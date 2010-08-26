@@ -2,12 +2,9 @@
 #include "fmap_error.h"
 #include "fmap_alloc.h"
 #include "fmap_refseq.h"
+#include "fmap_index.h"
 
-typedef struct {
-    char *fn_fasta;
-} fmap_index_opt_t;
-
-void fmap_index_core(fmap_index_opt_t *opt)
+static void fmap_index_core(fmap_index_opt_t *opt)
 {
   int i;
   fmap_refseq_t *refseq = NULL;

@@ -27,7 +27,7 @@
 
 */
 
-/* Nils Homer - modified not to macro-ized */
+/* Nils Homer - modified not to be macro-ized */
 
 #include <ctype.h>
 #include <string.h>
