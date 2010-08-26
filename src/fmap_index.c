@@ -32,7 +32,7 @@ static int usage()
   fprintf(stderr, "Usage: %s index [optionsn", PACKAGE);
   fprintf(stderr, "\n");
   fprintf(stderr, "Options:\n");
-  fprintf(stderr, "         -f FILE     the FASTA file name\n");
+  fprintf(stderr, "         -f FILE     the FASTA file name to index\n");
   fprintf(stderr, "         -h          print this message\n");
   fprintf(stderr, "\n");
   return 1;
