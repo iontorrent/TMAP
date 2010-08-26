@@ -1,0 +1,6 @@
+FMAP - flow mapper
+
+=== To Install ===
+
+1. Run:
+ sh autogen.sh && ./configure && make
