@@ -55,11 +55,11 @@ int fmap_index(int argc, char *argv[])
       }
   }
 
+  if(argc != optind || 1 == argc) {
+      return usage();
+  }
   if(NULL == opt.fn_fasta) {
       fmap_error("required option -f", Exit, CommandLineArgument);
-  }
-  if(argc != optind) {
-      return usage();
   }
 
   fmap_index_core(&opt);
