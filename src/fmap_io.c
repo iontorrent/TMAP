@@ -242,36 +242,36 @@ fmap_file_fread(void *ptr, size_t size, size_t count, fmap_file_t *fp)
               fmap_error("fp->c", Exit, ReadFileError);
           }
       }
-      num_read = nbuf;
+      num_read = nbuf / size;
       break;
 #endif
     case FMAP_FILE_GZ_COMPRESSION:
-      num_read = gzread(fp->gz, ptr, size*count);
+      num_read = gzread(fp->gz, ptr, size*count) / size;
       break;
     default:
       fmap_error("fp->c", Exit, OutOfRange);
       break;
   }
 
-  if(num_read != size*count) {
+  if(num_read != count) {
       // check if it was an end of file/stream
       switch(fp->c) {
         case FMAP_FILE_NO_COMPRESSION:
           if(0 != feof(fp->fp)) {
-              return EOF;
+              return num_read;
           }
           break;
 #ifndef DISABLE_BZ2 
         case FMAP_FILE_BZ2_COMPRESSION:
           if(BZ_STREAM_END == fp->bzerror) {
-              return EOF;
+              return num_read;
           }
           break;
 #endif
         case FMAP_FILE_GZ_COMPRESSION:
           gzerror(fp->gz, &error);
           if(Z_STREAM_END == error) {
-              return EOF;
+              return num_read;
           }
           break;
         default:
@@ -301,26 +301,26 @@ fmap_file_fgetc(fmap_file_t *fp)
 size_t 
 fmap_file_fwrite(void *ptr, size_t size, size_t count, fmap_file_t *fp) 
 {
-  size_t num_written = size * count;
+  size_t num_written = 0;
 
   switch(fp->c) {
     case FMAP_FILE_NO_COMPRESSION:
-      num_written = size * fwrite(ptr, size, count, fp->fp);
+      num_written = fwrite(ptr, size, count, fp->fp);
       break;
 #ifndef DISABLE_BZ2 
     case FMAP_FILE_BZ2_COMPRESSION:
-      BZ2_bzwrite(fp->bz2, ptr, size*count);
+      num_written = BZ2_bzwrite(fp->bz2, ptr, size*count) / size;
       break;
 #endif
     case FMAP_FILE_GZ_COMPRESSION:
-      num_written = gzwrite(fp->gz, ptr, size*count);
+      num_written = gzwrite(fp->gz, ptr, size*count) / size;
       break;
     default:
       fmap_error("fp->c", Exit, OutOfRange);
       break;
   }
 
-  if(num_written != size*count) {
+  if(num_written != count) {
       fmap_error(NULL, Exit, WriteFileError);
   }
 

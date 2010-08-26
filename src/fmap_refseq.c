@@ -48,8 +48,10 @@ fmap_refseq_read_fasta(const char *fn_fasta, int32_t compression)
   fp = fmap_file_fopen(fn_fasta, "rb", compression); 
   seq = fmap_seq_init(fp);
 
+  int last = -1;
+
   while(0 <= (l = fmap_seq_read(seq))) {
-      refseq->seq = fmap_realloc(refseq->seq, sizeof(char)*FMAP_REFSEQ_BYTE_LENGTH(l + refseq->len), "refseq->seq");
+      refseq->seq = fmap_realloc(refseq->seq, sizeof(uint8_t)*fmap_refseq_seq_memory(l + refseq->len), "refseq->seq");
 
       refseq->num_annos++;
       refseq->annos = fmap_realloc(refseq->annos, sizeof(fmap_anno_t)*refseq->num_annos, "refseq->annos");
@@ -66,13 +68,14 @@ fmap_refseq_read_fasta(const char *fn_fasta, int32_t compression)
 
       for(i=0;i<l;i++) {
           if(0 == (i & 3)) { // every fourth
-              refseq->seq[FMAP_REFSEQ_BYTE_LENGTH(refseq->len + i)] = 0; // set to zero
+              refseq->seq[fmap_refseq_seq_byte_i(refseq->len+i)] = 0; // set to zero
           }
-          int c = nt_char_to_int[(int)seq->seq.s[l]];
+          int c = nt_char_to_int[(int)seq->seq.s[i]];
           if(4 <= c) {
               c = lrand48() & 0x3; // random base
           }
-          FMAP_REFSEQ_STORE(refseq, refseq->len+i, c);
+          fmap_refseq_seq_store_i(refseq, refseq->len+i, c);
+          last = c;
       }
       refseq->len += l;
   }
@@ -87,10 +90,10 @@ fmap_refseq_read_fasta(const char *fn_fasta, int32_t compression)
 static inline void 
 fmap_refseq_write_header(fmap_file_t *fp, fmap_refseq_t *refseq)
 {
-  if(sizeof(uint64_t) != fmap_file_fwrite(&refseq->version_id, sizeof(uint64_t), 1, fp) 
-     || sizeof(uint32_t) != fmap_file_fwrite(&refseq->seed, sizeof(uint32_t), 1, fp) 
-     || sizeof(uint32_t) != fmap_file_fwrite(&refseq->num_annos, sizeof(uint32_t), 1, fp)
-     || sizeof(uint64_t) != fmap_file_fwrite(&refseq->len, sizeof(uint64_t), 1, fp)) {
+  if(1 != fmap_file_fwrite(&refseq->version_id, sizeof(uint64_t), 1, fp) 
+     || 1 != fmap_file_fwrite(&refseq->seed, sizeof(uint32_t), 1, fp) 
+     || 1 != fmap_file_fwrite(&refseq->num_annos, sizeof(uint32_t), 1, fp)
+     || 1 != fmap_file_fwrite(&refseq->len, sizeof(uint64_t), 1, fp)) {
       fmap_error(NULL, Exit, WriteFileError);
   }
 }
@@ -100,12 +103,22 @@ fmap_refseq_write_annos(fmap_file_t *fp, fmap_anno_t *anno)
 {
   uint32_t len = strlen(anno->name)+1; // include null terminator
 
-  if(sizeof(uint32_t) != fmap_file_fwrite(&len, sizeof(uint32_t), 1, fp) 
-     || len*sizeof(char) != fmap_file_fwrite(anno->name, sizeof(char), len, fp)
-     || sizeof(uint64_t) != fmap_file_fwrite(&anno->len, sizeof(uint64_t), 1, fp)
-     || sizeof(uint64_t) != fmap_file_fwrite(&anno->offset, sizeof(uint64_t), 1, fp)) {
+  if(1 != fmap_file_fwrite(&len, sizeof(uint32_t), 1, fp) 
+     || len != fmap_file_fwrite(anno->name, sizeof(char), len, fp)
+     || 1 != fmap_file_fwrite(&anno->len, sizeof(uint64_t), 1, fp)
+     || 1 != fmap_file_fwrite(&anno->offset, sizeof(uint64_t), 1, fp)) {
       fmap_error(NULL, Exit, WriteFileError);
   }
+}
+
+static inline char *
+fmap_refseq_get_file_name(const char *prefix)
+{
+  char *fn = NULL;
+  fn = fmap_malloc(sizeof(char)*(1+strlen(prefix)+strlen(FMAP_REFSEQ_FILE_EXTENSION)), "fn"); 
+  strcpy(fn, prefix);
+  strcat(fn, FMAP_REFSEQ_FILE_EXTENSION);
+  return fn;
 }
 
 void 
@@ -116,21 +129,19 @@ fmap_refseq_write(fmap_refseq_t *refseq, const char *prefix)
   fmap_file_t *fp = NULL;
 
   // creat the output file name
-  fn = fmap_malloc(sizeof(char)*(1+strlen(prefix)+strlen(FMAP_REFSEQ_FILE_EXTENSION)), "fn"); 
-  strcpy(fn, prefix);
-  strcat(fn, FMAP_REFSEQ_FILE_EXTENSION);
+  fn = fmap_refseq_get_file_name(prefix);
 
   // open the file
   fp = fmap_file_fopen(fn, "wb", FMAP_REFSEQ_COMPRESSION); 
   
   // free the output file name memory
-  free(fn);
+  free(fn);  fn = NULL;
 
   // write the header
   fmap_refseq_write_header(fp, refseq);
 
   // write the sequence
-  if(sizeof(char)*FMAP_REFSEQ_BYTE_LENGTH(refseq->len) != fmap_file_fwrite(refseq->seq, sizeof(char), FMAP_REFSEQ_BYTE_LENGTH(refseq->len), fp)) {
+  if(fmap_refseq_seq_memory(refseq->len) != fmap_file_fwrite(refseq->seq, sizeof(uint8_t), fmap_refseq_seq_memory(refseq->len), fp)) {
       fmap_error(NULL, Exit, WriteFileError);
   }
 
@@ -147,10 +158,10 @@ fmap_refseq_write(fmap_refseq_t *refseq, const char *prefix)
 static inline void 
 fmap_refseq_read_header(fmap_file_t *fp, fmap_refseq_t *refseq)
 {
-  if(sizeof(uint64_t) != fmap_file_fread(&refseq->version_id, sizeof(uint64_t), 1, fp) 
-     || sizeof(uint32_t) != fmap_file_fread(&refseq->seed, sizeof(uint32_t), 1, fp) 
-     || sizeof(uint32_t) != fmap_file_fread(&refseq->num_annos, sizeof(uint32_t), 1, fp)
-     || sizeof(uint64_t) != fmap_file_fread(&refseq->len, sizeof(uint64_t), 1, fp)) {
+  if(1 != fmap_file_fread(&refseq->version_id, sizeof(uint64_t), 1, fp) 
+     || 1 != fmap_file_fread(&refseq->seed, sizeof(uint32_t), 1, fp) 
+     || 1 != fmap_file_fread(&refseq->num_annos, sizeof(uint32_t), 1, fp)
+     || 1 != fmap_file_fread(&refseq->len, sizeof(uint64_t), 1, fp)) {
       fmap_error(NULL, Exit, WriteFileError);
   }
 }
@@ -160,15 +171,15 @@ fmap_refseq_read_annos(fmap_file_t *fp, fmap_anno_t *anno)
 {
   uint32_t len = 0;
 
-  if(sizeof(uint32_t) != fmap_file_fread(&len, sizeof(uint32_t), 1, fp)) {
+  if(1 != fmap_file_fread(&len, sizeof(uint32_t), 1, fp)) {
       fmap_error(NULL, Exit, WriteFileError);
   }
 
   anno->name = fmap_malloc(sizeof(char)*len, "anno->name");
      
-  if(len*sizeof(char) != fmap_file_fread(anno->name, sizeof(char), len, fp)
-     || sizeof(uint64_t) != fmap_file_fread(&anno->len, sizeof(uint64_t), 1, fp)
-     || sizeof(uint64_t) != fmap_file_fread(&anno->offset, sizeof(uint64_t), 1, fp)) {
+  if(len != fmap_file_fread(anno->name, sizeof(char), len, fp)
+     || 1 != fmap_file_fread(&anno->len, sizeof(uint64_t), 1, fp)
+     || 1 != fmap_file_fread(&anno->offset, sizeof(uint64_t), 1, fp)) {
       fmap_error(NULL, Exit, WriteFileError);
   }
 }
@@ -185,22 +196,23 @@ fmap_refseq_read(const char *prefix)
   refseq = fmap_calloc(1, sizeof(fmap_refseq_t), "refseq");
 
   // create the file name
-  fn = fmap_malloc(sizeof(char)*(1+strlen(prefix)+strlen(FMAP_REFSEQ_FILE_EXTENSION)), "fn"); 
-  strcpy(fn, prefix);
-  strcat(fn, FMAP_REFSEQ_FILE_EXTENSION);
+  fn = fmap_refseq_get_file_name(prefix);
 
   // open the file
   fp = fmap_file_fopen(fn, "rb", FMAP_REFSEQ_COMPRESSION); 
+  
+  // free the input file name memory
+  free(fn);  fn = NULL;
 
   // read the header
   fmap_refseq_read_header(fp, refseq);
 
   // allocate some memory
-  refseq->seq = fmap_malloc(sizeof(char)*FMAP_REFSEQ_BYTE_LENGTH(refseq->len), "refseq->seq");
+  refseq->seq = fmap_malloc(sizeof(char)*fmap_refseq_seq_memory(refseq->len), "refseq->seq");
   refseq->annos = fmap_malloc(sizeof(fmap_anno_t)*refseq->num_annos, "refseq->annos");
 
   // read the sequence
-  if(sizeof(char)*FMAP_REFSEQ_BYTE_LENGTH(refseq->len) != fmap_file_fread(refseq->seq, sizeof(char), FMAP_REFSEQ_BYTE_LENGTH(refseq->len), fp)) {
+  if(fmap_refseq_seq_memory(refseq->len) != fmap_file_fread(refseq->seq, sizeof(uint8_t), fmap_refseq_seq_memory(refseq->len), fp)) {
       fmap_error(NULL, Exit, WriteFileError);
   }
 
@@ -241,7 +253,7 @@ fmap_refseq_size(fmap_refseq_t *refseq)
   uint32_t i;
 
   size += sizeof(fmap_refseq_t);
-  size += sizeof(char)*FMAP_REFSEQ_BYTE_LENGTH(refseq->len);
+  size += sizeof(char)*fmap_refseq_seq_memory(refseq->len);
   size += sizeof(fmap_refseq_t)*refseq->num_annos;
   for(i=0;i<refseq->num_annos;i++) {
       size += (1+strlen(refseq->annos[i].name))*sizeof(char); // include null terminator

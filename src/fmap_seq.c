@@ -120,13 +120,13 @@ fmap_seq_read(fmap_seq_t *seq)
   int c;
   fmap_stream_t *ks = seq->f;
   if (seq->last_char == 0) { /* then jump to the next header line */
-      while ((c = fmap_stream_getc(ks)) != -1 && c != '>' && c != '@');
+       while ((c = fmap_stream_getc(ks)) != -1 && c != '>' && c != '@');
       if (c == -1) return -1; /* end of file */
       seq->last_char = c;
   } /* the first header char has been read */
   seq->comment.l = seq->seq.l = seq->qual.l = 0;
   if (fmap_stream_getuntil(ks, 0, &seq->name, &c) < 0) return -1;
-  if (c != 'n') fmap_stream_getuntil(ks, 'n', &seq->comment, 0);
+  if (c != '\n') fmap_stream_getuntil(ks, '\n', &seq->comment, 0);
   while ((c = fmap_stream_getc(ks)) != -1 && c != '>' && c != '+' && c != '@') {
       if (isgraph(c)) { /* printable non-space character */
           if (seq->seq.l + 1 >= seq->seq.m) { /* double the memory */
@@ -144,7 +144,7 @@ fmap_seq_read(fmap_seq_t *seq)
       seq->qual.m = seq->seq.m;
       seq->qual.s = fmap_realloc(seq->qual.s, seq->qual.m, "seq->qual.s");
   }
-  while ((c = fmap_stream_getc(ks)) != -1 && c != 'n'); /* skip the rest of '+' line */
+  while ((c = fmap_stream_getc(ks)) != -1 && c != '\n'); /* skip the rest of '+' line */
   if (c == -1) return -2; /* we should not stop here */
   while ((c = fmap_stream_getc(ks)) != -1 && seq->qual.l < seq->seq.l)
     if (c >= 33 && c <= 127) seq->qual.s[seq->qual.l++] = (unsigned char)c;

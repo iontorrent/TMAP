@@ -50,6 +50,7 @@ typedef struct {
   @param  path         filename to open
   @param  mode         access modes
   @param  compression  compression type
+  @return              a pointer to the initialized file structure
   */
 fmap_file_t *
 fmap_file_fopen(const char* path, const char *mode, int32_t compression);
@@ -78,7 +79,7 @@ fmap_file_fclose(fmap_file_t *fp);
   @param  size   size in bytes of each element to be read
   @param  count  number of elements, each one with a size of size bytes
   @param  fp     pointer to the file structure from which to read
-  @return        the number of bytes read
+  @return        the number of elements read (should equal count)
   */
 size_t 
 fmap_file_fread(void *ptr, size_t size, size_t count, fmap_file_t *fp);
@@ -88,7 +89,7 @@ fmap_file_fread(void *ptr, size_t size, size_t count, fmap_file_t *fp);
   @param  fp   pointer to the file structure from which to read
   @param  ptr  pointer to a block of memory with a minimum size of len bytes
   @param  len  number bytes to read
-  @return      the number of bytes read
+  @return      the number of elements read (should equal count)
   */
 int 
 fmap_file_fread2(fmap_file_t *fp, void *ptr, unsigned int len);
@@ -107,7 +108,7 @@ fmap_file_fgetc(fmap_file_t *fp);
   @param  size   size in bytes of each element to be written
   @param  count  number of elements, each one with a size of size bytes
   @param  fp     pointer to the file structure to which to write
-  @return        the number of bytes written
+  @return        the number of elements written (should equal count)
   */
 size_t 
 fmap_file_fwrite(void *ptr, size_t size, size_t count, fmap_file_t *fp); 

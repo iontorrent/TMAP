@@ -8,17 +8,43 @@
 #define FMAP_REFSEQ_VERSION_ID 0
 // seed for our random number generator
 #define FMAP_REFSEQ_SEED 13
-// we use 2 bits per DNA base
-#define FMAP_REFSEQ_BYTE_LENGTH(_len) (((_len) + 1) >> 2)
-#define FMAP_REFSEQ_BYTE_POSITION(_i) ((3 - ((_i) & 3)) << 1)
-// stores the _ith integer base 
-#define FMAP_REFSEQ_STORE(_refseq, _i, _c) (_refseq->seq[FMAP_REFSEQ_BYTE_LENGTH(_i)] |= _c << FMAP_REFSEQ_BYTE_POSITION(_i))
-// get the _ith integer base
-#define FMAP_REFSEQ_BASE(_refseq, _i) ((_refseq->seq[FMAP_REFSEQ_BYTE_LENGTH(_i)] >> FMAP_REFSEQ_BYTE_POSITION(_i)) & 3)
 // refseq file extension
 #define FMAP_REFSEQ_FILE_EXTENSION ".fmap.refseq"
 // compression for the refseq file
 #define FMAP_REFSEQ_COMPRESSION FMAP_FILE_NO_COMPRESSION
+
+/*! @macro
+  @param  _len  the number of bases stored 
+  @return       the number of bytes allocated
+  */
+#define fmap_refseq_seq_memory(_len) (((_len) + 1) >> 2)
+
+/*! @macro
+  @param  _i  the 0-based base position 
+  @return     the 0-based byte index
+  */
+#define fmap_refseq_seq_byte_i(_i) (fmap_refseq_seq_memory(_i-1))
+
+/*! @macro
+  @param  _i  the 0-based base position 
+  @return     the number of bits the base is shifted (returns a multiple of two)
+  @dicsussion the reference is stored in a 2-bit format
+  */
+#define fmap_refseq_seq_byte_shift(_i) ((3 - ((_i) & 3)) << 1)
+
+/*! @macro
+  @param  _refseq  pointer to the structure holding the reference sequence
+  @param  _i       the 0-based base position to store
+  @param  _c       the base's 2-bit integer representation
+  */
+#define fmap_refseq_seq_store_i(_refseq, _i, _c) (_refseq->seq[fmap_refseq_seq_byte_i(_i)] |= _c << fmap_refseq_seq_byte_shift(_i))
+
+/*! @macro
+  @param  _refseq  pointer to the structure holding the reference sequence
+  @param  _i       the 0-based base position to retrieve
+  @return          the base's 2-bit integer representation
+  */
+#define fmap_refseq_seq_i(_refseq, _i) ((_refseq->seq[fmap_refseq_seq_byte_i(_i)] >> fmap_refseq_seq_byte_shift(_i)) & 3)
 
 /*! @typedef
   @abstract  
@@ -43,7 +69,7 @@ typedef struct {
 typedef struct {
     uint64_t version_id;
     uint32_t seed;
-    char *seq;
+    uint8_t *seq;
     fmap_anno_t *annos;
     uint32_t num_annos;
     uint64_t len;
@@ -54,7 +80,7 @@ typedef struct {
   @field  fn_fasta     the file name of the fasta file
   @field  compression  the type of compression, if any to be used
   @return             a pointer to the initialized memory
- */
+  */
 fmap_refseq_t *
 fmap_refseq_read_fasta(const char *fn_fasta, int32_t compression);
 
@@ -62,7 +88,7 @@ fmap_refseq_read_fasta(const char *fn_fasta, int32_t compression);
   @abstract
   @field  refseq  pointer to the structure in which to store the data 
   @field  prefix   the prefix of the file to be written, usually the fasta file name 
- */
+  */
 void
 fmap_refseq_write(fmap_refseq_t *refseq, const char *prefix);
 
