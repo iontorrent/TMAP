@@ -9,9 +9,12 @@
 // seed for our random number generator
 #define FMAP_REFSEQ_SEED 13
 // refseq file extension
-#define FMAP_REFSEQ_FILE_EXTENSION ".fmap.refseq"
+#define FMAP_REFSEQ_ANNO_FILE_EXTENSION ".fmap.refseq.anno"
+#define FMAP_REFSEQ_PAC_FILE_EXTENSION ".fmap.refseq.pac"
 // compression for the refseq file
 #define FMAP_REFSEQ_COMPRESSION FMAP_FILE_NO_COMPRESSION
+// buffer size for reading in from a FASTA file
+#define FMAP_REFSEQ_BUFFER_SIZE 0x10000
 
 /*! @macro
   @param  _len  the number of bases stored 
