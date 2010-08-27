@@ -11,22 +11,34 @@
 // refseq file extension
 #define FMAP_REFSEQ_ANNO_FILE_EXTENSION ".fmap.refseq.anno"
 #define FMAP_REFSEQ_PAC_FILE_EXTENSION ".fmap.refseq.pac"
-// compression for the refseq file
-#define FMAP_REFSEQ_COMPRESSION FMAP_FILE_NO_COMPRESSION
+#define FMAP_REFSEQ_BWT_FILE_EXTENSION ".fmap.refseq.bwt"
+#define FMAP_REFSEQ_SA_FILE_EXTENSION ".fmap.refseq.sa"
+// the implementation relies on no compression
+#define FMAP_REFSEQ_ANNO_COMPRESSION FMAP_FILE_NO_COMPRESSION 
+#define FMAP_REFSEQ_PAC_COMPRESSION FMAP_FILE_NO_COMPRESSION 
+#define FMAP_REFSEQ_BWT_COMPRESSION FMAP_FILE_NO_COMPRESSION 
+#define FMAP_REFSEQ_SA_COMPRESSION FMAP_FILE_NO_COMPRESSION 
 // buffer size for reading in from a FASTA file
 #define FMAP_REFSEQ_BUFFER_SIZE 0x10000
+
+enum {
+    FMAP_REFSEQ_ANNO_FILE = 0,
+    FMAP_REFSEQ_PAC_FILE = 1,
+    FMAP_REFSEQ_BWT_FILE = 2,
+    FMAP_REFSEQ_SA_FILE = 3,
+};
 
 /*! @macro
   @param  _len  the number of bases stored 
   @return       the number of bytes allocated
   */
-#define fmap_refseq_seq_memory(_len) (((_len) + 1) >> 2)
+#define fmap_refseq_seq_memory(_len) ((((_len)-1) >> 2) + 1)
 
 /*! @macro
   @param  _i  the 0-based base position 
   @return     the 0-based byte index
   */
-#define fmap_refseq_seq_byte_i(_i) (fmap_refseq_seq_memory(_i-1))
+#define fmap_refseq_seq_byte_i(_i) ((_i) >> 2)
 
 /*! @macro
   @param  _i  the 0-based base position 
@@ -78,14 +90,23 @@ typedef struct {
     uint64_t len;
 } fmap_refseq_t;
 
+/*! @typedef
+  @abstract       gets the name of a specific file based on the reference sequence
+  @param  prefix   the prefix of the file to be written, usually the fasta file name 
+  @param  type    the type of file based on this reference sequence
+  @return         a pointer to the file name string
+  */
+inline char *
+fmap_refseq_get_file_name(const char *prefix, int32_t type);
+
 /*! @function
   @abstract
   @field  fn_fasta     the file name of the fasta file
   @field  compression  the type of compression, if any to be used
-  @return             a pointer to the initialized memory
+  @return             the length of the reference sequence
   */
-fmap_refseq_t *
-fmap_refseq_read_fasta(const char *fn_fasta, int32_t compression);
+uint64_t
+fmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression);
 
 /*! @function
   @abstract
@@ -117,4 +138,24 @@ fmap_refseq_destroy(fmap_refseq_t *refseq);
   */
 size_t
 fmap_refseq_size(fmap_refseq_t *refseq);
+
+/*! @function
+  @abstract
+  @field  fn_fasta     the file name of the fasta file
+  @return             the number of bytes used by the sequence 
+  */
+int64_t 
+fmap_refseq_seq_len(const char *fn_fasta);
+
+/*! @function
+  @abstract
+  @field  refseq      pointer to the structure in which the data is stored
+  @field  pacpos      the packed FASTA position
+  @field  aln_length  the alignment length
+  @field  seqid       the zero-based sequence index to be returned
+  @field  pos         the zero-based position to be returned
+  @return        the zero-based position, -1 if not found (overlaps two chromosomes)
+  */
+inline int32_t
+fmap_refseq_pac2real(fmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos);
 #endif

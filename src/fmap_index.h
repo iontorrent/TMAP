@@ -1,12 +1,19 @@
 #ifndef FMAP_INDEX_H_
 #define FMAP_INDEX_H_
+  
+#define FMAP_INDEX_LARGE_GENOME 0x40000000 
+#define FMAP_INDEX_TOO_BIG_GENOME 0x100000000 
 
 /*! @typedef
-  @abstract        structure to store the command line options for 'fmap index'
-  @field  fn_fasta  the fasta file name (-f)
+  @abstract            structure to store the command line options for 'fmap index'
+  @field  fn_fasta      the fasta file name (-f)
+  @field  occ_interval  the occurrence array interval (-o)
+  @field  sa_interval   the suffix array interval (-i)
 */
 typedef struct {
     char *fn_fasta;
+    int32_t occ_interval;
+    int32_t sa_interval;
 } fmap_index_opt_t;
 
 /*! @function

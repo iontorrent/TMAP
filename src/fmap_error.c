@@ -13,7 +13,7 @@ static char error_string[][64] =
   "could not read from the file",
   "could not write to the file",
   "encountered early end-of-file",
-  "error running he threads",
+  "error running the threads",
   "last error type"
 };	   
 

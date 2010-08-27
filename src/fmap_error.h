@@ -13,8 +13,8 @@ enum {Exit, Warn, LastActionType};
 
 /*! @enum
   @abstract                   the type of error
-  @field  CommandLineArgument  improper command line argument
   @field  OutOfRange           value was out of range
+  @field  CommandLineArgument  improper command line argument
   @field  ReallocMemory        memory re-allocation failure
   @field  MallocMemory         memory allocation failure
   @field  OpenFileError        could not open a file
@@ -26,7 +26,7 @@ enum {Exit, Warn, LastActionType};
   @field  LastErrorType        dummy error type 
   */
 enum {
-    OutOfRange, 
+    OutOfRange=0, 
     CommandLineArgument,
     ReallocMemory,
     MallocMemory,

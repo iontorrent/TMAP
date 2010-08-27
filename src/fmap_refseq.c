@@ -4,42 +4,37 @@
 #include "fmap_error.h"
 #include "fmap_alloc.h"
 #include "fmap_seq.h"
+#include "fmap_definitions.h"
 #include "fmap_refseq.h"
 
-// Input: ASCII character
-// Output: 2-bit DNA value
-uint8_t nt_char_to_int[256] = {
-    4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
-    4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
-    4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
-    4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
-    4, 0, 4, 1,  4, 4, 4, 2,  4, 4, 4, 4,  4, 4, 4, 4,
-    4, 4, 4, 4,  3, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
-    4, 0, 4, 1,  4, 4, 4, 2,  4, 4, 4, 4,  4, 4, 4, 4,
-    4, 4, 4, 4,  3, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
-    4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
-    4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
-    4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
-    4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
-    4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
-    4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
-    4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
-    4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4
-};
-
-static inline char *
-fmap_refseq_get_file_name(const char *prefix, int32_t is_anno)
+inline char *
+fmap_refseq_get_file_name(const char *prefix, int32_t type)
 {
   char *fn = NULL;
-  if(0 == is_anno) {
-      fn = fmap_malloc(sizeof(char)*(1+strlen(prefix)+strlen(FMAP_REFSEQ_PAC_FILE_EXTENSION)), "fn"); 
-      strcpy(fn, prefix);
-      strcat(fn, FMAP_REFSEQ_PAC_FILE_EXTENSION);
-  }
-  else {
+
+  switch(type) {
+    case FMAP_REFSEQ_ANNO_FILE:
       fn = fmap_malloc(sizeof(char)*(1+strlen(prefix)+strlen(FMAP_REFSEQ_ANNO_FILE_EXTENSION)), "fn"); 
       strcpy(fn, prefix);
       strcat(fn, FMAP_REFSEQ_ANNO_FILE_EXTENSION);
+      break;
+    case FMAP_REFSEQ_PAC_FILE:
+      fn = fmap_malloc(sizeof(char)*(1+strlen(prefix)+strlen(FMAP_REFSEQ_PAC_FILE_EXTENSION)), "fn"); 
+      strcpy(fn, prefix);
+      strcat(fn, FMAP_REFSEQ_PAC_FILE_EXTENSION);
+      break;
+    case FMAP_REFSEQ_BWT_FILE:
+      fn = fmap_malloc(sizeof(char)*(1+strlen(prefix)+strlen(FMAP_REFSEQ_BWT_FILE_EXTENSION)), "fn"); 
+      strcpy(fn, prefix);
+      strcat(fn, FMAP_REFSEQ_BWT_FILE_EXTENSION);
+      break;
+    case FMAP_REFSEQ_SA_FILE:
+      fn = fmap_malloc(sizeof(char)*(1+strlen(prefix)+strlen(FMAP_REFSEQ_SA_FILE_EXTENSION)), "fn"); 
+      strcpy(fn, prefix);
+      strcat(fn, FMAP_REFSEQ_SA_FILE_EXTENSION);
+      break;
+    default:
+      return NULL;
   }
   return fn;
 }
@@ -79,8 +74,8 @@ fmap_refseq_write_anno(fmap_file_t *fp, fmap_refseq_t *refseq)
   }
 }
 
-fmap_refseq_t *
-fmap_refseq_read_fasta(const char *fn_fasta, int32_t compression)
+uint64_t
+fmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
 {
   fmap_file_t *fp_fasta = NULL, *fp_pac = NULL, *fp_anno = NULL;;
   fmap_seq_t *seq = NULL;
@@ -89,6 +84,7 @@ fmap_refseq_read_fasta(const char *fn_fasta, int32_t compression)
   uint8_t buffer[FMAP_REFSEQ_BUFFER_SIZE];
   int32_t i, l, buffer_length;
   uint8_t x = 0;
+  uint64_t ref_len;
 
   refseq = fmap_calloc(1, sizeof(fmap_refseq_t), "refseq");
 
@@ -107,10 +103,10 @@ fmap_refseq_read_fasta(const char *fn_fasta, int32_t compression)
   seq = fmap_seq_init(fp_fasta);
 
   // output files
-  fn_pac = fmap_refseq_get_file_name(fn_fasta, 0);
-  fp_pac = fmap_file_fopen(fn_pac, "wb", FMAP_REFSEQ_COMPRESSION);
-  fn_anno = fmap_refseq_get_file_name(fn_fasta, 1);
-  fp_anno = fmap_file_fopen(fn_anno, "wb", FMAP_REFSEQ_COMPRESSION);
+  fn_pac = fmap_refseq_get_file_name(fn_fasta, FMAP_REFSEQ_PAC_FILE);
+  fp_pac = fmap_file_fopen(fn_pac, "wb", FMAP_REFSEQ_PAC_COMPRESSION);
+  fn_anno = fmap_refseq_get_file_name(fn_fasta, FMAP_REFSEQ_ANNO_FILE);
+  fp_anno = fmap_file_fopen(fn_anno, "wb", FMAP_REFSEQ_ANNO_COMPRESSION);
 
   // read in sequences
   while(0 <= (l = fmap_seq_read(seq))) {
@@ -158,6 +154,7 @@ fmap_refseq_read_fasta(const char *fn_fasta, int32_t compression)
       fmap_error(fn_pac, Exit, WriteFileError);
   }
   refseq->seq = NULL; // IMPORTANT: nullify this
+  ref_len = refseq->len; // save for return
 
   // write annotation file
   fmap_refseq_write_anno(fp_anno, refseq); 
@@ -166,11 +163,12 @@ fmap_refseq_read_fasta(const char *fn_fasta, int32_t compression)
   fmap_file_fclose(fp_pac);
   fmap_file_fclose(fp_anno);
 
+  fmap_refseq_destroy(refseq); 
   fmap_seq_destroy(seq);
   free(fn_pac);
   free(fn_anno);
 
-  return refseq;
+  return ref_len;
 }
 
 void 
@@ -180,15 +178,15 @@ fmap_refseq_write(fmap_refseq_t *refseq, const char *prefix)
   char *fn_pac = NULL, *fn_anno = NULL;
 
   // write annotation file
-  fn_anno = fmap_refseq_get_file_name(prefix, 1);
-  fp_anno = fmap_file_fopen(fn_anno, "wb", FMAP_REFSEQ_COMPRESSION);
+  fn_anno = fmap_refseq_get_file_name(prefix, FMAP_REFSEQ_ANNO_FILE);
+  fp_anno = fmap_file_fopen(fn_anno, "wb", FMAP_REFSEQ_ANNO_COMPRESSION);
   fmap_refseq_write_anno(fp_anno, refseq); 
   fmap_file_fclose(fp_anno);
   free(fn_anno);
 
   // write the sequence
-  fn_pac = fmap_refseq_get_file_name(prefix, 0);
-  fp_pac = fmap_file_fopen(fn_pac, "wb", FMAP_REFSEQ_COMPRESSION);
+  fn_pac = fmap_refseq_get_file_name(prefix, FMAP_REFSEQ_PAC_FILE);
+  fp_pac = fmap_file_fopen(fn_pac, "wb", FMAP_REFSEQ_PAC_COMPRESSION);
   if(fmap_refseq_seq_memory(refseq->len) != fmap_file_fwrite(refseq->seq, sizeof(uint8_t), fmap_refseq_seq_memory(refseq->len), fp_pac)) {
       fmap_error(NULL, Exit, WriteFileError);
   }
@@ -248,15 +246,15 @@ fmap_refseq_read(const char *prefix)
   refseq = fmap_calloc(1, sizeof(fmap_refseq_t), "refseq");
 
   // read annotation file
-  fn_anno = fmap_refseq_get_file_name(prefix, 1);
-  fp_anno = fmap_file_fopen(fn_anno, "rb", FMAP_REFSEQ_COMPRESSION);
+  fn_anno = fmap_refseq_get_file_name(prefix, FMAP_REFSEQ_ANNO_FILE);
+  fp_anno = fmap_file_fopen(fn_anno, "rb", FMAP_REFSEQ_ANNO_COMPRESSION);
   fmap_refseq_read_anno(fp_anno, refseq); 
   fmap_file_fclose(fp_anno);
   free(fn_anno);
 
   // read the sequence
-  fn_pac = fmap_refseq_get_file_name(prefix, 0);
-  fp_pac = fmap_file_fopen(fn_pac, "rb", FMAP_REFSEQ_COMPRESSION);
+  fn_pac = fmap_refseq_get_file_name(prefix, FMAP_REFSEQ_PAC_FILE);
+  fp_pac = fmap_file_fopen(fn_pac, "rb", FMAP_REFSEQ_PAC_COMPRESSION);
   refseq->seq = fmap_malloc(sizeof(char)*fmap_refseq_seq_memory(refseq->len), "refseq->seq"); // allocate
   if(fmap_refseq_seq_memory(refseq->len) != fmap_file_fread(refseq->seq, sizeof(uint8_t), fmap_refseq_seq_memory(refseq->len), fp_pac)) {
       fmap_error(NULL, Exit, WriteFileError);
@@ -300,4 +298,75 @@ fmap_refseq_size(fmap_refseq_t *refseq)
   }
 
   return size;
+}
+
+int64_t 
+fmap_refseq_seq_len(const char *fn_fasta)
+{
+  fmap_file_t *fp_anno = NULL;
+  char *fn_anno = NULL;
+  fmap_refseq_t refseq;
+
+  // read header only
+  fn_anno = fmap_refseq_get_file_name(fn_fasta, FMAP_REFSEQ_ANNO_FILE);
+  fp_anno = fmap_file_fopen(fn_anno, "rb", FMAP_REFSEQ_ANNO_COMPRESSION);
+  free(fn_anno); // do not want
+  fmap_refseq_read_header(fp_anno, &refseq);
+  fmap_file_fclose(fp_anno);
+
+  return refseq.len;
+}
+
+// zero-based
+static inline int32_t
+fmap_refseq_get_seqid1(fmap_refseq_t *refseq, uint32_t pacpos)
+{
+  int32_t left, right, mid;
+
+  if(refseq->len <= pacpos) {
+      fmap_error("Coordinate was larger than the reference", Exit, OutOfRange);
+  }
+
+  left = 0; mid = 0; right = refseq->num_annos;
+  while (left < right) {
+      mid = (left + right) >> 1;
+      if(refseq->annos[mid].offset <= pacpos) {
+          if(mid == refseq->num_annos - 1) break;
+          if(pacpos < refseq->annos[mid+1].offset) break;
+          left = mid + 1;
+      } else right = mid;
+  }
+
+  return mid;
+}
+
+// zero-based
+static inline int32_t
+fmap_refseq_get_seqid(fmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_len)
+{
+  int32_t seqid_left, seqid_right;
+
+  seqid_left = fmap_refseq_get_seqid1(refseq, pacpos);
+  seqid_right = fmap_refseq_get_seqid1(refseq, pacpos+aln_len-1);
+
+  if(seqid_left != seqid_right) return -1; // overlaps two chromosomes
+
+  return seqid_left;
+}
+
+// zero-based
+static inline uint32_t
+fmap_refseq_get_pos(fmap_refseq_t *refseq, uint32_t pacpos, uint32_t seqid)
+{
+  return pacpos - refseq->annos[seqid].offset;
+}
+
+inline int32_t
+fmap_refseq_pac2real(fmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos)
+{
+  (*seqid) = fmap_refseq_get_seqid(refseq, pacpos, aln_length);
+  if((*seqid) < 0) return -1;
+  (*pos) = fmap_refseq_get_pos(refseq, pacpos, (*seqid));
+
+  return (*pos);
 }

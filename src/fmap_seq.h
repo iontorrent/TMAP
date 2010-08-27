@@ -106,4 +106,12 @@ fmap_seq_destroy(fmap_seq_t *seq);
 int 
 fmap_seq_read(fmap_seq_t *seq);
 
+/*! @function
+  @abstract         reverse the seq and qual fields
+  @param  seq       a pointer to a sequence structure
+  @param  rev_comp  0 only to reverse, otherwise the compliment will also be taken
+  */
+void
+fmap_seq_reverse(fmap_seq_t *seq, int32_t rev_comp);
+
 #endif

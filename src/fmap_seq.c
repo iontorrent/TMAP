@@ -148,7 +148,7 @@ fmap_seq_read(fmap_seq_t *seq)
   int c;
   fmap_stream_t *ks = seq->f;
   if (seq->last_char == 0) { /* then jump to the next header line */
-       while ((c = fmap_stream_getc(ks)) != -1 && c != '>' && c != '@');
+      while ((c = fmap_stream_getc(ks)) != -1 && c != '>' && c != '@');
       if (c == -1) return -1; /* end of file */
       seq->last_char = c;
   } /* the first header char has been read */
@@ -180,4 +180,29 @@ fmap_seq_read(fmap_seq_t *seq)
   seq->last_char = 0;	/* we have not come to the next header line */
   if (seq->seq.l != seq->qual.l) return -2; /* qual string is shorter than seq string */
   return seq->seq.l;
+}
+
+static inline void
+fmap_string_reverse(fmap_string_t *str)
+{
+  int i;
+  for(i = 0; i < (str->l >> 1); ++i) {
+      char tmp = str->s[str->l-1-i];
+      str->s[str->l-1-i] = str->s[i]; str->s[i] = tmp;
+  }
+}
+
+void 
+fmap_seq_reverse(fmap_seq_t *seq, int32_t rev_comp)
+{
+  int i;
+
+  fmap_string_reverse(&seq->seq);
+  fmap_string_reverse(&seq->qual);
+
+  if(rev_comp) {
+      for(i = 0;i < seq->seq.l; ++i) {
+          seq->seq.s[i] = (4 <= seq->seq.s[i]) ? seq->seq.s[i] : 3 - seq->seq.s[i];
+      }
+  }
 }
