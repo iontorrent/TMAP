@@ -267,7 +267,7 @@ BWT *BWTCreate(const uint32_t textLength, uint32_t *decodeTable)
   bwt->textLength = 0;
   bwt->inverseSa = 0;
 
-  bwt->cumulativeFreq = fmap_calloc((ALPHABET_SIZE + 1), sizeof(uint32_t*), "bwt->cumulativeFreq");
+  bwt->cumulativeFreq = fmap_calloc((ALPHABET_SIZE + 1), sizeof(uint32_t), "bwt->cumulativeFreq");
   initializeVAL(bwt->cumulativeFreq, ALPHABET_SIZE + 1, 0);
 
   bwt->bwtSizeInWord = 0;
@@ -1461,22 +1461,24 @@ void BWTFree(BWT *bwt)
 {
   if (bwt == 0) return;
   free(bwt->cumulativeFreq);
-  free(bwt->bwtCode);
-  free(bwt->occValue);
+  //free(bwt->bwtCode); // not allocated
+  //free(bwt->occValue); // not allocated
   free(bwt->occValueMajor);
   free(bwt->saValue);
   free(bwt->inverseSa);
-  free(bwt->decodeTable);
   free(bwt->saIndexRange);
   free(bwt->saValueOnBoundary);
+  free(bwt->decodeTable);
   free(bwt);
 }
 
 void BWTIncFree(BWTInc *bwtInc)
 {
   if (bwtInc == 0) return;
-  free(bwtInc->bwt);
+  BWTFree(bwtInc->bwt);
   free(bwtInc->workingMemory);
+  free(bwtInc->cumulativeCountInCurrentBuild);
+  free(bwtInc->packedShift);
   free(bwtInc);
 }
 
@@ -1579,7 +1581,6 @@ void fmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_inter
   }
   fmap_bwt_destroy(bwt);
   fmap_refseq_destroy(refseq);
-  refseq=NULL;
 
   fmap_progress_print2("constructed BWT string from the packed FASTA");
 }
