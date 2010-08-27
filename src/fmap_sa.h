@@ -41,6 +41,7 @@ void
 fmap_sa_destroy(fmap_sa_t *sa);
 
 /*! @function
+  @abstract    returns the suffix array position given the occurence position
   @param  sa   the suffix array
   @param  bwt  the bwt structure 
   @param  k    the suffix array position

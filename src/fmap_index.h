@@ -14,6 +14,7 @@ typedef struct {
     char *fn_fasta;
     int32_t occ_interval;
     int32_t sa_interval;
+    int32_t is_large;
 } fmap_index_opt_t;
 
 /*! @function

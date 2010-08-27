@@ -12,6 +12,7 @@ fmap_SOURCES = \
 			   fmap_index.h fmap_index.c \
 			   fmap_exact.h fmap_exact.c \
 			   fmap_definitions.h fmap_definitions.c \
+			   fmap_progress.h fmap_progress.c \
 			   main.c
 
 fmap_LDADD = 

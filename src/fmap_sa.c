@@ -7,6 +7,7 @@
 #include "fmap_refseq.h"
 #include "fmap_bwt.h"
 #include "fmap_bwt_gen.h"
+#include "fmap_progress.h"
 #include "fmap_sa.h"
 
 fmap_sa_t *
@@ -56,7 +57,7 @@ fmap_sa_write(const char *fn_fasta, fmap_sa_t *sa)
      || sa->n_sa-1 != fmap_file_fwrite(sa->sa+1, sizeof(uint32_t), sa->n_sa-1, fp_sa)) {
       fmap_error(NULL, Exit, WriteFileError);
   }
-  
+
   fmap_file_fclose(fp_sa);
   free(fn_sa);
 }
@@ -89,8 +90,11 @@ fmap_sa_bwt2sa(const char *fn_fasta, uint32_t intv)
   fmap_bwt_t *bwt = NULL;
   fmap_sa_t *sa = NULL;
 
+  fmap_progress_set_start_time(clock());
+  fmap_progress_print1("constructing SA from BWT string", 0);
+
   bwt = fmap_bwt_read(fn_fasta);
-  
+
   sa = fmap_calloc(1, sizeof(fmap_sa_t), "sa");
 
   sa->primary = bwt->primary;
@@ -110,9 +114,11 @@ fmap_sa_bwt2sa(const char *fn_fasta, uint32_t intv)
   sa->sa[0] = (uint32_t)-1; // before this line, bwt->sa[0] = bwt->seq_len
 
   fmap_sa_write(fn_fasta, sa);
-  
+
   fmap_bwt_destroy(bwt);
   fmap_sa_destroy(sa);
+  
+  fmap_progress_print2("constructing SA from BWT string");
 }
 
 /* 
@@ -148,12 +154,12 @@ fmap_sa_bwt2sa(const char *fn_fasta, uint32_t intv)
 static void QSufSortSortSplit(int* __restrict V, int* __restrict I, const int32_t lowestPos, 
                               const int32_t highestPos, const int32_t numSortedChar);
 static int32_t QSufSortChoosePivot(int* __restrict V, int* __restrict I, const int32_t lowestPos, 
-                               const int32_t highestPos, const int32_t numSortedChar);
+                                   const int32_t highestPos, const int32_t numSortedChar);
 static void QSufSortInsertSortSplit(int* __restrict V, int* __restrict I, const int32_t lowestPos, 
                                     const int32_t highestPos, const int32_t numSortedChar);
 static void QSufSortBucketSort(int* __restrict V, int* __restrict I, const int32_t numChar, const int32_t alphabetSize);
 static int32_t QSufSortTransform(int* __restrict V, int* __restrict I, const int32_t numChar, const int32_t largestInputSymbol, 
-                             const int32_t smallestInputSymbol, const int32_t maxNewAlphabetSize, int32_t *numSymbolAggregated);
+                                 const int32_t smallestInputSymbol, const int32_t maxNewAlphabetSize, int32_t *numSymbolAggregated);
 
 // from MiscUtilities.c
 static int32_t leadingZero(const int32_t input) {
@@ -344,7 +350,7 @@ static void QSufSortSortSplit(int* __restrict V, int* __restrict I, const int32_
 
 /* Algorithm by Bentley & McIlroy.*/
 static int32_t QSufSortChoosePivot(int* __restrict V, int* __restrict I, const int32_t lowestPos, 
-                               const int32_t highestPos, const int32_t numSortedChar) {
+                                   const int32_t highestPos, const int32_t numSortedChar) {
 
     int32_t m;
     int32_t keyl, keym, keyn;
@@ -533,7 +539,7 @@ Output: Returns an integer j in the range 1...q representing the size of the
 new alphabet. If j<=n+1, the alphabet is compacted. The global variable r is
 set to the number of old symbols grouped into one. Only x[n] is 0.*/
 static int32_t QSufSortTransform(int* __restrict V, int* __restrict I, const int32_t numChar, const int32_t largestInputSymbol, 
-                             const int32_t smallestInputSymbol, const int32_t maxNewAlphabetSize, int32_t *numSymbolAggregated) {
+                                 const int32_t smallestInputSymbol, const int32_t maxNewAlphabetSize, int32_t *numSymbolAggregated) {
 
     int32_t c, i, j;
     int32_t a;	// numSymbolAggregated

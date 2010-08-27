@@ -1,10 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "fmap_error.h"
 #include "fmap_alloc.h"
 #include "fmap_seq.h"
 #include "fmap_definitions.h"
+#include "fmap_progress.h"
 #include "fmap_refseq.h"
 
 inline char *
@@ -85,6 +87,9 @@ fmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   int32_t i, l, buffer_length;
   uint8_t x = 0;
   uint64_t ref_len;
+
+  fmap_progress_set_start_time(clock());
+  fmap_progress_print1("packing reference FASTA", 0);
 
   refseq = fmap_calloc(1, sizeof(fmap_refseq_t), "refseq");
 
@@ -167,6 +172,8 @@ fmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   fmap_seq_destroy(seq);
   free(fn_pac);
   free(fn_anno);
+  
+  fmap_progress_print2("packed reference FASTA");
 
   return ref_len;
 }

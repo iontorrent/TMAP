@@ -54,10 +54,10 @@ fmap_bwt_read(const char *fn_fasta)
   if(1 != fmap_file_fread(&bwt->primary, sizeof(uint32_t), 1, fp_bwt)
      || 4 != fmap_file_fread(bwt->L2+1, sizeof(uint32_t), 4, fp_bwt)
      || 1 != fmap_file_fread(&bwt->occ_interval, sizeof(uint32_t), 1, fp_bwt)
+     || 1 != fmap_file_fread(&bwt->seq_len, sizeof(uint32_t), 1, fp_bwt)
      || bwt->bwt_size != fmap_file_fread(bwt->bwt, sizeof(uint32_t), bwt->bwt_size, fp_bwt)) {
       fmap_error(NULL, Exit, ReadFileError);
   }
-  bwt->seq_len = bwt->L2[4];
   fmap_bwt_gen_cnt_table(bwt);
 
   fmap_file_fclose(fp_bwt);
@@ -79,6 +79,7 @@ fmap_bwt_write(const char *fn_fasta, fmap_bwt_t *bwt)
      || 1 != fmap_file_fwrite(&bwt->primary, sizeof(uint32_t), 1, fp_bwt) 
      || 4 != fmap_file_fwrite(bwt->L2+1, sizeof(uint32_t), 4, fp_bwt)
      || 1 != fmap_file_fwrite(&bwt->occ_interval, sizeof(uint32_t), 1, fp_bwt)
+     || 1 != fmap_file_fwrite(&bwt->seq_len, sizeof(uint32_t), 1, fp_bwt)
      || bwt->bwt_size != fmap_file_fwrite(bwt->bwt, sizeof(uint32_t), bwt->bwt_size, fp_bwt)) {
       fmap_error(NULL, Exit, WriteFileError);
   }

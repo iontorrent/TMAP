@@ -29,8 +29,6 @@
 
 #include <stdint.h>
 
-// TODO document
-
 // requirement: ((b)->occ_interval%16 == 0)
 
 #ifndef FMAP_UBYTE
@@ -167,21 +165,33 @@ bwt_match_exact(const fmap_bwt_t *bwt, int len, const uint8_t *str, uint32_t *sa
 int 
 bwt_match_exact_alt(const fmap_bwt_t *bwt, int len, const uint8_t *str, uint32_t *k0, uint32_t *l0);
 
+// TODO: document
 #define fmap_bwt_bwt(b, k) ((b)->bwt[(k)/(b)->occ_interval*12 + 4 + (k)%(b)->occ_interval/16])
 
-/* retrieve a character from the $-removed BWT string. Note that
- * fmap_bwt_t::bwt is not exactly the BWT string and therefore this macro is
- * called bwt_B0 instead of bwt_B */
+// TODO: document
+/*! @macro
+  @abstract retrieve a character from the $-removed BWT string. 
+  @param  b   pointer to the bwt structure
+  @param  k   the zero-based index of the bwt character to retrieve
+  @return     the bwt character from the $-removed BWT string.
+  @discussion Note that fmap_bwt_t::bwt is not exactly the BWT string 
+              and therefore this macro is called bwt_B0 instead of bwt_B. 
+  */
 #define fmap_bwt_B0(b, k) (fmap_bwt_bwt(b, k)>>((~(k)&0xf)<<1)&3)
 
+// TODO: document
 #define fmap_bwt_occ_intv(b, k) ((b)->bwt + (k)/(b)->occ_interval*12)
 
-// inverse Psi function
+/*! @macro 
+  @abstract    inverse Psi function
+  @param  bwt  pointer to the bwt structure
+  @param  k    the occurence position 
+  @return      the suffix array position
+  */
 #define fmap_bwt_invPsi(bwt, k)												\
   (((k) == (bwt)->primary)? 0 :										\
    ((k) < (bwt)->primary)?											\
    (bwt)->L2[fmap_bwt_B0(bwt, k)] + bwt_occ(bwt, k, fmap_bwt_B0(bwt, k))		\
    : (bwt)->L2[fmap_bwt_B0(bwt, (k)-1)] + bwt_occ(bwt, k, fmap_bwt_B0(bwt, (k)-1)))
-
 
 #endif
