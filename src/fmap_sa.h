@@ -67,6 +67,16 @@ fmap_sa_bwt2sa(const char *fn_fasta, uint32_t intv);
 uint32_t 
 fmap_sa_gen_short(const uint8_t *T, int32_t *SA, uint32_t n);
 
+
+/*! @function
+  @abstract     main-like function for 'fmap bwt2sa'
+  @param  argc  the number of arguments
+  @param  argv  the argument list
+  @return       0 if executed successful
+  */
+int
+fmap_sa_bwt2sa_main(int argc, char *argv[]);
+
 #define KEY(V, I, p, h)                                 ( V[ I[p] + h ] )
 #define INSERT_SORT_NUM_ITEM    16
 

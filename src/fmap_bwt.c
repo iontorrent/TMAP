@@ -32,6 +32,7 @@
 #include "fmap_error.h"
 #include "fmap_alloc.h"
 #include "fmap_refseq.h"
+#include "fmap_bwt_gen.h"
 #include "fmap_bwt.h"
 
 fmap_bwt_t *
@@ -315,4 +316,28 @@ bwt_match_exact_alt(const fmap_bwt_t *bwt, int len, const uint8_t *str, uint32_t
   }
   *k0 = k; *l0 = l;
   return l - k + 1;
+}
+
+int
+fmap_bwt_pac2bwt_main(int argc, char *argv[])
+{
+  int c, is_large = 0, occ_interval = FMAP_BWT_OCC_INTERVAL;
+  while((c = getopt(argc, argv, "o:l")) >= 0) {
+      switch(c) {
+        case 'l': is_large= 1; break;
+        case 'o': occ_interval = atoi(optarg); break;
+        default: return 1;
+      }
+  }
+  if (argc < 2) {
+      fprintf(stderr, "Usage: %s %s [-l -o INT] <in.fasta>\n", PACKAGE, argv[0]);
+      return 1;
+  }
+  if(0 < occ_interval && 0 != (occ_interval % 16)) {
+      fmap_error("option -o out of range", Exit, CommandLineArgument);
+  }
+
+  fmap_bwt_pac2bwt(argv[2], is_large, occ_interval);
+
+  return 0;
 }

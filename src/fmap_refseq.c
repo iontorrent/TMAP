@@ -5,6 +5,7 @@
 #include "fmap_error.h"
 #include "fmap_alloc.h"
 #include "fmap_seq.h"
+#include "fmap_io.h"
 #include "fmap_definitions.h"
 #include "fmap_progress.h"
 #include "fmap_refseq.h"
@@ -168,7 +169,7 @@ fmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   fmap_seq_destroy(seq);
   free(fn_pac);
   free(fn_anno);
-  
+
   fmap_progress_print2("packed reference FASTA");
 
   return ref_len;
@@ -366,4 +367,15 @@ fmap_refseq_pac2real(fmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_length
   (*pos) = fmap_refseq_get_pos(refseq, pacpos, (*seqid));
 
   return (*pos);
+}
+
+int
+fmap_refseq_fasta2pac_main(int argc, char *argv[])
+{
+  if(argc < 2) {
+      fprintf(stderr, "Usage: %s %s <in.fasta>\n", PACKAGE, argv[0]);
+      return 1;
+  }
+  fmap_refseq_fasta2pac(argv[1], FMAP_FILE_NO_COMPRESSION);
+  return 0;
 }

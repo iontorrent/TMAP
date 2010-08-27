@@ -117,7 +117,7 @@ fmap_sa_bwt2sa(const char *fn_fasta, uint32_t intv)
 
   fmap_bwt_destroy(bwt);
   fmap_sa_destroy(sa);
-  
+
   fmap_progress_print2("constructing SA from BWT string");
 }
 
@@ -806,4 +806,27 @@ fmap_sa_gen_short(const uint8_t *T, int32_t *SA, uint32_t n)
       return 0;
   }
   return sais_main(T, SA+1, 0, n, 256, 1);
+}
+
+int
+fmap_sa_bwt2sa_main(int argc, char *argv[])
+{
+  int c, intv = FMAP_SA_INTERVAL;
+  while((c = getopt(argc, argv, "i:")) >= 0) {
+      switch(c) {
+        case 'i': intv = atoi(optarg); break;
+        default: return 1;
+      }
+  }
+  if (argc < 2) {
+      fprintf(stderr, "Usage: %s %s [-i INT] <in.fasta>\n", PACKAGE, argv[0]);
+      return 1;
+  }
+  if(0 < intv && 0 != (intv % 2)) {
+      fmap_error("option -i out of range", Exit, CommandLineArgument);
+  }
+
+  fmap_sa_bwt2sa(argv[1], intv);
+
+  return 0;
 }

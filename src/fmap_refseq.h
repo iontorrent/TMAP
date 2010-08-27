@@ -158,4 +158,13 @@ fmap_refseq_seq_len(const char *fn_fasta);
   */
 inline int32_t
 fmap_refseq_pac2real(fmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos);
+
+/*! @function
+  @abstract     main-like function for 'fmap fasta2pac'
+  @param  argc  the number of arguments
+  @param  argv  the argument list
+  @return       0 if executed successful
+  */
+int
+fmap_refseq_fasta2pac_main(int argc, char *argv[]);
 #endif

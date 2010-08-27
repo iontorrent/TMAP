@@ -175,7 +175,7 @@ bwt_match_exact_alt(const fmap_bwt_t *bwt, int len, const uint8_t *str, uint32_t
   @param  k   the zero-based index of the bwt character to retrieve
   @return     the bwt character from the $-removed BWT string.
   @discussion Note that fmap_bwt_t::bwt is not exactly the BWT string 
-              and therefore this macro is called bwt_B0 instead of bwt_B. 
+  and therefore this macro is called bwt_B0 instead of bwt_B. 
   */
 #define fmap_bwt_B0(b, k) (fmap_bwt_bwt(b, k)>>((~(k)&0xf)<<1)&3)
 
@@ -193,5 +193,14 @@ bwt_match_exact_alt(const fmap_bwt_t *bwt, int len, const uint8_t *str, uint32_t
    ((k) < (bwt)->primary)?											\
    (bwt)->L2[fmap_bwt_B0(bwt, k)] + bwt_occ(bwt, k, fmap_bwt_B0(bwt, k))		\
    : (bwt)->L2[fmap_bwt_B0(bwt, (k)-1)] + bwt_occ(bwt, k, fmap_bwt_B0(bwt, (k)-1)))
+
+/*! @function
+  @abstract     main-like function for 'fmap pac2bwt'
+  @param  argc  the number of arguments
+  @param  argv  the argument list
+  @return       0 if executed successful
+  */
+int
+fmap_bwt_pac2bwt_main(int argc, char *argv[]);
 
 #endif
