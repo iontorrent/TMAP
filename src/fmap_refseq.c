@@ -110,23 +110,16 @@ fmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   // output files
   fn_pac = fmap_refseq_get_file_name(fn_fasta, FMAP_REFSEQ_PAC_FILE);
   fp_pac = fmap_file_fopen(fn_pac, "wb", FMAP_REFSEQ_PAC_COMPRESSION);
-  fn_anno = fmap_refseq_get_file_name(fn_fasta, FMAP_REFSEQ_ANNO_FILE);
-  fp_anno = fmap_file_fopen(fn_anno, "wb", FMAP_REFSEQ_ANNO_COMPRESSION);
 
   // read in sequences
   while(0 <= (l = fmap_seq_read(seq))) {
+      fmap_progress_print2("packing [%s:1-%d]", seq->name.s, l);
+
       refseq->num_annos++;
       refseq->annos = fmap_realloc(refseq->annos, sizeof(fmap_anno_t)*refseq->num_annos, "refseq->annos");
       refseq->annos[refseq->num_annos-1].name = fmap_strdup(seq->name.s);  // sequence name
       refseq->annos[refseq->num_annos-1].len = l;
       refseq->annos[refseq->num_annos-1].offset = (1 == refseq->num_annos) ? 0 : refseq->annos[refseq->num_annos-2].offset + refseq->annos[refseq->num_annos-2].len;
-      if(refseq->num_annos <= 1) {
-          refseq->annos[refseq->num_annos-1].offset = 0; 
-      }
-      else {
-          refseq->annos[refseq->num_annos-1].offset = refseq->annos[refseq->num_annos-2].offset 
-            + refseq->annos[refseq->num_annos-2].len;
-      }
 
       // fill the buffer
       for(i=0;i<l;i++) {
@@ -162,8 +155,11 @@ fmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   ref_len = refseq->len; // save for return
 
   // write annotation file
+  fn_anno = fmap_refseq_get_file_name(fn_fasta, FMAP_REFSEQ_ANNO_FILE);
+  fp_anno = fmap_file_fopen(fn_anno, "wb", FMAP_REFSEQ_ANNO_COMPRESSION);
   fmap_refseq_write_anno(fp_anno, refseq); 
 
+  // close files
   fmap_file_fclose(fp_fasta);
   fmap_file_fclose(fp_pac);
   fmap_file_fclose(fp_anno);
@@ -236,7 +232,7 @@ fmap_refseq_read_anno(fmap_file_t *fp, fmap_refseq_t *refseq)
   uint32_t i;
   // read annotation file
   fmap_refseq_read_header(fp, refseq); // read the header
-  refseq->annos = fmap_malloc(sizeof(fmap_anno_t)*refseq->num_annos, "refseq->annos"); // allocate memory
+  refseq->annos = fmap_calloc(refseq->num_annos, sizeof(fmap_anno_t), "refseq->annos"); // allocate memory
   for(i=0;i<refseq->num_annos;i++) { // read the annotations
       fmap_refseq_read_annos(fp, &refseq->annos[i]);
   }
@@ -272,21 +268,15 @@ fmap_refseq_read(const char *prefix)
   return refseq;
 }
 
-static void
-fmap_refseq_destroy_annos(fmap_anno_t *anno)
-{
-  free(anno->name);
-  free(anno);
-}
-
 void
 fmap_refseq_destroy(fmap_refseq_t *refseq)
 {
   uint32_t i;
 
   for(i=0;i<refseq->num_annos;i++) {
-      fmap_refseq_destroy_annos(&refseq->annos[i]);
+      free(refseq->annos[i].name);
   }
+  free(refseq->annos);
   free(refseq->seq);
   free(refseq);
 }
