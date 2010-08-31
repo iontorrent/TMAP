@@ -4,28 +4,33 @@
 #include "fmap_error.h"
 #include "fmap_alloc.h"
 #include "fmap_io.h"
-#include "fmap_refseq.h"
 #include "fmap_bwt.h"
 #include "fmap_bwt_gen.h"
 #include "fmap_progress.h"
+#include "fmap_definitions.h"
 #include "fmap_sa.h"
 
 fmap_sa_t *
-fmap_sa_read(const char *fn_fasta)
+fmap_sa_read(const char *fn_fasta, uint32_t is_rev)
 {
   char *fn_sa = NULL;
   fmap_file_t *fp_sa = NULL;
   fmap_sa_t *sa = NULL;
 
-  fn_sa = fmap_refseq_get_file_name(fn_fasta, FMAP_REFSEQ_SA_FILE);
-  fp_sa = fmap_file_fopen(fn_sa, "rb", FMAP_REFSEQ_SA_COMPRESSION);
+  fn_sa = fmap_get_file_name(fn_fasta, (0 == is_rev) ? FMAP_SA_FILE : FMAP_REV_SA_FILE);
+  fp_sa = fmap_file_fopen(fn_sa, "rb", (0 == is_rev) ? FMAP_SA_COMPRESSION : FMAP_REV_SA_COMPRESSION);
 
   sa = fmap_calloc(1, sizeof(fmap_sa_t), "sa");
 
   if(1 != fmap_file_fread(&sa->primary, sizeof(uint32_t), 1, fp_sa)
      || 1 != fmap_file_fread(&sa->sa_intv, sizeof(uint32_t), 1, fp_sa)
-     || 1 != fmap_file_fread(&sa->seq_len, sizeof(uint32_t), 1, fp_sa)) {
+     || 1 != fmap_file_fread(&sa->seq_len, sizeof(uint32_t), 1, fp_sa)
+     || 1 != fmap_file_fread(&sa->is_rev, sizeof(uint32_t), 1, fp_sa)) {
       fmap_error(NULL, Exit, ReadFileError);
+  }
+
+  if(is_rev != sa->is_rev) {
+      fmap_error("is_rev != sa->is_rev", Exit, OutOfRange);
   }
 
   sa->n_sa = (sa->seq_len + sa->sa_intv) / sa->sa_intv;
@@ -43,13 +48,17 @@ fmap_sa_read(const char *fn_fasta)
 }
 
 void 
-fmap_sa_write(const char *fn_fasta, fmap_sa_t *sa)
+fmap_sa_write(const char *fn_fasta, fmap_sa_t *sa, uint32_t is_rev)
 {
   char *fn_sa = NULL;
   fmap_file_t *fp_sa = NULL;
+  
+  if(is_rev != sa->is_rev) {
+      fmap_error("is_rev != sa->is_rev", Exit, OutOfRange);
+  }
 
-  fn_sa = fmap_refseq_get_file_name(fn_fasta, FMAP_REFSEQ_SA_FILE);
-  fp_sa = fmap_file_fopen(fn_sa, "wb", FMAP_REFSEQ_SA_COMPRESSION);
+  fn_sa = fmap_get_file_name(fn_fasta, (0 == is_rev) ? FMAP_SA_FILE : FMAP_REV_SA_FILE);
+  fp_sa = fmap_file_fopen(fn_sa, "wb", (0 == is_rev) ? FMAP_SA_COMPRESSION : FMAP_REV_SA_COMPRESSION);
 
   if(1 != fmap_file_fwrite(&sa->primary, sizeof(uint32_t), 1, fp_sa)
      || 1 != fmap_file_fwrite(&sa->sa_intv, sizeof(uint32_t), 1, fp_sa) 
@@ -89,36 +98,50 @@ fmap_sa_bwt2sa(const char *fn_fasta, uint32_t intv)
   uint32_t isa, s, i; // S(isa) = sa
   fmap_bwt_t *bwt = NULL;
   fmap_sa_t *sa = NULL;
+  uint32_t is_rev;
 
-  fmap_progress_set_start_time(clock());
-  fmap_progress_print1("constructing SA from BWT string", 0);
+  for(is_rev=0;is_rev<=1;is_rev++) {
+      fmap_progress_set_start_time(clock());
+      if(is_rev == 0) {
+          fmap_progress_print("constructing the SA from the BWT string");
+      }
+      else {
+          fmap_progress_print("constructing the reverse SA from the reverse BWT string");
+      }
 
-  bwt = fmap_bwt_read(fn_fasta);
+      bwt = fmap_bwt_read(fn_fasta, is_rev);
 
-  sa = fmap_calloc(1, sizeof(fmap_sa_t), "sa");
+      sa = fmap_calloc(1, sizeof(fmap_sa_t), "sa");
 
-  sa->primary = bwt->primary;
-  sa->sa_intv = intv;
-  sa->seq_len = bwt->seq_len;
-  sa->n_sa = (bwt->seq_len + intv) / intv;
+      sa->primary = bwt->primary;
+      sa->sa_intv = intv;
+      sa->seq_len = bwt->seq_len;
+      sa->is_rev = is_rev;
+      sa->n_sa = (bwt->seq_len + intv) / intv;
 
-  // calculate SA value
-  sa->sa = fmap_calloc(sa->n_sa, sizeof(uint32_t), "sa->sa");
-  isa = 0; s = bwt->seq_len;
-  for(i = 0; i < bwt->seq_len; ++i) {
+      // calculate SA value
+      sa->sa = fmap_calloc(sa->n_sa, sizeof(uint32_t), "sa->sa");
+      isa = 0; s = bwt->seq_len;
+      for(i = 0; i < bwt->seq_len; ++i) {
+          if(isa % intv == 0) sa->sa[isa/intv] = s;
+          --s;
+          isa = fmap_bwt_invPsi(bwt, isa);
+      }
       if(isa % intv == 0) sa->sa[isa/intv] = s;
-      --s;
-      isa = fmap_bwt_invPsi(bwt, isa);
+      sa->sa[0] = (uint32_t)-1; // before this line, bwt->sa[0] = bwt->seq_len
+
+      fmap_sa_write(fn_fasta, sa, is_rev);
+
+      fmap_bwt_destroy(bwt);
+      fmap_sa_destroy(sa);
+
+      if(is_rev == 0) {
+          fmap_progress_print2("constructed the SA from the BWT string");
+      }
+      else {
+          fmap_progress_print2("constructed the reverse SA from the reverse BWT string");
+      }
   }
-  if(isa % intv == 0) sa->sa[isa/intv] = s;
-  sa->sa[0] = (uint32_t)-1; // before this line, bwt->sa[0] = bwt->seq_len
-
-  fmap_sa_write(fn_fasta, sa);
-
-  fmap_bwt_destroy(bwt);
-  fmap_sa_destroy(sa);
-
-  fmap_progress_print2("constructing SA from BWT string");
 }
 
 /* 

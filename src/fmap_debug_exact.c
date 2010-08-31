@@ -7,9 +7,10 @@
 #include "fmap_sa.h"
 #include "fmap_seq.h"
 #include "fmap_definitions.h"
-#include "fmap_exact.h"
+#include "fmap_debug_exact.h"
 
-static void fmap_exact_print_sam_unmapped(fmap_seq_t *seq)
+static void 
+fmap_debug_exact_print_sam_unmapped(fmap_seq_t *seq)
 {
   uint16_t flag = 0x0004;
   fprintf(stdout, "%s\t%u\t%s\t%u\t%u\t*\t*\t0\t0\t%s\t%s\n",
@@ -17,13 +18,14 @@ static void fmap_exact_print_sam_unmapped(fmap_seq_t *seq)
               0, 0, seq->seq.s, seq->qual.s);
 }
 
-static int32_t fmap_exact_print_sam(fmap_refseq_t *refseq, fmap_seq_t *seq, uint32_t pacpos, uint8_t strand)
+static int32_t 
+fmap_debug_exact_print_sam(fmap_refseq_t *refseq, fmap_seq_t *seq, uint32_t pacpos, uint8_t strand)
 {
   uint32_t pos, seqid;
   uint16_t flag = 0;
 
   if(0 <= fmap_refseq_pac2real(refseq, pacpos, seq->seq.l, &seqid, &pos)) {
-      if(1 == strand) { // reverse for the outptu
+      if(1 == strand) { // reverse for the output
           flag |= 0x0010;
           fmap_seq_reverse(seq, 1);
       }
@@ -38,7 +40,8 @@ static int32_t fmap_exact_print_sam(fmap_refseq_t *refseq, fmap_seq_t *seq, uint
   return 0;
 }
 
-static void fmap_exact_core_worker(fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *sa, fmap_seq_t *seq)
+static void 
+fmap_debug_exact_core_worker(fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *sa, fmap_seq_t *seq)
 {
   uint32_t i;
   uint32_t sa_begin, sa_end;
@@ -54,27 +57,28 @@ static void fmap_exact_core_worker(fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_
 
   if(0 != bwt_match_exact(bwt, seq->seq.l, seq_int, &sa_begin, &sa_end)) {
       for(i=sa_begin;i<=sa_end;i++) {
-          if(0 != fmap_exact_print_sam(refseq, seq, fmap_sa_pac_pos(sa, bwt, i), 0)) {
+          if(0 != fmap_debug_exact_print_sam(refseq, seq, fmap_sa_pac_pos(sa, bwt, i), 0)) {
               mapped = 1;
           }
       }
   }
   if(0 != bwt_match_exact(bwt, seq->seq.l, seq_int_rc, &sa_begin, &sa_end)) {
       for(i=sa_begin;i<=sa_end;i++) {
-          if(0 != fmap_exact_print_sam(refseq, seq, fmap_sa_pac_pos(sa, bwt, i), 1)) {
+          if(0 != fmap_debug_exact_print_sam(refseq, seq, fmap_sa_pac_pos(sa, bwt, i), 1)) {
               mapped = 1;
           }
       }
   }
 
   if(0 == mapped) {
-      fmap_exact_print_sam_unmapped(seq);
+      fmap_debug_exact_print_sam_unmapped(seq);
   }
   
   free(seq_int);
 }
 
-static void fmap_exact_core(fmap_exact_opt_t *opt)
+static void 
+fmap_debug_exact_core(fmap_debug_exact_opt_t *opt)
 {
   uint32_t i;
   fmap_refseq_t *refseq=NULL;
@@ -84,20 +88,21 @@ static void fmap_exact_core(fmap_exact_opt_t *opt)
   fmap_seq_t *seq=NULL;
   
   // SAM header
-  refseq = fmap_refseq_read(opt->fn_fasta);
+  refseq = fmap_refseq_read(opt->fn_fasta, 0);
   for(i=0;i<refseq->num_annos;i++) {
       fprintf(stdout, "@SQ\tSN:%s\tLN:%d\n",
               refseq->annos[i].name, (int)refseq->annos[i].len);
   }
 
-  bwt = fmap_bwt_read(opt->fn_fasta);
-  sa = fmap_sa_read(opt->fn_fasta);
+  // TODO modify so we use forward search
+  bwt = fmap_bwt_read(opt->fn_fasta, 1);
+  sa = fmap_sa_read(opt->fn_fasta, 1);
 
   fp_reads = fmap_file_fopen(opt->fn_reads, "rb", FMAP_FILE_NO_COMPRESSION);
   seq = fmap_seq_init(fp_reads);
 
   while(0 <= fmap_seq_read(seq)) {
-      fmap_exact_core_worker(refseq, bwt, sa, seq);
+      fmap_debug_exact_core_worker(refseq, bwt, sa, seq);
   }
 
   fmap_file_fclose(fp_reads);
@@ -106,7 +111,8 @@ static void fmap_exact_core(fmap_exact_opt_t *opt)
   fmap_sa_destroy(sa);
 }
 
-static int usage(fmap_exact_opt_t *opt)
+static int 
+usage(fmap_debug_exact_opt_t *opt)
 {
   fprintf(stderr, "\n");
   fprintf(stderr, "Usage: %s exact [optionsn", PACKAGE);
@@ -120,10 +126,11 @@ static int usage(fmap_exact_opt_t *opt)
   return 1;
 }
 
-int fmap_exact(int argc, char *argv[])
+int 
+fmap_debug_exact(int argc, char *argv[])
 {
   int c;
-  fmap_exact_opt_t opt;
+  fmap_debug_exact_opt_t opt;
 
   opt.fn_fasta = NULL;
 
@@ -149,7 +156,7 @@ int fmap_exact(int argc, char *argv[])
       fmap_error("required option -r", Exit, CommandLineArgument);
   }
 
-  fmap_exact_core(&opt);
+  fmap_debug_exact_core(&opt);
 
   free(opt.fn_fasta);
   free(opt.fn_reads);

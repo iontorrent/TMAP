@@ -4,7 +4,7 @@
 
 static char error_string[][64] =
 { 
-  "value out of range",
+  "the value is out of range",
   "command line argument",
   "could not re-allocate memory",
   "could not allocate memory",

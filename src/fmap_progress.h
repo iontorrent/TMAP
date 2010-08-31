@@ -27,6 +27,14 @@ fmap_progress_set_verbosity(int32_t verbosity);
 /*! @function
   @abstract
   @param  format      the format for the message
+  @param  ...         the arguments to fill in the format
+  */
+void
+fmap_progress_print(const char *format, ...);
+
+/*! @function
+  @abstract
+  @param  format      the format for the message
   @param  start_time  the execution start time 
   @param  ...         the arguments to fill in the format
   */

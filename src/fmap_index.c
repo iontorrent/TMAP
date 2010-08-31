@@ -29,9 +29,11 @@ static void fmap_index_core(fmap_index_opt_t *opt)
       }
       else if(FMAP_INDEX_LARGE_GENOME <= ref_len) { 
           opt->is_large = 1;
+          fmap_progress_print("defaulting to \"bwtsw\" bwt construction algorithm");
       }
       else {
           opt->is_large = 0;
+          fmap_progress_print("defaulting to \"is\" bwt construction algorithm");
       }
   }
 

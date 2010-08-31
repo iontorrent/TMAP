@@ -37,6 +37,7 @@
 #include "fmap_bwt.h"
 #include "fmap_sa.h"
 #include "fmap_progress.h"
+#include "fmap_definitions.h"
 #include "fmap_bwt_gen.h"
 
 static uint32_t 
@@ -1484,7 +1485,7 @@ BWTIncConstructFromPacked(const char *inputFileName, const float targetNBit,
       BWTIncConstruct(bwtInc, textToLoad);
       processedTextLength += textToLoad;
       if (bwtInc->numberOfIterationDone % 10 == 0) {
-          fmap_progress_print2("%u iterations done, with %u bases processed", bwtInc->numberOfIterationDone, processedTextLength);
+          fmap_progress_print2("%u iterations done with %u bases processed", bwtInc->numberOfIterationDone, processedTextLength);
       }
   }
   return bwtInc;
@@ -1525,13 +1526,21 @@ BWTFileSizeInWord(const uint32_t numChar)
 }
 
 void 
-BWTSaveBwtCodeAndOcc(fmap_bwt_t *bwt_out, const BWT *bwt, const char *fn_fasta, int32_t occ_interval)
+BWTSaveBwtCodeAndOcc(fmap_bwt_t *bwt_out, const BWT *bwt, const char *fn_fasta, int32_t occ_interval, uint32_t is_rev)
 {
   uint32_t i;
   fmap_bwt_t *bwt_tmp=NULL;
 
   // Move over to bwt data structure
   if(bwt_out->bwt_size != BWTFileSizeInWord(bwt->textLength)) {
+      // HERE
+      fprintf(stderr, "bwt_out->bwt_size=%lld BWTFileSizeInWord(bwt->textLength)=%lld\n",
+              (long long int)bwt_out->bwt_size, 
+              (long long int)BWTFileSizeInWord(bwt->textLength));
+      fprintf(stderr, "bwt->textLength=%lld\n",
+              (long long int)bwt->textLength);
+      fprintf(stderr, "bwt_out->seq_len=%lld\n",
+              (long long int)bwt_out->seq_len);
       fmap_error(NULL, Exit, OutOfRange);
   }
   bwt_out->primary = bwt->inverseSa0;
@@ -1542,16 +1551,17 @@ BWTSaveBwtCodeAndOcc(fmap_bwt_t *bwt_out, const BWT *bwt, const char *fn_fasta, 
   bwt_out->occ_interval = OCC_INTERVAL;
 
   // write
-  fmap_bwt_write(fn_fasta, bwt_out);
+  bwt_out->is_rev = is_rev;
+  fmap_bwt_write(fn_fasta, bwt_out, is_rev);
 
   // nullify
   bwt_out->bwt = NULL;
 
   // update occurrence interval
   if(0 < occ_interval && bwt_out->occ_interval != occ_interval) {
-      bwt_tmp = fmap_bwt_read(fn_fasta);
+      bwt_tmp = fmap_bwt_read(fn_fasta, is_rev);
       fmap_bwt_update(bwt_tmp, occ_interval);
-      fmap_bwt_write(fn_fasta, bwt_tmp);
+      fmap_bwt_write(fn_fasta, bwt_tmp, is_rev);
       fmap_bwt_destroy(bwt_tmp);
   }
 }
@@ -1562,64 +1572,78 @@ fmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval)
   BWTInc *bwtInc=NULL;
   fmap_bwt_t *bwt=NULL;
   uint8_t *buf=NULL;
-  uint32_t i;
+  uint32_t i, is_rev;
   char *fn_pac=NULL;
   fmap_refseq_t *refseq=NULL;
 
-  // progress
-  fmap_progress_set_start_time(clock());
-  fmap_progress_print1("constructing BWT string from the packed FASTA", 0);
+  for(is_rev=0;is_rev<=1;is_rev++) { // forward/reverse
 
-  // read in packed FASTA
-  refseq = fmap_refseq_read(fn_fasta);
-
-  // initialization
-  bwt = fmap_calloc(1, sizeof(fmap_bwt_t), "bwt");
-  bwt->seq_len = refseq->len;
-  bwt->bwt_size = (bwt->seq_len + 15) >> 4;
-
-  if(1 == is_large) {
-      fn_pac = fmap_refseq_get_file_name(fn_fasta, FMAP_REFSEQ_PAC_FILE);
-      if(FMAP_REFSEQ_PAC_COMPRESSION != FMAP_FILE_NO_COMPRESSION) { // the below uses fseek
-          fmap_error("PAC compression not supported", Exit, OutOfRange);
+      // progress
+      fmap_progress_set_start_time(clock());
+      if(0 == is_rev) {
+          fmap_progress_print("constructing the BWT string from the packed FASTA");
       }
-      bwtInc = BWTIncConstructFromPacked(fn_pac, 2.5, 10000000, 10000000);
-      BWTSaveBwtCodeAndOcc(bwt, bwtInc->bwt, fn_fasta, occ_interval);
-      BWTIncFree(bwtInc);
-      free(fn_pac);
+      else {
+          fmap_progress_print("constructing the reverse BWT string from the reversed packed FASTA");
+      }
+
+      // read in packed FASTA
+      refseq = fmap_refseq_read(fn_fasta, is_rev);
+
+      // initialization
+      bwt = fmap_calloc(1, sizeof(fmap_bwt_t), "bwt");
+      bwt->seq_len = refseq->len;
+      bwt->bwt_size = (bwt->seq_len + 15) >> 4;
+
+      if(1 == is_large) {
+          fn_pac = fmap_get_file_name(fn_fasta, (0 == is_rev) ? FMAP_PAC_FILE : FMAP_REV_PAC_FILE);
+          if(FMAP_PAC_COMPRESSION != FMAP_FILE_NO_COMPRESSION) { // the below uses fseek
+              fmap_error("PAC compression not supported", Exit, OutOfRange);
+          }
+          bwtInc = BWTIncConstructFromPacked(fn_pac, 2.5, 10000000, 10000000);
+          BWTSaveBwtCodeAndOcc(bwt, bwtInc->bwt, fn_fasta, occ_interval, is_rev);
+          BWTIncFree(bwtInc);
+          free(fn_pac);
+      }
+      else {
+          // From bwtmisc.c at http://bio-bwa.sf.net
+
+          // prepare sequence
+          memset(bwt->L2, 0, 5 * 4);
+          buf = fmap_calloc(bwt->seq_len + 1, 1, "buf");
+          for(i = 0; i < bwt->seq_len; ++i) {
+              buf[i] = fmap_refseq_seq_i(refseq, i);
+              ++bwt->L2[1+buf[i]];
+          }
+          for (i = 2; i <= 4; ++i) bwt->L2[i] += bwt->L2[i-1];
+
+          // Burrows-Wheeler Transform
+          bwt->primary = fmap_bwt_gen_short(buf, bwt->seq_len);
+          bwt->bwt = fmap_calloc(bwt->bwt_size, sizeof(uint32_t), "bwt->bwt");
+          for(i=0;i<bwt->seq_len;i++) {
+              bwt->bwt[i>>4] |= buf[i] << ((15 - (i&15)) << 1);
+          }
+          free(buf);
+          bwt->occ_interval = 1; 
+
+          // update occurrence interval
+          if(0 < occ_interval && bwt->occ_interval != occ_interval) {
+              fmap_bwt_update(bwt, occ_interval);
+          }
+
+          bwt->is_rev = is_rev;
+          fmap_bwt_write(fn_fasta, bwt, is_rev);
+      }
+      fmap_bwt_destroy(bwt);
+      fmap_refseq_destroy(refseq);
+
+      if(0 == is_rev) {
+          fmap_progress_print2("constructed the BWT string from the packed FASTA");
+      }
+      else {
+          fmap_progress_print2("constructed the reverse BWT string from the reversed packed FASTA");
+      }
   }
-  else {
-      // From bwtmisc.c at http://bio-bwa.sf.net
-
-      // prepare sequence
-      memset(bwt->L2, 0, 5 * 4);
-      buf = fmap_calloc(bwt->seq_len + 1, 1, "buf");
-      for(i = 0; i < bwt->seq_len; ++i) {
-          buf[i] = fmap_refseq_seq_i(refseq, i);
-          ++bwt->L2[1+buf[i]];
-      }
-      for (i = 2; i <= 4; ++i) bwt->L2[i] += bwt->L2[i-1];
-
-      // Burrows-Wheeler Transform
-      bwt->primary = fmap_bwt_gen_short(buf, bwt->seq_len);
-      bwt->bwt = fmap_calloc(bwt->bwt_size, sizeof(uint32_t), "bwt->bwt");
-      for(i=0;i<bwt->seq_len;i++) {
-          bwt->bwt[i>>4] |= buf[i] << ((15 - (i&15)) << 1);
-      }
-      free(buf);
-      bwt->occ_interval = 1; 
-
-      // update occurrence interval
-      if(0 < occ_interval && bwt->occ_interval != occ_interval) {
-          fmap_bwt_update(bwt, occ_interval);
-      }
-
-      fmap_bwt_write(fn_fasta, bwt);
-  }
-  fmap_bwt_destroy(bwt);
-  fmap_refseq_destroy(refseq);
-
-  fmap_progress_print2("constructed BWT string from the packed FASTA");
 }
 
 /*

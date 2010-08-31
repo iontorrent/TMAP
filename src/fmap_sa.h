@@ -7,6 +7,7 @@
   @field  primary  S^{-1}(0), or the primary index of BWT
   @field  sa_intv  the suffix array interval (sampled)
   @field  seq_len  the length of the reference sequence
+  @field  is_rev        1 if the reference sequence was reversed, 0 otherwise
   @field  n_sa     number of suffix array entries
   @field  sa       pointer to the suffix array entries
   */
@@ -14,6 +15,7 @@ typedef struct {
     uint32_t primary; // S^{-1}(0), or the primary index of BWT
     uint32_t sa_intv; // a power of 2
     uint32_t seq_len;  
+    uint32_t is_rev;
     uint32_t n_sa;
     uint32_t *sa;
 } fmap_sa_t;
@@ -21,18 +23,20 @@ typedef struct {
 /*! @function
   @abstract
   @param  fn_fasta  the FASTA file name
+  @param  is_rev    0 if to read the reverse packed sequence, 1 otherwise
   @return           pointer to the sa structure 
   */
 fmap_sa_t *
-fmap_sa_read(const char *fn_fasta);
+fmap_sa_read(const char *fn_fasta, uint32_t is_rev);
 
 /*! @function
   @abstract
   @param  fn_fasta  the FASTA file name
+  @param  is_rev    0 if to write the reverse packed sequence, 1 otherwise
   @param  sa        the sa structure to write
   */
 void
-fmap_sa_write(const char *fn_fasta, fmap_sa_t *sa);
+fmap_sa_write(const char *fn_fasta, fmap_sa_t *sa, uint32_t is_rev);
 
 /*! @function
   @param  sa  pointer to the suffix array structure

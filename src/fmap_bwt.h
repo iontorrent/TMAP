@@ -47,6 +47,7 @@ typedef unsigned char uint8_t;
   @field  occ_interval  occurence array interval, must be a strictly positive power of 16: (16, 32, 48, ...)
   @field  bwt           burrows-wheeler transform
   @field  cnt_table     occurrence array
+  @field  is_rev        1 if the reference sequence was reversed, 0 otherwise
   */
 typedef struct {
     uint32_t primary; // S^{-1}(0), or the primary index of BWT
@@ -54,25 +55,31 @@ typedef struct {
     uint32_t seq_len; // sequence length
     uint32_t bwt_size; // size of bwt, about seq_len/4
     uint32_t occ_interval;
-    uint32_t *bwt; // BWT
+    uint32_t *bwt; // BWT TODO: could this be stored in a smaller format?
     uint32_t cnt_table[256];
+    uint32_t is_rev;
+    uint32_t *hash_k; // BWT hash TODO: document
+    uint32_t *hash_l; // BWT hash TODO: document
+    uint32_t hash_width; // TODO: document
 } fmap_bwt_t;
 
 /*! @function
   @abstract
   @param  fn_fasta  the FASTA file name
+  @param  is_rev    0 if to read the reverse packed sequence, 1 otherwise
   @return           pointer to the bwt structure 
   */
 fmap_bwt_t *
-fmap_bwt_read(const char *fn_fasta);
+fmap_bwt_read(const char *fn_fasta, uint32_t is_rev);
 
 /*! @function
   @abstract
   @param  fn_fasta  the FASTA file name
+  @param  is_rev    0 if to write the reverse packed sequence, 1 otherwise
   @param  bwt       the bwt structure to write
   */
 void 
-fmap_bwt_write(const char *fn_fasta, fmap_bwt_t *bwt);
+fmap_bwt_write(const char *fn_fasta, fmap_bwt_t *bwt, uint32_t is_rev);
 
 /*! @function
   @abstract
@@ -95,6 +102,14 @@ fmap_bwt_update(fmap_bwt_t *bwt, uint32_t occ_interval);
   */
 void 
 fmap_bwt_gen_cnt_table(fmap_bwt_t *bwt);
+
+/*! @function
+  @abstract           generates the occurrence hash
+  @param  bwt         pointer to the bwt structure to update 
+  @parma  hash_width  the k-mer length to hash
+  */
+void
+fmap_bwt_gen_hash(fmap_bwt_t *bwt, uint32_t hash_width);
 
 /*! @function
   @abstract    calculates the next occurrence given the previous occurence and the next base
@@ -141,7 +156,7 @@ inline void
 bwt_2occ4(const fmap_bwt_t *bwt, uint32_t k, uint32_t l, uint32_t cntk[4], uint32_t cntl[4]);
 
 /*! @function
-  @abstract         computes the SA interval for the given sequence (if any)
+  @abstract         computes the SA interval for the given sequence (if any), using forward search
   @param  bwt       pointer to the bwt structure 
   @param  len       the length of the sequence
   @param  str       the DNA sequence in 2-bit format
@@ -153,7 +168,7 @@ int
 bwt_match_exact(const fmap_bwt_t *bwt, int len, const uint8_t *str, uint32_t *sa_begin, uint32_t *sa_end);
 
 /*! @function
-  @abstract         computes the SA interval for the given sequence (if any)
+  @abstract         computes the SA interval for the given sequence (if any), using forward search
   @param  bwt       pointer to the bwt structure 
   @param  len       the length of the sequence
   @param  str       the DNA sequence in 2-bit format

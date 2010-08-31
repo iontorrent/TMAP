@@ -14,7 +14,9 @@ fmap_bwt_pac2bwt_main(int argc, char *argv[]);
 extern int
 fmap_sa_bwt2sa_main(int argc, char *argv[]);
 extern int 
-fmap_exact(int argc, char *argv[]);
+fmap_debug_exact(int argc, char *argv[]);
+extern int 
+fmap_debug_hash(int argc, char *argv[]);
 
 static int usage()
 {
@@ -37,6 +39,7 @@ static int usage()
   fprintf(stderr, "\n");
   fprintf(stderr, "Debugging:\n");
   fprintf(stderr, "         exact          perform simple exact matching\n");
+  fprintf(stderr, "         hash           creates the BWT hash\n");
   return 1;
 }
 
@@ -47,7 +50,8 @@ int main(int argc, char *argv[])
   else if (0 == strcmp("fasta2pac", argv[1])) return fmap_refseq_fasta2pac_main(argc-1, argv+1);
   else if (0 == strcmp("pac2bwt", argv[1])) return fmap_bwt_pac2bwt_main(argc-1, argv+1);
   else if (0 == strcmp("bwt2sa", argv[1])) return fmap_sa_bwt2sa_main(argc-1, argv+1);
-  else if (0 == strcmp("exact", argv[1])) return fmap_exact(argc-1, argv+1);
+  else if (0 == strcmp("exact", argv[1])) return fmap_debug_exact(argc-1, argv+1);
+  else if (0 == strcmp("hash", argv[1])) return fmap_debug_hash(argc-1, argv+1);
   else {
       fmap_error1(PACKAGE, argv[1], Exit, CommandLineArgument);
   }

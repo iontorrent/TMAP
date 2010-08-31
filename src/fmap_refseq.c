@@ -10,38 +10,6 @@
 #include "fmap_progress.h"
 #include "fmap_refseq.h"
 
-inline char *
-fmap_refseq_get_file_name(const char *prefix, int32_t type)
-{
-  char *fn = NULL;
-
-  switch(type) {
-    case FMAP_REFSEQ_ANNO_FILE:
-      fn = fmap_malloc(sizeof(char)*(1+strlen(prefix)+strlen(FMAP_REFSEQ_ANNO_FILE_EXTENSION)), "fn"); 
-      strcpy(fn, prefix);
-      strcat(fn, FMAP_REFSEQ_ANNO_FILE_EXTENSION);
-      break;
-    case FMAP_REFSEQ_PAC_FILE:
-      fn = fmap_malloc(sizeof(char)*(1+strlen(prefix)+strlen(FMAP_REFSEQ_PAC_FILE_EXTENSION)), "fn"); 
-      strcpy(fn, prefix);
-      strcat(fn, FMAP_REFSEQ_PAC_FILE_EXTENSION);
-      break;
-    case FMAP_REFSEQ_BWT_FILE:
-      fn = fmap_malloc(sizeof(char)*(1+strlen(prefix)+strlen(FMAP_REFSEQ_BWT_FILE_EXTENSION)), "fn"); 
-      strcpy(fn, prefix);
-      strcat(fn, FMAP_REFSEQ_BWT_FILE_EXTENSION);
-      break;
-    case FMAP_REFSEQ_SA_FILE:
-      fn = fmap_malloc(sizeof(char)*(1+strlen(prefix)+strlen(FMAP_REFSEQ_SA_FILE_EXTENSION)), "fn"); 
-      strcpy(fn, prefix);
-      strcat(fn, FMAP_REFSEQ_SA_FILE_EXTENSION);
-      break;
-    default:
-      return NULL;
-  }
-  return fn;
-}
-
 static inline void 
 fmap_refseq_write_header(fmap_file_t *fp, fmap_refseq_t *refseq)
 {
@@ -90,17 +58,18 @@ fmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   uint64_t ref_len;
 
   fmap_progress_set_start_time(clock());
-  fmap_progress_print1("packing reference FASTA", 0);
+  fmap_progress_print("packing the reference FASTA");
 
   refseq = fmap_calloc(1, sizeof(fmap_refseq_t), "refseq");
 
-  refseq->version_id = FMAP_REFSEQ_VERSION_ID; 
+  refseq->version_id = FMAP_VERSION_ID; 
   refseq->seed = FMAP_REFSEQ_SEED;
   srand48(refseq->seed);
   refseq->seq = buffer; // IMPORTANT: must nullify later
   refseq->annos = NULL;
   refseq->num_annos = 0;
   refseq->len = 0;
+  refseq->is_rev = 0;
   memset(buffer, 0, FMAP_REFSEQ_BUFFER_SIZE);
   buffer_length = 0;
 
@@ -109,12 +78,12 @@ fmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   seq = fmap_seq_init(fp_fasta);
 
   // output files
-  fn_pac = fmap_refseq_get_file_name(fn_fasta, FMAP_REFSEQ_PAC_FILE);
-  fp_pac = fmap_file_fopen(fn_pac, "wb", FMAP_REFSEQ_PAC_COMPRESSION);
+  fn_pac = fmap_get_file_name(fn_fasta, FMAP_PAC_FILE);
+  fp_pac = fmap_file_fopen(fn_pac, "wb", FMAP_PAC_COMPRESSION);
 
   // read in sequences
   while(0 <= (l = fmap_seq_read(seq))) {
-      fmap_progress_print2("packing [%s:1-%d]", seq->name.s, l);
+      fmap_progress_print2("packing contig [%s:1-%d]", seq->name.s, l);
 
       refseq->num_annos++;
       refseq->annos = fmap_realloc(refseq->annos, sizeof(fmap_anno_t)*refseq->num_annos, "refseq->annos");
@@ -154,10 +123,10 @@ fmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   }
   refseq->seq = NULL; // IMPORTANT: nullify this
   ref_len = refseq->len; // save for return
-
+  
   // write annotation file
-  fn_anno = fmap_refseq_get_file_name(fn_fasta, FMAP_REFSEQ_ANNO_FILE);
-  fp_anno = fmap_file_fopen(fn_anno, "wb", FMAP_REFSEQ_ANNO_COMPRESSION);
+  fn_anno = fmap_get_file_name(fn_fasta, FMAP_ANNO_FILE);
+  fp_anno = fmap_file_fopen(fn_anno, "wb", FMAP_ANNO_COMPRESSION);
   fmap_refseq_write_anno(fp_anno, refseq); 
 
   // close files
@@ -170,32 +139,85 @@ fmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   free(fn_pac);
   free(fn_anno);
 
-  fmap_progress_print2("packed reference FASTA");
+  fmap_progress_print2("packed the reference FASTA");
+
+  fmap_refseq_pac2revpac(fn_fasta);
 
   return ref_len;
 }
 
+void
+fmap_refseq_pac2revpac(const char *fn_fasta)
+{
+  int32_t i, j, c;
+  fmap_refseq_t *refseq=NULL, *refseq_rev=NULL;
+  
+  fmap_progress_print("reversing the packed reference FASTA");
+  fmap_progress_set_start_time(clock());
+
+  refseq = fmap_refseq_read(fn_fasta, 0);
+
+  // shallow copy
+  refseq_rev = fmap_calloc(1, sizeof(fmap_refseq_t), "refseq_rev");
+  (*refseq_rev) = (*refseq);
+  
+  // update sequence
+  refseq_rev->seq = NULL;
+  refseq_rev->seq = fmap_calloc(fmap_refseq_seq_memory(refseq->len), sizeof(uint8_t), "refseq_rev->seq");
+  for(i=refseq->len-1;0<=i;i--) {
+      c = fmap_refseq_seq_i(refseq, i);
+      j = refseq->len - i - 1;
+      if(j < 0) {
+          fprintf(stderr, "i=%d j=%d c=%d\n", i, j, c);
+      }
+      fmap_refseq_seq_store_i(refseq_rev, j, c);
+  }
+
+  // write
+  fmap_refseq_write(refseq_rev, fn_fasta, 1);
+
+  // free
+  free(refseq_rev->seq);
+  free(refseq_rev);
+  fmap_refseq_destroy(refseq);
+}
+
 void 
-fmap_refseq_write(fmap_refseq_t *refseq, const char *prefix)
+fmap_refseq_write(fmap_refseq_t *refseq, const char *fn_fasta, uint32_t is_rev)
 {
   fmap_file_t *fp_pac = NULL, *fp_anno = NULL;;
   char *fn_pac = NULL, *fn_anno = NULL;
+  uint8_t x = 0;
 
   // write annotation file
-  fn_anno = fmap_refseq_get_file_name(prefix, FMAP_REFSEQ_ANNO_FILE);
-  fp_anno = fmap_file_fopen(fn_anno, "wb", FMAP_REFSEQ_ANNO_COMPRESSION);
-  fmap_refseq_write_anno(fp_anno, refseq); 
-  fmap_file_fclose(fp_anno);
-  free(fn_anno);
+  if(0 == is_rev) {
+      fn_anno = fmap_get_file_name(fn_fasta, FMAP_ANNO_FILE);
+      fp_anno = fmap_file_fopen(fn_anno, "wb", FMAP_ANNO_COMPRESSION);
+      fmap_refseq_write_anno(fp_anno, refseq); 
+      fmap_file_fclose(fp_anno);
+      free(fn_anno);
+  }
 
   // write the sequence
-  fn_pac = fmap_refseq_get_file_name(prefix, FMAP_REFSEQ_PAC_FILE);
-  fp_pac = fmap_file_fopen(fn_pac, "wb", FMAP_REFSEQ_PAC_COMPRESSION);
+  fn_pac = fmap_get_file_name(fn_fasta, (0 == is_rev) ? FMAP_PAC_FILE : FMAP_REV_PAC_FILE);
+  fp_pac = fmap_file_fopen(fn_pac, "wb", (0 == is_rev) ? FMAP_PAC_COMPRESSION : FMAP_REV_PAC_COMPRESSION);
   if(fmap_refseq_seq_memory(refseq->len) != fmap_file_fwrite(refseq->seq, sizeof(uint8_t), fmap_refseq_seq_memory(refseq->len), fp_pac)) {
       fmap_error(NULL, Exit, WriteFileError);
   }
+  if(refseq->len % 4 == 0) { // add an extra byte if we completely filled all bits
+      if(1 != fmap_file_fwrite(&x, sizeof(uint8_t), 1, fp_pac)) {
+          fmap_error(fn_pac, Exit, WriteFileError);
+      }
+  }
+  // store number of unused bits at the last byte
+  x = refseq->len % 4;
+  if(1 != fmap_file_fwrite(&x, sizeof(uint8_t), 1, fp_pac)) {
+      fmap_error(fn_pac, Exit, WriteFileError);
+  }
   fmap_file_fclose(fp_pac);
   free(fn_pac);
+  
+  fmap_progress_print2("reversed the packed reference FASTA");
 }
 
 static inline void 
@@ -240,31 +262,34 @@ fmap_refseq_read_anno(fmap_file_t *fp, fmap_refseq_t *refseq)
 }
 
 fmap_refseq_t *
-fmap_refseq_read(const char *prefix)
+fmap_refseq_read(const char *fn_fasta, uint32_t is_rev)
 {
   fmap_file_t *fp_pac = NULL, *fp_anno = NULL;;
   char *fn_pac = NULL, *fn_anno = NULL;
   fmap_refseq_t *refseq = NULL;
-
+  
   // allocate some memory 
   refseq = fmap_calloc(1, sizeof(fmap_refseq_t), "refseq");
+  refseq->is_rev = is_rev;
 
   // read annotation file
-  fn_anno = fmap_refseq_get_file_name(prefix, FMAP_REFSEQ_ANNO_FILE);
-  fp_anno = fmap_file_fopen(fn_anno, "rb", FMAP_REFSEQ_ANNO_COMPRESSION);
+  fn_anno = fmap_get_file_name(fn_fasta, FMAP_ANNO_FILE);
+  fp_anno = fmap_file_fopen(fn_anno, "rb", FMAP_ANNO_COMPRESSION);
   fmap_refseq_read_anno(fp_anno, refseq); 
   fmap_file_fclose(fp_anno);
   free(fn_anno);
 
   // read the sequence
-  fn_pac = fmap_refseq_get_file_name(prefix, FMAP_REFSEQ_PAC_FILE);
-  fp_pac = fmap_file_fopen(fn_pac, "rb", FMAP_REFSEQ_PAC_COMPRESSION);
-  refseq->seq = fmap_malloc(sizeof(char)*fmap_refseq_seq_memory(refseq->len), "refseq->seq"); // allocate
-  if(fmap_refseq_seq_memory(refseq->len) != fmap_file_fread(refseq->seq, sizeof(uint8_t), fmap_refseq_seq_memory(refseq->len), fp_pac)) {
+  fn_pac = fmap_get_file_name(fn_fasta, (0 == is_rev) ? FMAP_PAC_FILE : FMAP_REV_PAC_FILE);
+  fp_pac = fmap_file_fopen(fn_pac, "rb", (0 == is_rev) ? FMAP_PAC_COMPRESSION : FMAP_REV_PAC_COMPRESSION);
+  refseq->seq = fmap_malloc(sizeof(uint8_t)*fmap_refseq_seq_memory(refseq->len), "refseq->seq"); // allocate
+  if(fmap_refseq_seq_memory(refseq->len) 
+     != fmap_file_fread(refseq->seq, sizeof(uint8_t), fmap_refseq_seq_memory(refseq->len), fp_pac)) {
       fmap_error(NULL, Exit, WriteFileError);
   }
   fmap_file_fclose(fp_pac);
   free(fn_pac);
+
 
   return refseq;
 }
@@ -296,23 +321,6 @@ fmap_refseq_size(fmap_refseq_t *refseq)
   }
 
   return size;
-}
-
-int64_t 
-fmap_refseq_seq_len(const char *fn_fasta)
-{
-  fmap_file_t *fp_anno = NULL;
-  char *fn_anno = NULL;
-  fmap_refseq_t refseq;
-
-  // read header only
-  fn_anno = fmap_refseq_get_file_name(fn_fasta, FMAP_REFSEQ_ANNO_FILE);
-  fp_anno = fmap_file_fopen(fn_anno, "rb", FMAP_REFSEQ_ANNO_COMPRESSION);
-  free(fn_anno); // do not want
-  fmap_refseq_read_header(fp_anno, &refseq);
-  fmap_file_fclose(fp_anno);
-
-  return refseq.len;
 }
 
 // zero-based

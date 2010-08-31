@@ -56,6 +56,17 @@ fmap_progress_vprint1(const char *format, clock_t start_time, va_list ap)
 }
 
 void 
+fmap_progress_print(const char *format, ...)
+{
+  va_list ap;
+  if(0 != fmap_progress_verbosity) {
+      va_start(ap, format);
+      fmap_progress_vprint1(format, 0, ap);
+      va_end(ap);
+  }
+}
+
+void 
 fmap_progress_print1(const char *format, clock_t start_time, ...)
 {
   va_list ap;
