@@ -127,7 +127,7 @@ fmap_bwt_gen_hash(fmap_bwt_t *bwt, uint32_t hash_width);
   @return      the next occurrence given the base
   */
 inline uint32_t 
-bwt_occ(const fmap_bwt_t *bwt, uint32_t k, uint8_t c);
+fmap_bwt_occ(const fmap_bwt_t *bwt, uint32_t k, uint8_t c);
 
 /*! @function
   @abstract    calculates the next occurrences given the previous occurence for all four bases
@@ -136,7 +136,7 @@ bwt_occ(const fmap_bwt_t *bwt, uint32_t k, uint8_t c);
   @param  cnt  pointer to the next occurences for all four bases
   */
 inline void 
-bwt_occ4(const fmap_bwt_t *bwt, uint32_t k, uint32_t cnt[4]);
+fmap_bwt_occ4(const fmap_bwt_t *bwt, uint32_t k, uint32_t cnt[4]);
 
 /*! @function
   @abstract    calculates the SA interval given the previous SA interval and the next base
@@ -149,7 +149,7 @@ bwt_occ4(const fmap_bwt_t *bwt, uint32_t k, uint32_t cnt[4]);
   @discussion  more efficient version of bwt_occ but requires that k <= l (not checked)
   */
 inline void 
-bwt_2occ(const fmap_bwt_t *bwt, uint32_t k, uint32_t l, uint8_t c, uint32_t *ok, uint32_t *ol);
+fmap_bwt_2occ(const fmap_bwt_t *bwt, uint32_t k, uint32_t l, uint8_t c, uint32_t *ok, uint32_t *ol);
 
 /*! @function
   @abstract     calculates the next SA intervals given the previous SA intervals for all four bases
@@ -161,32 +161,7 @@ bwt_2occ(const fmap_bwt_t *bwt, uint32_t k, uint32_t l, uint8_t c, uint32_t *ok,
   @discussion   more efficient version of bwt_occ4 but requires that k <= l (not checked)
   */
 inline void 
-bwt_2occ4(const fmap_bwt_t *bwt, uint32_t k, uint32_t l, uint32_t cntk[4], uint32_t cntl[4]);
-
-/*! @function
-  @abstract         computes the SA interval for the given sequence (if any), using forward search
-  @param  bwt       pointer to the bwt structure 
-  @param  len       the length of the sequence
-  @param  str       the DNA sequence in 2-bit format
-  @param  sa_begin  the beginning of the returned occurence of the SA interval
-  @param  sa_end    the end of the returned occurrence of the SA interval
-  @return           the size of the SA interval, 0 if none found
-  */
-int 
-bwt_match_exact(const fmap_bwt_t *bwt, int len, const uint8_t *str, uint32_t *sa_begin, uint32_t *sa_end);
-
-/*! @function
-  @abstract         computes the SA interval for the given sequence (if any), using forward search
-  @param  bwt       pointer to the bwt structure 
-  @param  len       the length of the sequence
-  @param  str       the DNA sequence in 2-bit format
-  @param  k0        the beginning occurence of the SA interval
-  @param  l0        the end occurrence of the SA interval
-  @return           the size of the SA interval, 0 if none found
-  @discussion       the search will be started at SA interval [k0,l0], with the results returned as [k0,l0]
-  */
-int 
-bwt_match_exact_alt(const fmap_bwt_t *bwt, int len, const uint8_t *str, uint32_t *k0, uint32_t *l0);
+fmap_bwt_2occ4(const fmap_bwt_t *bwt, uint32_t k, uint32_t l, uint32_t cntk[4], uint32_t cntl[4]);
 
 // TODO: document
 #define fmap_bwt_bwt(b, k) ((b)->bwt[(k)/(b)->occ_interval*12 + 4 + (k)%(b)->occ_interval/16])
@@ -214,8 +189,8 @@ bwt_match_exact_alt(const fmap_bwt_t *bwt, int len, const uint8_t *str, uint32_t
 #define fmap_bwt_invPsi(bwt, k)												\
   (((k) == (bwt)->primary)? 0 :										\
    ((k) < (bwt)->primary)?											\
-   (bwt)->L2[fmap_bwt_B0(bwt, k)] + bwt_occ(bwt, k, fmap_bwt_B0(bwt, k))		\
-   : (bwt)->L2[fmap_bwt_B0(bwt, (k)-1)] + bwt_occ(bwt, k, fmap_bwt_B0(bwt, (k)-1)))
+   (bwt)->L2[fmap_bwt_B0(bwt, k)] + fmap_bwt_occ(bwt, k, fmap_bwt_B0(bwt, k))		\
+   : (bwt)->L2[fmap_bwt_B0(bwt, (k)-1)] + fmap_bwt_occ(bwt, k, fmap_bwt_B0(bwt, (k)-1)))
 
 /*! @function
   @abstract     main-like function for 'fmap pac2bwt'

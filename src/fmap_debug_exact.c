@@ -4,6 +4,7 @@
 #include "fmap_refseq.h"
 #include "fmap_bwt_gen.h"
 #include "fmap_bwt.h"
+#include "fmap_bwt_match.h"
 #include "fmap_sa.h"
 #include "fmap_seq.h"
 #include "fmap_definitions.h"
@@ -55,14 +56,14 @@ fmap_debug_exact_core_worker(fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *
       seq_int_rc[seq->seq.l-i-1] = (4 <= seq_int[i]) ? seq_int[i] : 3 - seq_int[i];
   }
 
-  if(0 != bwt_match_exact(bwt, seq->seq.l, seq_int, &sa_begin, &sa_end)) {
+  if(0 != fmap_bwt_match_exact(bwt, seq->seq.l, seq_int, &sa_begin, &sa_end)) {
       for(i=sa_begin;i<=sa_end;i++) {
           if(0 != fmap_debug_exact_print_sam(refseq, seq, fmap_sa_pac_pos(sa, bwt, i), 0)) {
               mapped = 1;
           }
       }
   }
-  if(0 != bwt_match_exact(bwt, seq->seq.l, seq_int_rc, &sa_begin, &sa_end)) {
+  if(0 != fmap_bwt_match_exact(bwt, seq->seq.l, seq_int_rc, &sa_begin, &sa_end)) {
       for(i=sa_begin;i<=sa_end;i++) {
           if(0 != fmap_debug_exact_print_sam(refseq, seq, fmap_sa_pac_pos(sa, bwt, i), 1)) {
               mapped = 1;

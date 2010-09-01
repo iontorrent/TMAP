@@ -222,7 +222,7 @@ fmap_bwt_gen_helper(fmap_bwt_t *bwt, uint32_t hash_value, uint32_t level,
               return;
           }
           else { // descend deeper
-              bwt_2occ4(bwt, 
+              fmap_bwt_2occ4(bwt, 
                         k[level-1][i]+bwt->L2[i], l[level-1][i]+bwt->L2[i], 
                         k[level], l[level]); // get occ values
               fmap_bwt_gen_helper(bwt, (hash_value << 2) + i, level+1, k, l); 
@@ -261,7 +261,7 @@ fmap_bwt_gen_hash(fmap_bwt_t *bwt, uint32_t hash_width)
   }
 
   // Get first level
-  bwt_2occ4(bwt, -1, bwt->seq_len, k[0], l[0]);
+  fmap_bwt_2occ4(bwt, -1, bwt->seq_len, k[0], l[0]);
   fmap_bwt_gen_helper(bwt, 0, 1, k, l); 
 
   uint32_t sum = 0;
@@ -297,7 +297,7 @@ __occ_aux(uint64_t y, int c)
 }
 
 inline uint32_t 
-bwt_occ(const fmap_bwt_t *bwt, uint32_t k, uint8_t c)
+fmap_bwt_occ(const fmap_bwt_t *bwt, uint32_t k, uint8_t c)
 {
   uint32_t n, l, j;
   uint32_t *p;
@@ -323,20 +323,20 @@ bwt_occ(const fmap_bwt_t *bwt, uint32_t k, uint8_t c)
   return n;
 }
 
-// an analogy to bwt_occ() but more efficient, requiring k <= l
+// an analogy to fmap_bwt_occ() but more efficient, requiring k <= l
 inline void 
-bwt_2occ(const fmap_bwt_t *bwt, uint32_t k, uint32_t l, uint8_t c, uint32_t *ok, uint32_t *ol)
+fmap_bwt_2occ(const fmap_bwt_t *bwt, uint32_t k, uint32_t l, uint8_t c, uint32_t *ok, uint32_t *ol)
 {
   uint32_t _k, _l;
   if(k == l) {
-      *ok = *ol = bwt_occ(bwt, k, c);
+      *ok = *ol = fmap_bwt_occ(bwt, k, c);
       return;
   }
   _k = (k >= bwt->primary)? k-1 : k;
   _l = (l >= bwt->primary)? l-1 : l;
   if(_l/bwt->occ_interval != _k/bwt->occ_interval || k == (uint32_t)(-1) || l == (uint32_t)(-1)) {
-      *ok = bwt_occ(bwt, k, c);
-      *ol = bwt_occ(bwt, l, c);
+      *ok = fmap_bwt_occ(bwt, k, c);
+      *ol = fmap_bwt_occ(bwt, l, c);
   } else {
       uint32_t m, n, i, j;
       uint32_t *p;
@@ -367,7 +367,7 @@ bwt_2occ(const fmap_bwt_t *bwt, uint32_t k, uint32_t l, uint8_t c, uint32_t *ok,
    + (bwt)->cnt_table[(b)>>16&0xff] + (bwt)->cnt_table[(b)>>24])
 
 inline void 
-bwt_occ4(const fmap_bwt_t *bwt, uint32_t k, uint32_t cnt[4])
+fmap_bwt_occ4(const fmap_bwt_t *bwt, uint32_t k, uint32_t cnt[4])
 {
   uint32_t l, j, x;
   uint32_t *p;
@@ -386,21 +386,21 @@ bwt_occ4(const fmap_bwt_t *bwt, uint32_t k, uint32_t cnt[4])
   cnt[0] += x&0xff; cnt[1] += x>>8&0xff; cnt[2] += x>>16&0xff; cnt[3] += x>>24;
 }
 
-// an analogy to bwt_occ4() but more efficient, requiring k <= l
+// an analogy to fmap_bwt_occ4() but more efficient, requiring k <= l
 inline void 
-bwt_2occ4(const fmap_bwt_t *bwt, uint32_t k, uint32_t l, uint32_t cntk[4], uint32_t cntl[4])
+fmap_bwt_2occ4(const fmap_bwt_t *bwt, uint32_t k, uint32_t l, uint32_t cntk[4], uint32_t cntl[4])
 {
   uint32_t _k, _l;
   if(k == l) {
-      bwt_occ4(bwt, k, cntk);
+      fmap_bwt_occ4(bwt, k, cntk);
       memcpy(cntl, cntk, 4 * sizeof(uint32_t));
       return;
   }
   _k = (k >= bwt->primary)? k-1 : k;
   _l = (l >= bwt->primary)? l-1 : l;
   if(_l/bwt->occ_interval != _k/bwt->occ_interval || k == (uint32_t)(-1) || l == (uint32_t)(-1)) {
-      bwt_occ4(bwt, k, cntk);
-      bwt_occ4(bwt, l, cntl);
+      fmap_bwt_occ4(bwt, k, cntk);
+      fmap_bwt_occ4(bwt, l, cntl);
   } else {
       uint32_t i, j, x, y;
       uint32_t *p;
@@ -425,44 +425,6 @@ bwt_2occ4(const fmap_bwt_t *bwt, uint32_t k, uint32_t l, uint32_t cntk[4], uint3
       cntk[0] += x&0xff; cntk[1] += x>>8&0xff; cntk[2] += x>>16&0xff; cntk[3] += x>>24;
       cntl[0] += y&0xff; cntl[1] += y>>8&0xff; cntl[2] += y>>16&0xff; cntl[3] += y>>24;
   }
-}
-
-int 
-bwt_match_exact(const fmap_bwt_t *bwt, int len, const uint8_t *str, uint32_t *sa_begin, uint32_t *sa_end)
-{
-  uint32_t k, l, ok, ol;
-  int i;
-  k = 0; l = bwt->seq_len;
-  for(i=0;i<len;i++) {
-      uint8_t c = str[i];
-      if(c > 3) return 0; // no match
-      bwt_2occ(bwt, k - 1, l, c, &ok, &ol);
-      k = bwt->L2[c] + ok + 1;
-      l = bwt->L2[c] + ol;
-      if(k > l) break; // no match
-  }
-  if(k > l) return 0; // no match
-  if(sa_begin) *sa_begin = k;
-  if(sa_end)   *sa_end = l;
-  return l - k + 1;
-}
-
-int 
-bwt_match_exact_alt(const fmap_bwt_t *bwt, int len, const uint8_t *str, uint32_t *k0, uint32_t *l0)
-{
-  int i;
-  uint32_t k, l, ok, ol;
-  k = *k0; l = *l0;
-  for(i=0;i<len;i++) {
-      uint8_t c = str[i];
-      if(c > 3) return 0; // there is an N here. no match
-      bwt_2occ(bwt, k - 1, l, c, &ok, &ol);
-      k = bwt->L2[c] + ok + 1;
-      l = bwt->L2[c] + ol;
-      if(k > l) return 0; // no match
-  }
-  *k0 = k; *l0 = l;
-  return l - k + 1;
 }
 
 int

@@ -7,6 +7,7 @@ fmap_SOURCES = \
 			   fmap_seq.h fmap_seq.c \
 			   fmap_refseq.h fmap_refseq.c \
 			   fmap_bwt.h fmap_bwt.c \
+			   fmap_bwt_match.h fmap_bwt_match.c \
 			   fmap_bwt_gen.h fmap_bwt_gen.c \
 			   fmap_sa.c fmap_sa.h \
 			   fmap_index.h fmap_index.c \
