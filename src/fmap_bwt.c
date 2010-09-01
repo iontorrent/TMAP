@@ -33,6 +33,7 @@
 #include "fmap_error.h"
 #include "fmap_alloc.h"
 #include "fmap_bwt_gen.h"
+#include "fmap_progress.h"
 #include "fmap_definitions.h"
 #include "fmap_bwt.h"
 
@@ -48,12 +49,19 @@ fmap_bwt_read(const char *fn_fasta, uint32_t is_rev)
 
   bwt = fmap_calloc(1, sizeof(fmap_bwt_t), "bwt");
 
-  if(1 != fmap_file_fread(&bwt->bwt_size, sizeof(uint32_t), 1, fp_bwt)) {
+  if(1 != fmap_file_fread(&bwt->version_id, sizeof(uint32_t), 1, fp_bwt)
+     || 1 != fmap_file_fread(&bwt->bwt_size, sizeof(uint32_t), 1, fp_bwt)) {
       fmap_error(NULL, Exit, ReadFileError);
   }
 
+  if(bwt->version_id != FMAP_VERSION_ID) {
+      fmap_error("version id did not match", Exit, ReadFileError);
+  }
+
   bwt->bwt = fmap_calloc(bwt->bwt_size, sizeof(uint32_t), "bwt->bwt");
-  if(1 != fmap_file_fread(&bwt->primary, sizeof(uint32_t), 1, fp_bwt)
+
+  if(1 != fmap_file_fread(&bwt->hash_width, sizeof(uint32_t), 1, fp_bwt)
+     || 1 != fmap_file_fread(&bwt->primary, sizeof(uint32_t), 1, fp_bwt)
      || 4 != fmap_file_fread(bwt->L2+1, sizeof(uint32_t), 4, fp_bwt)
      || 1 != fmap_file_fread(&bwt->occ_interval, sizeof(uint32_t), 1, fp_bwt)
      || 1 != fmap_file_fread(&bwt->seq_len, sizeof(uint32_t), 1, fp_bwt)
@@ -61,6 +69,20 @@ fmap_bwt_read(const char *fn_fasta, uint32_t is_rev)
      || bwt->bwt_size != fmap_file_fread(bwt->bwt, sizeof(uint32_t), bwt->bwt_size, fp_bwt)) {
       fmap_error(NULL, Exit, ReadFileError);
   }
+  if(0 < bwt->hash_width) {
+      bwt->hash_length = 1 << (bwt->hash_width * 2); // 4^{hash_width} entries
+      bwt->hash_k = fmap_malloc(bwt->hash_length*sizeof(uint32_t), "bwt->hash_k");
+      bwt->hash_l = fmap_malloc(bwt->hash_length*sizeof(uint32_t), "bwt->hash_l");
+      if(bwt->hash_length != fmap_file_fread(bwt->hash_k, sizeof(uint32_t), bwt->hash_length, fp_bwt)
+         || bwt->hash_length != fmap_file_fread(bwt->hash_l, sizeof(uint32_t), bwt->hash_length, fp_bwt)) {
+          fmap_error(NULL, Exit, ReadFileError);
+      }
+  }
+  else {
+      bwt->hash_length = 0;
+      bwt->hash_k = bwt->hash_l = NULL;
+  }
+
   fmap_bwt_gen_cnt_table(bwt);
 
   if(is_rev != bwt->is_rev) {
@@ -86,7 +108,9 @@ fmap_bwt_write(const char *fn_fasta, fmap_bwt_t *bwt, uint32_t is_rev)
   fn_bwt = fmap_get_file_name(fn_fasta, (0 == is_rev) ? FMAP_BWT_FILE : FMAP_REV_BWT_FILE);
   fp_bwt = fmap_file_fopen(fn_bwt, "wb", (0 == is_rev) ? FMAP_BWT_COMPRESSION : FMAP_REV_BWT_COMPRESSION);
 
-  if(1 != fmap_file_fwrite(&bwt->bwt_size, sizeof(uint32_t), 1, fp_bwt)
+  if(1 != fmap_file_fwrite(&bwt->version_id, sizeof(uint32_t), 1, fp_bwt)
+     || 1 != fmap_file_fwrite(&bwt->bwt_size, sizeof(uint32_t), 1, fp_bwt)
+     || 1 != fmap_file_fwrite(&bwt->hash_width, sizeof(uint32_t), 1, fp_bwt)
      || 1 != fmap_file_fwrite(&bwt->primary, sizeof(uint32_t), 1, fp_bwt) 
      || 4 != fmap_file_fwrite(bwt->L2+1, sizeof(uint32_t), 4, fp_bwt)
      || 1 != fmap_file_fwrite(&bwt->occ_interval, sizeof(uint32_t), 1, fp_bwt)
@@ -94,6 +118,12 @@ fmap_bwt_write(const char *fn_fasta, fmap_bwt_t *bwt, uint32_t is_rev)
      || 1 != fmap_file_fwrite(&bwt->is_rev, sizeof(uint32_t), 1, fp_bwt)
      || bwt->bwt_size != fmap_file_fwrite(bwt->bwt, sizeof(uint32_t), bwt->bwt_size, fp_bwt)) {
       fmap_error(NULL, Exit, WriteFileError);
+  }
+  if(0 < bwt->hash_width) {
+      if(bwt->hash_length != fmap_file_fwrite(bwt->hash_k, sizeof(uint32_t), bwt->hash_length, fp_bwt)
+         || bwt->hash_length != fmap_file_fwrite(bwt->hash_l, sizeof(uint32_t), bwt->hash_length, fp_bwt)) {
+          fmap_error(NULL, Exit, WriteFileError);
+      }
   }
 
   fmap_file_fclose(fp_bwt);
@@ -104,12 +134,14 @@ void
 fmap_bwt_destroy(fmap_bwt_t *bwt)
 {
   if(bwt == 0) return;
+  free(bwt->hash_k);
+  free(bwt->hash_l);
   free(bwt->bwt);
   free(bwt);
 }
 
 void
-fmap_bwt_update(fmap_bwt_t *bwt, uint32_t occ_interval)
+fmap_bwt_update_occ_interval(fmap_bwt_t *bwt, uint32_t occ_interval)
 {
   uint32_t i, k, c[4], n_occ;
   uint32_t *buf = NULL;
@@ -155,19 +187,7 @@ fmap_bwt_gen_helper(fmap_bwt_t *bwt, uint32_t hash_value, uint32_t level,
                     uint32_t **k, uint32_t **l)
 {
   uint32_t i, j;
-
-  fprintf(stderr, "hash_value=%u level=%u k[%u]={%u,%u,%u,%u} l[%u]={%u,%u,%u,%u}\n",
-          hash_value, level,
-          level-1,
-          k[level-1][0], 
-          k[level-1][1], 
-          k[level-1][2], 
-          k[level-1][3], 
-          level-1,
-          l[level-1][0], 
-          l[level-1][1], 
-          l[level-1][2], 
-          l[level-1][3]);
+  // TODO: could make this tail-recursive for speed
 
   if(bwt->hash_width < level) {
       // do nothing
@@ -176,16 +196,16 @@ fmap_bwt_gen_helper(fmap_bwt_t *bwt, uint32_t hash_value, uint32_t level,
   else if(bwt->hash_width == level) { // at the leaves
       // store values
       for(i=0;i<4;i++) {
-          bwt->hash_k[(hash_value << 2) + i] = k[level-1][i]-1; // TODO: is the -1 necessary? 
-          bwt->hash_l[(hash_value << 2) + i] = l[level-1][i]; 
+          bwt->hash_k[(hash_value << 2) + i] = k[level-1][i] + bwt->L2[i] + 1;
+          bwt->hash_l[(hash_value << 2) + i] = l[level-1][i] + bwt->L2[i]; 
       }
       return;
   }
   else { // at a non-leaf
       for(i=0;i<4;i++) {
-          if(l[level-1][i] <= k[level-1][i]) {
+          if(l[level-1][i] < k[level-1][i]) {
               uint32_t lower, upper;
-              
+
               lower = (hash_value << 2) + i;
               upper = ((hash_value + 1) << 2);
               if(upper <= lower) {
@@ -202,15 +222,9 @@ fmap_bwt_gen_helper(fmap_bwt_t *bwt, uint32_t hash_value, uint32_t level,
               return;
           }
           else { // descend deeper
-              fprintf(stderr, "HERE 1 %u-%u\n",
-                      k[level-1][i]-1, l[level-1][i]);
-              bwt_2occ4(bwt, k[level-1][i]-1, l[level-1][i], k[level], l[level]); // get occ values
-              for(j=0;j<4;j++) {
-                  fprintf(stderr, "1 j=%d %u-%u\n", j, k[level][j], l[level][j]);
-                  k[level][j] += bwt->L2[j] + 1;
-                  l[level][j] += bwt->L2[j];
-                  fprintf(stderr, "2 j=%d %u-%u\n", j, k[level][j], l[level][j]);
-              }
+              bwt_2occ4(bwt, 
+                        k[level-1][i]+bwt->L2[i], l[level-1][i]+bwt->L2[i], 
+                        k[level], l[level]); // get occ values
               fmap_bwt_gen_helper(bwt, (hash_value << 2) + i, level+1, k, l); 
           }
       }
@@ -222,37 +236,45 @@ void
 fmap_bwt_gen_hash(fmap_bwt_t *bwt, uint32_t hash_width)
 {
   uint32_t **k=NULL, **l=NULL;
-  uint32_t hash_value;
-  uint32_t i, length;
+  uint32_t i;
 
+  fmap_progress_set_start_time(clock());
+  fmap_progress_print("constructing the occurence hash for the BWT string");
 
-  length = 1 << (hash_width * 2); // 4^{hash_width} entries
+  bwt->hash_length = 1 << (hash_width * 2); // 4^{hash_width} entries
 
-  // TODO hash_width falls within acceptable limits
-  if(UINT32_MAX <= length-1) {
-      fmap_error("UINT32_MAX <= length-1", Exit, OutOfRange);
+  // TODO check if hash_width falls within acceptable limits
+  if(UINT32_MAX <= bwt->hash_length-1) {
+      fmap_error("UINT32_MAX <= bwt->hash_length-1", Exit, OutOfRange);
   }
 
   bwt->hash_width = hash_width;
-  bwt->hash_k = fmap_malloc(sizeof(uint32_t)*length, "bwt->hash_k");
-  bwt->hash_l = fmap_malloc(sizeof(uint32_t)*length, "bwt->hash_l");
+  bwt->hash_k = fmap_malloc(sizeof(uint32_t)*bwt->hash_length, "bwt->hash_k");
+  bwt->hash_l = fmap_malloc(sizeof(uint32_t)*bwt->hash_length, "bwt->hash_l");
 
   // working space
   k = fmap_malloc(sizeof(uint32_t*)*hash_width, "k");
   l = fmap_malloc(sizeof(uint32_t*)*hash_width, "l");
   for(i=0;i<hash_width;i++) {
       k[i] = fmap_malloc(sizeof(uint32_t)*4, "k[i]");
-      l[i] = fmap_malloc(sizeof(uint32_t)*4, "l");
+      l[i] = fmap_malloc(sizeof(uint32_t)*4, "l[i]");
   }
 
   // Get first level
   bwt_2occ4(bwt, -1, bwt->seq_len, k[0], l[0]);
-  for(i=0;i<4;i++) {
-      k[0][i] += bwt->L2[i] + 1;
-      l[0][i] += bwt->L2[i];
-  }
-  hash_value = 0;
   fmap_bwt_gen_helper(bwt, 0, 1, k, l); 
+
+  uint32_t sum = 0;
+  for(i=0;i<bwt->hash_length;i++) {
+      if(UINT32_MAX != bwt->hash_k[i]) {
+          sum += bwt->hash_l[i] - bwt->hash_k[i] + 1;
+          //fprintf(stderr, "[%d] k[%d]=%u l[%u]=%u\n", i, i, bwt->hash_k[i], i, bwt->hash_l[i]);
+      }
+  }
+  //fprintf(stderr, "bwt->seq_len=%u sum=%u\n", bwt->seq_len, sum);
+  if(sum != bwt->seq_len - bwt->hash_width + 1) {
+      fmap_error("sum != bwt->seq_len - bwt->hash_width + 1", Exit, OutOfRange);
+  }
 
   for(i=0;i<hash_width;i++) {
       free(k[i]);
@@ -260,6 +282,8 @@ fmap_bwt_gen_hash(fmap_bwt_t *bwt, uint32_t hash_width)
   }
   free(k);
   free(l);
+
+  fmap_progress_print2("constructed the occurence hash for the BWT string");
 }
 
 static inline int 
@@ -444,23 +468,24 @@ bwt_match_exact_alt(const fmap_bwt_t *bwt, int len, const uint8_t *str, uint32_t
 int
 fmap_bwt_pac2bwt_main(int argc, char *argv[])
 {
-  int c, is_large = 0, occ_interval = FMAP_BWT_OCC_INTERVAL;
+  int c, is_large = 0, occ_interval = FMAP_BWT_OCC_INTERVAL, hash_width = FMAP_BWT_HASH_WIDTH;
   while((c = getopt(argc, argv, "o:l")) >= 0) {
       switch(c) {
         case 'l': is_large= 1; break;
         case 'o': occ_interval = atoi(optarg); break;
+        case 'w': hash_width = atoi(optarg); break;
         default: return 1;
       }
   }
   if (argc < 2) {
-      fprintf(stderr, "Usage: %s %s [-l -o INT] <in.fasta>\n", PACKAGE, argv[0]);
+      fprintf(stderr, "Usage: %s %s [-l -o INT -w INT] <in.fasta>\n", PACKAGE, argv[0]);
       return 1;
   }
   if(0 < occ_interval && 0 != (occ_interval % 16)) {
       fmap_error("option -o out of range", Exit, CommandLineArgument);
   }
 
-  fmap_bwt_pac2bwt(argv[2], is_large, occ_interval);
+  fmap_bwt_pac2bwt(argv[2], is_large, occ_interval, hash_width);
 
   return 0;
 }

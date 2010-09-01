@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 // TODO: incorporate this into all static files
-#define FMAP_VERSION_ID 0
+#define FMAP_VERSION_ID ('f' + 'm' + 'a' + 'p')
 
 // refseq file extension
 #define FMAP_ANNO_FILE_EXTENSION ".fmap.anno"

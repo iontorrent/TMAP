@@ -37,9 +37,11 @@ typedef unsigned char uint8_t;
 #endif
 
 #define FMAP_BWT_OCC_INTERVAL 0x80
+#define FMAP_BWT_HASH_WIDTH 12
 
 /*! @typedef
   @abstract            BWT data structure
+  @field  version_id    the version id of this file
   @field  primary       S^{-1}(0), or the primary index of BWT
   @field  L2            C(), cumulative count
   @field  seq_len       reference sequence length
@@ -48,8 +50,13 @@ typedef unsigned char uint8_t;
   @field  bwt           burrows-wheeler transform
   @field  cnt_table     occurrence array
   @field  is_rev        1 if the reference sequence was reversed, 0 otherwise
+  @field  hash_k        hash of the BWT occurence array (lower bounds)
+  @field  hash_l        hash of the BWT occurence array (upper bounds)
+  @field  hash_width    the k-mer that is hashed
+  @field  hash_length   4^{hash_width}
   */
 typedef struct {
+    uint32_t version_id;
     uint32_t primary; // S^{-1}(0), or the primary index of BWT
     uint32_t L2[5]; // C(), cumulative count
     uint32_t seq_len; // sequence length
@@ -58,9 +65,10 @@ typedef struct {
     uint32_t *bwt; // BWT TODO: could this be stored in a smaller format?
     uint32_t cnt_table[256];
     uint32_t is_rev;
-    uint32_t *hash_k; // BWT hash TODO: document
-    uint32_t *hash_l; // BWT hash TODO: document
-    uint32_t hash_width; // TODO: document
+    uint32_t *hash_k; // BWT hash 
+    uint32_t *hash_l; // BWT hash 
+    uint32_t hash_width; 
+    uint32_t hash_length;
 } fmap_bwt_t;
 
 /*! @function
@@ -94,7 +102,7 @@ fmap_bwt_destroy(fmap_bwt_t *bwt);
   @param  occ_interval  the new occurrence interval
   */
 void 
-fmap_bwt_update(fmap_bwt_t *bwt, uint32_t occ_interval);
+fmap_bwt_update_occ_interval(fmap_bwt_t *bwt, uint32_t occ_interval);
 
 /*! @function
   @abstract    generates the occurrence array

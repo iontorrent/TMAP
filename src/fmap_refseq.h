@@ -56,12 +56,12 @@ typedef struct {
 
 /*! @typedef
   @abstract  
-  @field  version_id    the version id of this file
-  @field  seed          the random base generator seed
-  @field  seq           the packed nucleotide sequence, with contigs concatenated
-  @field  annos         the annotations about the contigs
-  @field  len           the total length of the reference sequence
-  @field  is_rev        1 if the reference sequence was reversed, 0 otherwise
+  @field  version_id  the version id of this file
+  @field  seed        the random base generator seed
+  @field  seq         the packed nucleotide sequence, with contigs concatenated
+  @field  annos       the annotations about the contigs
+  @field  len         the total length of the reference sequence
+  @field  is_rev      1 if the reference sequence was reversed, 0 otherwise
   */
 typedef struct {
     uint64_t version_id;

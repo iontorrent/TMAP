@@ -227,7 +227,11 @@ fmap_refseq_read_header(fmap_file_t *fp, fmap_refseq_t *refseq)
      || 1 != fmap_file_fread(&refseq->seed, sizeof(uint32_t), 1, fp) 
      || 1 != fmap_file_fread(&refseq->num_annos, sizeof(uint32_t), 1, fp)
      || 1 != fmap_file_fread(&refseq->len, sizeof(uint64_t), 1, fp)) {
-      fmap_error(NULL, Exit, WriteFileError);
+      fmap_error(NULL, Exit, ReadFileError);
+  }
+
+  if(refseq->version_id != FMAP_VERSION_ID) {
+      fmap_error("version id did not match", Exit, ReadFileError);
   }
 }
 
@@ -237,7 +241,7 @@ fmap_refseq_read_annos(fmap_file_t *fp, fmap_anno_t *anno)
   uint32_t len = 0;
 
   if(1 != fmap_file_fread(&len, sizeof(uint32_t), 1, fp)) {
-      fmap_error(NULL, Exit, WriteFileError);
+      fmap_error(NULL, Exit, ReadFileError);
   }
 
   anno->name = fmap_malloc(sizeof(char)*len, "anno->name");
@@ -245,7 +249,7 @@ fmap_refseq_read_annos(fmap_file_t *fp, fmap_anno_t *anno)
   if(len != fmap_file_fread(anno->name, sizeof(char), len, fp)
      || 1 != fmap_file_fread(&anno->len, sizeof(uint64_t), 1, fp)
      || 1 != fmap_file_fread(&anno->offset, sizeof(uint64_t), 1, fp)) {
-      fmap_error(NULL, Exit, WriteFileError);
+      fmap_error(NULL, Exit, ReadFileError);
   }
 }
 
@@ -285,7 +289,7 @@ fmap_refseq_read(const char *fn_fasta, uint32_t is_rev)
   refseq->seq = fmap_malloc(sizeof(uint8_t)*fmap_refseq_seq_memory(refseq->len), "refseq->seq"); // allocate
   if(fmap_refseq_seq_memory(refseq->len) 
      != fmap_file_fread(refseq->seq, sizeof(uint8_t), fmap_refseq_seq_memory(refseq->len), fp_pac)) {
-      fmap_error(NULL, Exit, WriteFileError);
+      fmap_error(NULL, Exit, ReadFileError);
   }
   fmap_file_fclose(fp_pac);
   free(fn_pac);

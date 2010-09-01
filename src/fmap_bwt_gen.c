@@ -1526,7 +1526,7 @@ BWTFileSizeInWord(const uint32_t numChar)
 }
 
 void 
-BWTSaveBwtCodeAndOcc(fmap_bwt_t *bwt_out, const BWT *bwt, const char *fn_fasta, int32_t occ_interval, uint32_t is_rev)
+BWTSaveBwtCodeAndOcc(fmap_bwt_t *bwt_out, const BWT *bwt, const char *fn_fasta, int32_t occ_interval, uint32_t is_rev) 
 {
   uint32_t i;
   fmap_bwt_t *bwt_tmp=NULL;
@@ -1552,6 +1552,7 @@ BWTSaveBwtCodeAndOcc(fmap_bwt_t *bwt_out, const BWT *bwt, const char *fn_fasta, 
 
   // write
   bwt_out->is_rev = is_rev;
+  bwt_out->hash_width = 0; // none yet
   fmap_bwt_write(fn_fasta, bwt_out, is_rev);
 
   // nullify
@@ -1560,15 +1561,16 @@ BWTSaveBwtCodeAndOcc(fmap_bwt_t *bwt_out, const BWT *bwt, const char *fn_fasta, 
   // update occurrence interval
   if(0 < occ_interval && bwt_out->occ_interval != occ_interval) {
       bwt_tmp = fmap_bwt_read(fn_fasta, is_rev);
-      fmap_bwt_update(bwt_tmp, occ_interval);
+      fmap_bwt_update_occ_interval(bwt_tmp, occ_interval);
       fmap_bwt_write(fn_fasta, bwt_tmp, is_rev);
       fmap_bwt_destroy(bwt_tmp);
   }
 }
 
 void 
-fmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval)
+fmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, uint32_t hash_width)
 {
+  // TODO: streamline occ_interval and hash creation
   BWTInc *bwtInc=NULL;
   fmap_bwt_t *bwt=NULL;
   uint8_t *buf=NULL;
@@ -1594,6 +1596,7 @@ fmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval)
       bwt = fmap_calloc(1, sizeof(fmap_bwt_t), "bwt");
       bwt->seq_len = refseq->len;
       bwt->bwt_size = (bwt->seq_len + 15) >> 4;
+      bwt->version_id = FMAP_VERSION_ID;
 
       if(1 == is_large) {
           fn_pac = fmap_get_file_name(fn_fasta, (0 == is_rev) ? FMAP_PAC_FILE : FMAP_REV_PAC_FILE);
@@ -1609,7 +1612,7 @@ fmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval)
           // From bwtmisc.c at http://bio-bwa.sf.net
 
           // prepare sequence
-          memset(bwt->L2, 0, 5 * 4);
+          memset(bwt->L2, 0, 5*sizeof(uint32_t));
           buf = fmap_calloc(bwt->seq_len + 1, 1, "buf");
           for(i = 0; i < bwt->seq_len; ++i) {
               buf[i] = fmap_refseq_seq_i(refseq, i);
@@ -1628,10 +1631,11 @@ fmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval)
 
           // update occurrence interval
           if(0 < occ_interval && bwt->occ_interval != occ_interval) {
-              fmap_bwt_update(bwt, occ_interval);
+              fmap_bwt_update_occ_interval(bwt, occ_interval);
           }
 
           bwt->is_rev = is_rev;
+          bwt->hash_width = 0; // none yet
           fmap_bwt_write(fn_fasta, bwt, is_rev);
       }
       fmap_bwt_destroy(bwt);
@@ -1643,6 +1647,11 @@ fmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval)
       else {
           fmap_progress_print2("constructed the reverse BWT string from the reversed packed FASTA");
       }
+      
+      bwt = fmap_bwt_read(fn_fasta, is_rev);
+      fmap_bwt_gen_hash(bwt, hash_width);
+      fmap_bwt_write(fn_fasta, bwt, is_rev);
+      fmap_bwt_destroy(bwt);
   }
 }
 

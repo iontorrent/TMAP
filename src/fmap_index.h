@@ -8,11 +8,13 @@
   @abstract            structure to store the command line options for 'fmap index'
   @field  fn_fasta      the fasta file name (-f)
   @field  occ_interval  the occurrence array interval (-o)
+  @field  hash_width    the occurrence hash width (-w)
   @field  sa_interval   the suffix array interval (-i)
 */
 typedef struct {
     char *fn_fasta;
     int32_t occ_interval;
+    int32_t hash_width;
     int32_t sa_interval;
     int32_t is_large;
 } fmap_index_opt_t;

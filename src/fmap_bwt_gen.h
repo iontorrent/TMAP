@@ -106,9 +106,10 @@ typedef struct BWTInc {
   @abstract             create a bwt FASTA file from a packed FASTA file
   @param  fn_fasta      file name of the FASTA file
   @param  occ_interval  the desired occurrence interval
+  @param  hash_width    the desired k-mer hash width
   */
 void 
-fmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval);
+fmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, uint32_t hash_width);
 
 /*! @function
   @abstract

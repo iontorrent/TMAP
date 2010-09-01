@@ -11,7 +11,6 @@ fmap_SOURCES = \
 			   fmap_sa.c fmap_sa.h \
 			   fmap_index.h fmap_index.c \
 			   fmap_debug_exact.h fmap_debug_exact.c \
-			   fmap_debug_hash.h fmap_debug_hash.c \
 			   fmap_definitions.h fmap_definitions.c \
 			   fmap_progress.h fmap_progress.c \
 			   main.c
