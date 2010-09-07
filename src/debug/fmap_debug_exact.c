@@ -86,6 +86,7 @@ fmap_debug_exact_core(fmap_debug_exact_opt_t *opt)
   fmap_bwt_t *bwt=NULL;
   fmap_sa_t *sa=NULL;
   fmap_file_t *fp_reads=NULL;
+  fmap_seq_io_t *seqio=NULL;
   fmap_seq_t *seq=NULL;
   
   // SAM header
@@ -100,9 +101,9 @@ fmap_debug_exact_core(fmap_debug_exact_opt_t *opt)
   sa = fmap_sa_read(opt->fn_fasta, 1);
 
   fp_reads = fmap_file_fopen(opt->fn_reads, "rb", FMAP_FILE_NO_COMPRESSION);
-  seq = fmap_seq_init(fp_reads);
+  seqio = fmap_seq_io_init(fp_reads);
 
-  while(0 <= fmap_seq_read(seq)) {
+  while(0 <= fmap_seq_io_read(seqio, seq)) {
       fmap_debug_exact_core_worker(refseq, bwt, sa, seq);
   }
 
@@ -110,15 +111,17 @@ fmap_debug_exact_core(fmap_debug_exact_opt_t *opt)
   fmap_refseq_destroy(refseq);
   fmap_bwt_destroy(bwt);
   fmap_sa_destroy(sa);
+  fmap_seq_io_destroy(seqio);
+  fmap_seq_destroy(seq);
 }
 
 static int 
 usage(fmap_debug_exact_opt_t *opt)
 {
   fprintf(stderr, "\n");
-  fprintf(stderr, "Usage: %s exact [optionsn", PACKAGE);
+  fprintf(stderr, "Usage: %s exact [options]", PACKAGE);
   fprintf(stderr, "\n");
-  fprintf(stderr, "Optiosn (required):\n");
+  fprintf(stderr, "Options (required):\n");
   fprintf(stderr, "         -f FILE     the FASTA reference file name\n");
   fprintf(stderr, "         -r FILE     the FASTQ reads file name\n");
   fprintf(stderr, "Options (optional):\n");

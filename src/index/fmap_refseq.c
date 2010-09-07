@@ -49,6 +49,7 @@ uint64_t
 fmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
 {
   fmap_file_t *fp_fasta = NULL, *fp_pac = NULL, *fp_anno = NULL;;
+  fmap_seq_io_t *seqio = NULL;
   fmap_seq_t *seq = NULL;
   fmap_refseq_t *refseq = NULL;
   char *fn_pac = NULL, *fn_anno = NULL;
@@ -75,14 +76,15 @@ fmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
 
   // input files
   fp_fasta = fmap_file_fopen(fn_fasta, "rb", compression); 
-  seq = fmap_seq_init(fp_fasta);
+  seqio = fmap_seq_io_init(fp_fasta);
+  seq = fmap_seq_init();
 
   // output files
   fn_pac = fmap_get_file_name(fn_fasta, FMAP_PAC_FILE);
   fp_pac = fmap_file_fopen(fn_pac, "wb", FMAP_PAC_COMPRESSION);
 
   // read in sequences
-  while(0 <= (l = fmap_seq_read(seq))) {
+  while(0 <= (l = fmap_seq_io_read(seqio, seq))) {
       fmap_progress_print2("packing contig [%s:1-%d]", seq->name.s, l);
 
       refseq->num_annos++;
@@ -135,6 +137,7 @@ fmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   fmap_file_fclose(fp_anno);
 
   fmap_refseq_destroy(refseq); 
+  fmap_seq_io_destroy(seqio);
   fmap_seq_destroy(seq);
   free(fn_pac);
   free(fn_anno);

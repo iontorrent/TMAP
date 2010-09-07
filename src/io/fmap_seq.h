@@ -73,38 +73,34 @@ typedef struct {
   @field  comment    the comment string
   @field  seq        the sequence string
   @field  qual       the quality string
+  */
+typedef struct {
+    fmap_string_t name, comment, seq, qual;
+} fmap_seq_t;
+
+/*! @typedef
+  @abstract         structure for reading FASTA/FASTQ strings
   @field  last_char  the last character read
   @field  f          pointer to the file structure
   */
 typedef struct {
-    fmap_string_t name, comment, seq, qual;
     int last_char;
     fmap_stream_t *f;
-} fmap_seq_t;
+} fmap_seq_io_t;
 
 /*! @function
-  @abstract   initializes sequence reading structure
-  @param  fp  a pointer to a file structure from which to read
-  @return     pointer to the initialized memory for reading in sequences
+  @abstract   initializes sequence read structure
+  @return     pointer to the initialized memory 
   */
 inline fmap_seq_t *
-fmap_seq_init(fmap_file_t *fp);
+fmap_seq_init();
 
 /*! @function
-  @abstract   initializes sequence reading structure
-  @param  fp  a pointer to a file structure from which to read
-  @return     pointer to the initialized memory for reading in sequences
+  @abstract   
+  @param  seq  a pointer to the sequence structure
   */
 inline void 
 fmap_seq_destroy(fmap_seq_t *seq);
-
-/*! @function
-  @abstract    reads in a reading structure
-  @param  seq  a pointer to a previously initialized sequence structure
-  @return      the length of the sequence read, -1 indicates an a EOF, -2 indicates a truncated quality string
-  */
-int 
-fmap_seq_read(fmap_seq_t *seq);
 
 /*! @function
   @abstract         reverse the seq and qual fields
@@ -113,5 +109,39 @@ fmap_seq_read(fmap_seq_t *seq);
   */
 void
 fmap_seq_reverse(fmap_seq_t *seq, int32_t rev_comp);
+
+/*! @function
+  @abstract   initializes sequence reading structure
+  @param  fp  a pointer to a file structure from which to read
+  @return     pointer to the initialized memory for reading in sequences
+  */
+inline fmap_seq_io_t *
+fmap_seq_io_init(fmap_file_t *fp);
+
+/*! @function
+  @abstract      destroys sequence reading structure
+  @param  seqio  a pointer to the sequence structure
+  */
+inline void 
+fmap_seq_io_destroy(fmap_seq_io_t *seqio);
+
+/*! @function
+  @abstract      reads in a reading structure
+  @param  seqio  a pointer to a previously initialized sequence structure
+  @param  seq    the sequence structure in which to store the data
+  @return        the length of the sequence read, -1 indicates an a EOF, -2 indicates a truncated quality string
+  */
+int 
+fmap_seq_io_read(fmap_seq_io_t *seqio, fmap_seq_t *seq);
+
+/*! @function
+  @abstract              reads sequences into a buffer
+  @param  seqio          a pointer to a previously initialized sequence structure
+  @param  seq_buffer     the sequence structure in which to store the data
+  @param  buffer_length  the number of sequences to read
+  @return                the number of sequences read
+  */
+int
+fmap_seq_io_read_buffer(fmap_seq_io_t *seqio, fmap_seq_t **seq_buffer, int32_t buffer_length);
 
 #endif

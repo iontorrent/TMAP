@@ -71,3 +71,39 @@ fmap_get_file_name(const char *prefix, int32_t type)
   }
   return fn;
 }
+
+int
+fmap_get_reads_file_format_int(char *optarg)
+{
+  if(0 == strcmp(optarg, "fa") || 0 == strcmp(optarg, "fasta")) {
+      return FMAP_READS_FORMAT_FASTA;
+  }
+  else if(0 == strcmp(optarg, "fq") || 0 == strcmp(optarg, "fastq")) {
+      return FMAP_READS_FORMAT_FASTQ;
+  }
+  else if(0 == strcmp(optarg, "sff")) {
+      return FMAP_READS_FORMAT_SFF;
+  }
+  return FMAP_READS_FORMAT_UNKNOWN;
+}
+
+char *
+fmap_get_reads_file_format_string(int format)
+{
+  if(FMAP_READS_FORMAT_FASTA == format) {
+      return strdup("fasta");
+  }
+  else if(FMAP_READS_FORMAT_FASTQ == format) {
+      return strdup("fastq");
+  }
+  else if(FMAP_READS_FORMAT_SFF == format) {
+      return strdup("sff");
+  }
+  else if(FMAP_READS_FORMAT_UNKNOWN == format) {
+      return strdup("unknown");
+  }
+  else {
+      return strdup("unknown1");
+  }
+
+}

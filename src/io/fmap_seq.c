@@ -113,73 +113,18 @@ fmap_stream_getuntil(fmap_stream_t *ks, int delimiter, fmap_string_t *str, int *
 }
 
 inline fmap_seq_t *
-fmap_seq_init(fmap_file_t *fp)
+fmap_seq_init()
 {
   fmap_seq_t *s = fmap_calloc(1, sizeof(fmap_seq_t), "s");
-  s->f = fmap_stream_init(fp, FMAP_STREAM_BUFFER_SIZE);
   s->name.s = s->comment.s = s->seq.s = s->qual.s = NULL;
   return s;
 }
 
-static inline void 
-fmap_seq_rewind(fmap_seq_t *seq)
-{
-  seq->last_char = 0;
-  seq->f->is_eof = seq->f->begin = seq->f->end = 0;
-}
-
-inline void 
+inline void
 fmap_seq_destroy(fmap_seq_t *seq)
 {
-  if(NULL == seq) return;
-  free(seq->name.s); free(seq->comment.s); free(seq->seq.s);	free(seq->qual.s);
-  fmap_stream_destroy(seq->f);
+  free(seq->name.s); free(seq->comment.s); free(seq->seq.s); free(seq->qual.s);
   free(seq);
-}
-
-/* Return value:
-   >=0  length of the sequence (normal)
-   -1   end-of-file
-   -2   truncated quality string
-   */
-int 
-fmap_seq_read(fmap_seq_t *seq)
-{
-  int c;
-  fmap_stream_t *ks = seq->f;
-  if (seq->last_char == 0) { /* then jump to the next header line */
-      while ((c = fmap_stream_getc(ks)) != -1 && c != '>' && c != '@');
-      if (c == -1) return -1; /* end of file */
-      seq->last_char = c;
-  } /* the first header char has been read */
-  seq->comment.l = seq->seq.l = seq->qual.l = 0;
-  if (fmap_stream_getuntil(ks, 0, &seq->name, &c) < 0) return -1;
-  if (c != '\n') fmap_stream_getuntil(ks, '\n', &seq->comment, 0);
-  while ((c = fmap_stream_getc(ks)) != -1 && c != '>' && c != '+' && c != '@') {
-      if (isgraph(c)) { /* printable non-space character */
-          if (seq->seq.l + 1 >= seq->seq.m) { /* double the memory */
-              seq->seq.m = seq->seq.l + 2;
-              kroundup32(seq->seq.m); /* rounded to next closest 2^k */
-              seq->seq.s = fmap_realloc(seq->seq.s, seq->seq.m, "seq->seq.s");
-          }
-          seq->seq.s[seq->seq.l++] = (char)c;
-      }
-  }
-  if (c == '>' || c == '@') seq->last_char = c; /* the first header char has been read */
-  seq->seq.s[seq->seq.l] = 0;	/* null terminated string */
-  if (c != '+') return seq->seq.l; /* FASTA */
-  if (seq->qual.m < seq->seq.m) {	/* allocate enough memory */
-      seq->qual.m = seq->seq.m;
-      seq->qual.s = fmap_realloc(seq->qual.s, seq->qual.m, "seq->qual.s");
-  }
-  while ((c = fmap_stream_getc(ks)) != -1 && c != '\n'); /* skip the rest of '+' line */
-  if (c == -1) return -2; /* we should not stop here */
-  while ((c = fmap_stream_getc(ks)) != -1 && seq->qual.l < seq->seq.l)
-    if (c >= 33 && c <= 127) seq->qual.s[seq->qual.l++] = (unsigned char)c;
-  seq->qual.s[seq->qual.l] = 0; /* null terminated string */
-  seq->last_char = 0;	/* we have not come to the next header line */
-  if (seq->seq.l != seq->qual.l) return -2; /* qual string is shorter than seq string */
-  return seq->seq.l;
 }
 
 static inline void
@@ -205,4 +150,84 @@ fmap_seq_reverse(fmap_seq_t *seq, int32_t rev_comp)
           seq->seq.s[i] = (4 <= seq->seq.s[i]) ? seq->seq.s[i] : 3 - seq->seq.s[i];
       }
   }
+}
+
+inline fmap_seq_io_t *
+fmap_seq_io_init(fmap_file_t *fp)
+{
+  fmap_seq_io_t *s = fmap_calloc(1, sizeof(fmap_seq_io_t), "s");
+  s->f = fmap_stream_init(fp, FMAP_STREAM_BUFFER_SIZE);
+  return s;
+}
+
+static inline void 
+fmap_seq_io_rewind(fmap_seq_io_t *seq)
+{
+  seq->last_char = 0;
+  seq->f->is_eof = seq->f->begin = seq->f->end = 0;
+}
+
+inline void 
+fmap_seq_io_destroy(fmap_seq_io_t *seqio)
+{
+  if(NULL == seqio) return;
+  fmap_stream_destroy(seqio->f);
+  free(seqio);
+}
+
+/* Return value:
+   >=0  length of the sequence (normal)
+   -1   end-of-file
+   -2   truncated quality string
+   */
+int 
+fmap_seq_io_read(fmap_seq_io_t *seqio, fmap_seq_t *seq)
+{
+  int c;
+  fmap_stream_t *ks = seqio->f;
+  if (seqio->last_char == 0) { /* then jump to the next header line */
+      while ((c = fmap_stream_getc(ks)) != -1 && c != '>' && c != '@');
+      if (c == -1) return -1; /* end of file */
+      seqio->last_char = c;
+  } /* the first header char has been read */
+  seq->comment.l = seq->seq.l = seq->qual.l = 0;
+  if (fmap_stream_getuntil(ks, 0, &seq->name, &c) < 0) return -1;
+  if (c != '\n') fmap_stream_getuntil(ks, '\n', &seq->comment, 0);
+  while ((c = fmap_stream_getc(ks)) != -1 && c != '>' && c != '+' && c != '@') {
+      if (isgraph(c)) { /* printable non-space character */
+          if (seq->seq.l + 1 >= seq->seq.m) { /* double the memory */
+              seq->seq.m = seq->seq.l + 2;
+              kroundup32(seq->seq.m); /* rounded to next closest 2^k */
+              seq->seq.s = fmap_realloc(seq->seq.s, seq->seq.m, "seq->seq.s");
+          }
+          seq->seq.s[seq->seq.l++] = (char)c;
+      }
+  }
+  if (c == '>' || c == '@') seqio->last_char = c; /* the first header char has been read */
+  seq->seq.s[seq->seq.l] = 0;	/* null terminated string */
+  if (c != '+') return seq->seq.l; /* FASTA */
+  if (seq->qual.m < seq->seq.m) {	/* allocate enough memory */
+      seq->qual.m = seq->seq.m;
+      seq->qual.s = fmap_realloc(seq->qual.s, seq->qual.m, "seq->qual.s");
+  }
+  while ((c = fmap_stream_getc(ks)) != -1 && c != '\n'); /* skip the rest of '+' line */
+  if (c == -1) return -2; /* we should not stop here */
+  while ((c = fmap_stream_getc(ks)) != -1 && seq->qual.l < seq->seq.l)
+    if (c >= 33 && c <= 127) seq->qual.s[seq->qual.l++] = (unsigned char)c;
+  seq->qual.s[seq->qual.l] = 0; /* null terminated string */
+  seqio->last_char = 0;	/* we have not come to the next header line */
+  if (seq->seq.l != seq->qual.l) return -2; /* qual string is shorter than seq string */
+  return seq->seq.l;
+}
+
+int
+fmap_seq_io_read_buffer(fmap_seq_io_t *seqio, fmap_seq_t **seq_buffer, int32_t buffer_length)
+{
+  int32_t n = 0;
+
+  while(n < buffer_length && 0 <= fmap_seq_io_read(seqio, seq_buffer[n])) {
+      n++;
+  }
+
+  return n;
 }
