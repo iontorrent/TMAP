@@ -30,7 +30,7 @@ static int usage()
   fprintf(stderr, "Contact: %s\n\n", PACKAGE_BUGREPORT);
   fprintf(stderr, "Usage:   %s <command> [options]\n\n", PACKAGE); 
   fprintf(stderr, "Pre-processing:\n");
-  fprintf(stderr, "         index          creates packed FASTA, BWT string, and SA files\n");
+  fprintf(stderr, "         index          creates the packed FASTA, BWT string, and SA files\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Utilities:\n");
   fprintf(stderr, "         fasta2pac      creates the packed FASTA file\n");
