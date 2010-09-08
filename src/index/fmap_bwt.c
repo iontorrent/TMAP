@@ -240,6 +240,11 @@ fmap_bwt_gen_hash(fmap_bwt_t *bwt, uint32_t hash_width)
 
   fmap_progress_set_start_time(clock());
   fmap_progress_print("constructing the occurence hash for the BWT string");
+  
+  if(bwt->seq_len < hash_width) {
+      fmap_error("Hash width was greater than the sequence length, defaulting to the sequence length", Warn, OutOfRange);
+      hash_width = bwt->seq_len;
+  }
 
   bwt->hash_length = 1 << (hash_width * 2); // 4^{hash_width} entries
 
