@@ -75,7 +75,6 @@ AC_CHECK_HEADERS([stdlib.h stdio.h stdint.h string.h sys/time.h unistd.h float.h
 
 AC_C_INLINE
 
-AC_CONFIG_FILES([Makefile
-				 src/Makefile])
+AC_CONFIG_FILES([Makefile])
 
 AC_OUTPUT
