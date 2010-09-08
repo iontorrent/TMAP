@@ -49,14 +49,17 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length,
           fmap_seq_t *seq = seq_buffer[i];
 
           // TODO: create bounds for # of mismatches in W[i,j]
+          // we could add this to the search procedure
 
           max_mm = (opt->max_mm < 0) ? (int)(opt->max_mm_frac * seq->seq.l) : opt->max_mm; 
           max_gape = (opt->max_gape < 0) ? (int)(opt->max_gape_frac * seq->seq.l) : opt->max_gape; 
           max_gapo = (opt->max_gapo < 0) ? (int)(opt->max_gapo_frac * seq->seq.l) : opt->max_gapo; 
+
+          // TODO: write search procedure
       }
   }
 }
-              
+
 static void *
 fmap_map1_core_thread_worker(void *arg)
 {
@@ -174,11 +177,12 @@ usage(fmap_map1_opt_t *opt)
   fprintf(stderr, "         -r FILE     the reads file name [%s]\n", opt->fn_reads);
   fprintf(stderr, "Options (optional):\n");
   fprintf(stderr, "         -F STRING   the reads file format (fastq|fq|fasta|fa|sff) [%s]\n", reads_format);
-  
+  fprintf(stderr, "         -s INT      the k-mer length to seed CALs [%d]\n", opt->seed_length);
+
   fprintf(stderr, "         -m NUM      maximum number of or (read length) fraction of mismatches");
   if(opt->max_mm < 0) fprintf(stderr, " [fraction: %lf]\n", opt->max_mm_frac);
   else fprintf(stderr, " [number: %d]\n", opt->max_mm); 
- 
+
   fprintf(stderr, "         -o NUM      maximum number of or (read length) fraction of indel starts");
   if(opt->max_gapo < 0) fprintf(stderr, " [fraction: %lf]\n", opt->max_gapo_frac);
   else fprintf(stderr, " [number: %d]\n", opt->max_gapo); 
@@ -211,6 +215,8 @@ fmap_map1(int argc, char *argv[])
 
   // program defaults
   opt.fn_fasta = opt.fn_reads = NULL;
+  opt.reads_format = FMAP_READS_FORMAT_FASTQ;
+  opt.seed_length = 16; // move this to a define block
   opt.max_mm = -1; opt.max_mm_frac = 0.02; // TODO: move this to a define block 
   opt.max_gapo = -1; opt.max_gapo_frac = 0.01; // TODO: move this to a define block
   opt.max_gape = -1; opt.max_gape_frac = 0.10; // TODO: move this to a define block
@@ -218,11 +224,10 @@ fmap_map1(int argc, char *argv[])
   opt.max_cals_del = 10; // TODO: move this to a define block
   opt.indel_ends_bound = 5; // TODO: move this to a define block
   opt.max_best_cals = 32; // TODO: move this to a define block
-  opt.reads_format = FMAP_READS_FORMAT_FASTQ;
   opt.reads_queue_size = 65536; // TODO: move this to a define block
   opt.num_threads = 1;
 
-  while((c = getopt(argc, argv, "f:r:F:q:n:h")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:s:m:o:e:M:O:E:d:i:b:q:n:h")) >= 0) {
       switch(c) {
         case 'f':
           opt.fn_fasta = fmap_strdup(optarg); break;
@@ -230,6 +235,32 @@ fmap_map1(int argc, char *argv[])
           opt.fn_reads = fmap_strdup(optarg); break;
         case 'F':
           opt.reads_format = fmap_get_reads_file_format_int(optarg); break;
+        case 's':
+          opt.seed_length = atoi(optarg); break;
+        case 'm':
+          if(NULL != strstr(optarg, ".")) opt.max_mm = -1, opt.max_mm_frac = atof(optarg);
+          else opt.max_mm = atoi(optarg), opt.max_mm_frac = -1.0;
+          break;
+        case 'o':
+          if(NULL != strstr(optarg, ".")) opt.max_gapo = -1, opt.max_gapo_frac = atof(optarg);
+          else opt.max_gapo = atoi(optarg), opt.max_gapo_frac = -1.0;
+          break;
+        case 'e':
+          if(NULL != strstr(optarg, ".")) opt.max_gape = -1, opt.max_gape_frac = atof(optarg);
+          else opt.max_gape = atoi(optarg), opt.max_gape_frac = -1.0;
+          break;
+        case 'M':
+          opt.pen_mm = atoi(optarg); break;
+        case 'O':
+          opt.pen_gapo = atoi(optarg); break;
+        case 'E':
+          opt.pen_gape = atoi(optarg); break;
+        case 'd':
+          opt.max_cals_del = atoi(optarg); break;
+        case 'i':
+          opt.indel_ends_bound = atoi(optarg); break;
+        case 'b':
+          opt.max_best_cals = atoi(optarg); break;
         case 'q': 
           opt.reads_queue_size = atoi(optarg); break;
         case 'n':
@@ -243,23 +274,28 @@ fmap_map1(int argc, char *argv[])
   if(argc != optind || 1 == argc) {
       return usage(&opt);
   }
-  if(NULL == opt.fn_fasta) {
-      fmap_error("required option -f", Exit, CommandLineArgument);
-  }
-  if(NULL == opt.fn_reads) {
-      fmap_error("required option -r", Exit, CommandLineArgument);
-  }
-  if(FMAP_READS_FORMAT_UNKNOWN == opt.reads_format) {
-      fmap_error("option -F unrecognized", Exit, CommandLineArgument);
-  }
-  if(FMAP_READS_FORMAT_SFF == opt.reads_format) {
-      fmap_error("SFF currently not supported", Exit, CommandLineArgument);
-  }
-  if(opt.reads_queue_size <= 0) {
-      fmap_error("option -q out of range", Exit, CommandLineArgument);
-  }
-  if(opt.num_threads <= 0) {
-      fmap_error("option -n out of range", Exit, CommandLineArgument);
+  else { // check command line arguments
+      if(NULL == opt.fn_fasta) fmap_error("required option -f", Exit, CommandLineArgument);
+      if(NULL == opt.fn_reads) fmap_error("required option -r", Exit, CommandLineArgument);
+      if(FMAP_READS_FORMAT_UNKNOWN == opt.reads_format) fmap_error("option -F unrecognized", Exit, CommandLineArgument);
+      if(FMAP_READS_FORMAT_SFF == opt.reads_format) fmap_error("SFF currently not supported", Exit, CommandLineArgument); // TODO: support SFF
+      fmap_error_cmd_check_int(opt.seed_length, 1, INT32_MAX, "-s");
+
+      // this will take care of the case where they are both < 0
+      fmap_error_cmd_check_int((opt.max_mm_frac < 0) ? opt.max_mm : (int32_t)opt.max_mm_frac, 0, INT32_MAX, "-m"); 
+      // this will take care of the case where they are both < 0
+      fmap_error_cmd_check_int((opt.max_gapo_frac < 0) ? opt.max_gapo : (int32_t)opt.max_gapo_frac, 0, INT32_MAX, "-m"); 
+      // this will take care of the case where they are both < 0
+      fmap_error_cmd_check_int((opt.max_gape_frac < 0) ? opt.max_gape : (int32_t)opt.max_gape_frac, 0, INT32_MAX, "-m"); 
+
+      fmap_error_cmd_check_int(opt.pen_mm, 0, INT32_MAX, "-M");
+      fmap_error_cmd_check_int(opt.pen_gapo, 0, INT32_MAX, "-O");
+      fmap_error_cmd_check_int(opt.pen_gape, 0, INT32_MAX, "-E");
+      fmap_error_cmd_check_int(opt.max_cals_del, 1, INT32_MAX, "-d");
+      fmap_error_cmd_check_int(opt.indel_ends_bound, 0, INT32_MAX, "-i");
+      fmap_error_cmd_check_int(opt.max_best_cals, 0, INT32_MAX, "-b");
+      fmap_error_cmd_check_int(opt.reads_queue_size, 1, INT32_MAX, "-q");
+      fmap_error_cmd_check_int(opt.num_threads, 1, INT32_MAX, "-n");
   }
 
   fmap_map1_core(&opt);

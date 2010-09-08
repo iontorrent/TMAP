@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "fmap_error.h"
 
 static char error_string[][64] =
@@ -20,6 +21,18 @@ static char error_string[][64] =
 static char action_string[][20] =
 {"fatal error", "warning", "LastActionType"};
 
+void
+fmap_error_cmd_check_int(int32_t val, int32_t lower, int32_t upper, char *option)
+{
+  if(val < lower || upper < val) {
+      char str[1024] = "\0";
+      strcpy(str, "option ");
+      strcat(str, option);
+      strcat(str, " out of range");
+      fmap_error(str, Exit, CommandLineArgument);
+  }
+} 
+
 void 
 fmap_error_full(const char *file, const unsigned int line, const char *function_name, const char *variable_name, int action_type, int error_type) 
 {
@@ -36,7 +49,7 @@ fmap_error_full(const char *file, const unsigned int line, const char *function_
      error_type == OpenFileError || 
      error_type == WriteFileError ||
      error_type == EndOfFile) {
-      perror("The file stream error was:");
+      perror("The file stream error was");
   }
 
   switch(action_type) {

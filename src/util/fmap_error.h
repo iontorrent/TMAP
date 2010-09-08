@@ -40,6 +40,16 @@ enum {
 };
 
 /*! @function
+  @abstract      checks if the value falls within the bounds
+  @param  val    the value to be checked
+  @param  lower  the lower integer value (inclusive)
+  @param  upper  the upper integer value (inclusive)
+  @discussion    throws a command line argument error if the value is not within the bounds
+  */
+void
+fmap_error_cmd_check_int(int32_t val, int32_t lower, int32_t upper, char *option);
+
+/*! @function
   @abstract              process an error based on the given action
   @param  variable_name  the variable name or value associated with the error
   @param  action_type    the action to be taken

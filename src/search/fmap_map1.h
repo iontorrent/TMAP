@@ -5,6 +5,8 @@
   @abstract                structure to store the command line options for 'fmap exact'
   @field  fn_fasta          the fasta reference file name (-f)
   @field  fn_reads          the reads file name (-r)
+  @field  reads_format      the reads file format (-F) 
+  @field  seed_length       the k-mer length to seed CALs (-s)
   @field  max_mm            maximum number of mismatches (-m)
   @field  max_mm_frac       maximum (read length) fraction of mismatches (-m)
   @field  max_gapo          maximum number of indel opens (-o)
@@ -15,15 +17,16 @@
   @field  pen_gapo          the indel open penalty (-O)
   @field  pen_gape          the indel extension penalty (-E)
   @field  max_cals_del      the maximum number of CALs to extend a deletion (-d)
-  @field  indel_ends_bound  indels are not allowed within INT number of bps from the end of the read
-  @field  max_best_cals     stop searching when INT optimal CALs have been found
-  @field  reads_format      the reads file format (-F) 
+  @field  indel_ends_bound  indels are not allowed within INT number of bps from the end of the read (-i)
+  @field  max_best_cals     stop searching when INT optimal CALs have been found (-b)
   @field  reads_queue_size  the reads queue size (-q)
   @field  num_threads       the number of threads (-n)
 */
 typedef struct {
     char *fn_fasta;
     char *fn_reads;
+    int32_t reads_format;
+    int32_t seed_length;
     int32_t max_mm;
     double max_mm_frac;
     int32_t max_gapo;
@@ -36,7 +39,6 @@ typedef struct {
     int32_t max_cals_del;
     int32_t indel_ends_bound;
     int32_t max_best_cals;
-    int32_t reads_format;
     int32_t reads_queue_size;
     int32_t num_threads;
 } fmap_map1_opt_t;
