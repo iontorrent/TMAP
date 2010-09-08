@@ -70,6 +70,14 @@ inline void
 fmap_seq_destroy(fmap_seq_t *seq);
 
 /*! @function
+  @abstract   clones the given sequence read structure
+  @param  pointer to the sequence read structure to be copied  
+  @return  pointer to the initialized memory 
+  */
+inline fmap_seq_t *
+fmap_seq_clone(fmap_seq_t *seq);
+
+/*! @function
   @abstract         reverse the seq and qual fields
   @param  seq       a pointer to a sequence structure
   @param  rev_comp  0 only to reverse, otherwise the compliment will also be taken

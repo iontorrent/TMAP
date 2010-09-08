@@ -22,6 +22,28 @@ fmap_seq_destroy(fmap_seq_t *seq)
 }
 
 static inline void
+fmap_string_copy(fmap_string_t *dest, fmap_string_t *src)
+{
+  dest->s = fmap_malloc(sizeof(char)*src->m, "dest->s");
+  strcpy(dest->s, src->s);
+  dest->l = src->l;
+  dest->m = src->m;
+}
+
+inline fmap_seq_t*
+fmap_seq_clone(fmap_seq_t *seq)
+{
+  fmap_seq_t *ret = fmap_calloc(1, sizeof(fmap_seq_t), "ret");
+  
+  fmap_string_copy(&ret->name, &seq->name);
+  fmap_string_copy(&ret->comment, &seq->comment);
+  fmap_string_copy(&ret->seq, &seq->seq);
+  fmap_string_copy(&ret->qual, &seq->qual);
+
+  return ret;
+}
+
+static inline void
 fmap_string_reverse(fmap_string_t *str)
 {
   int i;
