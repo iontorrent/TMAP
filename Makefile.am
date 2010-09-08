@@ -4,7 +4,8 @@ fmap_SOURCES = \
 			   src/util/fmap_error.h src/util/fmap_error.c \
 			   src/util/fmap_alloc.h src/util/fmap_alloc.c \
 			   src/io/fmap_io.h src/io/fmap_io.c \
-			   src/io/fmap_seq.h src/io/fmap_seq.c \
+			   src/util/fmap_seq.h src/util/fmap_seq.c \
+			   src/io/fmap_seq_io.h src/io/fmap_seq_io.c \
 			   src/index/fmap_refseq.h src/index/fmap_refseq.c \
 			   src/index/fmap_bwt.h src/index/fmap_bwt.c \
 			   src/index/fmap_bwt_match.h src/index/fmap_bwt_match.c \

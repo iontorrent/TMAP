@@ -2,12 +2,13 @@
 #include "../util/fmap_error.h"
 #include "../util/fmap_alloc.h"
 #include "../util/fmap_definitions.h"
+#include "../util/fmap_seq.h"
 #include "../index/fmap_refseq.h"
 #include "../index/fmap_bwt_gen.h"
 #include "../index/fmap_bwt.h"
 #include "../index/fmap_bwt_match.h"
 #include "../index/fmap_sa.h"
-#include "../io/fmap_seq.h"
+#include "../io/fmap_seq_io.h"
 #include "fmap_map1.h"
 
 #ifdef HAVE_LIBPTHREAD
@@ -43,7 +44,15 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length,
       high = seq_buffer_length; // process all
 #endif
       for(i=low;i<high;i++) { // process each read
-          // TODO
+          int32_t max_mm, max_gapo, max_gape;
+
+          fmap_seq_t *seq = seq_buffer[i];
+
+          // TODO: create bounds for # of mismatches in W[i,j]
+
+          max_mm = (opt->max_mm < 0) ? (int)(opt->max_mm_frac * seq->seq.l) : opt->max_mm; 
+          max_gape = (opt->max_gape < 0) ? (int)(opt->max_gape_frac * seq->seq.l) : opt->max_gape; 
+          max_gapo = (opt->max_gapo < 0) ? (int)(opt->max_gapo_frac * seq->seq.l) : opt->max_gapo; 
       }
   }
 }
@@ -153,6 +162,9 @@ static int
 usage(fmap_map1_opt_t *opt)
 {
   char *reads_format = fmap_get_reads_file_format_string(opt->reads_format);
+  // Future options:
+  // - adapter trimming ?
+  // - homopolymer enumeration ?
 
   fprintf(stderr, "\n");
   fprintf(stderr, "Usage: %s map1 [options]", PACKAGE);
@@ -181,7 +193,6 @@ usage(fmap_map1_opt_t *opt)
   fprintf(stderr, "         -d INT      the maximum number of CALs to extend a deletion [%d]\n", opt->max_cals_del); 
   fprintf(stderr, "         -i INT      indels are not allowed within INT number of bps from the end of the read [%d]\n", opt->indel_ends_bound);
   fprintf(stderr, "         -b INT      stop searching when INT optimal CALs have been found [%d]\n", opt->max_best_cals);
-  // adapter trimming ?
   fprintf(stderr, "         -q INT      the queue size for the reads [%d]\n", opt->reads_queue_size);
   fprintf(stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
   fprintf(stderr, "         -h          print this message\n");

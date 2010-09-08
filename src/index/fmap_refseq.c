@@ -7,7 +7,8 @@
 #include "../util/fmap_progress.h"
 #include "../util/fmap_definitions.h"
 #include "../io/fmap_io.h"
-#include "../io/fmap_seq.h"
+#include "../util/fmap_seq.h"
+#include "../io/fmap_seq_io.h"
 #include "fmap_refseq.h"
 
 static inline void 
