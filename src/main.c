@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
   else if (0 == strcmp("map1", argv[1])) return fmap_map1(argc-1, argv+1);
   else if (0 == strcmp("exact", argv[1])) return fmap_debug_exact(argc-1, argv+1);
   else {
-      fmap_error1(PACKAGE, argv[1], Exit, CommandLineArgument);
+      fmap_error1(PACKAGE, "Unknown command", Exit, CommandLineArgument);
   }
   return 0;
 }
