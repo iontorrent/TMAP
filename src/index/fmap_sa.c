@@ -63,6 +63,7 @@ fmap_sa_write(const char *fn_fasta, fmap_sa_t *sa, uint32_t is_rev)
   if(1 != fmap_file_fwrite(&sa->primary, sizeof(uint32_t), 1, fp_sa)
      || 1 != fmap_file_fwrite(&sa->sa_intv, sizeof(uint32_t), 1, fp_sa) 
      || 1 != fmap_file_fwrite(&sa->seq_len, sizeof(uint32_t), 1, fp_sa)
+     || 1 != fmap_file_fwrite(&sa->is_rev, sizeof(uint32_t), 1, fp_sa)
      || sa->n_sa-1 != fmap_file_fwrite(sa->sa+1, sizeof(uint32_t), sa->n_sa-1, fp_sa)) {
       fmap_error(NULL, Exit, WriteFileError);
   }
