@@ -75,46 +75,17 @@ fmap_map1_print_sam_unmapped(fmap_seq_t *seq)
           0, 0, seq->seq.s, seq->qual.s);
 }
 
-
-static int 
-fmap_map1_cal_width(const fmap_bwt_t *rbwt, int len, const char *str, fmap_map1_width_t *width)
-{
-  // TODO: update based on new BWT ordering
-  uint32_t k, l, ok, ol;
-  int i, bid;
-  bid = 0;
-  k = 0; l = rbwt->seq_len;
-  for (i = 0; i < len; ++i) {
-      uint8_t c = (int)str[i];
-      if (c < 4) {
-          fmap_bwt_2occ(rbwt, k - 1, l, c, &ok, &ol);
-          k = rbwt->L2[c] + ok + 1;
-          l = rbwt->L2[c] + ol;
-      }
-      if (k > l || c > 3) { // then restart
-          k = 0;
-          l = rbwt->seq_len;
-          ++bid;
-      }
-      width[i].w = l - k + 1;
-      width[i].bid = bid;
-  }
-  width[len].w = 0;
-  width[len].bid = ++bid;
-  return bid;
-}
-
 static void
 fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_map1_aln_t ***alns,
-                      fmap_bwt_t *bwt, int32_t tid, fmap_map1_opt_t *opt)
+                      fmap_bwt_t *bwt[2], int32_t tid, fmap_map1_opt_t *opt)
 {
   int32_t low = 0, high;
-  fmap_map1_width_t *width[2]={NULL,NULL}, *seed_width[2]={NULL,NULL};
+  fmap_bwt_match_width_t *width[2]={NULL,NULL}, *seed_width[2]={NULL,NULL};
   int32_t width_length = 0;
   fmap_map1_aux_stack_t *stack;
 
-  seed_width[0] = fmap_calloc(opt->seed_length+1, sizeof(fmap_map1_width_t), "seed_width[0]");
-  seed_width[1] = fmap_calloc(opt->seed_length+1, sizeof(fmap_map1_width_t), "seed_width[1]");
+  seed_width[0] = fmap_calloc(opt->seed_length, sizeof(fmap_bwt_match_width_t), "seed_width[0]");
+  seed_width[1] = fmap_calloc(opt->seed_length, sizeof(fmap_bwt_match_width_t), "seed_width[1]");
 
   stack = fmap_map1_aux_stack_init();
 
@@ -157,21 +128,21 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
           if(width_length < orig_seq->seq.l) {
               free(width[0]); free(width[1]);
               width_length = orig_seq->seq.l;
-              width[0] = fmap_calloc(width_length+1, sizeof(fmap_map1_width_t), "width[0]");
-              width[1] = fmap_calloc(width_length+1, sizeof(fmap_map1_width_t), "width[1]");
+              width[0] = fmap_calloc(width_length, sizeof(fmap_bwt_match_width_t), "width[0]");
+              width[1] = fmap_calloc(width_length, sizeof(fmap_bwt_match_width_t), "width[1]");
           }
-          fmap_map1_cal_width(bwt, seq[0]->seq.l, seq[0]->seq.s, width[0]);
-          fmap_map1_cal_width(bwt, seq[1]->seq.l, seq[1]->seq.s, width[1]);
+          fmap_bwt_match_cal_width(bwt[0], seq[0]->seq.l, seq[0]->seq.s, width[0]);
+          fmap_bwt_match_cal_width(bwt[0], seq[1]->seq.l, seq[1]->seq.s, width[1]);
 
           if(orig_seq->seq.l < opt->seed_length) {
               opt_local.seed_length = -1;
           }
           else {
-              fmap_map1_cal_width(bwt, opt->seed_length, seq[0]->seq.s, width[0]);
-              fmap_map1_cal_width(bwt, opt->seed_length, seq[1]->seq.s, width[1]);
+              fmap_bwt_match_cal_width(bwt[0], opt->seed_length, seq[0]->seq.s, width[0]);
+              fmap_bwt_match_cal_width(bwt[0], opt->seed_length, seq[1]->seq.s, width[1]);
           }
 
-          alns[low] = fmap_map1_aux_core(seq, bwt, width, (0 < opt_local.seed_length) ? seed_width : NULL, &opt_local, stack);
+          alns[low] = fmap_map1_aux_core(seq, bwt[1], width, (0 < opt_local.seed_length) ? seed_width : NULL, &opt_local, stack);
 
           low++;
 
@@ -205,7 +176,7 @@ fmap_map1_core(fmap_map1_opt_t *opt)
   uint32_t i, j;
   int32_t seq_buffer_length;
   fmap_refseq_t *refseq=NULL;
-  fmap_bwt_t *bwt=NULL;
+  fmap_bwt_t *bwt[2]={NULL,NULL};
   fmap_sa_t *sa=NULL;
   fmap_file_t *fp_reads=NULL;
   fmap_seq_io_t *seqio = NULL;
@@ -214,7 +185,8 @@ fmap_map1_core(fmap_map1_opt_t *opt)
 
   // For suffix search we need the reverse bwt/sa and forward refseq
   refseq = fmap_refseq_read(opt->fn_fasta, 0);
-  bwt = fmap_bwt_read(opt->fn_fasta, 1);
+  bwt[0] = fmap_bwt_read(opt->fn_fasta, 0);
+  bwt[1] = fmap_bwt_read(opt->fn_fasta, 1);
   sa = fmap_sa_read(opt->fn_fasta, 1);
 
   // SAM header
@@ -256,7 +228,8 @@ fmap_map1_core(fmap_map1_opt_t *opt)
               thread_data[i].seq_buffer = seq_buffer;
               thread_data[i].seq_buffer_length = seq_buffer_length;
               thread_data[i].alns = alns;
-              thread_data[i].bwt = bwt;
+              thread_data[i].bwt[0] = bwt[0];
+              thread_data[i].bwt[1] = bwt[1];
               thread_data[i].tid = i;
               thread_data[i].opt = opt; 
               if(0 != pthread_create(&threads[i], &attr, fmap_map1_core_thread_worker, &thread_data[i])) {
@@ -291,7 +264,7 @@ fmap_map1_core(fmap_map1_opt_t *opt)
           // print alignments
           if(0 < n_alns) {
               for(j=0;j<n_alns;j++) { 
-                  n_mapped += fmap_map1_print_sam(seq_buffer[i], refseq, bwt, sa, alns[i][j]);
+                  n_mapped += fmap_map1_print_sam(seq_buffer[i], refseq, bwt[1], sa, alns[i][j]);
               }
           }
           if(0 == n_mapped) {
@@ -316,7 +289,8 @@ fmap_map1_core(fmap_map1_opt_t *opt)
   free(alns);
   fmap_file_fclose(fp_reads);
   fmap_refseq_destroy(refseq);
-  fmap_bwt_destroy(bwt);
+  fmap_bwt_destroy(bwt[0]);
+  fmap_bwt_destroy(bwt[1]);
   fmap_sa_destroy(sa);
   fmap_seq_io_destroy(seqio);
 }

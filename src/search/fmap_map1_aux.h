@@ -61,7 +61,7 @@ fmap_map1_aux_stack_destroy(fmap_map1_aux_stack_t *stack);
   */
 fmap_map1_aln_t **
 fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
-                   fmap_map1_width_t *width[2], fmap_map1_width_t *seed_width[2], fmap_map1_opt_t *opt,
+                   fmap_bwt_match_width_t *width[2], fmap_bwt_match_width_t *seed_width[2], fmap_map1_opt_t *opt,
                    fmap_map1_aux_stack_t *stack);
 
 #endif

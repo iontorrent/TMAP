@@ -110,7 +110,7 @@ fmap_map1_aux_stack_pop(fmap_map1_aux_stack_t *stack)
 
 static inline void 
 fmap_map1_aux_stack_shadow(int32_t x, int32_t len, uint32_t max, 
-                           int32_t last_diff_pos, fmap_map1_width_t *w)
+                           int32_t last_diff_pos, fmap_bwt_match_width_t *w)
 {
   int32_t i, j;
   for(i = j = 0; i < last_diff_pos; ++i) {
@@ -168,7 +168,7 @@ fmap_map1_aux_get_bam_state(int state)
 
 fmap_map1_aln_t **
 fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
-                   fmap_map1_width_t *width[2], fmap_map1_width_t *seed_width[2], fmap_map1_opt_t *opt,
+                   fmap_bwt_match_width_t *width[2], fmap_bwt_match_width_t *seed_width[2], fmap_map1_opt_t *opt,
                    fmap_map1_aux_stack_t *stack)
 {
   int32_t max_mm = opt->max_mm, max_gapo = opt->max_gapo, max_gape = opt->max_gape;
@@ -205,8 +205,8 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
       //int32_t n_seed_mm;
       const uint8_t *str=NULL;
       int32_t hit_found, allow_diff, allow_M;
-      //fmap_map1_width_t *width_cur;
-      //const fmap_map1_width_t *seed_width-cur = NULL;
+      //fmap_bwt_match_width_t *width_cur;
+      //const fmap_bwt_match_width_t *seed_width-cur = NULL;
       // int32_t i, m, m_seed = 0;
 
       //if(stack->n_entries > opt->max_entries) break; // TODO

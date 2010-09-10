@@ -72,7 +72,7 @@ typedef struct {
   @field  seq_buffer         the buffer of sequences
   @field  seq_buffer_length  the buffer length
   @field  alns               alignments for each sequence
-  @field  bwt                pointer to the BWT index (reverse)
+  @field  bwt                pointer to the BWT indices (forward/reverse)
   @field  tid                the zero-based thread id
   @field  opt                the options to this program
  */
@@ -80,21 +80,10 @@ typedef struct {
     fmap_seq_t **seq_buffer;
     int32_t seq_buffer_length;
     fmap_map1_aln_t ***alns;
-    fmap_bwt_t *bwt;
+    fmap_bwt_t *bwt[2];
     int32_t tid;
     fmap_map1_opt_t *opt;
 } fmap_map1_thread_data_t;
-
-// TODO: document
-/*! @typedef
-  @abstract
-  @field  w
-  @field  bid
-  */
-typedef struct {
-    uint32_t w;
-    int32_t bid;
-} fmap_map1_width_t;
 
 /*! @function
   @abstract     main-like function for 'fmap exact'
