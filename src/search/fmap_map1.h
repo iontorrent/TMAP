@@ -21,6 +21,7 @@
   @field  indel_ends_bound  indels are not allowed within INT number of bps from the end of the read (-i)
   @field  max_best_cals     stop searching when INT optimal CALs have been found (-b)
   @field  reads_queue_size  the reads queue size (-q)
+  @field  max_entries       maximum number of alignment nodes (-Q)
   @field  num_threads       the number of threads (-n)
 */
 typedef struct {
@@ -42,6 +43,7 @@ typedef struct {
     int32_t indel_ends_bound;
     int32_t max_best_cals;
     int32_t reads_queue_size;
+    int32_t max_entries;;
     int32_t num_threads;
 } fmap_map1_opt_t;
 

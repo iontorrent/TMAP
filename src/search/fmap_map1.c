@@ -334,6 +334,7 @@ usage(fmap_map1_opt_t *opt)
   fprintf(stderr, "         -i INT      indels are not allowed within INT number of bps from the end of the read [%d]\n", opt->indel_ends_bound);
   fprintf(stderr, "         -b INT      stop searching when INT optimal CALs have been found [%d]\n", opt->max_best_cals);
   fprintf(stderr, "         -q INT      the queue size for the reads [%d]\n", opt->reads_queue_size);
+  fprintf(stderr, "         -Q INT      maximum number of alignment nodes [%d]\n", opt->max_entries);
   fprintf(stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
   fprintf(stderr, "         -h          print this message\n");
   fprintf(stderr, "\n");
@@ -363,9 +364,10 @@ fmap_map1(int argc, char *argv[])
   opt.indel_ends_bound = 5; // TODO: move this to a define block
   opt.max_best_cals = 32; // TODO: move this to a define block
   opt.reads_queue_size = 65536; // TODO: move this to a define block
+  opt.max_entries= 2000000; // TODO: move this to a define block
   opt.num_threads = 1;
 
-  while((c = getopt(argc, argv, "f:r:F:l:k:m:o:e:M:O:E:d:i:b:q:n:h")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:l:k:m:o:e:M:O:E:d:i:b:q:Q:n:h")) >= 0) {
       switch(c) {
         case 'f':
           opt.fn_fasta = fmap_strdup(optarg); break;
@@ -403,6 +405,8 @@ fmap_map1(int argc, char *argv[])
           opt.max_best_cals = atoi(optarg); break;
         case 'q': 
           opt.reads_queue_size = atoi(optarg); break;
+        case 'Q': 
+          opt.max_entries = atoi(optarg); break;
         case 'n':
           opt.num_threads = atoi(optarg); break;
         case 'h':
@@ -435,6 +439,7 @@ fmap_map1(int argc, char *argv[])
       fmap_error_cmd_check_int(opt.indel_ends_bound, 0, INT32_MAX, "-i");
       fmap_error_cmd_check_int(opt.max_best_cals, 0, INT32_MAX, "-b");
       fmap_error_cmd_check_int(opt.reads_queue_size, 1, INT32_MAX, "-q");
+      fmap_error_cmd_check_int(opt.max_entries, 1, INT32_MAX, "-Q");
       fmap_error_cmd_check_int(opt.num_threads, 1, INT32_MAX, "-n");
   }
 
