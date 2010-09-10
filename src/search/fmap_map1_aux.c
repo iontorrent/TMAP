@@ -78,11 +78,17 @@ fmap_map1_aux_stack_push(fmap_map1_aux_stack_t *stack,
   entry->state = state;
   entry->strand = strand;
   entry->offset = offset; 
-  entry->last_diff_offset = (1 == is_diff) ? offset : prev_entry->last_diff_offset;
   entry->k = k;
   entry->l = l;
   entry->i = stack->entry_pool_i;
-  entry->prev_i = (NULL == prev_entry) ? -1 : prev_entry->i;
+  if(NULL == prev_entry) {
+      entry->last_diff_offset = (1 == is_diff) ? offset : 0;
+      entry->prev_i = -1;
+  }
+  else {
+      entry->last_diff_offset = (1 == is_diff) ? offset : prev_entry->last_diff_offset;
+      entry->prev_i = prev_entry->i;
+  }
 
   if(stack->best_score > entry->score) stack->best_score = entry->score;
 
@@ -404,7 +410,7 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
           }
       }
       // mismatches
-      if(offset < len && 0 < n_mm && width[offset]->bid <= n_mm) { // mismatches allowed
+      if(offset < len && 0 < n_mm && width_cur[offset].bid <= n_mm) { // mismatches allowed
           for(j = 1; j <= 4; ++j) {
               int32_t c = (str[offset] + j) & 3;
               int32_t is_mm = (j != 4 || str[offset] > 3);
