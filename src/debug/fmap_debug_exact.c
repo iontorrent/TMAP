@@ -43,28 +43,28 @@ fmap_debug_exact_print_sam(fmap_refseq_t *refseq, fmap_seq_t *seq, uint32_t pacp
 }
 
 static void 
-fmap_debug_exact_core_worker(fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *sa, fmap_seq_t *seq)
+fmap_debug_exact_core_worker(fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *sa, fmap_seq_t *orig_seq)
 {
   uint32_t i;
   uint32_t sa_begin, sa_end;
-  uint8_t *seq_int = NULL, *seq_int_rc = NULL;
   uint32_t mapped = 0;
+  fmap_seq_t *seq=NULL, *rseq=NULL;
 
-  seq_int = fmap_malloc(sizeof(uint8_t)*seq->seq.l, "seq_int");
-  seq_int_rc = fmap_malloc(sizeof(uint8_t)*seq->seq.l, "seq_int");
-  for(i=0;i<seq->seq.l;i++) {
-      seq_int[i] = nt_char_to_int[(int)seq->seq.s[i]];
-      seq_int_rc[seq->seq.l-i-1] = (4 <= seq_int[i]) ? seq_int[i] : 3 - seq_int[i];
-  }
+  seq = fmap_seq_clone(orig_seq);
+  fmap_seq_to_int(seq);
+  
+  rseq = fmap_seq_clone(orig_seq);
+  fmap_seq_reverse(rseq, 1);
+  fmap_seq_to_int(rseq);
 
-  if(0 != fmap_bwt_match_exact(bwt, seq->seq.l, seq_int, &sa_begin, &sa_end)) {
+  if(0 != fmap_bwt_match_exact(bwt, seq->seq.l, (uint8_t*)seq->seq.s, &sa_begin, &sa_end)) {
       for(i=sa_begin;i<=sa_end;i++) {
           if(0 != fmap_debug_exact_print_sam(refseq, seq, fmap_sa_pac_pos(sa, bwt, i), 0)) {
               mapped = 1;
           }
       }
   }
-  if(0 != fmap_bwt_match_exact(bwt, seq->seq.l, seq_int_rc, &sa_begin, &sa_end)) {
+  if(0 != fmap_bwt_match_exact(bwt, seq->seq.l, (uint8_t*)rseq->seq.s, &sa_begin, &sa_end)) {
       for(i=sa_begin;i<=sa_end;i++) {
           if(0 != fmap_debug_exact_print_sam(refseq, seq, fmap_sa_pac_pos(sa, bwt, i), 1)) {
               mapped = 1;
@@ -76,7 +76,8 @@ fmap_debug_exact_core_worker(fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *
       fmap_debug_exact_print_sam_unmapped(seq);
   }
   
-  free(seq_int);
+  fmap_seq_destroy(seq);
+  fmap_seq_destroy(rseq);
 }
 
 static void 

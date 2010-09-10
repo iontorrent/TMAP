@@ -171,9 +171,6 @@ fmap_refseq_pac2revpac(const char *fn_fasta)
   for(i=refseq->len-1;0<=i;i--) {
       c = fmap_refseq_seq_i(refseq, i);
       j = refseq->len - i - 1;
-      if(j < 0) {
-          fprintf(stderr, "i=%d j=%d c=%d\n", i, j, c);
-      }
       fmap_refseq_seq_store_i(refseq_rev, j, c);
   }
 

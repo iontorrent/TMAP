@@ -185,6 +185,8 @@ int
 fmap_seq_io_read_buffer(fmap_seq_io_t *seqio, fmap_seq_t **seq_buffer, int32_t buffer_length)
 {
   int32_t n = 0;
+  
+  if(buffer_length <= 0) return 0;
 
   while(n < buffer_length && 0 <= fmap_seq_io_read(seqio, seq_buffer[n])) {
       n++;

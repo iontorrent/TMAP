@@ -9,6 +9,7 @@
 #include "../index/fmap_bwt_match.h"
 #include "../index/fmap_sa.h"
 #include "../io/fmap_seq_io.h"
+#include "fmap_map1_aux.h"
 #include "fmap_map1.h"
 
 #ifdef HAVE_LIBPTHREAD
@@ -18,12 +19,104 @@ static int32_t fmap_map1_read_lock_tid = 0;
 #define FMAP_MAP1_THREAD_BLOCK_SIZE 1024
 #endif
 
-static void
-fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length,
-                      fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *sa,
-                      int32_t tid, fmap_map1_opt_t *opt)
+static inline int 
+fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *sa, fmap_map1_aln_t *a)
 {
-  int32_t low = 0, high, i;
+  uint32_t i, j, n = 0;
+
+  for(i=a->k;i<=a->l;i++) {
+      uint16_t flag = 0x0000;
+      uint32_t pos = 0, seqid = 0, pacpos = 0; 
+      int32_t aln_ref_l = 0;
+
+      // get the number of non-inserted bases 
+      for(j=0;j<a->cigar_length;j++) {
+          switch((a->cigar[j] & 0xf)) {
+            case BAM_CMATCH:
+            case BAM_CDEL:
+              aln_ref_l += (a->cigar[j] >> 4); break;
+            default:
+              break;
+          }
+      }
+
+      // SA position to packed refseq position
+      pacpos = bwt->seq_len - fmap_sa_pac_pos(sa, bwt, i) - aln_ref_l + 1;
+
+      if(0 <= fmap_refseq_pac2real(refseq, pacpos, seq->seq.l, &seqid, &pos)) {
+          if(1 == a->strand) { // reverse for the output
+              flag |= 0x0010;
+              fmap_seq_reverse(seq, 1);
+          }
+          fprintf(stdout, "%s\t%u\t%s\t%u\t%u\t",
+                  seq->name.s, flag, refseq->annos[seqid].name,
+                  pos, 255);
+          for(j=0;j<a->cigar_length;j++) {
+              fprintf(stdout, "%d%c", (a->cigar[j]>>4), "MIDNSHP"[a->cigar[j] & 0xf]);
+          }
+          fprintf(stdout, "\t*\t0\t0\t%s\t%s\n",
+                  seq->seq.s, seq->qual.s);
+          if(1 == a->strand) { // reverse back
+              fmap_seq_reverse(seq, 1);
+          }
+          n++;
+      }
+  }
+
+  return n;
+}
+
+static inline void
+fmap_map1_print_sam_unmapped(fmap_seq_t *seq)
+{
+  uint16_t flag = 0x0004;
+  fprintf(stdout, "%s\t%u\t%s\t%u\t%u\t*\t*\t0\t0\t%s\t%s\n",
+          seq->name.s, flag, "*",
+          0, 0, seq->seq.s, seq->qual.s);
+}
+
+
+static int 
+fmap_map1_cal_width(const fmap_bwt_t *rbwt, int len, const char *str, fmap_map1_width_t *width)
+{
+  // TODO: update based on new BWT ordering
+  uint32_t k, l, ok, ol;
+  int i, bid;
+  bid = 0;
+  k = 0; l = rbwt->seq_len;
+  for (i = 0; i < len; ++i) {
+      uint8_t c = (int)str[i];
+      if (c < 4) {
+          fmap_bwt_2occ(rbwt, k - 1, l, c, &ok, &ol);
+          k = rbwt->L2[c] + ok + 1;
+          l = rbwt->L2[c] + ol;
+      }
+      if (k > l || c > 3) { // then restart
+          k = 0;
+          l = rbwt->seq_len;
+          ++bid;
+      }
+      width[i].w = l - k + 1;
+      width[i].bid = bid;
+  }
+  width[len].w = 0;
+  width[len].bid = ++bid;
+  return bid;
+}
+
+static void
+fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_map1_aln_t ***alns,
+                      fmap_bwt_t *bwt, int32_t tid, fmap_map1_opt_t *opt)
+{
+  int32_t low = 0, high;
+  fmap_map1_width_t *width[2]={NULL,NULL}, *seed_width[2]={NULL,NULL};
+  int32_t width_length = 0;
+  fmap_map1_aux_stack_t *stack;
+
+  seed_width[0] = fmap_calloc(opt->seed_length+1, sizeof(fmap_map1_width_t), "seed_width[0]");
+  seed_width[1] = fmap_calloc(opt->seed_length+1, sizeof(fmap_map1_width_t), "seed_width[1]");
+
+  stack = fmap_map1_aux_stack_init();
 
   while(low < seq_buffer_length) {
 #ifdef HAVE_LIBPTHREAD
@@ -43,21 +136,56 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length,
 #else 
       high = seq_buffer_length; // process all
 #endif
-      for(i=low;i<high;i++) { // process each read
-          int32_t max_mm, max_gapo, max_gape;
+      while(low<high) {
+          fmap_map1_opt_t opt_local = (*opt); // copy over values
+          fmap_seq_t *seq[2]={NULL, NULL}, *orig_seq=NULL;
 
-          fmap_seq_t *seq = seq_buffer[i];
+          orig_seq = seq_buffer[low];
 
-          // TODO: create bounds for # of mismatches in W[i,j]
-          // we could add this to the search procedure
+          // clone the sequence and get the reverse compliment
+          seq[0] = fmap_seq_clone(orig_seq);
+          seq[1] = fmap_seq_clone(orig_seq);
+          fmap_seq_reverse(seq[1], 1);
+          // convert to integers
+          fmap_seq_to_int(seq[0]);
+          fmap_seq_to_int(seq[1]);
 
-          max_mm = (opt->max_mm < 0) ? (int)(opt->max_mm_frac * seq->seq.l) : opt->max_mm; 
-          max_gape = (opt->max_gape < 0) ? (int)(opt->max_gape_frac * seq->seq.l) : opt->max_gape; 
-          max_gapo = (opt->max_gapo < 0) ? (int)(opt->max_gapo_frac * seq->seq.l) : opt->max_gapo; 
+          opt_local.max_mm = (opt->max_mm < 0) ? (int)(opt->max_mm_frac * orig_seq->seq.l) : opt->max_mm; 
+          opt_local.max_gape = (opt->max_gape < 0) ? (int)(opt->max_gape_frac * orig_seq->seq.l) : opt->max_gape; 
+          opt_local.max_gapo = (opt->max_gapo < 0) ? (int)(opt->max_gapo_frac * orig_seq->seq.l) : opt->max_gapo; 
 
-          // TODO: write search procedure
+          if(width_length < orig_seq->seq.l) {
+              free(width[0]); free(width[1]);
+              width_length = orig_seq->seq.l;
+              width[0] = fmap_calloc(width_length+1, sizeof(fmap_map1_width_t), "width[0]");
+              width[1] = fmap_calloc(width_length+1, sizeof(fmap_map1_width_t), "width[1]");
+          }
+          fmap_map1_cal_width(bwt, seq[0]->seq.l, seq[0]->seq.s, width[0]);
+          fmap_map1_cal_width(bwt, seq[1]->seq.l, seq[1]->seq.s, width[1]);
+
+          if(orig_seq->seq.l < opt->seed_length) {
+              opt_local.seed_length = -1;
+          }
+          else {
+              fmap_map1_cal_width(bwt, opt->seed_length, seq[0]->seq.s, width[0]);
+              fmap_map1_cal_width(bwt, opt->seed_length, seq[1]->seq.s, width[1]);
+          }
+
+          alns[low] = fmap_map1_aux_core(seq, bwt, width, (0 < opt_local.seed_length) ? seed_width : NULL, &opt_local, stack);
+
+          low++;
+
+          // destroy
+          fmap_seq_destroy(seq[0]);
+          fmap_seq_destroy(seq[1]);
       }
   }
+
+  fmap_map1_aux_stack_destroy(stack);
+  free(seed_width[0]);
+  free(seed_width[1]);
+  free(width[0]);
+  free(width[1]);
 }
 
 static void *
@@ -65,9 +193,8 @@ fmap_map1_core_thread_worker(void *arg)
 {
   fmap_map1_thread_data_t *thread_data = (fmap_map1_thread_data_t*)arg;
 
-  fmap_map1_core_worker(thread_data->seq_buffer, thread_data->seq_buffer_length,
-                        thread_data->refseq, thread_data->bwt, thread_data->sa,
-                        thread_data->tid, thread_data->opt);
+  fmap_map1_core_worker(thread_data->seq_buffer, thread_data->seq_buffer_length, thread_data->alns,
+                        thread_data->bwt, thread_data->tid, thread_data->opt);
 
   return arg;
 }
@@ -75,7 +202,7 @@ fmap_map1_core_thread_worker(void *arg)
 static void 
 fmap_map1_core(fmap_map1_opt_t *opt)
 {
-  uint32_t i;
+  uint32_t i, j;
   int32_t seq_buffer_length;
   fmap_refseq_t *refseq=NULL;
   fmap_bwt_t *bwt=NULL;
@@ -83,34 +210,35 @@ fmap_map1_core(fmap_map1_opt_t *opt)
   fmap_file_t *fp_reads=NULL;
   fmap_seq_io_t *seqio = NULL;
   fmap_seq_t **seq_buffer = NULL;
+  fmap_map1_aln_t ***alns = NULL;
 
-  // SAM header
-  /*
-     refseq = fmap_refseq_read(opt->fn_fasta, 0);
-     for(i=0;i<refseq->num_annos;i++) {
-     fprintf(stdout, "@SQ\tSN:%s\tLN:%d\n",
-     refseq->annos[i].name, (int)refseq->annos[i].len);
-     }
-     */
-
-  // TODO modify so we use forward search
+  // For suffix search we need the reverse bwt/sa and forward refseq
+  refseq = fmap_refseq_read(opt->fn_fasta, 0);
   bwt = fmap_bwt_read(opt->fn_fasta, 1);
   sa = fmap_sa_read(opt->fn_fasta, 1);
+
+  // SAM header
+  for(i=0;i<refseq->num_annos;i++) {
+      fprintf(stdout, "@SQ\tSN:%s\tLN:%d\n",
+              refseq->annos[i].name, (int)refseq->annos[i].len);
+  }
 
   // TODO: support FASTA/FASTQ/SFF
   fp_reads = fmap_file_fopen(opt->fn_reads, "rb", FMAP_FILE_NO_COMPRESSION);
   seqio = fmap_seq_io_init(fp_reads);
 
   // initialize the buffer
-  seq_buffer = fmap_malloc(sizeof(fmap_seq_t*), "seq_buffer");
+  seq_buffer = fmap_malloc(sizeof(fmap_seq_t*)*opt->reads_queue_size, "seq_buffer");
+  alns = fmap_malloc(sizeof(fmap_map1_aln_t**)*opt->reads_queue_size, "alns");
   for(i=0;i<opt->reads_queue_size;i++) {
       seq_buffer[i] = fmap_seq_init();
   }
 
   while(0 < (seq_buffer_length = fmap_seq_io_read_buffer(seqio, seq_buffer, opt->reads_queue_size))) {
+      // do alignment
 #ifdef HAVE_LIBPTHREAD
       if(1 == opt->num_threads) {
-          fmap_map1_core_worker(seq_buffer, seq_buffer_length, refseq, bwt, sa, 0, opt);
+          fmap_map1_core_worker(seq_buffer, seq_buffer_length, alns, bwt, 0, opt);
       }
       else {
           pthread_attr_t attr;
@@ -127,9 +255,8 @@ fmap_map1_core(fmap_map1_opt_t *opt)
           for(i=0;i<opt->num_threads;i++) {
               thread_data[i].seq_buffer = seq_buffer;
               thread_data[i].seq_buffer_length = seq_buffer_length;
-              thread_data[i].refseq = refseq;
+              thread_data[i].alns = alns;
               thread_data[i].bwt = bwt;
-              thread_data[i].sa = sa;
               thread_data[i].tid = i;
               thread_data[i].opt = opt; 
               if(0 != pthread_create(&threads[i], &attr, fmap_map1_core_thread_worker, &thread_data[i])) {
@@ -146,8 +273,39 @@ fmap_map1_core(fmap_map1_opt_t *opt)
           free(thread_data);
       }
 #else 
-      fmap_map1_core_worker(seq_buffer, seq_buffer_length, refseq, bwt, sa, 0, opt);
+      fmap_map1_core_worker(seq_buffer, seq_buffer_length, alns, bwt, 0, opt);
 #endif
+
+
+      for(i=0;i<seq_buffer_length;i++) {
+          int32_t n_alns = 0, n_mapped = 0;
+          fmap_map1_aln_t **a = alns[i];
+
+          // get the number of alignments
+          if(a != NULL) {
+              while(NULL != a[n_alns]) {
+                  n_alns++;
+              }
+          }
+
+          // print alignments
+          if(0 < n_alns) {
+              for(j=0;j<n_alns;j++) { 
+                  n_mapped += fmap_map1_print_sam(seq_buffer[i], refseq, bwt, sa, alns[i][j]);
+              }
+          }
+          if(0 == n_mapped) {
+              fmap_map1_print_sam_unmapped(seq_buffer[i]);
+          }
+
+          // free alignments
+          for(j=0;j<n_alns;j++) { 
+              free(alns[i][j]->cigar); // free cigar
+              free(alns[i][j]); // free alignment
+          }
+          free(alns[i]);
+          alns[i] = NULL;
+      }
   }
 
   // free memory
@@ -155,10 +313,12 @@ fmap_map1_core(fmap_map1_opt_t *opt)
       fmap_seq_destroy(seq_buffer[i]);
   }
   free(seq_buffer);
+  free(alns);
   fmap_file_fclose(fp_reads);
   fmap_refseq_destroy(refseq);
   fmap_bwt_destroy(bwt);
   fmap_sa_destroy(sa);
+  fmap_seq_io_destroy(seqio);
 }
 
 static int 
@@ -168,6 +328,7 @@ usage(fmap_map1_opt_t *opt)
   // Future options:
   // - adapter trimming ?
   // - homopolymer enumeration ?
+  // - add option to try various seed offsets
 
   fprintf(stderr, "\n");
   fprintf(stderr, "Usage: %s map1 [options]", PACKAGE);
@@ -177,7 +338,8 @@ usage(fmap_map1_opt_t *opt)
   fprintf(stderr, "         -r FILE     the reads file name [%s]\n", opt->fn_reads);
   fprintf(stderr, "Options (optional):\n");
   fprintf(stderr, "         -F STRING   the reads file format (fastq|fq|fasta|fa|sff) [%s]\n", reads_format);
-  fprintf(stderr, "         -s INT      the k-mer length to seed CALs [%d]\n", opt->seed_length);
+  fprintf(stderr, "         -l INT      the k-mer length to seed CALs (-1 to disable) [%d]\n", opt->seed_length);
+  fprintf(stderr, "         -k INT      maximum number of mismatches in the seed [%d]\n", opt->seed_max_mm);
 
   fprintf(stderr, "         -m NUM      maximum number of or (read length) fraction of mismatches");
   if(opt->max_mm < 0) fprintf(stderr, " [fraction: %lf]\n", opt->max_mm_frac);
@@ -213,10 +375,12 @@ fmap_map1(int argc, char *argv[])
   int c;
   fmap_map1_opt_t opt;
 
+
   // program defaults
   opt.fn_fasta = opt.fn_reads = NULL;
   opt.reads_format = FMAP_READS_FORMAT_FASTQ;
-  opt.seed_length = 16; // move this to a define block
+  opt.seed_length = 32; // move this to a define block
+  opt.seed_max_mm = 3; // move this to a define block
   opt.max_mm = -1; opt.max_mm_frac = 0.02; // TODO: move this to a define block 
   opt.max_gapo = -1; opt.max_gapo_frac = 0.01; // TODO: move this to a define block
   opt.max_gape = -1; opt.max_gape_frac = 0.10; // TODO: move this to a define block
@@ -227,7 +391,7 @@ fmap_map1(int argc, char *argv[])
   opt.reads_queue_size = 65536; // TODO: move this to a define block
   opt.num_threads = 1;
 
-  while((c = getopt(argc, argv, "f:r:F:s:m:o:e:M:O:E:d:i:b:q:n:h")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:l:k:m:o:e:M:O:E:d:i:b:q:n:h")) >= 0) {
       switch(c) {
         case 'f':
           opt.fn_fasta = fmap_strdup(optarg); break;
@@ -235,8 +399,10 @@ fmap_map1(int argc, char *argv[])
           opt.fn_reads = fmap_strdup(optarg); break;
         case 'F':
           opt.reads_format = fmap_get_reads_file_format_int(optarg); break;
-        case 's':
+        case 'l':
           opt.seed_length = atoi(optarg); break;
+        case 'k':
+          opt.seed_max_mm = atoi(optarg); break;
         case 'm':
           if(NULL != strstr(optarg, ".")) opt.max_mm = -1, opt.max_mm_frac = atof(optarg);
           else opt.max_mm = atoi(optarg), opt.max_mm_frac = -1.0;
@@ -279,7 +445,7 @@ fmap_map1(int argc, char *argv[])
       if(NULL == opt.fn_reads) fmap_error("required option -r", Exit, CommandLineArgument);
       if(FMAP_READS_FORMAT_UNKNOWN == opt.reads_format) fmap_error("option -F unrecognized", Exit, CommandLineArgument);
       if(FMAP_READS_FORMAT_SFF == opt.reads_format) fmap_error("SFF currently not supported", Exit, CommandLineArgument); // TODO: support SFF
-      fmap_error_cmd_check_int(opt.seed_length, 1, INT32_MAX, "-s");
+      if(-1 != opt.seed_length) fmap_error_cmd_check_int(opt.seed_length, 1, INT32_MAX, "-s");
 
       // this will take care of the case where they are both < 0
       fmap_error_cmd_check_int((opt.max_mm_frac < 0) ? opt.max_mm : (int32_t)opt.max_mm_frac, 0, INT32_MAX, "-m"); 

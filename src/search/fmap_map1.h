@@ -6,7 +6,8 @@
   @field  fn_fasta          the fasta reference file name (-f)
   @field  fn_reads          the reads file name (-r)
   @field  reads_format      the reads file format (-F) 
-  @field  seed_length       the k-mer length to seed CALs (-s)
+  @field  seed_length       the k-mer length to seed CALs (-l)
+  @field  seed_max_mm       maximum number of mismatches in hte seed (-k)
   @field  max_mm            maximum number of mismatches (-m)
   @field  max_mm_frac       maximum (read length) fraction of mismatches (-m)
   @field  max_gapo          maximum number of indel opens (-o)
@@ -27,6 +28,7 @@ typedef struct {
     char *fn_reads;
     int32_t reads_format;
     int32_t seed_length;
+    int32_t seed_max_mm;
     int32_t max_mm;
     double max_mm_frac;
     int32_t max_gapo;
@@ -43,25 +45,56 @@ typedef struct {
     int32_t num_threads;
 } fmap_map1_opt_t;
 
+/*! @typedef 
+  @field  score         the current alignment score
+  @field  n_mm          the current number of mismatches 
+  @field  n_gapo        the current number of gap opens
+  @field  n_gape        the current number of gap extensions
+  @field  strand        the strand of the alignment
+  @field  k             the lower range of the SA interval
+  @field  l             the upper range of the SA interval
+  @field  cigar_length  the length of the cigar array
+  @field  cigar         the cigar array
+  @discussion In the CIGAR array, each element is a 32-bit integer. The
+  lower 4 bits gives a CIGAR operation and the higher 28 bits keep the
+  length of a CIGAR.
+*/
+typedef struct {
+    uint32_t score;
+    uint32_t n_mm:9, n_gapo:10, n_gape:10, strand:3;
+    uint32_t k, l; // SA interval
+    uint32_t cigar_length;
+    uint32_t *cigar; 
+} fmap_map1_aln_t;
+
 /*! @typedef
   @abstract                 data to be passed to a thread
   @field  seq_buffer         the buffer of sequences
   @field  seq_buffer_length  the buffer length
-  @field  refseq             pointer to the references sequence
-  @field  bwt                pointer to the BWT index
-  @field  sa                 pointer to the SA structure
+  @field  alns               alignments for each sequence
+  @field  bwt                pointer to the BWT index (reverse)
   @field  tid                the zero-based thread id
   @field  opt                the options to this program
  */
 typedef struct {
     fmap_seq_t **seq_buffer;
     int32_t seq_buffer_length;
-    fmap_refseq_t *refseq;
+    fmap_map1_aln_t ***alns;
     fmap_bwt_t *bwt;
-    fmap_sa_t *sa;
     int32_t tid;
     fmap_map1_opt_t *opt;
 } fmap_map1_thread_data_t;
+
+// TODO: document
+/*! @typedef
+  @abstract
+  @field  w
+  @field  bid
+  */
+typedef struct {
+    uint32_t w;
+    int32_t bid;
+} fmap_map1_width_t;
 
 /*! @function
   @abstract     main-like function for 'fmap exact'

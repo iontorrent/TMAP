@@ -50,9 +50,11 @@ typedef struct {
   @field  comment    the comment string
   @field  seq        the sequence string
   @field  qual       the quality string
+  @field  is_int     1 if the sequence is in integer format, 0 otherwise 
   */
 typedef struct {
     fmap_string_t name, comment, seq, qual;
+    int32_t is_int;
 } fmap_seq_t;
 
 /*! @function
@@ -84,5 +86,19 @@ fmap_seq_clone(fmap_seq_t *seq);
   */
 void
 fmap_seq_reverse(fmap_seq_t *seq, int32_t rev_comp);
+
+/*! @function
+  @abstract         converts bases to integer values
+  @param  seq       a pointer to a sequence structure
+  */
+void
+fmap_seq_to_int(fmap_seq_t *seq);
+
+/*! @function
+  @abstract         converts bases to character values
+  @param  seq       a pointer to a sequence structure
+  */
+void
+fmap_seq_to_char(fmap_seq_t *seq);
 
 #endif

@@ -23,6 +23,24 @@
 #define FMAP_SA_COMPRESSION FMAP_FILE_NO_COMPRESSION
 #define FMAP_REV_SA_COMPRESSION FMAP_FILE_NO_COMPRESSION
 
+/*
+   CIGAR operations.
+   */
+/*! @abstract CIGAR: match */
+#define BAM_CMATCH      0
+/*! @abstract CIGAR: insertion to the reference */
+#define BAM_CINS        1
+/*! @abstract CIGAR: deletion from the reference */
+#define BAM_CDEL        2
+/*! @abstract CIGAR: skip on the reference (e.g. spliced alignment) */
+#define BAM_CREF_SKIP   3
+/*! @abstract CIGAR: clip on the read with clipped sequence present in qseq */
+#define BAM_CSOFT_CLIP  4
+/*! @abstract CIGAR: clip on the read with clipped sequence trimmed off */
+#define BAM_CHARD_CLIP  5
+/*! @abstract CIGAR: padding */
+#define BAM_CPAD        6
+
 // TODO: document
 enum {
     FMAP_ANNO_FILE     = 0,
@@ -43,6 +61,7 @@ enum {
 };
 
 extern uint8_t nt_char_to_int[256];
+extern uint8_t nt_char_to_rc_char[256];
 
 /*! @typedef
   @abstract       gets the name of a specific file based on the reference sequence
