@@ -82,7 +82,7 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
   int32_t low = 0, high;
   fmap_bwt_match_width_t *width[2]={NULL,NULL}, *seed_width[2]={NULL,NULL};
   int32_t width_length = 0;
-  fmap_map1_aux_stack_t *stack;
+  fmap_map1_aux_stack_t *stack = NULL;
 
   seed_width[0] = fmap_calloc(opt->seed_length, sizeof(fmap_bwt_match_width_t), "seed_width[0]");
   seed_width[1] = fmap_calloc(opt->seed_length, sizeof(fmap_bwt_match_width_t), "seed_width[1]");

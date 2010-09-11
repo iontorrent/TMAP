@@ -34,7 +34,7 @@ typedef struct {
   @field  best_score
  */
 typedef struct {
-    fmap_map1_aux_stack_entry_t *entry_pool; // memory pool
+    fmap_map1_aux_stack_entry_t **entry_pool; // memory pool
     int32_t entry_pool_length; // number of entries in the memory pool
     int32_t entry_pool_i; // 0-based index into the memory pool
     fmap_fibheap_t *heap;

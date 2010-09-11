@@ -22,20 +22,27 @@
 fmap_map1_aux_stack_t *
 fmap_map1_aux_stack_init()
 {
+  int32_t i;
   fmap_map1_aux_stack_t *stack = NULL;
   stack = fmap_calloc(1, sizeof(fmap_map1_aux_stack_t), "stack");
   stack->entry_pool_length = 1024; // TODO: move to a define block
-  stack->entry_pool = fmap_calloc(stack->entry_pool_length, sizeof(fmap_map1_aux_stack_entry_t), "stack->entry_pool");
+  stack->entry_pool = fmap_malloc(stack->entry_pool_length*sizeof(fmap_map1_aux_stack_entry_t*), "stack->entry_pool");
+  for(i=0;i<stack->entry_pool_length;i++) {
+      stack->entry_pool[i] = fmap_malloc(sizeof(fmap_map1_aux_stack_entry_t), "stack->entry_pool[i]");
+  }
   stack->heap = fmap_fibheap_makekeyheap();
 
   return stack;
 }
 
-
 void
 fmap_map1_aux_stack_destroy(fmap_map1_aux_stack_t *stack)
 {
+  int32_t i;
   fmap_fibheap_deleteheap(stack->heap);
+  for(i=0;i<stack->entry_pool_length;i++) {
+      free(stack->entry_pool[i]);
+  }
   free(stack->entry_pool);
   free(stack);
 }
@@ -62,15 +69,25 @@ fmap_map1_aux_stack_push(fmap_map1_aux_stack_t *stack,
 {
   fmap_map1_aux_stack_entry_t *entry = NULL;
 
+  /*
+  fprintf(stderr, "strand=%d offset=%d k=%u l=%u n_mm=%d n_gapo=%d n_gape=%d state=%d is_diff=%d prev_entry=%s\n",
+          strand, offset, k, l, n_mm, n_gapo, n_gape, state, is_diff, (NULL == prev_entry) ? "NULL" : "NOT NULL");
+          */
+
   // check to see if we need more memory
-  if(stack->entry_pool_i == stack->entry_pool_length) {
-      stack->entry_pool_length *= 2;
+  if(stack->entry_pool_length <= stack->entry_pool_i) { 
+      int32_t i = stack->entry_pool_length;
+      stack->entry_pool_length <<= 2;
       stack->entry_pool = fmap_realloc(stack->entry_pool, 
-                                       sizeof(fmap_map1_aux_stack_entry_t)*stack->entry_pool_length, 
+                                       sizeof(fmap_map1_aux_stack_entry_t*)*stack->entry_pool_length, 
                                        "stack->entry_pool");
+      while(i<stack->entry_pool_length) {
+          stack->entry_pool[i] = fmap_malloc(sizeof(fmap_map1_aux_stack_entry_t), "stack->entry_pool[i]");
+          i++;
+      }
   }
 
-  entry = &stack->entry_pool[stack->entry_pool_i];
+  entry = stack->entry_pool[stack->entry_pool_i];
   entry->score = aln_score(n_mm, n_gapo, n_gape, opt);
   entry->n_mm = n_mm;
   entry->n_gapo = n_gapo;
@@ -340,7 +357,7 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
                   else {
                       op_len++;
                   }
-                  cur = &stack->entry_pool[cur->prev_i];
+                  cur = stack->entry_pool[cur->prev_i];
               }
               __add_to_cigar();
 
