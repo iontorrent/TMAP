@@ -7,8 +7,8 @@
   @field  hi      the hash index of the SA interval if the offset is less than or equal to the hash width
   @field  k       the lower occurrence of the SA interval
   @field  l       the upper occurrence of the SA interval
-  @discussion    hi is set to UINT32_MAX if the offset is greater than the hash width.  If only one of 
-                 k or l are set to UINT32_MAX then that value is unavailable. 
+  @discussion    hi is set to UINT32_MAX if the offset is greater than the hash width.  If l is set to
+                 UINT32_MAX then that value is unavailable. 
   */
 typedef struct {
     uint32_t offset;
