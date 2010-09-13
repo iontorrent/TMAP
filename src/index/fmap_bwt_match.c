@@ -8,7 +8,7 @@ fmap_bwt_match_occ(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, uint8_t c,
   if(bwt->hash_width <= prev->offset) { // do not use the hash
       next->offset = prev->offset + 1;
       next->hi = UINT32_MAX;
-      next->k = fmap_bwt_occ(bwt, prev->k, c);
+      next->k = fmap_bwt_occ(bwt, prev->k-1, c);
       next->l = UINT32_MAX; 
   }
   else { // use the hash
@@ -25,7 +25,7 @@ fmap_bwt_match_2occ(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, uint8_t c
   if(bwt->hash_width <= prev->offset) { // do not use the hash
       next->offset = prev->offset + 1;
       next->hi = UINT32_MAX;
-      fmap_bwt_2occ(bwt, prev->k, prev->l, c, &next->k, &next->l);
+      fmap_bwt_2occ(bwt, prev->k-1, prev->l, c, &next->k, &next->l);
   }
   else { // use the hash
       next->offset = prev->offset + 1;
@@ -36,49 +36,49 @@ fmap_bwt_match_2occ(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, uint8_t c
 }
 
 inline void
-fmap_bwt_match_occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt_match_occ_t *next[4])
+fmap_bwt_match_occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt_match_occ_t next[4])
 {
   uint32_t i;
   if(bwt->hash_width <= prev->offset) { // do not use the hash
       uint32_t cntk[4];
-      fmap_bwt_occ4(bwt, prev->k, cntk);
+      fmap_bwt_occ4(bwt, prev->k-1, cntk);
       for(i=0;i<4;i++) {
-          next[i]->offset = prev->offset + 1;
-          next[i]->hi = UINT32_MAX;
-          next[i]->k = cntk[i];
-          next[i]->l = UINT32_MAX;
+          next[i].offset = prev->offset + 1;
+          next[i].hi = UINT32_MAX;
+          next[i].k = cntk[i];
+          next[i].l = UINT32_MAX;
       }
   }
   else { // use the hash
       for(i=0;i<4;i++) {
-          next[i]->offset = prev->offset + 1;
-          next[i]->hi = (prev->hi << 2) + i; // the next hash index
-          next[i]->k = bwt->hash_k[next[i]->offset-1][next[i]->hi];
-          next[i]->l = UINT32_MAX;
+          next[i].offset = prev->offset + 1;
+          next[i].hi = (prev->hi << 2) + i; // the next hash index
+          next[i].k = bwt->hash_k[next[i].offset-1][next[i].hi];
+          next[i].l = UINT32_MAX;
       }
   }
 }
 
 inline void
-fmap_bwt_match_2occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt_match_occ_t *next[4])
+fmap_bwt_match_2occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt_match_occ_t next[4])
 {
   uint32_t i;
   if(bwt->hash_width <= prev->offset) { // do not use the hash
       uint32_t cntk[4], cntl[4];
-      fmap_bwt_2occ4(bwt, prev->k, prev->l, cntk, cntl);
+      fmap_bwt_2occ4(bwt, prev->k-1, prev->l, cntk, cntl);
       for(i=0;i<4;i++) {
-          next[i]->offset = prev->offset + 1;
-          next[i]->hi = UINT32_MAX;
-          next[i]->k = cntk[i];
-          next[i]->l = cntl[i];
+          next[i].offset = prev->offset + 1;
+          next[i].hi = UINT32_MAX;
+          next[i].k = cntk[i];
+          next[i].l = cntl[i];
       }
   }
   else { // use the hash
       for(i=0;i<4;i++) {
-          next[i]->offset = prev->offset + 1;
-          next[i]->hi = (prev->hi << 2) + i; // the next hash index
-          next[i]->k = bwt->hash_k[next[i]->offset-1][next[i]->hi];
-          next[i]->l = bwt->hash_l[next[i]->offset-1][next[i]->hi];
+          next[i].offset = prev->offset + 1;
+          next[i].hi = (prev->hi << 2) + i; // the next hash index
+          next[i].k = bwt->hash_k[next[i].offset-1][next[i].hi];
+          next[i].l = bwt->hash_l[next[i].offset-1][next[i].hi];
       }
   }
 }
@@ -109,6 +109,7 @@ fmap_bwt_match_cal_width(const fmap_bwt_t *bwt, int len, const char *str, fmap_b
   }
 }
 
+// TODO: update for use with the hash
 int
 fmap_bwt_match_exact(const fmap_bwt_t *bwt, int len, const uint8_t *str, uint32_t *sa_begin, uint32_t *sa_end)
 {
@@ -129,6 +130,7 @@ fmap_bwt_match_exact(const fmap_bwt_t *bwt, int len, const uint8_t *str, uint32_
   return l - k + 1;
 }
 
+// TODO: update for use with the hash
 int
 fmap_bwt_match_exact_alt(const fmap_bwt_t *bwt, int len, const uint8_t *str, uint32_t *k0, uint32_t *l0)
 {

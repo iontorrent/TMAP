@@ -44,7 +44,7 @@ fmap_bwt_match_2occ(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, uint8_t c
   @param  next     pointer to the next match structure
   */
 inline void
-fmap_bwt_match_occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt_match_occ_t *next[4]);
+fmap_bwt_match_occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt_match_occ_t next[4]);
 
 /*! @function
   @abstract        analagous function to fmap_bwt_2occ4 but using a hash
@@ -53,7 +53,7 @@ fmap_bwt_match_occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt_
   @param  next     pointer to the next match structure
   */
 inline void
-fmap_bwt_match_2occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt_match_occ_t *next[4]);
+fmap_bwt_match_2occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt_match_occ_t next[4]);
 
 /*! @typedef
   @abstract   stores the lower bound of the number of mismatches in the string from [i,len-1].

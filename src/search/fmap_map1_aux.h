@@ -11,18 +11,16 @@
   @field  n_gape            the current number of gap extensions
   @field  state             the current state (match/mismatch/insertion/deletion)
   @field  strand            the strand of the alignment
-  @field  offset            the zero-based offset from the start of the read
   @field  last_diff_offset  the last offset of a base difference (mismatch/insertion/deletion)
-  @field  k                 the lower range of the SA interval
-  @field  l                 the upper range of the SA interval
+  @field  match_sa          the current SA interval information
   @field  i                 the zero-based index of this element in the memory pool 
   @field  prev_i            the zero-based index of the previous element (in the alignment) in the memory pool
 */
 typedef struct {
     uint32_t score;
     uint32_t n_mm:9, n_gapo:10, n_gape:10, state:2, strand:1;
-    int16_t offset, last_diff_offset;
-    uint32_t k, l; // SA interval
+    int16_t last_diff_offset;
+    fmap_bwt_match_occ_t match_sa; // SA interval and offset
     uint32_t i, prev_i;
 } fmap_map1_aux_stack_entry_t;
 
