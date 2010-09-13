@@ -2,6 +2,60 @@
 #define FMAP_BWT_MATCH_H_
 
 /*! @typedef
+  @abstract
+  @field  offset  the number of (read) bases used so far in this search (one-based)
+  @field  hi      the hash index of the SA interval if the offset is less than or equal to the hash width
+  @field  k       the lower occurrence of the SA interval
+  @field  l       the upper occurrence of the SA interval
+  @discussion    hi is set to UINT32_MAX if the offset is greater than the hash width.  If only one of 
+                 k or l are set to UINT32_MAX then that value is unavailable. 
+  */
+typedef struct {
+    uint32_t offset;
+    uint32_t hi, k, l;
+} fmap_bwt_match_occ_t;
+
+/*! @function
+  @abstract        analagous function to fmap_bwt_occ but using a hash
+  @param  bwt      pointer to the bwt structure 
+  @param  prev     pointer to the previous match structure
+  @param  c        base in two-bit integer format
+  @param  next     pointer to the next match structure
+  @discussion      this will not set the upper occurrence of the SA interval
+  */
+inline void
+fmap_bwt_match_occ(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, uint8_t c, fmap_bwt_match_occ_t *next);
+
+/*! @function
+  @abstract        analagous function to fmap_bwt_2occ but using a hash
+  @param  bwt      pointer to the bwt structure 
+  @param  prev     pointer to the previous match structure
+  @param  c        base in two-bit integer format
+  @param  next     pointer to the next match structure
+  @discussion      this will not set the upper occurrences of the SA interval
+  */
+inline void
+fmap_bwt_match_2occ(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, uint8_t c, fmap_bwt_match_occ_t *next);
+
+/*! @function
+  @abstract        analagous function to fmap_bwt_occ4 but using a hash
+  @param  bwt      pointer to the bwt structure 
+  @param  prev     pointer to the previous match structure
+  @param  next     pointer to the next match structure
+  */
+inline void
+fmap_bwt_match_occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt_match_occ_t *next[4]);
+
+/*! @function
+  @abstract        analagous function to fmap_bwt_2occ4 but using a hash
+  @param  bwt      pointer to the bwt structure 
+  @param  prev     pointer to the previous match structure
+  @param  next     pointer to the next match structure
+  */
+inline void
+fmap_bwt_match_2occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt_match_occ_t *next[4]);
+
+/*! @typedef
   @abstract   stores the lower bound of the number of mismatches in the string from [i,len-1].
   @field  w    the maximum number of occurrences
   @field  bid  the minimum number of mismatches
