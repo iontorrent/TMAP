@@ -46,9 +46,9 @@ static void
 fmap_debug_exact_core_worker(fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *sa, fmap_seq_t *orig_seq)
 {
   uint32_t i;
-  uint32_t sa_begin, sa_end;
   uint32_t mapped = 0;
   fmap_seq_t *seq=NULL, *rseq=NULL;
+  fmap_bwt_match_occ_t cur;
 
   seq = fmap_seq_clone(orig_seq);
   fmap_seq_to_int(seq);
@@ -57,15 +57,15 @@ fmap_debug_exact_core_worker(fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *
   fmap_seq_reverse(rseq, 1);
   fmap_seq_to_int(rseq);
 
-  if(0 != fmap_bwt_match_exact(bwt, seq->seq.l, (uint8_t*)seq->seq.s, &sa_begin, &sa_end)) {
-      for(i=sa_begin;i<=sa_end;i++) {
+  if(0 != fmap_bwt_match_exact(bwt, seq->seq.l, (uint8_t*)seq->seq.s, &cur)) {
+      for(i=cur.k;i<=cur.l;i++) {
           if(0 != fmap_debug_exact_print_sam(refseq, seq, fmap_sa_pac_pos(sa, bwt, i), 0)) {
               mapped = 1;
           }
       }
   }
-  if(0 != fmap_bwt_match_exact(bwt, seq->seq.l, (uint8_t*)rseq->seq.s, &sa_begin, &sa_end)) {
-      for(i=sa_begin;i<=sa_end;i++) {
+  if(0 != fmap_bwt_match_exact(bwt, seq->seq.l, (uint8_t*)rseq->seq.s, &cur)) {
+      for(i=cur.k;i<=cur.l;i++) {
           if(0 != fmap_debug_exact_print_sam(refseq, seq, fmap_sa_pac_pos(sa, bwt, i), 1)) {
               mapped = 1;
           }

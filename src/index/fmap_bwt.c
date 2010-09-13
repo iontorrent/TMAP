@@ -82,10 +82,8 @@ fmap_bwt_read(const char *fn_fasta, uint32_t is_rev)
               fmap_error(NULL, Exit, ReadFileError);
           }
       }
-      bwt->hash_length = 1 << (i * 2); // 4^{hash_width} entries
   }
   else {
-      bwt->hash_length = 0;
       bwt->hash_k = bwt->hash_l = NULL;
   }
 
@@ -198,21 +196,21 @@ fmap_bwt_gen_cnt_table(fmap_bwt_t *bwt)
 }
 
 static inline void
-fmap_bwt_gen_helper(fmap_bwt_t *bwt, uint32_t hash_value, uint32_t level, 
+fmap_bwt_gen_helper(fmap_bwt_t *bwt, uint32_t hash_width, uint32_t hash_value, uint32_t level, 
                     uint32_t **k, uint32_t **l)
 {
   uint32_t i, j;
   // TODO: could make this tail-recursive for speed
 
-  if(bwt->hash_width < level) {
+  if(hash_width < level) {
       // do nothing
       return;
   }
-  else if(bwt->hash_width == level) { // at the leaves
+  else if(hash_width == level) { // at the leaves
       // store values
       for(i=0;i<4;i++) {
-          bwt->hash_k[bwt->hash_width-1][(hash_value << 2) + i] = k[level-1][i] + bwt->L2[i] + 1;
-          bwt->hash_l[bwt->hash_width-1][(hash_value << 2) + i] = l[level-1][i] + bwt->L2[i]; 
+          bwt->hash_k[hash_width-1][(hash_value << 2) + i] = k[level-1][i] + bwt->L2[i] + 1;
+          bwt->hash_l[hash_width-1][(hash_value << 2) + i] = l[level-1][i] + bwt->L2[i]; 
       }
       return;
   }
@@ -229,8 +227,8 @@ fmap_bwt_gen_helper(fmap_bwt_t *bwt, uint32_t hash_value, uint32_t level,
 
               // all at this level or below are NULL
               for(j=lower;j<upper;j++) {
-                  bwt->hash_k[bwt->hash_width-1][j] = UINT32_MAX;
-                  bwt->hash_l[bwt->hash_width-1][j] = UINT32_MAX;
+                  bwt->hash_k[hash_width-1][j] = UINT32_MAX;
+                  bwt->hash_l[hash_width-1][j] = UINT32_MAX;
               }
 
               level--;
@@ -240,7 +238,7 @@ fmap_bwt_gen_helper(fmap_bwt_t *bwt, uint32_t hash_value, uint32_t level,
               fmap_bwt_2occ4(bwt, 
                              k[level-1][i]+bwt->L2[i], l[level-1][i]+bwt->L2[i], 
                              k[level], l[level]); // get occ values
-              fmap_bwt_gen_helper(bwt, (hash_value << 2) + i, level+1, k, l); 
+              fmap_bwt_gen_helper(bwt, hash_width, (hash_value << 2) + i, level+1, k, l); 
           }
       }
       return;
@@ -251,7 +249,7 @@ void
 fmap_bwt_gen_hash(fmap_bwt_t *bwt, uint32_t hash_width)
 {
   uint32_t **k=NULL, **l=NULL;
-  uint32_t i;
+  uint32_t i, j, sum;
 
   fmap_progress_set_start_time(clock());
   fmap_progress_print("constructing the occurence hash for the BWT string");
@@ -261,11 +259,8 @@ fmap_bwt_gen_hash(fmap_bwt_t *bwt, uint32_t hash_width)
       hash_width = bwt->seq_len;
   }
 
-  bwt->hash_length = 1 << (hash_width * 2); // 4^{hash_width} entries
-
-  // TODO check if hash_width falls within acceptable limits
-  if(UINT32_MAX <= bwt->hash_length-1) {
-      fmap_error("UINT32_MAX <= bwt->hash_length-1", Exit, OutOfRange);
+  if(UINT32_MAX <= (1 << (2 * bwt->hash_width)) - 1) {
+      fmap_error("Hash width is too great to fit in memory", Exit, OutOfRange);
   }
 
   bwt->hash_width = hash_width;
@@ -273,10 +268,6 @@ fmap_bwt_gen_hash(fmap_bwt_t *bwt, uint32_t hash_width)
   // memory for each level
   bwt->hash_k = fmap_malloc(sizeof(uint32_t*)*bwt->hash_width, "bwt->hash_k");
   bwt->hash_l = fmap_malloc(sizeof(uint32_t*)*bwt->hash_width, "bwt->hash_l");
-  
-  // memory for the last level
-  bwt->hash_k[bwt->hash_width-1] = fmap_malloc(sizeof(uint32_t*)*bwt->hash_length, "bwt->hash_k[bwt->hash_width-1]");
-  bwt->hash_l[bwt->hash_width-1] = fmap_malloc(sizeof(uint32_t*)*bwt->hash_length, "bwt->hash_l[bwt->hash_width-1]");
 
   // working space
   k = fmap_malloc(sizeof(uint32_t*)*hash_width, "k");
@@ -286,59 +277,29 @@ fmap_bwt_gen_hash(fmap_bwt_t *bwt, uint32_t hash_width)
       l[i] = fmap_malloc(sizeof(uint32_t)*4, "l[i]");
   }
 
-  // get the last level
-  fmap_bwt_2occ4(bwt, -1, bwt->seq_len, k[0], l[0]);
-  fmap_bwt_gen_helper(bwt, 0, 1, k, l); 
-
-  uint32_t sum = 0;
-  for(i=0;i<bwt->hash_length;i++) {
-      if(UINT32_MAX != bwt->hash_k[bwt->hash_width-1][i]) {
-          sum += bwt->hash_l[bwt->hash_width-1][i] - bwt->hash_k[bwt->hash_width-1][i] + 1;
-      }
-  }
-  //fprintf(stderr, "bwt->seq_len=%u sum=%u\n", bwt->seq_len, sum);
-  if(sum != bwt->seq_len - bwt->hash_width + 1) {
-      fmap_error("sum != bwt->seq_len - bwt->hash_width + 1", Exit, OutOfRange);
-  }
-
-  // get the previous levels
-  for(i=bwt->hash_width-1;0<i;i--) { // use next levels
-      uint32_t j;
-      uint32_t hash_length = 1 << (i * 2); // 4^{i} entries
-
+  // create a hash for each level
+  // Note: this could be improved by using the hash of the previous level etc.
+  for(i=1;i<=bwt->hash_width;i++) {
+      uint32_t hash_length = 1 << (i * 2); // 4^{hash_width} entries
+      
       // allocate memory for this level
       bwt->hash_k[i-1] = fmap_malloc(sizeof(uint32_t)*hash_length, "bwt->hash_k[i-1]");
       bwt->hash_l[i-1] = fmap_malloc(sizeof(uint32_t)*hash_length, "bwt->hash_l[i-1]");
 
-      for(j=0;j<hash_length;j++) {
-          uint32_t m, index;
+      // create the hash
+      fmap_bwt_2occ4(bwt, -1, bwt->seq_len, k[0], l[0]);
+      fmap_bwt_gen_helper(bwt, i, 0, 1, k, l); 
 
-          // initialize
-          bwt->hash_k[i-1][j] = UINT32_MAX;
-          bwt->hash_l[i-1][j] = UINT32_MAX;
-          index = (j << 2);
-
-          // lower
-          for(m=0;m<4;m++) { 
-              if(UINT32_MAX == bwt->hash_k[i-1][j] && UINT32_MAX != bwt->hash_k[i][index+m]) {
-                  bwt->hash_k[i-1][j] = bwt->hash_k[i][index+m];
-                  break;
-              } 
+      // check sum
+      for(j=sum=0;j<hash_length;j++) {
+          if(UINT32_MAX != bwt->hash_k[i-1][j]) {
+              sum += bwt->hash_l[i-1][j] - bwt->hash_k[i-1][j] + 1;
           }
-
-          // upper
-          for(m=0;m<4;m++) { 
-              if(UINT32_MAX == bwt->hash_l[i-1][j] && UINT32_MAX != bwt->hash_l[i][index+m]) {
-                  bwt->hash_l[i-1][j] = bwt->hash_l[i][index+m];
-                  break;
-              } 
-          }
-
-          // check the consistency of the results
-          if((UINT32_MAX == bwt->hash_k[i-1][j] && UINT32_MAX != bwt->hash_l[i-1][j])
-             || (UINT32_MAX != bwt->hash_k[i-1][j] && UINT32_MAX == bwt->hash_l[i-1][j])) {
-              fmap_error("hash inconsistency", Exit, OutOfRange);
-          }
+      }
+  
+      //fprintf(stderr, "bwt->seq_len=%u sum=%u\n", bwt->seq_len, sum);
+      if(sum != bwt->seq_len - i + 1) {
+          fmap_error("sum != bwt->seq_len - bwt->hash_width + 1", Exit, OutOfRange);
       }
   }
 

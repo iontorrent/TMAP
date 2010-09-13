@@ -8,7 +8,7 @@ fmap_bwt_match_occ(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, uint8_t c,
   if(bwt->hash_width <= prev->offset) { // do not use the hash
       next->offset = prev->offset + 1;
       next->hi = UINT32_MAX;
-      next->k = fmap_bwt_occ(bwt, prev->k-1, c);
+      next->k = fmap_bwt_occ(bwt, prev->k-1, c) + bwt->L2[c] + 1;
       next->l = UINT32_MAX; 
   }
   else { // use the hash
@@ -26,6 +26,8 @@ fmap_bwt_match_2occ(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, uint8_t c
       next->offset = prev->offset + 1;
       next->hi = UINT32_MAX;
       fmap_bwt_2occ(bwt, prev->k-1, prev->l, c, &next->k, &next->l);
+      next->k += bwt->L2[c] + 1;
+      next->l += bwt->L2[c];
   }
   else { // use the hash
       next->offset = prev->offset + 1;
@@ -45,7 +47,7 @@ fmap_bwt_match_occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt_
       for(i=0;i<4;i++) {
           next[i].offset = prev->offset + 1;
           next[i].hi = UINT32_MAX;
-          next[i].k = cntk[i];
+          next[i].k = cntk[i] + bwt->L2[i] + 1;
           next[i].l = UINT32_MAX;
       }
   }
@@ -69,8 +71,8 @@ fmap_bwt_match_2occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt
       for(i=0;i<4;i++) {
           next[i].offset = prev->offset + 1;
           next[i].hi = UINT32_MAX;
-          next[i].k = cntk[i];
-          next[i].l = cntl[i];
+          next[i].k = cntk[i] + bwt->L2[i] + 1;
+          next[i].l = cntl[i] + bwt->L2[i];
       }
   }
   else { // use the hash
@@ -109,42 +111,46 @@ fmap_bwt_match_cal_width(const fmap_bwt_t *bwt, int len, const char *str, fmap_b
   }
 }
 
-// TODO: update for use with the hash
 int
-fmap_bwt_match_exact(const fmap_bwt_t *bwt, int len, const uint8_t *str, uint32_t *sa_begin, uint32_t *sa_end)
+fmap_bwt_match_exact(const fmap_bwt_t *bwt, int len, const uint8_t *str, fmap_bwt_match_occ_t *match_sa)
 {
-  uint32_t k, l, ok, ol;
   int i;
-  k = 0; l = bwt->seq_len;
+  fmap_bwt_match_occ_t prev, next;
+
+  prev.k = 0; prev.l = bwt->seq_len;
+  prev.offset = 0;
+  prev.hi = 0;
+
   for(i=0;i<len;i++) {
       uint8_t c = str[i];
       if(c > 3) return 0; // no match
-      fmap_bwt_2occ(bwt, k - 1, l, c, &ok, &ol);
-      k = bwt->L2[c] + ok + 1;
-      l = bwt->L2[c] + ol;
-      if(k > l) break; // no match
+      fmap_bwt_match_2occ(bwt, &prev, c, &next);
+      if(next.k > next.l) break; // no match
+      prev = next;
   }
-  if(k > l) return 0; // no match
-  if(sa_begin) *sa_begin = k;
-  if(sa_end)   *sa_end = l;
-  return l - k + 1;
+  if(prev.k > prev.l) return 0; // no match
+  if(NULL != match_sa) {
+      (*match_sa) = prev;
+  }
+  return prev.l - prev.k + 1;
 }
 
 // TODO: update for use with the hash
 int
-fmap_bwt_match_exact_alt(const fmap_bwt_t *bwt, int len, const uint8_t *str, uint32_t *k0, uint32_t *l0)
+fmap_bwt_match_exact_alt(const fmap_bwt_t *bwt, int len, const uint8_t *str, fmap_bwt_match_occ_t *match_sa)
 {
   int i;
-  uint32_t k, l, ok, ol;
-  k = *k0; l = *l0;
+  fmap_bwt_match_occ_t prev, next;
+
+  prev = (*match_sa);
+  
   for(i=0;i<len;i++) {
       uint8_t c = str[i];
       if(c > 3) return 0; // there is an N here. no match
-      fmap_bwt_2occ(bwt, k - 1, l, c, &ok, &ol);
-      k = bwt->L2[c] + ok + 1;
-      l = bwt->L2[c] + ol;
-      if(k > l) return 0; // no match
+      fmap_bwt_match_2occ(bwt, &prev, c, &next);
+      if(next.k > next.l) return 0; // no match
+      prev = next;
   }
-  *k0 = k; *l0 = l;
-  return l - k + 1;
+  (*match_sa) = prev;
+  return prev.l - prev.k + 1;
 }
