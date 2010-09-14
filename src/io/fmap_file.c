@@ -10,7 +10,7 @@
 
 #include "../util/fmap_error.h"
 #include "../util/fmap_alloc.h"
-#include "fmap_io.h"
+#include "fmap_file.h"
 
 fmap_file_t *
 fmap_file_fopen(const char* path, const char *mode, int32_t compression) 

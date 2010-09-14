@@ -34,7 +34,7 @@
 #include <stdlib.h>
 
 #include "../util/fmap_seq.h"
-#include "fmap_io.h"
+#include "fmap_file.h"
 
 #define FMAP_STREAM_BUFFER_SIZE 4096
 

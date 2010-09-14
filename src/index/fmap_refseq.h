@@ -2,7 +2,7 @@
 #define FMAP_REFSEQ_H_
 
 #include <stdint.h>
-#include "../io/fmap_io.h"
+#include "../io/fmap_file.h"
 
 // seed for our random number generator
 #define FMAP_REFSEQ_SEED 13

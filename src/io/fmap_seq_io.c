@@ -5,7 +5,7 @@
 #include "../util/fmap_error.h"
 #include "../util/fmap_alloc.h"
 #include "../util/fmap_seq.h"
-#include "fmap_io.h"
+#include "fmap_file.h"
 #include "fmap_seq_io.h"
 
 /* The MIT License

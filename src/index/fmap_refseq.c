@@ -6,7 +6,7 @@
 #include "../util/fmap_alloc.h"
 #include "../util/fmap_progress.h"
 #include "../util/fmap_definitions.h"
-#include "../io/fmap_io.h"
+#include "../io/fmap_file.h"
 #include "../util/fmap_seq.h"
 #include "../io/fmap_seq_io.h"
 #include "fmap_refseq.h"

@@ -33,7 +33,7 @@
 #include "../util/fmap_alloc.h"
 #include "../util/fmap_progress.h"
 #include "../util/fmap_definitions.h"
-#include "../io/fmap_io.h"
+#include "../io/fmap_file.h"
 #include "fmap_bwt_gen.h"
 #include "fmap_bwt.h"
 
