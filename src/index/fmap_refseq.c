@@ -77,8 +77,8 @@ fmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
 
   // input files
   fp_fasta = fmap_file_fopen(fn_fasta, "rb", compression); 
-  seqio = fmap_seq_io_init(fp_fasta);
-  seq = fmap_seq_init();
+  seqio = fmap_seq_io_init(fp_fasta, FMAP_SEQ_TYPE_FQ);
+  seq = fmap_seq_init(FMAP_SEQ_TYPE_FQ);
 
   // output files
   fn_pac = fmap_get_file_name(fn_fasta, FMAP_PAC_FILE);
@@ -86,17 +86,17 @@ fmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
 
   // read in sequences
   while(0 <= (l = fmap_seq_io_read(seqio, seq))) {
-      fmap_progress_print2("packing contig [%s:1-%d]", seq->name.s, l);
+      fmap_progress_print2("packing contig [%s:1-%d]", seq->data.fq->name.s, l);
 
       refseq->num_annos++;
       refseq->annos = fmap_realloc(refseq->annos, sizeof(fmap_anno_t)*refseq->num_annos, "refseq->annos");
-      refseq->annos[refseq->num_annos-1].name = fmap_strdup(seq->name.s);  // sequence name
+      refseq->annos[refseq->num_annos-1].name = fmap_strdup(seq->data.fq->name.s);  // sequence name
       refseq->annos[refseq->num_annos-1].len = l;
       refseq->annos[refseq->num_annos-1].offset = (1 == refseq->num_annos) ? 0 : refseq->annos[refseq->num_annos-2].offset + refseq->annos[refseq->num_annos-2].len;
 
       // fill the buffer
       for(i=0;i<l;i++) {
-          int c = nt_char_to_int[(int)seq->seq.s[i]];
+          int c = nt_char_to_int[(int)seq->data.fq->seq.s[i]];
           if(4 <= c) c = lrand48() & 0x3; // random base
           if(buffer_length == (FMAP_REFSEQ_BUFFER_SIZE << 2)) { // 2-bit
               if(fmap_refseq_seq_memory(buffer_length) != fmap_file_fwrite(buffer, sizeof(uint8_t), fmap_refseq_seq_memory(buffer_length), fp_pac)) {

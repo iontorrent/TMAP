@@ -7,12 +7,13 @@
 #include "../index/fmap_bwt.h"
 #include "../index/fmap_bwt_match.h"
 #include "../index/fmap_sa.h"
+#include "../util/fmap_fq.h"
 #include "../util/fmap_seq.h"
 #include "../io/fmap_seq_io.h"
 #include "fmap_debug_exact.h"
 
 static void 
-fmap_debug_exact_print_sam_unmapped(fmap_seq_t *seq)
+fmap_debug_exact_print_sam_unmapped(fmap_fq_t *seq)
 {
   uint16_t flag = 0x0004;
   fprintf(stdout, "%s\t%u\t%s\t%u\t%u\t*\t*\t0\t0\t%s\t%s\n",
@@ -21,7 +22,7 @@ fmap_debug_exact_print_sam_unmapped(fmap_seq_t *seq)
 }
 
 static int32_t 
-fmap_debug_exact_print_sam(fmap_refseq_t *refseq, fmap_seq_t *seq, uint32_t pacpos, uint8_t strand)
+fmap_debug_exact_print_sam(fmap_refseq_t *refseq, fmap_fq_t *seq, uint32_t pacpos, uint8_t strand)
 {
   uint32_t pos, seqid;
   uint16_t flag = 0;
@@ -29,13 +30,13 @@ fmap_debug_exact_print_sam(fmap_refseq_t *refseq, fmap_seq_t *seq, uint32_t pacp
   if(0 <= fmap_refseq_pac2real(refseq, pacpos, seq->seq.l, &seqid, &pos)) {
       if(1 == strand) { // reverse for the output
           flag |= 0x0010;
-          fmap_seq_reverse(seq, 1);
+          fmap_fq_reverse(seq, 1);
       }
       fprintf(stdout, "%s\t%u\t%s\t%u\t%u\t%dM\t*\t0\t0\t%s\t%s\n",
               seq->name.s, flag, refseq->annos[seqid].name,
               pos, 255, (int)seq->seq.l, seq->seq.s, seq->qual.s);
       if(1 == strand) { // reverse back
-          fmap_seq_reverse(seq, 1);
+          fmap_fq_reverse(seq, 1);
       }
       return 1;
   }
@@ -43,19 +44,19 @@ fmap_debug_exact_print_sam(fmap_refseq_t *refseq, fmap_seq_t *seq, uint32_t pacp
 }
 
 static void 
-fmap_debug_exact_core_worker(fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *sa, fmap_seq_t *orig_seq)
+fmap_debug_exact_core_worker(fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *sa, fmap_fq_t *orig_seq)
 {
   uint32_t i;
   uint32_t mapped = 0;
-  fmap_seq_t *seq=NULL, *rseq=NULL;
+  fmap_fq_t *seq=NULL, *rseq=NULL;
   fmap_bwt_match_occ_t cur;
 
-  seq = fmap_seq_clone(orig_seq);
-  fmap_seq_to_int(seq);
+  seq = fmap_fq_clone(orig_seq);
+  fmap_fq_to_int(seq);
   
-  rseq = fmap_seq_clone(orig_seq);
-  fmap_seq_reverse(rseq, 1);
-  fmap_seq_to_int(rseq);
+  rseq = fmap_fq_clone(orig_seq);
+  fmap_fq_reverse(rseq, 1);
+  fmap_fq_to_int(rseq);
 
   if(0 != fmap_bwt_match_exact(bwt, seq->seq.l, (uint8_t*)seq->seq.s, &cur)) {
       for(i=cur.k;i<=cur.l;i++) {
@@ -76,8 +77,8 @@ fmap_debug_exact_core_worker(fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *
       fmap_debug_exact_print_sam_unmapped(seq);
   }
   
-  fmap_seq_destroy(seq);
-  fmap_seq_destroy(rseq);
+  fmap_fq_destroy(seq);
+  fmap_fq_destroy(rseq);
 }
 
 static void 
@@ -103,10 +104,11 @@ fmap_debug_exact_core(fmap_debug_exact_opt_t *opt)
   sa = fmap_sa_read(opt->fn_fasta, 1);
 
   fp_reads = fmap_file_fopen(opt->fn_reads, "rb", FMAP_FILE_NO_COMPRESSION);
-  seqio = fmap_seq_io_init(fp_reads);
+  seqio = fmap_seq_io_init(fp_reads, FMAP_SEQ_TYPE_FQ);
+  seq = fmap_seq_init(FMAP_SEQ_TYPE_FQ);
 
   while(0 <= fmap_seq_io_read(seqio, seq)) {
-      fmap_debug_exact_core_worker(refseq, bwt, sa, seq);
+      fmap_debug_exact_core_worker(refseq, bwt, sa, seq->data.fq);
   }
 
   fmap_file_fclose(fp_reads);

@@ -4,11 +4,14 @@ fmap_SOURCES = \
 			   src/util/fmap_error.h src/util/fmap_error.c \
 			   src/util/fmap_alloc.h src/util/fmap_alloc.c \
 			   src/util/fmap_fibheap.h src/util/fmap_fibheap.c \
-			   src/util/fmap_seq.h src/util/fmap_seq.c \
+			   src/util/fmap_fq.h src/util/fmap_fq.c \
 			   src/util/fmap_sff.h src/util/fmap_sff.c \
+			   src/util/fmap_seq.h src/util/fmap_seq.c \
 			   src/util/fmap_definitions.h src/util/fmap_definitions.c \
 			   src/util/fmap_progress.h src/util/fmap_progress.c \
 			   src/io/fmap_file.h src/io/fmap_file.c \
+			   src/io/fmap_fq_io.h src/io/fmap_fq_io.c \
+			   src/io/fmap_sff_io.h src/io/fmap_sff_io.c \
 			   src/io/fmap_seq_io.h src/io/fmap_seq_io.c \
 			   src/index/fmap_refseq.h src/index/fmap_refseq.c \
 			   src/index/fmap_bwt.h src/index/fmap_bwt.c \

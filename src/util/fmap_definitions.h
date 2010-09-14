@@ -64,6 +64,32 @@ extern uint8_t nt_char_to_int[256];
 extern uint8_t nt_char_to_rc_char[256];
 
 /*! @typedef
+  @abstract
+  @field  l  the length of the string
+  @field  m  the memory allocated for this string
+  @field  s  the pointer to the string
+  */
+typedef struct {
+    size_t l, m;
+    char *s;
+} fmap_string_t;
+
+/*! @function
+  @abstract     analagous to strcpy
+  @param  dest  pointer to the destination string
+  @param  src   pointer to the source string
+*/
+inline void
+fmap_string_copy(fmap_string_t *dest, fmap_string_t *src);
+
+/*! @function
+  @abstract    reverse the characters in the string
+  @param  str  pointer to the string
+*/
+inline void
+fmap_string_reverse(fmap_string_t *str);
+
+/*! @function
   @abstract       gets the name of a specific file based on the reference sequence
   @param  prefix   the prefix of the file to be written, usually the fasta file name 
   @param  type    the type of file based on this reference sequence
@@ -72,7 +98,7 @@ extern uint8_t nt_char_to_rc_char[256];
 inline char *
 fmap_get_file_name(const char *prefix, int32_t type);
 
-/*! @typedef
+/*! @function
   @abstract       
   @param  optarg  the string of the file format
   @return         the format type
@@ -80,7 +106,7 @@ fmap_get_file_name(const char *prefix, int32_t type);
 int 
 fmap_get_reads_file_format_int(char *optarg);
 
-/*! @typedef
+/*! @function
   @abstract       
   @param  format  the interger file format specifier
   @return         the format type (string)
