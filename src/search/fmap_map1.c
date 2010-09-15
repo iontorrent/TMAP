@@ -76,8 +76,13 @@ fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fma
           }
           fmap_file_fprintf(fmap_file_stdout, "\t*\t0\t0\t%s\t%s",
                   bases->s, qualities->s);
-          // optional tags
-          // AS
+          // AS optional tag
+          fmap_file_fprintf(fmap_file_stdout, "\tAS:i:%d", a->score);
+          // NM
+          fmap_file_fprintf(fmap_file_stdout, "\tNM:i:%d", (a->n_mm + a->n_gapo + a->n_gape));
+
+          // new line
+          fmap_file_fprintf(fmap_file_stdout, "\n");
           if(1 == a->strand) { // reverse back
               fmap_string_reverse_compliment(bases, 1);
               fmap_string_reverse(qualities);
@@ -123,6 +128,7 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
   fmap_bwt_match_width_t *width[2]={NULL,NULL}, *seed_width[2]={NULL,NULL};
   int32_t width_length = 0;
   fmap_map1_aux_stack_t *stack = NULL;
+
 
   seed_width[0] = fmap_calloc(opt->seed_length, sizeof(fmap_bwt_match_width_t), "seed_width[0]");
   seed_width[1] = fmap_calloc(opt->seed_length, sizeof(fmap_bwt_match_width_t), "seed_width[1]");

@@ -53,8 +53,8 @@ int main(int argc, char *argv[])
 {
   int ret = 0;
   
-  fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "rb", FMAP_FILE_NO_COMPRESSION);
-  fmap_file_stderr = fmap_file_fdopen(fileno(stderr), "rb", FMAP_FILE_NO_COMPRESSION);
+  fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "w", FMAP_FILE_NO_COMPRESSION);
+  fmap_file_stderr = fmap_file_fdopen(fileno(stderr), "w", FMAP_FILE_NO_COMPRESSION);
 
   if(argc < 2) ret = usage();
   else if (0 == strcmp("index", argv[1])) ret = fmap_index(argc-1, argv+1);

@@ -63,7 +63,8 @@ typedef struct {
 */
 typedef struct {
     uint32_t score;
-    uint32_t n_mm:9, n_gapo:10, n_gape:10, strand:3;
+    uint16_t n_mm, n_gapo, n_gape;
+    uint8_t strand;
     uint32_t k, l; // SA interval
     uint32_t cigar_length;
     uint32_t *cigar; 
