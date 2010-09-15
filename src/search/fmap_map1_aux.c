@@ -194,11 +194,11 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
                    fmap_bwt_match_width_t *width[2], fmap_bwt_match_width_t *seed_width[2], fmap_map1_opt_t *opt,
                    fmap_map1_aux_stack_t *stack)
 {
-  int32_t max_mm = opt->max_mm, max_gapo = opt->max_gapo, max_gape = opt->max_gape;
+  int32_t max_mm = opt->max_mm, max_gapo = opt->max_gapo, max_gape = opt->max_gape, seed_max_mm = opt->seed_max_mm;
   int32_t best_score = aln_score(max_mm+1, max_gapo+1, max_gape+1, opt);
   int32_t best_cnt = 0;
-  int32_t j, _j;
-  int32_t min_edit_score;
+  int32_t j, num_n = 0;
+  int32_t max_edit_score;
   int32_t alns_num = 0; 
   fmap_bwt_match_occ_t match_sa_start;
   fmap_map1_aln_t **alns=NULL;
@@ -209,15 +209,35 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
 
   if(0 == bwt->is_rev) fmap_error("0 == bwt->is_rev", Exit, OutOfRange);
 
-  min_edit_score = opt->pen_mm;
-  if(opt->pen_gapo < min_edit_score) min_edit_score = opt->pen_gapo;
-  if(opt->pen_gape < min_edit_score) min_edit_score = opt->pen_gape;
+  max_edit_score = opt->pen_mm;
+  if(max_edit_score < opt->pen_gapo) max_edit_score = opt->pen_gapo;
+  if(max_edit_score < opt->pen_gape) max_edit_score = opt->pen_gape;
 
   // check whether there are too many N
-  for(j=_j=0;j<seq[0]->seq.l;j++) {
-      if(3 < seq[0]->seq.s[j]) _j++;
+  if(FMAP_SEQ_TYPE_FQ == seq[0]->type) {
+      for(j=num_n=0;j<seq[0]->data.fq->seq->l;j++) {
+          if(3 < seq[0]->data.fq->seq->s[j]) {
+              num_n++;
+          }
+      }
   }
-  if(max_mm < _j) {
+  else if(FMAP_SEQ_TYPE_SFF == seq[0]->type) {
+      num_n = 0; // ignore
+      // to match the SFF format where the value is 100*(flow signal)
+      // ASSUMPTION: that the 'flow signal' scales linearly with the true number of
+      // bases.
+      max_mm *= 100;
+      max_gapo *= 100;
+      max_gape *= 100;
+
+      fmap_error("SFF read type not supported", Exit, OutOfRange);
+      // TODO: support
+  }
+  else {
+      // after this, we do not need to check the read types
+      fmap_error("unknown read type", Exit, OutOfRange);
+  }
+  if(max_mm < num_n) {
       return NULL;
   }
 
@@ -232,7 +252,7 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
 
   while(0 < fmap_map1_aux_stack_size(stack) && fmap_map1_aux_stack_size(stack) < opt->max_entries) {
       fmap_map1_aux_stack_entry_t *e = NULL;
-      int32_t strand, len; 
+      int32_t strand, len=-1; 
       int32_t n_mm, n_gapo, n_gape;
       int32_t n_seed_mm, offset;
       const uint8_t *str=NULL;
@@ -243,18 +263,23 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
       // int32_t i, m, m_seed = 0;
 
       e = fmap_map1_aux_stack_pop(stack); // get the best entry
-      if(best_score + min_edit_score < e->score) break; // no need to continue
+      if(best_score + max_edit_score < e->score) break; // no need to continue
                   
       strand = e->strand; // strand;
       match_sa_cur = e->match_sa; 
-      n_mm = opt->max_mm - e->n_mm;
-      n_gapo = opt->max_gapo - e->n_gapo;
-      n_gape = opt->max_gape - e->n_gape;
+      n_mm = max_mm - e->n_mm;
+      n_gapo = max_gapo - e->n_gapo;
+      n_gape = max_gape - e->n_gape;
       if(n_mm < 0 || n_gapo < 0 || n_gape < 0) continue; // too many edits
 
       offset = e->offset;
-      str = (uint8_t*)seq[strand]->seq.s; 
-      len = seq[strand]->seq.l;
+      if(FMAP_SEQ_TYPE_FQ == seq[0]->type) {
+          str = (uint8_t*)seq[strand]->data.fq->seq->s; 
+          len = seq[strand]->data.fq->seq->l;
+      }
+      else if(FMAP_SEQ_TYPE_SFF == seq[0]->type) {
+          // TODO
+      }
       width_cur = width[strand];
       seed_width_cur = (NULL == seed_width) ? NULL : seed_width[strand];
 
@@ -265,7 +290,7 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
 
       if(NULL != seed_width_cur) { // apply seeding
           seed_width_cur = seed_width[strand];
-          n_seed_mm = opt->seed_max_mm - e->n_mm; // ignore gaps TODO: is this correct?
+          n_seed_mm = seed_max_mm - e->n_mm; // ignore gaps TODO: is this correct?
       }
       // if there are no more gaps, check if we are allowed mismatches
       if(offset+1 < len && 0 == n_gapo && 0 == n_gape && n_mm < width_cur[offset].bid) {

@@ -151,34 +151,34 @@ fmap_fq_io_read(fmap_fq_io_t *fqio, fmap_fq_t *fq)
       if (c == -1) return -1; /* end of file */
       fqio->last_char = c;
   } /* the first header char has been read */
-  fq->comment.l = fq->seq.l = fq->qual.l = 0;
-  if (fmap_stream_getuntil(ks, 0, &fq->name, &c) < 0) return -1;
-  if (c != '\n') fmap_stream_getuntil(ks, '\n', &fq->comment, 0);
+  fq->comment->l = fq->seq->l = fq->qual->l = 0;
+  if (fmap_stream_getuntil(ks, 0, fq->name, &c) < 0) return -1;
+  if (c != '\n') fmap_stream_getuntil(ks, '\n', fq->comment, 0);
   while ((c = fmap_stream_getc(ks)) != -1 && c != '>' && c != '+' && c != '@') {
       if (isgraph(c)) { /* printable non-space character */
-          if (fq->seq.l + 1 >= fq->seq.m) { /* double the memory */
-              fq->seq.m = fq->seq.l + 2;
-              kroundup32(fq->seq.m); /* rounded to next closest 2^k */
-              fq->seq.s = fmap_realloc(fq->seq.s, fq->seq.m, "fq->seq.s");
+          if (fq->seq->l + 1 >= fq->seq->m) { /* double the memory */
+              fq->seq->m = fq->seq->l + 2;
+              kroundup32(fq->seq->m); /* rounded to next closest 2^k */
+              fq->seq->s = fmap_realloc(fq->seq->s, fq->seq->m, "fq->seq->s");
           }
-          fq->seq.s[fq->seq.l++] = (char)c;
+          fq->seq->s[fq->seq->l++] = (char)c;
       }
   }
   if (c == '>' || c == '@') fqio->last_char = c; /* the first header char has been read */
-  fq->seq.s[fq->seq.l] = 0;	/* null terminated string */
-  if (c != '+') return fq->seq.l; /* FASTA */
-  if (fq->qual.m < fq->seq.m) {	/* allocate enough memory */
-      fq->qual.m = fq->seq.m;
-      fq->qual.s = fmap_realloc(fq->qual.s, fq->qual.m, "fq->qual.s");
+  fq->seq->s[fq->seq->l] = 0;	/* null terminated string */
+  if (c != '+') return fq->seq->l; /* FASTA */
+  if (fq->qual->m < fq->seq->m) {	/* allocate enough memory */
+      fq->qual->m = fq->seq->m;
+      fq->qual->s = fmap_realloc(fq->qual->s, fq->qual->m, "fq->qual->s");
   }
   while ((c = fmap_stream_getc(ks)) != -1 && c != '\n'); /* skip the rest of '+' line */
   if (c == -1) return -2; /* we should not stop here */
-  while ((c = fmap_stream_getc(ks)) != -1 && fq->qual.l < fq->seq.l)
-    if (c >= 33 && c <= 127) fq->qual.s[fq->qual.l++] = (unsigned char)c;
-  fq->qual.s[fq->qual.l] = 0; /* null terminated string */
+  while ((c = fmap_stream_getc(ks)) != -1 && fq->qual->l < fq->seq->l)
+    if (c >= 33 && c <= 127) fq->qual->s[fq->qual->l++] = (unsigned char)c;
+  fq->qual->s[fq->qual->l] = 0; /* null terminated string */
   fqio->last_char = 0;	/* we have not come to the next header line */
-  if (fq->seq.l != fq->qual.l) return -2; /* qual string is shorter than fq string */
-  return fq->seq.l;
+  if (fq->seq->l != fq->qual->l) return -2; /* qual string is shorter than fq string */
+  return fq->seq->l;
 }
 
 int

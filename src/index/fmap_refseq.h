@@ -2,6 +2,7 @@
 #define FMAP_REFSEQ_H_
 
 #include <stdint.h>
+#include "../util/fmap_string.h"
 #include "../io/fmap_file.h"
 
 // seed for our random number generator
@@ -49,7 +50,7 @@
   @field  offset  the offset from the start of the reference
   */
 typedef struct {
-    char *name;
+    fmap_string_t *name;
     uint64_t len;
     uint64_t offset;
 } fmap_anno_t;
@@ -114,14 +115,6 @@ fmap_refseq_read(const char *fn_fasta, uint32_t is_rev);
   */
 void
 fmap_refseq_destroy(fmap_refseq_t *refseq);
-
-/*! @function
-  @abstract
-  @param  refseq  pointer to the structure in which the data is stored
-  @return         the number of bytes used by this data structure
-  */
-size_t
-fmap_refseq_size(fmap_refseq_t *refseq);
 
 /*! @function
   @abstract

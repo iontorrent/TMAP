@@ -41,4 +41,29 @@ fmap_seq_init(int8_t type);
 void
 fmap_seq_destroy(fmap_seq_t *seq);
 
+/*! @function
+  @abstract
+  @param  seq  pointer to the structure to clone
+  @return      pointer to the initialized memory 
+*/
+fmap_seq_t *
+fmap_seq_clone(fmap_seq_t *seq);
+
+/*! @function
+  @abstract
+  @param  seq  pointer to the structure to clone
+*/
+void
+fmap_seq_reverse_compliment(fmap_seq_t *seq);
+
+/*! @function
+  @abstract
+  @param  seq  pointer to the structure to clone
+*/
+void
+fmap_seq_to_int(fmap_seq_t *seq);
+
+fmap_string_t *
+fmap_seq_get_bases(fmap_seq_t *seq);
+
 #endif

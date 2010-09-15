@@ -19,7 +19,8 @@
 */
 typedef struct {
     uint32_t score;
-    uint32_t n_mm:9, n_gapo:10, n_gape:10, state:2, strand:1;
+    uint16_t n_mm, n_gapo, n_gape;
+    uint8_t state:7, strand:1;
     int16_t offset, last_diff_offset;
     fmap_bwt_match_occ_t match_sa; // SA interval and offset
     uint32_t i, prev_i;

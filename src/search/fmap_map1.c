@@ -28,6 +28,25 @@ fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fma
       uint16_t flag = 0x0000;
       uint32_t pos = 0, seqid = 0, pacpos = 0; 
       int32_t aln_ref_l = 0;
+      int32_t seq_len = 0;
+      fmap_string_t *name=NULL, *bases=NULL, *qualities=NULL;
+
+      switch(seq->type) {
+        case FMAP_SEQ_TYPE_FQ:
+          seq_len = seq->data.fq->seq->l;
+          name = seq->data.fq->name;
+          bases = seq->data.fq->seq;
+          qualities = seq->data.fq->qual;
+          break;
+        case FMAP_SEQ_TYPE_SFF:
+          fmap_error("SFF not supported", Exit, OutOfRange);
+          // TODO
+          name = seq->data.sff->rheader->name;
+          break;
+        default:
+          fmap_error("unknown sequence", Exit, OutOfRange);
+          break;
+      }
 
       // get the number of non-inserted bases 
       for(j=0;j<a->cigar_length;j++) {
@@ -43,21 +62,23 @@ fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fma
       // SA position to packed refseq position
       pacpos = bwt->seq_len - fmap_sa_pac_pos(sa, bwt, i) - aln_ref_l + 1;
 
-      if(0 <= fmap_refseq_pac2real(refseq, pacpos, seq->seq.l, &seqid, &pos)) {
+      if(0 <= fmap_refseq_pac2real(refseq, pacpos, seq_len, &seqid, &pos)) {
           if(1 == a->strand) { // reverse for the output
               flag |= 0x0010;
-              fmap_seq_reverse(seq, 1);
+              fmap_string_reverse_compliment(bases, 1);
+              fmap_string_reverse(qualities);
           }
           fprintf(stdout, "%s\t%u\t%s\t%u\t%u\t",
-                  seq->name.s, flag, refseq->annos[seqid].name,
+                  name->s, flag, refseq->annos[seqid].name->s,
                   pos, 255);
           for(j=0;j<a->cigar_length;j++) {
               fprintf(stdout, "%d%c", (a->cigar[j]>>4), "MIDNSHP"[a->cigar[j] & 0xf]);
           }
           fprintf(stdout, "\t*\t0\t0\t%s\t%s\n",
-                  seq->seq.s, seq->qual.s);
+                  bases->s, qualities->s);
           if(1 == a->strand) { // reverse back
-              fmap_seq_reverse(seq, 1);
+              fmap_string_reverse_compliment(bases, 1);
+              fmap_string_reverse(qualities);
           }
           n++;
       }
@@ -70,9 +91,26 @@ static inline void
 fmap_map1_print_sam_unmapped(fmap_seq_t *seq)
 {
   uint16_t flag = 0x0004;
+  fmap_string_t *name=NULL, *bases=NULL, *qualities=NULL;
+
+  switch(seq->type) {
+    case FMAP_SEQ_TYPE_FQ:
+      name = seq->data.fq->name;
+      bases = seq->data.fq->seq;
+      qualities = seq->data.fq->qual;
+      break;
+    case FMAP_SEQ_TYPE_SFF:
+      fmap_error("SFF not supported", Exit, OutOfRange);
+      // TODO
+      name = seq->data.sff->rheader->name;
+      break;
+    default:
+      fmap_error("unknown sequence", Exit, OutOfRange);
+      break;
+  }
   fprintf(stdout, "%s\t%u\t%s\t%u\t%u\t*\t*\t0\t0\t%s\t%s\n",
-          seq->name.s, flag, "*",
-          0, 0, seq->seq.s, seq->qual.s);
+          name->s, flag, "*",
+          0, 0, bases->s, qualities->s);
 }
 
 static void
@@ -110,36 +148,42 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
       while(low<high) {
           fmap_map1_opt_t opt_local = (*opt); // copy over values
           fmap_seq_t *seq[2]={NULL, NULL}, *orig_seq=NULL;
-
           orig_seq = seq_buffer[low];
+          fmap_string_t *orig_bases = NULL, *bases[2]={NULL, NULL};
+
+
 
           // clone the sequence and get the reverse compliment
           seq[0] = fmap_seq_clone(orig_seq);
           seq[1] = fmap_seq_clone(orig_seq);
-          fmap_seq_reverse(seq[1], 1);
+          fmap_seq_reverse_compliment(seq[1]);
           // convert to integers
           fmap_seq_to_int(seq[0]);
           fmap_seq_to_int(seq[1]);
 
-          opt_local.max_mm = (opt->max_mm < 0) ? (int)(opt->max_mm_frac * orig_seq->seq.l) : opt->max_mm; 
-          opt_local.max_gape = (opt->max_gape < 0) ? (int)(opt->max_gape_frac * orig_seq->seq.l) : opt->max_gape; 
-          opt_local.max_gapo = (opt->max_gapo < 0) ? (int)(opt->max_gapo_frac * orig_seq->seq.l) : opt->max_gapo; 
+          orig_bases = fmap_seq_get_bases(orig_seq); 
+          bases[0] = fmap_seq_get_bases(seq[0]);
+          bases[1] = fmap_seq_get_bases(seq[1]);
 
-          if(width_length < orig_seq->seq.l) {
+          opt_local.max_mm = (opt->max_mm < 0) ? (int)(opt->max_mm_frac * orig_bases->l) : opt->max_mm; 
+          opt_local.max_gape = (opt->max_gape < 0) ? (int)(opt->max_gape_frac * orig_bases->l) : opt->max_gape; 
+          opt_local.max_gapo = (opt->max_gapo < 0) ? (int)(opt->max_gapo_frac * orig_bases->l) : opt->max_gapo; 
+
+          if(width_length < orig_bases->l) {
               free(width[0]); free(width[1]);
-              width_length = orig_seq->seq.l;
+              width_length = orig_bases->l;
               width[0] = fmap_calloc(width_length, sizeof(fmap_bwt_match_width_t), "width[0]");
               width[1] = fmap_calloc(width_length, sizeof(fmap_bwt_match_width_t), "width[1]");
           }
-          fmap_bwt_match_cal_width(bwt[0], seq[0]->seq.l, seq[0]->seq.s, width[0]);
-          fmap_bwt_match_cal_width(bwt[0], seq[1]->seq.l, seq[1]->seq.s, width[1]);
+          fmap_bwt_match_cal_width(bwt[0], bases[0]->l, bases[0]->s, width[0]);
+          fmap_bwt_match_cal_width(bwt[0], bases[1]->l, bases[1]->s, width[1]);
 
-          if(orig_seq->seq.l < opt->seed_length) {
+          if(orig_bases->l < opt->seed_length) {
               opt_local.seed_length = -1;
           }
           else {
-              fmap_bwt_match_cal_width(bwt[0], opt->seed_length, seq[0]->seq.s, width[0]);
-              fmap_bwt_match_cal_width(bwt[0], opt->seed_length, seq[1]->seq.s, width[1]);
+              fmap_bwt_match_cal_width(bwt[0], opt->seed_length, bases[0]->s, width[0]);
+              fmap_bwt_match_cal_width(bwt[0], opt->seed_length, bases[1]->s, width[1]);
           }
 
           alns[low] = fmap_map1_aux_core(seq, bwt[1], width, (0 < opt_local.seed_length) ? seed_width : NULL, &opt_local, stack);
@@ -192,18 +236,31 @@ fmap_map1_core(fmap_map1_opt_t *opt)
   // SAM header
   for(i=0;i<refseq->num_annos;i++) {
       fprintf(stdout, "@SQ\tSN:%s\tLN:%d\n",
-              refseq->annos[i].name, (int)refseq->annos[i].len);
+              refseq->annos[i].name->s, (int)refseq->annos[i].len);
   }
 
-  // TODO: support FASTA/FASTQ/SFF
-  fp_reads = fmap_file_fopen(opt->fn_reads, "rb", FMAP_FILE_NO_COMPRESSION);
-  seqio = fmap_seq_io_init(fp_reads);
-
-  // initialize the buffer
+  // allocate the buffer
   seq_buffer = fmap_malloc(sizeof(fmap_seq_t*)*opt->reads_queue_size, "seq_buffer");
   alns = fmap_malloc(sizeof(fmap_map1_aln_t**)*opt->reads_queue_size, "alns");
-  for(i=0;i<opt->reads_queue_size;i++) {
-      seq_buffer[i] = fmap_seq_init();
+
+  fp_reads = fmap_file_fopen(opt->fn_reads, "rb", FMAP_FILE_NO_COMPRESSION);
+  switch(opt->reads_format) {
+    case FMAP_READS_FORMAT_FASTA:
+    case FMAP_READS_FORMAT_FASTQ:
+      seqio = fmap_seq_io_init(fp_reads, FMAP_SEQ_TYPE_FQ);
+      for(i=0;i<opt->reads_queue_size;i++) { // initialize the buffer
+          seq_buffer[i] = fmap_seq_init(FMAP_SEQ_TYPE_FQ);
+      }
+      break;
+    case FMAP_READS_FORMAT_SFF:
+      seqio = fmap_seq_io_init(fp_reads, FMAP_SEQ_TYPE_SFF);
+      for(i=0;i<opt->reads_queue_size;i++) { // initialize the buffer
+          seq_buffer[i] = fmap_seq_init(FMAP_SEQ_TYPE_SFF);
+      }
+      break;
+    default:
+      fmap_error("unrecognized input format", Exit, CommandLineArgument);
+      break;
   }
 
   while(0 < (seq_buffer_length = fmap_seq_io_read_buffer(seqio, seq_buffer, opt->reads_queue_size))) {
@@ -303,6 +360,7 @@ usage(fmap_map1_opt_t *opt)
   // - adapter trimming ?
   // - homopolymer enumeration ?
   // - add option to try various seed offsets
+  // - add option for "how many edits away" to search
 
   fprintf(stderr, "\n");
   fprintf(stderr, "Usage: %s map1 [options]", PACKAGE);

@@ -4,6 +4,7 @@
 
 #include "../util/fmap_error.h"
 #include "../util/fmap_alloc.h"
+#include "../util/fmap_string.h"
 #include "../util/fmap_progress.h"
 #include "../util/fmap_definitions.h"
 #include "../io/fmap_file.h"
@@ -25,7 +26,7 @@ fmap_refseq_write_header(fmap_file_t *fp, fmap_refseq_t *refseq)
 static inline void
 fmap_refseq_write_annos(fmap_file_t *fp, fmap_anno_t *anno) 
 {
-  uint32_t len = strlen(anno->name)+1; // include null terminator
+  uint32_t len = anno->name->l+1; // include null terminator
 
   if(1 != fmap_file_fwrite(&len, sizeof(uint32_t), 1, fp) 
      || len != fmap_file_fwrite(anno->name, sizeof(char), len, fp)
@@ -86,17 +87,17 @@ fmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
 
   // read in sequences
   while(0 <= (l = fmap_seq_io_read(seqio, seq))) {
-      fmap_progress_print2("packing contig [%s:1-%d]", seq->data.fq->name.s, l);
+      fmap_progress_print2("packing contig [%s:1-%d]", seq->data.fq->name->s, l);
 
       refseq->num_annos++;
       refseq->annos = fmap_realloc(refseq->annos, sizeof(fmap_anno_t)*refseq->num_annos, "refseq->annos");
-      refseq->annos[refseq->num_annos-1].name = fmap_strdup(seq->data.fq->name.s);  // sequence name
+      refseq->annos[refseq->num_annos-1].name = fmap_string_clone(seq->data.fq->name); 
       refseq->annos[refseq->num_annos-1].len = l;
       refseq->annos[refseq->num_annos-1].offset = (1 == refseq->num_annos) ? 0 : refseq->annos[refseq->num_annos-2].offset + refseq->annos[refseq->num_annos-2].len;
 
       // fill the buffer
       for(i=0;i<l;i++) {
-          int c = nt_char_to_int[(int)seq->data.fq->seq.s[i]];
+          int c = nt_char_to_int[(int)seq->data.fq->seq->s[i]];
           if(4 <= c) c = lrand48() & 0x3; // random base
           if(buffer_length == (FMAP_REFSEQ_BUFFER_SIZE << 2)) { // 2-bit
               if(fmap_refseq_seq_memory(buffer_length) != fmap_file_fwrite(buffer, sizeof(uint8_t), fmap_refseq_seq_memory(buffer_length), fp_pac)) {
@@ -239,19 +240,21 @@ fmap_refseq_read_header(fmap_file_t *fp, fmap_refseq_t *refseq)
 static inline void
 fmap_refseq_read_annos(fmap_file_t *fp, fmap_anno_t *anno) 
 {
-  uint32_t len = 0;
+  uint32_t len = 0; // includes the null-terminator
 
   if(1 != fmap_file_fread(&len, sizeof(uint32_t), 1, fp)) {
       fmap_error(NULL, Exit, ReadFileError);
   }
 
-  anno->name = fmap_malloc(sizeof(char)*len, "anno->name");
+  anno->name = fmap_string_init(len);
 
-  if(len != fmap_file_fread(anno->name, sizeof(char), len, fp)
+  if(len != fmap_file_fread(anno->name->s, sizeof(char), len, fp)
      || 1 != fmap_file_fread(&anno->len, sizeof(uint64_t), 1, fp)
      || 1 != fmap_file_fread(&anno->offset, sizeof(uint64_t), 1, fp)) {
       fmap_error(NULL, Exit, ReadFileError);
   }
+  // set name length
+  anno->name->l = len-1;
 }
 
 static inline void
@@ -305,27 +308,11 @@ fmap_refseq_destroy(fmap_refseq_t *refseq)
   uint32_t i;
 
   for(i=0;i<refseq->num_annos;i++) {
-      free(refseq->annos[i].name);
+      fmap_string_destroy(refseq->annos[i].name);
   }
   free(refseq->annos);
   free(refseq->seq);
   free(refseq);
-}
-
-size_t
-fmap_refseq_size(fmap_refseq_t *refseq)
-{
-  size_t size = 0;
-  uint32_t i;
-
-  size += sizeof(fmap_refseq_t);
-  size += sizeof(char)*fmap_refseq_seq_memory(refseq->len);
-  size += sizeof(fmap_refseq_t)*refseq->num_annos;
-  for(i=0;i<refseq->num_annos;i++) {
-      size += (1+strlen(refseq->annos[i].name))*sizeof(char); // include null terminator
-  }
-
-  return size;
 }
 
 // zero-based

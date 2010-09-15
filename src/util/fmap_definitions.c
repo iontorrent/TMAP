@@ -46,28 +46,6 @@ uint8_t nt_char_to_rc_char[256] = {
     'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N'
 };
 
-inline void
-fmap_string_copy(fmap_string_t *dest, fmap_string_t *src)
-{
-  int32_t i;
-  dest->s = fmap_malloc(sizeof(char)*src->m, "dest->s");
-  for(i=0;i<src->m;i++) { // copy over all memory
-      dest->s[i] = src->s[i];
-  }
-  dest->l = src->l;
-  dest->m = src->m;
-}
-
-inline void
-fmap_string_reverse(fmap_string_t *str)
-{
-  int i;
-  for(i = 0; i < (str->l >> 1); ++i) {
-      char tmp = str->s[str->l-1-i];
-      str->s[str->l-1-i] = str->s[i]; str->s[i] = tmp;
-  }
-}
-
 inline char *
 fmap_get_file_name(const char *prefix, int32_t type)
 {

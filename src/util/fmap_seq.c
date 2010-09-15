@@ -45,3 +45,74 @@ fmap_seq_destroy(fmap_seq_t *seq)
   }
   free(seq);
 }
+
+fmap_seq_t *
+fmap_seq_clone(fmap_seq_t *seq)
+{
+  fmap_seq_t *ret = NULL;
+
+  ret = fmap_seq_init(seq->type);
+
+  switch(seq->type) {
+    case FMAP_SEQ_TYPE_FQ:
+      seq->data.fq = fmap_fq_clone(seq->data.fq);
+      break;
+    case FMAP_SEQ_TYPE_SFF:
+      seq->data.sff = fmap_sff_clone(seq->data.sff);
+      break;
+    default:
+      fmap_error("type is unrecognized", Exit, OutOfRange);
+      break;
+  }
+
+  return ret;
+}
+
+void
+fmap_seq_reverse_compliment(fmap_seq_t *seq)
+{
+  switch(seq->type) {
+    case FMAP_SEQ_TYPE_FQ:
+      fmap_fq_reverse_compliment(seq->data.fq);
+      break;
+    case FMAP_SEQ_TYPE_SFF:
+      fmap_sff_reverse_compliment(seq->data.sff);
+      break;
+    default:
+      fmap_error("type is unrecognized", Exit, OutOfRange);
+      break;
+  }
+}
+
+void
+fmap_seq_to_int(fmap_seq_t *seq)
+{
+  switch(seq->type) {
+    case FMAP_SEQ_TYPE_FQ:
+      fmap_fq_to_int(seq->data.fq);
+      break;
+    case FMAP_SEQ_TYPE_SFF:
+      fmap_sff_to_int(seq->data.sff);
+      break;
+    default:
+      fmap_error("type is unrecognized", Exit, OutOfRange);
+      break;
+  }
+}
+
+fmap_string_t *
+fmap_seq_get_bases(fmap_seq_t *seq)
+{
+  switch(seq->type) {
+    case FMAP_SEQ_TYPE_FQ:
+      return seq->data.fq->seq;
+      break;
+    case FMAP_SEQ_TYPE_SFF:
+      return seq->data.sff->read->bases;
+      break;
+    default:
+      fmap_error("type is unrecognized", Exit, OutOfRange);
+      break;
+  }
+  return NULL;
+}

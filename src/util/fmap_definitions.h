@@ -1,5 +1,5 @@
-#ifndef FMAP_DEFINTIONS_H_
-#define FMAP_DEFINTIONS_H_
+#ifndef FMAP_DEFINITIONS_H_
+#define FMAP_DEFINITIONS_H_
 
 #include <stdint.h>
 
@@ -62,32 +62,6 @@ enum {
 
 extern uint8_t nt_char_to_int[256];
 extern uint8_t nt_char_to_rc_char[256];
-
-/*! @typedef
-  @abstract
-  @field  l  the length of the string
-  @field  m  the memory allocated for this string
-  @field  s  the pointer to the string
-  */
-typedef struct {
-    size_t l, m;
-    char *s;
-} fmap_string_t;
-
-/*! @function
-  @abstract     analagous to strcpy
-  @param  dest  pointer to the destination string
-  @param  src   pointer to the source string
-*/
-inline void
-fmap_string_copy(fmap_string_t *dest, fmap_string_t *src);
-
-/*! @function
-  @abstract    reverse the characters in the string
-  @param  str  pointer to the string
-*/
-inline void
-fmap_string_reverse(fmap_string_t *str);
 
 /*! @function
   @abstract       gets the name of a specific file based on the reference sequence

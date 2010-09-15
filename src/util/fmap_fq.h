@@ -32,6 +32,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
+#include "fmap_string.h"
 #include "fmap_definitions.h"
 
 /*! @typedef
@@ -43,7 +44,7 @@
   @field  is_int     1 if the sequence is in integer format, 0 otherwise 
   */
 typedef struct {
-    fmap_string_t name, comment, seq, qual;
+    fmap_string_t *name, *comment, *seq, *qual;
     int32_t is_int;
 } fmap_fq_t;
 
@@ -56,39 +57,38 @@ fmap_fq_init();
 
 /*! @function
   @abstract   
-  @param  seq  a pointer to the sequence structure
+  @param  fq  a pointer to the sequence structure
   */
 inline void 
-fmap_fq_destroy(fmap_fq_t *seq);
+fmap_fq_destroy(fmap_fq_t *fq);
 
 /*! @function
   @abstract   clones the given sequence read structure
-  @param  pointer to the sequence read structure to be copied  
-  @return  pointer to the initialized memory 
+  @param  fq  pointer to the sequence read structure to be copied  
+  @return     pointer to the initialized memory 
   */
 inline fmap_fq_t *
-fmap_fq_clone(fmap_fq_t *seq);
+fmap_fq_clone(fmap_fq_t *fq);
 
 /*! @function
-  @abstract         reverse the seq and qual fields
-  @param  seq       a pointer to a sequence structure
-  @param  rev_comp  0 only to reverse, otherwise the compliment will also be taken
+  @abstract   reverse compliments the sequence and reverse the qualities
+  @param  fq  a pointer to a sequence structure
   */
 void
-fmap_fq_reverse(fmap_fq_t *seq, int32_t rev_comp);
+fmap_fq_reverse_compliment(fmap_fq_t *fq);
 
 /*! @function
-  @abstract         converts bases to integer values
-  @param  seq       a pointer to a sequence structure
+  @abstract   converts bases to integer values
+  @param  fq  a pointer to a sequence structure
   */
 void
-fmap_fq_to_int(fmap_fq_t *seq);
+fmap_fq_to_int(fmap_fq_t *fq);
 
 /*! @function
-  @abstract         converts bases to character values
-  @param  seq       a pointer to a sequence structure
+  @abstract   converts bases to character values
+  @param  fq  a pointer to a sequence structure
   */
 void
-fmap_fq_to_char(fmap_fq_t *seq);
+fmap_fq_to_char(fmap_fq_t *fq);
 
 #endif

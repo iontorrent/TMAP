@@ -17,8 +17,8 @@ fmap_debug_exact_print_sam_unmapped(fmap_fq_t *seq)
 {
   uint16_t flag = 0x0004;
   fprintf(stdout, "%s\t%u\t%s\t%u\t%u\t*\t*\t0\t0\t%s\t%s\n",
-              seq->name.s, flag, "*",
-              0, 0, seq->seq.s, seq->qual.s);
+              seq->name->s, flag, "*",
+              0, 0, seq->seq->s, seq->qual->s);
 }
 
 static int32_t 
@@ -27,16 +27,18 @@ fmap_debug_exact_print_sam(fmap_refseq_t *refseq, fmap_fq_t *seq, uint32_t pacpo
   uint32_t pos, seqid;
   uint16_t flag = 0;
 
-  if(0 <= fmap_refseq_pac2real(refseq, pacpos, seq->seq.l, &seqid, &pos)) {
+  if(0 <= fmap_refseq_pac2real(refseq, pacpos, seq->seq->l, &seqid, &pos)) {
       if(1 == strand) { // reverse for the output
           flag |= 0x0010;
-          fmap_fq_reverse(seq, 1);
+          fmap_string_reverse_compliment(seq->seq, seq->is_int);
+          fmap_string_reverse(seq->qual);
       }
       fprintf(stdout, "%s\t%u\t%s\t%u\t%u\t%dM\t*\t0\t0\t%s\t%s\n",
-              seq->name.s, flag, refseq->annos[seqid].name,
-              pos, 255, (int)seq->seq.l, seq->seq.s, seq->qual.s);
+              seq->name->s, flag, refseq->annos[seqid].name->s,
+              pos, 255, (int)seq->seq->l, seq->seq->s, seq->qual->s);
       if(1 == strand) { // reverse back
-          fmap_fq_reverse(seq, 1);
+          fmap_string_reverse_compliment(seq->seq, seq->is_int);
+          fmap_string_reverse(seq->qual);
       }
       return 1;
   }
@@ -55,17 +57,17 @@ fmap_debug_exact_core_worker(fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *
   fmap_fq_to_int(seq);
   
   rseq = fmap_fq_clone(orig_seq);
-  fmap_fq_reverse(rseq, 1);
   fmap_fq_to_int(rseq);
+  fmap_string_reverse_compliment(rseq->seq, 1);
 
-  if(0 != fmap_bwt_match_exact(bwt, seq->seq.l, (uint8_t*)seq->seq.s, &cur)) {
+  if(0 != fmap_bwt_match_exact(bwt, seq->seq->l, (uint8_t*)seq->seq->s, &cur)) {
       for(i=cur.k;i<=cur.l;i++) {
           if(0 != fmap_debug_exact_print_sam(refseq, seq, fmap_sa_pac_pos(sa, bwt, i), 0)) {
               mapped = 1;
           }
       }
   }
-  if(0 != fmap_bwt_match_exact(bwt, seq->seq.l, (uint8_t*)rseq->seq.s, &cur)) {
+  if(0 != fmap_bwt_match_exact(bwt, seq->seq->l, (uint8_t*)rseq->seq->s, &cur)) {
       for(i=cur.k;i<=cur.l;i++) {
           if(0 != fmap_debug_exact_print_sam(refseq, seq, fmap_sa_pac_pos(sa, bwt, i), 1)) {
               mapped = 1;
@@ -96,7 +98,7 @@ fmap_debug_exact_core(fmap_debug_exact_opt_t *opt)
   refseq = fmap_refseq_read(opt->fn_fasta, 0);
   for(i=0;i<refseq->num_annos;i++) {
       fprintf(stdout, "@SQ\tSN:%s\tLN:%d\n",
-              refseq->annos[i].name, (int)refseq->annos[i].len);
+              refseq->annos[i].name->s, (int)refseq->annos[i].len);
   }
 
   // TODO modify so we use forward search
