@@ -36,6 +36,9 @@ fmap_error_cmd_check_int(int32_t val, int32_t lower, int32_t upper, char *option
 void 
 fmap_error_full(const char *file, const unsigned int line, const char *function_name, const char *variable_name, int action_type, int error_type) 
 {
+  // Note: using regular-old fprintf since fmap_file_fprintf will call this
+  // function (infinite recursion)
+
   if(NULL == variable_name) {
       fprintf(stderr, "\n%s:%u: in function \"%s\"\n%s: %s\n",
               file, line, function_name, action_string[action_type], error_string[error_type]);

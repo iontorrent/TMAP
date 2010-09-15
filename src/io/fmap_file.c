@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <assert.h>
+#include <stdarg.h>
 #include <unistd.h>
 #include <string.h>
 #include <bzlib.h>
@@ -326,3 +326,34 @@ fmap_file_fwrite(void *ptr, size_t size, size_t count, fmap_file_t *fp)
 
   return num_written;
 }
+
+int32_t 
+fmap_file_vfprintf(fmap_file_t *fp, const char *format, va_list ap)
+{
+  int32_t n;
+
+  if(FMAP_FILE_NO_COMPRESSION != fp->c) {
+      fmap_error("compression not supported", Exit, OutOfRange);
+  }
+
+  n = vfprintf(fp->fp, format, ap);
+
+  if(n < 0) {
+      fmap_error("vfprintf failed", Exit, WriteFileError);
+  }
+
+  return n;
+} 
+
+int32_t 
+fmap_file_fprintf(fmap_file_t *fp, const char *format, ...)
+{
+  int32_t n;
+  va_list ap;
+
+  va_start(ap, format);
+  n = vfprintf(fp->fp, format, ap);
+  va_end(ap);
+
+  return n;
+} 

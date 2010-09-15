@@ -7,6 +7,7 @@
 #include <bzlib.h>
 #endif 
 #include <config.h>
+#include <stdarg.h>
 
 /*! @enum
   @abstract file compression types
@@ -44,6 +45,9 @@ typedef struct {
     int32_t n_unused, bzerror, open_type;
 #endif
 } fmap_file_t;
+
+extern fmap_file_t *fmap_file_stdout; // to use, initialize this in your main
+extern fmap_file_t *fmap_file_stderr; // to use, initialize this in your main
 
 /*! @function
   @abstract            emulates fopen from stdio.h
@@ -113,4 +117,23 @@ fmap_file_fgetc(fmap_file_t *fp);
 size_t 
 fmap_file_fwrite(void *ptr, size_t size, size_t count, fmap_file_t *fp); 
 
+/*! @function
+  @abstract       emulates vfprintf from stdio.h
+  @param  fp      pointer to the file structure to which to write
+  @param  format  the text and format of what to print
+  @param  ap      depending on the format string, the function may expect a sequence of additional arguments
+  @return         the number of characters written
+  */
+int32_t
+fmap_file_vfprintf(fmap_file_t *fp, const char *format, va_list ap);
+
+/*! @function
+  @abstract       emulates fprintf from stdio.h
+  @param  fp      pointer to the file structure to which to write
+  @param  format  the text and format of what to print
+  @param  ...     depending on the format string, the function may expect a sequence of additional arguments
+  @return         the number of characters written
+  */
+int32_t
+fmap_file_fprintf(fmap_file_t *fp, const char *format, ...);
 #endif

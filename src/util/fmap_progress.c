@@ -6,6 +6,7 @@
 #include <config.h>
 
 #include "fmap_error.h"
+#include "../io/fmap_file.h"
 #include "fmap_progress.h"
 
 static char fmap_progress_command[1024]="(null)";
@@ -36,7 +37,7 @@ static void
 fmap_progress_vprint1(const char *format, clock_t start_time, va_list ap)
 {
   static char fmap_progress_format[2048]="\0";
-
+  
   if(0 != fmap_progress_verbosity) {
       if(0 < (float)start_time) {
           if(sprintf(fmap_progress_format, "[%s] %.2f sec: ", fmap_progress_command, (float)(clock()-start_time) / CLOCKS_PER_SEC) < 0) {
@@ -51,7 +52,7 @@ fmap_progress_vprint1(const char *format, clock_t start_time, va_list ap)
       strcat(fmap_progress_format, format);
       strcat(fmap_progress_format, ".\n");
 
-      vfprintf(stdout, fmap_progress_format, ap);
+      fmap_file_vfprintf(fmap_file_stdout, fmap_progress_format, ap);
   }
 }
 

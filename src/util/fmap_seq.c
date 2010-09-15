@@ -55,10 +55,10 @@ fmap_seq_clone(fmap_seq_t *seq)
 
   switch(seq->type) {
     case FMAP_SEQ_TYPE_FQ:
-      seq->data.fq = fmap_fq_clone(seq->data.fq);
+      ret->data.fq = fmap_fq_clone(seq->data.fq);
       break;
     case FMAP_SEQ_TYPE_SFF:
-      seq->data.sff = fmap_sff_clone(seq->data.sff);
+      ret->data.sff = fmap_sff_clone(seq->data.sff);
       break;
     default:
       fmap_error("type is unrecognized", Exit, OutOfRange);

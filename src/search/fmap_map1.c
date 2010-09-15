@@ -68,14 +68,16 @@ fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fma
               fmap_string_reverse_compliment(bases, 1);
               fmap_string_reverse(qualities);
           }
-          fprintf(stdout, "%s\t%u\t%s\t%u\t%u\t",
+          fmap_file_fprintf(fmap_file_stdout, "%s\t%u\t%s\t%u\t%u\t",
                   name->s, flag, refseq->annos[seqid].name->s,
                   pos, 255);
           for(j=0;j<a->cigar_length;j++) {
-              fprintf(stdout, "%d%c", (a->cigar[j]>>4), "MIDNSHP"[a->cigar[j] & 0xf]);
+              fmap_file_fprintf(fmap_file_stdout, "%d%c", (a->cigar[j]>>4), "MIDNSHP"[a->cigar[j] & 0xf]);
           }
-          fprintf(stdout, "\t*\t0\t0\t%s\t%s\n",
+          fmap_file_fprintf(fmap_file_stdout, "\t*\t0\t0\t%s\t%s",
                   bases->s, qualities->s);
+          // optional tags
+          // AS
           if(1 == a->strand) { // reverse back
               fmap_string_reverse_compliment(bases, 1);
               fmap_string_reverse(qualities);
@@ -108,7 +110,7 @@ fmap_map1_print_sam_unmapped(fmap_seq_t *seq)
       fmap_error("unknown sequence", Exit, OutOfRange);
       break;
   }
-  fprintf(stdout, "%s\t%u\t%s\t%u\t%u\t*\t*\t0\t0\t%s\t%s\n",
+  fmap_file_fprintf(fmap_file_stdout, "%s\t%u\t%s\t%u\t%u\t*\t*\t0\t0\t%s\t%s\n",
           name->s, flag, "*",
           0, 0, bases->s, qualities->s);
 }
@@ -152,15 +154,16 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
           fmap_string_t *orig_bases = NULL, *bases[2]={NULL, NULL};
 
 
-
           // clone the sequence and get the reverse compliment
           seq[0] = fmap_seq_clone(orig_seq);
           seq[1] = fmap_seq_clone(orig_seq);
           fmap_seq_reverse_compliment(seq[1]);
+          
           // convert to integers
           fmap_seq_to_int(seq[0]);
           fmap_seq_to_int(seq[1]);
 
+          // get bases
           orig_bases = fmap_seq_get_bases(orig_seq); 
           bases[0] = fmap_seq_get_bases(seq[0]);
           bases[1] = fmap_seq_get_bases(seq[1]);
@@ -235,7 +238,7 @@ fmap_map1_core(fmap_map1_opt_t *opt)
 
   // SAM header
   for(i=0;i<refseq->num_annos;i++) {
-      fprintf(stdout, "@SQ\tSN:%s\tLN:%d\n",
+      fmap_file_fprintf(fmap_file_stdout, "@SQ\tSN:%s\tLN:%d\n",
               refseq->annos[i].name->s, (int)refseq->annos[i].len);
   }
 
@@ -362,40 +365,40 @@ usage(fmap_map1_opt_t *opt)
   // - add option to try various seed offsets
   // - add option for "how many edits away" to search
 
-  fprintf(stderr, "\n");
-  fprintf(stderr, "Usage: %s map1 [options]", PACKAGE);
-  fprintf(stderr, "\n");
-  fprintf(stderr, "Options (required):\n");
-  fprintf(stderr, "         -f FILE     the FASTA reference file name [%s]\n", opt->fn_fasta);
-  fprintf(stderr, "         -r FILE     the reads file name [%s]\n", opt->fn_reads);
-  fprintf(stderr, "Options (optional):\n");
-  fprintf(stderr, "         -F STRING   the reads file format (fastq|fq|fasta|fa|sff) [%s]\n", reads_format);
-  fprintf(stderr, "         -l INT      the k-mer length to seed CALs (-1 to disable) [%d]\n", opt->seed_length);
-  fprintf(stderr, "         -k INT      maximum number of mismatches in the seed [%d]\n", opt->seed_max_mm);
+  fmap_file_fprintf(fmap_file_stderr, "\n");
+  fmap_file_fprintf(fmap_file_stderr, "Usage: %s map1 [options]", PACKAGE);
+  fmap_file_fprintf(fmap_file_stderr, "\n");
+  fmap_file_fprintf(fmap_file_stderr, "Options (required):\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -f FILE     the FASTA reference file name [%s]\n", opt->fn_fasta);
+  fmap_file_fprintf(fmap_file_stderr, "         -r FILE     the reads file name [%s]\n", opt->fn_reads);
+  fmap_file_fprintf(fmap_file_stderr, "Options (optional):\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -F STRING   the reads file format (fastq|fq|fasta|fa|sff) [%s]\n", reads_format);
+  fmap_file_fprintf(fmap_file_stderr, "         -l INT      the k-mer length to seed CALs (-1 to disable) [%d]\n", opt->seed_length);
+  fmap_file_fprintf(fmap_file_stderr, "         -k INT      maximum number of mismatches in the seed [%d]\n", opt->seed_max_mm);
 
-  fprintf(stderr, "         -m NUM      maximum number of or (read length) fraction of mismatches");
-  if(opt->max_mm < 0) fprintf(stderr, " [fraction: %lf]\n", opt->max_mm_frac);
-  else fprintf(stderr, " [number: %d]\n", opt->max_mm); 
+  fmap_file_fprintf(fmap_file_stderr, "         -m NUM      maximum number of or (read length) fraction of mismatches");
+  if(opt->max_mm < 0) fmap_file_fprintf(fmap_file_stderr, " [fraction: %lf]\n", opt->max_mm_frac);
+  else fmap_file_fprintf(fmap_file_stderr, " [number: %d]\n", opt->max_mm); 
 
-  fprintf(stderr, "         -o NUM      maximum number of or (read length) fraction of indel starts");
-  if(opt->max_gapo < 0) fprintf(stderr, " [fraction: %lf]\n", opt->max_gapo_frac);
-  else fprintf(stderr, " [number: %d]\n", opt->max_gapo); 
+  fmap_file_fprintf(fmap_file_stderr, "         -o NUM      maximum number of or (read length) fraction of indel starts");
+  if(opt->max_gapo < 0) fmap_file_fprintf(fmap_file_stderr, " [fraction: %lf]\n", opt->max_gapo_frac);
+  else fmap_file_fprintf(fmap_file_stderr, " [number: %d]\n", opt->max_gapo); 
 
-  fprintf(stderr, "         -e NUM      maximum number of or (read length) fraction of indel extensions");
-  if(opt->max_gape < 0) fprintf(stderr, " [fraction: %lf]\n", opt->max_gape_frac);
-  else fprintf(stderr, " [number: %d]\n", opt->max_gape); 
+  fmap_file_fprintf(fmap_file_stderr, "         -e NUM      maximum number of or (read length) fraction of indel extensions");
+  if(opt->max_gape < 0) fmap_file_fprintf(fmap_file_stderr, " [fraction: %lf]\n", opt->max_gape_frac);
+  else fmap_file_fprintf(fmap_file_stderr, " [number: %d]\n", opt->max_gape); 
 
-  fprintf(stderr, "         -M INT      the mismatch penalty [%d]\n", opt->pen_mm); 
-  fprintf(stderr, "         -O INT      the indel start penalty [%d]\n", opt->pen_gapo); 
-  fprintf(stderr, "         -E INT      the indel extend penalty [%d]\n", opt->pen_gape); 
-  fprintf(stderr, "         -d INT      the maximum number of CALs to extend a deletion [%d]\n", opt->max_cals_del); 
-  fprintf(stderr, "         -i INT      indels are not allowed within INT number of bps from the end of the read [%d]\n", opt->indel_ends_bound);
-  fprintf(stderr, "         -b INT      stop searching when INT optimal CALs have been found [%d]\n", opt->max_best_cals);
-  fprintf(stderr, "         -q INT      the queue size for the reads [%d]\n", opt->reads_queue_size);
-  fprintf(stderr, "         -Q INT      maximum number of alignment nodes [%d]\n", opt->max_entries);
-  fprintf(stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
-  fprintf(stderr, "         -h          print this message\n");
-  fprintf(stderr, "\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -M INT      the mismatch penalty [%d]\n", opt->pen_mm); 
+  fmap_file_fprintf(fmap_file_stderr, "         -O INT      the indel start penalty [%d]\n", opt->pen_gapo); 
+  fmap_file_fprintf(fmap_file_stderr, "         -E INT      the indel extend penalty [%d]\n", opt->pen_gape); 
+  fmap_file_fprintf(fmap_file_stderr, "         -d INT      the maximum number of CALs to extend a deletion [%d]\n", opt->max_cals_del); 
+  fmap_file_fprintf(fmap_file_stderr, "         -i INT      indels are not allowed within INT number of bps from the end of the read [%d]\n", opt->indel_ends_bound);
+  fmap_file_fprintf(fmap_file_stderr, "         -b INT      stop searching when INT optimal CALs have been found [%d]\n", opt->max_best_cals);
+  fmap_file_fprintf(fmap_file_stderr, "         -q INT      the queue size for the reads [%d]\n", opt->reads_queue_size);
+  fmap_file_fprintf(fmap_file_stderr, "         -Q INT      maximum number of alignment nodes [%d]\n", opt->max_entries);
+  fmap_file_fprintf(fmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
+  fmap_file_fprintf(fmap_file_stderr, "         -h          print this message\n");
+  fmap_file_fprintf(fmap_file_stderr, "\n");
 
   free(reads_format);
 

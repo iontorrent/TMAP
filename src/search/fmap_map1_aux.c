@@ -214,14 +214,15 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
   if(max_edit_score < opt->pen_gape) max_edit_score = opt->pen_gape;
 
   // check whether there are too many N
-  if(FMAP_SEQ_TYPE_FQ == seq[0]->type) {
+  switch(seq[0]->type) {
+    case FMAP_SEQ_TYPE_FQ: // FASTA/FASTQ
       for(j=num_n=0;j<seq[0]->data.fq->seq->l;j++) {
           if(3 < seq[0]->data.fq->seq->s[j]) {
               num_n++;
           }
       }
-  }
-  else if(FMAP_SEQ_TYPE_SFF == seq[0]->type) {
+      break;
+    case FMAP_SEQ_TYPE_SFF: // SFF
       num_n = 0; // ignore
       // to match the SFF format where the value is 100*(flow signal)
       // ASSUMPTION: that the 'flow signal' scales linearly with the true number of
@@ -232,10 +233,11 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
 
       fmap_error("SFF read type not supported", Exit, OutOfRange);
       // TODO: support
-  }
-  else {
+      break;
+    default:
       // after this, we do not need to check the read types
       fmap_error("unknown read type", Exit, OutOfRange);
+      break;
   }
   if(max_mm < num_n) {
       return NULL;

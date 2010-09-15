@@ -16,7 +16,7 @@ static void
 fmap_debug_exact_print_sam_unmapped(fmap_fq_t *seq)
 {
   uint16_t flag = 0x0004;
-  fprintf(stdout, "%s\t%u\t%s\t%u\t%u\t*\t*\t0\t0\t%s\t%s\n",
+  fmap_file_fprintf(fmap_file_stdout, "%s\t%u\t%s\t%u\t%u\t*\t*\t0\t0\t%s\t%s\n",
               seq->name->s, flag, "*",
               0, 0, seq->seq->s, seq->qual->s);
 }
@@ -33,7 +33,7 @@ fmap_debug_exact_print_sam(fmap_refseq_t *refseq, fmap_fq_t *seq, uint32_t pacpo
           fmap_string_reverse_compliment(seq->seq, seq->is_int);
           fmap_string_reverse(seq->qual);
       }
-      fprintf(stdout, "%s\t%u\t%s\t%u\t%u\t%dM\t*\t0\t0\t%s\t%s\n",
+      fmap_file_fprintf(fmap_file_stdout, "%s\t%u\t%s\t%u\t%u\t%dM\t*\t0\t0\t%s\t%s\n",
               seq->name->s, flag, refseq->annos[seqid].name->s,
               pos, 255, (int)seq->seq->l, seq->seq->s, seq->qual->s);
       if(1 == strand) { // reverse back
@@ -97,7 +97,7 @@ fmap_debug_exact_core(fmap_debug_exact_opt_t *opt)
   // SAM header
   refseq = fmap_refseq_read(opt->fn_fasta, 0);
   for(i=0;i<refseq->num_annos;i++) {
-      fprintf(stdout, "@SQ\tSN:%s\tLN:%d\n",
+      fmap_file_fprintf(fmap_file_stdout, "@SQ\tSN:%s\tLN:%d\n",
               refseq->annos[i].name->s, (int)refseq->annos[i].len);
   }
 
@@ -124,15 +124,15 @@ fmap_debug_exact_core(fmap_debug_exact_opt_t *opt)
 static int 
 usage(fmap_debug_exact_opt_t *opt)
 {
-  fprintf(stderr, "\n");
-  fprintf(stderr, "Usage: %s exact [options]", PACKAGE);
-  fprintf(stderr, "\n");
-  fprintf(stderr, "Options (required):\n");
-  fprintf(stderr, "         -f FILE     the FASTA reference file name\n");
-  fprintf(stderr, "         -r FILE     the FASTQ reads file name\n");
-  fprintf(stderr, "Options (optional):\n");
-  fprintf(stderr, "         -h          print this message\n");
-  fprintf(stderr, "\n");
+  fmap_file_fprintf(fmap_file_stderr, "\n");
+  fmap_file_fprintf(fmap_file_stderr, "Usage: %s exact [options]", PACKAGE);
+  fmap_file_fprintf(fmap_file_stderr, "\n");
+  fmap_file_fprintf(fmap_file_stderr, "Options (required):\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -f FILE     the FASTA reference file name\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -r FILE     the FASTQ reads file name\n");
+  fmap_file_fprintf(fmap_file_stderr, "Options (optional):\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -h          print this message\n");
+  fmap_file_fprintf(fmap_file_stderr, "\n");
   return 1;
 }
 
