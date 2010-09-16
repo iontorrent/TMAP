@@ -299,6 +299,9 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
           low = fmap_map1_read_lock_tid;
           fmap_map1_read_lock_tid += FMAP_MAP1_THREAD_BLOCK_SIZE;
           high = low + FMAP_MAP1_THREAD_BLOCK_SIZE;
+          if(seq_buffer_length < high) {
+              high = seq_buffer_length; 
+          }
 
           pthread_mutex_unlock(&fmap_map1_read_lock);
       }
@@ -346,8 +349,8 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
               opt_local.seed_length = -1;
           }
           else {
-              fmap_bwt_match_cal_width(bwt[0], opt->seed_length, bases[0]->s, width[0]);
-              fmap_bwt_match_cal_width(bwt[0], opt->seed_length, bases[1]->s, width[1]);
+              fmap_bwt_match_cal_width(bwt[0], opt->seed_length, bases[0]->s, seed_width[0]);
+              fmap_bwt_match_cal_width(bwt[0], opt->seed_length, bases[1]->s, seed_width[1]);
           }
 
           alns[low] = fmap_map1_aux_core(seq, bwt[1], width, (0 < opt_local.seed_length) ? seed_width : NULL, &opt_local, stack, &n_alns, &max_score);
@@ -438,9 +441,8 @@ fmap_map1_core(fmap_map1_opt_t *opt)
       break;
   }
 
+  fmap_progress_print("processing reads");
   while(0 < (seq_buffer_length = fmap_seq_io_read_buffer(seqio, seq_buffer, opt->reads_queue_size))) {
-  
-      fmap_progress_print("performing alignment");
 
       // do alignment
 #ifdef HAVE_LIBPTHREAD
@@ -483,7 +485,6 @@ fmap_map1_core(fmap_map1_opt_t *opt)
 #else 
       fmap_map1_core_worker(seq_buffer, seq_buffer_length, alns, bwt, 0, opt);
 #endif
-      fmap_progress_print2("aligned %d reads", seq_buffer_length);
 
       fmap_progress_print("writing alignments");
       for(i=0;i<seq_buffer_length;i++) {
@@ -515,10 +516,9 @@ fmap_map1_core(fmap_map1_opt_t *opt)
           free(alns[i]);
           alns[i] = NULL;
       }
-      fmap_progress_print2("wrote %d reads", seq_buffer_length);
 
       n_reads_processed += seq_buffer_length;
-      fmap_progress_print("processed %d reads", n_reads_processed);
+      fmap_progress_print2("processed %d reads", n_reads_processed);
   }
 
   // free memory
@@ -553,7 +553,7 @@ usage(fmap_map1_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "Options (required):\n");
   fmap_file_fprintf(fmap_file_stderr, "         -f FILE     the FASTA reference file name [%s]\n", opt->fn_fasta);
   fmap_file_fprintf(fmap_file_stderr, "Options (optional):\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -r FILE     the reads file name [%s]\n", opt->fn_reads);
+  fmap_file_fprintf(fmap_file_stderr, "         -r FILE     the reads file name [%s]\n", (NULL == opt->fn_reads) ? "stdin" : opt->fn_reads);
   fmap_file_fprintf(fmap_file_stderr, "         -F STRING   the reads file format (fastq|fq|fasta|fa|sff) [%s]\n", reads_format);
   fmap_file_fprintf(fmap_file_stderr, "         -l INT      the k-mer length to seed CALs (-1 to disable) [%d]\n", opt->seed_length);
   fmap_file_fprintf(fmap_file_stderr, "         -k INT      maximum number of mismatches in the seed [%d]\n", opt->seed_max_mm);
@@ -616,7 +616,7 @@ fmap_map1(int argc, char *argv[])
   opt.max_cals_del = 10; // TODO: move this to a define block
   opt.indel_ends_bound = 5; // TODO: move this to a define block
   opt.max_best_cals = 32; // TODO: move this to a define block
-  opt.reads_queue_size = 65536; // TODO: move this to a define block
+  opt.reads_queue_size = 262144; // TODO: move this to a define block
   opt.max_entries= 2000000; // TODO: move this to a define block
   opt.num_threads = 1;
   opt.aln_output_mode = 0; // TODO: move this to a define block
@@ -713,6 +713,8 @@ fmap_map1(int argc, char *argv[])
 
   free(opt.fn_fasta);
   free(opt.fn_reads);
+      
+  fmap_progress_print2("terminating successfully");
 
   return 0;
 }

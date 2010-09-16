@@ -101,7 +101,7 @@ fmap_bwt_match_cal_width(const fmap_bwt_t *bwt, int len, const char *str, fmap_b
           k = bwt->L2[c] + ok + 1;
           l = bwt->L2[c] + ol;
       }
-      if(l < k || 3 < c) { // new widith
+      if(l < k || 3 < c) { // new width
           k = 0;
           l = bwt->seq_len;
           bid++;

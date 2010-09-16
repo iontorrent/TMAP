@@ -19,6 +19,25 @@
 // TODO redefine
 #define aln_score(m,o,e,p) ((m)*(p)->pen_mm + (o)*(p)->pen_gapo + (e)*(p)->pen_gape)
 
+static int 
+fmap_map1_aux_stack_cmp(void *a, void *b)
+{
+  fmap_map1_aux_stack_entry_t *x = (fmap_map1_aux_stack_entry_t*)a;
+  fmap_map1_aux_stack_entry_t *y = (fmap_map1_aux_stack_entry_t*)b;
+
+  /* sort by score, then offset */
+  if(x->score < y->score 
+     || (x->score == y->score && x->offset > y->offset)) {
+      return -1;
+  }
+  else if(x->score == y->score && x->offset == y->offset) {
+      return 0;
+  }
+  else {
+      return 1;
+  }
+}
+
 fmap_map1_aux_stack_t *
 fmap_map1_aux_stack_init()
 {
@@ -30,7 +49,8 @@ fmap_map1_aux_stack_init()
   for(i=0;i<stack->entry_pool_length;i++) {
       stack->entry_pool[i] = fmap_malloc(sizeof(fmap_map1_aux_stack_entry_t), "stack->entry_pool[i]");
   }
-  stack->heap = fmap_fibheap_makekeyheap();
+  stack->heap = fmap_fibheap_makeheap(fmap_map1_aux_stack_cmp);
+  //stack->heap = fmap_fibheap_makekeyheap();
 
   return stack;
 }
@@ -52,7 +72,8 @@ fmap_map1_aux_stack_reset(fmap_map1_aux_stack_t *stack)
 {
   // reset heap
   fmap_fibheap_deleteheap(stack->heap);
-  stack->heap = fmap_fibheap_makekeyheap();
+  stack->heap = fmap_fibheap_makeheap(fmap_map1_aux_stack_cmp);
+  //stack->heap = fmap_fibheap_makekeyheap();
   // move to the beginning of the memory pool
   stack->entry_pool_i = 0;
   stack->best_score = INT32_MAX;
@@ -103,7 +124,8 @@ fmap_map1_aux_stack_push(fmap_map1_aux_stack_t *stack, int32_t strand,
 
   if(stack->best_score > entry->score) stack->best_score = entry->score;
 
-  fmap_fibheap_insertkey(stack->heap, entry->score, entry);
+  fmap_fibheap_insert(stack->heap, entry);
+  //fmap_fibheap_insertkey(stack->heap, entry->score, entry);
 
   stack->entry_pool_i++;
 }
@@ -254,17 +276,16 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
       fmap_map1_aux_stack_entry_t *e = NULL;
       int32_t strand, len=-1; 
       int32_t n_mm, n_gapo, n_gape;
-      int32_t n_seed_mm, offset;
+      int32_t n_seed_mm=0, offset;
       const uint8_t *str=NULL;
       int32_t hit_found;
       fmap_bwt_match_width_t *width_cur;
       const fmap_bwt_match_width_t *seed_width_cur = NULL;
       fmap_bwt_match_occ_t match_sa_cur, match_sa_next[4];
-      // int32_t i, m, m_seed = 0;
 
       e = fmap_map1_aux_stack_pop(stack); // get the best entry
       if(best_score + max_edit_score < e->score) break; // no need to continue
-                  
+
       strand = e->strand; // strand;
       match_sa_cur = e->match_sa; 
       n_mm = max_mm - e->n_mm;
@@ -281,17 +302,18 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
           // TODO
       }
       width_cur = width[strand];
-      seed_width_cur = (NULL == seed_width) ? NULL : seed_width[strand];
+      if(NULL != seed_width && offset < opt->seed_length) { 
+          seed_width_cur = seed_width[strand];
+          n_seed_mm = seed_max_mm - e->n_mm; // consider only mismatches in the seed
+      }
+      else {
+          seed_width_cur = NULL;
+      }
 
       /*
-      fprintf(stderr, "strand=%d offset=%d k=%u l=%u hi=%u e->n_mm=%d e->n_gapo=%d e->n_gape=%d score=%d\n",
-              strand, match_sa_cur.offset, match_sa_cur.k, match_sa_cur.l, match_sa_cur.hi, e->n_mm, e->n_gapo, e->n_gape, e->score);
-              */
-
-      if(NULL != seed_width_cur) { // apply seeding
-          seed_width_cur = seed_width[strand];
-          n_seed_mm = seed_max_mm - e->n_mm; // ignore gaps TODO: is this correct?
-      }
+         fprintf(stderr, "strand=%d offset=%d k=%u l=%u hi=%u e->n_mm=%d e->n_gapo=%d e->n_gape=%d score=%d\n",
+         strand, match_sa_cur.offset, match_sa_cur.k, match_sa_cur.l, match_sa_cur.hi, e->n_mm, e->n_gapo, e->n_gape, e->score);
+         */
       // if there are no more gaps, check if we are allowed mismatches
       if(offset+1 < len && 0 == n_gapo && 0 == n_gape && n_mm < width_cur[offset].bid) {
           continue;
@@ -312,7 +334,7 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
               continue; // no hit, skip
           }
       }
-      
+
       if(1 == hit_found) { // alignment found
           int32_t score = aln_score(e->n_mm, e->n_gapo, e->n_gape, opt);
           int32_t do_add = 1;
@@ -407,68 +429,99 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
               // TODO: use the shadow ?
               //fmap_map1_aux_stack_shadow(l - k + 1, len, bwt->seq_len, e->last_diff_offset, width_cur);
           }
-          continue; // could use an else statement
       }
+      else {
 
-      // retrieve the next SA interval
-      fmap_bwt_match_2occ4(bwt, &e->match_sa, match_sa_next); 
+          // use a bound for mismatches
+          int32_t allow_mm = 1;
+          if(n_mm < width_cur[offset].bid) {
+              allow_mm = 0;
+          }
+          else if(offset < len-1
+                  && width_cur[offset+1].bid == width_cur[offset].bid
+                  && width_cur[offset+1].w == width_cur[offset].w) {
+              allow_mm = 0;
+          }
+          else if(NULL != seed_width_cur) {
+              if(n_seed_mm < seed_width_cur[offset].bid) {
+                  allow_mm = 0;
+              }
+              else if(offset < len-1
+                      && seed_width_cur[offset+1].bid == seed_width_cur[offset].bid
+                      && seed_width_cur[offset+1].w == seed_width_cur[offset].w) {
+                  allow_mm = 0;
+              }
+          }
+
+          if(allow_mm == 0) {
+              continue;
+          }
+
+          // retrieve the next SA interval
+          fmap_bwt_match_2occ4(bwt, &e->match_sa, match_sa_next); 
 
           /*
-          fprintf(stderr, "e->match_sa.k=%u e->match_sa.l=%u match_sa_next[%d].k=%u match_sa_next[%d].l=%u\n",
-                  e->match_sa.k, e->match_sa.l, j, match_sa_next[j].k, j, match_sa_next[j].l);
-                  */
+             fprintf(stderr, "e->match_sa.k=%u e->match_sa.l=%u match_sa_next[%d].k=%u match_sa_next[%d].l=%u\n",
+             e->match_sa.k, e->match_sa.l, j, match_sa_next[j].k, j, match_sa_next[j].l);
+             */
 
-      // insertions/deletions
-      if(opt->indel_ends_bound <= offset && offset <= len - opt->indel_ends_bound) { // do not add gaps round the ends
-          if(STATE_M == e->state) { // gap open
-              if(0 < n_gapo) { // gap open is allowed
-                  // insertion
-                  // remember to use 'offset+1' and 'match_sa_cur' to skip over a read base
-                  fmap_map1_aux_stack_push(stack, strand, offset+1, &match_sa_cur, e->n_mm, e->n_gapo + 1, e->n_gape, STATE_I, 1, e, opt);
-                  
-                  // deletion
-                  for(j = 0; j != 4; ++j) {
-                      if(match_sa_next[j].k <= match_sa_next[j].l) {
-                          //   remember that a gap deletion does not consume a
-                          //   read base, so use 'offset'
-                          fmap_map1_aux_stack_push(stack, strand, offset, &match_sa_next[j], e->n_mm, e->n_gapo + 1, e->n_gape, STATE_D, 1, e, opt);
+          // insertions/deletions
+          if(opt->indel_ends_bound <= offset && offset <= len - opt->indel_ends_bound) { // do not add gaps round the ends
+              if(STATE_M == e->state) { // gap open
+                  if(0 < n_gapo) { // gap open is allowed
+                      // insertion
+                      // remember to use 'offset+1' and 'match_sa_cur' to skip over a read base
+                      fmap_map1_aux_stack_push(stack, strand, offset+1, &match_sa_cur, e->n_mm, e->n_gapo + 1, e->n_gape, STATE_I, 1, e, opt);
+
+                      // deletion
+                      for(j = 0; j != 4; ++j) {
+                          if(match_sa_next[j].k <= match_sa_next[j].l) {
+                              //   remember that a gap deletion does not consume a
+                              //   read base, so use 'offset'
+                              fmap_map1_aux_stack_push(stack, strand, offset, &match_sa_next[j], e->n_mm, e->n_gapo + 1, e->n_gape, STATE_D, 1, e, opt);
+                          }
+                      }
+                  }
+              }
+              else if(STATE_I == e->state) { // extension of an insertion
+                  if(0 < n_gape) { // gap extension is allowed
+                      // remember to use 'offset+1' and 'match_sa_cur' to skip over a read base
+                      fmap_map1_aux_stack_push(stack, strand, offset+1, &match_sa_cur, e->n_mm, e->n_gapo, e->n_gape + 1, STATE_I, 1, e, opt);
+                  }
+              }
+              else if(STATE_D == e->state) { // extension of a deletion
+                  if(0 < n_gape 
+                     && e->match_sa.l - e->match_sa.k + 1 < opt->max_cals_del) { // gap extension is allowed
+                      for(j = 0; j != 4; ++j) {
+                          if(match_sa_next[j].k <= match_sa_next[j].l) {
+                              //   remember that a gap deletion does not consume a
+                              //   read base, so use 'match_sa_next[j].offset-1'
+                              fmap_map1_aux_stack_push(stack, strand, offset, &match_sa_next[j], e->n_mm, e->n_gapo, e->n_gape + 1, STATE_D, 1, e, opt);
+                          }
                       }
                   }
               }
           }
-          else if(STATE_I == e->state) { // extension of an insertion
-              if(0 < n_gape) { // gap extension is allowed
-                  // remember to use 'offset+1' and 'match_sa_cur' to skip over a read base
-                  fmap_map1_aux_stack_push(stack, strand, offset+1, &match_sa_cur, e->n_mm, e->n_gapo, e->n_gape + 1, STATE_I, 1, e, opt);
-              }
-          }
-          else if(STATE_D == e->state) { // extension of a deletion
-              if(0 < n_gape 
-                 && e->match_sa.l - e->match_sa.k + 1 < opt->max_cals_del) { // gap extension is allowed
-                  for(j = 0; j != 4; ++j) {
-                      if(match_sa_next[j].k <= match_sa_next[j].l) {
-                          //   remember that a gap deletion does not consume a
-                          //   read base, so use 'match_sa_next[j].offset-1'
-                          fmap_map1_aux_stack_push(stack, strand, offset, &match_sa_next[j], e->n_mm, e->n_gapo, e->n_gape + 1, STATE_D, 1, e, opt);
-                      }
+
+          // mismatches
+          if(1 == allow_mm && offset < len && 0 < n_mm && width_cur[offset].bid <= n_mm) { // mismatches allowed
+              for(j=0;j<4;j++) {
+                  int32_t c = (str[offset] + j) & 3;
+                  int32_t is_mm = (0 < j || 3 < str[offset]);
+                  if(match_sa_next[c].k <= match_sa_next[c].l) {
+                      /*
+                         fprintf(stderr, "pushing offset=%d e->n_mm+is_mm=%d strand=%d\n",
+                         offset+1, e->n_mm+is_mm, strand);
+                         */
+                      fmap_map1_aux_stack_push(stack, strand, offset+1, &match_sa_next[c], e->n_mm + is_mm, e->n_gapo, e->n_gape, STATE_M, is_mm, e, opt);
                   }
               }
-          }
-      }
-      // mismatches
-      if(offset < len && 0 < n_mm && width_cur[offset].bid <= n_mm) { // mismatches allowed
-          for(j=0;j<4;j++) {
-              int32_t c = (str[offset] + j) & 3;
-              int32_t is_mm = (0 < j || 3 < str[offset]);
+          } 
+          else if(str[offset] < 4) { // try exact match only
+              int32_t c = str[offset] & 3;
               if(match_sa_next[c].k <= match_sa_next[c].l) {
-                  fmap_map1_aux_stack_push(stack, strand, offset+1, &match_sa_next[c], e->n_mm + is_mm, e->n_gapo, e->n_gape, STATE_M, is_mm, e, opt);
+                  fmap_map1_aux_stack_push(stack, strand, offset+1, &match_sa_next[c], e->n_mm, e->n_gapo, e->n_gape, STATE_M, 0, e, opt);
               }
-          }
-      } 
-      else if(str[offset] < 4) { // try exact match only
-          int32_t c = str[offset] & 3;
-          if(match_sa_next[c].k <= match_sa_next[c].l) {
-              fmap_map1_aux_stack_push(stack, strand, offset+1, &match_sa_next[c], e->n_mm, e->n_gapo, e->n_gape, STATE_M, 0, e, opt);
           }
       }
   }
