@@ -20,14 +20,14 @@ static int32_t fmap_map1_read_lock_tid = 0;
 #define FMAP_MAP1_THREAD_BLOCK_SIZE 1024
 #endif
 
-static int g_log_n[256];
+static int32_t g_log_n[256];
 
 static inline void
 fmap_map1_set_g_log_n()
 {
   int32_t i;
   for(i=1;i<256;i++) {
-      g_log_n[i] = (int)(4.343 * log(i) + 0.5);
+      g_log_n[i] = (int32_t)(4.343 * log(i) + 0.5);
   }
 }
 
@@ -40,7 +40,7 @@ fmap_map1_aln_mapq(int32_t num_best_sa, int32_t num_all_sa, int32_t max_score, i
       return 0; // multiple best hits
   }
   else if(max_score == score) {
-      return 25; // maximum score
+      return 25; // maximum possible score
   }
 
   n = (num_best_sa - num_all_sa);
@@ -76,7 +76,7 @@ fmap_map1_aln_overwrite(fmap_map1_aln_t *dest, fmap_map1_aln_t *src)
 static inline void
 fmap_map1_aln_filter(fmap_map1_opt_t *opt, fmap_map1_aln_t ***alns, int32_t *n_alns, int32_t max_score)
 {
-  int32_t i;
+  int32_t i, was_rand = 0;
   int32_t num_best_sa, num_best, num_all_sa;
 
   if(0 == (*n_alns)) return;
@@ -125,6 +125,7 @@ fmap_map1_aln_filter(fmap_map1_opt_t *opt, fmap_map1_aln_t ***alns, int32_t *n_a
           num_best_sa = 1;
           num_best = 1; 
           // WARNING: make sure mapping quality is zero after this
+          was_rand = 1;
       }
 
       if(1 < num_best_sa) {
@@ -138,7 +139,7 @@ fmap_map1_aln_filter(fmap_map1_opt_t *opt, fmap_map1_aln_t ***alns, int32_t *n_a
           (*n_alns) = 0;
       }
       else {
-          if(FMAP_ALN_OUTPUT_MODE_BEST_RAND == opt->aln_output_mode) {
+          if(FMAP_ALN_OUTPUT_MODE_BEST_RAND == opt->aln_output_mode && 1 == was_rand) {
               (*alns)[0]->mapq = 0;
           }
           else {
@@ -313,7 +314,6 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
           fmap_string_t *orig_bases = NULL, *bases[2]={NULL, NULL};
           int32_t n_alns, max_score;
 
-
           // clone the sequence and get the reverse compliment
           seq[0] = fmap_seq_clone(orig_seq);
           seq[1] = fmap_seq_clone(orig_seq);
@@ -473,7 +473,6 @@ fmap_map1_core(fmap_map1_opt_t *opt)
       fmap_map1_core_worker(seq_buffer, seq_buffer_length, alns, bwt, 0, opt);
 #endif
 
-
       for(i=0;i<seq_buffer_length;i++) {
           int32_t n_alns = 0, n_mapped = 0;
           fmap_map1_aln_t **a = alns[i];
@@ -586,7 +585,7 @@ fmap_map1(int argc, char *argv[])
 
   // program defaults
   opt.fn_fasta = opt.fn_reads = NULL;
-  opt.reads_format = FMAP_READS_FORMAT_FASTQ;
+  opt.reads_format = FMAP_READS_FORMAT_UNKNOWN;
   opt.seed_length = 32; // move this to a define block
   opt.seed_max_mm = 3; // move this to a define block
   opt.max_mm = -1; opt.max_mm_frac = 0.02; // TODO: move this to a define block 
@@ -657,8 +656,13 @@ fmap_map1(int argc, char *argv[])
   else { // check command line arguments
       if(NULL == opt.fn_fasta) fmap_error("required option -f", Exit, CommandLineArgument);
       if(NULL == opt.fn_reads) fmap_error("required option -r", Exit, CommandLineArgument);
-      if(FMAP_READS_FORMAT_UNKNOWN == opt.reads_format) fmap_error("option -F unrecognized", Exit, CommandLineArgument);
-      if(FMAP_READS_FORMAT_SFF == opt.reads_format) fmap_error("SFF currently not supported", Exit, CommandLineArgument); // TODO: support SFF
+      if(FMAP_READS_FORMAT_UNKNOWN == opt.reads_format) { // try to auto-recognize
+          opt.reads_format = fmap_get_reads_file_format_from_fn_int(opt.fn_reads);
+          if(FMAP_READS_FORMAT_UNKNOWN == opt.reads_format) {
+              fmap_error("option -F unrecognized", Exit, CommandLineArgument);
+          }
+      }
+      if(FMAP_READS_FORMAT_SFF == opt.reads_format) fmap_error("SFF reads is unsupported", Exit, OutOfRange);
       if(-1 != opt.seed_length) fmap_error_cmd_check_int(opt.seed_length, 1, INT32_MAX, "-s");
 
       // this will take care of the case where they are both < 0

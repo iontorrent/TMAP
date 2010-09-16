@@ -60,8 +60,23 @@ enum {
     FMAP_READS_FORMAT_SFF      = 2
 };
 
+//TODO: document
 extern uint8_t nt_char_to_int[256];
+//TODO: document
 extern uint8_t nt_char_to_rc_char[256];
+//TODO: document
+#define CHAR2QUAL(c) ((uint8_t)c-33)
+//TODO: document
+#define QUAL2CHAR(q) (char)(((q<=93)?q:93)+33)
+
+//TODO: document
+#ifndef htonll
+#define htonll(x) ((((uint64_t)htonl(x)) << 32) + htonl(x >> 32))
+#endif
+//TODO: document
+#ifndef ntohll
+#define ntohll(x) ((((uint64_t)ntohl(x)) << 32) + ntohl(x >> 32))
+#endif
 
 /*! @function
   @abstract       gets the name of a specific file based on the reference sequence
@@ -79,6 +94,15 @@ fmap_get_file_name(const char *prefix, int32_t type);
   */
 int 
 fmap_get_reads_file_format_int(char *optarg);
+
+/*! @function
+  @abstract   checks the extension of the file to recognize its format     
+  @param  fn  the file name 
+  @return     the format type
+  */
+int 
+fmap_get_reads_file_format_from_fn_int(char *fn);
+
 
 /*! @function
   @abstract       

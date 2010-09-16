@@ -2,7 +2,10 @@
 #define FMAP_SFF_H_
 
 #define FMAP_SFF_MAGIC 0x2E736666
-#define FMAP_SFF_VERSION "\0\0\0\1"
+#define FMAP_SFF_VERSION 1
+
+// uncomment this to allow for some SFF debuggin
+//#define FMAP_SFF_DEBUG 1
 
 #include <stdint.h>
 #include "../io/fmap_file.h"
@@ -25,7 +28,7 @@ typedef struct {
     uint32_t magic;
     uint32_t version;
     uint64_t index_offset;
-    uint64_t index_length;
+    uint32_t index_length;
     uint32_t n_reads;
     uint32_t gheader_length;
     uint16_t key_length;
@@ -46,13 +49,13 @@ typedef struct {
   @field  name                the read name 
   */
 typedef struct {
-    uint16_t  rheader_length;
-    uint16_t  name_length;
-    uint32_t  n_bases;
-    uint16_t  clip_qual_left;
-    uint16_t  clip_qual_right;
-    uint16_t  clip_adapter_left;
-    uint16_t  clip_adapter_right;
+    uint16_t rheader_length;
+    uint16_t name_length;
+    uint32_t n_bases;
+    uint16_t clip_qual_left;
+    uint16_t clip_qual_right;
+    uint16_t clip_adapter_left;
+    uint16_t clip_adapter_right;
     fmap_string_t *name;
 } fmap_sff_read_header_t;
 

@@ -108,6 +108,42 @@ fmap_get_reads_file_format_int(char *optarg)
   return FMAP_READS_FORMAT_UNKNOWN;
 }
 
+static char *
+fmap_check_suffix(char *str, char *suffix)
+{
+  int32_t i, j;
+
+  if(NULL == str) return NULL;
+  if(NULL == suffix) return str; // empty suffix always matches
+
+  i=strlen(str)-1;
+  j=strlen(suffix)-1;
+
+  if(i < j) return NULL; // the suffix is longer than the string
+
+  while(0 <= j) {
+      if(str[i] != suffix[j]) return NULL;
+      i--;
+      j--;
+  }
+  return (str + i + 1); // pointer to the start of the suffix
+}
+
+int
+fmap_get_reads_file_format_from_fn_int(char *fn)
+{
+  if(NULL != fmap_check_suffix(fn, ".fa") || NULL != fmap_check_suffix(fn, ".fasta")) {
+      return FMAP_READS_FORMAT_FASTA;
+  }
+  else if(NULL != fmap_check_suffix(fn, ".fq") || NULL != fmap_check_suffix(fn, ".fastq")) {
+      return FMAP_READS_FORMAT_FASTQ;
+  }
+  else if(NULL != fmap_check_suffix(fn, ".sff")) {
+      return FMAP_READS_FORMAT_SFF;
+  }
+  return FMAP_READS_FORMAT_UNKNOWN;
+}
+
 char *
 fmap_get_reads_file_format_string(int format)
 {
