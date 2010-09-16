@@ -4,6 +4,7 @@
 #include "../util/fmap_alloc.h"
 #include "../util/fmap_definitions.h"
 #include "../util/fmap_seq.h"
+#include "../util/fmap_progress.h"
 #include "../index/fmap_refseq.h"
 #include "../index/fmap_bwt_gen.h"
 #include "../index/fmap_bwt.h"
@@ -103,21 +104,21 @@ fmap_map1_aln_filter(fmap_map1_opt_t *opt, fmap_map1_aln_t ***alns, int32_t *n_a
   else if(FMAP_ALN_OUTPUT_MODE_BEST == opt->aln_output_mode  // unique best hit 
           || FMAP_ALN_OUTPUT_MODE_BEST_RAND == opt->aln_output_mode) { // random best hit
 
-      if(1 < num_best && FMAP_ALN_OUTPUT_MODE_BEST_RAND == opt->aln_output_mode) { // pick a random one
-          int32_t best_index = 0, rand, j;
-          rand = lrand48() * num_best_sa; 
-          for(i=j=0;i<num_best;i++) { // get the "rand"th best score
-              j += (*alns)[best_index]->l - (*alns)[best_index]->k + 1;
-              if(rand < j) {
+      if(1 < num_best_sa && FMAP_ALN_OUTPUT_MODE_BEST_RAND == opt->aln_output_mode) { // pick a random one
+          int32_t best_index = 0, rand;
+          rand = drand48() * num_best_sa; 
+          for(i=0;i<num_best;i++) { // get the "rand"th best score
+              if(rand < (*alns)[i]->l - (*alns)[i]->k + 1) {
                   best_index = i;
                   break;
               }
+              rand -= (*alns)[i]->l - (*alns)[i]->k + 1;
           }
           // copy to the front
           if(0 < best_index) {
               fmap_map1_aln_overwrite((*alns)[0], (*alns)[best_index]);
           }
-          (*alns)[0]->k += j - rand;
+          (*alns)[0]->k += rand;
           if((*alns)[0]->l < (*alns)[0]->k) {
               fmap_error("control reach an unexpected point", Exit, OutOfRange);
           }
@@ -222,7 +223,7 @@ fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fma
           }
           fmap_file_fprintf(fmap_file_stdout, "%s\t%u\t%s\t%u\t%u\t",
                             name->s, flag, refseq->annos[seqid].name->s,
-                            pos, 255);
+                            pos, a->mapq);
           for(j=0;j<a->cigar_length;j++) {
               fmap_file_fprintf(fmap_file_stdout, "%d%c", (a->cigar[j]>>4), "MIDNSHP"[a->cigar[j] & 0xf]);
           }
@@ -331,7 +332,7 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
           opt_local.max_mm = (opt->max_mm < 0) ? (int)(opt->max_mm_frac * orig_bases->l) : opt->max_mm; 
           opt_local.max_gape = (opt->max_gape < 0) ? (int)(opt->max_gape_frac * orig_bases->l) : opt->max_gape; 
           opt_local.max_gapo = (opt->max_gapo < 0) ? (int)(opt->max_gapo_frac * orig_bases->l) : opt->max_gapo; 
-
+          
           if(width_length < orig_bases->l) {
               free(width[0]); free(width[1]);
               width_length = orig_bases->l;
@@ -384,7 +385,7 @@ fmap_map1_core_thread_worker(void *arg)
 static void 
 fmap_map1_core(fmap_map1_opt_t *opt)
 {
-  uint32_t i, j;
+  uint32_t i, j, n_reads_processed=0;;
   int32_t seq_buffer_length;
   fmap_refseq_t *refseq=NULL;
   fmap_bwt_t *bwt[2]={NULL,NULL};
@@ -395,10 +396,12 @@ fmap_map1_core(fmap_map1_opt_t *opt)
   fmap_map1_aln_t ***alns = NULL;
 
   // For suffix search we need the reverse bwt/sa and forward refseq
+  fmap_progress_print("reading in reference data");
   refseq = fmap_refseq_read(opt->fn_fasta, 0);
   bwt[0] = fmap_bwt_read(opt->fn_fasta, 0);
   bwt[1] = fmap_bwt_read(opt->fn_fasta, 1);
   sa = fmap_sa_read(opt->fn_fasta, 1);
+  fmap_progress_print2("reference data read in");
 
   // SAM header
   for(i=0;i<refseq->num_annos;i++) {
@@ -436,6 +439,9 @@ fmap_map1_core(fmap_map1_opt_t *opt)
   }
 
   while(0 < (seq_buffer_length = fmap_seq_io_read_buffer(seqio, seq_buffer, opt->reads_queue_size))) {
+  
+      fmap_progress_print("performing alignment");
+
       // do alignment
 #ifdef HAVE_LIBPTHREAD
       if(1 == opt->num_threads) {
@@ -477,7 +483,9 @@ fmap_map1_core(fmap_map1_opt_t *opt)
 #else 
       fmap_map1_core_worker(seq_buffer, seq_buffer_length, alns, bwt, 0, opt);
 #endif
+      fmap_progress_print2("aligned %d reads", seq_buffer_length);
 
+      fmap_progress_print("writing alignments");
       for(i=0;i<seq_buffer_length;i++) {
           int32_t n_alns = 0, n_mapped = 0;
           fmap_map1_aln_t **a = alns[i];
@@ -507,6 +515,10 @@ fmap_map1_core(fmap_map1_opt_t *opt)
           free(alns[i]);
           alns[i] = NULL;
       }
+      fmap_progress_print2("wrote %d reads", seq_buffer_length);
+
+      n_reads_processed += seq_buffer_length;
+      fmap_progress_print("processed %d reads", n_reads_processed);
   }
 
   // free memory
@@ -572,6 +584,7 @@ usage(fmap_map1_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "                             1 - random best hit\n");
   fmap_file_fprintf(fmap_file_stderr, "                             2 - all best hits\n");
   fmap_file_fprintf(fmap_file_stderr, "                             3 - all alignments\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -v          print verbose progress information\n");
   fmap_file_fprintf(fmap_file_stderr, "         -h          print this message\n");
   fmap_file_fprintf(fmap_file_stderr, "\n");
 
@@ -587,6 +600,9 @@ fmap_map1(int argc, char *argv[])
   fmap_map1_opt_t opt;
 
   srand48(0); // random seed
+  // Set output progress
+  fmap_progress_set_command(argv[0]);
+  fmap_progress_set_start_time(clock());
 
   // program defaults
   opt.fn_fasta = opt.fn_reads = NULL;
@@ -605,7 +621,7 @@ fmap_map1(int argc, char *argv[])
   opt.num_threads = 1;
   opt.aln_output_mode = 0; // TODO: move this to a define block
 
-  while((c = getopt(argc, argv, "f:r:F:l:k:m:o:e:M:O:E:d:i:b:q:Q:n:a:h")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:l:k:m:o:e:M:O:E:d:i:b:q:Q:n:a:vh")) >= 0) {
       switch(c) {
         case 'f':
           opt.fn_fasta = fmap_strdup(optarg); break;
@@ -649,6 +665,8 @@ fmap_map1(int argc, char *argv[])
           opt.num_threads = atoi(optarg); break;
         case 'a':
           opt.aln_output_mode = atoi(optarg); break;
+        case 'v':
+          fmap_progress_set_verbosity(1); break;
         case 'h':
         default:
           return usage(&opt);
@@ -666,7 +684,7 @@ fmap_map1(int argc, char *argv[])
       if(FMAP_READS_FORMAT_UNKNOWN == opt.reads_format) { // try to auto-recognize
           opt.reads_format = fmap_get_reads_file_format_from_fn_int(opt.fn_reads);
           if(FMAP_READS_FORMAT_UNKNOWN == opt.reads_format) {
-              fmap_error("option -F unrecognized", Exit, CommandLineArgument);
+              fmap_error("the reads format (-r) was unrecognized", Exit, CommandLineArgument);
           }
       }
       if(FMAP_READS_FORMAT_SFF == opt.reads_format) fmap_error("SFF reads is unsupported", Exit, OutOfRange);
@@ -688,7 +706,7 @@ fmap_map1(int argc, char *argv[])
       fmap_error_cmd_check_int(opt.reads_queue_size, 1, INT32_MAX, "-q");
       fmap_error_cmd_check_int(opt.max_entries, 1, INT32_MAX, "-Q");
       fmap_error_cmd_check_int(opt.num_threads, 1, INT32_MAX, "-n");
-      fmap_error_cmd_check_int(opt.num_threads, 0, 3, "-a");
+      fmap_error_cmd_check_int(opt.aln_output_mode, 0, 3, "-a");
   }
 
   fmap_map1_core(&opt);

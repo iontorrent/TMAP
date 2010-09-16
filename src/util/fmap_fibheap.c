@@ -559,8 +559,9 @@ fmap_fibheap_insertkey(fmap_fibheap_t *h, int key, void *data)
 
   if(0 == h->fmap_fibheap_keys) fmap_error("key heap required", Exit, OutOfRange);
 
-  if((x = fmap_fibheap_element_newelem()) == NULL)
+  if((x = fmap_fibheap_element_newelem()) == NULL) {
     return NULL;
+  }
 
   /* just insert on root list, and make sure it's not the new min */
   x->fmap_fibheap_element_data = data;
@@ -686,17 +687,12 @@ void *
 fmap_fibheap_extractmin(fmap_fibheap_t *h)
 {
   fmap_fibheap_element_t *z;
-  void *ret;
-
-  ret = NULL;
+  void *ret = NULL;
 
   if(h->fmap_fibheap_min != NULL) {
       z = fmap_fibheap_extractminel(h);
       ret = z->fmap_fibheap_element_data;
-#ifndef FMAP_FIBHEAP_NO_FREE
       fmap_fibheap_element_destroy(z);
-#endif
-
   }
 
   return ret;

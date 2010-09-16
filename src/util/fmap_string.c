@@ -71,8 +71,6 @@ fmap_string_reverse_compliment(fmap_string_t *str, int32_t is_int)
 {
   int i;
 
-  fmap_string_reverse(str);
-
   if(1 == is_int) { // bases are integer values
       for(i = 0; i < (str->l >> 1); ++i) {
           char tmp = str->s[str->l-1-i];

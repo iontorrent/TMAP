@@ -52,7 +52,7 @@ fmap_progress_vprint1(const char *format, clock_t start_time, va_list ap)
       strcat(fmap_progress_format, format);
       strcat(fmap_progress_format, ".\n");
 
-      fmap_file_vfprintf(fmap_file_stdout, fmap_progress_format, ap);
+      fmap_file_vfprintf(fmap_file_stderr, fmap_progress_format, ap);
   }
 }
 

@@ -46,21 +46,21 @@ static void fmap_index_core(fmap_index_opt_t *opt)
 
 static int usage(fmap_index_opt_t *opt)
 {
-  fprintf(stderr, "\n");
-  fprintf(stderr, "Usage: %s index [optionsn", PACKAGE);
-  fprintf(stderr, "\n");
-  fprintf(stderr, "Options (required):\n");
-  fprintf(stderr, "         -f FILE     the FASTA file name to index\n");
-  fprintf(stderr, "Options (optional):\n");
-  fprintf(stderr, "         -o INT      the occurrence interval [%d]\n", opt->occ_interval);
-  fprintf(stderr, "         -w INT      the k-mer occurrence hash width [%d]\n", opt->hash_width);
-  fprintf(stderr, "         -i INT      the suffix array interval [%d]\n", opt->sa_interval);
-  fprintf(stderr, "         -a STRING   override BWT construction algorithm:\n");
-  fprintf(stderr, "                     \t\"bwtsw\" (large genomes)\n");
-  fprintf(stderr, "                     \t\"is\" (short genomes)\n");
-  fprintf(stderr, "         -h          print this message\n");
-  fprintf(stderr, "         -v          print verbose progress information\n");
-  fprintf(stderr, "\n");
+  fmap_file_fprintf(fmap_file_stderr, "\n");
+  fmap_file_fprintf(fmap_file_stderr, "Usage: %s index [optionsn", PACKAGE);
+  fmap_file_fprintf(fmap_file_stderr, "\n");
+  fmap_file_fprintf(fmap_file_stderr, "Options (required):\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -f FILE     the FASTA file name to index\n");
+  fmap_file_fprintf(fmap_file_stderr, "Options (optional):\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -o INT      the occurrence interval [%d]\n", opt->occ_interval);
+  fmap_file_fprintf(fmap_file_stderr, "         -w INT      the k-mer occurrence hash width [%d]\n", opt->hash_width);
+  fmap_file_fprintf(fmap_file_stderr, "         -i INT      the suffix array interval [%d]\n", opt->sa_interval);
+  fmap_file_fprintf(fmap_file_stderr, "         -a STRING   override BWT construction algorithm:\n");
+  fmap_file_fprintf(fmap_file_stderr, "                     \t\"bwtsw\" (large genomes)\n");
+  fmap_file_fprintf(fmap_file_stderr, "                     \t\"is\" (short genomes)\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -v          print verbose progress information\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -h          print this message\n");
+  fmap_file_fprintf(fmap_file_stderr, "\n");
   return 1;
 }
 
