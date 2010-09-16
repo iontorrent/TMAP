@@ -410,7 +410,12 @@ fmap_map1_core(fmap_map1_opt_t *opt)
   seq_buffer = fmap_malloc(sizeof(fmap_seq_t*)*opt->reads_queue_size, "seq_buffer");
   alns = fmap_malloc(sizeof(fmap_map1_aln_t**)*opt->reads_queue_size, "alns");
 
-  fp_reads = fmap_file_fopen(opt->fn_reads, "rb", FMAP_FILE_NO_COMPRESSION);
+  if(NULL == opt->fn_reads) {
+      fp_reads = fmap_file_fdopen(fileno(stdin), "rb", FMAP_FILE_NO_COMPRESSION);
+  }
+  else {
+      fp_reads = fmap_file_fopen(opt->fn_reads, "rb", FMAP_FILE_NO_COMPRESSION);
+  }
   switch(opt->reads_format) {
     case FMAP_READS_FORMAT_FASTA:
     case FMAP_READS_FORMAT_FASTQ:
@@ -535,8 +540,8 @@ usage(fmap_map1_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "\n");
   fmap_file_fprintf(fmap_file_stderr, "Options (required):\n");
   fmap_file_fprintf(fmap_file_stderr, "         -f FILE     the FASTA reference file name [%s]\n", opt->fn_fasta);
-  fmap_file_fprintf(fmap_file_stderr, "         -r FILE     the reads file name [%s]\n", opt->fn_reads);
   fmap_file_fprintf(fmap_file_stderr, "Options (optional):\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -r FILE     the reads file name [%s]\n", opt->fn_reads);
   fmap_file_fprintf(fmap_file_stderr, "         -F STRING   the reads file format (fastq|fq|fasta|fa|sff) [%s]\n", reads_format);
   fmap_file_fprintf(fmap_file_stderr, "         -l INT      the k-mer length to seed CALs (-1 to disable) [%d]\n", opt->seed_length);
   fmap_file_fprintf(fmap_file_stderr, "         -k INT      maximum number of mismatches in the seed [%d]\n", opt->seed_max_mm);
@@ -655,7 +660,9 @@ fmap_map1(int argc, char *argv[])
   }
   else { // check command line arguments
       if(NULL == opt.fn_fasta) fmap_error("required option -f", Exit, CommandLineArgument);
-      if(NULL == opt.fn_reads) fmap_error("required option -r", Exit, CommandLineArgument);
+      if(NULL == opt.fn_reads && FMAP_READS_FORMAT_UNKNOWN == opt.reads_format) {
+          fmap_error("option -F or option -r must be specified", Exit, CommandLineArgument);
+      }
       if(FMAP_READS_FORMAT_UNKNOWN == opt.reads_format) { // try to auto-recognize
           opt.reads_format = fmap_get_reads_file_format_from_fn_int(opt.fn_reads);
           if(FMAP_READS_FORMAT_UNKNOWN == opt.reads_format) {
