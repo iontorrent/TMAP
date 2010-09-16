@@ -1,6 +1,13 @@
 #ifndef FMAP_MAP1_H_
 #define FMAP_MAP1_H_
 
+enum {
+    FMAP_ALN_OUTPUT_MODE_BEST = 0,
+    FMAP_ALN_OUTPUT_MODE_BEST_RAND = 1,
+    FMAP_ALN_OUTPUT_MODE_BEST_ALL = 2,
+    FMAP_ALN_OUTPUT_MODE_ALL = 3,
+};
+
 /*! @typedef
   @abstract                structure to store the command line options for 'fmap exact'
   @field  fn_fasta          the fasta reference file name (-f)
@@ -23,6 +30,7 @@
   @field  reads_queue_size  the reads queue size (-q)
   @field  max_entries       maximum number of alignment nodes (-Q)
   @field  num_threads       the number of threads (-n)
+  @field  aln_output_mode   specifies how to choose alignments (-a) 
 */
 typedef struct {
     char *fn_fasta;
@@ -43,8 +51,9 @@ typedef struct {
     int32_t indel_ends_bound;
     int32_t max_best_cals;
     int32_t reads_queue_size;
-    int32_t max_entries;;
+    int32_t max_entries;
     int32_t num_threads;
+    int32_t aln_output_mode; 
 } fmap_map1_opt_t;
 
 /*! @typedef 
@@ -52,6 +61,7 @@ typedef struct {
   @field  n_mm          the current number of mismatches 
   @field  n_gapo        the current number of gap opens
   @field  n_gape        the current number of gap extensions
+  @field  mapq          the mapping quality
   @field  strand        the strand of the alignment
   @field  k             the lower range of the SA interval
   @field  l             the upper range of the SA interval
@@ -64,6 +74,7 @@ typedef struct {
 typedef struct {
     uint32_t score;
     uint16_t n_mm, n_gapo, n_gape;
+    uint8_t mapq;
     uint8_t strand;
     uint32_t k, l; // SA interval
     uint32_t cigar_length;

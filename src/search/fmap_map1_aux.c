@@ -192,7 +192,7 @@ fmap_map1_aux_get_bam_state(int state)
 fmap_map1_aln_t **
 fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
                    fmap_bwt_match_width_t *width[2], fmap_bwt_match_width_t *seed_width[2], fmap_map1_opt_t *opt,
-                   fmap_map1_aux_stack_t *stack)
+                   fmap_map1_aux_stack_t *stack, int32_t *n_alns, int32_t *max_score)
 {
   int32_t max_mm = opt->max_mm, max_gapo = opt->max_gapo, max_gape = opt->max_gape, seed_max_mm = opt->seed_max_mm;
   int32_t best_score = aln_score(max_mm+1, max_gapo+1, max_gape+1, opt);
@@ -203,15 +203,13 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
   fmap_bwt_match_occ_t match_sa_start;
   fmap_map1_aln_t **alns=NULL;
 
-  // HERE
-  //int32_t hw = bwt->hash_width;
-  //bwt->hash_width = 0;
-
   if(0 == bwt->is_rev) fmap_error("0 == bwt->is_rev", Exit, OutOfRange);
 
   max_edit_score = opt->pen_mm;
   if(max_edit_score < opt->pen_gapo) max_edit_score = opt->pen_gapo;
   if(max_edit_score < opt->pen_gape) max_edit_score = opt->pen_gape;
+
+  (*max_score) = aln_score(max_mm, max_gapo, max_gape, opt);
 
   // check whether there are too many N
   switch(seq[0]->type) {
@@ -479,9 +477,7 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
       alns = fmap_realloc(alns, sizeof(fmap_map1_aln_t*)*(1+alns_num), "alns");
       alns[alns_num] = NULL;
   }
-
-  // HERE
-  //bwt->hash_width = hw;
+  (*n_alns) = alns_num;
 
   return alns;
 }

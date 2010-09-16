@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <math.h>
 #include "../util/fmap_error.h"
 #include "../util/fmap_alloc.h"
 #include "../util/fmap_definitions.h"
@@ -18,6 +19,156 @@ static pthread_mutex_t fmap_map1_read_lock = PTHREAD_MUTEX_INITIALIZER;
 static int32_t fmap_map1_read_lock_tid = 0;
 #define FMAP_MAP1_THREAD_BLOCK_SIZE 1024
 #endif
+
+static int g_log_n[256];
+
+static inline void
+fmap_map1_set_g_log_n()
+{
+  int32_t i;
+  for(i=1;i<256;i++) {
+      g_log_n[i] = (int)(4.343 * log(i) + 0.5);
+  }
+}
+
+static inline uint8_t
+fmap_map1_aln_mapq(int32_t num_best_sa, int32_t num_all_sa, int32_t max_score, int32_t score)
+{
+  int32_t n;
+
+  if(1 < num_best_sa) {
+      return 0; // multiple best hits
+  }
+  else if(max_score == score) {
+      return 25; // maximum score
+  }
+
+  n = (num_best_sa - num_all_sa);
+  if(0 == n) {
+      return 37; // no second best hits
+  }
+
+  // use MAQ-like mapping qualities
+  return (23 < g_log_n[n])? 0 : 23 - g_log_n[n];
+}
+
+static inline void
+fmap_map1_aln_overwrite(fmap_map1_aln_t *dest, fmap_map1_aln_t *src)
+{
+  // cigar
+  free(dest->cigar);
+  dest->cigar = src->cigar;
+  dest->cigar_length = src->cigar_length;
+  src->cigar = NULL;
+  src->cigar_length = 0;
+
+  // rest
+  dest->score = src->score;
+  dest->n_mm = src->n_mm;
+  dest->n_gapo = src->n_gapo;
+  dest->n_gape = src->n_gape;
+  dest->mapq = src->mapq;
+  dest->strand = src->strand;
+  dest->k = src->k;
+  dest->l = src->l;
+}
+
+static inline void
+fmap_map1_aln_filter(fmap_map1_opt_t *opt, fmap_map1_aln_t ***alns, int32_t *n_alns, int32_t max_score)
+{
+  int32_t i;
+  int32_t num_best_sa, num_best, num_all_sa;
+
+  if(0 == (*n_alns)) return;
+
+  //Note: assumes that the alignments are sorted by increasing score
+  num_best = num_best_sa = num_all_sa = 0;
+  for(i=0;i<(*n_alns);i++) {
+      if((*alns)[0]->score < (*alns)[i]->score) {
+          break;
+      }
+      num_best++;
+      num_best_sa += (*alns)[i]->l - (*alns)[i]->k + 1;
+  }
+  for(i=0;i<(*n_alns);i++) {
+      num_all_sa += (*alns)[i]->l - (*alns)[i]->k + 1;
+  }
+
+  if(FMAP_ALN_OUTPUT_MODE_ALL == opt->aln_output_mode) { // all hits
+      for(i=0;i<(*n_alns);i++) {
+          (*alns)[i]->mapq = 0;
+      }
+      (*alns)[0]->mapq = fmap_map1_aln_mapq(num_best_sa, num_all_sa, max_score, (*alns)[0]->score);
+  }
+  else if(FMAP_ALN_OUTPUT_MODE_BEST == opt->aln_output_mode  // unique best hit 
+          || FMAP_ALN_OUTPUT_MODE_BEST_RAND == opt->aln_output_mode) { // random best hit
+
+      if(1 < num_best && FMAP_ALN_OUTPUT_MODE_BEST_RAND == opt->aln_output_mode) { // pick a random one
+          int32_t best_index = 0, rand, j;
+          rand = lrand48() * num_best_sa; 
+          for(i=j=0;i<num_best;i++) { // get the "rand"th best score
+              j += (*alns)[best_index]->l - (*alns)[best_index]->k + 1;
+              if(rand < j) {
+                  best_index = i;
+                  break;
+              }
+          }
+          // copy to the front
+          if(0 < best_index) {
+              fmap_map1_aln_overwrite((*alns)[0], (*alns)[best_index]);
+          }
+          (*alns)[0]->k += j - rand;
+          if((*alns)[0]->l < (*alns)[0]->k) {
+              fmap_error("control reach an unexpected point", Exit, OutOfRange);
+          }
+          (*alns)[0]->l = (*alns)[0]->k;
+          num_best_sa = 1;
+          num_best = 1; 
+          // WARNING: make sure mapping quality is zero after this
+      }
+
+      if(1 < num_best_sa) {
+          // free them all
+          for(i=0;i<(*n_alns);i++) {
+              free((*alns)[i]->cigar);
+              free((*alns)[i]);
+          }
+          free((*alns));
+          (*alns) = NULL;
+          (*n_alns) = 0;
+      }
+      else {
+          if(FMAP_ALN_OUTPUT_MODE_BEST_RAND == opt->aln_output_mode) {
+              (*alns)[0]->mapq = 0;
+          }
+          else {
+              (*alns)[0]->mapq = fmap_map1_aln_mapq(num_best_sa, num_all_sa, max_score, (*alns)[0]->score);
+          }
+
+          for(i=1;i<(*n_alns);i++) { // free the rest
+              free((*alns)[i]->cigar);
+              free((*alns)[i]);
+          }
+          (*alns) = fmap_realloc((*alns), sizeof(fmap_map1_aln_t*)*2, "(*alns)");
+          (*alns)[1] = NULL; // add trailing null
+          (*n_alns) = 1;
+      }
+  }
+  else if(FMAP_ALN_OUTPUT_MODE_BEST_ALL == opt->aln_output_mode) { // all best hits
+      for(i=0;i<num_best;i++) {
+          (*alns)[i]->mapq = fmap_map1_aln_mapq(num_best_sa, num_all_sa, max_score, (*alns)[0]->score);
+      }
+      if(num_best < (*n_alns)) {
+          for(i=num_best;i<(*n_alns);i++) { // free the rest
+              free((*alns)[i]->cigar);
+              free((*alns)[i]);
+          }
+          (*alns) = fmap_realloc((*alns), sizeof(fmap_map1_aln_t*)*(1+num_best), "(*alns)");
+          (*alns)[num_best] = NULL; // add trailing null
+          (*n_alns) = num_best;
+      }
+  }
+}
 
 static inline int 
 fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *sa, fmap_map1_aln_t *a)
@@ -69,13 +220,13 @@ fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fma
               fmap_string_reverse(qualities);
           }
           fmap_file_fprintf(fmap_file_stdout, "%s\t%u\t%s\t%u\t%u\t",
-                  name->s, flag, refseq->annos[seqid].name->s,
-                  pos, 255);
+                            name->s, flag, refseq->annos[seqid].name->s,
+                            pos, 255);
           for(j=0;j<a->cigar_length;j++) {
               fmap_file_fprintf(fmap_file_stdout, "%d%c", (a->cigar[j]>>4), "MIDNSHP"[a->cigar[j] & 0xf]);
           }
           fmap_file_fprintf(fmap_file_stdout, "\t*\t0\t0\t%s\t%s",
-                  bases->s, qualities->s);
+                            bases->s, qualities->s);
           // AS optional tag
           fmap_file_fprintf(fmap_file_stdout, "\tAS:i:%d", a->score);
           // NM
@@ -116,8 +267,8 @@ fmap_map1_print_sam_unmapped(fmap_seq_t *seq)
       break;
   }
   fmap_file_fprintf(fmap_file_stdout, "%s\t%u\t%s\t%u\t%u\t*\t*\t0\t0\t%s\t%s\n",
-          name->s, flag, "*",
-          0, 0, bases->s, qualities->s);
+                    name->s, flag, "*",
+                    0, 0, bases->s, qualities->s);
 }
 
 static void
@@ -129,6 +280,8 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
   int32_t width_length = 0;
   fmap_map1_aux_stack_t *stack = NULL;
 
+  // for calculating mapping qualities
+  fmap_map1_set_g_log_n();
 
   seed_width[0] = fmap_calloc(opt->seed_length, sizeof(fmap_bwt_match_width_t), "seed_width[0]");
   seed_width[1] = fmap_calloc(opt->seed_length, sizeof(fmap_bwt_match_width_t), "seed_width[1]");
@@ -158,13 +311,14 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
           fmap_seq_t *seq[2]={NULL, NULL}, *orig_seq=NULL;
           orig_seq = seq_buffer[low];
           fmap_string_t *orig_bases = NULL, *bases[2]={NULL, NULL};
+          int32_t n_alns, max_score;
 
 
           // clone the sequence and get the reverse compliment
           seq[0] = fmap_seq_clone(orig_seq);
           seq[1] = fmap_seq_clone(orig_seq);
           fmap_seq_reverse_compliment(seq[1]);
-          
+
           // convert to integers
           fmap_seq_to_int(seq[0]);
           fmap_seq_to_int(seq[1]);
@@ -195,13 +349,17 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
               fmap_bwt_match_cal_width(bwt[0], opt->seed_length, bases[1]->s, width[1]);
           }
 
-          alns[low] = fmap_map1_aux_core(seq, bwt[1], width, (0 < opt_local.seed_length) ? seed_width : NULL, &opt_local, stack);
+          alns[low] = fmap_map1_aux_core(seq, bwt[1], width, (0 < opt_local.seed_length) ? seed_width : NULL, &opt_local, stack, &n_alns, &max_score);
 
-          low++;
+          // filter alignments
+          fmap_map1_aln_filter(&opt_local, &alns[low], &n_alns, max_score);
 
           // destroy
           fmap_seq_destroy(seq[0]);
           fmap_seq_destroy(seq[1]);
+
+          // next
+          low++;
       }
   }
 
@@ -245,7 +403,7 @@ fmap_map1_core(fmap_map1_opt_t *opt)
   // SAM header
   for(i=0;i<refseq->num_annos;i++) {
       fmap_file_fprintf(fmap_file_stdout, "@SQ\tSN:%s\tLN:%d\n",
-              refseq->annos[i].name->s, (int)refseq->annos[i].len);
+                        refseq->annos[i].name->s, (int)refseq->annos[i].len);
   }
 
   // allocate the buffer
@@ -370,6 +528,8 @@ usage(fmap_map1_opt_t *opt)
   // - homopolymer enumeration ?
   // - add option to try various seed offsets
   // - add option for "how many edits away" to search
+  // - add an option to only output all alignments
+  // - add an option to randomize best scoring alignments
 
   fmap_file_fprintf(fmap_file_stderr, "\n");
   fmap_file_fprintf(fmap_file_stderr, "Usage: %s map1 [options]", PACKAGE);
@@ -403,6 +563,11 @@ usage(fmap_map1_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "         -q INT      the queue size for the reads [%d]\n", opt->reads_queue_size);
   fmap_file_fprintf(fmap_file_stderr, "         -Q INT      maximum number of alignment nodes [%d]\n", opt->max_entries);
   fmap_file_fprintf(fmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
+  fmap_file_fprintf(fmap_file_stderr, "         -a INT      output filter [%d]\n", opt->aln_output_mode);
+  fmap_file_fprintf(fmap_file_stderr, "                             0 - unique best hits\n");
+  fmap_file_fprintf(fmap_file_stderr, "                             1 - random best hit\n");
+  fmap_file_fprintf(fmap_file_stderr, "                             2 - all best hits\n");
+  fmap_file_fprintf(fmap_file_stderr, "                             3 - all alignments\n");
   fmap_file_fprintf(fmap_file_stderr, "         -h          print this message\n");
   fmap_file_fprintf(fmap_file_stderr, "\n");
 
@@ -417,6 +582,7 @@ fmap_map1(int argc, char *argv[])
   int c;
   fmap_map1_opt_t opt;
 
+  srand48(0); // random seed
 
   // program defaults
   opt.fn_fasta = opt.fn_reads = NULL;
@@ -433,8 +599,9 @@ fmap_map1(int argc, char *argv[])
   opt.reads_queue_size = 65536; // TODO: move this to a define block
   opt.max_entries= 2000000; // TODO: move this to a define block
   opt.num_threads = 1;
+  opt.aln_output_mode = 0; // TODO: move this to a define block
 
-  while((c = getopt(argc, argv, "f:r:F:l:k:m:o:e:M:O:E:d:i:b:q:Q:n:h")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:l:k:m:o:e:M:O:E:d:i:b:q:Q:n:a:h")) >= 0) {
       switch(c) {
         case 'f':
           opt.fn_fasta = fmap_strdup(optarg); break;
@@ -476,6 +643,8 @@ fmap_map1(int argc, char *argv[])
           opt.max_entries = atoi(optarg); break;
         case 'n':
           opt.num_threads = atoi(optarg); break;
+        case 'a':
+          opt.aln_output_mode = atoi(optarg); break;
         case 'h':
         default:
           return usage(&opt);
@@ -508,6 +677,7 @@ fmap_map1(int argc, char *argv[])
       fmap_error_cmd_check_int(opt.reads_queue_size, 1, INT32_MAX, "-q");
       fmap_error_cmd_check_int(opt.max_entries, 1, INT32_MAX, "-Q");
       fmap_error_cmd_check_int(opt.num_threads, 1, INT32_MAX, "-n");
+      fmap_error_cmd_check_int(opt.num_threads, 0, 3, "-a");
   }
 
   fmap_map1_core(&opt);

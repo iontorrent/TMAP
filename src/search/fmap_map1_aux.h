@@ -57,11 +57,13 @@ fmap_map1_aux_stack_destroy(fmap_map1_aux_stack_t *stack);
   @param  seed_width  the bounds within the seed (forward/reverse)
   @param  opt         the program parameters structure
   @param  stack       the stack structure
+  @param  n_alns      the number of alignments returned
+  @param  max_score   the maximum possible total score for a best scoring alignment
   @return             pointer to the alignments, NULL terminated
   */
 fmap_map1_aln_t **
 fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
                    fmap_bwt_match_width_t *width[2], fmap_bwt_match_width_t *seed_width[2], fmap_map1_opt_t *opt,
-                   fmap_map1_aux_stack_t *stack);
+                   fmap_map1_aux_stack_t *stack, int32_t *n_alns, int32_t *max_score);
 
 #endif

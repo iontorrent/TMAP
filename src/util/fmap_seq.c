@@ -51,7 +51,8 @@ fmap_seq_clone(fmap_seq_t *seq)
 {
   fmap_seq_t *ret = NULL;
 
-  ret = fmap_seq_init(seq->type);
+  ret = fmap_calloc(1, sizeof(fmap_seq_t), "ret");
+  ret->type = seq->type;
 
   switch(seq->type) {
     case FMAP_SEQ_TYPE_FQ:

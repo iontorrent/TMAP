@@ -21,25 +21,25 @@ fmap_fq_init()
 }
 
 inline void
-fmap_fq_destroy(fmap_fq_t *seq)
+fmap_fq_destroy(fmap_fq_t *fq)
 {
-  fmap_string_destroy(seq->name);
-  fmap_string_destroy(seq->comment);
-  fmap_string_destroy(seq->seq);
-  fmap_string_destroy(seq->qual);
-  free(seq);
+  fmap_string_destroy(fq->name);
+  fmap_string_destroy(fq->comment);
+  fmap_string_destroy(fq->seq);
+  fmap_string_destroy(fq->qual);
+  free(fq);
 }
 
 inline fmap_fq_t*
-fmap_fq_clone(fmap_fq_t *seq)
+fmap_fq_clone(fmap_fq_t *fq)
 {
   fmap_fq_t *ret = fmap_calloc(1, sizeof(fmap_fq_t), "ret");
 
-  ret->name = fmap_string_clone(seq->name);
-  ret->comment = fmap_string_clone(seq->comment);
-  ret->seq = fmap_string_clone(seq->seq);
-  ret->qual = fmap_string_clone(seq->qual);
-  ret->is_int = seq->is_int;
+  ret->name = fmap_string_clone(fq->name);
+  ret->comment = fmap_string_clone(fq->comment);
+  ret->seq = fmap_string_clone(fq->seq);
+  ret->qual = fmap_string_clone(fq->qual);
+  ret->is_int = fq->is_int;
 
   return ret;
 }
@@ -52,23 +52,23 @@ fmap_fq_reverse_compliment(fmap_fq_t *fq)
 }
 
 void
-fmap_fq_to_int(fmap_fq_t *seq)
+fmap_fq_to_int(fmap_fq_t *fq)
 {
   int i;
-  if(1 == seq->is_int) return;
-  for(i=0;i<seq->seq->l;i++) {
-      seq->seq->s[i] = nt_char_to_int[(int)seq->seq->s[i]];
+  if(1 == fq->is_int) return;
+  for(i=0;i<fq->seq->l;i++) {
+      fq->seq->s[i] = nt_char_to_int[(int)fq->seq->s[i]];
   }
-  seq->is_int = 1;
+  fq->is_int = 1;
 }
 
 void
-fmap_fq_to_char(fmap_fq_t *seq)
+fmap_fq_to_char(fmap_fq_t *fq)
 {
   int i;
-  if(0 == seq->is_int) return;
-  for(i=0;i<seq->seq->l;i++) {
-      seq->seq->s[i] = "ACGTN"[(int)seq->seq->s[i]];
+  if(0 == fq->is_int) return;
+  for(i=0;i<fq->seq->l;i++) {
+      fq->seq->s[i] = "ACGTN"[(int)fq->seq->s[i]];
   }
-  seq->is_int = 0;
+  fq->is_int = 0;
 }
