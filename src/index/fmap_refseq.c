@@ -315,7 +315,7 @@ fmap_refseq_shm_num_bytes(fmap_refseq_t *refseq)
   for(i=0;i<refseq->num_annos;i++) {
       n += sizeof(fmap_anno_t); // annos[i]
       n -= sizeof(fmap_string_t); // annos[i]->name pointer
-      n += sizeof(uint32_t): // annos[i].name->l
+      n += sizeof(uint32_t); // annos[i].name->l
       n += sizeof(char)*refseq->annos[i].name->l; // annos[i]->name->s
   }
 
