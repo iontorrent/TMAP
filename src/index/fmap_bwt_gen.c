@@ -1533,14 +1533,6 @@ BWTSaveBwtCodeAndOcc(fmap_bwt_t *bwt_out, const BWT *bwt, const char *fn_fasta, 
 
   // Move over to bwt data structure
   if(bwt_out->bwt_size != BWTFileSizeInWord(bwt->textLength)) {
-      // HERE
-      fprintf(stderr, "bwt_out->bwt_size=%lld BWTFileSizeInWord(bwt->textLength)=%lld\n",
-              (long long int)bwt_out->bwt_size, 
-              (long long int)BWTFileSizeInWord(bwt->textLength));
-      fprintf(stderr, "bwt->textLength=%lld\n",
-              (long long int)bwt->textLength);
-      fprintf(stderr, "bwt_out->seq_len=%lld\n",
-              (long long int)bwt_out->seq_len);
       fmap_error(NULL, Exit, OutOfRange);
   }
   bwt_out->primary = bwt->inverseSa0;
@@ -1580,8 +1572,6 @@ fmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, 
 
   for(is_rev=0;is_rev<=1;is_rev++) { // forward/reverse
 
-      // progress
-      fmap_progress_set_start_time(clock());
       if(0 == is_rev) {
           fmap_progress_print("constructing the BWT string from the packed FASTA");
       }
@@ -1612,13 +1602,17 @@ fmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, 
           // From bwtmisc.c at http://bio-bwa.sf.net
 
           // prepare sequence
-          memset(bwt->L2, 0, 5*sizeof(uint32_t));
-          buf = fmap_calloc(bwt->seq_len + 1, 1, "buf");
-          for(i = 0; i < bwt->seq_len; ++i) {
+          for(i=0;i<ALPHABET_SIZE+1;i++) {
+              bwt->L2[i]=0;
+          }
+          buf = fmap_calloc(bwt->seq_len + 1, sizeof(uint8_t), "buf");
+          for(i=0;i<bwt->seq_len;i++) {
               buf[i] = fmap_refseq_seq_i(refseq, i);
               ++bwt->L2[1+buf[i]];
           }
-          for (i = 2; i <= 4; ++i) bwt->L2[i] += bwt->L2[i-1];
+          for(i=2;i<ALPHABET_SIZE+1;i++) {
+            bwt->L2[i] += bwt->L2[i-1];
+          }
 
           // Burrows-Wheeler Transform
           bwt->primary = fmap_bwt_gen_short(buf, bwt->seq_len);

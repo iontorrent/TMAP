@@ -203,7 +203,7 @@ fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fma
       // SA position to packed refseq position
       pacpos = bwt->seq_len - fmap_sa_pac_pos(sa, bwt, i) - aln_ref_l + 1;
 
-      if(0 <= fmap_refseq_pac2real(refseq, pacpos, seq_len, &seqid, &pos)) {
+      if(0 < fmap_refseq_pac2real(refseq, pacpos, seq_len, &seqid, &pos)) {
           if(1 == a->strand) { // reverse for the output
               flag |= 0x0010;
               fmap_string_reverse_compliment(bases, 1);

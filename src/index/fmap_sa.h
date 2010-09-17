@@ -39,6 +39,40 @@ void
 fmap_sa_write(const char *fn_fasta, fmap_sa_t *sa, uint32_t is_rev);
 
 /*! @function
+  @abstract
+  @param  sa  the sa structure 
+  @return     the number of bytes required for this sa in shared memory
+  */
+uint64_t
+fmap_sa_shm_num_bytes(fmap_sa_t *sa);
+
+/*! @function
+  @abstract
+  @param  sa  the sa structure to pack 
+  @param  buf  the byte array in which to pack the sa data
+  @return      a pointer to the next unused byte in memory
+  */
+uint8_t *
+fmap_sa_shm_pack(fmap_sa_t *sa, uint8_t *buf);
+
+/*! @function
+  @abstract
+  @param  buf  the byte array in which to unpack the sa data
+  @return      a pointer to the initialized sa structure
+  @discussion  do not use 'fmap_sa_destroy', but instead 'fmap_sa_shm_destroy'
+  */
+fmap_sa_t *
+fmap_sa_shm_unpack(uint8_t *buf);
+
+/*! @function
+  @abstract
+  @param  sa  pointer to the sa structure to destroy
+  @discussion  only destroys memory allocated by 'fmap_sa_shm_unpack'
+  */
+void
+fmap_sa_shm_destroy(fmap_sa_t *sa);
+
+/*! @function
   @param  sa  pointer to the suffix array structure
   */
 void 

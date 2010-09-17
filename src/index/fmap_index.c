@@ -76,6 +76,7 @@ int fmap_index(int argc, char *argv[])
   opt.is_large = -1;
 
   // Set output progress
+  fmap_progress_set_start_time(clock());
   fmap_progress_set_command(argv[0]);
 
   while((c = getopt(argc, argv, "f:o:i:w:a:hv")) >= 0) {

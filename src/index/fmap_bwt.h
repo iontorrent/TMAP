@@ -26,7 +26,6 @@
    SOFTWARE.
    */
 
-
 #include <stdint.h>
 
 // requirement: ((b)->occ_interval%16 == 0)
@@ -88,6 +87,40 @@ fmap_bwt_read(const char *fn_fasta, uint32_t is_rev);
   */
 void 
 fmap_bwt_write(const char *fn_fasta, fmap_bwt_t *bwt, uint32_t is_rev);
+
+/*! @function
+  @abstract
+  @param  bwt  the bwt structure 
+  @return      the number of bytes required for this bwt in shared memory
+  */
+uint64_t
+fmap_bwt_shm_num_bytes(fmap_bwt_t *bwt);
+
+/*! @function
+  @abstract
+  @param  bwt  the bwt structure to pack 
+  @param  buf  the byte array in which to pack the bwt data
+  @return      a pointer to the next unused byte in memory
+  */
+uint8_t *
+fmap_bwt_shm_pack(fmap_bwt_t *bwt, uint8_t *buf);
+
+/*! @function
+  @abstract
+  @param  buf  the byte array in which to unpack the bwt data
+  @return      a pointer to the initialized bwt structure
+  @discussion  do not use 'fmap_bwt_destroy', but instead 'fmap_bwt_shm_destroy'
+  */
+fmap_bwt_t *
+fmap_bwt_shm_unpack(uint8_t *buf);
+
+/*! @function
+  @abstract
+  @param  bwt  pointer to the bwt structure to destroy
+  @discussion  only destroys memory allocated by 'fmap_bwt_shm_unpack'
+  */
+void
+fmap_bwt_shm_destroy(fmap_bwt_t *bwt);
 
 /*! @function
   @abstract

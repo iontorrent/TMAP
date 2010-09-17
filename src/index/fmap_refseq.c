@@ -29,7 +29,7 @@ fmap_refseq_write_annos(fmap_file_t *fp, fmap_anno_t *anno)
   uint32_t len = anno->name->l+1; // include null terminator
 
   if(1 != fmap_file_fwrite(&len, sizeof(uint32_t), 1, fp) 
-     || len != fmap_file_fwrite(anno->name, sizeof(char), len, fp)
+     || len != fmap_file_fwrite(anno->name->s, sizeof(char), len, fp)
      || 1 != fmap_file_fwrite(&anno->len, sizeof(uint64_t), 1, fp)
      || 1 != fmap_file_fwrite(&anno->offset, sizeof(uint64_t), 1, fp)) {
       fmap_error(NULL, Exit, WriteFileError);
@@ -60,7 +60,6 @@ fmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   uint8_t x = 0;
   uint64_t ref_len;
 
-  fmap_progress_set_start_time(clock());
   fmap_progress_print("packing the reference FASTA");
 
   refseq = fmap_calloc(1, sizeof(fmap_refseq_t), "refseq");
@@ -154,11 +153,10 @@ fmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
 void
 fmap_refseq_pac2revpac(const char *fn_fasta)
 {
-  int32_t i, j, c;
+  uint32_t i, j, c;
   fmap_refseq_t *refseq=NULL, *refseq_rev=NULL;
   
   fmap_progress_print("reversing the packed reference FASTA");
-  fmap_progress_set_start_time(clock());
 
   refseq = fmap_refseq_read(fn_fasta, 0);
 
@@ -169,7 +167,7 @@ fmap_refseq_pac2revpac(const char *fn_fasta)
   // update sequence
   refseq_rev->seq = NULL;
   refseq_rev->seq = fmap_calloc(fmap_refseq_seq_memory(refseq->len), sizeof(uint8_t), "refseq_rev->seq");
-  for(i=refseq->len-1;0<=i;i--) {
+  for(i=0;i<refseq->len;i++) {
       c = fmap_refseq_seq_i(refseq, i);
       j = refseq->len - i - 1;
       fmap_refseq_seq_store_i(refseq_rev, j, c);
@@ -182,6 +180,8 @@ fmap_refseq_pac2revpac(const char *fn_fasta)
   free(refseq_rev->seq);
   free(refseq_rev);
   fmap_refseq_destroy(refseq);
+  
+  fmap_progress_print2("reversed the packed reference FASTA");
 }
 
 void 
@@ -218,8 +218,6 @@ fmap_refseq_write(fmap_refseq_t *refseq, const char *fn_fasta, uint32_t is_rev)
   }
   fmap_file_fclose(fp_pac);
   free(fn_pac);
-  
-  fmap_progress_print2("reversed the packed reference FASTA");
 }
 
 static inline void 
@@ -302,6 +300,95 @@ fmap_refseq_read(const char *fn_fasta, uint32_t is_rev)
   return refseq;
 }
 
+uint64_t 
+fmap_refseq_shm_num_bytes(fmap_refseq_t *refseq)
+{
+  // returns the number of bytes to allocate for shared memory
+  int32_t i;
+  uint64_t n = 0;
+
+
+  n += sizeof(fmap_refseq_t); // struct
+  n += sizeof(uint8_t)*fmap_refseq_seq_memory(refseq->len); // seq 
+  n -= sizeof(uint8_t*); // seq pointer 
+  n -= sizeof(fmap_anno_t*); // annos pointer
+  for(i=0;i<refseq->num_annos;i++) {
+      n += sizeof(fmap_anno_t); // annos[i]
+      n -= sizeof(fmap_string_t); // annos[i]->name pointer
+      n += sizeof(char)*refseq->annos[i].name->l; // annos[i]->name->l
+  }
+
+  return n;
+}
+
+uint8_t *
+fmap_refseq_shm_pack(fmap_refseq_t *refseq, uint8_t *buf)
+{
+  int32_t i;
+  // fixed length data
+  memcpy(buf, &refseq->version_id, sizeof(uint64_t)) ; buf += sizeof(uint64_t);
+  memcpy(buf, &refseq->seed, sizeof(uint32_t)) ; buf += sizeof(uint32_t);
+  memcpy(buf, &refseq->num_annos, sizeof(uint32_t)) ; buf += sizeof(uint32_t);
+  memcpy(buf, &refseq->len, sizeof(uint64_t)) ; buf += sizeof(uint64_t);
+  memcpy(buf, &refseq->is_rev, sizeof(uint32_t)) ; buf += sizeof(uint32_t);
+  // variable length data
+  memcpy(buf, refseq->seq, fmap_refseq_seq_memory(refseq->len)*sizeof(uint8_t)); 
+  buf += fmap_refseq_seq_memory(refseq->len)*sizeof(uint8_t);
+  for(i=0;i<refseq->num_annos;i++) {
+      // fixed length data
+      memcpy(buf, &refseq->annos[i].len, sizeof(uint64_t)); buf += sizeof(uint64_t); 
+      memcpy(buf, &refseq->annos[i].offset, sizeof(uint64_t)); buf += sizeof(uint64_t); 
+      memcpy(buf, &refseq->annos[i].name->l, sizeof(uint32_t)); buf += sizeof(uint32_t);
+      // variable length data
+      memcpy(buf, refseq->annos[i].name->s, sizeof(char)*refseq->annos[i].name->l);
+      buf += sizeof(char)*refseq->annos[i].name->l;
+  }
+
+  return buf;
+}
+
+fmap_refseq_t *
+fmap_refseq_shm_unpack(uint8_t *buf)
+{
+  int32_t i;
+  fmap_refseq_t *refseq = NULL;
+
+  refseq = fmap_calloc(1, sizeof(fmap_refseq_t), "refseq");
+  
+  // fixed length data
+  memcpy(&refseq->version_id, buf, sizeof(uint64_t)) ; buf += sizeof(uint64_t);
+  memcpy(&refseq->seed, buf, sizeof(uint32_t)) ; buf += sizeof(uint32_t);
+  memcpy(&refseq->num_annos, buf, sizeof(uint32_t)) ; buf += sizeof(uint32_t);
+  memcpy(&refseq->len, buf, sizeof(uint64_t)) ; buf += sizeof(uint64_t);
+  memcpy(&refseq->is_rev, buf, sizeof(uint32_t)) ; buf += sizeof(uint32_t);
+
+  // allocate memory
+  refseq->annos = fmap_calloc(refseq->num_annos, sizeof(fmap_anno_t), "refseq->annos");
+
+  // variable length data
+  refseq->seq = (uint8_t*)buf;
+  buf += fmap_refseq_seq_memory(refseq->len)*sizeof(uint8_t);
+  for(i=0;i<refseq->num_annos;i++) {
+      // fixed length data
+      memcpy(&refseq->annos[i].len, buf, sizeof(uint64_t)); buf += sizeof(uint64_t); 
+      memcpy(&refseq->annos[i].offset, buf, sizeof(uint64_t)); buf += sizeof(uint64_t); 
+      memcpy(&refseq->annos[i].name->l, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
+      refseq->annos[i].name->m = refseq->annos[i].name->l;
+      // variable length data
+      refseq->annos[i].name->s = (char*)buf;
+      buf += sizeof(char)*refseq->annos[i].name->l;
+  }
+
+  return refseq;
+}
+
+void
+fmap_refseq_shm_destroy(fmap_refseq_t *refseq)
+{
+  free(refseq->annos);
+  free(refseq);
+}
+
 void
 fmap_refseq_destroy(fmap_refseq_t *refseq)
 {
@@ -359,11 +446,11 @@ fmap_refseq_get_pos(fmap_refseq_t *refseq, uint32_t pacpos, uint32_t seqid)
   return pacpos - refseq->annos[seqid].offset;
 }
 
-inline int32_t
+inline uint32_t
 fmap_refseq_pac2real(fmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos)
 {
   (*seqid) = fmap_refseq_get_seqid(refseq, pacpos, aln_length);
-  if((*seqid) < 0) return -1;
+  if((*seqid) < 0) return 0;
   (*pos) = fmap_refseq_get_pos(refseq, pacpos, (*seqid));
 
   return (*pos);
@@ -372,10 +459,24 @@ fmap_refseq_pac2real(fmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_length
 int
 fmap_refseq_fasta2pac_main(int argc, char *argv[])
 {
-  if(argc < 2) {
-      fprintf(stderr, "Usage: %s %s <in.fasta>\n", PACKAGE, argv[0]);
+  int c, help=0;
+
+  fmap_progress_set_start_time(clock());
+  fmap_progress_set_command(argv[0]);
+
+  while((c = getopt(argc, argv, "vh")) >= 0) {
+      switch(c) {
+        case 'v': fmap_progress_set_verbosity(1); break;
+        case 'h': help = 1; break;
+        default: return 1;
+      }
+  }
+  if(1 != argc - optind || 1 == help) {
+      fprintf(stderr, "Usage: %s %s [-v -h] <in.fasta>\n", PACKAGE, argv[0]);
       return 1;
   }
-  fmap_refseq_fasta2pac(argv[1], FMAP_FILE_NO_COMPRESSION);
+
+  fmap_refseq_fasta2pac(argv[optind], FMAP_FILE_NO_COMPRESSION);
+
   return 0;
 }

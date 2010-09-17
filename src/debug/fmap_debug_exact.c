@@ -27,7 +27,7 @@ fmap_debug_exact_print_sam(fmap_refseq_t *refseq, fmap_fq_t *seq, uint32_t pacpo
   uint32_t pos, seqid;
   uint16_t flag = 0;
 
-  if(0 <= fmap_refseq_pac2real(refseq, pacpos, seq->seq->l, &seqid, &pos)) {
+  if(0 < fmap_refseq_pac2real(refseq, pacpos, seq->seq->l, &seqid, &pos)) {
       if(1 == strand) { // reverse for the output
           flag |= 0x0010;
           fmap_string_reverse_compliment(seq->seq, seq->is_int);

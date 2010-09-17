@@ -111,6 +111,40 @@ fmap_refseq_read(const char *fn_fasta, uint32_t is_rev);
 
 /*! @function
   @abstract
+  @param  refseq  the refseq structure 
+  @return         the number of bytes required for this bwt in shared memory
+  */
+uint64_t
+fmap_refseq_shm_num_bytes(fmap_refseq_t *refseq);
+
+/*! @function
+  @abstract
+  @param  refseq  the refseq structure to pack 
+  @param  buf     the byte array in which to pack the refseq data
+  @return         a pointer to the next unused byte in memory
+  */
+uint8_t *
+fmap_refseq_shm_pack(fmap_refseq_t *refseq, uint8_t *buf);
+
+/*! @function
+  @abstract
+  @param  buf  the byte array in which to unpack the refseq data
+  @return      a pointer to the initialized refseq structure
+  @discussion  do not use 'fmap_refseq_destroy', but instead 'fmap_refseq_shm_destroy'
+  */
+fmap_refseq_t *
+fmap_refseq_shm_unpack(uint8_t *buf);
+
+/*! @function
+  @abstract
+  @param  refseq  pointer to the refseq structure to destroy
+  @discussion     only destroys memory allocated by 'fmap_refseq_shm_unpack'
+  */
+void
+fmap_refseq_shm_destroy(fmap_refseq_t *refseq);
+
+/*! @function
+  @abstract
   @param  refseq  pointer to the structure in which the data is stored
   */
 void
@@ -122,10 +156,10 @@ fmap_refseq_destroy(fmap_refseq_t *refseq);
   @param  pacpos      the packed FASTA position
   @param  aln_length  the alignment length
   @param  seqid       the zero-based sequence index to be returned
-  @param  pos         the zero-based position to be returned
-  @return             the zero-based position, -1 if not found (overlaps two chromosomes)
+  @param  pos         the one-based position to be returned
+  @return             the one-based position, 0 if not found (i.e. overlaps two chromosomes)
   */
-inline int32_t
+inline uint32_t
 fmap_refseq_pac2real(fmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos);
 
 /*! @function

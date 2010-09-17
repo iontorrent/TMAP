@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <limits.h>
+#include <string.h>
 
 #include "../util/fmap_error.h"
 #include "../util/fmap_alloc.h"
@@ -72,6 +73,60 @@ fmap_sa_write(const char *fn_fasta, fmap_sa_t *sa, uint32_t is_rev)
   free(fn_sa);
 }
 
+uint64_t
+fmap_sa_shm_num_bytes(fmap_sa_t *sa)
+{
+  // returns the number of bytes to allocate for shared memory
+  uint64_t n = 0;
+  
+  n += sizeof(fmap_sa_t); // main struct
+  n -= sizeof(uint32_t*); // sa pointer
+  n += sizeof(uint32_t)*sa->n_sa; // sa
+
+  return n;
+}
+
+uint8_t *
+fmap_sa_shm_pack(fmap_sa_t *sa, uint8_t *buf)
+{
+  // fixed length data
+  memcpy(buf, &sa->primary, sizeof(uint32_t)); buf += sizeof(uint32_t);
+  memcpy(buf, &sa->sa_intv, sizeof(uint32_t)); buf += sizeof(uint32_t);
+  memcpy(buf, &sa->seq_len, sizeof(uint32_t)); buf += sizeof(uint32_t);
+  memcpy(buf, &sa->is_rev, sizeof(uint32_t)); buf += sizeof(uint32_t);
+  memcpy(buf, &sa->n_sa, sizeof(uint32_t)); buf += sizeof(uint32_t);
+  // variable length data
+  memcpy(buf, sa->sa, sa->n_sa*sizeof(uint32_t)); buf += sa->n_sa*sizeof(uint32_t);
+
+  return buf;
+}
+
+fmap_sa_t *
+fmap_sa_shm_unpack(uint8_t *buf)
+{
+  fmap_sa_t *sa = NULL;
+
+  sa = fmap_calloc(1, sizeof(fmap_sa_t), "sa");
+
+  // fixed length data
+  memcpy(&sa->primary, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
+  memcpy(&sa->sa_intv, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
+  memcpy(&sa->seq_len, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
+  memcpy(&sa->is_rev, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
+  memcpy(&sa->n_sa, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
+  // variable length data
+  sa->sa = (uint32_t*)buf;
+  buf += sa->n_sa*sizeof(uint32_t);
+
+  return sa;
+}
+
+void 
+fmap_sa_shm_destroy(fmap_sa_t *sa)
+{
+  free(sa);
+}
+
 void 
 fmap_sa_destroy(fmap_sa_t *sa)
 {
@@ -96,13 +151,12 @@ fmap_sa_pac_pos(const fmap_sa_t *sa, const fmap_bwt_t *bwt, uint32_t k)
 void
 fmap_sa_bwt2sa(const char *fn_fasta, uint32_t intv)
 {
-  uint32_t isa, s, i; // S(isa) = sa
+  int64_t isa, s, i; // S(isa) = sa
   fmap_bwt_t *bwt = NULL;
   fmap_sa_t *sa = NULL;
   uint32_t is_rev;
 
   for(is_rev=0;is_rev<=1;is_rev++) {
-      fmap_progress_set_start_time(clock());
       if(is_rev == 0) {
           fmap_progress_print("constructing the SA from the BWT string");
       }
@@ -135,6 +189,8 @@ fmap_sa_bwt2sa(const char *fn_fasta, uint32_t intv)
 
       fmap_bwt_destroy(bwt);
       fmap_sa_destroy(sa);
+      sa=NULL;
+      bwt=NULL;
 
       if(is_rev == 0) {
           fmap_progress_print2("constructed the SA from the BWT string");
@@ -186,10 +242,10 @@ static int32_t QSufSortTransform(int* __restrict V, int* __restrict I, const int
                                  const int32_t smallestInputSymbol, const int32_t maxNewAlphabetSize, int32_t *numSymbolAggregated);
 
 // from MiscUtilities.c
-static int32_t leadingZero(const int32_t input) {
+static uint32_t leadingZero(const uint32_t input) {
 
-    int32_t l;
-    const static int32_t leadingZero8bit[256] = {8,7,6,6,5,5,5,5,4,4,4,4,4,4,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,
+    uint32_t l;
+    const static uint32_t leadingZero8bit[256] = {8,7,6,6,5,5,5,5,4,4,4,4,4,4,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,
         2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
         1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
         1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -835,22 +891,28 @@ fmap_sa_gen_short(const uint8_t *T, int32_t *SA, uint32_t n)
 int
 fmap_sa_bwt2sa_main(int argc, char *argv[])
 {
-  int c, intv = FMAP_SA_INTERVAL;
-  while((c = getopt(argc, argv, "i:")) >= 0) {
+  int c, intv = FMAP_SA_INTERVAL, help=0;
+
+  fmap_progress_set_start_time(clock());
+  fmap_progress_set_command(argv[0]);
+
+  while((c = getopt(argc, argv, "i:vh")) >= 0) {
       switch(c) {
         case 'i': intv = atoi(optarg); break;
+        case 'v': fmap_progress_set_verbosity(1); break;
+        case 'h': help = 1; break;
         default: return 1;
       }
   }
-  if (argc < 2) {
-      fprintf(stderr, "Usage: %s %s [-i INT] <in.fasta>\n", PACKAGE, argv[0]);
+  if(1 != argc - optind || 1 == help) {
+      fprintf(stderr, "Usage: %s %s [-i INT -vh] <in.fasta>\n", PACKAGE, argv[0]);
       return 1;
   }
   if(0 < intv && 0 != (intv % 2)) {
       fmap_error("option -i out of range", Exit, CommandLineArgument);
   }
 
-  fmap_sa_bwt2sa(argv[1], intv);
+  fmap_sa_bwt2sa(argv[optind], intv);
 
   return 0;
 }
