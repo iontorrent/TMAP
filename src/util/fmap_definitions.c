@@ -138,12 +138,14 @@ fmap_get_reads_file_format_from_fn_int(char *fn, int32_t compr_type)
     case FMAP_FILE_BZ2_COMPRESSION:
       if(NULL == fmap_check_suffix(fn, ".bz2", 0)) {
           fmap_error("the expected bzip2 file extension is \".bz2\"", Warn, OutOfRange);
+          return FMAP_READS_FORMAT_UNKNOWN;
       }
       compr_suffix_length = 4; // ".bz2"
       break;
     case FMAP_FILE_GZ_COMPRESSION:
       if(NULL == fmap_check_suffix(fn, ".gz", 0)) {
           fmap_error("the expected gzip file extension is \".gz\"", Warn, OutOfRange);
+          return FMAP_READS_FORMAT_UNKNOWN;
       }
       compr_suffix_length = 3; // ".gz"
       break;
