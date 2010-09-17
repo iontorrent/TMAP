@@ -54,7 +54,7 @@ fmap_bwt_match_occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt_
   else { // use the hash
       for(i=0;i<4;i++) {
           next[i].offset = prev->offset + 1;
-          next[i].hi = (prev->hi << 2) + i; // the next hash index
+          next[i].hi = i + (0 == prev->offset) ? 0: ((prev->hi << 2) + i); // the next hash index
           next[i].k = bwt->hash_k[next[i].offset-1][next[i].hi];
           next[i].l = UINT32_MAX;
       }
@@ -78,7 +78,7 @@ fmap_bwt_match_2occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt
   else { // use the hash
       for(i=0;i<4;i++) {
           next[i].offset = prev->offset + 1;
-          next[i].hi = (prev->hi << 2) + i; // the next hash index
+          next[i].hi = i + (0 == prev->offset) ? 0: ((prev->hi << 2) + i); // the next hash index
           next[i].k = bwt->hash_k[next[i].offset-1][next[i].hi];
           next[i].l = bwt->hash_l[next[i].offset-1][next[i].hi];
       }

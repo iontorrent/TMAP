@@ -247,12 +247,8 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
       return NULL;
   }
 
-  // HERE
-  int32_t bwt_hw = bwt->hash_width;
-  bwt->hash_width = 0;
-
   match_sa_start.offset = 0;
-  match_sa_start.hi = UINT32_MAX;
+  match_sa_start.hi = 0;
   match_sa_start.k = 0;
   match_sa_start.l = bwt->seq_len;
 
@@ -550,9 +546,6 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
       alns[alns_num] = NULL;
   }
   (*n_alns) = alns_num;
-
-  // HERE
-  bwt->hash_width = bwt_hw;
 
   return alns;
 }
