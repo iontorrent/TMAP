@@ -184,22 +184,10 @@ fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fma
       int32_t seq_len = 0;
       fmap_string_t *name=NULL, *bases=NULL, *qualities=NULL;
 
-      switch(seq->type) {
-        case FMAP_SEQ_TYPE_FQ:
-          seq_len = seq->data.fq->seq->l;
-          name = seq->data.fq->name;
-          bases = seq->data.fq->seq;
-          qualities = seq->data.fq->qual;
-          break;
-        case FMAP_SEQ_TYPE_SFF:
-          fmap_error("SFF not supported", Exit, OutOfRange);
-          // TODO
-          name = seq->data.sff->rheader->name;
-          break;
-        default:
-          fmap_error("unknown sequence", Exit, OutOfRange);
-          break;
-      }
+      name = fmap_seq_get_name(seq);
+      bases = fmap_seq_get_bases(seq);
+      qualities = fmap_seq_get_qualities(seq);
+      seq_len = bases->l;
 
       // get the number of non-inserted bases 
       for(j=0;j<a->cigar_length;j++) {
@@ -253,21 +241,10 @@ fmap_map1_print_sam_unmapped(fmap_seq_t *seq)
   uint16_t flag = 0x0004;
   fmap_string_t *name=NULL, *bases=NULL, *qualities=NULL;
 
-  switch(seq->type) {
-    case FMAP_SEQ_TYPE_FQ:
-      name = seq->data.fq->name;
-      bases = seq->data.fq->seq;
-      qualities = seq->data.fq->qual;
-      break;
-    case FMAP_SEQ_TYPE_SFF:
-      fmap_error("SFF not supported", Exit, OutOfRange);
-      // TODO
-      name = seq->data.sff->rheader->name;
-      break;
-    default:
-      fmap_error("unknown sequence", Exit, OutOfRange);
-      break;
-  }
+  name = fmap_seq_get_name(seq);
+  bases = fmap_seq_get_bases(seq);
+  qualities = fmap_seq_get_qualities(seq);
+
   fmap_file_fprintf(fmap_file_stdout, "%s\t%u\t%s\t%u\t%u\t*\t*\t0\t0\t%s\t%s\n",
                     name->s, flag, "*",
                     0, 0, bases->s, qualities->s);
@@ -335,7 +312,7 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
           opt_local.max_mm = (opt->max_mm < 0) ? (int)(opt->max_mm_frac * orig_bases->l) : opt->max_mm; 
           opt_local.max_gape = (opt->max_gape < 0) ? (int)(opt->max_gape_frac * orig_bases->l) : opt->max_gape; 
           opt_local.max_gapo = (opt->max_gapo < 0) ? (int)(opt->max_gapo_frac * orig_bases->l) : opt->max_gapo; 
-          
+
           if(width_length < orig_bases->l) {
               free(width[0]); free(width[1]);
               width_length = orig_bases->l;
@@ -687,7 +664,7 @@ fmap_map1(int argc, char *argv[])
               fmap_error("the reads format (-r) was unrecognized", Exit, CommandLineArgument);
           }
       }
-      if(FMAP_READS_FORMAT_SFF == opt.reads_format) fmap_error("SFF reads is unsupported", Exit, OutOfRange);
+      //if(FMAP_READS_FORMAT_SFF == opt.reads_format) fmap_error("SFF reads is unsupported", Exit, OutOfRange);
       if(-1 != opt.seed_length) fmap_error_cmd_check_int(opt.seed_length, 1, INT32_MAX, "-s");
 
       // this will take care of the case where they are both < 0
@@ -713,7 +690,7 @@ fmap_map1(int argc, char *argv[])
 
   free(opt.fn_fasta);
   free(opt.fn_reads);
-      
+
   fmap_progress_print2("terminating successfully");
 
   return 0;

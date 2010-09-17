@@ -63,7 +63,28 @@ fmap_seq_reverse_compliment(fmap_seq_t *seq);
 void
 fmap_seq_to_int(fmap_seq_t *seq);
 
+/*! @function
+  @abstract
+  @param  seq  pointer to the structure to clone
+  @return      a pointer to the name string
+*/
+fmap_string_t *
+fmap_seq_get_name(fmap_seq_t *seq);
+
+/*! @function
+  @abstract
+  @param  seq  pointer to the structure to clone
+  @return      a pointer to the base sequence string
+*/
 fmap_string_t *
 fmap_seq_get_bases(fmap_seq_t *seq);
+
+/*! @function
+  @abstract
+  @param  seq  pointer to the structure to clone
+  @return      a pointer to the quality string
+*/
+fmap_string_t *
+fmap_seq_get_qualities(fmap_seq_t *seq);
 
 #endif

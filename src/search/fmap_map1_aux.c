@@ -434,10 +434,11 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
 
           // use a bound for mismatches
           int32_t allow_mm = 1;
-          if(n_mm < width_cur[offset].bid) {
+          if(n_mm-1 < width_cur[offset].bid) {
               allow_mm = 0;
           }
           else if(offset < len-1
+                  && width_cur[offset].bid == n_mm-1
                   && width_cur[offset+1].bid == width_cur[offset].bid
                   && width_cur[offset+1].w == width_cur[offset].w) {
               allow_mm = 0;
@@ -447,14 +448,11 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
                   allow_mm = 0;
               }
               else if(offset < len-1
+                      && seed_width_cur[offset].bid == n_seed_mm-1
                       && seed_width_cur[offset+1].bid == seed_width_cur[offset].bid
                       && seed_width_cur[offset+1].w == seed_width_cur[offset].w) {
                   allow_mm = 0;
               }
-          }
-
-          if(allow_mm == 0) {
-              continue;
           }
 
           // retrieve the next SA interval

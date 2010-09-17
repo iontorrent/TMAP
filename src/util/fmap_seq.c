@@ -102,6 +102,23 @@ fmap_seq_to_int(fmap_seq_t *seq)
 }
 
 fmap_string_t *
+fmap_seq_get_name(fmap_seq_t *seq)
+{
+  switch(seq->type) {
+    case FMAP_SEQ_TYPE_FQ:
+      return seq->data.fq->name;
+      break;
+    case FMAP_SEQ_TYPE_SFF:
+      return seq->data.sff->rheader->name;
+      break;
+    default:
+      fmap_error("type is unrecognized", Exit, OutOfRange);
+      break;
+  }
+  return NULL;
+}
+
+fmap_string_t *
 fmap_seq_get_bases(fmap_seq_t *seq)
 {
   switch(seq->type) {
@@ -110,6 +127,23 @@ fmap_seq_get_bases(fmap_seq_t *seq)
       break;
     case FMAP_SEQ_TYPE_SFF:
       return seq->data.sff->read->bases;
+      break;
+    default:
+      fmap_error("type is unrecognized", Exit, OutOfRange);
+      break;
+  }
+  return NULL;
+}
+
+fmap_string_t *
+fmap_seq_get_qualities(fmap_seq_t *seq)
+{
+  switch(seq->type) {
+    case FMAP_SEQ_TYPE_FQ:
+      return seq->data.fq->qual;
+      break;
+    case FMAP_SEQ_TYPE_SFF:
+      return seq->data.sff->read->quality;
       break;
     default:
       fmap_error("type is unrecognized", Exit, OutOfRange);
