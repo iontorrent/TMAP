@@ -224,6 +224,7 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
   int32_t alns_num = 0; 
   fmap_bwt_match_occ_t match_sa_start;
   fmap_map1_aln_t **alns=NULL;
+  fmap_string_t *bases[2]={NULL,NULL};
 
   if(0 == bwt->is_rev) fmap_error("0 == bwt->is_rev", Exit, OutOfRange);
 
@@ -233,31 +234,14 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
 
   (*max_score) = aln_score(max_mm, max_gapo, max_gape, opt);
 
-  // check whether there are too many N
-  switch(seq[0]->type) {
-    case FMAP_SEQ_TYPE_FQ: // FASTA/FASTQ
-      for(j=num_n=0;j<seq[0]->data.fq->seq->l;j++) {
-          if(3 < seq[0]->data.fq->seq->s[j]) {
-              num_n++;
-          }
-      }
-      break;
-    case FMAP_SEQ_TYPE_SFF: // SFF
-      num_n = 0; // ignore
-      // to match the SFF format where the value is 100*(flow signal)
-      // ASSUMPTION: that the 'flow signal' scales linearly with the true number of
-      // bases.
-      max_mm *= 100;
-      max_gapo *= 100;
-      max_gape *= 100;
+  bases[0] = fmap_seq_get_bases(seq[0]);
+  bases[1] = fmap_seq_get_bases(seq[1]);
 
-      fmap_error("SFF read type not supported", Exit, OutOfRange);
-      // TODO: support
-      break;
-    default:
-      // after this, we do not need to check the read types
-      fmap_error("unknown read type", Exit, OutOfRange);
-      break;
+  // check whether there are too many N
+  for(j=num_n=0;j<bases[0]->l;j++) {
+      if(3 < bases[0]->s[j]) {
+          num_n++;
+      }
   }
   if(max_mm < num_n) {
       return NULL;
@@ -294,14 +278,10 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
       if(n_mm < 0 || n_gapo < 0 || n_gape < 0) continue; // too many edits
 
       offset = e->offset;
-      if(FMAP_SEQ_TYPE_FQ == seq[0]->type) {
-          str = (uint8_t*)seq[strand]->data.fq->seq->s; 
-          len = seq[strand]->data.fq->seq->l;
-      }
-      else if(FMAP_SEQ_TYPE_SFF == seq[0]->type) {
-          // TODO
-      }
+      str = (uint8_t*)bases[strand]->s;
+      len = bases[strand]->l;
       width_cur = width[strand];
+
       if(NULL != seed_width && offset < opt->seed_length) { 
           seed_width_cur = seed_width[strand];
           n_seed_mm = seed_max_mm - e->n_mm; // consider only mismatches in the seed

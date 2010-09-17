@@ -23,6 +23,7 @@ fmap_string_init(int32_t mem)
 inline void
 fmap_string_destroy(fmap_string_t *str)
 {
+  if(NULL == str) return;
   free(str->s);
   free(str);
 }

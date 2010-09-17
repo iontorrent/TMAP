@@ -76,11 +76,13 @@ typedef struct {
   @field  gheader  pointer to the global header
   @field  rheader  pointer to the read header
   @field  read     pointer to the read
+  @field  is_int   1 if the bases are integer values, 0 otherwise
   */
 typedef struct {
     fmap_sff_header_t *gheader;
     fmap_sff_read_header_t *rheader;
     fmap_sff_read_t *read;
+    int32_t is_int;
 } fmap_sff_t;
 
 /*! @function

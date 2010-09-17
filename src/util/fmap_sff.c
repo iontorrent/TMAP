@@ -111,6 +111,7 @@ fmap_sff_header_read(fmap_file_t *fp)
 void
 fmap_sff_header_destroy(fmap_sff_header_t *h)
 {
+  if(NULL == h) return;
   fmap_string_destroy(h->flow);
   fmap_string_destroy(h->key);
   free(h);
@@ -188,6 +189,7 @@ fmap_sff_read_header_read(fmap_file_t *fp)
 void
 fmap_sff_read_header_destroy(fmap_sff_read_header_t *rh)
 {
+  if(NULL == rh) return;
   fmap_string_destroy(rh->name);
   free(rh);
 }
@@ -283,6 +285,7 @@ fmap_sff_read_read(fmap_file_t *fp, fmap_sff_header_t *gh, fmap_sff_read_header_
 void
 fmap_sff_read_destroy(fmap_sff_read_t *r)
 {
+  if(NULL == r) return;
   free(r->flowgram);
   free(r->flow_index);
   fmap_string_destroy(r->bases);
@@ -331,6 +334,7 @@ fmap_sff_init()
 void 
 fmap_sff_destroy(fmap_sff_t *sff)
 {
+  if(NULL == sff) return;
   fmap_sff_read_header_destroy(sff->rheader);
   fmap_sff_read_destroy(sff->read);
   free(sff);
@@ -354,11 +358,33 @@ fmap_sff_clone(fmap_sff_t *sff)
 void
 fmap_sff_reverse_compliment(fmap_sff_t *sff)
 {
-  fmap_error("Not implemented", Exit, OutOfRange);
+  int32_t i;
+
+  // reverse flow index
+  for(i=0;i<(sff->gheader->flow_length>>2);i++) {
+      uint16_t tmp = sff->read->flowgram[sff->gheader->flow_length-1-i];
+      sff->read->flowgram[sff->gheader->flow_length-1-i] = sff->read->flowgram[i];
+      sff->read->flowgram[i] = tmp;
+  }
+  // reverse flow index
+  for(i=0;i<(sff->rheader->n_bases>>1);i++) {
+      uint8_t tmp = sff->read->flow_index[sff->rheader->n_bases-1-i];
+      sff->read->flow_index[sff->rheader->n_bases-1-i] = sff->read->flow_index[i];
+      sff->read->flow_index[i] = tmp;
+  }
+  // reverse compliment the bases
+  fmap_string_reverse_compliment(sff->read->bases, sff->is_int);
+  // reverse the qualities
+  fmap_string_reverse(sff->read->quality);
 }
 
 void
 fmap_sff_to_int(fmap_sff_t *sff)
 {
-  fmap_error("Not implemented", Exit, OutOfRange);
+  int32_t i;
+  if(1 == sff->is_int) return;
+  for(i=0;i<sff->read->bases->l;i++) {
+      sff->read->bases->s[i] = nt_char_to_int[(int)sff->read->bases->s[i]];
+  }
+  sff->is_int = 1;
 }
