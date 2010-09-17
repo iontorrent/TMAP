@@ -383,6 +383,9 @@ fmap_map1_core(fmap_map1_opt_t *opt)
   sa = fmap_sa_read(opt->fn_fasta, 1);
   fmap_progress_print2("reference data read in");
 
+  // Note: 'fmap_file_stdout' should not have been previously modified
+  fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "wb", opt->output_compr);
+
   // SAM header
   for(i=0;i<refseq->num_annos;i++) {
       fmap_file_fprintf(fmap_file_stdout, "@SQ\tSN:%s\tLN:%d\n",
@@ -394,10 +397,10 @@ fmap_map1_core(fmap_map1_opt_t *opt)
   alns = fmap_malloc(sizeof(fmap_map1_aln_t**)*opt->reads_queue_size, "alns");
 
   if(NULL == opt->fn_reads) {
-      fp_reads = fmap_file_fdopen(fileno(stdin), "rb", FMAP_FILE_NO_COMPRESSION);
+      fp_reads = fmap_file_fdopen(fileno(stdin), "rb", opt->input_compr);
   }
   else {
-      fp_reads = fmap_file_fopen(opt->fn_reads, "rb", FMAP_FILE_NO_COMPRESSION);
+      fp_reads = fmap_file_fopen(opt->fn_reads, "rb", opt->input_compr);
   }
   switch(opt->reads_format) {
     case FMAP_READS_FORMAT_FASTA:
@@ -497,6 +500,9 @@ fmap_map1_core(fmap_map1_opt_t *opt)
       n_reads_processed += seq_buffer_length;
       fmap_progress_print2("processed %d reads", n_reads_processed);
   }
+  
+  // close the outptu
+  fmap_file_fclose(fmap_file_stdout);
 
   // free memory
   for(i=0;i<opt->reads_queue_size;i++) {
@@ -561,6 +567,10 @@ usage(fmap_map1_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "                             1 - random best hit\n");
   fmap_file_fprintf(fmap_file_stderr, "                             2 - all best hits\n");
   fmap_file_fprintf(fmap_file_stderr, "                             3 - all alignments\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -j          the input is bz2 compressed (bzip2)\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -z          the input is gz compressed (gzip)\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -J          the output is bz2 compressed (bzip2)\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -Z          the output is gz compressed (gzip)\n");
   fmap_file_fprintf(fmap_file_stderr, "         -v          print verbose progress information\n");
   fmap_file_fprintf(fmap_file_stderr, "         -h          print this message\n");
   fmap_file_fprintf(fmap_file_stderr, "\n");
@@ -597,8 +607,10 @@ fmap_map1(int argc, char *argv[])
   opt.max_entries= 2000000; // TODO: move this to a define block
   opt.num_threads = 1;
   opt.aln_output_mode = 0; // TODO: move this to a define block
+  opt.input_compr = FMAP_FILE_NO_COMPRESSION;
+  opt.output_compr = FMAP_FILE_NO_COMPRESSION;
 
-  while((c = getopt(argc, argv, "f:r:F:l:k:m:o:e:M:O:E:d:i:b:q:Q:n:a:vh")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:l:k:m:o:e:M:O:E:d:i:b:q:Q:n:a:jzJZvh")) >= 0) {
       switch(c) {
         case 'f':
           opt.fn_fasta = fmap_strdup(optarg); break;
@@ -644,6 +656,14 @@ fmap_map1(int argc, char *argv[])
           opt.aln_output_mode = atoi(optarg); break;
         case 'v':
           fmap_progress_set_verbosity(1); break;
+        case 'j':
+          opt.input_compr = FMAP_FILE_BZ2_COMPRESSION; break;
+        case 'z':
+          opt.input_compr = FMAP_FILE_GZ_COMPRESSION; break;
+        case 'J':
+          opt.output_compr = FMAP_FILE_BZ2_COMPRESSION; break;
+        case 'Z':
+          opt.output_compr = FMAP_FILE_GZ_COMPRESSION; break;
         case 'h':
         default:
           return usage(&opt);
@@ -659,7 +679,7 @@ fmap_map1(int argc, char *argv[])
           fmap_error("option -F or option -r must be specified", Exit, CommandLineArgument);
       }
       if(FMAP_READS_FORMAT_UNKNOWN == opt.reads_format) { // try to auto-recognize
-          opt.reads_format = fmap_get_reads_file_format_from_fn_int(opt.fn_reads);
+          opt.reads_format = fmap_get_reads_file_format_from_fn_int(opt.fn_reads, opt.input_compr);
           if(FMAP_READS_FORMAT_UNKNOWN == opt.reads_format) {
               fmap_error("the reads format (-r) was unrecognized", Exit, CommandLineArgument);
           }

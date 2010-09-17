@@ -96,13 +96,13 @@ int
 fmap_get_reads_file_format_int(char *optarg);
 
 /*! @function
-  @abstract   checks the extension of the file to recognize its format     
-  @param  fn  the file name 
-  @return     the format type
+  @abstract           checks the extension of the file to recognize its format     
+  @param  fn          the file name 
+  @param  compr_type  the type of compression used, if any
+  @return             the format type
   */
 int 
-fmap_get_reads_file_format_from_fn_int(char *fn);
-
+fmap_get_reads_file_format_from_fn_int(char *fn, int32_t compr_type);
 
 /*! @function
   @abstract       

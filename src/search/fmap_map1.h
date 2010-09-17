@@ -31,6 +31,8 @@ enum {
   @field  max_entries       maximum number of alignment nodes (-Q)
   @field  num_threads       the number of threads (-n)
   @field  aln_output_mode   specifies how to choose alignments (-a) 
+  @field  input_compr       the input compression type (-j and -z)
+  @field  output_compr      the output compression type (-j and -z)
 */
 typedef struct {
     char *fn_fasta;
@@ -54,6 +56,8 @@ typedef struct {
     int32_t max_entries;
     int32_t num_threads;
     int32_t aln_output_mode; 
+    int32_t input_compr;
+    int32_t output_compr;
 } fmap_map1_opt_t;
 
 /*! @typedef 

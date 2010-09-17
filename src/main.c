@@ -19,7 +19,7 @@ fmap_map1(int argc, char *argv[]);
 extern int 
 fmap_debug_exact(int argc, char *argv[]);
 
-fmap_file_t *fmap_file_stdout = NULL;
+fmap_file_t *fmap_file_stdout = NULL; // do not initialize as this may used for output
 fmap_file_t *fmap_file_stderr = NULL;
 
 static int usage()
@@ -53,7 +53,6 @@ int main(int argc, char *argv[])
 {
   int ret = 0;
   
-  fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "w", FMAP_FILE_NO_COMPRESSION);
   fmap_file_stderr = fmap_file_fdopen(fileno(stderr), "w", FMAP_FILE_NO_COMPRESSION);
 
   if(argc < 2) ret = usage();
@@ -67,7 +66,6 @@ int main(int argc, char *argv[])
       fmap_error1(PACKAGE, "Unknown command", Exit, CommandLineArgument);
   }
 
-  fmap_file_fclose(fmap_file_stdout);
   fmap_file_fclose(fmap_file_stderr);
 
   return ret;

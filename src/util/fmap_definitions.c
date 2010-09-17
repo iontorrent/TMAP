@@ -3,6 +3,7 @@
 #include "fmap_error.h"
 #include "fmap_alloc.h"
 #include "fmap_definitions.h"
+#include "../io/fmap_file.h"
 
 // Input: ASCII character
 // Output: 2-bit DNA value
@@ -109,14 +110,14 @@ fmap_get_reads_file_format_int(char *optarg)
 }
 
 static char *
-fmap_check_suffix(char *str, char *suffix)
+fmap_check_suffix(char *str, char *suffix, int32_t end_skip_length)
 {
   int32_t i, j;
 
   if(NULL == str) return NULL;
   if(NULL == suffix) return str; // empty suffix always matches
 
-  i=strlen(str)-1;
+  i=strlen(str)- 1 - end_skip_length;
   j=strlen(suffix)-1;
 
   if(i < j) return NULL; // the suffix is longer than the string
@@ -130,15 +131,35 @@ fmap_check_suffix(char *str, char *suffix)
 }
 
 int
-fmap_get_reads_file_format_from_fn_int(char *fn)
+fmap_get_reads_file_format_from_fn_int(char *fn, int32_t compr_type)
 {
-  if(NULL != fmap_check_suffix(fn, ".fa") || NULL != fmap_check_suffix(fn, ".fasta")) {
+  int32_t compr_suffix_length = 0;
+  switch(compr_type) {
+    case FMAP_FILE_BZ2_COMPRESSION:
+      if(NULL == fmap_check_suffix(fn, ".bz2", 0)) {
+          fmap_error("the expected bzip2 file extension is \".bz2\"", Warn, OutOfRange);
+      }
+      compr_suffix_length = 4; // ".bz2"
+      break;
+    case FMAP_FILE_GZ_COMPRESSION:
+      if(NULL == fmap_check_suffix(fn, ".gz", 0)) {
+          fmap_error("the expected gzip file extension is \".gz\"", Warn, OutOfRange);
+      }
+      compr_suffix_length = 3; // ".gz"
+      break;
+    case FMAP_FILE_NO_COMPRESSION:
+    default:
+      break;
+  }
+  if(NULL != fmap_check_suffix(fn, ".fa", compr_suffix_length) 
+     || NULL != fmap_check_suffix(fn, ".fasta", compr_suffix_length)) {
       return FMAP_READS_FORMAT_FASTA;
   }
-  else if(NULL != fmap_check_suffix(fn, ".fq") || NULL != fmap_check_suffix(fn, ".fastq")) {
+  else if(NULL != fmap_check_suffix(fn, ".fq", compr_suffix_length) 
+          || NULL != fmap_check_suffix(fn, ".fastq", compr_suffix_length)) {
       return FMAP_READS_FORMAT_FASTQ;
   }
-  else if(NULL != fmap_check_suffix(fn, ".sff")) {
+  else if(NULL != fmap_check_suffix(fn, ".sff", compr_suffix_length)) {
       return FMAP_READS_FORMAT_SFF;
   }
   return FMAP_READS_FORMAT_UNKNOWN;
