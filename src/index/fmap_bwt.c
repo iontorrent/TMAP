@@ -97,6 +97,8 @@ fmap_bwt_read(const char *fn_fasta, uint32_t is_rev)
   fmap_file_fclose(fp_bwt);
   free(fn_bwt);
 
+  bwt->is_shm = 0;
+
   return bwt;
 }
 
@@ -139,19 +141,27 @@ fmap_bwt_write(const char *fn_fasta, fmap_bwt_t *bwt, uint32_t is_rev)
   free(fn_bwt);
 }
 
-uint64_t
+size_t
 fmap_bwt_shm_num_bytes(fmap_bwt_t *bwt)
 {
   // returns the number of bytes to allocate for shared memory
   int32_t i;
-  uint64_t n = 0;
-  
-  n += sizeof(fmap_bwt_t); // main struct
-  n -= sizeof(uint32_t*); // bwt pointer
-  n -= sizeof(uint32_t*); // hash_k pointer
-  n -= sizeof(uint32_t*); // hash_l pointer
+  size_t n = 0;
+
+  // fixed length data
+  n += sizeof(uint32_t); // version id
+  n += sizeof(uint32_t); // primary
+  n += 5*sizeof(uint32_t); // L2[5]
+  n += sizeof(uint32_t); // seq_len
+  n += sizeof(uint32_t); // bwt_size;
+  n += sizeof(uint32_t); // occ_interval
+  n += 256*sizeof(uint32_t); // cnt_table[256]
+  n += sizeof(uint32_t); // is_rev
+  n += sizeof(uint32_t); // hash_width
+  n += sizeof(uint32_t); // hash_length
+
+  //variable length data
   n += sizeof(uint32_t)*bwt->bwt_size; // bwt
-      
   for(i=1;i<=bwt->hash_width;i++) {
       uint32_t hash_length = 1 << (i * 2); // 4^{hash_width} entries
       n += sizeof(uint32_t)*hash_length; // hash_k[i-1]
@@ -191,7 +201,7 @@ fmap_bwt_shm_unpack(uint8_t *buf)
 {
   fmap_bwt_t *bwt = NULL;
   int32_t i;
-  
+
   bwt = fmap_calloc(1, sizeof(fmap_bwt_t), "bwt");
 
   // fixed length data
@@ -218,16 +228,9 @@ fmap_bwt_shm_unpack(uint8_t *buf)
       bwt->hash_l[i-1] = (uint32_t*)buf; buf += hash_length*sizeof(uint32_t);
   }
 
-  return bwt;
-}
+  bwt->is_shm = 1;
 
-void 
-fmap_bwt_shm_destroy(fmap_bwt_t *bwt)
-{
-  if(bwt == 0) return;
-  free(bwt->hash_k);
-  free(bwt->hash_l);
-  free(bwt);
+  return bwt;
 }
 
 void 
@@ -235,14 +238,21 @@ fmap_bwt_destroy(fmap_bwt_t *bwt)
 {
   int32_t i;
   if(bwt == 0) return;
-  for(i=0;i<bwt->hash_width;i++) {
-      free(bwt->hash_k[i]);
-      free(bwt->hash_l[i]);
+  if(1 == bwt->is_shm) {
+      free(bwt->hash_k);
+      free(bwt->hash_l);
+      free(bwt);
   }
-  free(bwt->hash_k);
-  free(bwt->hash_l);
-  free(bwt->bwt);
-  free(bwt);
+  else {
+      for(i=0;i<bwt->hash_width;i++) {
+          free(bwt->hash_k[i]);
+          free(bwt->hash_l[i]);
+      }
+      free(bwt->hash_k);
+      free(bwt->hash_l);
+      free(bwt->bwt);
+      free(bwt);
+  }
 }
 
 void
@@ -372,7 +382,7 @@ fmap_bwt_gen_hash(fmap_bwt_t *bwt, uint32_t hash_width)
   // Note: this could be improved by using the hash of the previous level etc.
   for(i=1;i<=bwt->hash_width;i++) {
       uint32_t hash_length = 1 << (i * 2); // 4^{hash_width} entries
-      
+
       // allocate memory for this level
       bwt->hash_k[i-1] = fmap_malloc(sizeof(uint32_t)*hash_length, "bwt->hash_k[i-1]");
       bwt->hash_l[i-1] = fmap_malloc(sizeof(uint32_t)*hash_length, "bwt->hash_l[i-1]");
@@ -387,7 +397,7 @@ fmap_bwt_gen_hash(fmap_bwt_t *bwt, uint32_t hash_width)
               sum += bwt->hash_l[i-1][j] - bwt->hash_k[i-1][j] + 1;
           }
       }
-  
+
       //fprintf(stderr, "bwt->seq_len=%u sum=%u\n", bwt->seq_len, sum);
       if(sum != bwt->seq_len - i + 1) {
           fmap_error("sum != bwt->seq_len - bwt->hash_width + 1", Exit, OutOfRange);
@@ -550,7 +560,7 @@ int
 fmap_bwt_pac2bwt_main(int argc, char *argv[])
 {
   int c, is_large = 0, occ_interval = FMAP_BWT_OCC_INTERVAL, hash_width = FMAP_BWT_HASH_WIDTH, help = 0;
-      
+
   fmap_progress_set_start_time(clock());
   fmap_progress_set_command(argv[0]);
 
@@ -565,7 +575,7 @@ fmap_bwt_pac2bwt_main(int argc, char *argv[])
       }
   }
   if(1 != argc - optind || 1 == help) {
-      fprintf(stderr, "Usage: %s %s [-l -o INT -w INT -v -h] <in.fasta>\n", PACKAGE, argv[0]);
+      fmap_file_fprintf(fmap_file_stderr, "Usage: %s %s [-l -o INT -w INT -v -h] <in.fasta>\n", PACKAGE, argv[0]);
       return 1;
   }
   if(0 < occ_interval && 0 != (occ_interval % 16)) {

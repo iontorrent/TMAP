@@ -63,6 +63,7 @@ typedef struct {
   @field  annos       the annotations about the contigs
   @field  len         the total length of the reference sequence
   @field  is_rev      1 if the reference sequence was reversed, 0 otherwise
+  @field  is_shm      1 if loaded from shared memory, 0 otherwise
   */
 typedef struct {
     uint64_t version_id;
@@ -72,6 +73,7 @@ typedef struct {
     uint32_t num_annos;
     uint64_t len;
     uint32_t is_rev;
+    uint32_t is_shm;
 } fmap_refseq_t;
 
 /*! @function
@@ -114,7 +116,7 @@ fmap_refseq_read(const char *fn_fasta, uint32_t is_rev);
   @param  refseq  the refseq structure 
   @return         the number of bytes required for this bwt in shared memory
   */
-uint64_t
+size_t
 fmap_refseq_shm_num_bytes(fmap_refseq_t *refseq);
 
 /*! @function
@@ -130,18 +132,9 @@ fmap_refseq_shm_pack(fmap_refseq_t *refseq, uint8_t *buf);
   @abstract
   @param  buf  the byte array in which to unpack the refseq data
   @return      a pointer to the initialized refseq structure
-  @discussion  do not use 'fmap_refseq_destroy', but instead 'fmap_refseq_shm_destroy'
   */
 fmap_refseq_t *
 fmap_refseq_shm_unpack(uint8_t *buf);
-
-/*! @function
-  @abstract
-  @param  refseq  pointer to the refseq structure to destroy
-  @discussion     only destroys memory allocated by 'fmap_refseq_shm_unpack'
-  */
-void
-fmap_refseq_shm_destroy(fmap_refseq_t *refseq);
 
 /*! @function
   @abstract

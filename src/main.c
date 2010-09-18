@@ -15,6 +15,8 @@ fmap_bwt_pac2bwt_main(int argc, char *argv[]);
 extern int
 fmap_sa_bwt2sa_main(int argc, char *argv[]);
 extern int 
+fmap_server_main(int argc, char *argv[]);
+extern int 
 fmap_map1(int argc, char *argv[]);
 extern int 
 fmap_debug_exact(int argc, char *argv[]);
@@ -40,6 +42,8 @@ static int usage()
   fprintf(stderr, "         fasta2pac      creates the packed FASTA file\n");
   fprintf(stderr, "         pac2bwt        creates the BWT string file from the packed FASTA file\n");
   fprintf(stderr, "         bwt2sa         creates the SA file from the BWT string file\n");
+  fprintf(stderr, "Server:\n");
+  fprintf(stderr, "         server         creates a mapping server\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Mapping:\n");
   fprintf(stderr, "         map1           mapping procedure #1\n");
@@ -60,6 +64,7 @@ int main(int argc, char *argv[])
   else if (0 == strcmp("fasta2pac", argv[1])) ret = fmap_refseq_fasta2pac_main(argc-1, argv+1);
   else if (0 == strcmp("pac2bwt", argv[1])) ret = fmap_bwt_pac2bwt_main(argc-1, argv+1);
   else if (0 == strcmp("bwt2sa", argv[1])) ret = fmap_sa_bwt2sa_main(argc-1, argv+1);
+  else if (0 == strcmp("server", argv[1])) ret = fmap_server_main(argc-1, argv+1);
   else if (0 == strcmp("map1", argv[1])) ret = fmap_map1(argc-1, argv+1);
   else if (0 == strcmp("exact", argv[1])) ret = fmap_debug_exact(argc-1, argv+1);
   else {

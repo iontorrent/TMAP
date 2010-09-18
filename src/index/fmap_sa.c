@@ -45,6 +45,8 @@ fmap_sa_read(const char *fn_fasta, uint32_t is_rev)
   fmap_file_fclose(fp_sa);
   free(fn_sa);
 
+  sa->is_shm = 0;
+
   return sa;
 }
 
@@ -73,14 +75,17 @@ fmap_sa_write(const char *fn_fasta, fmap_sa_t *sa, uint32_t is_rev)
   free(fn_sa);
 }
 
-uint64_t
+size_t
 fmap_sa_shm_num_bytes(fmap_sa_t *sa)
 {
   // returns the number of bytes to allocate for shared memory
-  uint64_t n = 0;
+  size_t n = 0;
   
-  n += sizeof(fmap_sa_t); // main struct
-  n -= sizeof(uint32_t*); // sa pointer
+  n += sizeof(uint32_t); // primary
+  n += sizeof(uint32_t); // sa_intv
+  n += sizeof(uint32_t); // seq_len
+  n += sizeof(uint32_t); // is_rev
+  n += sizeof(uint32_t); // n_sa
   n += sizeof(uint32_t)*sa->n_sa; // sa
 
   return n;
@@ -117,21 +122,22 @@ fmap_sa_shm_unpack(uint8_t *buf)
   // variable length data
   sa->sa = (uint32_t*)buf;
   buf += sa->n_sa*sizeof(uint32_t);
+  
+  sa->is_shm = 1;
 
   return sa;
 }
 
 void 
-fmap_sa_shm_destroy(fmap_sa_t *sa)
-{
-  free(sa);
-}
-
-void 
 fmap_sa_destroy(fmap_sa_t *sa)
 {
+  if(1 == sa->is_shm) {
+  free(sa);
+  }
+  else {
   free(sa->sa);
   free(sa);
+  }
 }
 
 uint32_t 
@@ -905,7 +911,7 @@ fmap_sa_bwt2sa_main(int argc, char *argv[])
       }
   }
   if(1 != argc - optind || 1 == help) {
-      fprintf(stderr, "Usage: %s %s [-i INT -vh] <in.fasta>\n", PACKAGE, argv[0]);
+      fmap_file_fprintf(fmap_file_stderr, "Usage: %s %s [-i INT -vh] <in.fasta>\n", PACKAGE, argv[0]);
       return 1;
   }
   if(0 < intv && 0 != (intv % 2)) {

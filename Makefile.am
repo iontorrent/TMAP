@@ -20,6 +20,8 @@ fmap_SOURCES = \
 			   src/index/fmap_bwt_gen.h src/index/fmap_bwt_gen.c \
 			   src/index/fmap_sa.c src/index/fmap_sa.h \
 			   src/index/fmap_index.h src/index/fmap_index.c \
+			   src/server/fmap_shm.h src/server/fmap_shm.c \
+			   src/server/fmap_server.h src/server/fmap_server.c \
 			   src/debug/fmap_debug_exact.h src/debug/fmap_debug_exact.c \
 			   src/search/fmap_map1_aux.h src/search/fmap_map1_aux.c \
 			   src/search/fmap_map1.h src/search/fmap_map1.c \

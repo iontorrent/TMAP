@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include "fmap_error.h"
 
 static char error_string[][64] =
@@ -15,6 +16,10 @@ static char error_string[][64] =
   "could not write to the file",
   "encountered early end-of-file",
   "error running the threads",
+  "could not get the shared memory",
+  "could not attach the shared memory",
+  "could not control the shared memory",
+  "could not detach the shared memory",
   "last error type"
 };	   
 
@@ -48,11 +53,29 @@ fmap_error_full(const char *file, const unsigned int line, const char *function_
               file, line, function_name, variable_name, action_string[action_type], error_string[error_type]);
   }
 
-  if(error_type == ReadFileError || 
-     error_type == OpenFileError || 
-     error_type == WriteFileError ||
-     error_type == EndOfFile) {
+  if(error_type == ReadFileError 
+     || error_type == OpenFileError 
+     || error_type == WriteFileError 
+     || error_type == EndOfFile) {
       perror("The file stream error was");
+  }
+  else if(error_type == SharedMemoryGet
+          || error_type == SharedMemoryAttach
+          || error_type == SharedMemoryControl
+          || error_type == SharedMemoryDetach) {
+      fprintf(stderr, "errno: ");
+      switch(errno) {
+        case EACCES: fprintf(stderr, "EACCES\n"); break;
+        case EEXIST: fprintf(stderr, "EEXIST\n"); break;
+        case EINVAL: fprintf(stderr, "EINVAL\n"); break;
+        case ENOENT: fprintf(stderr, "ENOENT\n"); break;
+        case ENOMEM: fprintf(stderr, "ENOMEM\n"); break;
+        case ENOSPC: fprintf(stderr, "ENOSPC\n"); break;
+        case EPERM: fprintf(stderr, "EPERM\n"); break;
+        case EOVERFLOW: fprintf(stderr, "EOVERFLOW\n"); break;
+        default: fprintf(stderr, "Uknown error\n"); break;
+      }
+      perror("The shared memory error was");
   }
 
   switch(action_type) {

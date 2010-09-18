@@ -23,6 +23,10 @@ enum {Exit, Warn, LastActionType};
   @field  WriteFileError       could not write from a file
   @field  EndOfFile            reached the end-of-file prematurely
   @field  ThreadError          error starting/joining threads
+  @field  SharedMemoryGet      could not get the shared memory
+  @field  SharedMemoryAttach   could not attach the shared memory
+  @field  SharedMemoryControl  could not control the shared memory
+  @field  SharedMemoryDetach   could not detach the shared memory
   @field  LastErrorType        dummy error type 
   */
 enum {
@@ -36,6 +40,10 @@ enum {
     WriteFileError,
     EndOfFile,
     ThreadError,
+    SharedMemoryGet,
+    SharedMemoryAttach,
+    SharedMemoryControl,
+    SharedMemoryDetach,
     LastErrorType,
 };
 

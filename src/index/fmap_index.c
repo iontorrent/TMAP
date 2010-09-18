@@ -47,7 +47,7 @@ static void fmap_index_core(fmap_index_opt_t *opt)
 static int usage(fmap_index_opt_t *opt)
 {
   fmap_file_fprintf(fmap_file_stderr, "\n");
-  fmap_file_fprintf(fmap_file_stderr, "Usage: %s index [optionsn", PACKAGE);
+  fmap_file_fprintf(fmap_file_stderr, "Usage: %s index [options]", PACKAGE);
   fmap_file_fprintf(fmap_file_stderr, "\n");
   fmap_file_fprintf(fmap_file_stderr, "Options (required):\n");
   fmap_file_fprintf(fmap_file_stderr, "         -f FILE     the FASTA file name to index\n");

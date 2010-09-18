@@ -7,9 +7,10 @@
   @field  primary  S^{-1}(0), or the primary index of BWT
   @field  sa_intv  the suffix array interval (sampled)
   @field  seq_len  the length of the reference sequence
-  @field  is_rev        1 if the reference sequence was reversed, 0 otherwise
+  @field  is_rev   1 if the reference sequence was reversed, 0 otherwise
   @field  n_sa     number of suffix array entries
   @field  sa       pointer to the suffix array entries
+  @field  is_shm   1 if loaded from shared memory, 0 otherwise
   */
 typedef struct {
     uint32_t primary; // S^{-1}(0), or the primary index of BWT
@@ -18,6 +19,7 @@ typedef struct {
     uint32_t is_rev;
     uint32_t n_sa;
     uint32_t *sa;
+    uint32_t is_shm;
 } fmap_sa_t;
 
 /*! @function
@@ -43,7 +45,7 @@ fmap_sa_write(const char *fn_fasta, fmap_sa_t *sa, uint32_t is_rev);
   @param  sa  the sa structure 
   @return     the number of bytes required for this sa in shared memory
   */
-uint64_t
+size_t
 fmap_sa_shm_num_bytes(fmap_sa_t *sa);
 
 /*! @function
@@ -59,18 +61,9 @@ fmap_sa_shm_pack(fmap_sa_t *sa, uint8_t *buf);
   @abstract
   @param  buf  the byte array in which to unpack the sa data
   @return      a pointer to the initialized sa structure
-  @discussion  do not use 'fmap_sa_destroy', but instead 'fmap_sa_shm_destroy'
   */
 fmap_sa_t *
 fmap_sa_shm_unpack(uint8_t *buf);
-
-/*! @function
-  @abstract
-  @param  sa  pointer to the sa structure to destroy
-  @discussion  only destroys memory allocated by 'fmap_sa_shm_unpack'
-  */
-void
-fmap_sa_shm_destroy(fmap_sa_t *sa);
 
 /*! @function
   @param  sa  pointer to the suffix array structure

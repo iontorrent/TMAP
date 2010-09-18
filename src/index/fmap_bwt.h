@@ -53,6 +53,7 @@ typedef unsigned char uint8_t;
   @field  hash_l        hash of the BWT occurence array (upper bounds)
   @field  hash_width    the k-mer that is hashed
   @field  hash_length   4^{hash_width}
+  @field  is_shm        1 if loaded from shared memory, 0 otherwise
   */
 typedef struct {
     uint32_t version_id;
@@ -68,6 +69,7 @@ typedef struct {
     uint32_t **hash_l; // BWT hash 
     uint32_t hash_width; 
     uint32_t hash_length;
+    uint32_t is_shm;
 } fmap_bwt_t;
 
 /*! @function
@@ -93,7 +95,7 @@ fmap_bwt_write(const char *fn_fasta, fmap_bwt_t *bwt, uint32_t is_rev);
   @param  bwt  the bwt structure 
   @return      the number of bytes required for this bwt in shared memory
   */
-uint64_t
+size_t
 fmap_bwt_shm_num_bytes(fmap_bwt_t *bwt);
 
 /*! @function
@@ -109,18 +111,9 @@ fmap_bwt_shm_pack(fmap_bwt_t *bwt, uint8_t *buf);
   @abstract
   @param  buf  the byte array in which to unpack the bwt data
   @return      a pointer to the initialized bwt structure
-  @discussion  do not use 'fmap_bwt_destroy', but instead 'fmap_bwt_shm_destroy'
   */
 fmap_bwt_t *
 fmap_bwt_shm_unpack(uint8_t *buf);
-
-/*! @function
-  @abstract
-  @param  bwt  pointer to the bwt structure to destroy
-  @discussion  only destroys memory allocated by 'fmap_bwt_shm_unpack'
-  */
-void
-fmap_bwt_shm_destroy(fmap_bwt_t *bwt);
 
 /*! @function
   @abstract
@@ -131,7 +124,7 @@ fmap_bwt_destroy(fmap_bwt_t *bwt);
 
 /*! @function
   @abstract
-  @param  bwt           pointer to the bwt structure to destroy
+  @param  bwt           pointer to the bwt structure to update
   @param  occ_interval  the new occurrence interval
   */
 void 

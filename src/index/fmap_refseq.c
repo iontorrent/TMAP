@@ -72,6 +72,7 @@ fmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   refseq->num_annos = 0;
   refseq->len = 0;
   refseq->is_rev = 0;
+  refseq->is_shm = 0;
   memset(buffer, 0, FMAP_REFSEQ_BUFFER_SIZE);
   buffer_length = 0;
 
@@ -126,7 +127,7 @@ fmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   }
   refseq->seq = NULL; // IMPORTANT: nullify this
   ref_len = refseq->len; // save for return
-  
+
   // write annotation file
   fn_anno = fmap_get_file_name(fn_fasta, FMAP_ANNO_FILE);
   fp_anno = fmap_file_fopen(fn_anno, "wb", FMAP_ANNO_COMPRESSION);
@@ -155,7 +156,7 @@ fmap_refseq_pac2revpac(const char *fn_fasta)
 {
   uint32_t i, j, c;
   fmap_refseq_t *refseq=NULL, *refseq_rev=NULL;
-  
+
   fmap_progress_print("reversing the packed reference FASTA");
 
   refseq = fmap_refseq_read(fn_fasta, 0);
@@ -163,7 +164,7 @@ fmap_refseq_pac2revpac(const char *fn_fasta)
   // shallow copy
   refseq_rev = fmap_calloc(1, sizeof(fmap_refseq_t), "refseq_rev");
   (*refseq_rev) = (*refseq);
-  
+
   // update sequence
   refseq_rev->seq = NULL;
   refseq_rev->seq = fmap_calloc(fmap_refseq_seq_memory(refseq->len), sizeof(uint8_t), "refseq_rev->seq");
@@ -180,7 +181,7 @@ fmap_refseq_pac2revpac(const char *fn_fasta)
   free(refseq_rev->seq);
   free(refseq_rev);
   fmap_refseq_destroy(refseq);
-  
+
   fmap_progress_print2("reversed the packed reference FASTA");
 }
 
@@ -273,10 +274,11 @@ fmap_refseq_read(const char *fn_fasta, uint32_t is_rev)
   fmap_file_t *fp_pac = NULL, *fp_anno = NULL;;
   char *fn_pac = NULL, *fn_anno = NULL;
   fmap_refseq_t *refseq = NULL;
-  
+
   // allocate some memory 
   refseq = fmap_calloc(1, sizeof(fmap_refseq_t), "refseq");
   refseq->is_rev = is_rev;
+  refseq->is_shm = 0;
 
   // read annotation file
   fn_anno = fmap_get_file_name(fn_fasta, FMAP_ANNO_FILE);
@@ -300,23 +302,24 @@ fmap_refseq_read(const char *fn_fasta, uint32_t is_rev)
   return refseq;
 }
 
-uint64_t 
+size_t
 fmap_refseq_shm_num_bytes(fmap_refseq_t *refseq)
 {
   // returns the number of bytes to allocate for shared memory
   int32_t i;
-  uint64_t n = 0;
+  size_t n = 0;
 
-
-  n += sizeof(fmap_refseq_t); // struct
+  n += sizeof(uint64_t); // version_id
+  n += sizeof(uint32_t); // seed
+  n += sizeof(uint32_t); // annos
+  n += sizeof(uint64_t); // len
+  n += sizeof(uint32_t); // is_rev
   n += sizeof(uint8_t)*fmap_refseq_seq_memory(refseq->len); // seq 
-  n -= sizeof(uint8_t*); // seq pointer 
-  n -= sizeof(fmap_anno_t*); // annos pointer
   for(i=0;i<refseq->num_annos;i++) {
-      n += sizeof(fmap_anno_t); // annos[i]
-      n -= sizeof(fmap_string_t); // annos[i]->name pointer
-      n += sizeof(uint32_t); // annos[i].name->l
-      n += sizeof(char)*refseq->annos[i].name->l; // annos[i]->name->s
+      n += sizeof(uint64_t); // len
+      n += sizeof(uint64_t); // offset
+      n += sizeof(size_t); // annos[i].name->l
+      n += sizeof(char)*(refseq->annos[i].name->l+1); // annos[i].name->s
   }
 
   return n;
@@ -326,6 +329,7 @@ uint8_t *
 fmap_refseq_shm_pack(fmap_refseq_t *refseq, uint8_t *buf)
 {
   int32_t i;
+
   // fixed length data
   memcpy(buf, &refseq->version_id, sizeof(uint64_t)) ; buf += sizeof(uint64_t);
   memcpy(buf, &refseq->seed, sizeof(uint32_t)) ; buf += sizeof(uint32_t);
@@ -335,14 +339,15 @@ fmap_refseq_shm_pack(fmap_refseq_t *refseq, uint8_t *buf)
   // variable length data
   memcpy(buf, refseq->seq, fmap_refseq_seq_memory(refseq->len)*sizeof(uint8_t)); 
   buf += fmap_refseq_seq_memory(refseq->len)*sizeof(uint8_t);
+
   for(i=0;i<refseq->num_annos;i++) {
       // fixed length data
       memcpy(buf, &refseq->annos[i].len, sizeof(uint64_t)); buf += sizeof(uint64_t); 
       memcpy(buf, &refseq->annos[i].offset, sizeof(uint64_t)); buf += sizeof(uint64_t); 
-      memcpy(buf, &refseq->annos[i].name->l, sizeof(uint32_t)); buf += sizeof(uint32_t);
+      memcpy(buf, &refseq->annos[i].name->l, sizeof(size_t)); buf += sizeof(size_t);
       // variable length data
-      memcpy(buf, refseq->annos[i].name->s, sizeof(char)*refseq->annos[i].name->l);
-      buf += sizeof(char)*refseq->annos[i].name->l;
+      memcpy(buf, refseq->annos[i].name->s, sizeof(char)*(refseq->annos[i].name->l+1));
+      buf += sizeof(char)*(refseq->annos[i].name->l+1);
   }
 
   return buf;
@@ -355,7 +360,7 @@ fmap_refseq_shm_unpack(uint8_t *buf)
   fmap_refseq_t *refseq = NULL;
 
   refseq = fmap_calloc(1, sizeof(fmap_refseq_t), "refseq");
-  
+
   // fixed length data
   memcpy(&refseq->version_id, buf, sizeof(uint64_t)) ; buf += sizeof(uint64_t);
   memcpy(&refseq->seed, buf, sizeof(uint32_t)) ; buf += sizeof(uint32_t);
@@ -369,25 +374,22 @@ fmap_refseq_shm_unpack(uint8_t *buf)
   // variable length data
   refseq->seq = (uint8_t*)buf;
   buf += fmap_refseq_seq_memory(refseq->len)*sizeof(uint8_t);
+  refseq->annos = fmap_calloc(refseq->num_annos, sizeof(fmap_anno_t), "refseq->annos");
   for(i=0;i<refseq->num_annos;i++) {
       // fixed length data
       memcpy(&refseq->annos[i].len, buf, sizeof(uint64_t)); buf += sizeof(uint64_t); 
       memcpy(&refseq->annos[i].offset, buf, sizeof(uint64_t)); buf += sizeof(uint64_t); 
-      memcpy(&refseq->annos[i].name->l, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
-      refseq->annos[i].name->m = refseq->annos[i].name->l;
+      refseq->annos[i].name = fmap_string_init(0);
+      memcpy(&refseq->annos[i].name->l, buf, sizeof(size_t)); buf += sizeof(size_t);
+      refseq->annos[i].name->m = refseq->annos[i].name->l+1;
       // variable length data
       refseq->annos[i].name->s = (char*)buf;
-      buf += sizeof(char)*refseq->annos[i].name->l;
+      buf += sizeof(char)*refseq->annos[i].name->l+1;
   }
 
-  return refseq;
-}
+  refseq->is_shm = 1;
 
-void
-fmap_refseq_shm_destroy(fmap_refseq_t *refseq)
-{
-  free(refseq->annos);
-  free(refseq);
+  return refseq;
 }
 
 void
@@ -395,12 +397,21 @@ fmap_refseq_destroy(fmap_refseq_t *refseq)
 {
   uint32_t i;
 
-  for(i=0;i<refseq->num_annos;i++) {
-      fmap_string_destroy(refseq->annos[i].name);
+  if(1 == refseq->is_shm) {
+      for(i=0;i<refseq->num_annos;i++) {
+          free(refseq->annos[i].name);
+      }
+      free(refseq->annos);
+      free(refseq);
   }
-  free(refseq->annos);
-  free(refseq->seq);
-  free(refseq);
+  else {
+      for(i=0;i<refseq->num_annos;i++) {
+          fmap_string_destroy(refseq->annos[i].name);
+      }
+      free(refseq->annos);
+      free(refseq->seq);
+      free(refseq);
+  }
 }
 
 // zero-based
@@ -473,7 +484,7 @@ fmap_refseq_fasta2pac_main(int argc, char *argv[])
       }
   }
   if(1 != argc - optind || 1 == help) {
-      fprintf(stderr, "Usage: %s %s [-v -h] <in.fasta>\n", PACKAGE, argv[0]);
+      fmap_file_fprintf(fmap_file_stderr, "Usage: %s %s [-v -h] <in.fasta>\n", PACKAGE, argv[0]);
       return 1;
   }
 
