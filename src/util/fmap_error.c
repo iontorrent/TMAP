@@ -20,6 +20,7 @@ static char error_string[][64] =
   "could not attach the shared memory",
   "could not control the shared memory",
   "could not detach the shared memory",
+  "could not find the listing in the shared memory",
   "last error type"
 };	   
 

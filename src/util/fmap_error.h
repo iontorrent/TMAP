@@ -27,6 +27,7 @@ enum {Exit, Warn, LastActionType};
   @field  SharedMemoryAttach   could not attach the shared memory
   @field  SharedMemoryControl  could not control the shared memory
   @field  SharedMemoryDetach   could not detach the shared memory
+  @field  SharedMemoryListing  could not find the listing in shared memory
   @field  LastErrorType        dummy error type 
   */
 enum {
@@ -44,6 +45,7 @@ enum {
     SharedMemoryAttach,
     SharedMemoryControl,
     SharedMemoryDetach,
+    SharedMemoryListing,
     LastErrorType,
 };
 

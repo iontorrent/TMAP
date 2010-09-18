@@ -12,6 +12,16 @@
 #define FMAP_SHM_READY 0xffaa6161
 #define FMAP_SHM_DEAD  0xaabbccdd
 
+// 32 listings supported
+enum {
+    FMAP_SERVER_LISTING_REFSEQ     = 0x1,
+    FMAP_SERVER_LISTING_REV_REFSEQ = 0x2,
+    FMAP_SERVER_LISTING_BWT        = 0x4,
+    FMAP_SERVER_LISTING_REV_BWT    = 0x8,
+    FMAP_SERVER_LISTING_SA         = 0x10,
+    FMAP_SERVER_LISTING_REV_SA     = 0x20
+};
+
 /*! @typedef
   @abstract
   @field  key    the key of the shared memory 
@@ -39,6 +49,42 @@ fmap_shm_get_state(fmap_shm_t *shm);
 
 /*! @function
   @abstract
+  @param  shm      pointer to the shared memory structure
+  @param  listing  the listing to check
+  @return          1 if the listing exists, 0 otherwise
+  */
+inline uint32_t
+fmap_shm_listing_exists(fmap_shm_t *shm, uint32_t listing);
+
+/*! @function
+  @abstract
+  @param  shm      pointer to the shared memory structure
+  @param  listing  the listing of the shared memory
+  @param  size     size of the listing in bytes
+  */
+inline void
+fmap_shm_add_listing(fmap_shm_t *shm, uint32_t listing, size_t size);
+
+/*! @function
+  @abstract
+  @param  shm      pointer to the shared memory structure
+  @param  listing  the listing of the shared memory
+  @return          the number of bytes from the start of the buffer, or SIZE_MAX if the listing does not exist
+  */
+inline size_t
+fmap_shm_get_listing_bytes(fmap_shm_t *shm, uint32_t listing);
+
+/*! @function
+  @abstract
+  @param  shm      pointer to the shared memory structure
+  @param  listing  the listing of the shared memory
+  @return          pointer to the beginning of the packed listing
+  */
+inline uint8_t *
+fmap_shm_get_buffer(fmap_shm_t *shm, uint32_t listing);
+
+/*! @function
+  @abstract
   @param  shm  pointer to the shared memory structure
   */
 inline void
@@ -59,10 +105,10 @@ fmap_shm_set_dead(fmap_shm_t *shm);
 
 /*! @function
   @abstract
-  @param  key     the key of the shared memory 
-  @param  size    the size of the shared memory
-  @param  create  1 if the process is to create the shared memory, 0 otherwise
-  @return         a pointer to the initialized shared memory
+  @param  key         the key of the shared memory 
+  @param  size        the total size of the shared memory
+  @param  create      1 if the process is to create the shared memory, 0 otherwise
+  @return             a pointer to the initialized shared memory
   */
 fmap_shm_t *
 fmap_shm_init(key_t key, size_t size, int32_t create);

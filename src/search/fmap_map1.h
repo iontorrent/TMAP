@@ -33,6 +33,7 @@ enum {
   @field  aln_output_mode   specifies how to choose alignments (-a) 
   @field  input_compr       the input compression type (-j and -z)
   @field  output_compr      the output compression type (-j and -z)
+  @field  shm_key           the shared memory key (-s)
 */
 typedef struct {
     char *fn_fasta;
@@ -58,6 +59,7 @@ typedef struct {
     int32_t aln_output_mode; 
     int32_t input_compr;
     int32_t output_compr;
+    key_t shm_key;
 } fmap_map1_opt_t;
 
 /*! @typedef 

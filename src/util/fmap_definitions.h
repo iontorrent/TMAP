@@ -79,6 +79,13 @@ extern uint8_t nt_char_to_rc_char[256];
 #endif
 
 /*! @function
+  @param  v  the value to take the log 2
+  @return    log of the value, base two
+ */
+inline uint32_t 
+fmap_log2(uint32_t v);
+
+/*! @function
   @abstract       gets the name of a specific file based on the reference sequence
   @param  prefix   the prefix of the file to be written, usually the fasta file name 
   @param  type    the type of file based on this reference sequence

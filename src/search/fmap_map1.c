@@ -11,6 +11,7 @@
 #include "../index/fmap_bwt_match.h"
 #include "../index/fmap_sa.h"
 #include "../io/fmap_seq_io.h"
+#include "../server/fmap_shm.h"
 #include "fmap_map1_aux.h"
 #include "fmap_map1.h"
 
@@ -374,14 +375,34 @@ fmap_map1_core(fmap_map1_opt_t *opt)
   fmap_seq_io_t *seqio = NULL;
   fmap_seq_t **seq_buffer = NULL;
   fmap_map1_aln_t ***alns = NULL;
+  fmap_shm_t *shm = NULL;
 
   // For suffix search we need the reverse bwt/sa and forward refseq
-  fmap_progress_print("reading in reference data");
-  refseq = fmap_refseq_read(opt->fn_fasta, 0);
-  bwt[0] = fmap_bwt_read(opt->fn_fasta, 0);
-  bwt[1] = fmap_bwt_read(opt->fn_fasta, 1);
-  sa = fmap_sa_read(opt->fn_fasta, 1);
-  fmap_progress_print2("reference data read in");
+  if(0 == opt->shm_key) {
+      fmap_progress_print("reading in reference data");
+      refseq = fmap_refseq_read(opt->fn_fasta, 0);
+      bwt[0] = fmap_bwt_read(opt->fn_fasta, 0);
+      bwt[1] = fmap_bwt_read(opt->fn_fasta, 1);
+      sa = fmap_sa_read(opt->fn_fasta, 1);
+      fmap_progress_print2("reference data read in");
+  }
+  else {
+      fmap_progress_print("retrieving reference data from shared memory");
+      shm = fmap_shm_init(opt->shm_key, 0, 0);
+      if(NULL == (refseq = fmap_refseq_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SERVER_LISTING_REFSEQ)))) {
+          fmap_error("the packed reference sequence was not found in shared memory", Exit, SharedMemoryListing);
+      }
+      if(0 == (bwt[0] = fmap_bwt_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SERVER_LISTING_BWT)))) {
+          fmap_error("the BWT string was not found in shared memory", Exit, SharedMemoryListing);
+      }
+      if(0 == (bwt[1] = fmap_bwt_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SERVER_LISTING_REV_BWT)))) {
+          fmap_error("the reverse BWT string was not found in shared memory", Exit, SharedMemoryListing);
+      }
+      if(0 == (sa = fmap_sa_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SERVER_LISTING_REV_SA)))) {
+          fmap_error("the reverse SA was not found in shared memory", Exit, SharedMemoryListing);
+      }
+      fmap_progress_print2("reference data retrieved from shared memory");
+  }
 
   // Note: 'fmap_file_stdout' should not have been previously modified
   fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "wb", opt->output_compr);
@@ -500,7 +521,7 @@ fmap_map1_core(fmap_map1_opt_t *opt)
       n_reads_processed += seq_buffer_length;
       fmap_progress_print2("processed %d reads", n_reads_processed);
   }
-  
+
   // close the outptu
   fmap_file_fclose(fmap_file_stdout);
 
@@ -516,6 +537,9 @@ fmap_map1_core(fmap_map1_opt_t *opt)
   fmap_bwt_destroy(bwt[1]);
   fmap_sa_destroy(sa);
   fmap_seq_io_destroy(seqio);
+  if(0 < opt->shm_key) {
+      fmap_shm_destroy(shm, 0);
+  }
 }
 
 static int 
@@ -571,6 +595,7 @@ usage(fmap_map1_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "         -z          the input is gz compressed (gzip)\n");
   fmap_file_fprintf(fmap_file_stderr, "         -J          the output is bz2 compressed (bzip2)\n");
   fmap_file_fprintf(fmap_file_stderr, "         -Z          the output is gz compressed (gzip)\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -s INT      use shared memory with the following key [%d]\n", opt->shm_key);
   fmap_file_fprintf(fmap_file_stderr, "         -v          print verbose progress information\n");
   fmap_file_fprintf(fmap_file_stderr, "         -h          print this message\n");
   fmap_file_fprintf(fmap_file_stderr, "\n");
@@ -609,8 +634,9 @@ fmap_map1(int argc, char *argv[])
   opt.aln_output_mode = 0; // TODO: move this to a define block
   opt.input_compr = FMAP_FILE_NO_COMPRESSION;
   opt.output_compr = FMAP_FILE_NO_COMPRESSION;
+  opt.shm_key = 0;
 
-  while((c = getopt(argc, argv, "f:r:F:l:k:m:o:e:M:O:E:d:i:b:q:Q:n:a:jzJZvh")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:l:k:m:o:e:M:O:E:d:i:b:q:Q:n:a:jzJZs:vh")) >= 0) {
       switch(c) {
         case 'f':
           opt.fn_fasta = fmap_strdup(optarg); break;
@@ -654,8 +680,6 @@ fmap_map1(int argc, char *argv[])
           opt.num_threads = atoi(optarg); break;
         case 'a':
           opt.aln_output_mode = atoi(optarg); break;
-        case 'v':
-          fmap_progress_set_verbosity(1); break;
         case 'j':
           opt.input_compr = FMAP_FILE_BZ2_COMPRESSION; break;
         case 'z':
@@ -664,6 +688,10 @@ fmap_map1(int argc, char *argv[])
           opt.output_compr = FMAP_FILE_BZ2_COMPRESSION; break;
         case 'Z':
           opt.output_compr = FMAP_FILE_GZ_COMPRESSION; break;
+        case 's':
+          opt.shm_key = atoi(optarg); break;
+        case 'v':
+          fmap_progress_set_verbosity(1); break;
         case 'h':
         default:
           return usage(&opt);
@@ -674,7 +702,12 @@ fmap_map1(int argc, char *argv[])
       return usage(&opt);
   }
   else { // check command line arguments
-      if(NULL == opt.fn_fasta) fmap_error("required option -f", Exit, CommandLineArgument);
+      if(NULL == opt.fn_fasta && 0 == opt.shm_key) {
+          fmap_error("option -f or option -s must be specified", Exit, CommandLineArgument);
+      }
+      else if(NULL != opt.fn_fasta && 0 < opt.shm_key) {
+          fmap_error("option -f and option -s may not be specified together", Exit, CommandLineArgument);
+      }
       if(NULL == opt.fn_reads && FMAP_READS_FORMAT_UNKNOWN == opt.reads_format) {
           fmap_error("option -F or option -r must be specified", Exit, CommandLineArgument);
       }

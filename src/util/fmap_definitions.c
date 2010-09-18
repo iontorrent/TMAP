@@ -47,6 +47,17 @@ uint8_t nt_char_to_rc_char[256] = {
     'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N'
 };
 
+inline uint32_t fmap_log2(uint32_t v)
+{
+  uint32_t c = 0;
+  if(v & 0xffff0000u) { v >>= 16; c |= 16; }
+  if(v & 0xff00) { v >>= 8; c |= 8; }
+  if(v & 0xf0) { v >>= 4; c |= 4; }
+  if(v & 0xc) { v >>= 2; c |= 2; }
+  if(v & 0x2) c |= 1;
+  return c;
+}
+
 inline char *
 fmap_get_file_name(const char *prefix, int32_t type)
 {

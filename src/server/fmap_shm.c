@@ -8,6 +8,7 @@
 
 #include "../util/fmap_error.h"
 #include "../util/fmap_alloc.h"
+#include "../util/fmap_definitions.h"
 #include "fmap_shm.h"
 
 static int32_t
@@ -16,7 +17,6 @@ fmap_shmget(key_t key, size_t size, int32_t shmflg)
   int32_t shmid;
 
   if((shmid = shmget(key, size, shmflg)) < 0) {
-      fprintf(stderr, "size=%lld\n", (long long int)size);
       fmap_error(NULL, Exit, SharedMemoryGet);
   }
 
@@ -84,6 +84,54 @@ fmap_shm_set_dead(fmap_shm_t *shm)
   fmap_shm_set_state(shm, FMAP_SHM_DEAD);
 }
 
+static inline uint32_t 
+fmap_shm_get_listing(fmap_shm_t *shm)
+{
+  return ((volatile uint32_t*)shm->ptr)[1];
+}
+
+inline uint32_t
+fmap_shm_listing_exists(fmap_shm_t *shm, uint32_t listing)
+{
+  if(listing == (listing & fmap_shm_get_listing(shm))) {
+      return 1;
+  }
+  else {
+      return 0;
+  }
+}
+
+inline void
+fmap_shm_add_listing(fmap_shm_t *shm, uint32_t listing, size_t size)
+{
+  ((volatile uint32_t*)shm->ptr)[1] |= listing;
+  ((size_t*)(((volatile uint32_t*)shm->ptr) + 2))[fmap_log2(listing)] = size;
+}
+
+inline size_t
+fmap_shm_get_listing_bytes(fmap_shm_t *shm, uint32_t listing)
+{
+  int32_t i;
+  size_t s = 0;
+
+  if(0 == fmap_shm_listing_exists(shm, listing)) return SIZE_MAX;
+
+  for(i=1;i<listing;i<<=1) {
+      if(1 == fmap_shm_listing_exists(shm, i)) {
+          s += ((size_t*)(((volatile uint32_t*)shm->ptr) + 2))[fmap_log2(i)];
+      }
+  }
+  return s;
+}
+
+inline uint8_t *
+fmap_shm_get_buffer(fmap_shm_t *shm, uint32_t listing)
+{
+  size_t s = fmap_shm_get_listing_bytes(shm, listing);
+  if(SIZE_MAX == s) return NULL;
+  return (uint8_t*)(((volatile uint8_t*)(shm->buf)) + s);
+}
+
 fmap_shm_t *
 fmap_shm_init(key_t key, size_t size, int32_t create)
 {
@@ -94,9 +142,11 @@ fmap_shm_init(key_t key, size_t size, int32_t create)
   shm = fmap_calloc(1, sizeof(fmap_shm_t), "shm");
   shm->key = key;
   shm->size = size;
-  
+
   if(1 == create) {
-      shm->size += sizeof(uint32_t); // add four for synchronization
+      shm->size += sizeof(uint32_t); // add for synchronization
+      shm->size += sizeof(uint32_t); // add for on/off bits for listing what is in memory
+      shm->size += 32*sizeof(size_t); // add for the byte size of each listing
       shmflg = IPC_CREAT | IPC_EXCL | 0666;
   }
   else {
@@ -108,7 +158,9 @@ fmap_shm_init(key_t key, size_t size, int32_t create)
 
   // attach the shared memory
   shm->ptr = fmap_shmat(shm->shmid, NULL, 0);
-  shm->buf = ((char*)shm->ptr) + sizeof(uint32_t);
+  shm->buf = ((char*)shm->ptr);
+  shm->buf += sizeof(uint32_t); // synchronization 
+  shm->buf += sizeof(uint32_t) + 32*sizeof(size_t); // listings
 
   if(1 == create) {
       // check that the current process created the shared memory
@@ -133,10 +185,10 @@ void
 fmap_shm_destroy(fmap_shm_t *shm, int32_t force)
 {
   struct shmid_ds buf;
-      
+
   // detach the shared memory
   fmap_shmdt(shm->ptr);
-  
+
   fmap_shmctl(shm->shmid, IPC_STAT, &buf);
   if(1 == force || buf.shm_cpid == getpid()) { // delete the shared memory
       fmap_shmctl(shm->shmid, IPC_RMID, NULL);
