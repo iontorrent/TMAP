@@ -11,6 +11,8 @@
 #define FMAP_SHM_NOT_READY ~0xffaa6161
 #define FMAP_SHM_READY 0xffaa6161
 #define FMAP_SHM_DEAD  0xaabbccdd
+#define FMAP_SHMGET_SLEEP 10
+#define FMAP_SHMGET_RETRIES 10
 
 // 32 listings supported
 enum {

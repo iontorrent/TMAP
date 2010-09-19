@@ -12,10 +12,20 @@
 #include "fmap_shm.h"
 
 static int32_t
-fmap_shmget(key_t key, size_t size, int32_t shmflg)
+fmap_shmget(key_t key, size_t size, int32_t shmflg, int32_t create)
 {
-  int32_t shmid;
+  int32_t shmid, i;
 
+  if(0 == create) {
+      // try a number of times before failing
+      for(i=0,shmid=-1;shmid<0 && i<FMAP_SHMGET_RETRIES-1;i++) {
+          if(0 <= (shmid = shmget(key, size, shmflg))) {
+              return shmid;
+          }
+          // sleep and retry
+          sleep(FMAP_SHMGET_SLEEP);
+      }
+  }
   if((shmid = shmget(key, size, shmflg)) < 0) {
       fmap_error(NULL, Exit, SharedMemoryGet);
   }
@@ -154,7 +164,7 @@ fmap_shm_init(key_t key, size_t size, int32_t create)
   }
 
   // get the shared memory id
-  shm->shmid = fmap_shmget(shm->key, shm->size, shmflg);
+  shm->shmid = fmap_shmget(shm->key, shm->size, shmflg, create);
 
   // attach the shared memory
   shm->ptr = fmap_shmat(shm->shmid, NULL, 0);
