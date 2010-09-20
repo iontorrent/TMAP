@@ -149,7 +149,7 @@ fmap_shm_t *
 fmap_shm_init(key_t key, size_t size, int32_t create)
 {
   fmap_shm_t *shm = NULL;
-  int32_t shmflg = 0;
+  int32_t i, shmflg = 0;
   struct shmid_ds buf;
 
   shm = fmap_calloc(1, sizeof(fmap_shm_t), "shm");
@@ -175,9 +175,9 @@ fmap_shm_init(key_t key, size_t size, int32_t create)
   shm->buf += sizeof(uint32_t); // synchronization 
   shm->buf += sizeof(uint32_t) + 32*sizeof(size_t); // listings
 
+  fmap_shmctl(shm->shmid, IPC_STAT, &buf);
   if(1 == create) {
       // check that the current process created the shared memory
-      fmap_shmctl(shm->shmid, IPC_STAT, &buf);
       if(buf.shm_cpid != getpid() || FMAP_SHM_READY == fmap_shm_get_state(shm)) {
           fmap_error("shared memory was not created by the current process", Exit, OutOfRange);
       }
@@ -187,6 +187,20 @@ fmap_shm_init(key_t key, size_t size, int32_t create)
       }
   }
   else {
+      // try a number of times before failing
+      for(i=0;i<FMAP_SHMGET_RETRIES;i++) {
+          if(FMAP_SHM_READY == fmap_shm_get_state(shm)) {
+              break;
+          }
+          fmap_progress_print("shared memory not ready, %d more retries", FMAP_SHMGET_RETRIES-i-1);
+          fmap_progress_print("retrying in %d seconds", FMAP_SHMGET_SLEEP);
+          // sleep and retry
+          sleep(FMAP_SHMGET_SLEEP);
+      }
+      if(FMAP_SHMGET_RETRIES == i) {
+          fmap_error("shared memory did not become available", Exit, SharedMemoryGet);
+      }
+      
       // set the size
       shm->size = buf.shm_segsz;
   }
