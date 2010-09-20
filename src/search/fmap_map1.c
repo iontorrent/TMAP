@@ -310,9 +310,10 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
           bases[0] = fmap_seq_get_bases(seq[0]);
           bases[1] = fmap_seq_get_bases(seq[1]);
 
-          opt_local.max_mm = (opt->max_mm < 0) ? (int)(opt->max_mm_frac * orig_bases->l) : opt->max_mm; 
-          opt_local.max_gape = (opt->max_gape < 0) ? (int)(opt->max_gape_frac * orig_bases->l) : opt->max_gape; 
-          opt_local.max_gapo = (opt->max_gapo < 0) ? (int)(opt->max_gapo_frac * orig_bases->l) : opt->max_gapo; 
+          // remember to round up
+          opt_local.max_mm = (opt->max_mm < 0) ? (int)(0.99 + opt->max_mm_frac * orig_bases->l) : opt->max_mm; 
+          opt_local.max_gape = (opt->max_gape < 0) ? (int)(0.99 + opt->max_gape_frac * orig_bases->l) : opt->max_gape; 
+          opt_local.max_gapo = (opt->max_gapo < 0) ? (int)(0.99 + opt->max_gapo_frac * orig_bases->l) : opt->max_gapo; 
 
           if(width_length < orig_bases->l) {
               free(width[0]); free(width[1]);
@@ -640,7 +641,7 @@ fmap_map1(int argc, char *argv[])
   opt.reads_queue_size = 262144; // TODO: move this to a define block
   opt.max_entries= 2000000; // TODO: move this to a define block
   opt.num_threads = 1;
-  opt.aln_output_mode = 0; // TODO: move this to a define block
+  opt.aln_output_mode = 1; // TODO: move this to a define block
   opt.input_compr = FMAP_FILE_NO_COMPRESSION;
   opt.output_compr = FMAP_FILE_NO_COMPRESSION;
   opt.shm_key = 0;
