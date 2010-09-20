@@ -16,6 +16,7 @@ static char error_string[][64] =
   "could not write to the file",
   "encountered early end-of-file",
   "error running the threads",
+  "SIGINT signal caught (i.e ctrl-c)",
   "could not get the shared memory",
   "could not attach the shared memory",
   "could not control the shared memory",
@@ -58,7 +59,7 @@ fmap_error_full(const char *file, const unsigned int line, const char *function_
      || error_type == OpenFileError 
      || error_type == WriteFileError 
      || error_type == EndOfFile) {
-      perror("The file stream error was");
+      perror("the file stream error was");
   }
   else if(error_type == SharedMemoryGet
           || error_type == SharedMemoryAttach
@@ -76,7 +77,15 @@ fmap_error_full(const char *file, const unsigned int line, const char *function_
         case EOVERFLOW: fprintf(stderr, "EOVERFLOW\n"); break;
         default: fprintf(stderr, "Uknown error\n"); break;
       }
-      perror("The shared memory error was");
+      perror("the shared memory error was");
+  }
+  else if(error_type == SigInt) {
+      if(action_type == Warn) {
+          fprintf(stderr, "cleaning up...\n");
+      }
+      else {
+          fprintf(stderr, "exiting...\n");
+      }
   }
 
   switch(action_type) {
@@ -87,7 +96,6 @@ fmap_error_full(const char *file, const unsigned int line, const char *function_
       exit(EXIT_FAILURE); 
       break; /* Not necessary actually! */
     case Warn:
-      fprintf(stderr, "\n");
       break;
     default:
       exit(EXIT_FAILURE); 

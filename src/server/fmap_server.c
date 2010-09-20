@@ -4,6 +4,7 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include "../util/fmap_error.h"
 #include "../util/fmap_alloc.h"
@@ -13,6 +14,28 @@
 #include "../index/fmap_sa.h"
 #include "fmap_shm.h"
 #include "fmap_server.h"
+
+static fmap_shm_t *fmap_server_shm_ptr = NULL;
+
+static void
+fmap_server_sigint(int signal)
+{
+  fmap_error(NULL, Warn, SigInt); // warn
+  if(NULL != fmap_server_shm_ptr) {
+      // try to destroy the shared memory
+      fmap_shm_set_dead(fmap_server_shm_ptr);
+      fmap_shm_destroy(fmap_server_shm_ptr, 0);
+      fmap_server_shm_ptr = NULL;
+  }
+  fmap_error(NULL, Exit, SigInt); //exit
+}
+
+static void
+fmap_server_set_sigint(fmap_shm_t *shm)
+{
+  fmap_server_shm_ptr = shm;
+  signal(SIGINT, fmap_server_sigint); 
+}
 
 // TODO: avoid loading twice
 static void
@@ -90,6 +113,9 @@ fmap_server_start(char *fn_fasta, key_t key, uint32_t listing)
           fmap_progress_print("retrieving shared memory [%llu bytes]", (long long unsigned int)n_bytes);
           shm = fmap_shm_init(key, n_bytes, 1);
           fmap_progress_print2("shared memory retrieved");
+      
+          // catch a ctrl-c signal
+          fmap_server_set_sigint(shm);
       }
       else {
           fmap_progress_print2("shared memory packed");
