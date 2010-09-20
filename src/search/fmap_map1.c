@@ -393,13 +393,13 @@ fmap_map1_core(fmap_map1_opt_t *opt)
       if(NULL == (refseq = fmap_refseq_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SERVER_LISTING_REFSEQ)))) {
           fmap_error("the packed reference sequence was not found in shared memory", Exit, SharedMemoryListing);
       }
-      if(0 == (bwt[0] = fmap_bwt_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SERVER_LISTING_BWT)))) {
+      if(NULL == (bwt[0] = fmap_bwt_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SERVER_LISTING_BWT)))) {
           fmap_error("the BWT string was not found in shared memory", Exit, SharedMemoryListing);
       }
-      if(0 == (bwt[1] = fmap_bwt_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SERVER_LISTING_REV_BWT)))) {
+      if(NULL == (bwt[1] = fmap_bwt_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SERVER_LISTING_REV_BWT)))) {
           fmap_error("the reverse BWT string was not found in shared memory", Exit, SharedMemoryListing);
       }
-      if(0 == (sa = fmap_sa_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SERVER_LISTING_REV_SA)))) {
+      if(NULL == (sa = fmap_sa_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SERVER_LISTING_REV_SA)))) {
           fmap_error("the reverse SA was not found in shared memory", Exit, SharedMemoryListing);
       }
       fmap_progress_print2("reference data retrieved from shared memory");
@@ -638,7 +638,7 @@ fmap_map1(int argc, char *argv[])
   opt.max_cals_del = 10; // TODO: move this to a define block
   opt.indel_ends_bound = 5; // TODO: move this to a define block
   opt.max_best_cals = 32; // TODO: move this to a define block
-  opt.reads_queue_size = 262144; // TODO: move this to a define block
+  opt.reads_queue_size = 65536; // TODO: move this to a define block
   opt.max_entries= 2000000; // TODO: move this to a define block
   opt.num_threads = 1;
   opt.aln_output_mode = 1; // TODO: move this to a define block

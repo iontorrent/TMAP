@@ -286,7 +286,6 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
       fmap_bwt_match_occ_t match_sa_cur, match_sa_next[4];
 
       e = fmap_map1_aux_stack_pop(stack); // get the best entry
-      //fprintf(stderr, "popping stack_size=%d\n", fmap_map1_aux_stack_size(stack)); 
       if(best_score + max_edit_score < e->score) break; // no need to continue
 
       strand = e->strand; // strand;
@@ -445,8 +444,8 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
                   allow_diff = 0;
               }
               else if(width_cur[offset].bid == n_mm-1
-                 && width_cur[offset+1].bid == n_mm-1
-                 && width_cur[offset+1].w == width_cur[offset].w) {
+                      && width_cur[offset+1].bid == n_mm-1
+                      && width_cur[offset+1].w == width_cur[offset].w) {
                   allow_mm = 0;
               }
               if(NULL != seed_width_cur && offset+1 < opt->seed_length) {
@@ -461,14 +460,14 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
                   }
               }
               /*
-              fprintf(stderr, "strand=%d offset=%d n_mm-1=%d width[%d].bid=%d width[%d].bid=%d width[%d].w=%d width[%d].w=%d allow_diff=%d allow_mm=%d\n",
-                      strand, offset, n_mm-1,
-                      offset, width_cur[offset].bid,
-                      offset+1, width_cur[offset+1].bid,
-                      offset, width_cur[offset].w,
-                      offset+1, width_cur[offset+1].w,
-                      allow_diff, allow_mm);
-              */
+                 fprintf(stderr, "strand=%d offset=%d n_mm-1=%d width[%d].bid=%d width[%d].bid=%d width[%d].w=%d width[%d].w=%d allow_diff=%d allow_mm=%d\n",
+                 strand, offset, n_mm-1,
+                 offset, width_cur[offset].bid,
+                 offset+1, width_cur[offset+1].bid,
+                 offset, width_cur[offset].w,
+                 offset+1, width_cur[offset+1].w,
+                 allow_diff, allow_mm);
+                 */
           }
 
           // retrieve the next SA interval

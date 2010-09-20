@@ -52,7 +52,6 @@ typedef unsigned char uint8_t;
   @field  hash_k        hash of the BWT occurence array (lower bounds)
   @field  hash_l        hash of the BWT occurence array (upper bounds)
   @field  hash_width    the k-mer that is hashed
-  @field  hash_length   4^{hash_width}
   @field  is_shm        1 if loaded from shared memory, 0 otherwise
   */
 typedef struct {
@@ -68,7 +67,6 @@ typedef struct {
     uint32_t **hash_k; // BWT hash 
     uint32_t **hash_l; // BWT hash 
     uint32_t hash_width; 
-    uint32_t hash_length;
     uint32_t is_shm;
 } fmap_bwt_t;
 

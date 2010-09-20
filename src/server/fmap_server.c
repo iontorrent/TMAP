@@ -41,7 +41,6 @@ fmap_server_set_sigint(fmap_shm_t *shm)
   signal(SIGINT, fmap_server_sigint); 
 }
 
-// TODO: avoid loading twice
 static void
 fmap_server_start(char *fn_fasta, key_t key, uint32_t listing)
 {
@@ -93,13 +92,13 @@ fmap_server_start(char *fn_fasta, key_t key, uint32_t listing)
   for(i=0;i<2;i++) { // forward/reverse
       cur_listing = (0 == i) ? FMAP_SERVER_LISTING_REFSEQ : FMAP_SERVER_LISTING_REV_REFSEQ;
       if(listing & cur_listing) {
+          fmap_progress_print("packing %s reference", (0 == i) ? "forward" : "reverse");
           refseq = fmap_refseq_read(fn_fasta, i);
           cur_bytes = fmap_refseq_shm_num_bytes(refseq);
           fmap_refseq_shm_pack(refseq, buf);
           fmap_shm_add_listing(shm, cur_listing, cur_bytes); 
           buf += cur_bytes;
           fmap_refseq_destroy(refseq);
-          n_bytes += cur_bytes;
       } 
   }
 
@@ -107,13 +106,13 @@ fmap_server_start(char *fn_fasta, key_t key, uint32_t listing)
   for(i=0;i<2;i++) { // forward/reverse
       cur_listing = (0 == i) ? FMAP_SERVER_LISTING_BWT : FMAP_SERVER_LISTING_REV_BWT;
       if(listing & cur_listing) {
+          fmap_progress_print("packing %s bwt", (0 == i) ? "forward" : "reverse");
           bwt = fmap_bwt_read(fn_fasta, i);
           cur_bytes = fmap_bwt_shm_num_bytes(bwt);
           fmap_bwt_shm_pack(bwt, buf);
           fmap_shm_add_listing(shm, cur_listing, cur_bytes); 
           buf += cur_bytes;
           fmap_bwt_destroy(bwt);
-          n_bytes += cur_bytes;
       } 
   }
 
@@ -121,13 +120,13 @@ fmap_server_start(char *fn_fasta, key_t key, uint32_t listing)
   for(i=0;i<2;i++) { // forward/reverse
       cur_listing = (0 == i) ? FMAP_SERVER_LISTING_SA : FMAP_SERVER_LISTING_REV_SA;
       if(listing & cur_listing) {
+          fmap_progress_print("packing %s sa", (0 == i) ? "forward" : "reverse");
           sa = fmap_sa_read(fn_fasta, i);
           cur_bytes = fmap_sa_shm_num_bytes(sa);
           fmap_sa_shm_pack(sa, buf);
           fmap_shm_add_listing(shm, cur_listing, cur_bytes); 
           buf += cur_bytes;
           fmap_sa_destroy(sa);
-          n_bytes += cur_bytes;
       } 
   }
 
@@ -261,7 +260,7 @@ fmap_server_main(int argc, char *argv[])
       return usage();
   }
 
-  if(1 == cmd && 0 == listing) {
+  if(FMAP_SERVER_START == cmd && 0 == listing) {
       fmap_error("no data structures to load", Exit, CommandLineArgument);
   }
 

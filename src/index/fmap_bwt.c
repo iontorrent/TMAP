@@ -158,7 +158,6 @@ fmap_bwt_shm_num_bytes(fmap_bwt_t *bwt)
   n += 256*sizeof(uint32_t); // cnt_table[256]
   n += sizeof(uint32_t); // is_rev
   n += sizeof(uint32_t); // hash_width
-  n += sizeof(uint32_t); // hash_length
 
   //variable length data
   n += sizeof(uint32_t)*bwt->bwt_size; // bwt
@@ -234,10 +233,9 @@ fmap_bwt_shm_pack(fmap_bwt_t *bwt, uint8_t *buf)
   memcpy(buf, &bwt->seq_len, sizeof(uint32_t)); buf += sizeof(uint32_t);
   memcpy(buf, &bwt->bwt_size, sizeof(uint32_t)); buf += sizeof(uint32_t);
   memcpy(buf, &bwt->occ_interval, sizeof(uint32_t)); buf += sizeof(uint32_t);
-  memcpy(buf, bwt->cnt_table, sizeof(uint32_t)); buf += 256*sizeof(uint32_t);
+  memcpy(buf, bwt->cnt_table, 256*sizeof(uint32_t)); buf += 256*sizeof(uint32_t);
   memcpy(buf, &bwt->is_rev, sizeof(uint32_t)); buf += sizeof(uint32_t);
   memcpy(buf, &bwt->hash_width, sizeof(uint32_t)); buf += sizeof(uint32_t);
-  memcpy(buf, &bwt->hash_length, sizeof(uint32_t)); buf += sizeof(uint32_t);
   // variable length data
   memcpy(buf, bwt->bwt, bwt->bwt_size*sizeof(uint32_t)); buf += bwt->bwt_size*sizeof(uint32_t);
   for(i=1;i<=bwt->hash_width;i++) {
@@ -263,10 +261,9 @@ fmap_bwt_shm_unpack(uint8_t *buf)
   memcpy(&bwt->seq_len, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
   memcpy(&bwt->bwt_size, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
   memcpy(&bwt->occ_interval, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
-  memcpy(bwt->cnt_table, buf, sizeof(uint32_t)); buf += 256*sizeof(uint32_t);
+  memcpy(bwt->cnt_table, buf, 256*sizeof(uint32_t)); buf += 256*sizeof(uint32_t);
   memcpy(&bwt->is_rev, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
   memcpy(&bwt->hash_width, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
-  memcpy(&bwt->hash_length, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
 
   // allocate memory 
   bwt->hash_k = fmap_calloc(bwt->hash_width, sizeof(uint32_t*), "bwt->hash_k");
@@ -456,7 +453,6 @@ fmap_bwt_gen_hash(fmap_bwt_t *bwt, uint32_t hash_width)
           }
       }
 
-      //fprintf(stderr, "bwt->seq_len=%u sum=%u\n", bwt->seq_len, sum);
       if(sum != bwt->seq_len - i + 1) {
           fmap_error("sum != bwt->seq_len - bwt->hash_width + 1", Exit, OutOfRange);
       }

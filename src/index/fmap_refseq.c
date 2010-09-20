@@ -400,9 +400,6 @@ fmap_refseq_shm_unpack(uint8_t *buf)
   memcpy(&refseq->len, buf, sizeof(uint64_t)) ; buf += sizeof(uint64_t);
   memcpy(&refseq->is_rev, buf, sizeof(uint32_t)) ; buf += sizeof(uint32_t);
 
-  // allocate memory
-  refseq->annos = fmap_calloc(refseq->num_annos, sizeof(fmap_anno_t), "refseq->annos");
-
   // variable length data
   refseq->seq = (uint8_t*)buf;
   buf += fmap_refseq_seq_memory(refseq->len)*sizeof(uint8_t);

@@ -128,6 +128,8 @@ fmap_sa_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev)
   // get the number of bytes
   n = fmap_sa_shm_num_bytes(sa);
 
+  fmap_sa_destroy(sa);
+
   return n;
 }
 
