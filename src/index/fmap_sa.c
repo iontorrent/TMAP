@@ -91,6 +91,46 @@ fmap_sa_shm_num_bytes(fmap_sa_t *sa)
   return n;
 }
 
+size_t
+fmap_sa_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev)
+{
+  size_t n = 0;
+  char *fn_sa = NULL;
+  fmap_file_t *fp_sa = NULL;
+  fmap_sa_t *sa = NULL;
+
+  fn_sa = fmap_get_file_name(fn_fasta, (0 == is_rev) ? FMAP_SA_FILE : FMAP_REV_SA_FILE);
+  fp_sa = fmap_file_fopen(fn_sa, "rb", (0 == is_rev) ? FMAP_SA_COMPRESSION : FMAP_REV_SA_COMPRESSION);
+
+  sa = fmap_calloc(1, sizeof(fmap_sa_t), "sa");
+
+  if(1 != fmap_file_fread(&sa->primary, sizeof(uint32_t), 1, fp_sa)
+     || 1 != fmap_file_fread(&sa->sa_intv, sizeof(uint32_t), 1, fp_sa)
+     || 1 != fmap_file_fread(&sa->seq_len, sizeof(uint32_t), 1, fp_sa)
+     || 1 != fmap_file_fread(&sa->is_rev, sizeof(uint32_t), 1, fp_sa)) {
+      fmap_error(NULL, Exit, ReadFileError);
+  }
+
+  if(is_rev != sa->is_rev) {
+      fmap_error("is_rev != sa->is_rev", Exit, OutOfRange);
+  }
+
+  sa->n_sa = (sa->seq_len + sa->sa_intv) / sa->sa_intv;
+
+  // No need to read in sa->sa
+  sa->sa = NULL;
+
+  fmap_file_fclose(fp_sa);
+  free(fn_sa);
+
+  sa->is_shm = 0;
+
+  // get the number of bytes
+  n = fmap_sa_shm_num_bytes(sa);
+
+  return n;
+}
+
 uint8_t *
 fmap_sa_shm_pack(fmap_sa_t *sa, uint8_t *buf)
 {

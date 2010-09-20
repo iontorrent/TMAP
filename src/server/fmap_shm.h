@@ -24,6 +24,7 @@ enum {
     FMAP_SERVER_LISTING_REV_SA     = 0x20
 };
 
+
 /*! @typedef
   @abstract
   @field  key    the key of the shared memory 

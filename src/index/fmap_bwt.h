@@ -100,6 +100,15 @@ fmap_bwt_shm_num_bytes(fmap_bwt_t *bwt);
 
 /*! @function
   @abstract
+  @param  fn_fasta  the FASTA file name
+  @param  is_rev    0 if to write the reverse packed sequence, 1 otherwise
+  @return      the number of bytes required for this bwt in shared memory
+  */
+size_t
+fmap_bwt_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev);
+
+/*! @function
+  @abstract
   @param  bwt  the bwt structure to pack 
   @param  buf  the byte array in which to pack the bwt data
   @return      a pointer to the next unused byte in memory

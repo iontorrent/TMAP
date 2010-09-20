@@ -50,6 +50,15 @@ fmap_sa_shm_num_bytes(fmap_sa_t *sa);
 
 /*! @function
   @abstract
+  @param  fn_fasta  the FASTA file name
+  @param  is_rev    0 if to write the reverse packed sequence, 1 otherwise
+  @return     the number of bytes required for this sa in shared memory
+  */
+size_t
+fmap_sa_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev);
+
+/*! @function
+  @abstract
   @param  sa  the sa structure to pack 
   @param  buf  the byte array in which to pack the sa data
   @return      a pointer to the next unused byte in memory

@@ -121,6 +121,15 @@ fmap_refseq_shm_num_bytes(fmap_refseq_t *refseq);
 
 /*! @function
   @abstract
+  @param  fn_fasta  the fn_fasta of the file to be read, usually the fasta file name 
+  @param  is_rev    0 if to read the reverse packed sequence, 1 otherwise
+  @return           the number of bytes required for this bwt in shared memory
+  */
+size_t
+fmap_refseq_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev);
+
+/*! @function
+  @abstract
   @param  refseq  the refseq structure to pack 
   @param  buf     the byte array in which to pack the refseq data
   @return         a pointer to the next unused byte in memory

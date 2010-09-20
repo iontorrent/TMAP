@@ -50,7 +50,7 @@ fmap_refseq_write_anno(fmap_file_t *fp, fmap_refseq_t *refseq)
 uint64_t
 fmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
 {
-  fmap_file_t *fp_fasta = NULL, *fp_pac = NULL, *fp_anno = NULL;;
+  fmap_file_t *fp_fasta = NULL, *fp_pac = NULL, *fp_anno = NULL;
   fmap_seq_io_t *seqio = NULL;
   fmap_seq_t *seq = NULL;
   fmap_refseq_t *refseq = NULL;
@@ -188,7 +188,7 @@ fmap_refseq_pac2revpac(const char *fn_fasta)
 void 
 fmap_refseq_write(fmap_refseq_t *refseq, const char *fn_fasta, uint32_t is_rev)
 {
-  fmap_file_t *fp_pac = NULL, *fp_anno = NULL;;
+  fmap_file_t *fp_pac = NULL, *fp_anno = NULL;
   char *fn_pac = NULL, *fn_anno = NULL;
   uint8_t x = 0;
 
@@ -271,7 +271,7 @@ fmap_refseq_read_anno(fmap_file_t *fp, fmap_refseq_t *refseq)
 fmap_refseq_t *
 fmap_refseq_read(const char *fn_fasta, uint32_t is_rev)
 {
-  fmap_file_t *fp_pac = NULL, *fp_anno = NULL;;
+  fmap_file_t *fp_pac = NULL, *fp_anno = NULL;
   char *fn_pac = NULL, *fn_anno = NULL;
   fmap_refseq_t *refseq = NULL;
 
@@ -321,6 +321,38 @@ fmap_refseq_shm_num_bytes(fmap_refseq_t *refseq)
       n += sizeof(size_t); // annos[i].name->l
       n += sizeof(char)*(refseq->annos[i].name->l+1); // annos[i].name->s
   }
+
+  return n;
+}
+
+size_t
+fmap_refseq_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev)
+{
+  size_t n = 0;
+  fmap_file_t *fp_anno = NULL;
+  char *fn_anno = NULL;
+  fmap_refseq_t *refseq = NULL;
+
+  // allocate some memory 
+  refseq = fmap_calloc(1, sizeof(fmap_refseq_t), "refseq");
+  refseq->is_rev = is_rev;
+  refseq->is_shm = 0;
+
+  // read the annotation file
+  fn_anno = fmap_get_file_name(fn_fasta, FMAP_ANNO_FILE);
+  fp_anno = fmap_file_fopen(fn_anno, "rb", FMAP_ANNO_COMPRESSION);
+  fmap_refseq_read_anno(fp_anno, refseq);
+  fmap_file_fclose(fp_anno);
+  free(fn_anno);
+
+  // No need to read in the pac
+  refseq->seq = NULL;
+
+  // get the number of bytes
+  n = fmap_refseq_shm_num_bytes(refseq);
+
+  // destroy
+  fmap_refseq_destroy(refseq);
 
   return n;
 }

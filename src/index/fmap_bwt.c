@@ -40,7 +40,7 @@
 fmap_bwt_t *
 fmap_bwt_read(const char *fn_fasta, uint32_t is_rev)
 {
-  fmap_bwt_t *bwt;
+  fmap_bwt_t *bwt = NULL;
   char *fn_bwt = NULL;
   fmap_file_t *fp_bwt = NULL;
 
@@ -171,6 +171,58 @@ fmap_bwt_shm_num_bytes(fmap_bwt_t *bwt)
   return n;
 }
 
+size_t
+fmap_bwt_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev)
+{
+  size_t n = 0;
+  fmap_bwt_t *bwt = NULL;
+  char *fn_bwt = NULL;
+  fmap_file_t *fp_bwt = NULL;
+
+  fn_bwt = fmap_get_file_name(fn_fasta, (0 == is_rev) ? FMAP_BWT_FILE : FMAP_REV_BWT_FILE);
+  fp_bwt = fmap_file_fopen(fn_bwt, "rb", (0 == is_rev) ? FMAP_BWT_COMPRESSION : FMAP_REV_BWT_COMPRESSION);
+
+  bwt = fmap_calloc(1, sizeof(fmap_bwt_t), "bwt");
+
+  if(1 != fmap_file_fread(&bwt->version_id, sizeof(uint32_t), 1, fp_bwt)
+     || 1 != fmap_file_fread(&bwt->bwt_size, sizeof(uint32_t), 1, fp_bwt)) {
+      fmap_error(NULL, Exit, ReadFileError);
+  }
+
+  if(bwt->version_id != FMAP_VERSION_ID) {
+      fmap_error("version id did not match", Exit, ReadFileError);
+  }
+
+  if(1 != fmap_file_fread(&bwt->hash_width, sizeof(uint32_t), 1, fp_bwt)
+     || 1 != fmap_file_fread(&bwt->primary, sizeof(uint32_t), 1, fp_bwt)
+     || 4 != fmap_file_fread(bwt->L2+1, sizeof(uint32_t), 4, fp_bwt)
+     || 1 != fmap_file_fread(&bwt->occ_interval, sizeof(uint32_t), 1, fp_bwt)
+     || 1 != fmap_file_fread(&bwt->seq_len, sizeof(uint32_t), 1, fp_bwt)
+     || 1 != fmap_file_fread(&bwt->is_rev, sizeof(uint32_t), 1, fp_bwt)) {
+      fmap_error(NULL, Exit, ReadFileError);
+  }
+
+  // No need to read in bwt->bwt, bwt->hash_k, bwt->hash_l
+  bwt->bwt = NULL;
+  bwt->hash_k = bwt->hash_l = NULL;
+
+  if(is_rev != bwt->is_rev) {
+      fmap_error("is_rev != bwt->is_rev", Exit, OutOfRange);
+  }
+
+  fmap_file_fclose(fp_bwt);
+  free(fn_bwt);
+
+  bwt->is_shm = 0;
+
+  // get the number of bytes
+  n = fmap_bwt_shm_num_bytes(bwt);
+
+  fmap_bwt_destroy(bwt);
+
+  return n;
+}
+
 uint8_t *
 fmap_bwt_shm_pack(fmap_bwt_t *bwt, uint8_t *buf)
 {
@@ -244,9 +296,15 @@ fmap_bwt_destroy(fmap_bwt_t *bwt)
       free(bwt);
   }
   else {
-      for(i=0;i<bwt->hash_width;i++) {
-          free(bwt->hash_k[i]);
-          free(bwt->hash_l[i]);
+      if(NULL != bwt->hash_k) {
+          for(i=0;i<bwt->hash_width;i++) {
+              free(bwt->hash_k[i]);
+          }
+      }
+      if(NULL != bwt->hash_l) {
+          for(i=0;i<bwt->hash_width;i++) {
+              free(bwt->hash_l[i]);
+          }
       }
       free(bwt->hash_k);
       free(bwt->hash_l);

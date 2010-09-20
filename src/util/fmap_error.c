@@ -79,14 +79,6 @@ fmap_error_full(const char *file, const unsigned int line, const char *function_
       }
       perror("the shared memory error was");
   }
-  else if(error_type == SigInt) {
-      if(action_type == Warn) {
-          fprintf(stderr, "cleaning up...\n");
-      }
-      else {
-          fprintf(stderr, "exiting...\n");
-      }
-  }
 
   switch(action_type) {
     case Exit: 
