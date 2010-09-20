@@ -10,6 +10,8 @@ enum {
 
 /*! @typedef
   @abstract                structure to store the command line options for 'fmap exact'
+  @field  argv              the command line argv structure
+  @field  argc              the number of command line arguments passed
   @field  fn_fasta          the fasta reference file name (-f)
   @field  fn_reads          the reads file name (-r)
   @field  reads_format      the reads file format (-F) 
@@ -36,6 +38,8 @@ enum {
   @field  shm_key           the shared memory key (-s)
 */
 typedef struct {
+    char **argv;
+    int argc;
     char *fn_fasta;
     char *fn_reads;
     int32_t reads_format;

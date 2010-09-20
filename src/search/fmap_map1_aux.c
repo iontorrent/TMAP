@@ -436,45 +436,37 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
       else {
 
           // use a bound for mismatches
-          int32_t allow_mm = 1;
+          int32_t allow_diff = 1, allow_mm = 1;
           if(n_mm <= 0 || n_mm-1 < width_cur[offset].bid) {
-              allow_mm = -1;
+              allow_diff = 0;
           }
-          else if(offset < len
+          if(offset < len
                   && width_cur[offset].bid == n_mm-1
                   && width_cur[offset+1].bid == width_cur[offset].bid
                   && width_cur[offset+1].w == width_cur[offset].w) {
-              /*
-                 fprintf(stderr, "width_cur[%d].bid=%d width_cur[%d].bid=%d n_mm-1=%d width_cur[%d].w=%d width_cur[%d].w=%d\n",
-                 offset, width_cur[offset].bid,
-                 offset+1, width_cur[offset+1].bid,
-                 n_mm-1,
-                 offset, width_cur[offset].w,
-                 offset+1, width_cur[offset+1].w);
-                 */
-              allow_mm = -2;
+              allow_mm = 0;
           }
-          else if(NULL != seed_width_cur) {
+          if(NULL != seed_width_cur) {
               if(n_seed_mm < seed_width_cur[offset].bid) {
-                  allow_mm = -3;
+                  allow_diff = 0;
               }
-              else if(offset < len
+              if(offset < len
                       && seed_width_cur[offset].bid == n_seed_mm-1
                       && seed_width_cur[offset+1].bid == seed_width_cur[offset].bid
                       && seed_width_cur[offset+1].w == seed_width_cur[offset].w) {
-                  allow_mm = -4;
+                  allow_mm = 0;
               }
           }
           
           /*
-          if(offset < len) { // HERE
-              fprintf(stderr, "offset=%d width[%d].bid=%d width[%d].bid=%d width[%d].w=%d width[%d].w=%d allow_mm=%d\n",
-                      offset,
+          if(offset < len) { 
+              fprintf(stderr, "strand=%d offset=%d n_mm-1=%d width[%d].bid=%d width[%d].bid=%d width[%d].w=%d width[%d].w=%d allow_diff=%d allow_mm=%d\n",
+                      strand, offset, n_mm-1,
                       offset, width_cur[offset].bid,
-                      offset, width_cur[offset+1].bid,
+                      offset+1, width_cur[offset+1].bid,
                       offset, width_cur[offset].w,
-                      offset, width_cur[offset+1].w,
-                      allow_mm);
+                      offset+1, width_cur[offset+1].w,
+                      allow_diff, allow_mm);
           }
           */
 
@@ -526,7 +518,7 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
           }
 
           // mismatches
-          if(1 == allow_mm && offset < len) { // mismatches allowed
+          if(1 == allow_mm && 1 == allow_diff && offset < len) { // mismatches allowed
               for(j=0;j<4;j++) {
                   int32_t c = (str[offset] + j) & 3;
                   int32_t is_mm = (0 < j || 3 < str[offset]);

@@ -351,6 +351,8 @@ fmap_file_fprintf(fmap_file_t *fp, const char *format, ...)
   int32_t n;
   va_list ap;
 
+  if(NULL == fp) fmap_error("input file pointer was null", Exit, WriteFileError);
+
   va_start(ap, format);
   n = vfprintf(fp->fp, format, ap);
   va_end(ap);

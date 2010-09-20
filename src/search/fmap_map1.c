@@ -412,6 +412,13 @@ fmap_map1_core(fmap_map1_opt_t *opt)
       fmap_file_fprintf(fmap_file_stdout, "@SQ\tSN:%s\tLN:%d\n",
                         refseq->annos[i].name->s, (int)refseq->annos[i].len);
   }
+  fmap_file_fprintf(fmap_file_stdout, "@PG\tID:%s\tVN:%s\t",
+                    PACKAGE_NAME, PACKAGE_VERSION);
+  for(i=0;i<opt->argc;i++) {
+      if(0 < i) fmap_file_fprintf(fmap_file_stdout, " ");
+      fmap_file_fprintf(fmap_file_stdout, "%s", opt->argv[i]);
+  }
+  fmap_file_fprintf(fmap_file_stdout, "\n");
 
   // allocate the buffer
   seq_buffer = fmap_malloc(sizeof(fmap_seq_t*)*opt->reads_queue_size, "seq_buffer");
@@ -617,12 +624,14 @@ fmap_map1(int argc, char *argv[])
   fmap_progress_set_start_time(clock());
 
   // program defaults
+  opt.argv = argv;
+  opt.argc = argc;
   opt.fn_fasta = opt.fn_reads = NULL;
   opt.reads_format = FMAP_READS_FORMAT_UNKNOWN;
   opt.seed_length = 32; // move this to a define block
   opt.seed_max_mm = 3; // move this to a define block
-  opt.max_mm = -1; opt.max_mm_frac = 0.02; // TODO: move this to a define block 
-  opt.max_gapo = -1; opt.max_gapo_frac = 0.01; // TODO: move this to a define block
+  opt.max_mm = -1; opt.max_mm_frac = 0.05; // TODO: move this to a define block 
+  opt.max_gapo = -1; opt.max_gapo_frac = 0.02; // TODO: move this to a define block
   opt.max_gape = -1; opt.max_gape_frac = 0.10; // TODO: move this to a define block
   opt.pen_mm = 3; opt.pen_gapo = 11; opt.pen_gape = 4; // TODO: move this to a define block
   opt.max_cals_del = 10; // TODO: move this to a define block
