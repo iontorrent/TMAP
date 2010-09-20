@@ -366,7 +366,7 @@ fmap_map1_core_thread_worker(void *arg)
 static void 
 fmap_map1_core(fmap_map1_opt_t *opt)
 {
-  uint32_t i, j, n_reads_processed=0;;
+  uint32_t i, j, n_reads_processed=0;
   int32_t seq_buffer_length;
   fmap_refseq_t *refseq=NULL;
   fmap_bwt_t *bwt[2]={NULL,NULL};
