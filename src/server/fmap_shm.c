@@ -9,6 +9,7 @@
 #include "../util/fmap_error.h"
 #include "../util/fmap_alloc.h"
 #include "../util/fmap_definitions.h"
+#include "../util/fmap_progress.h"
 #include "fmap_shm.h"
 
 static int32_t
@@ -22,6 +23,8 @@ fmap_shmget(key_t key, size_t size, int32_t shmflg, int32_t create)
           if(0 <= (shmid = shmget(key, size, shmflg))) {
               return shmid;
           }
+          fmap_progress_print("could not get shared memory, %d more retries", FMAP_SHMGET_RETRIES-i-1);
+          fmap_progress_print("retrying in %d seconds", FMAP_SHMGET_SLEEP);
           // sleep and retry
           sleep(FMAP_SHMGET_SLEEP);
       }
