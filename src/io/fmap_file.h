@@ -12,7 +12,8 @@
 /*! @enum
   @abstract file compression types
   */
-enum {FMAP_FILE_NO_COMPRESSION=0, 
+enum {
+    FMAP_FILE_NO_COMPRESSION=0, 
     FMAP_FILE_BZ2_COMPRESSION, 
     FMAP_FILE_GZ_COMPRESSION};
 

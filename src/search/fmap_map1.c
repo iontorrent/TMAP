@@ -522,7 +522,7 @@ fmap_map1_core(fmap_map1_opt_t *opt)
       fmap_progress_print2("processed %d reads", n_reads_processed);
   }
 
-  // close the outptu
+  // close the output
   fmap_file_fclose(fmap_file_stdout);
 
   // free memory
