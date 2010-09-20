@@ -49,7 +49,7 @@ static void
 fmap_debug_exact_core_worker(fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *sa, fmap_fq_t *orig_seq)
 {
   uint32_t i;
-  uint32_t mapped = 0;
+  uint32_t mapped = 0, pacpos = 0;;
   fmap_fq_t *seq=NULL, *rseq=NULL;
   fmap_bwt_match_occ_t cur;
 
@@ -62,14 +62,16 @@ fmap_debug_exact_core_worker(fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *
 
   if(0 != fmap_bwt_match_exact(bwt, seq->seq->l, (uint8_t*)seq->seq->s, &cur)) {
       for(i=cur.k;i<=cur.l;i++) {
-          if(0 != fmap_debug_exact_print_sam(refseq, seq, fmap_sa_pac_pos(sa, bwt, i), 0)) {
+          pacpos = bwt->seq_len - fmap_sa_pac_pos(sa, bwt, i) - seq->seq->l + 1;
+          if(0 != fmap_debug_exact_print_sam(refseq, seq, pacpos, 0)) {
               mapped = 1;
           }
       }
   }
   if(0 != fmap_bwt_match_exact(bwt, seq->seq->l, (uint8_t*)rseq->seq->s, &cur)) {
       for(i=cur.k;i<=cur.l;i++) {
-          if(0 != fmap_debug_exact_print_sam(refseq, seq, fmap_sa_pac_pos(sa, bwt, i), 1)) {
+          pacpos = bwt->seq_len - fmap_sa_pac_pos(sa, bwt, i) - seq->seq->l + 1;
+          if(0 != fmap_debug_exact_print_sam(refseq, seq, pacpos, 1)) {
               mapped = 1;
           }
       }
@@ -165,8 +167,14 @@ fmap_debug_exact(int argc, char *argv[])
   if(NULL == opt.fn_reads) {
       fmap_error("required option -r", Exit, CommandLineArgument);
   }
+  
+  // Note: 'fmap_file_stdout' should not have been previously modified
+  fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "wb", FMAP_FILE_NO_COMPRESSION);
 
   fmap_debug_exact_core(&opt);
+  
+  // close the output
+  fmap_file_fclose(fmap_file_stdout);
 
   free(opt.fn_fasta);
   free(opt.fn_reads);
