@@ -67,7 +67,7 @@ extern uint8_t nt_char_to_rc_char[256];
 //TODO: document
 #define CHAR2QUAL(c) ((uint8_t)c-33)
 //TODO: document
-#define QUAL2CHAR(q) (char)(((q<=93)?q:93)+33)
+#define QUAL2CHAR(q) (char)(((((unsigned char)q)<=93)?q:93)+33)
 
 //TODO: document
 #ifndef htonll
