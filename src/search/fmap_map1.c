@@ -34,19 +34,14 @@ fmap_map1_set_g_log_n()
 }
 
 static inline uint8_t
-fmap_map1_aln_mapq(int32_t num_best_sa, int32_t num_all_sa, int32_t max_score, int32_t score)
+fmap_map1_aln_mapq(int32_t num_best_sa, int32_t num_all_sa, int32_t max_mm, int32_t num_mm)
 {
   int32_t n;
-
-  /*
-  fprintf(stderr, "num_best_sa=%d num_all_sa=%d max_score=%d score=%d\n",
-          num_best_sa, num_all_sa, max_score, score);
-          */
 
   if(1 < num_best_sa) {
       return 0; // multiple best hits
   }
-  else if(max_score == score) {
+  else if(max_mm == num_mm) {
       return 25; // maximum possible score
   }
 
@@ -85,7 +80,7 @@ fmap_map1_aln_overwrite(fmap_map1_aln_t *dest, fmap_map1_aln_t *src)
 }
 
 static inline void
-fmap_map1_aln_filter(fmap_map1_opt_t *opt, fmap_map1_aln_t ***alns, int32_t *n_alns, int32_t max_score)
+fmap_map1_aln_filter(fmap_map1_opt_t *opt, fmap_map1_aln_t ***alns, int32_t *n_alns, int32_t max_mm)
 {
   int32_t i, was_rand = 0;
   int32_t num_best_sa, num_best, num_all_sa;
@@ -109,7 +104,7 @@ fmap_map1_aln_filter(fmap_map1_opt_t *opt, fmap_map1_aln_t ***alns, int32_t *n_a
       for(i=0;i<(*n_alns);i++) {
           (*alns)[i]->mapq = 0;
       }
-      (*alns)[0]->mapq = fmap_map1_aln_mapq(num_best_sa, num_all_sa, max_score, (*alns)[0]->score);
+      (*alns)[0]->mapq = fmap_map1_aln_mapq(num_best_sa, num_all_sa, max_mm, (*alns)[0]->n_mm);
   }
   else if(FMAP_ALN_OUTPUT_MODE_BEST == opt->aln_output_mode  // unique best hit 
           || FMAP_ALN_OUTPUT_MODE_BEST_RAND == opt->aln_output_mode) { // random best hit
@@ -154,7 +149,7 @@ fmap_map1_aln_filter(fmap_map1_opt_t *opt, fmap_map1_aln_t ***alns, int32_t *n_a
               (*alns)[0]->mapq = 0;
           }
           else {
-              (*alns)[0]->mapq = fmap_map1_aln_mapq(num_best_sa, num_all_sa, max_score, (*alns)[0]->score);
+              (*alns)[0]->mapq = fmap_map1_aln_mapq(num_best_sa, num_all_sa, max_mm, (*alns)[0]->n_mm);
           }
 
           for(i=1;i<(*n_alns);i++) { // free the rest
@@ -168,7 +163,7 @@ fmap_map1_aln_filter(fmap_map1_opt_t *opt, fmap_map1_aln_t ***alns, int32_t *n_a
   }
   else if(FMAP_ALN_OUTPUT_MODE_BEST_ALL == opt->aln_output_mode) { // all best hits
       for(i=0;i<num_best;i++) {
-          (*alns)[i]->mapq = fmap_map1_aln_mapq(num_best_sa, num_all_sa, max_score, (*alns)[0]->score);
+          (*alns)[i]->mapq = fmap_map1_aln_mapq(num_best_sa, num_all_sa, max_mm, (*alns)[i]->n_mm);
       }
       if(num_best < (*n_alns)) {
           for(i=num_best;i<(*n_alns);i++) { // free the rest
@@ -231,6 +226,9 @@ fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fma
           fmap_file_fprintf(fmap_file_stdout, "\tAS:i:%d", a->score);
           // NM
           fmap_file_fprintf(fmap_file_stdout, "\tNM:i:%d", (a->n_mm + a->n_gapo + a->n_gape));
+          // XM/XO/XG
+          fmap_file_fprintf(fmap_file_stdout, "\tXM:i:%d\tXO:i:%d\tXG:i:%d",
+                            a->n_mm, a->n_gapo, a->n_gape);
 
           // new line
           fmap_file_fprintf(fmap_file_stdout, "\n");
@@ -303,7 +301,7 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
           fmap_seq_t *seq[2]={NULL, NULL}, *orig_seq=NULL;
           orig_seq = seq_buffer[low];
           fmap_string_t *orig_bases = NULL, *bases[2]={NULL, NULL};
-          int32_t n_alns, max_score;
+          int32_t n_alns;
 
           // clone the sequence and get the reverse compliment
           seq[0] = fmap_seq_clone(orig_seq);
@@ -341,10 +339,10 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
               fmap_bwt_match_cal_width(bwt[0], opt->seed_length, bases[1]->s, seed_width[1]);
           }
 
-          alns[low] = fmap_map1_aux_core(seq, bwt[1], width, (0 < opt_local.seed_length) ? seed_width : NULL, &opt_local, stack, &n_alns, &max_score);
+          alns[low] = fmap_map1_aux_core(seq, bwt[1], width, (0 < opt_local.seed_length) ? seed_width : NULL, &opt_local, stack, &n_alns);
 
           // filter alignments
-          fmap_map1_aln_filter(&opt_local, &alns[low], &n_alns, max_score);
+          fmap_map1_aln_filter(&opt_local, &alns[low], &n_alns, opt->max_mm);
 
           // destroy
           fmap_seq_destroy(seq[0]);

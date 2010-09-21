@@ -214,7 +214,7 @@ fmap_map1_aux_get_bam_state(int state)
 fmap_map1_aln_t **
 fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
                    fmap_bwt_match_width_t *width[2], fmap_bwt_match_width_t *seed_width[2], fmap_map1_opt_t *opt,
-                   fmap_map1_aux_stack_t *stack, int32_t *n_alns, int32_t *max_score)
+                   fmap_map1_aux_stack_t *stack, int32_t *n_alns)
 {
   int32_t max_mm = opt->max_mm, max_gapo = opt->max_gapo, max_gape = opt->max_gape, seed_max_mm = opt->seed_max_mm;
   int32_t best_score, next_best_score;
@@ -233,8 +233,6 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
   max_edit_score = opt->pen_mm;
   if(max_edit_score < opt->pen_gapo) max_edit_score = opt->pen_gapo;
   if(max_edit_score < opt->pen_gape) max_edit_score = opt->pen_gape;
-
-  (*max_score) = aln_score(max_mm, max_gapo, max_gape, opt);
 
   bases[0] = fmap_seq_get_bases(seq[0]);
   bases[1] = fmap_seq_get_bases(seq[1]);
