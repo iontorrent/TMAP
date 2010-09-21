@@ -103,10 +103,6 @@ fmap_map1_aln_filter(fmap_map1_opt_t *opt, fmap_map1_aln_t ***alns, int32_t *n_a
   }
   for(i=0;i<(*n_alns);i++) {
       num_all_sa += (*alns)[i]->l - (*alns)[i]->k + 1;
-      fprintf(stderr, "(*alns)[i]->score=%d width=%d sum=%d\n",
-              (*alns)[i]->score,
-              (*alns)[i]->l - (*alns)[i]->k + 1,
-              num_all_sa);
   }
 
   if(FMAP_ALN_OUTPUT_MODE_ALL == opt->aln_output_mode) { // all hits
