@@ -128,7 +128,13 @@ fmap_check_suffix(char *str, char *suffix, int32_t end_skip_length)
   if(NULL == str) return NULL;
   if(NULL == suffix) return str; // empty suffix always matches
 
-  i=strlen(str)- 1 - end_skip_length;
+  if(0 < end_skip_length) {
+      // try first without skipping the end
+      char *ptr = fmap_check_suffix(str, suffix, 0);
+      if(NULL != ptr) return ptr;
+  }
+
+  i=strlen(str) - 1 - end_skip_length;
   j=strlen(suffix)-1;
 
   if(i < j) return NULL; // the suffix is longer than the string
@@ -141,41 +147,99 @@ fmap_check_suffix(char *str, char *suffix, int32_t end_skip_length)
   return (str + i + 1); // pointer to the start of the suffix
 }
 
-int
-fmap_get_reads_file_format_from_fn_int(char *fn, int32_t compr_type)
+static int32_t
+fmap_get_last_dot_index(const char *fn)
+{
+  int32_t len = strlen(fn), l;
+  for(l=len-1;0<=l;l--) {
+      if('.' == fn[l]) return len-l;
+  }
+  return len;
+}
+
+void
+fmap_get_reads_file_format_from_fn_int(char *fn, int32_t *reads_format, int32_t *compr_type)
 {
   int32_t compr_suffix_length = 0;
-  switch(compr_type) {
+
+  // auto-recognize the compression type
+  if(FMAP_FILE_NO_COMPRESSION == (*compr_type)) {
+      if(NULL != fmap_check_suffix(fn, ".bz2", 0)) {
+          compr_suffix_length = 4; // ".bz2"
+          (*compr_type) = FMAP_FILE_BZ2_COMPRESSION;
+      }
+      else if(NULL != fmap_check_suffix(fn, ".gz", 0)) {
+          compr_suffix_length = 3; // ".gz"
+          (*compr_type) = FMAP_FILE_GZ_COMPRESSION;
+      }
+      else {
+          compr_suffix_length = 0; // unknown/none
+      }
+  }
+  else if(FMAP_FILE_BZ2_COMPRESSION == (*compr_type)) {
+          compr_suffix_length = 4; // ".bz2"
+  }
+  else if(FMAP_FILE_GZ_COMPRESSION == (*compr_type)) {
+          compr_suffix_length = 3; // ".gz"
+  }
+
+  // auto-recognize the reads format
+  if(FMAP_READS_FORMAT_UNKNOWN == (*reads_format)) {
+      if(NULL != fmap_check_suffix(fn, ".fa", compr_suffix_length) 
+         || NULL != fmap_check_suffix(fn, ".fasta", compr_suffix_length)) {
+          (*reads_format) = FMAP_READS_FORMAT_FASTA;
+      }
+      else if(NULL != fmap_check_suffix(fn, ".fq", compr_suffix_length) 
+              || NULL != fmap_check_suffix(fn, ".fastq", compr_suffix_length)) {
+          (*reads_format) = FMAP_READS_FORMAT_FASTQ;
+      }
+      else if(NULL != fmap_check_suffix(fn, ".sff", compr_suffix_length)) {
+          (*reads_format) = FMAP_READS_FORMAT_SFF;
+      }
+  }
+  
+  // check the suffix implied by the compression type
+  switch((*compr_type)) {
     case FMAP_FILE_BZ2_COMPRESSION:
       if(NULL == fmap_check_suffix(fn, ".bz2", 0)) {
           fmap_error("the expected bzip2 file extension is \".bz2\"", Warn, OutOfRange);
-          return FMAP_READS_FORMAT_UNKNOWN;
+          compr_suffix_length = fmap_get_last_dot_index(fn); // remove file extension
       }
-      compr_suffix_length = 4; // ".bz2"
       break;
     case FMAP_FILE_GZ_COMPRESSION:
       if(NULL == fmap_check_suffix(fn, ".gz", 0)) {
           fmap_error("the expected gzip file extension is \".gz\"", Warn, OutOfRange);
-          return FMAP_READS_FORMAT_UNKNOWN;
+          compr_suffix_length = fmap_get_last_dot_index(fn); // remove file extension
       }
-      compr_suffix_length = 3; // ".gz"
       break;
     case FMAP_FILE_NO_COMPRESSION:
     default:
       break;
   }
-  if(NULL != fmap_check_suffix(fn, ".fa", compr_suffix_length) 
-     || NULL != fmap_check_suffix(fn, ".fasta", compr_suffix_length)) {
-      return FMAP_READS_FORMAT_FASTA;
+
+  // check the suffix implied by the reads format
+  // Note: try with and without compression file extension
+  switch((*reads_format)) {
+    case FMAP_READS_FORMAT_FASTA:
+      if(NULL == fmap_check_suffix(fn, ".fa", compr_suffix_length) 
+         && NULL == fmap_check_suffix(fn, ".fasta", compr_suffix_length)) {
+          fmap_error("the expected FASTA file extension is \".fa\" or \".fasta\"", Warn, OutOfRange);
+      }
+      break;
+    case FMAP_READS_FORMAT_FASTQ:
+      if(NULL == fmap_check_suffix(fn, ".fq", compr_suffix_length) 
+              && NULL == fmap_check_suffix(fn, ".fastq", compr_suffix_length)) {
+          fmap_error("the expected FASTA file extension is \".fq\" or \".fastq\"", Warn, OutOfRange);
+      }
+    case FMAP_READS_FORMAT_SFF:
+      if(NULL == fmap_check_suffix(fn, ".sff", compr_suffix_length)) {
+          fmap_error("the expected SFF file extension is \".sff\"", Warn, OutOfRange);
+      }
+      break;
+    case FMAP_READS_FORMAT_UNKNOWN:
+    default:
+      break;
   }
-  else if(NULL != fmap_check_suffix(fn, ".fq", compr_suffix_length) 
-          || NULL != fmap_check_suffix(fn, ".fastq", compr_suffix_length)) {
-      return FMAP_READS_FORMAT_FASTQ;
-  }
-  else if(NULL != fmap_check_suffix(fn, ".sff", compr_suffix_length)) {
-      return FMAP_READS_FORMAT_SFF;
-  }
-  return FMAP_READS_FORMAT_UNKNOWN;
 }
 
 char *

@@ -605,10 +605,14 @@ usage(fmap_map1_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "                             1 - random best hit\n");
   fmap_file_fprintf(fmap_file_stderr, "                             2 - all best hits\n");
   fmap_file_fprintf(fmap_file_stderr, "                             3 - all alignments\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -j          the input is bz2 compressed (bzip2)\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -z          the input is gz compressed (gzip)\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -J          the output is bz2 compressed (bzip2)\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -Z          the output is gz compressed (gzip)\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -j          the input is bz2 compressed (bzip2) [%s]\n",
+                    (FMAP_FILE_BZ2_COMPRESSION == opt->input_compr) ? "true" : "false");
+  fmap_file_fprintf(fmap_file_stderr, "         -z          the input is gz compressed (gzip) [%s]\n",
+                    (FMAP_FILE_GZ_COMPRESSION == opt->input_compr) ? "true" : "false");
+  fmap_file_fprintf(fmap_file_stderr, "         -J          the output is bz2 compressed (bzip2) [%s]\n",
+                    (FMAP_FILE_BZ2_COMPRESSION == opt->output_compr) ? "true" : "false");
+  fmap_file_fprintf(fmap_file_stderr, "         -Z          the output is gz compressed (gzip) [%s]\n",
+                    (FMAP_FILE_GZ_COMPRESSION == opt->output_compr) ? "true" : "false");
   fmap_file_fprintf(fmap_file_stderr, "         -s INT      use shared memory with the following key [%d]\n", opt->shm_key);
   fmap_file_fprintf(fmap_file_stderr, "         -v          print verbose progress information\n");
   fmap_file_fprintf(fmap_file_stderr, "         -h          print this message\n");
@@ -657,7 +661,9 @@ fmap_map1(int argc, char *argv[])
         case 'f':
           opt.fn_fasta = fmap_strdup(optarg); break;
         case 'r':
-          opt.fn_reads = fmap_strdup(optarg); break;
+          opt.fn_reads = fmap_strdup(optarg); 
+          fmap_get_reads_file_format_from_fn_int(opt.fn_reads, &opt.reads_format, &opt.input_compr);
+          break;
         case 'F':
           opt.reads_format = fmap_get_reads_file_format_int(optarg); break;
         case 'l':
@@ -697,9 +703,13 @@ fmap_map1(int argc, char *argv[])
         case 'a':
           opt.aln_output_mode = atoi(optarg); break;
         case 'j':
-          opt.input_compr = FMAP_FILE_BZ2_COMPRESSION; break;
+          opt.input_compr = FMAP_FILE_BZ2_COMPRESSION; 
+          fmap_get_reads_file_format_from_fn_int(opt.fn_reads, &opt.reads_format, &opt.input_compr);
+          break;
         case 'z':
-          opt.input_compr = FMAP_FILE_GZ_COMPRESSION; break;
+          opt.input_compr = FMAP_FILE_GZ_COMPRESSION; 
+          fmap_get_reads_file_format_from_fn_int(opt.fn_reads, &opt.reads_format, &opt.input_compr);
+          break;
         case 'J':
           opt.output_compr = FMAP_FILE_BZ2_COMPRESSION; break;
         case 'Z':
@@ -727,13 +737,9 @@ fmap_map1(int argc, char *argv[])
       if(NULL == opt.fn_reads && FMAP_READS_FORMAT_UNKNOWN == opt.reads_format) {
           fmap_error("option -F or option -r must be specified", Exit, CommandLineArgument);
       }
-      if(FMAP_READS_FORMAT_UNKNOWN == opt.reads_format) { // try to auto-recognize
-          opt.reads_format = fmap_get_reads_file_format_from_fn_int(opt.fn_reads, opt.input_compr);
-          if(FMAP_READS_FORMAT_UNKNOWN == opt.reads_format) {
-              fmap_error("the reads format (-r) was unrecognized", Exit, CommandLineArgument);
-          }
+      if(FMAP_READS_FORMAT_UNKNOWN == opt.reads_format) {
+          fmap_error("the reads format (-r) was unrecognized", Exit, CommandLineArgument);
       }
-      //if(FMAP_READS_FORMAT_SFF == opt.reads_format) fmap_error("SFF reads is unsupported", Exit, OutOfRange);
       if(-1 != opt.seed_length) fmap_error_cmd_check_int(opt.seed_length, 1, INT32_MAX, "-s");
 
       // this will take care of the case where they are both < 0

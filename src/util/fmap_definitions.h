@@ -103,13 +103,14 @@ int
 fmap_get_reads_file_format_int(char *optarg);
 
 /*! @function
-  @abstract           checks the extension of the file to recognize its format     
-  @param  fn          the file name 
-  @param  compr_type  the type of compression used, if any
-  @return             the format type
+  @abstract             checks the extension of the file to recognize its format     
+  @param  fn            the file name 
+  @param  reads_format  pointer to the reads format, if any (unknown|fastq|fq|fasta|fa|sff)
+  @param  compr_type    pointer the type of compression used, if any (none|gz|bz2)
+  @discussion           if the reads_format is unknown, it will be populated; similarly for compr_type.
   */
-int 
-fmap_get_reads_file_format_from_fn_int(char *fn, int32_t compr_type);
+void
+fmap_get_reads_file_format_from_fn_int(char *fn, int32_t *reads_format, int32_t *compr_type);
 
 /*! @function
   @abstract       
