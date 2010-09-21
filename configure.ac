@@ -47,22 +47,21 @@ AC_C_CONST
 AC_FUNC_MALLOC 
 AC_FUNC_REALLOC
 AC_CHECK_LIB([z], [gzread])
-AC_CHECK_LIB([z], [gzwrite])
 AC_CHECK_LIB([bz2], [BZ2_bzRead])
 AC_CHECK_LIB([m], [pow])
-AC_CHECK_LIB([m], [pow])
 AC_CHECK_LIB([pthread], [pthread_create])
-AC_CHECK_LIB([pthread], [pthread_join])
-AC_CHECK_FUNC(pow, [AC_DEFINE(HAVE_POW, 1, [Define 1 if you have the function pow])],[])
-AC_CHECK_FUNC(strdup, [AC_DEFINE(HAVE_STRDUP, 1, [Define 1 if you have the function strdup])],[])
+AC_CHECK_FUNCS([pow strdup memset strchr strdup strstr])
 
 # Check types
-AC_CHECK_TYPE(int8_t)
-AC_CHECK_TYPE(int32_t)
-AC_CHECK_TYPE(int64_t)
-AC_CHECK_TYPE(uint8_t)
-AC_CHECK_TYPE(uint32_t)
-AC_CHECK_TYPE(uint64_t)
+AC_TYPE_INT8_T
+AC_TYPE_INT16_T
+AC_TYPE_INT32_T
+AC_TYPE_INT64_T
+AC_TYPE_UINT8_T
+AC_TYPE_UINT16_T
+AC_TYPE_UINT32_T
+AC_TYPE_UINT64_T
+AC_TYPE_SIZE_T
 
 # Set proprocessor SIZEOF_short_int, SIZEOF_int, SIZEOF_long_int
 AC_CHECK_SIZEOF([short int])
@@ -71,8 +70,7 @@ AC_CHECK_SIZEOF([long int])
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([stdlib.h stdio.h stdint.h string.h sys/time.h unistd.h float.h zlib.h bzlib.h pthread.h])
-ACX_PTHREAD
+AC_CHECK_HEADERS([stdlib.h stdio.h stdint.h string.h sys/time.h unistd.h float.h zlib.h bzlib.h pthread.h limits.h netinet/in.h])
 
 AC_C_INLINE
 
