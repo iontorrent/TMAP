@@ -32,8 +32,8 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
-#include "fmap_string.h"
-#include "fmap_definitions.h"
+#include "../util/fmap_string.h"
+#include "../util/fmap_definitions.h"
 
 /*! @typedef
   @abstract         structure for holding FASTA/FASTQ strings

@@ -8,8 +8,8 @@
 //#define FMAP_SFF_DEBUG 1
 
 #include <stdint.h>
+#include "../util/fmap_string.h"
 #include "../io/fmap_file.h"
-#include "fmap_string.h"
 
 /*! @typedef
   @field  magic           the magic number for this file

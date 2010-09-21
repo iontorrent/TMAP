@@ -2,9 +2,9 @@
 
 #include "../util/fmap_error.h"
 #include "../util/fmap_alloc.h"
-#include "../util/fmap_seq.h"
 #include "../util/fmap_fibheap.h"
 #include "../util/fmap_definitions.h"
+#include "../seq/fmap_seq.h"
 #include "../index/fmap_refseq.h"
 #include "../index/fmap_bwt.h"
 #include "../index/fmap_bwt_match.h"

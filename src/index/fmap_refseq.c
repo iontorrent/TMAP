@@ -7,8 +7,8 @@
 #include "../util/fmap_string.h"
 #include "../util/fmap_progress.h"
 #include "../util/fmap_definitions.h"
+#include "../seq/fmap_seq.h"
 #include "../io/fmap_file.h"
-#include "../util/fmap_seq.h"
 #include "../io/fmap_seq_io.h"
 #include "fmap_refseq.h"
 

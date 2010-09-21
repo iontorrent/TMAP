@@ -1,7 +1,7 @@
 #include <stdlib.h>
 
-#include "fmap_error.h"
-#include "fmap_alloc.h"
+#include "../util/fmap_error.h"
+#include "../util/fmap_alloc.h"
 #include "fmap_fq.h"
 #include "fmap_sff.h"
 #include "fmap_seq.h"

@@ -4,7 +4,7 @@
 
 #include "../util/fmap_error.h"
 #include "../util/fmap_alloc.h"
-#include "../util/fmap_fq.h"
+#include "../seq/fmap_fq.h"
 #include "fmap_file.h"
 #include "fmap_fq_io.h"
 

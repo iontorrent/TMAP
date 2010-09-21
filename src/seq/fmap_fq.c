@@ -2,9 +2,9 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "fmap_error.h"
-#include "fmap_alloc.h"
-#include "fmap_definitions.h"
+#include "../util/fmap_error.h"
+#include "../util/fmap_alloc.h"
+#include "../util/fmap_definitions.h"
 #include "fmap_fq.h"
 
 inline fmap_fq_t *

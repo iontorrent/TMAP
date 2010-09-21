@@ -7,8 +7,8 @@
 #include "../index/fmap_bwt.h"
 #include "../index/fmap_bwt_match.h"
 #include "../index/fmap_sa.h"
-#include "../util/fmap_fq.h"
-#include "../util/fmap_seq.h"
+#include "../seq/fmap_fq.h"
+#include "../seq/fmap_seq.h"
 #include "../io/fmap_seq_io.h"
 #include "fmap_debug_exact.h"
 

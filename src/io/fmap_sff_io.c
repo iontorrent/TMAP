@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 #include "../util/fmap_alloc.h"
-#include "../util/fmap_sff.h"
+#include "../seq/fmap_sff.h"
 #include "fmap_file.h"
 #include "fmap_sff_io.h"
 

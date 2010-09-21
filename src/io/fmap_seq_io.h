@@ -1,9 +1,9 @@
 #ifndef FMAP_SEQ_IO_H_
 #define FMAP_SEQ_IO_H_
 
-#include "../util/fmap_fq.h"
-#include "../util/fmap_sff.h"
-#include "../util/fmap_seq.h"
+#include "../seq/fmap_fq.h"
+#include "../seq/fmap_sff.h"
+#include "../seq/fmap_seq.h"
 #include "fmap_sff_io.h"
 #include "fmap_fq_io.h"
 

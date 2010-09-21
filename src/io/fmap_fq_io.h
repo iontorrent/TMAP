@@ -33,7 +33,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "../util/fmap_fq.h"
+#include "../seq/fmap_fq.h"
 #include "fmap_file.h"
 
 #define FMAP_STREAM_BUFFER_SIZE 4096
