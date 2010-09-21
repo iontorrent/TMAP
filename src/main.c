@@ -45,6 +45,7 @@ static int usage()
   fprintf(stderr, "         pac2bwt        creates the BWT string file from the packed FASTA file\n");
   fprintf(stderr, "         bwt2sa         creates the SA file from the BWT string file\n");
   fprintf(stderr, "         sff2fq         converts a SFF file to a FASTQ file\n");
+  fprintf(stderr, "\n");
   fprintf(stderr, "Server:\n");
   fprintf(stderr, "         server         creates a mapping server\n");
   fprintf(stderr, "\n");
