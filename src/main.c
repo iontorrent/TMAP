@@ -9,6 +9,10 @@
 extern int 
 fmap_index(int argc, char *argv[]);
 extern int 
+fmap_server_main(int argc, char *argv[]);
+extern int 
+fmap_map1(int argc, char *argv[]);
+extern int 
 fmap_refseq_fasta2pac_main(int argc, char *argv[]);
 extern int 
 fmap_bwt_pac2bwt_main(int argc, char *argv[]);
@@ -16,10 +20,6 @@ extern int
 fmap_sa_bwt2sa_main(int argc, char *argv[]);
 extern int
 fmap_seq_io_sff2fq_main(int argc, char *argv[]);
-extern int 
-fmap_server_main(int argc, char *argv[]);
-extern int 
-fmap_map1(int argc, char *argv[]);
 extern int 
 fmap_debug_exact(int argc, char *argv[]);
 
@@ -65,12 +65,12 @@ int main(int argc, char *argv[])
 
   if(argc < 2) ret = usage();
   else if (0 == strcmp("index", argv[1])) ret = fmap_index(argc-1, argv+1);
+  else if (0 == strcmp("server", argv[1])) ret = fmap_server_main(argc-1, argv+1);
+  else if (0 == strcmp("map1", argv[1])) ret = fmap_map1(argc-1, argv+1);
   else if (0 == strcmp("fasta2pac", argv[1])) ret = fmap_refseq_fasta2pac_main(argc-1, argv+1);
   else if (0 == strcmp("pac2bwt", argv[1])) ret = fmap_bwt_pac2bwt_main(argc-1, argv+1);
   else if (0 == strcmp("bwt2sa", argv[1])) ret = fmap_sa_bwt2sa_main(argc-1, argv+1);
   else if (0 == strcmp("sff2fq", argv[1])) ret = fmap_seq_io_sff2fq_main(argc-1, argv+1);
-  else if (0 == strcmp("server", argv[1])) ret = fmap_server_main(argc-1, argv+1);
-  else if (0 == strcmp("map1", argv[1])) ret = fmap_map1(argc-1, argv+1);
   else if (0 == strcmp("exact", argv[1])) ret = fmap_debug_exact(argc-1, argv+1);
   else {
       fmap_error1(PACKAGE, "Unknown command", Exit, CommandLineArgument);
