@@ -231,6 +231,7 @@ fmap_get_reads_file_format_from_fn_int(char *fn, int32_t *reads_format, int32_t 
               && NULL == fmap_check_suffix(fn, ".fastq", compr_suffix_length)) {
           fmap_error("the expected FASTA file extension is \".fq\" or \".fastq\"", Warn, OutOfRange);
       }
+      break;
     case FMAP_READS_FORMAT_SFF:
       if(NULL == fmap_check_suffix(fn, ".sff", compr_suffix_length)) {
           fmap_error("the expected SFF file extension is \".sff\"", Warn, OutOfRange);
