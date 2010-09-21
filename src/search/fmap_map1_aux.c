@@ -225,7 +225,7 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
   fmap_bwt_match_occ_t match_sa_start;
   fmap_map1_aln_t **alns=NULL;
   fmap_string_t *bases[2]={NULL,NULL};
-  
+
   best_score = next_best_score = aln_score(max_mm+1, max_gapo+1, max_gape+1, opt);
 
   if(0 == bwt->is_rev) fmap_error("0 == bwt->is_rev", Exit, OutOfRange);
@@ -274,7 +274,8 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
 
   fmap_map1_aux_stack_reset(stack); // reset stack
   fmap_map1_aux_stack_push(stack, 0, 0, &match_sa_start, 0, 0, 0, STATE_M, 0, NULL, opt);
-  fmap_map1_aux_stack_push(stack, 1, 0, &match_sa_start, 0, 0, 0, STATE_M, 0, NULL, opt);
+  // HERE
+  //fmap_map1_aux_stack_push(stack, 1, 0, &match_sa_start, 0, 0, 0, STATE_M, 0, NULL, opt);
 
   while(0 < fmap_map1_aux_stack_size(stack) && fmap_map1_aux_stack_size(stack) < opt->max_entries) {
       fmap_map1_aux_stack_entry_t *e = NULL;
@@ -491,7 +492,7 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
              */
 
           // insertions/deletions
-          if(opt->indel_ends_bound <= offset && offset <= len - opt->indel_ends_bound) { // do not add gaps round the ends
+          if(opt->indel_ends_bound <= offset && offset < len - opt->indel_ends_bound) { // do not add gaps round the ends
               if(STATE_M == e->state) { // gap open
                   if(0 < n_gapo) { // gap open is allowed
                       // insertion
