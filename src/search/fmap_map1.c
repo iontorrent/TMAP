@@ -38,6 +38,11 @@ fmap_map1_aln_mapq(int32_t num_best_sa, int32_t num_all_sa, int32_t max_score, i
 {
   int32_t n;
 
+  /*
+  fprintf(stderr, "num_best_sa=%d num_all_sa=%d max_score=%d score=%d\n",
+          num_best_sa, num_all_sa, max_score, score);
+          */
+
   if(1 < num_best_sa) {
       return 0; // multiple best hits
   }
@@ -45,11 +50,15 @@ fmap_map1_aln_mapq(int32_t num_best_sa, int32_t num_all_sa, int32_t max_score, i
       return 25; // maximum possible score
   }
 
-  n = (num_best_sa - num_all_sa);
+  n = (num_all_sa - num_best_sa);
   if(0 == n) {
       return 37; // no second best hits
   }
+  else if(255 < n) {
+      n = 255;
+  }
 
+  //fprintf(stderr, "g_log_n[%d]=%d\n", n, g_log_n[n]);
   // use MAQ-like mapping qualities
   return (23 < g_log_n[n])? 0 : 23 - g_log_n[n];
 }
@@ -94,6 +103,10 @@ fmap_map1_aln_filter(fmap_map1_opt_t *opt, fmap_map1_aln_t ***alns, int32_t *n_a
   }
   for(i=0;i<(*n_alns);i++) {
       num_all_sa += (*alns)[i]->l - (*alns)[i]->k + 1;
+      fprintf(stderr, "(*alns)[i]->score=%d width=%d sum=%d\n",
+              (*alns)[i]->score,
+              (*alns)[i]->l - (*alns)[i]->k + 1,
+              num_all_sa);
   }
 
   if(FMAP_ALN_OUTPUT_MODE_ALL == opt->aln_output_mode) { // all hits

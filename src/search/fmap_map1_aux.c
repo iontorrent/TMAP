@@ -217,7 +217,7 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
                    fmap_map1_aux_stack_t *stack, int32_t *n_alns, int32_t *max_score)
 {
   int32_t max_mm = opt->max_mm, max_gapo = opt->max_gapo, max_gape = opt->max_gape, seed_max_mm = opt->seed_max_mm;
-  int32_t best_score = aln_score(max_mm+1, max_gapo+1, max_gape+1, opt);
+  int32_t best_score, next_best_score;
   int32_t best_cnt = 0;
   int32_t j, num_n = 0;
   int32_t max_edit_score;
@@ -225,6 +225,8 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
   fmap_bwt_match_occ_t match_sa_start;
   fmap_map1_aln_t **alns=NULL;
   fmap_string_t *bases[2]={NULL,NULL};
+  
+  best_score = next_best_score = aln_score(max_mm+1, max_gapo+1, max_gape+1, opt);
 
   if(0 == bwt->is_rev) fmap_error("0 == bwt->is_rev", Exit, OutOfRange);
 
@@ -344,7 +346,7 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
       if(1 == hit_found) { // alignment found
           int32_t score = aln_score(e->n_mm, e->n_gapo, e->n_gape, opt);
           int32_t do_add = 1;
-          //fprintf(stderr, "hit found: %d:(%u,%u)\n", e->n_mm+e->n_gapo+e->n_gape, match_sa_cur.k, match_sa_cur.l);
+          //fprintf(stderr, "hit found: %d %d:(%u,%u)\n", score, e->n_mm+e->n_gapo+e->n_gape, match_sa_cur.k, match_sa_cur.l);
           if(alns_num == 0) {
               best_score = score;
               best_cnt = 0;
@@ -352,9 +354,18 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
           if(score == best_score) {
               best_cnt += match_sa_cur.l - match_sa_cur.k + 1;
           }
-          else if(opt->max_best_cals < best_cnt) {
-              // ignore if too many "best" have been found
-              break;
+          else {
+              if(opt->max_best_cals < best_cnt) {
+                  // ignore if too many "best" have been found
+                  break;
+              }
+              if(score < next_best_score) {
+                  next_best_score = score;
+              }
+              else if(next_best_score < score) {
+                  // no need to examine further
+                  break;
+              }
           }
           if(0 < e->n_gapo) { // check if the same alignment has been found 
               for(j=0;j<alns_num;j++) {
