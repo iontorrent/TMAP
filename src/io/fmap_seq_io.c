@@ -153,6 +153,7 @@ fmap_seq_io_sff2fq_main(int argc, char *argv[])
   while(0 < fmap_seq_io_read(io_in, seq_in)) {
       seq_out = fmap_seq_sff2fq(seq_in);
       fmap_seq_io_print(fmap_file_stdout, seq_out);
+      fmap_seq_destroy(seq_out);
   }
   fmap_seq_destroy(seq_in);
 
