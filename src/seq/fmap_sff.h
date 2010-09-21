@@ -173,4 +173,11 @@ fmap_sff_reverse_compliment(fmap_sff_t *sff);
 void
 fmap_sff_to_int(fmap_sff_t *sff);
 
+/*! @function
+  @abstract
+  @param  sff  a pointer to the sff 
+*/
+void
+fmap_sff_to_char(fmap_sff_t *sff);
+
 #endif

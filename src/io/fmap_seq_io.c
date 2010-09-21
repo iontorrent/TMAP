@@ -3,6 +3,7 @@
 
 #include "../util/fmap_error.h"
 #include "../util/fmap_alloc.h"
+#include "../util/fmap_progress.h"
 #include "fmap_seq_io.h"
 #include "fmap_sff_io.h"
 #include "fmap_seq_io.h"
@@ -93,4 +94,75 @@ fmap_seq_io_read_buffer(fmap_seq_io_t *io, fmap_seq_t **seq_buffer, int32_t buff
   }
 
   return n;
+}
+
+static int
+fmap_seq_io_print(fmap_file_t *fp, fmap_seq_t *seq)
+{
+  switch(seq->type) {
+    case FMAP_SEQ_TYPE_FQ:
+      return fmap_file_fprintf(fp, "@%s\n%s\n+%s\n%s\n",
+                        seq->data.fq->name->s,
+                        seq->data.fq->seq->s,
+                        (0 < seq->data.fq->comment->l) ? seq->data.fq->comment->s : "",
+                        seq->data.fq->qual->s);
+      break;
+    case FMAP_SEQ_TYPE_SFF:
+      fmap_error("SFF writing is unsupported", Exit, OutOfRange);
+      break;
+    default:
+      fmap_error("type is unrecognized", Exit, OutOfRange);
+      break;
+  }
+  return 0;
+}
+
+int
+fmap_seq_io_sff2fq_main(int argc, char *argv[])
+{
+  int c, help = 0;
+  fmap_file_t *fmap_file_in = NULL;
+  fmap_seq_io_t *io_in = NULL, *io_out = NULL;
+  fmap_seq_t *seq_in = NULL, *seq_out = NULL;
+
+  fmap_progress_set_start_time(clock());
+  fmap_progress_set_command(argv[0]);
+
+  while((c = getopt(argc, argv, "vh")) >= 0) {
+      switch(c) {
+        case 'v': fmap_progress_set_verbosity(1); break;
+        case 'h': help = 1; break;
+        default: return 1;
+      }
+  }
+  if(1 != argc - optind || 1 == help) {
+      fmap_file_fprintf(fmap_file_stderr, "Usage: %s %s [-v -h] <in.sff>\n", PACKAGE, argv[0]);
+      return 1;
+  }
+
+
+  // input
+  fmap_file_in = fmap_file_fopen(argv[optind], "rb", FMAP_FILE_NO_COMPRESSION);
+  io_in = fmap_seq_io_init(fmap_file_in, FMAP_SEQ_TYPE_SFF);
+  seq_in = fmap_seq_init(FMAP_SEQ_TYPE_SFF);
+
+  // output
+  fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "wb", FMAP_FILE_NO_COMPRESSION);
+  io_out = fmap_seq_io_init(fmap_file_stdout, FMAP_SEQ_TYPE_FQ);
+
+  while(0 < fmap_seq_io_read(io_in, seq_in)) {
+      seq_out = fmap_seq_sff2fq(seq_in);
+      fmap_seq_io_print(fmap_file_stdout, seq_out);
+  }
+  fmap_seq_destroy(seq_in);
+
+  // input
+  fmap_seq_io_destroy(io_in);
+  fmap_file_fclose(fmap_file_in);
+  
+  // output
+  fmap_seq_io_destroy(io_out);
+  fmap_file_fclose(fmap_file_stdout);
+
+  return 0;
 }

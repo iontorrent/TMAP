@@ -388,3 +388,14 @@ fmap_sff_to_int(fmap_sff_t *sff)
   }
   sff->is_int = 1;
 }
+
+void
+fmap_sff_to_char(fmap_sff_t *sff)
+{
+  int32_t i;
+  if(0 == sff->is_int) return;
+  for(i=0;i<sff->read->bases->l;i++) {
+      sff->read->bases->s[i] = "ACGTN"[(int)sff->read->bases->s[i]];
+  }
+  sff->is_int = 0;
+}

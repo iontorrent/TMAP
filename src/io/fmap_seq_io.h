@@ -37,7 +37,7 @@ fmap_seq_io_destroy(fmap_seq_io_t *io);
 
 /*! @function
   @abstract      reads in a reading structure
-  @param  io  a pointer to a previously initialized sequence structure
+  @param  io     a pointer to a previously initialized sequence structure
   @param  seq    the sequence structure in which to store the data
   @return        the length of the sequence read, -1 indicates an a EOF, -2 indicates a truncated quality string
   */
@@ -53,5 +53,14 @@ fmap_seq_io_read(fmap_seq_io_t *io, fmap_seq_t *seq);
   */
 int
 fmap_seq_io_read_buffer(fmap_seq_io_t *io, fmap_seq_t **seq_buffer, int32_t buffer_length);
+
+/*! @function
+  @abstract     main-like function for 'fmap sff2fq'
+  @param  argc  the number of arguments
+  @param  argv  the argument list
+  @return       0 if executed successful
+  */
+int
+fmap_seq_io_sff2fq_main(int argc, char *argv[]);
 
 #endif

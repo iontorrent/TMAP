@@ -151,3 +151,20 @@ fmap_seq_get_qualities(fmap_seq_t *seq)
   }
   return NULL;
 }
+
+fmap_seq_t *
+fmap_seq_sff2fq(fmap_seq_t *seq)
+{
+  fmap_seq_t *ret= NULL;
+  
+  if(seq->type == FMAP_SEQ_TYPE_FQ) return fmap_seq_clone(seq);
+
+  //Note:  ignore the comment field
+  ret = fmap_seq_init(FMAP_SEQ_TYPE_FQ);
+  fmap_string_copy(ret->data.fq->name, seq->data.sff->rheader->name); // name
+  fmap_string_copy(ret->data.fq->seq, seq->data.sff->read->bases); // seq
+  fmap_string_copy(ret->data.fq->qual, seq->data.sff->read->quality); // qual
+  ret->data.fq->is_int = seq->data.sff->is_int; // is in integer format
+
+  return ret;
+}
