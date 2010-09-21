@@ -155,6 +155,7 @@ fmap_seq_get_qualities(fmap_seq_t *seq)
 fmap_seq_t *
 fmap_seq_sff2fq(fmap_seq_t *seq)
 {
+  int32_t i;
   fmap_seq_t *ret= NULL;
   
   if(seq->type == FMAP_SEQ_TYPE_FQ) return fmap_seq_clone(seq);
@@ -165,6 +166,14 @@ fmap_seq_sff2fq(fmap_seq_t *seq)
   fmap_string_copy(ret->data.fq->seq, seq->data.sff->read->bases); // seq
   fmap_string_copy(ret->data.fq->qual, seq->data.sff->read->quality); // qual
   ret->data.fq->is_int = seq->data.sff->is_int; // is in integer format
+
+  // remove key sequence
+  for(i=0;i<ret->data.fq->seq->l - seq->data.sff->gheader->key_length;i++) {
+      ret->data.fq->seq->s[i] = ret->data.fq->seq->s[i + seq->data.sff->gheader->key_length];
+      ret->data.fq->qual->s[i] = ret->data.fq->qual->s[i + seq->data.sff->gheader->key_length];
+  }
+  ret->data.fq->seq->l -= seq->data.sff->gheader->key_length;
+  ret->data.fq->qual->l -= seq->data.sff->gheader->key_length;
 
   return ret;
 }
