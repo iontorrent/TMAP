@@ -23,8 +23,8 @@ fmap_SOURCES = \
 			   src/server/fmap_shm.h src/server/fmap_shm.c \
 			   src/server/fmap_server.h src/server/fmap_server.c \
 			   src/debug/fmap_debug_exact.h src/debug/fmap_debug_exact.c \
-			   src/search/fmap_map1_aux.h src/search/fmap_map1_aux.c \
-			   src/search/fmap_map1.h src/search/fmap_map1.c \
+			   src/map/fmap_map1_aux.h src/map/fmap_map1_aux.c \
+			   src/map/fmap_map1.h src/map/fmap_map1.c \
 			   src/main.c
 
 fmap_LDADD =
