@@ -110,7 +110,7 @@ typedef struct {
 } fmap_map1_thread_data_t;
 
 /*! @function
-  @abstract     main-like function for 'fmap exact'
+  @abstract     main-like function for 'fmap map1'
   @param  argc  the number of arguments
   @param  argv  the argument list
   @return       0 if executed successful
