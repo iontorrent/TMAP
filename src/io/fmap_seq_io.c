@@ -125,9 +125,6 @@ fmap_seq_io_sff2fq_main(int argc, char *argv[])
   fmap_seq_io_t *io_in = NULL, *io_out = NULL;
   fmap_seq_t *seq_in = NULL, *seq_out = NULL;
 
-  fmap_progress_set_start_time(clock());
-  fmap_progress_set_command(argv[0]);
-
   while((c = getopt(argc, argv, "vh")) >= 0) {
       switch(c) {
         case 'v': fmap_progress_set_verbosity(1); break;
@@ -139,7 +136,6 @@ fmap_seq_io_sff2fq_main(int argc, char *argv[])
       fmap_file_fprintf(fmap_file_stderr, "Usage: %s %s [-v -h] <in.sff>\n", PACKAGE, argv[0]);
       return 1;
   }
-
 
   // input
   fmap_file_in = fmap_file_fopen(argv[optind], "rb", FMAP_FILE_NO_COMPRESSION);

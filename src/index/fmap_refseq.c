@@ -502,9 +502,6 @@ fmap_refseq_fasta2pac_main(int argc, char *argv[])
 {
   int c, help=0;
 
-  fmap_progress_set_start_time(clock());
-  fmap_progress_set_command(argv[0]);
-
   while((c = getopt(argc, argv, "vh")) >= 0) {
       switch(c) {
         case 'v': fmap_progress_set_verbosity(1); break;

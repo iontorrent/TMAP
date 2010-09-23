@@ -9,7 +9,7 @@ enum {
 };
 
 /*! @typedef
-  @abstract                structure to store the command line options for 'fmap exact'
+  @abstract                structure to store the command line options for 'fmap map1'
   @field  argv              the command line argv structure
   @field  argc              the number of command line arguments passed
   @field  fn_fasta          the fasta reference file name (-f)
@@ -34,7 +34,7 @@ enum {
   @field  num_threads       the number of threads (-n)
   @field  aln_output_mode   specifies how to choose alignments (-a) 
   @field  input_compr       the input compression type (-j and -z)
-  @field  output_compr      the output compression type (-j and -z)
+  @field  output_compr      the output compression type (-J and -Z)
   @field  shm_key           the shared memory key (-s)
 */
 typedef struct {
@@ -115,6 +115,7 @@ typedef struct {
   @param  argv  the argument list
   @return       0 if executed successful
 */
-int fmap_map1(int argc, char *argv[]);
+int 
+fmap_map1(int argc, char *argv[]);
 
 #endif

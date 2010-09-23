@@ -941,9 +941,6 @@ fmap_sa_bwt2sa_main(int argc, char *argv[])
 {
   int c, intv = FMAP_SA_INTERVAL, help=0;
 
-  fmap_progress_set_start_time(clock());
-  fmap_progress_set_command(argv[0]);
-
   while((c = getopt(argc, argv, "i:vh")) >= 0) {
       switch(c) {
         case 'i': intv = atoi(optarg); break;

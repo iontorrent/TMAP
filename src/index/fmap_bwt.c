@@ -615,9 +615,6 @@ fmap_bwt_pac2bwt_main(int argc, char *argv[])
 {
   int c, is_large = 0, occ_interval = FMAP_BWT_OCC_INTERVAL, hash_width = FMAP_BWT_HASH_WIDTH, help = 0;
 
-  fmap_progress_set_start_time(clock());
-  fmap_progress_set_command(argv[0]);
-
   while((c = getopt(argc, argv, "o:lw:vh")) >= 0) {
       switch(c) {
         case 'l': is_large= 1; break;

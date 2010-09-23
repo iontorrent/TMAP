@@ -226,9 +226,6 @@ fmap_server_main(int argc, char *argv[])
   key_t key=13;
   uint32_t listing = 0;
 
-  fmap_progress_set_start_time(clock());
-  fmap_progress_set_command(argv[0]);
-
   while((c = getopt(argc, argv, "f:a:k:rRbBsSvh")) >= 0) {
       switch(c) {
         case 'f':
@@ -256,6 +253,7 @@ fmap_server_main(int argc, char *argv[])
           return usage();
       }
   }
+  
   if(argc != optind || 1 == argc || 1 == help) {
       return usage();
   }

@@ -623,148 +623,164 @@ usage(fmap_map1_opt_t *opt)
   return 1;
 }
 
+static fmap_map1_opt_t *
+fmap_map1_opt_init()
+{
+  fmap_map1_opt_t *opt = NULL;
+
+  opt = fmap_calloc(1, sizeof(fmap_map1_opt_t), "opt");
+
+  // program defaults
+  opt->argv = NULL;
+  opt->argc = -1;
+  opt->fn_fasta = opt->fn_reads = NULL;
+  opt->reads_format = FMAP_READS_FORMAT_UNKNOWN;
+  opt->seed_length = 32; // move this to a define block
+  opt->seed_max_mm = 3; // move this to a define block
+  opt->max_mm = -1; opt->max_mm_frac = 0.05; // TODO: move this to a define block 
+  opt->max_gapo = -1; opt->max_gapo_frac = 0.02; // TODO: move this to a define block
+  opt->max_gape = -1; opt->max_gape_frac = 0.10; // TODO: move this to a define block
+  opt->pen_mm = 3; opt->pen_gapo = 11; opt->pen_gape = 4; // TODO: move this to a define block
+  opt->max_cals_del = 10; // TODO: move this to a define block
+  opt->indel_ends_bound = 5; // TODO: move this to a define block
+  opt->max_best_cals = 32; // TODO: move this to a define block
+  opt->reads_queue_size = 65536; // TODO: move this to a define block
+  opt->max_entries= 2000000; // TODO: move this to a define block
+  opt->num_threads = 1;
+  opt->aln_output_mode = 1; // TODO: move this to a define block
+  opt->input_compr = FMAP_FILE_NO_COMPRESSION;
+  opt->output_compr = FMAP_FILE_NO_COMPRESSION;
+  opt->shm_key = 0;
+
+  return opt;
+}
+
+static void
+fmap_map1_opt_destroy(fmap_map1_opt_t *opt)
+{
+  free(opt->fn_fasta);
+  free(opt->fn_reads);
+  free(opt);
+}
+
 int 
 fmap_map1(int argc, char *argv[])
 {
   int c;
-  fmap_map1_opt_t opt;
+  fmap_map1_opt_t *opt = NULL;
 
   srand48(0); // random seed
-  // Set output progress
-  fmap_progress_set_command(argv[0]);
-  fmap_progress_set_start_time(clock());
-
-  // program defaults
-  opt.argv = argv;
-  opt.argc = argc;
-  opt.fn_fasta = opt.fn_reads = NULL;
-  opt.reads_format = FMAP_READS_FORMAT_UNKNOWN;
-  opt.seed_length = 32; // move this to a define block
-  opt.seed_max_mm = 3; // move this to a define block
-  opt.max_mm = -1; opt.max_mm_frac = 0.05; // TODO: move this to a define block 
-  opt.max_gapo = -1; opt.max_gapo_frac = 0.02; // TODO: move this to a define block
-  opt.max_gape = -1; opt.max_gape_frac = 0.10; // TODO: move this to a define block
-  opt.pen_mm = 3; opt.pen_gapo = 11; opt.pen_gape = 4; // TODO: move this to a define block
-  opt.max_cals_del = 10; // TODO: move this to a define block
-  opt.indel_ends_bound = 5; // TODO: move this to a define block
-  opt.max_best_cals = 32; // TODO: move this to a define block
-  opt.reads_queue_size = 65536; // TODO: move this to a define block
-  opt.max_entries= 2000000; // TODO: move this to a define block
-  opt.num_threads = 1;
-  opt.aln_output_mode = 1; // TODO: move this to a define block
-  opt.input_compr = FMAP_FILE_NO_COMPRESSION;
-  opt.output_compr = FMAP_FILE_NO_COMPRESSION;
-  opt.shm_key = 0;
+  opt = fmap_map1_opt_init(argv, argc);
+  opt->argc = argc; opt->argv = argv;
 
   while((c = getopt(argc, argv, "f:r:F:l:k:m:o:e:M:O:E:d:i:b:q:Q:n:a:jzJZs:vh")) >= 0) {
       switch(c) {
         case 'f':
-          opt.fn_fasta = fmap_strdup(optarg); break;
+          opt->fn_fasta = fmap_strdup(optarg); break;
         case 'r':
-          opt.fn_reads = fmap_strdup(optarg); 
-          fmap_get_reads_file_format_from_fn_int(opt.fn_reads, &opt.reads_format, &opt.input_compr);
+          opt->fn_reads = fmap_strdup(optarg); 
+          fmap_get_reads_file_format_from_fn_int(opt->fn_reads, &opt->reads_format, &opt->input_compr);
           break;
         case 'F':
-          opt.reads_format = fmap_get_reads_file_format_int(optarg); break;
+          opt->reads_format = fmap_get_reads_file_format_int(optarg); break;
         case 'l':
-          opt.seed_length = atoi(optarg); break;
+          opt->seed_length = atoi(optarg); break;
         case 'k':
-          opt.seed_max_mm = atoi(optarg); break;
+          opt->seed_max_mm = atoi(optarg); break;
         case 'm':
-          if(NULL != strstr(optarg, ".")) opt.max_mm = -1, opt.max_mm_frac = atof(optarg);
-          else opt.max_mm = atoi(optarg), opt.max_mm_frac = -1.0;
+          if(NULL != strstr(optarg, ".")) opt->max_mm = -1, opt->max_mm_frac = atof(optarg);
+          else opt->max_mm = atoi(optarg), opt->max_mm_frac = -1.0;
           break;
         case 'o':
-          if(NULL != strstr(optarg, ".")) opt.max_gapo = -1, opt.max_gapo_frac = atof(optarg);
-          else opt.max_gapo = atoi(optarg), opt.max_gapo_frac = -1.0;
+          if(NULL != strstr(optarg, ".")) opt->max_gapo = -1, opt->max_gapo_frac = atof(optarg);
+          else opt->max_gapo = atoi(optarg), opt->max_gapo_frac = -1.0;
           break;
         case 'e':
-          if(NULL != strstr(optarg, ".")) opt.max_gape = -1, opt.max_gape_frac = atof(optarg);
-          else opt.max_gape = atoi(optarg), opt.max_gape_frac = -1.0;
+          if(NULL != strstr(optarg, ".")) opt->max_gape = -1, opt->max_gape_frac = atof(optarg);
+          else opt->max_gape = atoi(optarg), opt->max_gape_frac = -1.0;
           break;
         case 'M':
-          opt.pen_mm = atoi(optarg); break;
+          opt->pen_mm = atoi(optarg); break;
         case 'O':
-          opt.pen_gapo = atoi(optarg); break;
+          opt->pen_gapo = atoi(optarg); break;
         case 'E':
-          opt.pen_gape = atoi(optarg); break;
+          opt->pen_gape = atoi(optarg); break;
         case 'd':
-          opt.max_cals_del = atoi(optarg); break;
+          opt->max_cals_del = atoi(optarg); break;
         case 'i':
-          opt.indel_ends_bound = atoi(optarg); break;
+          opt->indel_ends_bound = atoi(optarg); break;
         case 'b':
-          opt.max_best_cals = atoi(optarg); break;
+          opt->max_best_cals = atoi(optarg); break;
         case 'q': 
-          opt.reads_queue_size = atoi(optarg); break;
+          opt->reads_queue_size = atoi(optarg); break;
         case 'Q': 
-          opt.max_entries = atoi(optarg); break;
+          opt->max_entries = atoi(optarg); break;
         case 'n':
-          opt.num_threads = atoi(optarg); break;
+          opt->num_threads = atoi(optarg); break;
         case 'a':
-          opt.aln_output_mode = atoi(optarg); break;
+          opt->aln_output_mode = atoi(optarg); break;
         case 'j':
-          opt.input_compr = FMAP_FILE_BZ2_COMPRESSION; 
-          fmap_get_reads_file_format_from_fn_int(opt.fn_reads, &opt.reads_format, &opt.input_compr);
+          opt->input_compr = FMAP_FILE_BZ2_COMPRESSION; 
+          fmap_get_reads_file_format_from_fn_int(opt->fn_reads, &opt->reads_format, &opt->input_compr);
           break;
         case 'z':
-          opt.input_compr = FMAP_FILE_GZ_COMPRESSION; 
-          fmap_get_reads_file_format_from_fn_int(opt.fn_reads, &opt.reads_format, &opt.input_compr);
+          opt->input_compr = FMAP_FILE_GZ_COMPRESSION; 
+          fmap_get_reads_file_format_from_fn_int(opt->fn_reads, &opt->reads_format, &opt->input_compr);
           break;
         case 'J':
-          opt.output_compr = FMAP_FILE_BZ2_COMPRESSION; break;
+          opt->output_compr = FMAP_FILE_BZ2_COMPRESSION; break;
         case 'Z':
-          opt.output_compr = FMAP_FILE_GZ_COMPRESSION; break;
+          opt->output_compr = FMAP_FILE_GZ_COMPRESSION; break;
         case 's':
-          opt.shm_key = atoi(optarg); break;
+          opt->shm_key = atoi(optarg); break;
         case 'v':
           fmap_progress_set_verbosity(1); break;
         case 'h':
         default:
-          return usage(&opt);
+          return usage(opt);
       }
   }
 
   if(argc != optind || 1 == argc) {
-      return usage(&opt);
+      return usage(opt);
   }
   else { // check command line arguments
-      if(NULL == opt.fn_fasta && 0 == opt.shm_key) {
+      if(NULL == opt->fn_fasta && 0 == opt->shm_key) {
           fmap_error("option -f or option -s must be specified", Exit, CommandLineArgument);
       }
-      else if(NULL != opt.fn_fasta && 0 < opt.shm_key) {
+      else if(NULL != opt->fn_fasta && 0 < opt->shm_key) {
           fmap_error("option -f and option -s may not be specified together", Exit, CommandLineArgument);
       }
-      if(NULL == opt.fn_reads && FMAP_READS_FORMAT_UNKNOWN == opt.reads_format) {
+      if(NULL == opt->fn_reads && FMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
           fmap_error("option -F or option -r must be specified", Exit, CommandLineArgument);
       }
-      if(FMAP_READS_FORMAT_UNKNOWN == opt.reads_format) {
+      if(FMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
           fmap_error("the reads format (-r) was unrecognized", Exit, CommandLineArgument);
       }
-      if(-1 != opt.seed_length) fmap_error_cmd_check_int(opt.seed_length, 1, INT32_MAX, "-s");
+      if(-1 != opt->seed_length) fmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "-s");
 
       // this will take care of the case where they are both < 0
-      fmap_error_cmd_check_int((opt.max_mm_frac < 0) ? opt.max_mm : (int32_t)opt.max_mm_frac, 0, INT32_MAX, "-m"); 
+      fmap_error_cmd_check_int((opt->max_mm_frac < 0) ? opt->max_mm : (int32_t)opt->max_mm_frac, 0, INT32_MAX, "-m"); 
       // this will take care of the case where they are both < 0
-      fmap_error_cmd_check_int((opt.max_gapo_frac < 0) ? opt.max_gapo : (int32_t)opt.max_gapo_frac, 0, INT32_MAX, "-m"); 
+      fmap_error_cmd_check_int((opt->max_gapo_frac < 0) ? opt->max_gapo : (int32_t)opt->max_gapo_frac, 0, INT32_MAX, "-m"); 
       // this will take care of the case where they are both < 0
-      fmap_error_cmd_check_int((opt.max_gape_frac < 0) ? opt.max_gape : (int32_t)opt.max_gape_frac, 0, INT32_MAX, "-m"); 
+      fmap_error_cmd_check_int((opt->max_gape_frac < 0) ? opt->max_gape : (int32_t)opt->max_gape_frac, 0, INT32_MAX, "-m"); 
 
-      fmap_error_cmd_check_int(opt.pen_mm, 0, INT32_MAX, "-M");
-      fmap_error_cmd_check_int(opt.pen_gapo, 0, INT32_MAX, "-O");
-      fmap_error_cmd_check_int(opt.pen_gape, 0, INT32_MAX, "-E");
-      fmap_error_cmd_check_int(opt.max_cals_del, 1, INT32_MAX, "-d");
-      fmap_error_cmd_check_int(opt.indel_ends_bound, 0, INT32_MAX, "-i");
-      fmap_error_cmd_check_int(opt.max_best_cals, 0, INT32_MAX, "-b");
-      fmap_error_cmd_check_int(opt.reads_queue_size, 1, INT32_MAX, "-q");
-      fmap_error_cmd_check_int(opt.max_entries, 1, INT32_MAX, "-Q");
-      fmap_error_cmd_check_int(opt.num_threads, 1, INT32_MAX, "-n");
-      fmap_error_cmd_check_int(opt.aln_output_mode, 0, 3, "-a");
+      fmap_error_cmd_check_int(opt->pen_mm, 0, INT32_MAX, "-M");
+      fmap_error_cmd_check_int(opt->pen_gapo, 0, INT32_MAX, "-O");
+      fmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
+      fmap_error_cmd_check_int(opt->max_cals_del, 1, INT32_MAX, "-d");
+      fmap_error_cmd_check_int(opt->indel_ends_bound, 0, INT32_MAX, "-i");
+      fmap_error_cmd_check_int(opt->max_best_cals, 0, INT32_MAX, "-b");
+      fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
+      fmap_error_cmd_check_int(opt->max_entries, 1, INT32_MAX, "-Q");
+      fmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
+      fmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
   }
 
-  fmap_map1_core(&opt);
+  fmap_map1_core(opt);
 
-  free(opt.fn_fasta);
-  free(opt.fn_reads);
+  fmap_map1_opt_destroy(opt);
 
   fmap_progress_print2("terminating successfully");
 

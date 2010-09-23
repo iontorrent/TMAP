@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "util/fmap_error.h"
+#include "util/fmap_progress.h"
 #include "io/fmap_file.h"
 
 extern int 
@@ -60,11 +61,15 @@ static int usage()
 int main(int argc, char *argv[])
 {
   int ret = 0;
-  
-  fmap_file_stderr = fmap_file_fdopen(fileno(stderr), "w", FMAP_FILE_NO_COMPRESSION);
+
 
   if(argc < 2) ret = usage();
-  else if (0 == strcmp("index", argv[1])) ret = fmap_index(argc-1, argv+1);
+
+  fmap_file_stderr = fmap_file_fdopen(fileno(stderr), "w", FMAP_FILE_NO_COMPRESSION); // set stderr
+  fmap_progress_set_command(argv[1]); // set output progress
+  fmap_progress_set_start_time(clock()); // set start time
+
+  if (0 == strcmp("index", argv[1])) ret = fmap_index(argc-1, argv+1);
   else if (0 == strcmp("server", argv[1])) ret = fmap_server_main(argc-1, argv+1);
   else if (0 == strcmp("map1", argv[1])) ret = fmap_map1(argc-1, argv+1);
   else if (0 == strcmp("fasta2pac", argv[1])) ret = fmap_refseq_fasta2pac_main(argc-1, argv+1);
