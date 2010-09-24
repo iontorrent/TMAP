@@ -270,8 +270,8 @@ type_t fmap_sort_small_##name(size_t n, type_t arr[], size_t kk) \
   @param  a     the array of elements to be sorted
   */
 #define fmap_sort_heapsort(name, n, a) fmap_sort_heapsort_##name(n, a)
-//#define fmap_sort_heapmake(name, n, a) fmap_sort_heapmake_##name(n, a)
-//#define fmap_sort_heapadjust(name, i, n, a) fmap_sort_heapadjust_##name(i, n, a)
+#define fmap_sort_heapmake(name, n, a) fmap_sort_heapmake_##name(n, a)
+#define fmap_sort_heapadjust(name, i, n, a) fmap_sort_heapadjust_##name(i, n, a)
 /*! @macro
   @abstract     performs small sorton the given array
   @param  name  the name of the associated sort functions (set during initailization) 
