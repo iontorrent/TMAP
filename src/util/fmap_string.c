@@ -1,9 +1,11 @@
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include "fmap_error.h"
 #include "fmap_alloc.h"
+#include "fmap_definitions.h"
 #include "fmap_string.h"
-
 
 inline fmap_string_t *
 fmap_string_init(int32_t mem)
@@ -55,6 +57,28 @@ fmap_string_clone(fmap_string_t *str)
   ret->l = str->l;
 
   return ret;
+}
+
+inline void
+fmap_string_lsprintf(fmap_string_t *dest, int32_t l, const char *format, ...) 
+{
+  va_list ap;
+  int32_t length;
+  if(l < 0) fmap_error(NULL, Exit, OutOfRange);
+  va_start(ap, format);
+  length = vsnprintf(dest->s + l, dest->m - l, format, ap);
+  if(length < 0) fmap_error(NULL, Exit, OutOfRange);
+  va_end(ap);
+  if(dest->m - l - 1 < length) {
+      dest->m = length + l + 2;
+      fmap_roundup32(dest->m);
+      dest->s = fmap_realloc(dest->s, sizeof(char)*dest->m, "dest->s");
+      va_start(ap, format);
+      length = vsnprintf(dest->s + l, dest->m - l, format, ap);
+      va_end(ap);
+      if(length < 0) fmap_error(NULL, Exit, OutOfRange);
+  }
+  dest->l += length;
 }
 
 inline void

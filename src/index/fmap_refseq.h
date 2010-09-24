@@ -27,7 +27,7 @@
   @return     the number of bits the base is shifted (returns a multiple of two)
   @dicsussion the reference is stored in a 2-bit format
   */
-#define fmap_refseq_seq_byte_shift(_i) ((3 - ((_i) & 3)) << 1)
+#define fmap_refseq_seq_byte_shift(_i) ((0x3 - ((_i) & 0x3)) << 1)
 
 /*! @macro
   @param  _refseq  pointer to the structure holding the reference sequence
@@ -41,7 +41,7 @@
   @param  _i       the 0-based base position to retrieve
   @return          the base's 2-bit integer representation
   */
-#define fmap_refseq_seq_i(_refseq, _i) ((_refseq->seq[fmap_refseq_seq_byte_i(_i)] >> fmap_refseq_seq_byte_shift(_i)) & 3)
+#define fmap_refseq_seq_i(_refseq, _i) ((_refseq->seq[fmap_refseq_seq_byte_i(_i)] >> fmap_refseq_seq_byte_shift(_i)) & 0x3)
 
 /*! @typedef
   @abstract  
@@ -162,7 +162,7 @@ fmap_refseq_destroy(fmap_refseq_t *refseq);
   @return             the one-based position, 0 if not found (i.e. overlaps two chromosomes)
   */
 inline uint32_t
-fmap_refseq_pac2real(fmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos);
+fmap_refseq_pac2real(const fmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos);
 
 /*! @function
   @abstract     main-like function for 'fmap fasta2pac'

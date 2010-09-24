@@ -78,6 +78,11 @@ extern uint8_t nt_char_to_rc_char[256];
 #define ntohll(x) ((((uint64_t)ntohl(x)) << 32) + ntohl(x >> 32))
 #endif
 
+// TODO: document
+#ifndef fmap_roundup32
+#define fmap_roundup32(x) (--(x), (x)|=(x)>>1, (x)|=(x)>>2, (x)|=(x)>>4, (x)|=(x)>>8, (x)|=(x)>>16, ++(x))
+#endif
+
 /*! @function
   @param  v  the value to take the log 2
   @return    log of the value, base two

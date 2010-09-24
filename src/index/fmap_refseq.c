@@ -445,7 +445,7 @@ fmap_refseq_destroy(fmap_refseq_t *refseq)
 
 // zero-based
 static inline int32_t
-fmap_refseq_get_seqid1(fmap_refseq_t *refseq, uint32_t pacpos)
+fmap_refseq_get_seqid1(const fmap_refseq_t *refseq, uint32_t pacpos)
 {
   int32_t left, right, mid;
 
@@ -468,7 +468,7 @@ fmap_refseq_get_seqid1(fmap_refseq_t *refseq, uint32_t pacpos)
 
 // zero-based
 static inline int32_t
-fmap_refseq_get_seqid(fmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_len)
+fmap_refseq_get_seqid(const fmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_len)
 {
   int32_t seqid_left, seqid_right;
 
@@ -482,13 +482,13 @@ fmap_refseq_get_seqid(fmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_len)
 
 // zero-based
 static inline uint32_t
-fmap_refseq_get_pos(fmap_refseq_t *refseq, uint32_t pacpos, uint32_t seqid)
+fmap_refseq_get_pos(const fmap_refseq_t *refseq, uint32_t pacpos, uint32_t seqid)
 {
   return pacpos - refseq->annos[seqid].offset;
 }
 
 inline uint32_t
-fmap_refseq_pac2real(fmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos)
+fmap_refseq_pac2real(const fmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos)
 {
   (*seqid) = fmap_refseq_get_seqid(refseq, pacpos, aln_length);
   if((*seqid) < 0) return 0;

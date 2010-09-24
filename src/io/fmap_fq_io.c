@@ -98,7 +98,7 @@ fmap_stream_getuntil(fmap_stream_t *ks, int delimiter, fmap_string_t *str, int *
       }
       if (str->m - str->l < i - ks->begin + 1) {
           str->m = str->l + (i - ks->begin) + 1;
-          kroundup32(str->m);
+          fmap_roundup32(str->m);
           str->s = fmap_realloc(str->s, str->m, "str->s");
       }
       memcpy(str->s + str->l, ks->buf + ks->begin, i - ks->begin);
@@ -158,7 +158,7 @@ fmap_fq_io_read(fmap_fq_io_t *fqio, fmap_fq_t *fq)
       if (isgraph(c)) { /* printable non-space character */
           if (fq->seq->l + 1 >= fq->seq->m) { /* double the memory */
               fq->seq->m = fq->seq->l + 2;
-              kroundup32(fq->seq->m); /* rounded to next closest 2^k */
+              fmap_roundup32(fq->seq->m); /* rounded to next closest 2^k */
               fq->seq->s = fmap_realloc(fq->seq->s, fq->seq->m, "fq->seq->s");
           }
           fq->seq->s[fq->seq->l++] = (char)c;

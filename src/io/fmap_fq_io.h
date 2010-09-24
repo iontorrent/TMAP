@@ -38,10 +38,6 @@
 
 #define FMAP_STREAM_BUFFER_SIZE 4096
 
-#ifndef kroundup32
-#define kroundup32(x) (--(x), (x)|=(x)>>1, (x)|=(x)>>2, (x)|=(x)>>4, (x)|=(x)>>8, (x)|=(x)>>16, ++(x))
-#endif
-
 /*! @typedef
   @abstract         
   @field  buf      the character buffer

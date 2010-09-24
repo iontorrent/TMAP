@@ -47,6 +47,17 @@ inline fmap_string_t *
 fmap_string_clone(fmap_string_t *str);
 
 /*! @function
+  @abstract
+  @param  dest    pointer to the destination string
+  @param  l       the number of leading characters to skip
+  @param  format  the format for the string
+  @param  ...     the arguments to fill in the format
+  @discussion     the first l characters will not be modified
+ */
+inline void
+fmap_string_lsprintf(fmap_string_t *dest, int32_t l, const char *format, ...);
+
+/*! @function
   @abstract    reverse the characters in the string
   @param  str  pointer to the string
 */

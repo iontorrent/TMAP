@@ -1,6 +1,8 @@
 #ifndef FMAP_MAP1_H_
 #define FMAP_MAP1_H_
 
+#include <config.h>
+
 enum {
     FMAP_ALN_OUTPUT_MODE_BEST = 0,
     FMAP_ALN_OUTPUT_MODE_BEST_RAND = 1,
@@ -91,6 +93,7 @@ typedef struct {
     uint32_t *cigar; 
 } fmap_map1_aln_t;
 
+#ifdef HAVE_LIBPTHREAD
 /*! @typedef
   @abstract                 data to be passed to a thread
   @field  seq_buffer         the buffer of sequences
@@ -108,6 +111,7 @@ typedef struct {
     int32_t tid;
     fmap_map1_opt_t *opt;
 } fmap_map1_thread_data_t;
+#endif
 
 /*! @function
   @abstract     main-like function for 'fmap map1'
@@ -116,6 +120,6 @@ typedef struct {
   @return       0 if executed successful
 */
 int 
-fmap_map1(int argc, char *argv[]);
+fmap_map1_main(int argc, char *argv[]);
 
 #endif

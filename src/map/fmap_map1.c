@@ -1,9 +1,14 @@
 #include <stdlib.h>
 #include <math.h>
+#include <config.h>
+#ifdef HAVE_LIBPTHREAD
+#include <pthread.h>
+#endif
 #include "../util/fmap_error.h"
 #include "../util/fmap_alloc.h"
 #include "../util/fmap_definitions.h"
 #include "../util/fmap_progress.h"
+#include "../util/fmap_sam.h"
 #include "../seq/fmap_seq.h"
 #include "../index/fmap_refseq.h"
 #include "../index/fmap_bwt_gen.h"
@@ -16,9 +21,8 @@
 #include "fmap_map1.h"
 
 #ifdef HAVE_LIBPTHREAD
-#include <pthread.h>
 static pthread_mutex_t fmap_map1_read_lock = PTHREAD_MUTEX_INITIALIZER;
-static int32_t fmap_map1_read_lock_tid = 0;
+static int32_t fmap_map1_read_lock_low = 0;
 #define FMAP_MAP1_THREAD_BLOCK_SIZE 1024
 #endif
 
@@ -243,21 +247,6 @@ fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fma
   return n;
 }
 
-static inline void
-fmap_map1_print_sam_unmapped(fmap_seq_t *seq)
-{
-  uint16_t flag = 0x0004;
-  fmap_string_t *name=NULL, *bases=NULL, *qualities=NULL;
-
-  name = fmap_seq_get_name(seq);
-  bases = fmap_seq_get_bases(seq);
-  qualities = fmap_seq_get_qualities(seq);
-
-  fmap_file_fprintf(fmap_file_stdout, "%s\t%u\t%s\t%u\t%u\t*\t*\t0\t0\t%s\t%s\n",
-                    name->s, flag, "*",
-                    0, 0, bases->s, qualities->s);
-}
-
 static void
 fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_map1_aln_t ***alns,
                       fmap_bwt_t *bwt[2], int32_t tid, fmap_map1_opt_t *opt)
@@ -281,8 +270,8 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
           pthread_mutex_lock(&fmap_map1_read_lock);
 
           // update bounds
-          low = fmap_map1_read_lock_tid;
-          fmap_map1_read_lock_tid += FMAP_MAP1_THREAD_BLOCK_SIZE;
+          low = fmap_map1_read_lock_low;
+          fmap_map1_read_lock_low += FMAP_MAP1_THREAD_BLOCK_SIZE;
           high = low + FMAP_MAP1_THREAD_BLOCK_SIZE;
           if(seq_buffer_length < high) {
               high = seq_buffer_length; 
@@ -416,17 +405,7 @@ fmap_map1_core(fmap_map1_opt_t *opt)
   fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "wb", opt->output_compr);
 
   // SAM header
-  for(i=0;i<refseq->num_annos;i++) {
-      fmap_file_fprintf(fmap_file_stdout, "@SQ\tSN:%s\tLN:%d\n",
-                        refseq->annos[i].name->s, (int)refseq->annos[i].len);
-  }
-  fmap_file_fprintf(fmap_file_stdout, "@PG\tID:%s\tVN:%s\t",
-                    PACKAGE_NAME, PACKAGE_VERSION);
-  for(i=0;i<opt->argc;i++) {
-      if(0 < i) fmap_file_fprintf(fmap_file_stdout, " ");
-      fmap_file_fprintf(fmap_file_stdout, "%s", opt->argv[i]);
-  }
-  fmap_file_fprintf(fmap_file_stdout, "\n");
+  fmap_sam_print_header(fmap_file_stdout, refseq, opt->argc, opt->argv);
 
   // allocate the buffer
   seq_buffer = fmap_malloc(sizeof(fmap_seq_t*)*opt->reads_queue_size, "seq_buffer");
@@ -475,7 +454,7 @@ fmap_map1_core(fmap_map1_opt_t *opt)
 
           threads = fmap_calloc(opt->num_threads, sizeof(pthread_t), "threads");
           thread_data = fmap_calloc(opt->num_threads, sizeof(fmap_map1_thread_data_t), "thread_data");
-          fmap_map1_read_lock_tid = 0; // ALWAYS set before running threads 
+          fmap_map1_read_lock_low = 0; // ALWAYS set before running threads 
 
           for(i=0;i<opt->num_threads;i++) {
               thread_data[i].seq_buffer = seq_buffer;
@@ -521,7 +500,7 @@ fmap_map1_core(fmap_map1_opt_t *opt)
               }
           }
           if(0 == n_mapped) {
-              fmap_map1_print_sam_unmapped(seq_buffer[i]);
+              fmap_sam_print_unmapped(fmap_file_stdout, seq_buffer[i]);
           }
 
           // free alignments
@@ -664,7 +643,7 @@ fmap_map1_opt_destroy(fmap_map1_opt_t *opt)
 }
 
 int 
-fmap_map1(int argc, char *argv[])
+fmap_map1_main(int argc, char *argv[])
 {
   int c;
   fmap_map1_opt_t *opt = NULL;

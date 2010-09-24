@@ -6,23 +6,7 @@
 #include "util/fmap_error.h"
 #include "util/fmap_progress.h"
 #include "io/fmap_file.h"
-
-extern int 
-fmap_index(int argc, char *argv[]);
-extern int 
-fmap_server_main(int argc, char *argv[]);
-extern int 
-fmap_map1(int argc, char *argv[]);
-extern int 
-fmap_refseq_fasta2pac_main(int argc, char *argv[]);
-extern int 
-fmap_bwt_pac2bwt_main(int argc, char *argv[]);
-extern int
-fmap_sa_bwt2sa_main(int argc, char *argv[]);
-extern int
-fmap_seq_io_sff2fq_main(int argc, char *argv[]);
-extern int 
-fmap_debug_exact(int argc, char *argv[]);
+#include "fmap_main.h"
 
 fmap_file_t *fmap_file_stdout = NULL; // do not initialize as this may used for output
 fmap_file_t *fmap_file_stderr = NULL;
@@ -46,6 +30,7 @@ static int usage()
   fprintf(stderr, "\n");
   fprintf(stderr, "Mapping:\n");
   fprintf(stderr, "         map1           mapping procedure #1\n");
+  fprintf(stderr, "         map2           mapping procedure #2\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Utilities:\n");
   fprintf(stderr, "         fasta2pac      creates the packed FASTA file\n");
@@ -62,26 +47,30 @@ int main(int argc, char *argv[])
 {
   int ret = 0;
 
-
-  if(argc < 2) ret = usage();
-
-  fmap_file_stderr = fmap_file_fdopen(fileno(stderr), "w", FMAP_FILE_NO_COMPRESSION); // set stderr
-  fmap_progress_set_command(argv[1]); // set output progress
-  fmap_progress_set_start_time(clock()); // set start time
-
-  if (0 == strcmp("index", argv[1])) ret = fmap_index(argc-1, argv+1);
-  else if (0 == strcmp("server", argv[1])) ret = fmap_server_main(argc-1, argv+1);
-  else if (0 == strcmp("map1", argv[1])) ret = fmap_map1(argc-1, argv+1);
-  else if (0 == strcmp("fasta2pac", argv[1])) ret = fmap_refseq_fasta2pac_main(argc-1, argv+1);
-  else if (0 == strcmp("pac2bwt", argv[1])) ret = fmap_bwt_pac2bwt_main(argc-1, argv+1);
-  else if (0 == strcmp("bwt2sa", argv[1])) ret = fmap_sa_bwt2sa_main(argc-1, argv+1);
-  else if (0 == strcmp("sff2fq", argv[1])) ret = fmap_seq_io_sff2fq_main(argc-1, argv+1);
-  else if (0 == strcmp("exact", argv[1])) ret = fmap_debug_exact(argc-1, argv+1);
-  else {
-      fmap_error1(PACKAGE, "Unknown command", Exit, CommandLineArgument);
+  if(argc < 2) {
+      return usage();
   }
+  else {
 
-  fmap_file_fclose(fmap_file_stderr);
+      fmap_file_stderr = fmap_file_fdopen(fileno(stderr), "w", FMAP_FILE_NO_COMPRESSION); // set stderr
+      fmap_progress_set_command(argv[1]); // set output progress
+      fmap_progress_set_start_time(clock()); // set start time
+
+      if (0 == strcmp("index", argv[1])) ret = fmap_index(argc-1, argv+1);
+      else if (0 == strcmp("server", argv[1])) ret = fmap_server_main(argc-1, argv+1);
+      else if (0 == strcmp("map1", argv[1])) ret = fmap_map1_main(argc-1, argv+1);
+      else if (0 == strcmp("map2", argv[1])) ret = fmap_map2_main(argc-1, argv+1);
+      else if (0 == strcmp("fasta2pac", argv[1])) ret = fmap_refseq_fasta2pac_main(argc-1, argv+1);
+      else if (0 == strcmp("pac2bwt", argv[1])) ret = fmap_bwt_pac2bwt_main(argc-1, argv+1);
+      else if (0 == strcmp("bwt2sa", argv[1])) ret = fmap_sa_bwt2sa_main(argc-1, argv+1);
+      else if (0 == strcmp("sff2fq", argv[1])) ret = fmap_seq_io_sff2fq_main(argc-1, argv+1);
+      else if (0 == strcmp("exact", argv[1])) ret = fmap_debug_exact(argc-1, argv+1);
+      else {
+          fmap_error1(PACKAGE, "Unknown command", Exit, CommandLineArgument);
+      }
+
+      fmap_file_fclose(fmap_file_stderr);
+  }
 
   return ret;
 }

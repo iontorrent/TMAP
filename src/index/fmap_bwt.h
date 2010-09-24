@@ -199,14 +199,13 @@ fmap_bwt_2occ4(const fmap_bwt_t *bwt, uint32_t k, uint32_t l, uint32_t cntk[4], 
 // TODO: document
 #define fmap_bwt_bwt(b, k) ((b)->bwt[(k)/(b)->occ_interval*12 + 4 + (k)%(b)->occ_interval/16])
 
-// TODO: document
 /*! @macro
   @abstract retrieve a character from the $-removed BWT string. 
   @param  b   pointer to the bwt structure
   @param  k   the zero-based index of the bwt character to retrieve
   @return     the bwt character from the $-removed BWT string.
   @discussion Note that fmap_bwt_t::bwt is not exactly the BWT string 
-  and therefore this macro is called bwt_B0 instead of bwt_B. 
+  and therefore this macro is called fmap_bwt_B0 instead of fmap_bwt_B. 
   */
 #define fmap_bwt_B0(b, k) (fmap_bwt_bwt(b, k)>>((~(k)&0xf)<<1)&3)
 

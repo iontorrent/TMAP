@@ -3,6 +3,9 @@
 
 #define FMAP_SA_INTERVAL 32
 
+#include <stdint.h>
+#include "fmap_bwt.h"
+
 /*! @typedef
   @field  primary  S^{-1}(0), or the primary index of BWT
   @field  sa_intv  the suffix array interval (sampled)

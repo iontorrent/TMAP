@@ -833,7 +833,7 @@ induceSA(const unsigned char *T, int32_t *SA, int32_t *C, int32_t *B, int32_t n,
  * space (excluding T and SA) of at most 2n+O(1) for a constant alphabet
  */
 static int32_t 
-sais_main(const unsigned char *T, int32_t *SA, int32_t fs, int32_t n, int32_t k, int32_t cs)
+fmap_sa_sais_main(const unsigned char *T, int32_t *SA, int32_t fs, int32_t n, int32_t k, int32_t cs)
 {
   int32_t *C, *B, *RA;
   int32_t  i, j, c, m, p, q, plen, qlen, name;
@@ -892,7 +892,7 @@ sais_main(const unsigned char *T, int32_t *SA, int32_t fs, int32_t n, int32_t k,
       for (i = n - 1, j = m - 1; m <= i; --i) {
           if (SA[i] != 0) RA[j--] = SA[i] - 1;
       }
-      if (sais_main((unsigned char *) RA, SA, fs + n - m * 2, m, name, sizeof(int)) != 0) return -2;
+      if (fmap_sa_sais_main((unsigned char *) RA, SA, fs + n - m * 2, m, name, sizeof(int)) != 0) return -2;
       for (i = n - 2, j = m - 1, c = 0, c1 = chr(n - 1); 0 <= i; --i, c1 = c0) {
           if ((c0 = chr(i)) < (c1 + c)) c = 1;
           else if (c != 0) RA[j--] = i + 1, c = 0; /* get p1 */
@@ -917,13 +917,6 @@ sais_main(const unsigned char *T, int32_t *SA, int32_t fs, int32_t n, int32_t k,
   return 0;
 }
 
-/**
- * Constructs the suffix array of a given string.
- * @param T[0..n-1] The input string.
- * @param SA[0..n] The output array of suffixes.
- * @param n The length of the given string.
- * @return 0 if no error occurred
- */
 uint32_t 
 fmap_sa_gen_short(const uint8_t *T, int32_t *SA, uint32_t n)
 {
@@ -933,7 +926,7 @@ fmap_sa_gen_short(const uint8_t *T, int32_t *SA, uint32_t n)
       if (n == 1) SA[1] = 0;
       return 0;
   }
-  return sais_main(T, SA+1, 0, n, 256, 1);
+  return fmap_sa_sais_main(T, SA+1, 0, n, 256, 1);
 }
 
 int

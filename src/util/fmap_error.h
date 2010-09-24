@@ -3,6 +3,8 @@
 
 #define BREAK_LINE "************************************************************\n"
 
+#include <stdint.h>
+
 /*! @enum
   @abstract              the type of action to be taken
   @field  Exit            exit the program
