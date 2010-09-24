@@ -155,7 +155,6 @@ fmap_bwt_match_exact(const fmap_bwt_t *bwt, int len, const uint8_t *str, fmap_bw
   return prev.l - prev.k + 1;
 }
 
-// TODO: update for use with the hash
 int
 fmap_bwt_match_exact_alt(const fmap_bwt_t *bwt, int len, const uint8_t *str, fmap_bwt_match_occ_t *match_sa)
 {

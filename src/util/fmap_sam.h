@@ -16,7 +16,11 @@
 void
 fmap_sam_print_header(fmap_file_t *fp, fmap_refseq_t *refseq, int argc, char *argv[]);
 
-// TODO: document
+/*! @function
+  @abstract  prints out a SAM record signifying the sequence is unmapped 
+  @param  fp   the file pointer to which to print
+  @param  seq  the sequence that is unmapped
+  */
 inline void
 fmap_sam_print_unmapped(fmap_file_t *fp, fmap_seq_t *seq);
 

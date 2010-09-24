@@ -61,7 +61,7 @@ typedef struct {
     uint32_t seq_len; // sequence length
     uint32_t bwt_size; // size of bwt, about seq_len/4
     uint32_t occ_interval;
-    uint32_t *bwt; // BWT TODO: could this be stored in a smaller format?
+    uint32_t *bwt; // BWT 
     uint32_t cnt_table[256];
     uint32_t is_rev;
     uint32_t **hash_k; // BWT hash 

@@ -3,18 +3,45 @@
 
 #include <stdint.h>
 
-// TODO: incorporate this into all static files
+/*! @defined FMAP_VERSION_ID
+  @abstract  the magic id for fmap
+  */
 #define FMAP_VERSION_ID ('f' + 'm' + 'a' + 'p')
 
-// refseq file extension
+/* 
+ * File extensions
+ */
+/*! @defined FMAP_ANNO_FILE_EXTENSION
+  @abstract  the file extension for the reference sequence annotations
+  */
 #define FMAP_ANNO_FILE_EXTENSION ".fmap.anno"
+/*! @defined FMAP_PAC_FILE_EXTENSION
+  @abstract  the file extension for the packed forward reference sequence
+  */
 #define FMAP_PAC_FILE_EXTENSION ".fmap.pac"
+/*! @defined FMAP_REV_PAC_FILE_EXTENSION
+  @abstract  the file extension for the packed reverse reference sequence
+  */
 #define FMAP_REV_PAC_FILE_EXTENSION ".fmap.rpac"
+/*! @defined FMAP_BWT_FILE_EXTENSION
+  @abstract  the file extension for the forward BWT structure
+  */
 #define FMAP_BWT_FILE_EXTENSION ".fmap.bwt"
+/*! @defined FMAP_REV_BWT_FILE_EXTENSION
+  @abstract  the file extension for the reverse BWT structure
+  */
 #define FMAP_REV_BWT_FILE_EXTENSION ".fmap.rbwt"
+/*! @defined FMAP_SA_FILE_EXTENSION
+  @abstract  the file extension for the forward SA structure
+  */
 #define FMAP_SA_FILE_EXTENSION ".fmap.sa"
+/*! @defined FMAP_REV_SA_FILE_EXTENSION
+  @abstract  the file extension for the reverse SA structure
+  */
 #define FMAP_REV_SA_FILE_EXTENSION ".fmap.rsa"
-// the implementation relies on no compression
+
+// The default compression types for each file
+// Note: the implementation relies on no compression
 #define FMAP_ANNO_COMPRESSION FMAP_FILE_NO_COMPRESSION 
 #define FMAP_PAC_COMPRESSION FMAP_FILE_NO_COMPRESSION 
 #define FMAP_REV_PAC_COMPRESSION FMAP_FILE_NO_COMPRESSION 
@@ -41,7 +68,17 @@
 /*! @abstract CIGAR: padding */
 #define BAM_CPAD        6
 
-// TODO: document
+/*! @enum  file name ids
+  @abstract  for each type of file, the integer id associated with this file
+  @constant  FMAP_ANNO_FILE  the reference sequence annotation file
+  @constant  FMAP_PAC_FILE  the packed forward reference sequence file
+  @constant  FMAP_REV_PAC_FILE  the packed reverse reference sequence file
+  @constant  FMAP_BWT_FILE  the packed forward BWT file
+  @constant  FMAP_REV_BWT_FILE  the packed reverse BWT file
+  @constant  FMAP_SA_FILE  the packed forward SA file
+  @constant  FMAP_REV_SA_FILE  the packed reverse SA file
+  @discussion  can be used with 'fmap_get_file_name' 
+  */
 enum {
     FMAP_ANNO_FILE     = 0,
     FMAP_PAC_FILE      = 1,
@@ -52,7 +89,12 @@ enum {
     FMAP_REV_SA_FILE   = 6
 };
 
-// TODO: document
+/*! @enum  Reads Format
+  @constant  FMAP_READS_FORMAT_UNKNOWN  the reads format is unrecognized
+  @constant  FMAP_READS_FORMAT_FASTA  the reads are in FASTA format
+  @constant  FMAP_READS_FORMAT_FASTQ  the reads are in FASTQ format
+  @constant  FMAP_READS_FORMAT_SFF  the reads are in SFF format
+  */
 enum {
     FMAP_READS_FORMAT_UNKNOWN  = -1,
     FMAP_READS_FORMAT_FASTA    = 0,
@@ -60,33 +102,61 @@ enum {
     FMAP_READS_FORMAT_SFF      = 2
 };
 
-//TODO: document
+/*! @var  nt_char_to_int
+  @discussion  converts a DNA base in ASCII format to its 2-bit format [0-4]. 
+  */
 extern uint8_t nt_char_to_int[256];
-//TODO: document
+
+/*! @var  nt_char_to_rc_char
+  @discussion  converts a DNA base in ASCII format to reverse compliment in ASCII format.
+  */
 extern uint8_t nt_char_to_rc_char[256];
-//TODO: document
+
+/*! @macro
+  @abstract
+  @param  c  the quality value in ASCII format
+  @return    the quality value in integer format
+  */
 #define CHAR2QUAL(c) ((uint8_t)c-33)
-//TODO: document
+
+/*! @macro
+  @abstract
+  @param  q  the quality value in integer format
+  @return    the quality value in ASCII format
+  */
 #define QUAL2CHAR(q) (char)(((((unsigned char)q)<=93)?q:93)+33)
 
-//TODO: document
 #ifndef htonll
+/*! @macro
+  @abstract  converts a 64-bit value to network order
+  @param  x  the 64-bit value to convert
+  @return    the converted 64-bit value
+  */
 #define htonll(x) ((((uint64_t)htonl(x)) << 32) + htonl(x >> 32))
 #endif
-//TODO: document
+
 #ifndef ntohll
+/*! @macro
+  @abstract  converts a 64-bit value to host order
+  @param  x  the 64-bit value to convert
+  @return    the converted 64-bit value
+  */
 #define ntohll(x) ((((uint64_t)ntohl(x)) << 32) + ntohl(x >> 32))
 #endif
 
-// TODO: document
 #ifndef fmap_roundup32
+/*! @macro
+  @abstract  rounds up to the nearest power of two integer
+  @param  x  the integer to round up
+  @return    the smallest integer greater than x that is a power of two 
+  */
 #define fmap_roundup32(x) (--(x), (x)|=(x)>>1, (x)|=(x)>>2, (x)|=(x)>>4, (x)|=(x)>>8, (x)|=(x)>>16, ++(x))
 #endif
 
 /*! @function
   @param  v  the value to take the log 2
   @return    log of the value, base two
- */
+  */
 inline uint32_t 
 fmap_log2(uint32_t v);
 

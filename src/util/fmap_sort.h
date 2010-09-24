@@ -28,16 +28,34 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "fmap_alloc.h"
 
 // TODO: document
 
+/*! @typedef
+  @abstract  stack structure for introsort
+  @param  left   the left boundary
+  @param  right   the right boundary
+  @param  depth  the stack depth
+  */
 typedef struct {
     void *left, *right;
     int depth;
 } fmap_sort_isort_stack_t;
 
+/*! @macro
+  @param  type_t  the variable type being swapped 
+  @param  a       the first variable
+  @param  b       the second variable
+*/
 #define FMAP_SORT_SWAP(type_t, a, b) { register type_t t=(a); (a)=(b); (b)=t; }
 
+/*! @macro
+  @abstract  initializes sort functions with the given name, type, and comparison function 
+  @param  name       the (unique) name of sort functions
+  @param  type_t     the type to be compared
+  @param  __sort_lt  the comparison function
+  */
 #define FMAP_SORT_INIT(name, type_t, __sort_lt) \
   void fmap_sort_mergesort_##name(size_t n, type_t array[], type_t temp[]) \
 { \
@@ -45,7 +63,7 @@ typedef struct {
   int curr, shift; \
   \
   a2[0] = array; \
-  a2[1] = temp? temp : (type_t*)malloc(sizeof(type_t) * n); \
+  a2[1] = temp? temp : (type_t*)fmap_malloc(sizeof(type_t) * n, "a2[1]"); \
   for (curr = 0, shift = 0; (1ul<<shift) < n; ++shift) { \
       a = a2[curr]; b = a2[1-curr]; \
       if (shift == 0) { \
@@ -155,7 +173,7 @@ void fmap_sort_introsort_##name(size_t n, type_t a[]) \
       return; \
   } \
   for (d = 2; 1ul<<d < n; ++d); \
-  stack = (fmap_sort_isort_stack_t*)malloc(sizeof(fmap_sort_isort_stack_t) * ((sizeof(size_t)*d)+2)); \
+  stack = (fmap_sort_isort_stack_t*)fmap_malloc(sizeof(fmap_sort_isort_stack_t) * ((sizeof(size_t)*d)+2), "stack"); \
   top = stack; s = a; t = a + (n-1); d <<= 1; \
   while (1) { \
       if (s < t) { \
@@ -223,20 +241,75 @@ type_t fmap_sort_small_##name(size_t n, type_t arr[], size_t kk) \
   } \
 }
 
+/*! @macro
+  @abstract     performs mergesort on the given array
+  @param  name  the name of the associated sort functions (set during initailization) 
+  @param  n     the size of the array
+  @param  a     the array of elements to be sorted
+  @param  t     a temporary array of elements of length n, or NULL
+  */
 #define fmap_sort_mergesort(name, n, a, t) fmap_sort_mergesort_##name(n, a, t)
+/*! @macro
+  @abstract     performs introsort on the given array
+  @param  name  the name of the associated sort functions (set during initailization) 
+  @param  n     the size of the array
+  @param  a     the array of elements to be sorted
+  */
 #define fmap_sort_introsort(name, n, a) fmap_sort_introsort_##name(n, a)
+/*! @macro
+  @abstract     performs combsort on the given array
+  @param  name  the name of the associated sort functions (set during initailization) 
+  @param  n     the size of the array
+  @param  a     the array of elements to be sorted
+  */
 #define fmap_sort_combsort(name, n, a) fmap_sort_combsort_##name(n, a)
+/*! @macro
+  @abstract     performs heapsort on the given array
+  @param  name  the name of the associated sort functions (set during initailization) 
+  @param  n     the size of the array
+  @param  a     the array of elements to be sorted
+  */
 #define fmap_sort_heapsort(name, n, a) fmap_sort_heapsort_##name(n, a)
-#define fmap_sort_heapmake(name, n, a) fmap_sort_heapmake_##name(n, a)
-#define fmap_sort_heapadjust(name, i, n, a) fmap_sort_heapadjust_##name(i, n, a)
+//#define fmap_sort_heapmake(name, n, a) fmap_sort_heapmake_##name(n, a)
+//#define fmap_sort_heapadjust(name, i, n, a) fmap_sort_heapadjust_##name(i, n, a)
+/*! @macro
+  @abstract     performs small sorton the given array
+  @param  name  the name of the associated sort functions (set during initailization) 
+  @param  n     the size of the array
+  @param  a     the array of elements to be sorted
+  @discussion   adapted from http://ndevilla.free.fr/median/
+  */
 #define fmap_sort_small(name, n, a, k) fmap_sort_small_##name(n, a, k)
 
+/*! @macro
+  @abstract  a generic value-based less-than comparison function
+  @param  a  the first value to compare
+  @param  b  the second value to compare
+  @return    1 if true, 0 otherwise
+  */
 #define fmap_sort_lt_generic(a, b) ((a) < (b))
+/*! @macro
+  @abstract  a generic string-based comparison function
+  @param  a  the first string to compare
+  @param  b  the second string to compare
+  @return    1 if true, 0 otherwise
+  @discussion  this uses strcmp
+  */
 #define fmap_sort_lt_str(a, b) (strcmp((a), (b)) < 0)
 
 typedef const char *ksstr_t;
 
+/*! @macro
+  @abstract  initializes sort functions with the given type
+  @param  type_t     the type to be compared
+  @discussion  this will define functions named by the type and using the generic value-based comparison function.
+  */
 #define FMAP_SORT_INIT_GENERIC(type_t) FMAP_SORT_INIT(type_t, type_t, fmap_sort_lt_generic)
+
+/*! @macro
+  @abstract  initializes string comparison sort functions 
+  @discussion  this will define functions with the name "str" and using the generic string-based comparison function.
+  */
 #define FMAP_SORT_INIT_STR FMAP_SORT_INIT(str, ksstr_t, fmap_sort_lt_str)
 
 #endif

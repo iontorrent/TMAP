@@ -3,8 +3,6 @@
 
 #include <stdint.h>
 
-// TODO: document
-
 /*! @typedef
   @abstract  a light-weight BWT structure
   @field  seq_len   sequence length
