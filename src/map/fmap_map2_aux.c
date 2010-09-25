@@ -488,6 +488,8 @@ fmap_map2_sam_t *
 fmap_map2_sam_realloc(fmap_map2_sam_t *sam, int32_t n)
 {
   int32_t i;
+
+  if(n == sam->num_entries) return sam;
   for(i=n;i<sam->num_entries;i++) { // free if shrinking
       free(sam->entries[i].cigar);
   }
@@ -547,7 +549,7 @@ fmap_map1_aux_store_hits(fmap_refseq_t *refseq, fmap_map2_opt_t *opt,
           if(p->n_seeds < 2) c *= .2;
           qual = (int)(c * (p->G - subo) * (250.0 / p->G + 0.03 / opt->score_match) + .499);
           if(qual > 250) qual = 250;
-          if(p->flag&1) qual = 0;
+          if(p->flag & 1) qual = 0;
           sam->entries[j].mapq = qual;
 
           // copy cigar memory
@@ -563,7 +565,7 @@ fmap_map1_aux_store_hits(fmap_refseq_t *refseq, fmap_map2_opt_t *opt,
       }
       sam->entries[j].AS = p->G;
       sam->entries[j].XS = p->G2;
-      sam->entries[j].XF = p->flag>>15;
+      sam->entries[j].XF = p->flag>>16;
       sam->entries[j].XE = p->n_seeds;
       if(p->l) {
           sam->entries[j].XI = p->l - p->k + 1;
