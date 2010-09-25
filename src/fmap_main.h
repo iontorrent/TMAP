@@ -1,6 +1,10 @@
 #ifndef FMAP_MAIN_H_
 #define FMAP_MAIN_H_
 
+/*! @header
+  @abstract  Main FMAP Function
+  */
+
 extern int 
 fmap_index(int argc, char *argv[]);
 extern int 

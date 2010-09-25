@@ -7,6 +7,10 @@
 #include "fmap_sff_io.h"
 #include "fmap_fq_io.h"
 
+/*! @header
+  @abstract  An Abstract DNA Sequence Reading Library
+  */
+
 /*! @typedef 
   @field  type  the type of io associated with this structure
   @field  io    pointer to the particular io data structure

@@ -165,19 +165,19 @@ fmap_map2_core(fmap_map2_opt_t *opt)
   else {
       fmap_progress_print("retrieving reference data from shared memory");
       shm = fmap_shm_init(opt->shm_key, 0, 0);
-      if(NULL == (refseq = fmap_refseq_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SERVER_LISTING_REFSEQ)))) {
+      if(NULL == (refseq = fmap_refseq_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SHM_LISTING_REFSEQ)))) {
           fmap_error("the packed reference sequence was not found in shared memory", Exit, SharedMemoryListing);
       }
-      if(NULL == (bwt[0] = fmap_bwt_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SERVER_LISTING_BWT)))) {
+      if(NULL == (bwt[0] = fmap_bwt_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SHM_LISTING_BWT)))) {
           fmap_error("the BWT string was not found in shared memory", Exit, SharedMemoryListing);
       }
-      if(NULL == (bwt[1] = fmap_bwt_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SERVER_LISTING_REV_BWT)))) {
+      if(NULL == (bwt[1] = fmap_bwt_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SHM_LISTING_REV_BWT)))) {
           fmap_error("the reverse BWT string was not found in shared memory", Exit, SharedMemoryListing);
       }
-      if(NULL == (sa[0] = fmap_sa_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SERVER_LISTING_SA)))) {
+      if(NULL == (sa[0] = fmap_sa_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SHM_LISTING_SA)))) {
           fmap_error("the reverse SA was not found in shared memory", Exit, SharedMemoryListing);
       }
-      if(NULL == (sa[1] = fmap_sa_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SERVER_LISTING_REV_SA)))) {
+      if(NULL == (sa[1] = fmap_sa_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SHM_LISTING_REV_SA)))) {
           fmap_error("the reverse SA was not found in shared memory", Exit, SharedMemoryListing);
       }
       fmap_progress_print2("reference data retrieved from shared memory");

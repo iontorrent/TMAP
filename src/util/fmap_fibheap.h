@@ -32,6 +32,10 @@
 #ifndef FMAP_FIBHEAP_H_
 #define FMAP_FIBHEAP_H_
 
+/*! @header
+  @abstract Fibonacci Heap Library
+  */
+
 /*! @typedef 
   @abstract  a node in the fibonacci heap
  */
@@ -190,7 +194,7 @@ fmap_fibheap_delete(fmap_fibheap_t *h, fmap_fibheap_element_t *x);
   @discussion  does not destroy the data within
 */
 void 
-fmap_fibheap_deleteheap(fmap_fibheap_t *);
+fmap_fibheap_deleteheap(fmap_fibheap_t *h);
 
 /*! @function
   @abstract   merges two heaps

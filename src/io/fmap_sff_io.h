@@ -4,6 +4,10 @@
 #include "../seq/fmap_sff.h"
 #include "fmap_file.h"
 
+/*! @header
+  @abstract  A SFF Reading Library
+  */
+
 /*! @typedef
   @abstract       structure for reading SFFs
   @field  fp       pointer to the file structure

@@ -1,6 +1,11 @@
 #ifndef FMAP_BWT_MATCH_H_
 #define FMAP_BWT_MATCH_H_
 
+/*! @header
+  @abstract  API for BWT Index Lookups
+  @discussion  This API facilitates a secondary hash into the BWT
+  */
+
 /*! @typedef
   @abstract
   @field  offset  the number of (read) bases used so far in this search (one-based)
@@ -12,7 +17,9 @@
   */
 typedef struct {
     uint32_t offset;
-    uint32_t hi, k, l;
+    uint32_t hi;
+    uint32_t k;
+    uint32_t l;
 } fmap_bwt_match_occ_t;
 
 /*! @function

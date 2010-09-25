@@ -3,6 +3,10 @@
 
 #include <time.h>
 
+/*! @header
+  @abstract  Progress Messaging 
+  */
+
 /*! @function
   @abstract
   @param  command  the command string
@@ -43,7 +47,7 @@ fmap_progress_print1(const char *format, clock_t start_time, ...);
 
 /*! @function
   @abstract
-  @param  message  the message to display
+  @param  format   the format for the message
   @param  ...      the arguments to fill in the format
   */
 void

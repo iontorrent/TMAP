@@ -27,7 +27,7 @@
 
 */
 
-/* Nils Homer - modified not to be macro-ized */
+/* Nils Homer - modified not to be define-ized */
 
 #include <ctype.h>
 #include <string.h>
@@ -35,6 +35,10 @@
 
 #include "../seq/fmap_fq.h"
 #include "fmap_file.h"
+
+/*! @header
+  @abstract  A FASTQ Reading Library
+  */
 
 #define FMAP_STREAM_BUFFER_SIZE 4096
 
@@ -48,7 +52,9 @@
   */
 typedef struct {
     char *buf;
-    int32_t begin, end, is_eof;
+    int32_t begin;
+    int32_t end;
+    int32_t is_eof;
     fmap_file_t *f;
     int32_t bufsize;
 } fmap_stream_t; 

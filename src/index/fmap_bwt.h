@@ -35,6 +35,10 @@
 typedef unsigned char uint8_t;
 #endif
 
+/*! @header
+  @abstract  A BWT index library
+  */
+
 #define FMAP_BWT_OCC_INTERVAL 0x80
 #define FMAP_BWT_HASH_WIDTH 12
 
@@ -147,7 +151,7 @@ fmap_bwt_gen_cnt_table(fmap_bwt_t *bwt);
 /*! @function
   @abstract           generates the occurrence hash
   @param  bwt         pointer to the bwt structure to update 
-  @parma  hash_width  the k-mer length to hash
+  @param  hash_width  the k-mer length to hash
   */
 void
 fmap_bwt_gen_hash(fmap_bwt_t *bwt, uint32_t hash_width);
@@ -199,20 +203,20 @@ fmap_bwt_2occ4(const fmap_bwt_t *bwt, uint32_t k, uint32_t l, uint32_t cntk[4], 
 // TODO: document
 #define fmap_bwt_bwt(b, k) ((b)->bwt[(k)/(b)->occ_interval*12 + 4 + (k)%(b)->occ_interval/16])
 
-/*! @macro
+/*! @define
   @abstract retrieve a character from the $-removed BWT string. 
   @param  b   pointer to the bwt structure
   @param  k   the zero-based index of the bwt character to retrieve
   @return     the bwt character from the $-removed BWT string.
   @discussion Note that fmap_bwt_t::bwt is not exactly the BWT string 
-  and therefore this macro is called fmap_bwt_B0 instead of fmap_bwt_B. 
+  and therefore this define is called fmap_bwt_B0 instead of fmap_bwt_B. 
   */
 #define fmap_bwt_B0(b, k) (fmap_bwt_bwt(b, k)>>((~(k)&0xf)<<1)&3)
 
 // TODO: document
 #define fmap_bwt_occ_intv(b, k) ((b)->bwt + (k)/(b)->occ_interval*12)
 
-/*! @macro 
+/*! @define 
   @abstract    inverse Psi function
   @param  bwt  pointer to the bwt structure
   @param  k    the occurence position 

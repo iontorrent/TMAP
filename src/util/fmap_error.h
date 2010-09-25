@@ -5,33 +5,39 @@
 
 #include <stdint.h>
 
-/*! @enum
-  @abstract              the type of action to be taken
-  @field  Exit            exit the program
-  @field  Warn            print a warning 
-  @field  LastActionType  dummy action type
+/*! @header
+  @abstract  Error handling routines.
+ */
+
+/*! @enum Action Type 
+  @abstract                  the type of action to be taken
+  @constant  Exit            exit the program
+  @constant  Warn            print a warning 
+  @constant  LastActionType  dummy action type
+  @discussion  the type of action to take upon the detection of an error
   */
 enum {Exit, Warn, LastActionType};
 
-/*! @enum
+/*! @enum  Error Type
   @abstract                   the type of error
-  @field  OutOfRange           value was out of range
-  @field  CommandLineArgument  improper command line argument
-  @field  ReallocMemory        memory re-allocation failure
-  @field  MallocMemory         memory allocation failure
-  @field  OpenFileError        could not open a file
-  @field  CloseFileError       could not close a file
-  @field  ReadFileError        could not read from a file
-  @field  WriteFileError       could not write from a file
-  @field  EndOfFile            reached the end-of-file prematurely
-  @field  ThreadError          error starting/joining threads
-  @field  SigInt               SIGINT signal caught
-  @field  SharedMemoryGet      could not get the shared memory
-  @field  SharedMemoryAttach   could not attach the shared memory
-  @field  SharedMemoryControl  could not control the shared memory
-  @field  SharedMemoryDetach   could not detach the shared memory
-  @field  SharedMemoryListing  could not find the listing in shared memory
-  @field  LastErrorType        dummy error type 
+  @constant  OutOfRange           value was out of range
+  @constant  CommandLineArgument  improper command line argument
+  @constant  ReallocMemory        memory re-allocation failure
+  @constant  MallocMemory         memory allocation failure
+  @constant  OpenFileError        could not open a file
+  @constant  CloseFileError       could not close a file
+  @constant  ReadFileError        could not read from a file
+  @constant  WriteFileError       could not write from a file
+  @constant  EndOfFile            reached the end-of-file prematurely
+  @constant  ThreadError          error starting/joining threads
+  @constant  SigInt               SIGINT signal caught
+  @constant  SharedMemoryGet      could not get the shared memory
+  @constant  SharedMemoryAttach   could not attach the shared memory
+  @constant  SharedMemoryControl  could not control the shared memory
+  @constant  SharedMemoryDetach   could not detach the shared memory
+  @constant  SharedMemoryListing  could not find the listing in shared memory
+  @constant  LastErrorType        dummy error type 
+  @discussion  the type of error detected
   */
 enum {
     OutOfRange=0, 
@@ -39,7 +45,7 @@ enum {
     ReallocMemory,
     MallocMemory,
     OpenFileError,
-    CloseFileEror,
+    CloseFileError,
     ReadFileError,
     WriteFileError,
     EndOfFile,
@@ -63,24 +69,24 @@ enum {
 void
 fmap_error_cmd_check_int(int32_t val, int32_t lower, int32_t upper, char *option);
 
-/*! @function
+/*! @define
   @abstract              process an error based on the given action
   @param  variable_name  the variable name or value associated with the error
   @param  action_type    the action to be taken
   @param  error_type     the error type 
   */
-#define fmap_error(_variable_name, _action_type, _error_type) \
-  (fmap_error_full(__FILE__, __LINE__, __func__, _variable_name, _action_type, _error_type))
+#define fmap_error(variable_name, action_type, error_type) \
+  (fmap_error_full(__FILE__, __LINE__, __func__, variable_name, action_type, error_type))
 
-/*! @function
+/*! @define
   @abstract              process an error based on the given action
   @param  function_name  the function name reporting the error
   @param  variable_name  the variable name or value associated with the error
   @param  action_type    the action to be taken
   @param  error_type     the error type 
   */
-#define fmap_error1(_function_name, _variable_name, _action_type, _error_type) \
-  (fmap_error_full(__FILE__, __LINE__, _function_name, _variable_name, _action_type, _error_type))
+#define fmap_error1(function_name, variable_name, action_type, error_type) \
+  (fmap_error_full(__FILE__, __LINE__, function_name, variable_name, action_type, error_type))
 
 /*! @function
   @abstract              process an error based on the given action

@@ -58,6 +58,7 @@ fmap_error_full(const char *file, const unsigned int line, const char *function_
   if(error_type == ReadFileError 
      || error_type == OpenFileError 
      || error_type == WriteFileError 
+     || error_type == CloseFileError
      || error_type == EndOfFile) {
       perror("the file stream error was");
   }

@@ -3,6 +3,10 @@
 
 #include <stdint.h>
 
+/*! @header
+  @discussion  A Generic String Library
+  */
+
 extern uint8_t nt_char_to_rc_char[256];
 
 /*! @typedef
@@ -12,7 +16,8 @@ extern uint8_t nt_char_to_rc_char[256];
   @field  s  the pointer to the string
   */
 typedef struct {
-    size_t l, m;
+    size_t l;
+    size_t m;
     char *s;
 } fmap_string_t;
 

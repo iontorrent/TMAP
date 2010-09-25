@@ -6,6 +6,10 @@
 #include <stdint.h>
 #include "fmap_bwt.h"
 
+/*! @header
+  @abstract  A Suffix Array Library
+  */
+
 /*! @typedef
   @field  primary  S^{-1}(0), or the primary index of BWT
   @field  sa_intv  the suffix array interval (sampled)

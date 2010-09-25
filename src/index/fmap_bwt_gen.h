@@ -25,6 +25,11 @@
 #ifndef FMAP_BWT_GEN_H
 #define FMAP_BWT_GEN_H
 
+/*! @header
+  @abstract  BWT Generation Library
+  */
+
+/* START -- large BWT construction code */
 #define ALPHABET_SIZE				4
 #define BIT_PER_CHAR				2
 #define CHAR_PER_WORD				16
@@ -101,6 +106,7 @@ typedef struct BWTInc {
     uint8_t *textBuffer;
     uint32_t *packedShift;
 } BWTInc;
+/* END -- large BWT construction code */
 
 /*! @function
   @abstract             create a bwt FASTA file from a packed FASTA file

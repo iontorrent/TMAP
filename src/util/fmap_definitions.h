@@ -3,6 +3,10 @@
 
 #include <stdint.h>
 
+/*! @header
+  @discussion  Generic Functions
+  */
+
 /*! @defined FMAP_VERSION_ID
   @abstract  the magic id for fmap
   */
@@ -112,14 +116,14 @@ extern uint8_t nt_char_to_int[256];
   */
 extern uint8_t nt_char_to_rc_char[256];
 
-/*! @macro
+/*! @define
   @abstract
   @param  c  the quality value in ASCII format
   @return    the quality value in integer format
   */
 #define CHAR2QUAL(c) ((uint8_t)c-33)
 
-/*! @macro
+/*! @define
   @abstract
   @param  q  the quality value in integer format
   @return    the quality value in ASCII format
@@ -127,7 +131,7 @@ extern uint8_t nt_char_to_rc_char[256];
 #define QUAL2CHAR(q) (char)(((((unsigned char)q)<=93)?q:93)+33)
 
 #ifndef htonll
-/*! @macro
+/*! @define
   @abstract  converts a 64-bit value to network order
   @param  x  the 64-bit value to convert
   @return    the converted 64-bit value
@@ -136,7 +140,7 @@ extern uint8_t nt_char_to_rc_char[256];
 #endif
 
 #ifndef ntohll
-/*! @macro
+/*! @define
   @abstract  converts a 64-bit value to host order
   @param  x  the 64-bit value to convert
   @return    the converted 64-bit value
@@ -145,7 +149,7 @@ extern uint8_t nt_char_to_rc_char[256];
 #endif
 
 #ifndef fmap_roundup32
-/*! @macro
+/*! @define
   @abstract  rounds up to the nearest power of two integer
   @param  x  the integer to round up
   @return    the smallest integer greater than x that is a power of two 

@@ -9,41 +9,53 @@
 #include <config.h>
 #include <stdarg.h>
 
-/*! @enum
-  @abstract file compression types
+/*! @header
+  @abstract  File handling routines analgous to those in stdio.h
+  */
+
+/*! @enum  Compression Types 
+  @constant  FMAP_FILE_NO_COMPRESSION  no compression
+  @constant  FMAP_FILE_BZ2_COMPRESSION  bzip2 compression
+  @constant  FMAP_FILE_GZ_COMPRESSION  gzip compression
+  @discussion  the various supported file compression types
   */
 enum {
     FMAP_FILE_NO_COMPRESSION=0, 
     FMAP_FILE_BZ2_COMPRESSION, 
     FMAP_FILE_GZ_COMPRESSION};
 
-/*! @enum
-  @abstract bz2 type
+/*! @enum  BZIP2 Stream Type
+  @constant  FMAP_FILE_BZ2_READ   a reading bzip2 stream 
+  @constant  FMAP_FILE_BZ2_WRITE  a writing bzip2 stream
+  @discussion  the type of bzip2 stream (read/write)
   */
 enum {FMAP_FILE_BZ2_READ=0, 
     FMAP_FILE_BZ2_WRITE};
 
 /*! @typedef
-  @abstract        structure aggregating common file structures
-  @field  fp        stdio file pointer
-  @field  bz2       bz2 file pointer
-  @field  gz        gzip file pointer
-  @field  c         compression type
-  @field  unused    for bz2 function 'BZ2_bzReadOpen'
-  @field  n_unused  for bz2 function 'BZ2_bzReadGetUnused'
+  @abstract         structure aggregating common file structures
+  @field  fp         stdio file pointer
+  @field  gz         gzip file pointer
+  @field  c          compression type
+  @field  bz2        bz2 file pointer
+  @field  unused     for bz2 function 'BZ2_bzReadOpen'
+  @field  n_unused   for bz2 function 'BZ2_bzReadGetUnused'
+  @field  bzerror    stores the last BZ2 error
+  @field  open_type  the type of bzip2 stream
   */
 typedef struct {
     FILE *fp;
+    gzFile gz;
 #ifndef DISABLE_BZ2
     BZFILE *bz2;
 #endif
-    gzFile gz;
     int32_t c;
 
 #ifndef DISABLE_BZ2
-    // bzip2
     char unused[BZ_MAX_UNUSED];
-    int32_t n_unused, bzerror, open_type;
+    int32_t n_unused;
+    int32_t bzerror;
+    int32_t open_type;
 #endif
 } fmap_file_t;
 
@@ -62,13 +74,13 @@ fmap_file_fopen(const char* path, const char *mode, int32_t compression);
 
 /*! @function
   @abstract            emulates fdopen from stdio.h
-  @param  path         file descriptor to open
+  @param  filedes       file descriptor to open
   @param  mode         access modes
   @param  compression  compression type
   @return              a pointer to the initialized file structure
   */
 fmap_file_t *
-fmap_file_fdopen(int fildes, const char *mode, int32_t compression);
+fmap_file_fdopen(int filedes, const char *mode, int32_t compression);
 
 /*! @function
   @abstract   closes the file associated with the file pointer

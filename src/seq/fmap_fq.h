@@ -27,13 +27,17 @@
 
 */
 
-/* Nils Homer - modified not to be macro-ized */
+/* Nils Homer - modified not to be define-ized */
 
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
 #include "../util/fmap_string.h"
 #include "../util/fmap_definitions.h"
+
+/*! @header
+  @abstract  A Library for FASTQ data
+  */
 
 /*! @typedef
   @abstract         structure for holding FASTA/FASTQ strings
@@ -44,7 +48,10 @@
   @field  is_int     1 if the sequence is in integer format, 0 otherwise 
   */
 typedef struct {
-    fmap_string_t *name, *comment, *seq, *qual;
+    fmap_string_t *name;
+    fmap_string_t *comment;
+    fmap_string_t *seq;
+    fmap_string_t *qual;
     int32_t is_int;
 } fmap_fq_t;
 

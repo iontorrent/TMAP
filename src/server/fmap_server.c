@@ -18,7 +18,7 @@
 
 static fmap_shm_t *fmap_server_shm_ptr = NULL;
 
-static void
+void
 fmap_server_sigint(int signal)
 {
   if(NULL != fmap_server_shm_ptr) {
@@ -34,14 +34,14 @@ fmap_server_sigint(int signal)
   }
 }
 
-static void
+void
 fmap_server_set_sigint(fmap_shm_t *shm)
 {
   fmap_server_shm_ptr = shm;
   signal(SIGINT, fmap_server_sigint); 
 }
 
-static void
+void
 fmap_server_start(char *fn_fasta, key_t key, uint32_t listing)
 {
   int32_t i;
@@ -57,22 +57,22 @@ fmap_server_start(char *fn_fasta, key_t key, uint32_t listing)
 
   // get data size
   n_bytes = 0;
-  if(listing & FMAP_SERVER_LISTING_REFSEQ) {
+  if(listing & FMAP_SHM_LISTING_REFSEQ) {
       n_bytes += fmap_refseq_shm_read_num_bytes(fn_fasta, 0);
   }
-  if(listing & FMAP_SERVER_LISTING_REV_REFSEQ) {
+  if(listing & FMAP_SHM_LISTING_REV_REFSEQ) {
       n_bytes += fmap_refseq_shm_read_num_bytes(fn_fasta, 1);
   }
-  if(listing & FMAP_SERVER_LISTING_BWT) {
+  if(listing & FMAP_SHM_LISTING_BWT) {
       n_bytes += fmap_bwt_shm_read_num_bytes(fn_fasta, 0);
   }
-  if(listing & FMAP_SERVER_LISTING_REV_BWT) {
+  if(listing & FMAP_SHM_LISTING_REV_BWT) {
       n_bytes += fmap_bwt_shm_read_num_bytes(fn_fasta, 1);
   }
-  if(listing & FMAP_SERVER_LISTING_SA) {
+  if(listing & FMAP_SHM_LISTING_SA) {
       n_bytes += fmap_sa_shm_read_num_bytes(fn_fasta, 0);
   }
-  if(listing & FMAP_SERVER_LISTING_REV_SA) {
+  if(listing & FMAP_SHM_LISTING_REV_SA) {
       n_bytes += fmap_sa_shm_read_num_bytes(fn_fasta, 1);
   }
 
@@ -90,7 +90,7 @@ fmap_server_start(char *fn_fasta, key_t key, uint32_t listing)
 
   // pack the reference sequence
   for(i=0;i<2;i++) { // forward/reverse
-      cur_listing = (0 == i) ? FMAP_SERVER_LISTING_REFSEQ : FMAP_SERVER_LISTING_REV_REFSEQ;
+      cur_listing = (0 == i) ? FMAP_SHM_LISTING_REFSEQ : FMAP_SHM_LISTING_REV_REFSEQ;
       if(listing & cur_listing) {
           fmap_progress_print("packing %s reference", (0 == i) ? "forward" : "reverse");
           refseq = fmap_refseq_read(fn_fasta, i);
@@ -104,7 +104,7 @@ fmap_server_start(char *fn_fasta, key_t key, uint32_t listing)
 
   // pack the bwt 
   for(i=0;i<2;i++) { // forward/reverse
-      cur_listing = (0 == i) ? FMAP_SERVER_LISTING_BWT : FMAP_SERVER_LISTING_REV_BWT;
+      cur_listing = (0 == i) ? FMAP_SHM_LISTING_BWT : FMAP_SHM_LISTING_REV_BWT;
       if(listing & cur_listing) {
           fmap_progress_print("packing %s bwt", (0 == i) ? "forward" : "reverse");
           bwt = fmap_bwt_read(fn_fasta, i);
@@ -118,7 +118,7 @@ fmap_server_start(char *fn_fasta, key_t key, uint32_t listing)
 
   // pack the SA
   for(i=0;i<2;i++) { // forward/reverse
-      cur_listing = (0 == i) ? FMAP_SERVER_LISTING_SA : FMAP_SERVER_LISTING_REV_SA;
+      cur_listing = (0 == i) ? FMAP_SHM_LISTING_SA : FMAP_SHM_LISTING_REV_SA;
       if(listing & cur_listing) {
           fmap_progress_print("packing %s sa", (0 == i) ? "forward" : "reverse");
           sa = fmap_sa_read(fn_fasta, i);
@@ -147,7 +147,7 @@ fmap_server_start(char *fn_fasta, key_t key, uint32_t listing)
   fmap_progress_print2("server stopped");
 }
 
-static void
+void
 fmap_server_stop(key_t key)
 {
   fmap_shm_t *shm = NULL;
@@ -166,7 +166,7 @@ fmap_server_stop(key_t key)
   fmap_shm_destroy(shm, 0);
 }
 
-static void
+void
 fmap_server_kill(key_t key)
 {
   fmap_shm_t *shm = NULL;
@@ -209,7 +209,7 @@ usage()
   return 1;
 }
 
-static int32_t
+int32_t
 fmap_server_get_command_int(char *optarg)
 {
   if(0 == strcmp("start", optarg)) return FMAP_SERVER_START;
@@ -235,17 +235,17 @@ fmap_server_main(int argc, char *argv[])
         case 'k': 
           key = atoi(optarg); break;
         case 'r':
-          listing |= FMAP_SERVER_LISTING_REFSEQ; break;
+          listing |= FMAP_SHM_LISTING_REFSEQ; break;
         case 'R':
-          listing |= FMAP_SERVER_LISTING_REV_REFSEQ; break;
+          listing |= FMAP_SHM_LISTING_REV_REFSEQ; break;
         case 'b':
-          listing |= FMAP_SERVER_LISTING_BWT; break;
+          listing |= FMAP_SHM_LISTING_BWT; break;
         case 'B':
-          listing |= FMAP_SERVER_LISTING_REV_BWT; break;
+          listing |= FMAP_SHM_LISTING_REV_BWT; break;
         case 's':
-          listing |= FMAP_SERVER_LISTING_SA; break;
+          listing |= FMAP_SHM_LISTING_SA; break;
         case 'S':
-          listing |= FMAP_SERVER_LISTING_REV_SA; break;
+          listing |= FMAP_SHM_LISTING_REV_SA; break;
         case 'v': 
           fmap_progress_set_verbosity(1); break;
         case 'h': 

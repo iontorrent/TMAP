@@ -4,9 +4,15 @@
 #include "fmap_fq.h"
 #include "fmap_sff.h"
 
-/*! @enum  
-  @constant  FMAP_SEQ_TYPE_SEQ  FASTA/FASTQ input/output
-  @constant  FMAP_SEQ_TYPE_SFF  SFF input/output
+/*! @header
+  @abstract  An Abstract Library for DNA Sequence Data
+  */
+
+/*! @enum  Sequence Type 
+  @constant  FMAP_SEQ_TYPE_NOTYPE    unknown type
+  @constant  FMAP_SEQ_TYPE_FQ        FASTA/FASTQ input/output
+  @constant  FMAP_SEQ_TYPE_SFF       SFF input/output
+  @discussion  the type of DNA sequence data
   */
 enum {
     FMAP_SEQ_TYPE_NOTYPE = -1,

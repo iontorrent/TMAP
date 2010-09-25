@@ -3,8 +3,11 @@
 
 #include "fmap_error.h"
 
+/*! @header
+  @abstract  Memory Allocation Routines. 
+  */
 
-/*! @macro
+/*! @define
   @abstract               wrapper function for malloc
   @param  _size           the size of the memory block, in bytes
   @param  _variable_name  the variable name to be assigned this memory in the calling function
@@ -13,9 +16,9 @@
 #define fmap_malloc(_size, _variable_name) \
   fmap_malloc1(_size, __func__, _variable_name)
 
-/*! @macro
+/*! @define
   @abstract               wrapper function for realloc
-  @param  _variable       the variable to be reallocated
+  @param  _ptr            the variable to be reallocated
   @param  _size           the size of the memory block, in bytes
   @param  _variable_name  the variable name to be assigned this memory in the calling function
   @return 		  upon success, a pointer to the memory block allocated by the function; a null pointer otherwise.
@@ -24,7 +27,7 @@
 #define fmap_realloc(_ptr, _size, _variable_name) \
   fmap_realloc1(_ptr, _size, __func__, _variable_name)
 
-/*! @function
+/*! @define
   @abstract               wrapper function for calloc
   @param  _num            the number of elements to be allocated
   @param  _size           the size of the memory block, in bytes
@@ -34,7 +37,7 @@
 #define fmap_calloc(_num, _size, _variable_name) \
   fmap_calloc1(_num, _size, __func__, _variable_name)
 
-/*! @function
+/*! @define
   @abstract               wrapper for 'strdup' that checks memory allocation
   @param  _str            string to be copied
   @return                 a pointer to the copied string
@@ -45,6 +48,7 @@
 /*! @function
   @abstract              wrapper function for malloc
   @param  size           the size of the memory block, in bytes
+  @param  function_name  the calling function name 
   @param  variable_name  the variable name to be assigned this memory in the calling function
   @return                upon success, a pointer to the memory block allocated by the function; a null pointer otherwise.
   */
@@ -53,7 +57,7 @@ fmap_malloc1(size_t size, const char *function_name, const char *variable_name);
 
 /*! @function
   @abstract              wrapper function for realloc
-  @param  variable       the variable to be reallocated
+  @param  ptr            the variable to be reallocated
   @param  size           the size of the memory block, in bytes
   @param  function_name  the calling function name 
   @param  variable_name  the variable name to be assigned this memory in the calling function

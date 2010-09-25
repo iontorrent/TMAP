@@ -11,6 +11,10 @@
 #include "../util/fmap_string.h"
 #include "../io/fmap_file.h"
 
+/*! @header
+  @abstract  A Library for SFF data
+  */
+
 /*! @typedef
   @field  magic           the magic number for this file
   @field  version         the version number
@@ -110,7 +114,7 @@ fmap_sff_read_header_read(fmap_file_t *fp);
 
 /*! @function
   @abstract
-  @param  h  a pointer to the sff read header to destroy
+  @param  rh  a pointer to the sff read header to destroy
   */
 void
 fmap_sff_read_header_destroy(fmap_sff_read_header_t *rh);
@@ -125,7 +129,7 @@ fmap_sff_read_read(fmap_file_t *fp, fmap_sff_header_t *gh, fmap_sff_read_header_
 
 /*! @function
   @abstract
-  @param  h  a pointer to the sff read to destroy
+  @param  r  a pointer to the sff read to destroy
   */
 void
 fmap_sff_read_destroy(fmap_sff_read_t *r);
@@ -143,13 +147,6 @@ fmap_sff_init();
   */
 void
 fmap_sff_destroy(fmap_sff_t *sff);
-
-/*! @function
-  @abstract
-  @return a pointer to the empty sff 
-  */
-fmap_sff_t *
-fmap_sff_init();
 
 /*! @function
   @abstract

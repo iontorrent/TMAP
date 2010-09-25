@@ -5,38 +5,42 @@
 #include "../util/fmap_string.h"
 #include "../io/fmap_file.h"
 
+/*! @header
+  @abstract DNA Referene Sequence Library 
+  */
+
 // seed for our random number generator
 #define FMAP_REFSEQ_SEED 13
 // buffer size for reading in from a FASTA file
 #define FMAP_REFSEQ_BUFFER_SIZE 0x10000
 
-/*! @macro
+/*! @define
   @param  _len  the number of bases stored 
   @return       the number of bytes allocated
   */
 #define fmap_refseq_seq_memory(_len) ((((_len)-1) >> 2) + 1)
 
-/*! @macro
+/*! @define
   @param  _i  the 0-based base position 
   @return     the 0-based byte index
   */
 #define fmap_refseq_seq_byte_i(_i) ((_i) >> 2)
 
-/*! @macro
+/*! @define
   @param  _i  the 0-based base position 
   @return     the number of bits the base is shifted (returns a multiple of two)
-  @dicsussion the reference is stored in a 2-bit format
+  @discussion the reference is stored in a 2-bit format
   */
 #define fmap_refseq_seq_byte_shift(_i) ((0x3 - ((_i) & 0x3)) << 1)
 
-/*! @macro
+/*! @define
   @param  _refseq  pointer to the structure holding the reference sequence
   @param  _i       the 0-based base position to store
   @param  _c       the base's 2-bit integer representation
   */
 #define fmap_refseq_seq_store_i(_refseq, _i, _c) (_refseq->seq[fmap_refseq_seq_byte_i(_i)] |= _c << fmap_refseq_seq_byte_shift(_i))
 
-/*! @macro
+/*! @define
   @param  _refseq  pointer to the structure holding the reference sequence
   @param  _i       the 0-based base position to retrieve
   @return          the base's 2-bit integer representation

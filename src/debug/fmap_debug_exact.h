@@ -1,6 +1,10 @@
 #ifndef FMAP_DEBUG_EXACT_H_
 #define FMAP_DEBUG_EXACT_H_
 
+/*! @header
+  @abstract  Debugging Functions
+ */ 
+
 /*! @typedef
   @abstract        structure to store the command line options for 'fmap exact'
   @field  fn_fasta  the fasta reference file name (-f)
