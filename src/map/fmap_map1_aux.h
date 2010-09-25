@@ -4,6 +4,10 @@
 #include "../util/fmap_fibheap.h"
 #include "fmap_map1.h"
 
+/*! @header
+  @abstract  Auxiliary Functions for the BWA-like (short-read) Mapping Algorithm
+  */
+
 /*! @typedef 
   @field  score             the current alignment score
   @field  n_mm              the current number of mismatches 
@@ -16,23 +20,28 @@
   @field  match_sa          the current SA interval information
   @field  i                 the zero-based index of this element in the memory pool 
   @field  prev_i            the zero-based index of the previous element (in the alignment) in the memory pool
-*/
+  */
 typedef struct {
     uint32_t score;
-    uint16_t n_mm, n_gapo, n_gape;
-    uint8_t state:7, strand:1;
-    int16_t offset, last_diff_offset;
+    uint16_t n_mm;
+    int16_t n_gapo;
+    int16_t n_gape;
+    uint8_t state:7;
+    uint8_t strand:1;
+    int16_t offset;
+    int16_t last_diff_offset;
     fmap_bwt_match_occ_t match_sa; // SA interval and offset
-    uint32_t i, prev_i;
+    uint32_t i;
+    int32_t prev_i;
 } fmap_map1_aux_stack_entry_t;
 
 /*! @typedef
   @field  entry_pool
   @field  entry_pool_length
-  @field  entry_pool_iu
+  @field  entry_pool_i
   @field  heap
   @field  best_score
- */
+  */
 typedef struct {
     fmap_map1_aux_stack_entry_t **entry_pool; // memory pool
     int32_t entry_pool_length; // number of entries in the memory pool

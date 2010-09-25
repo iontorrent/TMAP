@@ -3,6 +3,17 @@
 
 #include <config.h>
 
+/*! @header
+  @abstract  BWA-like (short-read) Mapping Algorithm
+  */
+
+/*! @enum  Output Alignment Filter
+  @constant  FMAP_ALN_OUTPUT_MODE_BEST       Output an alignment only if it is uniquely the best
+  @constant  FMAP_ALN_OUTPUT_MODE_BEST_RAND  Output a random best scoring alignment
+  @constant  FMAP_ALN_OUTPUT_MODE_BEST_ALL   Output all the alignments with the best score
+  @constant  FMAP_ALN_OUTPUT_MODE_ALL        Output all alignments
+  @discussion  determines how to output multiple alignments
+  */
 enum {
     FMAP_ALN_OUTPUT_MODE_BEST = 0,
     FMAP_ALN_OUTPUT_MODE_BEST_RAND = 1,
@@ -85,10 +96,13 @@ typedef struct {
 */
 typedef struct {
     uint32_t score;
-    uint16_t n_mm, n_gapo, n_gape;
+    uint16_t n_mm;
+    uint16_t n_gapo;
+    uint16_t n_gape;
     uint8_t mapq;
     uint8_t strand;
-    uint32_t k, l; // SA interval
+    uint32_t k;
+    uint32_t l;
     uint32_t cigar_length;
     uint32_t *cigar; 
 } fmap_map1_aln_t;

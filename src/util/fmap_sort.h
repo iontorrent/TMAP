@@ -41,7 +41,8 @@
   @param  depth  the stack depth
   */
 typedef struct {
-    void *left, *right;
+    void *left;
+    void *right;
     int depth;
 } fmap_sort_isort_stack_t;
 

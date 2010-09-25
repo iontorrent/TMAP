@@ -4,6 +4,10 @@
 #include <stdlib.h>
 #include <sys/ipc.h>
 
+/*! @header
+  @abstract  The BWA-like (long-read) Mapping Algorithm
+  */
+
 /*! @typedef
   @abstract
   @abstract                structure to store the command line options for 'fmap map2'
@@ -36,10 +40,22 @@ typedef struct {
     char *fn_fasta;
     char *fn_reads;
     int32_t reads_format;
-    int32_t score_match, pen_mm, pen_gapo, pen_gape;
-    double yita, mask_level, length_coef;
-    int32_t band_width, score_thr, max_seed_intv, z_best, seeds_rev;
-    int32_t reads_queue_size, num_threads, input_compr, output_compr;
+    int32_t score_match;
+    int32_t pen_mm;
+    int32_t pen_gapo;
+    int32_t pen_gape;
+    double yita;
+    int32_t mask_level;
+    int32_t length_coef;
+    int32_t band_width;
+    int32_t score_thr;
+    int32_t max_seed_intv;
+    int32_t z_best;
+    int32_t seeds_rev;
+    int32_t reads_queue_size;
+    int32_t num_threads;
+    int32_t input_compr;
+    int32_t output_compr;
     key_t shm_key;
 } fmap_map2_opt_t;
 
