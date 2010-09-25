@@ -6,8 +6,8 @@
 #include "../index/fmap_refseq.h"
 #include "../index/fmap_bwt.h"
 #include "../index/fmap_sa.h"
-#include "fmap_map2.h"
 #include "fmap_map2_mempool.h"
+#include "fmap_map2.h"
 
 #define FMAP_MAP2_MASK_LEVEL 0.90f
 

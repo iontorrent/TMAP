@@ -4,9 +4,9 @@
 #include "../index/fmap_bwtl.h"
 #include "../index/fmap_bwt.h"
 #include "../index/fmap_sa.h"
-#include "fmap_map2.h"
-#include "fmap_map2_aux.h"
 #include "fmap_map2_mempool.h"
+#include "fmap_map2_aux.h"
+#include "fmap_map2.h"
 
 #define FMAP_MAP2_MINUS_INF -0x3fffffff
 

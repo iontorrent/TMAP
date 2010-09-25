@@ -2,6 +2,7 @@
 #include "../util/fmap_error.h"
 #include "../util/fmap_alloc.h"
 #include "../util/fmap_vec.h"
+#include "fmap_map2_core.h"
 #include "fmap_map2_mempool.h"
 
 void 
@@ -65,12 +66,10 @@ fmap_map2_global_mempool_t *
 fmap_map2_global_mempool_init()
 {
   fmap_map2_global_mempool_t *pool= NULL;
-  fmap_map2_stack_t *stack = NULL;
 
   pool = fmap_calloc(1, sizeof(fmap_map2_global_mempool_t), "pool");
-  stack = fmap_calloc(1, sizeof(fmap_map2_stack_t), "stack");
-  stack->pool = fmap_calloc(1, sizeof(fmap_map2_mempool_t), "stack->pool");
-  pool->stack = stack;
+  pool->stack = fmap_calloc(1, sizeof(fmap_map2_stack_t), "stack");
+  pool->stack->pool = fmap_calloc(1, sizeof(fmap_map2_mempool_t), "stack->pool");
 
   return pool;
 }
