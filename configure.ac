@@ -78,7 +78,7 @@ AC_MSG_CHECKING("for samtools")
 if test -d "samtools" ; then
 	AC_MSG_RESULT("yes")
 	LDFLAGS="${LDFLAGS} -L./samtools -lbam";
-	CFLAGS="${CLAGS} -I./samtools";
+	CFLAGS="${CFLAGS} -I./samtools";
 	AC_DEFINE(HAVE_SAMTOOLS, 1, [Define 1 if the samtools library is present]) 
 else 
 	AC_MSG_RESULT("no")
