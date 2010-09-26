@@ -37,6 +37,7 @@ static int usage()
   fprintf(stderr, "         pac2bwt        creates the BWT string file from the packed FASTA file\n");
   fprintf(stderr, "         bwt2sa         creates the SA file from the BWT string file\n");
   fprintf(stderr, "         sff2fq         converts a SFF file to a FASTQ file\n");
+  fprintf(stderr, "         sfferr         creates an error profile frm an sff file and sam file\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Debugging:\n");
   fprintf(stderr, "         exact          perform simple exact matching\n");
@@ -64,6 +65,7 @@ int main(int argc, char *argv[])
       else if (0 == strcmp("pac2bwt", argv[1])) ret = fmap_bwt_pac2bwt_main(argc-1, argv+1);
       else if (0 == strcmp("bwt2sa", argv[1])) ret = fmap_sa_bwt2sa_main(argc-1, argv+1);
       else if (0 == strcmp("sff2fq", argv[1])) ret = fmap_seq_io_sff2fq_main(argc-1, argv+1);
+      else if (0 == strcmp("sfferr", argv[1])) ret = fmap_sfferr_main(argc-1, argv+1);
       else if (0 == strcmp("exact", argv[1])) ret = fmap_debug_exact(argc-1, argv+1);
       else {
           fmap_error1(PACKAGE, "Unknown command", Exit, CommandLineArgument);
