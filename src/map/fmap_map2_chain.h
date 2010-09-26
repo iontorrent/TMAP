@@ -9,8 +9,10 @@
 
 /*! @typedef
   @abstract      structure to resolve chaining for Smith-Waterman extension
-  @param  tbeg   the lower suffix array interval, or suffix array position 
-  @param  tend   the upper suffix array interval, or 0 when k is the suffix array position
+  @param  tbeg   the lower suffix array interval for the target
+  @param  tend   the upper suffix array interval for the target
+  @param  qbeg   the lower suffix array interval for the query
+  @param  qend   the upper suffix array interval for the query
   @param  flag    the origin of the chain (forward/reverse bwt)
   @param  idx    0-based index within the originating hits
   @param  chain  the chain index; also used as a counter

@@ -52,7 +52,6 @@ typedef struct __fmap_fibheap_element_t {
 
 /*! @typedef
   @abstract  a fibonacci heap
-  @param  fmap_fibheap_n  the number of elements in this heap
  */
 typedef struct {
     int	(*fmap_fibheap_cmp_fnct)(void *, void *);
