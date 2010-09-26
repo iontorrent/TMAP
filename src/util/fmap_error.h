@@ -11,56 +11,36 @@
 
 /*! 
   @abstract                  the type of action to be taken
-  @constant  Exit            exit the program
-  @constant  Warn            print a warning 
-  @constant  LastActionType  dummy action type
   @discussion  the type of action to take upon the detection of an error
   */
 enum {
-    Exit, 
-    Warn, 
-    LastActionType
+    Exit,  /*!< exit the program */
+    Warn,  /*!< print a warning  */
+    LastActionType /*!< dummy action type */
 };
 
 /*! 
   @abstract                   the type of error
-  @constant  OutOfRange           value was out of range
-  @constant  CommandLineArgument  improper command line argument
-  @constant  ReallocMemory        memory re-allocation failure
-  @constant  MallocMemory         memory allocation failure
-  @constant  OpenFileError        could not open a file
-  @constant  CloseFileError       could not close a file
-  @constant  ReadFileError        could not read from a file
-  @constant  WriteFileError       could not write from a file
-  @constant  EndOfFile            reached the end-of-file prematurely
-  @constant  ThreadError          error starting/joining threads
-  @constant  SigInt               SIGINT signal caught
-  @constant  SharedMemoryGet      could not get the shared memory
-  @constant  SharedMemoryAttach   could not attach the shared memory
-  @constant  SharedMemoryControl  could not control the shared memory
-  @constant  SharedMemoryDetach   could not detach the shared memory
-  @constant  SharedMemoryListing  could not find the listing in shared memory
-  @constant  LastErrorType        dummy error type 
   @discussion  the type of error detected
   */
 enum {
-    OutOfRange=0, 
-    CommandLineArgument,
-    ReallocMemory,
-    MallocMemory,
-    OpenFileError,
-    CloseFileError,
-    ReadFileError,
-    WriteFileError,
-    EndOfFile,
-    ThreadError,
-    SigInt,
-    SharedMemoryGet,
-    SharedMemoryAttach,
-    SharedMemoryControl,
-    SharedMemoryDetach,
-    SharedMemoryListing,
-    LastErrorType,
+    OutOfRange=0,  /*!< value was out of range */
+    CommandLineArgument, /*!< improper command line argument */
+    ReallocMemory, /*!< memory re-allocation failure */
+    MallocMemory, /*!< memory allocation failure */
+    OpenFileError, /*!< could not open a file */
+    CloseFileError, /*!< could not close a file */
+    ReadFileError, /*!< could not read from a file */
+    WriteFileError, /*!< could not write from a file */
+    EndOfFile, /*!< reached the end-of-file prematurely */
+    ThreadError, /*!< error starting/joining threads */
+    SigInt, /*!< SIGINT signal caught */
+    SharedMemoryGet, /*!< could not get the shared memory */
+    SharedMemoryAttach, /*!< could not attach the shared memory */
+    SharedMemoryControl, /*!< could not control the shared memory */
+    SharedMemoryDetach, /*!< could not detach the shared memory */
+    SharedMemoryListing, /*!< could not find the listing in shared memory */
+    LastErrorType, /*!< dummy error type  */
 };
 
 /*! @function

@@ -8,17 +8,13 @@
   */
 
 /*! 
-  @constant  FMAP_ALN_OUTPUT_MODE_BEST       Output an alignment only if it is uniquely the best
-  @constant  FMAP_ALN_OUTPUT_MODE_BEST_RAND  Output a random best scoring alignment
-  @constant  FMAP_ALN_OUTPUT_MODE_BEST_ALL   Output all the alignments with the best score
-  @constant  FMAP_ALN_OUTPUT_MODE_ALL        Output all alignments
   @discussion  determines how to output multiple alignments
   */
 enum {
-    FMAP_ALN_OUTPUT_MODE_BEST = 0,
-    FMAP_ALN_OUTPUT_MODE_BEST_RAND = 1,
-    FMAP_ALN_OUTPUT_MODE_BEST_ALL = 2,
-    FMAP_ALN_OUTPUT_MODE_ALL = 3,
+    FMAP_ALN_OUTPUT_MODE_BEST = 0, /*!< Output an alignment only if it is uniquely the best */
+    FMAP_ALN_OUTPUT_MODE_BEST_RAND = 1, /*!< Output a random best scoring alignment */
+    FMAP_ALN_OUTPUT_MODE_BEST_ALL = 2, /*!< Output all the alignments with the best score */
+    FMAP_ALN_OUTPUT_MODE_ALL = 3, /*!< Output all alignments */
 };
 
 /*! @typedef

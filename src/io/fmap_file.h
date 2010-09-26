@@ -14,24 +14,21 @@
   */
 
 /*! 
-  @constant  FMAP_FILE_NO_COMPRESSION  no compression
-  @constant  FMAP_FILE_BZ2_COMPRESSION  bzip2 compression
-  @constant  FMAP_FILE_GZ_COMPRESSION  gzip compression
   @discussion  the various supported file compression types
   */
 enum {
-    FMAP_FILE_NO_COMPRESSION=0, 
-    FMAP_FILE_BZ2_COMPRESSION, 
-    FMAP_FILE_GZ_COMPRESSION};
+    FMAP_FILE_NO_COMPRESSION=0,  /*!< no compression */
+    FMAP_FILE_BZ2_COMPRESSION,  /*!< bzip2 compression */
+    FMAP_FILE_GZ_COMPRESSION  /*!< gzip compression */
+};
 
 /*! 
-  @constant  FMAP_FILE_BZ2_READ   a reading bzip2 stream 
-  @constant  FMAP_FILE_BZ2_WRITE  a writing bzip2 stream
   @discussion  the type of bzip2 stream (read/write)
   */
 enum {
-    FMAP_FILE_BZ2_READ=0, 
-    FMAP_FILE_BZ2_WRITE};
+    FMAP_FILE_BZ2_READ=0,  /*!< a reading bzip2 stream  */
+    FMAP_FILE_BZ2_WRITE  /*!< a writing bzip2 stream */
+};
 
 /*! @typedef
   @abstract         structure aggregating common file structures

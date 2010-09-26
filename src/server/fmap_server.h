@@ -12,17 +12,13 @@
 //#define FMAP_SERVER_SLEEP 15
 
 /*! 
-  @constant  FMAP_SERVER_UNKNOWN  Unknown command
-  @constant  FMAP_SERVER_START    Start command
-  @constant  FMAP_SERVER_STOP     Stop command
-  @constant  FMAP_SERVER_KILL     Kill command
   @discussion  The command to the server.
  */
 enum {
-    FMAP_SERVER_UNKNOWN = -1,
-    FMAP_SERVER_START   = 0,
-    FMAP_SERVER_STOP    = 1,
-    FMAP_SERVER_KILL    = 2
+    FMAP_SERVER_UNKNOWN = -1, /*!< Unknown command */
+    FMAP_SERVER_START   = 0, /*!< Start command */
+    FMAP_SERVER_STOP    = 1, /*!< Stop command */
+    FMAP_SERVER_KILL    = 2 /*!< Kill command */
 };
 
 /*! @function

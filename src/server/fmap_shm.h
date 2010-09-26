@@ -19,22 +19,16 @@
   */
 
 /*! 
-  @constant  FMAP_SHM_LISTING_REFSEQ      the forward packed reference sequence 
-  @constant  FMAP_SHM_LISTING_REV_REFSEQ  the forward packed reference sequence 
-  @constant  FMAP_SHM_LISTING_BWT         the forward BWT string
-  @constant  FMAP_SHM_LISTING_REV_BWT     the reverse BWT string
-  @constant  FMAP_SHM_LISTING_SA          the forward SA string
-  @constant  FMAP_SHM_LISTING_REV_SA      the reverse SA string
   @discussion  The server listings are stored as 0/1 bits, with 32-bits currently supported.
   They list if a given data structure is loaded into memory.
   */
 enum {
-    FMAP_SHM_LISTING_REFSEQ     = 0x1,
-    FMAP_SHM_LISTING_REV_REFSEQ = 0x2,
-    FMAP_SHM_LISTING_BWT        = 0x4,
-    FMAP_SHM_LISTING_REV_BWT    = 0x8,
-    FMAP_SHM_LISTING_SA         = 0x10,
-    FMAP_SHM_LISTING_REV_SA     = 0x20
+    FMAP_SHM_LISTING_REFSEQ     = 0x1, /*!< the forward packed reference sequence  */
+    FMAP_SHM_LISTING_REV_REFSEQ = 0x2, /*!< the forward packed reference sequence  */
+    FMAP_SHM_LISTING_BWT        = 0x4, /*!< the forward BWT string */
+    FMAP_SHM_LISTING_REV_BWT    = 0x8, /*!< the reverse BWT string */
+    FMAP_SHM_LISTING_SA         = 0x10, /*!< the forward SA string */
+    FMAP_SHM_LISTING_REV_SA     = 0x20 /*!< the reverse SA string */
 };
 
 /*! @typedef

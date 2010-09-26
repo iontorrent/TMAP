@@ -9,15 +9,12 @@
   */
 
 /*! 
-  @constant  FMAP_SEQ_TYPE_NOTYPE    unknown type
-  @constant  FMAP_SEQ_TYPE_FQ        FASTA/FASTQ input/output
-  @constant  FMAP_SEQ_TYPE_SFF       SFF input/output
   @discussion  the type of DNA sequence data
   */
 enum {
-    FMAP_SEQ_TYPE_NOTYPE = -1,
-    FMAP_SEQ_TYPE_FQ = 0,
-    FMAP_SEQ_TYPE_SFF = 1
+    FMAP_SEQ_TYPE_NOTYPE = -1, /*!< unknown type */
+    FMAP_SEQ_TYPE_FQ = 0, /*!< FASTA/FASTQ input/output */
+    FMAP_SEQ_TYPE_SFF = 1 /*!< SFF input/output */
 };
 
 /*! @typedef 

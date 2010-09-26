@@ -74,36 +74,25 @@
 
 /*! 
   @abstract  for each type of file, the integer id associated with this file
-  @constant  FMAP_ANNO_FILE  the reference sequence annotation file
-  @constant  FMAP_PAC_FILE  the packed forward reference sequence file
-  @constant  FMAP_REV_PAC_FILE  the packed reverse reference sequence file
-  @constant  FMAP_BWT_FILE  the packed forward BWT file
-  @constant  FMAP_REV_BWT_FILE  the packed reverse BWT file
-  @constant  FMAP_SA_FILE  the packed forward SA file
-  @constant  FMAP_REV_SA_FILE  the packed reverse SA file
   @discussion  can be used with 'fmap_get_file_name' 
   */
 enum {
-    FMAP_ANNO_FILE     = 0,
-    FMAP_PAC_FILE      = 1,
-    FMAP_REV_PAC_FILE  = 2,
-    FMAP_BWT_FILE      = 3,
-    FMAP_REV_BWT_FILE  = 4,
-    FMAP_SA_FILE       = 5,
-    FMAP_REV_SA_FILE   = 6
+    FMAP_ANNO_FILE     = 0, /*!< the reference sequence annotation file */
+    FMAP_PAC_FILE      = 1, /*!< the packed forward reference sequence file */
+    FMAP_REV_PAC_FILE  = 2, /*!< the packed reverse reference sequence file */
+    FMAP_BWT_FILE      = 3, /*!< the packed forward BWT file */
+    FMAP_REV_BWT_FILE  = 4, /*!< the packed reverse BWT file */
+    FMAP_SA_FILE       = 5, /*!< the packed forward SA file */
+    FMAP_REV_SA_FILE   = 6 /*!< the packed reverse SA file */
 };
 
 /*! 
-  @constant  FMAP_READS_FORMAT_UNKNOWN  the reads format is unrecognized
-  @constant  FMAP_READS_FORMAT_FASTA  the reads are in FASTA format
-  @constant  FMAP_READS_FORMAT_FASTQ  the reads are in FASTQ format
-  @constant  FMAP_READS_FORMAT_SFF  the reads are in SFF format
   */
 enum {
-    FMAP_READS_FORMAT_UNKNOWN  = -1,
-    FMAP_READS_FORMAT_FASTA    = 0,
-    FMAP_READS_FORMAT_FASTQ    = 1,
-    FMAP_READS_FORMAT_SFF      = 2
+    FMAP_READS_FORMAT_UNKNOWN  = -1, /*!< the reads format is unrecognized */
+    FMAP_READS_FORMAT_FASTA    = 0, /*!< the reads are in FASTA format */
+    FMAP_READS_FORMAT_FASTQ    = 1, /*!< the reads are in FASTQ format */
+    FMAP_READS_FORMAT_SFF      = 2 /*!< the reads are in SFF format */
 };
 
 /*! @var  nt_char_to_int
