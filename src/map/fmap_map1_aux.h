@@ -4,11 +4,11 @@
 #include "../util/fmap_fibheap.h"
 #include "fmap_map1.h"
 
-/*! @header
-  @abstract  Auxiliary Functions for the BWA-like (short-read) Mapping Algorithm
+/*! 
+  Auxiliary Functions for the BWA-like (short-read) Mapping Algorithm
   */
 
-/*! @typedef 
+/*! 
   @field  score             the current alignment score
   @field  n_mm              the current number of mismatches 
   @field  n_gapo            the current number of gap opens
@@ -35,7 +35,7 @@ typedef struct {
     int32_t prev_i;
 } fmap_map1_aux_stack_entry_t;
 
-/*! @typedef
+/*! 
   @field  entry_pool
   @field  entry_pool_length
   @field  entry_pool_i
@@ -58,8 +58,7 @@ fmap_map1_aux_stack_init();
 void
 fmap_map1_aux_stack_destroy(fmap_map1_aux_stack_t *stack);
 
-/*! @function
-  @abstract
+/*! 
   @param  seq         the base sequences (forward/reverse-complimented)
   @param  bwt         the BWT structure (reversed)
   @param  width       the bounds within the read (forward/reverse)

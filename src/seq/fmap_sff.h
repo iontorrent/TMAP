@@ -11,11 +11,11 @@
 #include "../util/fmap_string.h"
 #include "../io/fmap_file.h"
 
-/*! @header
-  @abstract  A Library for SFF data
+/*! 
+  A Library for SFF data
   */
 
-/*! @typedef
+/*! 
   @field  magic           the magic number for this file
   @field  version         the version number
   @field  index_offset    not currently used (value is 0)
@@ -42,7 +42,7 @@ typedef struct {
     fmap_string_t *key;
 } fmap_sff_header_t;
 
-/*! @typedef
+/*! 
   @field  rheader_length      the number of bytes in the 
   @field  name_length         the number of characters in the name of the read (not including the null-terminator)
   @field  n_bases             the number of bases in the read
@@ -63,7 +63,7 @@ typedef struct {
     fmap_string_t *name;
 } fmap_sff_read_header_t;
 
-/*! @typedef
+/*! 
   @field  flowgram    the flowgram 
   @field  flow_index  the 1-based flow index for each base called
   @field  bases      the called bases
@@ -76,7 +76,7 @@ typedef struct {
     fmap_string_t *quality;
 } fmap_sff_read_t;
 
-/*! @typedef
+/*! 
   @field  gheader  pointer to the global header
   @field  rheader  pointer to the read header
   @field  read     pointer to the read
@@ -89,89 +89,77 @@ typedef struct {
     int32_t is_int;
 } fmap_sff_t;
 
-/*! @function
-  @abstract
+/*! 
   @param  fp  the file pointer from which to read
   @return     a pointer to the sff header read in
   */
 fmap_sff_header_t *
 fmap_sff_header_read(fmap_file_t *fp);
 
-/*! @function
-  @abstract
+/*! 
   @param  h  a pointer to the sff header to destroy
   */
 void
 fmap_sff_header_destroy(fmap_sff_header_t *h);
 
-/*! @function
-  @abstract
+/*! 
   @param  fp  the file pointer from which to read
   @return     a pointer to the sff read header read in
   */
 fmap_sff_read_header_t *
 fmap_sff_read_header_read(fmap_file_t *fp);
 
-/*! @function
-  @abstract
+/*! 
   @param  rh  a pointer to the sff read header to destroy
   */
 void
 fmap_sff_read_header_destroy(fmap_sff_read_header_t *rh);
 
-/*! @function
-  @abstract
+/*! 
   @param  fp  the file pointer from which to read
   @return     a pointer to the sff read to read in
   */
 fmap_sff_read_t *
 fmap_sff_read_read(fmap_file_t *fp, fmap_sff_header_t *gh, fmap_sff_read_header_t *rh);
 
-/*! @function
-  @abstract
+/*! 
   @param  r  a pointer to the sff read to destroy
   */
 void
 fmap_sff_read_destroy(fmap_sff_read_t *r);
 
-/*! @function
-  @abstract
+/*! 
   @return a pointer to the empty sff 
   */
 fmap_sff_t *
 fmap_sff_init();
 
-/*! @function
-  @abstract
+/*! 
   @param  sff  a pointer to the sff to destroy
   */
 void
 fmap_sff_destroy(fmap_sff_t *sff);
 
-/*! @function
-  @abstract
+/*! 
   @param  sff  a pointer to the sff to clone
   @return a pointer to the cloned sff
 */
 fmap_sff_t *
 fmap_sff_clone(fmap_sff_t *sff);
 
-/*! @function
-  @abstract
+/*! 
   @param  sff  a pointer to the sff 
 */
 void
 fmap_sff_reverse_compliment(fmap_sff_t *sff);
 
-/*! @function
-  @abstract
+/*! 
   @param  sff  a pointer to the sff 
 */
 void
 fmap_sff_to_int(fmap_sff_t *sff);
 
-/*! @function
-  @abstract
+/*! 
   @param  sff  a pointer to the sff 
 */
 void

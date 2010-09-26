@@ -30,12 +30,12 @@
 #include <string.h>
 #include "fmap_alloc.h"
 
-/*! @header
-  @abstract  Generic Sort Library
+/*! 
+  Generic Sort Library
   */
 
-/*! @typedef
-  @abstract  stack structure for introsort
+/*! 
+  stack structure for introsort
   @param  left   the left boundary
   @param  right   the right boundary
   @param  depth  the stack depth
@@ -46,15 +46,15 @@ typedef struct {
     int depth;
 } fmap_sort_isort_stack_t;
 
-/*! @define
+/*! 
   @param  type_t  the type of values [type]
   @param  a       the first variable
   @param  b       the second variable
 */
 #define FMAP_SORT_SWAP(type_t, a, b) { register type_t t=(a); (a)=(b); (b)=t; }
 
-/*! @define
-  @abstract          initializes sort functions with the given name, type, and comparison function 
+/*! 
+          initializes sort functions with the given name, type, and comparison function 
   @param  name       the name of sort functions [symbol]
   @param  type_t     the type of values [type]
   @param  __sort_lt  the comparison function
@@ -244,30 +244,30 @@ type_t fmap_sort_small_##name(size_t n, type_t arr[], size_t kk) \
   } \
 }
 
-/*! @define
-  @abstract     performs mergesort on the given array
+/*! 
+     performs mergesort on the given array
   @param  name  the name of the sort functions [symbol] 
   @param  n     the size of the array
   @param  a     the array of elements to be sorted
   @param  t     a temporary array of elements of length n, or NULL
   */
 #define fmap_sort_mergesort(name, n, a, t) fmap_sort_mergesort_##name(n, a, t)
-/*! @define
-  @abstract     performs introsort on the given array
+/*! 
+     performs introsort on the given array
   @param  name  the name of the sort functions [symbol] 
   @param  n     the size of the array
   @param  a     the array of elements to be sorted
   */
 #define fmap_sort_introsort(name, n, a) fmap_sort_introsort_##name(n, a)
-/*! @define
-  @abstract     performs combsort on the given array
+/*! 
+     performs combsort on the given array
   @param  name  the name of the sort functions [symbol] 
   @param  n     the size of the array
   @param  a     the array of elements to be sorted
   */
 #define fmap_sort_combsort(name, n, a) fmap_sort_combsort_##name(n, a)
-/*! @define
-  @abstract     performs heapsort on the given array
+/*! 
+     performs heapsort on the given array
   @param  name  the name of the sort functions [symbol] 
   @param  n     the size of the array
   @param  a     the array of elements to be sorted
@@ -275,43 +275,43 @@ type_t fmap_sort_small_##name(size_t n, type_t arr[], size_t kk) \
 #define fmap_sort_heapsort(name, n, a) fmap_sort_heapsort_##name(n, a)
 #define fmap_sort_heapmake(name, n, a) fmap_sort_heapmake_##name(n, a)
 #define fmap_sort_heapadjust(name, i, n, a) fmap_sort_heapadjust_##name(i, n, a)
-/*! @define
-  @abstract     performs small sorton the given array
+/*! 
+     performs small sorton the given array
   @param  name  the name of the sort functions [symbol] 
   @param  n     the size of the array
   @param  a     the array of elements to be sorted
-  @discussion   adapted from http://ndevilla.free.fr/median/
+  details   adapted from http://ndevilla.free.fr/median/
   */
 #define fmap_sort_small(name, n, a, k) fmap_sort_small_##name(n, a, k)
 
-/*! @define
-  @abstract  a generic value-based less-than comparison function
+/*! 
+  a generic value-based less-than comparison function
   @param  a  the first value to compare
   @param  b  the second value to compare
   @return    1 if true, 0 otherwise
   */
 #define fmap_sort_lt_generic(a, b) ((a) < (b))
-/*! @define
-  @abstract  a generic string-based comparison function
+/*! 
+  a generic string-based comparison function
   @param  a  the first string to compare
   @param  b  the second string to compare
   @return    1 if true, 0 otherwise
-  @discussion  this uses strcmp
+  details  this uses strcmp
   */
 #define fmap_sort_lt_str(a, b) (strcmp((a), (b)) < 0)
 
 typedef const char *ksstr_t;
 
-/*! @define
-  @abstract       initializes sort functions with the given type
+/*! 
+       initializes sort functions with the given type
   @param  type_t  the type of values [type]
-  @discussion  this will define functions named by the type and using the generic value-based comparison function.
+  details  this will define functions named by the type and using the generic value-based comparison function.
   */
 #define FMAP_SORT_INIT_GENERIC(type_t) FMAP_SORT_INIT(type_t, type_t, fmap_sort_lt_generic)
 
-/*! @define
-  @abstract  initializes string comparison sort functions 
-  @discussion  this will define functions with the name "str" and using the generic string-based comparison function.
+/*! 
+  initializes string comparison sort functions 
+  details  this will define functions with the name "str" and using the generic string-based comparison function.
   */
 #define FMAP_SORT_INIT_STR FMAP_SORT_INIT(str, ksstr_t, fmap_sort_lt_str)
 

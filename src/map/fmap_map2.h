@@ -4,13 +4,12 @@
 #include <stdlib.h>
 #include <sys/ipc.h>
 
-/*! @header
-  @abstract  The BWA-like (long-read) Mapping Algorithm
+/*! 
+  The BWA-like (long-read) Mapping Algorithm
   */
 
-/*! @typedef
-  @abstract
-  @abstract                structure to store the command line options for 'fmap map2'
+/*! 
+                structure to store the command line options for 'fmap map2'
   @field  argv              the command line argv structure
   @field  argc              the number of command line arguments passed
   @field  fn_fasta          the fasta reference file name (-f)
@@ -59,8 +58,8 @@ typedef struct {
     key_t shm_key;
 } fmap_map2_opt_t;
 
-/*! @typedef
-  @abstract                 data to be passed to a thread
+/*! 
+                 data to be passed to a thread
   @field  seq_buffer         the buffer of sequences
   @field  seq_buffer_length  the buffer length
   @field  sams               the sam alignments for each sequence
@@ -81,8 +80,8 @@ typedef struct {
     fmap_map2_opt_t *opt;
 } fmap_map2_thread_data_t;
 
-/*! @function
-  @abstract     main-like function for 'fmap map2'
+/*! 
+     main-like function for 'fmap map2'
   @param  argc  the number of arguments
   @param  argv  the argument list
   @return       0 if executed successful

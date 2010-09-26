@@ -28,8 +28,8 @@
 
 #include <stdint.h>
 
-/*! @header
-  @abstract  Functions for Performing Efficient Smith-Waterman
+/*! 
+  Functions for Performing Efficient Smith-Waterman
   */
 
 // TODO: document

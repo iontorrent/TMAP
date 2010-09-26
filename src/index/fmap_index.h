@@ -4,13 +4,12 @@
 #define FMAP_INDEX_LARGE_GENOME 0x40000000 
 #define FMAP_INDEX_TOO_BIG_GENOME 0x100000000 
 
-/*! @header
-  @abstract Reference Data Construction Functions
-  @discussion  Constructs the packed reference sequence, BWT string, and Suffix Array.
+/*! 
+  details  Constructs the packed reference sequence, BWT string, and Suffix Array.
   */
 
-/*! @typedef
-  @abstract            structure to store the command line options for 'fmap index'
+/*! 
+            structure to store the command line options for 'fmap index'
   @field  fn_fasta      the fasta file name (-f)
   @field  occ_interval  the occurrence array interval (-o)
   @field  hash_width    the occurrence hash width (-w)
@@ -24,8 +23,8 @@ typedef struct {
     int32_t is_large;
 } fmap_index_opt_t;
 
-/*! @function
-  @abstract     main-like function for 'fmap index'
+/*! 
+     main-like function for 'fmap index'
   @param  argc  the number of arguments
   @param  argv  the argument list
   @return       0 if executed successful

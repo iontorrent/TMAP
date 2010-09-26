@@ -35,12 +35,12 @@
 #include "../util/fmap_string.h"
 #include "../util/fmap_definitions.h"
 
-/*! @header
-  @abstract  A Library for FASTQ data
+/*! 
+  A Library for FASTQ data
   */
 
-/*! @typedef
-  @abstract         structure for holding FASTA/FASTQ strings
+/*! 
+         structure for holding FASTA/FASTQ strings
   @field  name       the name string
   @field  comment    the comment string
   @field  seq        the sequence string
@@ -55,44 +55,44 @@ typedef struct {
     int32_t is_int;
 } fmap_fq_t;
 
-/*! @function
-  @abstract   initializes sequence read structure
+/*! 
+   initializes sequence read structure
   @return     pointer to the initialized memory 
   */
 inline fmap_fq_t *
 fmap_fq_init();
 
-/*! @function
-  @abstract   
+/*! 
+   
   @param  fq  a pointer to the sequence structure
   */
 inline void 
 fmap_fq_destroy(fmap_fq_t *fq);
 
-/*! @function
-  @abstract   clones the given sequence read structure
+/*! 
+   clones the given sequence read structure
   @param  fq  pointer to the sequence read structure to be copied  
   @return     pointer to the initialized memory 
   */
 inline fmap_fq_t *
 fmap_fq_clone(fmap_fq_t *fq);
 
-/*! @function
-  @abstract   reverse compliments the sequence and reverse the qualities
+/*! 
+   reverse compliments the sequence and reverse the qualities
   @param  fq  a pointer to a sequence structure
   */
 void
 fmap_fq_reverse_compliment(fmap_fq_t *fq);
 
-/*! @function
-  @abstract   converts bases to integer values
+/*! 
+   converts bases to integer values
   @param  fq  a pointer to a sequence structure
   */
 void
 fmap_fq_to_int(fmap_fq_t *fq);
 
-/*! @function
-  @abstract   converts bases to character values
+/*! 
+   converts bases to character values
   @param  fq  a pointer to a sequence structure
   */
 void

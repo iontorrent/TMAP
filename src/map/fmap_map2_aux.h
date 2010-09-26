@@ -11,12 +11,11 @@
 
 #define FMAP_MAP2_MASK_LEVEL 0.90f
 
-/*! @header
-  @abstract Auxiliary Functions for the BWA-like (long-read) Algorithm
+/*! 
   */
 
-/*! @typedef
-  @abstract        stores an alignment hit
+/*! 
+        stores an alignment hit
   @param  k        the lower suffix array interval, or suffix array position 
   @param  l        the upper suffix array interval, or 0 when k is the suffix array position
   @param  flag      records the origin of the hit (forward/reverse bwt in the 17th/18th bit respectively); the strand in the 5th bit; the first bit stores if the hit was repetitive
@@ -33,8 +32,8 @@ typedef struct {
     int32_t beg, end;
 } fmap_map2_hit_t;
 
-/*! @typedef
-  @abstract        stores alignment hits
+/*! 
+        stores alignment hits
   @param  n        the number of hits
   @param  max      the maximum memory for the number of hits
   @param  hits     the hits
@@ -48,8 +47,8 @@ typedef struct {
     uint32_t **cigar;
 } fmap_map2_aln_t;
 
-/*! @typedef
-  @abstract  
+/*! 
+  
   @param  strand   the strand
   @param  seqid    the zero-based reference contig index
   @param  pos      the zero-based reference position
@@ -74,8 +73,8 @@ typedef struct {
     int32_t XI;
 } fmap_map2_sam_entry_t;
 
-/*! @typedef
-  @abstract            stores sam entries to be printed
+/*! 
+            stores sam entries to be printed
   @param  num_entries  the number of entries
   @param  entries      the array of entries
   */
@@ -84,15 +83,15 @@ typedef struct __fmap_map2_sam_t {
     fmap_map2_sam_entry_t *entries;
 } fmap_map2_sam_t;
 
-/*! @function
-  @abstract  destroys an alignment
+/*! 
+  destroys an alignment
   @param  a  pointer to the alignment
   */
 void
 fmap_map2_aln_destroy(fmap_map2_aln_t *a);
 
-/*! @function
-  @abstract  resolves duplicate hits
+/*! 
+  resolves duplicate hits
   @param  bwt  pointer to the bwt structure
   @param  sa   pointer to the suffix array
   @param  b    pointer to the alignment
@@ -101,16 +100,16 @@ fmap_map2_aln_destroy(fmap_map2_aln_t *a);
 int32_t
 fmap_map2_aux_resolve_duphits(const fmap_bwt_t *bwt, const fmap_sa_t *sa, fmap_map2_aln_t *b, int32_t IS);
 
-/*! @function
-  @abstract  initializes a container for sam entries
+/*! 
+  initializes a container for sam entries
   @param  n  the number of entries to initialize
   @return    a pointer to the initialized memory
   */
 fmap_map2_sam_t *
 fmap_map2_sam_init(int32_t n);
 
-/*! @function
-  @abstract    resizes a container for sam entries
+/*! 
+    resizes a container for sam entries
   @param  sam  pointer to the sam entries structure
   @param  n    the new number of entries 
   @return      a pointer to the re-initialized memory
@@ -118,15 +117,15 @@ fmap_map2_sam_init(int32_t n);
 fmap_map2_sam_t *
 fmap_map2_sam_realloc(fmap_map2_sam_t *sam, int32_t n);
 
-/*! @function
-  @abstract    destroys a container for sam entries
+/*! 
+    destroys a container for sam entries
   @param  sam  pointer to the sam entries structure
   */
 void
 fmap_map2_sam_destroy(fmap_map2_sam_t *sam);
 
-/*! @function
-  @abstract       performs the  BWA-like (long-read) algorithm 
+/*! 
+       performs the  BWA-like (long-read) algorithm 
   @param  _opt    pointer to the program parameters
   @param  query   pointer to the query sequence 
   @param  refseq  pointer to the reference sequence structure

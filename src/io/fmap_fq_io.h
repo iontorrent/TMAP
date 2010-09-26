@@ -36,14 +36,14 @@
 #include "../seq/fmap_fq.h"
 #include "fmap_file.h"
 
-/*! @header
-  @abstract  A FASTQ Reading Library
+/*! 
+  A FASTQ Reading Library
   */
 
 #define FMAP_STREAM_BUFFER_SIZE 4096
 
-/*! @typedef
-  @abstract         
+/*! 
+         
   @field  buf      the character buffer
   @field  begin    the index of the next character in the buffer
   @field  end      the number of characters last read
@@ -59,8 +59,8 @@ typedef struct {
     int32_t bufsize;
 } fmap_stream_t; 
 
-/*! @typedef
-  @abstract         structure for reading FASTA/FASTQ strings
+/*! 
+         structure for reading FASTA/FASTQ strings
   @field  last_char  the last character read
   @field  f          pointer to the file structure
   */
@@ -69,23 +69,23 @@ typedef struct {
     fmap_stream_t *f;
 } fmap_fq_io_t;
 
-/*! @function
-  @abstract   initializes fastq reading structure
+/*! 
+   initializes fastq reading structure
   @param  fp  a pointer to a file structure from which to read
   @return     pointer to the initialized memory for reading in fastqs
   */
 inline fmap_fq_io_t *
 fmap_fq_io_init(fmap_file_t *fp);
 
-/*! @function
-  @abstract     destroys fastq reading structure
+/*! 
+     destroys fastq reading structure
   @param  fqio  a pointer to the fastq structure
   */
 inline void 
 fmap_fq_io_destroy(fmap_fq_io_t *fqio);
 
-/*! @function
-  @abstract     reads in a reading structure
+/*! 
+     reads in a reading structure
   @param  fqio  a pointer to a previously initialized fastq structure
   @param  fq    the fastq structure in which to store the data
   @return       the length of the fastq read, -1 indicates an a EOF, -2 indicates a truncated quality string
@@ -93,8 +93,8 @@ fmap_fq_io_destroy(fmap_fq_io_t *fqio);
 int 
 fmap_fq_io_read(fmap_fq_io_t *fqio, fmap_fq_t *fq);
 
-/*! @function
-  @abstract              reads fastqs into a buffer
+/*! 
+              reads fastqs into a buffer
   @param  fqio           a pointer to a previously initialized fastq structure
   @param  fq_buffer      the fastq structure in which to store the data
   @param  buffer_length  the number of fastqs to read

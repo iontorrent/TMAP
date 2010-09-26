@@ -27,8 +27,8 @@
 #ifndef FMAP_HASH_H_
 #define FMAP_HASH_H_
 
-/*! @header
-  @abstract  Generic Hash Libary
+/*! 
+  Generic Hash Libary
   */
 
 #include <stdlib.h>
@@ -214,24 +214,24 @@ static inline void fmap_hash_del_##name(fmap_hash_##name##_t *h, fmap_hash_int_t
 
 /* --- BEGIN OF HASH FUNCTIONS --- */
 
-/*! @define
-  @abstract     Integer hash function
+/*! 
+     Integer hash function
   @param  key   The integer [fmap_hash_int32_t]
   @return       The hash value [fmap_hash_int_t]
   */
 #define fmap_hash_int_hash_func(key) (fmap_hash_int32_t)(key)
-/*! @define
-  @abstract     Integer comparison function
+/*! 
+     Integer comparison function
   */
 #define fmap_hash_int_hash_equal(a, b) ((a) == (b))
-/*! @define
-  @abstract     64-bit integer hash function
+/*! 
+     64-bit integer hash function
   @param  key   The integer [fmap_hash_int64_t]
   @return       The hash value [fmap_hash_int_t]
   */
 #define fmap_hash_int64_hash_func(key) (fmap_hash_int32_t)((key)>>33^(key)^(key)<<11)
-/*! @define
-  @abstract     64-bit integer comparison function
+/*! 
+     64-bit integer comparison function
   */
 #define fmap_hash_int64_hash_equal(a, b) ((a) == (b))
 // Undocumented
@@ -241,14 +241,14 @@ static inline fmap_hash_int_t __fmap_hash_X31_hash_string(const char *s)
   if (h) for (++s ; *s; ++s) h = (h << 5) - h + *s;
   return h;
 }
-/*! @define
-  @abstract     Another interface to const char* hash function
+/*! 
+     Another interface to const char* hash function
   @param  key   Pointer to a null terminated string [const char*]
   @return       The hash value [fmap_hash_int_t]
   */
 #define fmap_hash_str_hash_func(key) __fmap_hash_X31_hash_string(key)
-/*! @define
-  @abstract     Const char* comparison function
+/*! 
+     Const char* comparison function
   */
 #define fmap_hash_str_hash_equal(a, b) (strcmp(a, b) == 0)
 
@@ -257,42 +257,41 @@ static inline fmap_hash_int_t __fmap_hash_X31_hash_string(const char *s)
 /* Other necessary defines... */
 
 /*!
-  @abstract Type of the hash table.
   @param  name  Name of the hash table [symbol]
   */
 #define fmap_hash_t(name) fmap_hash_##name##_t
 
-/*! @define
-  @abstract     Initiate a hash table.
+/*! 
+     Initiate a hash table.
   @param  name  Name of the hash table [symbol]
   @return       Pointer to the hash table [fmap_hash_t(name)*]
   */
 #define fmap_hash_init(name) fmap_hash_init_##name()
 
-/*! @define
-  @abstract     Destroy a hash table.
+/*! 
+     Destroy a hash table.
   @param  name  Name of the hash table [symbol]
   @param  h     Pointer to the hash table [fmap_hash_t(name)*]
   */
 #define fmap_hash_destroy(name, h) fmap_hash_destroy_##name(h)
 
-/*! @define
-  @abstract     Reset a hash table without deallocating memory.
+/*! 
+     Reset a hash table without deallocating memory.
   @param  name  Name of the hash table [symbol]
   @param  h     Pointer to the hash table [fmap_hash_t(name)*]
   */
 #define fmap_hash_clear(name, h) fmap_hash_clear_##name(h)
 
-/*! @define
-  @abstract     Resize a hash table.
+/*! 
+     Resize a hash table.
   @param  name  Name of the hash table [symbol]
   @param  h     Pointer to the hash table [fmap_hash_t(name)*]
   @param  s     New size [fmap_hash_int_t]
   */
 #define fmap_hash_resize(name, h, s) fmap_hash_resize_##name(h, s)
 
-/*! @define
-  @abstract     Insert a key to the hash table.
+/*! 
+     Insert a key to the hash table.
   @param  name  Name of the hash table [symbol]
   @param  h     Pointer to the hash table [fmap_hash_t(name)*]
   @param  k     Key [type of keys]
@@ -303,8 +302,8 @@ static inline fmap_hash_int_t __fmap_hash_X31_hash_string(const char *s)
   */
 #define fmap_hash_put(name, h, k, r) fmap_hash_put_##name(h, k, r)
 
-/*! @define
-  @abstract     Retrieve a key from the hash table.
+/*! 
+     Retrieve a key from the hash table.
   @param  name  Name of the hash table [symbol]
   @param  h     Pointer to the hash table [fmap_hash_t(name)*]
   @param  k     Key [type of keys]
@@ -312,8 +311,8 @@ static inline fmap_hash_int_t __fmap_hash_X31_hash_string(const char *s)
   */
 #define fmap_hash_get(name, h, k) fmap_hash_get_##name(h, k)
 
-/*! @define
-  @abstract     Remove a key from the hash table.
+/*! 
+     Remove a key from the hash table.
   @param  name  Name of the hash table [symbol]
   @param  h     Pointer to the hash table [fmap_hash_t(name)*]
   @param  k     Iterator to the element to be deleted [fmap_hash_int_t]
@@ -321,59 +320,59 @@ static inline fmap_hash_int_t __fmap_hash_X31_hash_string(const char *s)
 #define fmap_hash_del(name, h, k) fmap_hash_del_##name(h, k)
 
 
-/*! @define
-  @abstract     Test whether a bucket contains data.
+/*! 
+     Test whether a bucket contains data.
   @param  h     Pointer to the hash table [fmap_hash_t(name)*]
   @param  x     Iterator to the bucket [fmap_hash_int_t]
   @return       1 if containing data; 0 otherwise [int]
   */
 #define fmap_hash_exist(h, x) (!__fmap_hash_iseither((h)->flags, (x)))
 
-/*! @define
-  @abstract     Get key given an iterator
+/*! 
+     Get key given an iterator
   @param  h     Pointer to the hash table [fmap_hash_t(name)*]
   @param  x     Iterator to the bucket [fmap_hash_int_t]
   @return       Key [type of keys]
   */
 #define fmap_hash_key(h, x) ((h)->keys[x])
 
-/*! @define
-  @abstract     Get value given an iterator
+/*! 
+     Get value given an iterator
   @param  h     Pointer to the hash table [fmap_hash_t(name)*]
   @param  x     Iterator to the bucket [fmap_hash_int_t]
   @return       Value [type of values]
-  @discussion   For hash sets, calling this results in segfault.
+  details   For hash sets, calling this results in segfault.
   */
 #define fmap_hash_val(h, x) ((h)->vals[x])
 
-/*! @define
-  @abstract     Alias of fmap_hash_val()
+/*! 
+     Alias of fmap_hash_val()
   */
 #define fmap_hash_value(h, x) ((h)->vals[x])
 
-/*! @define
-  @abstract     Get the start iterator
+/*! 
+     Get the start iterator
   @param  h     Pointer to the hash table [fmap_hash_t(name)*]
   @return       The start iterator [fmap_hash_int_t]
   */
 #define fmap_hash_begin(h) (fmap_hash_int_t)(0)
 
-/*! @define
-  @abstract     Get the end iterator
+/*! 
+     Get the end iterator
   @param  h     Pointer to the hash table [fmap_hash_t(name)*]
   @return       The end iterator [fmap_hash_int_t]
   */
 #define fmap_hash_end(h) ((h)->n_buckets)
 
-/*! @define
-  @abstract     Get the number of elements in the hash table
+/*! 
+     Get the number of elements in the hash table
   @param  h     Pointer to the hash table [fmap_hash_t(name)*]
   @return       Number of elements in the hash table [fmap_hash_int_t]
   */
 #define fmap_hash_size(h) ((h)->size)
 
-/*! @define
-  @abstract     Get the number of buckets in the hash table
+/*! 
+     Get the number of buckets in the hash table
   @param  h     Pointer to the hash table [fmap_hash_t(name)*]
   @return       Number of buckets in the hash table [fmap_hash_int_t]
   */
@@ -381,30 +380,30 @@ static inline fmap_hash_int_t __fmap_hash_X31_hash_string(const char *s)
 
 /* More conenient interfaces */
 
-/*! @define
-  @abstract     Instantiate a hash set containing integer keys
+/*! 
+     Instantiate a hash set containing integer keys
   @param  name  Name of the hash table [symbol]
   */
 #define FMAP_HASH_SET_INIT_INT(name) \
   FMAP_HASH_INIT(name, fmap_hash_int32_t, char, 0, fmap_hash_int_hash_func, fmap_hash_int_hash_equal)
 
-/*! @define
-  @abstract     Instantiate a hash map containing integer keys
+/*! 
+     Instantiate a hash map containing integer keys
   @param  name  Name of the hash table [symbol]
   @param  fmap_hashval_t  Type of values [type]
   */
 #define FMAP_HASH_MAP_INIT_INT(name, fmap_hashval_t) \
   FMAP_HASH_INIT(name, fmap_hash_int32_t, fmap_hashval_t, 1, fmap_hash_int_hash_func, fmap_hash_int_hash_equal)
 
-/*! @define
-  @abstract     Instantiate a hash map containing 64-bit integer keys
+/*! 
+     Instantiate a hash map containing 64-bit integer keys
   @param  name  Name of the hash table [symbol]
   */
 #define FMAP_HASH_SET_INIT_INT64(name) \
   FMAP_HASH_INIT(name, fmap_hash_int64_t, char, 0, fmap_hash_int64_hash_func, fmap_hash_int64_hash_equal)
 
-/*! @define
-  @abstract     Instantiate a hash map containing 64-bit integer keys
+/*! 
+     Instantiate a hash map containing 64-bit integer keys
   @param  name  Name of the hash table [symbol]
   @param  fmap_hashval_t  Type of values [type]
   */
@@ -412,15 +411,15 @@ static inline fmap_hash_int_t __fmap_hash_X31_hash_string(const char *s)
   FMAP_HASH_INIT(name, fmap_hash_int64_t, fmap_hashval_t, 1, fmap_hash_int64_hash_func, fmap_hash_int64_hash_equal)
 
 typedef const char *fmap_hash_cstr_t;
-/*! @define
-  @abstract     Instantiate a hash map containing const char* keys
+/*! 
+     Instantiate a hash map containing const char* keys
   @param  name  Name of the hash table [symbol]
   */
 #define FMAP_HASH_SET_INIT_STR(name) \
   FMAP_HASH_INIT(name, fmap_hash_cstr_t, char, 0, fmap_hash_str_hash_func, fmap_hash_str_hash_equal)
 
-/*! @define
-  @abstract     Instantiate a hash map containing const char* keys
+/*! 
+     Instantiate a hash map containing const char* keys
   @param  name  Name of the hash table [symbol]
   @param  fmap_hashval_t  Type of values [type]
   */

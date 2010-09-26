@@ -35,15 +35,15 @@
 typedef unsigned char uint8_t;
 #endif
 
-/*! @header
-  @abstract  A BWT index library
+/*! 
+  A BWT index library
   */
 
 #define FMAP_BWT_OCC_INTERVAL 0x80
 #define FMAP_BWT_HASH_WIDTH 12
 
-/*! @typedef
-  @abstract            BWT data structure
+/*! 
+            BWT data structure
   @field  version_id    the version id of this file
   @field  primary       S^{-1}(0), or the primary index of BWT
   @field  L2            C(), cumulative count
@@ -74,8 +74,7 @@ typedef struct {
     uint32_t is_shm;
 } fmap_bwt_t;
 
-/*! @function
-  @abstract
+/*! 
   @param  fn_fasta  the FASTA file name
   @param  is_rev    0 if to read the reverse packed sequence, 1 otherwise
   @return           pointer to the bwt structure 
@@ -83,8 +82,7 @@ typedef struct {
 fmap_bwt_t *
 fmap_bwt_read(const char *fn_fasta, uint32_t is_rev);
 
-/*! @function
-  @abstract
+/*! 
   @param  fn_fasta  the FASTA file name
   @param  is_rev    0 if to write the reverse packed sequence, 1 otherwise
   @param  bwt       the bwt structure to write
@@ -92,16 +90,14 @@ fmap_bwt_read(const char *fn_fasta, uint32_t is_rev);
 void 
 fmap_bwt_write(const char *fn_fasta, fmap_bwt_t *bwt, uint32_t is_rev);
 
-/*! @function
-  @abstract
+/*! 
   @param  bwt  the bwt structure 
   @return      the number of bytes required for this bwt in shared memory
   */
 size_t
 fmap_bwt_shm_num_bytes(fmap_bwt_t *bwt);
 
-/*! @function
-  @abstract
+/*! 
   @param  fn_fasta  the FASTA file name
   @param  is_rev    0 if to write the reverse packed sequence, 1 otherwise
   @return      the number of bytes required for this bwt in shared memory
@@ -109,8 +105,7 @@ fmap_bwt_shm_num_bytes(fmap_bwt_t *bwt);
 size_t
 fmap_bwt_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev);
 
-/*! @function
-  @abstract
+/*! 
   @param  bwt  the bwt structure to pack 
   @param  buf  the byte array in which to pack the bwt data
   @return      a pointer to the next unused byte in memory
@@ -118,46 +113,43 @@ fmap_bwt_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev);
 uint8_t *
 fmap_bwt_shm_pack(fmap_bwt_t *bwt, uint8_t *buf);
 
-/*! @function
-  @abstract
+/*! 
   @param  buf  the byte array in which to unpack the bwt data
   @return      a pointer to the initialized bwt structure
   */
 fmap_bwt_t *
 fmap_bwt_shm_unpack(uint8_t *buf);
 
-/*! @function
-  @abstract
+/*! 
   @param  bwt  pointer to the bwt structure to destroy
   */
 void 
 fmap_bwt_destroy(fmap_bwt_t *bwt);
 
-/*! @function
-  @abstract
+/*! 
   @param  bwt           pointer to the bwt structure to update
   @param  occ_interval  the new occurrence interval
   */
 void 
 fmap_bwt_update_occ_interval(fmap_bwt_t *bwt, uint32_t occ_interval);
 
-/*! @function
-  @abstract    generates the occurrence array
+/*! 
+    generates the occurrence array
   @param  bwt  pointer to the bwt structure to update 
   */
 void 
 fmap_bwt_gen_cnt_table(fmap_bwt_t *bwt);
 
-/*! @function
-  @abstract           generates the occurrence hash
+/*! 
+           generates the occurrence hash
   @param  bwt         pointer to the bwt structure to update 
   @param  hash_width  the k-mer length to hash
   */
 void
 fmap_bwt_gen_hash(fmap_bwt_t *bwt, uint32_t hash_width);
 
-/*! @function
-  @abstract    calculates the next occurrence given the previous occurence and the next base
+/*! 
+    calculates the next occurrence given the previous occurence and the next base
   @param  bwt  pointer to the bwt structure 
   @param  k    previous occurence
   @param  c    base in two-bit integer format
@@ -166,8 +158,8 @@ fmap_bwt_gen_hash(fmap_bwt_t *bwt, uint32_t hash_width);
 inline uint32_t 
 fmap_bwt_occ(const fmap_bwt_t *bwt, uint32_t k, uint8_t c);
 
-/*! @function
-  @abstract    calculates the next occurrences given the previous occurence for all four bases
+/*! 
+    calculates the next occurrences given the previous occurence for all four bases
   @param  bwt  pointer to the bwt structure 
   @param  k    previous occurence
   @param  cnt  pointer to the next occurences for all four bases
@@ -175,27 +167,27 @@ fmap_bwt_occ(const fmap_bwt_t *bwt, uint32_t k, uint8_t c);
 inline void 
 fmap_bwt_occ4(const fmap_bwt_t *bwt, uint32_t k, uint32_t cnt[4]);
 
-/*! @function
-  @abstract    calculates the SA interval given the previous SA interval and the next base
+/*! 
+    calculates the SA interval given the previous SA interval and the next base
   @param  bwt  pointer to the bwt structure 
   @param  k    previous lower occurence
   @param  l    previous upper occurence
   @param  c    base in two-bit integer format
   @param  ok   the next lower occurence
   @param  ol   the next upper occurence
-  @discussion  more efficient version of bwt_occ but requires that k <= l (not checked)
+  details  more efficient version of bwt_occ but requires that k <= l (not checked)
   */
 inline void 
 fmap_bwt_2occ(const fmap_bwt_t *bwt, uint32_t k, uint32_t l, uint8_t c, uint32_t *ok, uint32_t *ol);
 
-/*! @function
-  @abstract     calculates the next SA intervals given the previous SA intervals for all four bases
+/*! 
+     calculates the next SA intervals given the previous SA intervals for all four bases
   @param  bwt   pointer to the bwt structure 
   @param  k     previous lower occurence
   @param  l     previous upper occurence
   @param  cntk  next upper occurences
   @param  cntl  next lower occurences
-  @discussion   more efficient version of bwt_occ4 but requires that k <= l (not checked)
+  details   more efficient version of bwt_occ4 but requires that k <= l (not checked)
   */
 inline void 
 fmap_bwt_2occ4(const fmap_bwt_t *bwt, uint32_t k, uint32_t l, uint32_t cntk[4], uint32_t cntl[4]);
@@ -203,12 +195,11 @@ fmap_bwt_2occ4(const fmap_bwt_t *bwt, uint32_t k, uint32_t l, uint32_t cntk[4], 
 // TODO: document
 #define fmap_bwt_bwt(b, k) ((b)->bwt[(k)/(b)->occ_interval*12 + 4 + (k)%(b)->occ_interval/16])
 
-/*! @define
-  @abstract retrieve a character from the $-removed BWT string. 
+/*! 
   @param  b   pointer to the bwt structure
   @param  k   the zero-based index of the bwt character to retrieve
   @return     the bwt character from the $-removed BWT string.
-  @discussion Note that fmap_bwt_t::bwt is not exactly the BWT string 
+  details Note that fmap_bwt_t::bwt is not exactly the BWT string 
   and therefore this define is called fmap_bwt_B0 instead of fmap_bwt_B. 
   */
 #define fmap_bwt_B0(b, k) (fmap_bwt_bwt(b, k)>>((~(k)&0xf)<<1)&3)
@@ -216,8 +207,8 @@ fmap_bwt_2occ4(const fmap_bwt_t *bwt, uint32_t k, uint32_t l, uint32_t cntk[4], 
 // TODO: document
 #define fmap_bwt_occ_intv(b, k) ((b)->bwt + (k)/(b)->occ_interval*12)
 
-/*! @define 
-  @abstract    inverse Psi function
+/*!  
+    inverse Psi function
   @param  bwt  pointer to the bwt structure
   @param  k    the occurence position 
   @return      the suffix array position
@@ -228,8 +219,8 @@ fmap_bwt_2occ4(const fmap_bwt_t *bwt, uint32_t k, uint32_t l, uint32_t cntk[4], 
    (bwt)->L2[fmap_bwt_B0(bwt, k)] + fmap_bwt_occ(bwt, k, fmap_bwt_B0(bwt, k))		\
    : (bwt)->L2[fmap_bwt_B0(bwt, (k)-1)] + fmap_bwt_occ(bwt, k, fmap_bwt_B0(bwt, (k)-1)))
 
-/*! @function
-  @abstract     main-like function for 'fmap pac2bwt'
+/*! 
+     main-like function for 'fmap pac2bwt'
   @param  argc  the number of arguments
   @param  argv  the argument list
   @return       0 if executed successful

@@ -10,12 +10,11 @@
 
 #define FMAP_MAP2_MINUS_INF -0x3fffffff
 
-/*! @header
-  @abstract Core Functions for the BWA-like (long-read) Algorithm
+/*! 
   */
 
-/*! @function
-  @abstract           the core alignment algorithm
+/*! 
+           the core alignment algorithm
   @param  opt         the program options
   @param  target      the target sequence (read)
   @param  query_bwt   the query bwt (reference)

@@ -32,12 +32,11 @@
 #ifndef FMAP_FIBHEAP_H_
 #define FMAP_FIBHEAP_H_
 
-/*! @header
-  @abstract Fibonacci Heap Library
+/*! 
   */
 
-/*! @typedef 
-  @abstract  a node in the fibonacci heap
+/*! 
+  a node in the fibonacci heap
  */
 typedef struct __fmap_fibheap_element_t {
     int	fmap_fibheap_element_degree;
@@ -50,8 +49,8 @@ typedef struct __fmap_fibheap_element_t {
     void	*fmap_fibheap_element_data;
 } fmap_fibheap_element_t; 
 
-/*! @typedef
-  @abstract  a fibonacci heap
+/*! 
+  a fibonacci heap
  */
 typedef struct {
     int	(*fmap_fibheap_cmp_fnct)(void *, void *);
@@ -64,20 +63,20 @@ typedef struct {
     int	fmap_fibheap_keys;
 } fmap_fibheap_t;
 
-/*! @function
-  @abstract  the comparison prototype 
+/*! 
+  the comparison prototype 
  */
 typedef int (*fmap_fibheap_voidcmp)(void *, void *);
 
-/*! @function
-  @abstract  create a key heap
+/*! 
+  create a key heap
   @return    pointer to the initialized key heap
 */
 fmap_fibheap_t *
 fmap_fibheap_makekeyheap();
 
-/*! @function
-  @abstract     inserts an element with the given key into a key heap
+/*! 
+     inserts an element with the given key into a key heap
   @param  h     pointer to the heap structure
   @param  key   the key of the element
   @param  data  the data to insert
@@ -86,16 +85,16 @@ fmap_fibheap_makekeyheap();
 fmap_fibheap_element_t *
 fmap_fibheap_insertkey(fmap_fibheap_t *h, int key, void *data);
 
-/*! @function
-  @abstract  gets the minimum element's key from a key heap
+/*! 
+  gets the minimum element's key from a key heap
   @param  h  pointer to the heap structure
   @return    the minimum element's key, or INT_MIN if the key is empty
 */
 int 
 fmap_fibheap_minkey(fmap_fibheap_t *h);
 
-/*! @function
-  @abstract    changes a given element's key in a key heap
+/*! 
+    changes a given element's key in a key heap
   @param  h    pointer to the heap structure
   @param  x    the element whos key to update
   @param  key  the new key
@@ -104,8 +103,8 @@ fmap_fibheap_minkey(fmap_fibheap_t *h);
 int 
 fmap_fibheap_replacekey(fmap_fibheap_t *h, fmap_fibheap_element_t *x, int key);
 
-/*! @function
-  @abstract    changes a given element's key and data in a key heap
+/*! 
+    changes a given element's key and data in a key heap
   @param  h    pointer to the heap structure
   @param  x    the element whos key and data to update
   @param  key  the new key
@@ -115,16 +114,16 @@ fmap_fibheap_replacekey(fmap_fibheap_t *h, fmap_fibheap_element_t *x, int key);
 void *
 fmap_fibheap_replacekeydata(fmap_fibheap_t *h, fmap_fibheap_element_t *x, int key, void *data);
 
-/*! @function
-  @abstract     changes a given element's key and data in a void heap
+/*! 
+     changes a given element's key and data in a void heap
   @param  fnct  the comparison function of type fmap_fibheap_voidcmp
   @return       pointer to the initialized key heap
 */
 fmap_fibheap_t *
 fmap_fibheap_makeheap(fmap_fibheap_voidcmp fnct);
 
-/*! @function
-  @abstract     changes the void heap's comparison function
+/*! 
+     changes the void heap's comparison function
   @param  h     pointer to the heap structure
   @param  fnct  the comparison function of type fmap_fibheap_voidcmp
   @return       the previous comparison function
@@ -132,8 +131,8 @@ fmap_fibheap_makeheap(fmap_fibheap_voidcmp fnct);
 fmap_fibheap_voidcmp 
 fmap_fibheap_setcmp(fmap_fibheap_t *h, fmap_fibheap_voidcmp fnct);
 
-/*! @function
-  @abstract     changes the void heap's negative infinity data
+/*! 
+     changes the void heap's negative infinity data
   @param  h     pointer to the heap structure
   @param  data  the data to represent negative infinity 
   @return       the previous negative infinity data
@@ -141,8 +140,8 @@ fmap_fibheap_setcmp(fmap_fibheap_t *h, fmap_fibheap_voidcmp fnct);
 void *
 fmap_fibheap_setneginf(fmap_fibheap_t *h, void *data);
 
-/*! @function
-  @abstract     insert the given data into a void heap
+/*! 
+     insert the given data into a void heap
   @param  h     pointer to the heap structure
   @param  data  the data to insert
   @return       pointer to the element inserted 
@@ -150,26 +149,26 @@ fmap_fibheap_setneginf(fmap_fibheap_t *h, void *data);
 fmap_fibheap_element_t *
 fmap_fibheap_insert(fmap_fibheap_t *h, void *data);
 
-/*! @function
-  @abstract  get the data on top of the heap
+/*! 
+  get the data on top of the heap
   @param  h  pointer to the heap structure
   @return    the minimum data
-  @discussion  removes the minimum element from the heap
+  details  removes the minimum element from the heap
 */
 void *
 fmap_fibheap_extractmin(fmap_fibheap_t *h);
 
-/*! @function
-  @abstract    get the data on top of the heap
+/*! 
+    get the data on top of the heap
   @param  h    pointer to the heap structure
   @return      the minimum data
-  @discussion  does not remove the minimum element from the heap
+  details  does not remove the minimum element from the heap
 */
 void *
 fmap_fibheap_min(fmap_fibheap_t *h);
 
-/*! @function
-  @abstract    replaces the given element's data in the heap
+/*! 
+    replaces the given element's data in the heap
   @param  h    pointer to the heap structure
   @param  x    the element whos data to update
   @param  data the new data
@@ -178,8 +177,8 @@ fmap_fibheap_min(fmap_fibheap_t *h);
 void *
 fmap_fibheap_replacedata(fmap_fibheap_t *h, fmap_fibheap_element_t *x, void *data);
 
-/*! @function
-  @abstract    delete the given element from the heap
+/*! 
+    delete the given element from the heap
   @param  h    pointer to the heap structure
   @param  x    the element whos data to delete 
   @return      the deleted element's data
@@ -187,20 +186,20 @@ fmap_fibheap_replacedata(fmap_fibheap_t *h, fmap_fibheap_element_t *x, void *dat
 void *
 fmap_fibheap_delete(fmap_fibheap_t *h, fmap_fibheap_element_t *x);
 
-/*! @function
-  @abstract    delete the given the heap
+/*! 
+    delete the given the heap
   @param  h    pointer to the heap structure
-  @discussion  does not destroy the data within
+  details  does not destroy the data within
 */
 void 
 fmap_fibheap_deleteheap(fmap_fibheap_t *h);
 
-/*! @function
-  @abstract   merges two heaps
+/*! 
+   merges two heaps
   @param  ha  pointer to the heap structure #1
   @param  hb  pointer to the heap structure #2
   @return     pointer to the merged heap
-  @discussion  ha is used to store the merged heap
+  details  ha is used to store the merged heap
 */
 fmap_fibheap_t *
 fmap_fibheap_union(fmap_fibheap_t *ha, fmap_fibheap_t *hb);

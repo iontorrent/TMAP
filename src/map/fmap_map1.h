@@ -3,12 +3,12 @@
 
 #include <config.h>
 
-/*! @header
-  @abstract  BWA-like (short-read) Mapping Algorithm
+/*! 
+  BWA-like (short-read) Mapping Algorithm
   */
 
 /*! 
-  @discussion  determines how to output multiple alignments
+  details  determines how to output multiple alignments
   */
 enum {
     FMAP_ALN_OUTPUT_MODE_BEST = 0, /*!< Output an alignment only if it is uniquely the best */
@@ -17,8 +17,8 @@ enum {
     FMAP_ALN_OUTPUT_MODE_ALL = 3, /*!< Output all alignments */
 };
 
-/*! @typedef
-  @abstract                structure to store the command line options for 'fmap map1'
+/*! 
+                structure to store the command line options for 'fmap map1'
   @field  argv              the command line argv structure
   @field  argc              the number of command line arguments passed
   @field  fn_fasta          the fasta reference file name (-f)
@@ -75,7 +75,7 @@ typedef struct {
     key_t shm_key;
 } fmap_map1_opt_t;
 
-/*! @typedef 
+/*! 
   @field  score         the current alignment score
   @field  n_mm          the current number of mismatches 
   @field  n_gapo        the current number of gap opens
@@ -86,7 +86,7 @@ typedef struct {
   @field  l             the upper range of the SA interval
   @field  cigar_length  the length of the cigar array
   @field  cigar         the cigar array
-  @discussion In the CIGAR array, each element is a 32-bit integer. The
+  details In the CIGAR array, each element is a 32-bit integer. The
   lower 4 bits gives a CIGAR operation and the higher 28 bits keep the
   length of a CIGAR.
 */
@@ -104,8 +104,8 @@ typedef struct {
 } fmap_map1_aln_t;
 
 #ifdef HAVE_LIBPTHREAD
-/*! @typedef
-  @abstract                 data to be passed to a thread
+/*! 
+                 data to be passed to a thread
   @field  seq_buffer         the buffer of sequences
   @field  seq_buffer_length  the buffer length
   @field  alns               alignments for each sequence
@@ -123,8 +123,8 @@ typedef struct {
 } fmap_map1_thread_data_t;
 #endif
 
-/*! @function
-  @abstract     main-like function for 'fmap map1'
+/*! 
+     main-like function for 'fmap map1'
   @param  argc  the number of arguments
   @param  argv  the argument list
   @return       0 if executed successful

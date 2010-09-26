@@ -25,8 +25,8 @@
 #ifndef FMAP_BWT_GEN_H
 #define FMAP_BWT_GEN_H
 
-/*! @header
-  @abstract  BWT Generation Library
+/*! 
+  BWT Generation Library
   */
 
 /* START -- large BWT construction code */
@@ -108,8 +108,8 @@ typedef struct BWTInc {
 } BWTInc;
 /* END -- large BWT construction code */
 
-/*! @function
-  @abstract             create a bwt FASTA file from a packed FASTA file
+/*! 
+             create a bwt FASTA file from a packed FASTA file
   @param  fn_fasta      file name of the FASTA file
   @param  occ_interval  the desired occurrence interval
   @param  hash_width    the desired k-mer hash width
@@ -117,8 +117,7 @@ typedef struct BWTInc {
 void 
 fmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, uint32_t hash_width);
 
-/*! @function
-  @abstract
+/*! 
   @param  T  the input string
   @param  n  the length of the input string
   @return    the primary index if no error occurred, -1 or -2 otherwise

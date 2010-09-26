@@ -29,72 +29,70 @@
 #include <stdlib.h>
 #include "fmap_alloc.h"
 
-/*! @header
-  @discussion  A Vector Library
+/*! 
+  details  A Vector Library
   */
 
 #ifdef fmap_roundup32
 #define fmap_vec_roundup32 fmap_roundup32
 #else
-/*! @define
-  @abstract  rounds up to the nearest power of two integer
+/*! 
+  rounds up to the nearest power of two integer
   @param  x  the integer to round up
   @return    the smallest integer greater than x that is a power of two 
   */
 #define fmap_vec_roundup32(x) (--(x), (x)|=(x)>>1, (x)|=(x)>>2, (x)|=(x)>>4, (x)|=(x)>>8, (x)|=(x)>>16, ++(x))
 #endif
 
-/*! @define  fmap_vec_t(type)
+/*!   fmap_vec_t(type)
   @param  type  the type of values [type]
-  @discussion  defines an anonymous struct representing a vector of values of the given type  
+  details  defines an anonymous struct representing a vector of values of the given type  
 */
 #define fmap_vec_t(type) struct { size_t n, m; type *a; }
-/*! @define
-  @abstract
+/*! 
   @param  v  the vector to initialize
 */
 #define fmap_vec_init(v) ((v).n = (v).m = 0, (v).a = 0)
-/*! @define
-  @abstract
+/*! 
   @param  v  the vector to destroy 
 */
 #define fmap_vec_destroy(v) free((v).a)
-/*! @define
-  @abstract  sets the element at index i
+/*! 
+  sets the element at index i
   @param  v  the element to set
   @param  i  the zero-based index
   @return    the set element
 */
 #define fmap_vec_A(v, i) ((v).a[(i)])
-/*! @define
-  @abstract  pop an element from the vector
+/*! 
+  pop an element from the vector
   @param  v  the vector 
   @return    the popped element 
 */
 #define fmap_vec_pop(v) ((v).a[--(v).n])
-/*! @define
-  @abstract  get the vector size
+/*! 
+  get the vector size
   @param  v  the vector 
   @return    the size of the vector
 */
 #define fmap_vec_size(v) ((v).n)
-/*! @define
-  @abstract  get the vectors memory capacity
+/*! 
+  get the vectors memory capacity
   @param  v  the vector 
   @return    the memory capacity
 */
 #define fmap_vec_max(v) ((v).m)
 
-/*! @define
-  @abstract     resizes the given vector
+/*! 
+     resizes the given vector
   @param  type  the type of values [type]
   @param  v     the vector 
   @param  s     the new memory size
 */
 #define fmap_vec_resize(type, v, s)  ((v).m = (s), (v).a = (type*)fmap_realloc((v).a, sizeof(type) * (v).m, "(v).a"))
 
-/*! @define
-  @abstract     copies vector v0 into vector v1
+/*! 
+     copies vector v0 into vector v1
   @param  type  the type of values [type]
   @param  v1    the destination vector
   @param  v0    the source vector
@@ -105,8 +103,8 @@
     memcpy((v1).a, (v0).a, sizeof(type) * (v0).n); \
 } while (0) \
 
-/*! @define
-  @abstract     adds the give element to the vector
+/*! 
+     adds the give element to the vector
   @param  type  the type of values [type]
   @param  v     the vector
   @param  x     the element to add

@@ -1,8 +1,8 @@
 #ifndef FMAP_MAIN_H_
 #define FMAP_MAIN_H_
 
-/*! @header
-  @abstract  Main FMAP Function
+/*! 
+  Main FMAP Function
   */
 
 extern int 

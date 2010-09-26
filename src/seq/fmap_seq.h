@@ -4,12 +4,12 @@
 #include "fmap_fq.h"
 #include "fmap_sff.h"
 
-/*! @header
-  @abstract  An Abstract Library for DNA Sequence Data
+/*! 
+  An Abstract Library for DNA Sequence Data
   */
 
 /*! 
-  @discussion  the type of DNA sequence data
+  details  the type of DNA sequence data
   */
 enum {
     FMAP_SEQ_TYPE_NOTYPE = -1, /*!< unknown type */
@@ -17,7 +17,7 @@ enum {
     FMAP_SEQ_TYPE_SFF = 1 /*!< SFF input/output */
 };
 
-/*! @typedef 
+/*! 
   @field  type  the type associated with this structure
   @field  data  pointer to the particular read data structure
   */
@@ -29,69 +29,60 @@ typedef struct {
     } data;
 } fmap_seq_t;
 
-/*! @function
-  @abstract
+/*! 
   @param  type  the type associated with this structure
   @return       pointer to the initialized memory 
   */
 fmap_seq_t *
 fmap_seq_init(int8_t type);
 
-/*! @function
-  @abstract
+/*! 
   @param  seq  pointer to the structure
   */
 void
 fmap_seq_destroy(fmap_seq_t *seq);
 
-/*! @function
-  @abstract
+/*! 
   @param  seq  pointer to the structure to clone
   @return      pointer to the initialized memory 
   */
 fmap_seq_t *
 fmap_seq_clone(fmap_seq_t *seq);
 
-/*! @function
-  @abstract
+/*! 
   @param  seq  pointer to the structure to clone
   */
 void
 fmap_seq_reverse_compliment(fmap_seq_t *seq);
 
-/*! @function
-  @abstract
+/*! 
   @param  seq  pointer to the structure to clone
   */
 void
 fmap_seq_to_int(fmap_seq_t *seq);
 
-/*! @function
-  @abstract
+/*! 
   @param  seq  pointer to the structure to clone
   @return      a pointer to the name string
   */
 fmap_string_t *
 fmap_seq_get_name(fmap_seq_t *seq);
 
-/*! @function
-  @abstract
+/*! 
   @param  seq  pointer to the structure to clone
   @return      a pointer to the base sequence string
   */
 fmap_string_t *
 fmap_seq_get_bases(fmap_seq_t *seq);
 
-/*! @function
-  @abstract
+/*! 
   @param  seq  pointer to the structure to clone
   @return      a pointer to the quality string
   */
 fmap_string_t *
 fmap_seq_get_qualities(fmap_seq_t *seq);
 
-/*! @function
-  @abstract
+/*! 
   @param  seq  pointer to the structure to convert
   @return      a pointer to the fq structure
   */
