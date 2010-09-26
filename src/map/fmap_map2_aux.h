@@ -12,6 +12,7 @@
 #define FMAP_MAP2_MASK_LEVEL 0.90f
 
 /*! 
+  Auxiliary Functions for BWT-like (long-read) Algorithm
   */
 
 /*! 

@@ -341,7 +341,7 @@ static inline fmap_hash_int_t __fmap_hash_X31_hash_string(const char *s)
   @param  h     Pointer to the hash table [fmap_hash_t(name)*]
   @param  x     Iterator to the bucket [fmap_hash_int_t]
   @return       Value [type of values]
-  details   For hash sets, calling this results in segfault.
+  @details      For hash sets, calling this results in segfault.
   */
 #define fmap_hash_val(h, x) ((h)->vals[x])
 

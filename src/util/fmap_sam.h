@@ -14,7 +14,7 @@
   @param  refseq  pointer to the reference sequence (forward)
   @param  argc    the number of input command line arguments
   @param  argv    the input command line arguments
-  details     the following header tags will be ouptted: \@SQ:SN:LN and \@PG:ID:VN:CL.
+  @details        the following header tags will be ouptted: \@SQ:SN:LN and \@PG:ID:VN:CL.
   */
 void
 fmap_sam_print_header(fmap_file_t *fp, fmap_refseq_t *refseq, int argc, char *argv[]);

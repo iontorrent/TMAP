@@ -19,7 +19,7 @@
   */
 
 /*! 
-  details  The server listings are stored as 0/1 bits, with 32-bits currently supported.
+  @details  The server listings are stored as 0/1 bits, with 32-bits currently supported.
   They list if a given data structure is loaded into memory.
   */
 enum {
@@ -32,7 +32,7 @@ enum {
 };
 
 /*! 
-  details   four bytes begin the shared memory for lazy synchronization
+  @details  four bytes begin the shared memory for lazy synchronization
   */
 typedef struct {
     key_t key;  /*!< the key of the shared memory  */

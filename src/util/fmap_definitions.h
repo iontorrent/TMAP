@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 /*! 
-  details  Generic Functions
+  Generic Functions
   */
 
 /*! d FMAP_VERSION_ID
@@ -67,7 +67,7 @@
 
 /*! 
   for each type of file, the integer id associated with this file
-  details  can be used with 'fmap_get_file_name' 
+  @details  can be used with 'fmap_get_file_name' 
   */
 enum {
     FMAP_ANNO_FILE     = 0, /*!< the reference sequence annotation file */
@@ -89,12 +89,12 @@ enum {
 };
 
 /*! @var  nt_char_to_int
-  details  converts a DNA base in ASCII format to its 2-bit format [0-4]. 
+  @details  converts a DNA base in ASCII format to its 2-bit format [0-4]. 
   */
 extern uint8_t nt_char_to_int[256];
 
 /*! @var  nt_char_to_rc_char
-  details  converts a DNA base in ASCII format to reverse compliment in ASCII format.
+  @details  converts a DNA base in ASCII format to reverse compliment in ASCII format.
   */
 extern uint8_t nt_char_to_rc_char[256];
 
@@ -165,7 +165,7 @@ fmap_get_reads_file_format_int(char *optarg);
   @param  fn            the file name 
   @param  reads_format  pointer to the reads format, if any (unknown|fastq|fq|fasta|fa|sff)
   @param  compr_type    pointer the type of compression used, if any (none|gz|bz2)
-  details           if the reads_format is unknown, it will be populated; similarly for compr_type.
+  @details              if the reads_format is unknown, it will be populated; similarly for compr_type.
   */
 void
 fmap_get_reads_file_format_from_fn_int(char *fn, int32_t *reads_format, int32_t *compr_type);

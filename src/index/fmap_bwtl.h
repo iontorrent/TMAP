@@ -9,7 +9,7 @@
 
 /*! 
   a light-weight BWT structure
-  details  this structure contains the occurrence array, bwt string, and suffix array
+  @details  this structure contains the occurrence array, bwt string, and suffix array
   */
 typedef struct {
     uint32_t seq_len;  /*!< sequence length */
@@ -27,7 +27,7 @@ typedef struct {
   @param  b   pointer to the bwt light-weight structure
   @param  k   the zero-based index of the bwt character to retrieve
   @return     the bwt character from the $-removed BWT string.
-  details Note that fmap_bwt_t::bwt is not exactly the BWT string 
+  @details    Note that fmap_bwt_t::bwt is not exactly the BWT string 
   and therefore this define is called fmap_bwtl_B0 instead of fmap_bwtl_B. 
   */
 #define fmap_bwtl_B0(b, k) ((b)->bwt[(k)>>4]>>((~(k)&0xf)<<1)&3)
@@ -67,7 +67,7 @@ fmap_bwtl_occ4(const fmap_bwtl_t *bwtl, uint32_t k, uint32_t cnt[4]);
   @param  l     previous upper occurence
   @param  cntk  next upper occurences
   @param  cntl  next lower occurences
-  details   more efficient version of bwt_occ4 but requires that k <= l (not checked)
+  @details      more efficient version of bwt_occ4 but requires that k <= l (not checked)
   */
 inline void 
 fmap_bwtl_2occ4(const fmap_bwtl_t *bwtl, uint32_t k, uint32_t l, uint32_t cntk[4], uint32_t cntl[4]);

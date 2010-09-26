@@ -6,6 +6,7 @@
 #include "../io/fmap_file.h"
 
 /*! 
+  DNA Reference Sequence Library
   */
 
 // seed for our random number generator
@@ -28,7 +29,7 @@
 /*! 
   @param  _i  the 0-based base position 
   @return     the number of bits the base is shifted (returns a multiple of two)
-  details the reference is stored in a 2-bit format
+  @details    the reference is stored in a 2-bit format
   */
 #define fmap_refseq_seq_byte_shift(_i) ((0x3 - ((_i) & 0x3)) << 1)
 
@@ -85,7 +86,7 @@ fmap_refseq_pac2revpac(const char *fn_fasta);
   @param  refseq    pointer to the structure in which to store the data 
   @param  fn_fasta  the fn_fasta of the file to be written, usually the fasta file name 
   @param  is_rev    0 if to write the reverse packed sequence, 1 otherwise
-  details       this will not overwrite the annotation file if "is_rev" is 1
+  @details          this will not overwrite the annotation file if "is_rev" is 1
   */
 void
 fmap_refseq_write(fmap_refseq_t *refseq, const char *fn_fasta, uint32_t is_rev);

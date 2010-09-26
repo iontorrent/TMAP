@@ -30,7 +30,7 @@
 #include "fmap_alloc.h"
 
 /*! 
-  details  A Vector Library
+  A Vector Library
   */
 
 #ifdef fmap_roundup32
@@ -46,7 +46,7 @@
 
 /*!   fmap_vec_t(type)
   @param  type  the type of values [type]
-  details  defines an anonymous struct representing a vector of values of the given type  
+  @details      defines an anonymous struct representing a vector of values of the given type  
 */
 #define fmap_vec_t(type) struct { size_t n, m; type *a; }
 /*! 

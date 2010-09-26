@@ -80,7 +80,7 @@ fmap_map2_stack_push0(fmap_map2_stack_t *stack, fmap_map2_entry_p e);
   pop an entry from the main stack
   @param  stack  a pointer to the stack
   @return        the popped element
-  details    this will fail (error) if the stack is empty
+  @details       this will fail (error) if the stack is empty
   */
 inline fmap_map2_entry_p 
 fmap_map2_stack_pop(fmap_map2_stack_t *stack);
@@ -96,7 +96,7 @@ fmap_map2_stack_pop(fmap_map2_stack_t *stack);
   gets another entry from the memory pool
   @param  mp  pointer to a memory pool
   @return     an element from the memory pool
-  details  this will allocate more memory if necessary
+  @details    this will allocate more memory if necessary
   */
 inline fmap_map2_entry_p
 fmap_map2_mempool_alloc(fmap_map2_mempool_t *mp);

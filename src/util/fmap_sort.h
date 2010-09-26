@@ -280,7 +280,7 @@ type_t fmap_sort_small_##name(size_t n, type_t arr[], size_t kk) \
   @param  n     the size of the array
   @param  a     the array of elements to be sorted
   @param  k     a midpoint to start this algorithm
-  details   adapted from http://ndevilla.free.fr/median/
+  @details      adapted from http://ndevilla.free.fr/median/
   */
 #define fmap_sort_small(name, n, a, k) fmap_sort_small_##name(n, a, k)
 
@@ -296,7 +296,7 @@ type_t fmap_sort_small_##name(size_t n, type_t arr[], size_t kk) \
   @param  a  the first string to compare
   @param  b  the second string to compare
   @return    1 if true, 0 otherwise
-  details  this uses strcmp
+  @details   this uses strcmp
   */
 #define fmap_sort_lt_str(a, b) (strcmp((a), (b)) < 0)
 
@@ -305,13 +305,13 @@ typedef const char *ksstr_t;
 /*! 
   initializes sort functions with the given type
   @param  type_t  the type of values [type]
-  details  this will define functions named by the type and using the generic value-based comparison function.
+  @details        this will define functions named by the type and using the generic value-based comparison function.
   */
 #define FMAP_SORT_INIT_GENERIC(type_t) FMAP_SORT_INIT(type_t, type_t, fmap_sort_lt_generic)
 
 /*! 
   initializes string comparison sort functions 
-  details  this will define functions with the name "str" and using the generic string-based comparison function.
+  @details  this will define functions with the name "str" and using the generic string-based comparison function.
   */
 #define FMAP_SORT_INIT_STR FMAP_SORT_INIT(str, ksstr_t, fmap_sort_lt_str)
 

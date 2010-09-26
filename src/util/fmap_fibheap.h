@@ -144,7 +144,7 @@ fmap_fibheap_insert(fmap_fibheap_t *h, void *data);
   get the data on top of the heap
   @param  h  pointer to the heap structure
   @return    the minimum data
-  details  removes the minimum element from the heap
+  @details   removes the minimum element from the heap
 */
 void *
 fmap_fibheap_extractmin(fmap_fibheap_t *h);
@@ -152,7 +152,7 @@ fmap_fibheap_extractmin(fmap_fibheap_t *h);
   get the data on top of the heap
   @param  h    pointer to the heap structure
   @return      the minimum data
-  details  does not remove the minimum element from the heap
+  @details     does not remove the minimum element from the heap
 */
 void *
 fmap_fibheap_min(fmap_fibheap_t *h);
@@ -176,7 +176,7 @@ fmap_fibheap_delete(fmap_fibheap_t *h, fmap_fibheap_element_t *x);
 /*! 
   delete the given the heap
   @param  h    pointer to the heap structure
-  details  does not destroy the data within
+  @details     does not destroy the data within
 */
 void 
 fmap_fibheap_deleteheap(fmap_fibheap_t *h);
@@ -185,7 +185,7 @@ fmap_fibheap_deleteheap(fmap_fibheap_t *h);
   @param  ha  pointer to the heap structure #1
   @param  hb  pointer to the heap structure #2
   @return     pointer to the merged heap
-  details  ha is used to store the merged heap
+  @details    ha is used to store the merged heap
 */
 fmap_fibheap_t *
 fmap_fibheap_union(fmap_fibheap_t *ha, fmap_fibheap_t *hb);

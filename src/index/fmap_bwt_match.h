@@ -3,11 +3,11 @@
 
 /*! 
   API for BWT Index Lookups
-  details  This API facilitates a secondary hash into the BWT
+  @details  This API facilitates a secondary hash into the BWT
   */
 
 /*! 
-  details    hi is set to UINT32_MAX if the offset is greater than the hash width.  If l is set to
+  @details hi is set to UINT32_MAX if the offset is greater than the hash width.  If l is set to
   UINT32_MAX then that value is unavailable. 
   */
 typedef struct {
@@ -23,7 +23,7 @@ typedef struct {
   @param  prev     pointer to the previous match structure
   @param  c        base in two-bit integer format
   @param  next     pointer to the next match structure
-  details      this will not set the upper occurrence of the SA interval
+  @details         this will not set the upper occurrence of the SA interval
   */
 inline void
 fmap_bwt_match_occ(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, uint8_t c, fmap_bwt_match_occ_t *next);
@@ -34,7 +34,7 @@ fmap_bwt_match_occ(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, uint8_t c,
   @param  prev     pointer to the previous match structure
   @param  c        base in two-bit integer format
   @param  next     pointer to the next match structure
-  details      this will not set the upper occurrences of the SA interval
+  @details         this will not set the upper occurrences of the SA interval
   */
 inline void
 fmap_bwt_match_2occ(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, uint8_t c, fmap_bwt_match_occ_t *next);
@@ -92,7 +92,7 @@ fmap_bwt_match_exact(const fmap_bwt_t *bwt, int len, const uint8_t *str, fmap_bw
   @param  str       the DNA sequence in 2-bit format
   @param  match_sa  pointer to the match structure to be returned
   @return           the size of the SA interval, 0 if none found
-  details       the search will be started at SA interval [k0,l0], with the results returned as [k0,l0]
+  @details          the search will be started at SA interval [k0,l0], with the results returned as [k0,l0]
   */
 int
 fmap_bwt_match_exact_alt(const fmap_bwt_t *bwt, int len, const uint8_t *str, fmap_bwt_match_occ_t *match_sa);
