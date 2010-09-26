@@ -111,6 +111,7 @@ typedef struct BWTInc {
 /*! 
   create a bwt FASTA file from a packed FASTA file
   @param  fn_fasta      file name of the FASTA file
+  @param  is_large      0 to use the short BWT construction algorith, 1 otherwise (large BWT construction algorithm) 
   @param  occ_interval  the desired occurrence interval
   @param  hash_width    the desired k-mer hash width
   */

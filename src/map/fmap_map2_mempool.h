@@ -102,8 +102,9 @@ inline fmap_map2_entry_p
 fmap_map2_mempool_alloc(fmap_map2_mempool_t *mp);
 
 /*! 
-  destroys the memory pool
+  relinquishes the entry back to the memory pool
   @param  mp  pointer to a memory pool
+  @param  e   pointer to the entry to relinquish
   */
 void
 fmap_map2_mempool_free(fmap_map2_mempool_t *mp, fmap_map2_entry_t *e);

@@ -90,6 +90,8 @@ fmap_sff_read_header_destroy(fmap_sff_read_header_t *rh);
 
 /*! 
   @param  fp  the file pointer from which to read
+  @param  gh  the sff global header
+  @param  rh  the sff read header
   @return     a pointer to the sff read to read in
   */
 fmap_sff_read_t *

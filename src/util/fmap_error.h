@@ -45,9 +45,10 @@ enum {
 
 /*! 
   checks if the value falls within the bounds
-  @param  val    the value to be checked
-  @param  lower  the lower integer value (inclusive)
-  @param  upper  the upper integer value (inclusive)
+  @param  val     the value to be checked
+  @param  lower   the lower integer value (inclusive)
+  @param  upper   the upper integer value (inclusive)
+  @param  option  the option being checked 
   details    throws a command line argument error if the value is not within the bounds
   */
 void
@@ -74,6 +75,8 @@ fmap_error_cmd_check_int(int32_t val, int32_t lower, int32_t upper, char *option
 
 /*! 
   process an error based on the given action
+  @param  file            the calling file (use __FILE__)
+  @param  line           the line number in the calling file (use __LINE__)
   @param  function_name  the function name reporting the error
   @param  variable_name  the variable name or value associated with the error
   @param  action_type    the action to be taken

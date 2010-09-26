@@ -279,6 +279,7 @@ type_t fmap_sort_small_##name(size_t n, type_t arr[], size_t kk) \
   @param  name  the name of the sort functions [symbol] 
   @param  n     the size of the array
   @param  a     the array of elements to be sorted
+  @param  k     a midpoint to start this algorithm
   details   adapted from http://ndevilla.free.fr/median/
   */
 #define fmap_sort_small(name, n, a, k) fmap_sort_small_##name(n, a, k)

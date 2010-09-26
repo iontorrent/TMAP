@@ -13,7 +13,7 @@
   @param  fp      the output file pointer
   @param  refseq  pointer to the reference sequence (forward)
   @param  argc    the number of input command line arguments
-  @param  argc    the input command line arguments
+  @param  argv    the input command line arguments
   details     the following header tags will be ouptted: \@SQ:SN:LN and \@PG:ID:VN:CL.
   */
 void
