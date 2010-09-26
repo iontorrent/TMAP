@@ -18,7 +18,7 @@
   @abstract  Shared Memory Library
   */
 
-/*! @enum Server Listings
+/*! 
   @constant  FMAP_SHM_LISTING_REFSEQ      the forward packed reference sequence 
   @constant  FMAP_SHM_LISTING_REV_REFSEQ  the forward packed reference sequence 
   @constant  FMAP_SHM_LISTING_BWT         the forward BWT string

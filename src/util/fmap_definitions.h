@@ -72,7 +72,7 @@
 /*! @abstract CIGAR: padding */
 #define BAM_CPAD        6
 
-/*! @enum  file name ids
+/*! 
   @abstract  for each type of file, the integer id associated with this file
   @constant  FMAP_ANNO_FILE  the reference sequence annotation file
   @constant  FMAP_PAC_FILE  the packed forward reference sequence file
@@ -93,7 +93,7 @@ enum {
     FMAP_REV_SA_FILE   = 6
 };
 
-/*! @enum  Reads Format
+/*! 
   @constant  FMAP_READS_FORMAT_UNKNOWN  the reads format is unrecognized
   @constant  FMAP_READS_FORMAT_FASTA  the reads are in FASTA format
   @constant  FMAP_READS_FORMAT_FASTQ  the reads are in FASTQ format

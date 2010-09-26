@@ -11,7 +11,7 @@
 #define FMAP_SERVER_SLEEP 5
 //#define FMAP_SERVER_SLEEP 15
 
-/*! @enum  The Server Command
+/*! 
   @constant  FMAP_SERVER_UNKNOWN  Unknown command
   @constant  FMAP_SERVER_START    Start command
   @constant  FMAP_SERVER_STOP     Stop command

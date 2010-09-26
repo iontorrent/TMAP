@@ -7,7 +7,7 @@
   @abstract  BWA-like (short-read) Mapping Algorithm
   */
 
-/*! @enum  Output Alignment Filter
+/*! 
   @constant  FMAP_ALN_OUTPUT_MODE_BEST       Output an alignment only if it is uniquely the best
   @constant  FMAP_ALN_OUTPUT_MODE_BEST_RAND  Output a random best scoring alignment
   @constant  FMAP_ALN_OUTPUT_MODE_BEST_ALL   Output all the alignments with the best score

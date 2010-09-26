@@ -9,7 +9,7 @@
   @abstract  Error handling routines.
  */
 
-/*! @enum Action Type 
+/*! 
   @abstract                  the type of action to be taken
   @constant  Exit            exit the program
   @constant  Warn            print a warning 
@@ -22,7 +22,7 @@ enum {
     LastActionType
 };
 
-/*! @enum  Error Type
+/*! 
   @abstract                   the type of error
   @constant  OutOfRange           value was out of range
   @constant  CommandLineArgument  improper command line argument

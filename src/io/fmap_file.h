@@ -13,7 +13,7 @@
   @abstract  File handling routines analgous to those in stdio.h
   */
 
-/*! @enum  Compression Types 
+/*! 
   @constant  FMAP_FILE_NO_COMPRESSION  no compression
   @constant  FMAP_FILE_BZ2_COMPRESSION  bzip2 compression
   @constant  FMAP_FILE_GZ_COMPRESSION  gzip compression
@@ -24,12 +24,13 @@ enum {
     FMAP_FILE_BZ2_COMPRESSION, 
     FMAP_FILE_GZ_COMPRESSION};
 
-/*! @enum  BZIP2 Stream Type
+/*! 
   @constant  FMAP_FILE_BZ2_READ   a reading bzip2 stream 
   @constant  FMAP_FILE_BZ2_WRITE  a writing bzip2 stream
   @discussion  the type of bzip2 stream (read/write)
   */
-enum {FMAP_FILE_BZ2_READ=0, 
+enum {
+    FMAP_FILE_BZ2_READ=0, 
     FMAP_FILE_BZ2_WRITE};
 
 /*! @typedef

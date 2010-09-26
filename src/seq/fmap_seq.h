@@ -8,7 +8,7 @@
   @abstract  An Abstract Library for DNA Sequence Data
   */
 
-/*! @enum  Sequence Type 
+/*! 
   @constant  FMAP_SEQ_TYPE_NOTYPE    unknown type
   @constant  FMAP_SEQ_TYPE_FQ        FASTA/FASTQ input/output
   @constant  FMAP_SEQ_TYPE_SFF       SFF input/output
