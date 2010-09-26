@@ -52,9 +52,8 @@ typedef struct {
   @param  b       the second variable
 */
 #define FMAP_SORT_SWAP(type_t, a, b) { register type_t t=(a); (a)=(b); (b)=t; }
-
 /*! 
-          initializes sort functions with the given name, type, and comparison function 
+  initializes sort functions with the given name, type, and comparison function 
   @param  name       the name of sort functions [symbol]
   @param  type_t     the type of values [type]
   @param  __sort_lt  the comparison function
@@ -245,7 +244,7 @@ type_t fmap_sort_small_##name(size_t n, type_t arr[], size_t kk) \
 }
 
 /*! 
-     performs mergesort on the given array
+  performs mergesort on the given array
   @param  name  the name of the sort functions [symbol] 
   @param  n     the size of the array
   @param  a     the array of elements to be sorted
@@ -253,21 +252,21 @@ type_t fmap_sort_small_##name(size_t n, type_t arr[], size_t kk) \
   */
 #define fmap_sort_mergesort(name, n, a, t) fmap_sort_mergesort_##name(n, a, t)
 /*! 
-     performs introsort on the given array
+  performs introsort on the given array
   @param  name  the name of the sort functions [symbol] 
   @param  n     the size of the array
   @param  a     the array of elements to be sorted
   */
 #define fmap_sort_introsort(name, n, a) fmap_sort_introsort_##name(n, a)
 /*! 
-     performs combsort on the given array
+  performs combsort on the given array
   @param  name  the name of the sort functions [symbol] 
   @param  n     the size of the array
   @param  a     the array of elements to be sorted
   */
 #define fmap_sort_combsort(name, n, a) fmap_sort_combsort_##name(n, a)
 /*! 
-     performs heapsort on the given array
+  performs heapsort on the given array
   @param  name  the name of the sort functions [symbol] 
   @param  n     the size of the array
   @param  a     the array of elements to be sorted
@@ -276,7 +275,7 @@ type_t fmap_sort_small_##name(size_t n, type_t arr[], size_t kk) \
 #define fmap_sort_heapmake(name, n, a) fmap_sort_heapmake_##name(n, a)
 #define fmap_sort_heapadjust(name, i, n, a) fmap_sort_heapadjust_##name(i, n, a)
 /*! 
-     performs small sorton the given array
+  performs small sorton the given array
   @param  name  the name of the sort functions [symbol] 
   @param  n     the size of the array
   @param  a     the array of elements to be sorted
@@ -303,7 +302,7 @@ type_t fmap_sort_small_##name(size_t n, type_t arr[], size_t kk) \
 typedef const char *ksstr_t;
 
 /*! 
-       initializes sort functions with the given type
+  initializes sort functions with the given type
   @param  type_t  the type of values [type]
   details  this will define functions named by the type and using the generic value-based comparison function.
   */

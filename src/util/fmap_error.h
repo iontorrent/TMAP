@@ -10,7 +10,7 @@
  */
 
 /*! 
-                  the type of action to be taken
+  the type of action to be taken
   details  the type of action to take upon the detection of an error
   */
 enum {
@@ -20,7 +20,7 @@ enum {
 };
 
 /*! 
-                   the type of error
+  the type of error
   details  the type of error detected
   */
 enum {
@@ -44,7 +44,7 @@ enum {
 };
 
 /*! 
-      checks if the value falls within the bounds
+  checks if the value falls within the bounds
   @param  val    the value to be checked
   @param  lower  the lower integer value (inclusive)
   @param  upper  the upper integer value (inclusive)
@@ -54,7 +54,7 @@ void
 fmap_error_cmd_check_int(int32_t val, int32_t lower, int32_t upper, char *option);
 
 /*! 
-              process an error based on the given action
+  process an error based on the given action
   @param  variable_name  the variable name or value associated with the error
   @param  action_type    the action to be taken
   @param  error_type     the error type 
@@ -63,7 +63,7 @@ fmap_error_cmd_check_int(int32_t val, int32_t lower, int32_t upper, char *option
   (fmap_error_full(__FILE__, __LINE__, __func__, variable_name, action_type, error_type))
 
 /*! 
-              process an error based on the given action
+  process an error based on the given action
   @param  function_name  the function name reporting the error
   @param  variable_name  the variable name or value associated with the error
   @param  action_type    the action to be taken
@@ -73,7 +73,7 @@ fmap_error_cmd_check_int(int32_t val, int32_t lower, int32_t upper, char *option
   (fmap_error_full(__FILE__, __LINE__, function_name, variable_name, action_type, error_type))
 
 /*! 
-              process an error based on the given action
+  process an error based on the given action
   @param  function_name  the function name reporting the error
   @param  variable_name  the variable name or value associated with the error
   @param  action_type    the action to be taken

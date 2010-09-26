@@ -15,7 +15,7 @@
   */
 
 /*! 
-        stores an alignment hit
+  stores an alignment hit
   @param  k        the lower suffix array interval, or suffix array position 
   @param  l        the upper suffix array interval, or 0 when k is the suffix array position
   @param  flag      records the origin of the hit (forward/reverse bwt in the 17th/18th bit respectively); the strand in the 5th bit; the first bit stores if the hit was repetitive
@@ -33,7 +33,7 @@ typedef struct {
 } fmap_map2_hit_t;
 
 /*! 
-        stores alignment hits
+  stores alignment hits
   @param  n        the number of hits
   @param  max      the maximum memory for the number of hits
   @param  hits     the hits
@@ -48,7 +48,6 @@ typedef struct {
 } fmap_map2_aln_t;
 
 /*! 
-  
   @param  strand   the strand
   @param  seqid    the zero-based reference contig index
   @param  pos      the zero-based reference position
@@ -74,7 +73,7 @@ typedef struct {
 } fmap_map2_sam_entry_t;
 
 /*! 
-            stores sam entries to be printed
+  stores sam entries to be printed
   @param  num_entries  the number of entries
   @param  entries      the array of entries
   */
@@ -109,7 +108,7 @@ fmap_map2_sam_t *
 fmap_map2_sam_init(int32_t n);
 
 /*! 
-    resizes a container for sam entries
+  resizes a container for sam entries
   @param  sam  pointer to the sam entries structure
   @param  n    the new number of entries 
   @return      a pointer to the re-initialized memory
@@ -118,14 +117,14 @@ fmap_map2_sam_t *
 fmap_map2_sam_realloc(fmap_map2_sam_t *sam, int32_t n);
 
 /*! 
-    destroys a container for sam entries
+  destroys a container for sam entries
   @param  sam  pointer to the sam entries structure
   */
 void
 fmap_map2_sam_destroy(fmap_map2_sam_t *sam);
 
 /*! 
-       performs the  BWA-like (long-read) algorithm 
+  performs the  BWA-like (long-read) algorithm 
   @param  _opt    pointer to the program parameters
   @param  query   pointer to the query sequence 
   @param  refseq  pointer to the reference sequence structure

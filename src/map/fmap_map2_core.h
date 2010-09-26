@@ -14,7 +14,7 @@
   */
 
 /*! 
-           the core alignment algorithm
+  the core alignment algorithm
   @param  opt         the program options
   @param  target      the target sequence (read)
   @param  query_bwt   the query bwt (reference)

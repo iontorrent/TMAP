@@ -9,45 +9,29 @@
   */
 
 /*! 
-  @field  score             the current alignment score
-  @field  n_mm              the current number of mismatches 
-  @field  n_gapo            the current number of gap opens
-  @field  n_gape            the current number of gap extensions
-  @field  state             the current state (match/mismatch/insertion/deletion)
-  @field  strand            the strand of the alignment
-  @field  offset            the number of (read) bases used (one-based)
-  @field  last_diff_offset  the last offset of a base difference (mismatch/insertion/deletion)
-  @field  match_sa          the current SA interval information
-  @field  i                 the zero-based index of this element in the memory pool 
-  @field  prev_i            the zero-based index of the previous element (in the alignment) in the memory pool
   */
 typedef struct {
-    uint32_t score;
-    uint16_t n_mm;
-    int16_t n_gapo;
-    int16_t n_gape;
-    uint8_t state:7;
-    uint8_t strand:1;
-    int16_t offset;
-    int16_t last_diff_offset;
-    fmap_bwt_match_occ_t match_sa; // SA interval and offset
-    uint32_t i;
-    int32_t prev_i;
+    uint32_t score;  /*!< the current alignment score */
+    uint16_t n_mm;  /*!< the current number of mismatches  */
+    int16_t n_gapo;  /*!< the current number of gap opens */
+    int16_t n_gape;  /*!< the current number of gap extensions */
+    uint8_t state:7;  /*!< the current state (match/mismatch/insertion/deletion) */
+    uint8_t strand:1;  /*!< the strand of the alignment */
+    int16_t offset;  /*!< the number of (read) bases used (one-based) */
+    int16_t last_diff_offset;  /*!< the last offset of a base difference (mismatch/insertion/deletion) */
+    fmap_bwt_match_occ_t match_sa;  /*!< the current SA interval information */
+    uint32_t i;  /*!< the zero-based index of this element in the memory pool  */
+    int32_t prev_i;  /*!< the zero-based index of the previous element (in the alignment) in the memory pool */
 } fmap_map1_aux_stack_entry_t;
 
 /*! 
-  @field  entry_pool
-  @field  entry_pool_length
-  @field  entry_pool_i
-  @field  heap
-  @field  best_score
   */
 typedef struct {
-    fmap_map1_aux_stack_entry_t **entry_pool; // memory pool
-    int32_t entry_pool_length; // number of entries in the memory pool
-    int32_t entry_pool_i; // 0-based index into the memory pool
-    fmap_fibheap_t *heap;
-    int32_t best_score;
+    fmap_map1_aux_stack_entry_t **entry_pool;  /*!<  the memory pool of entries */
+    int32_t entry_pool_length;  /*!< the memory pool length */ 
+    int32_t entry_pool_i;  /*!< the next available entry in the memory pool */
+    fmap_fibheap_t *heap;  /*!< the entry heap for this stack*/
+    int32_t best_score;  /*!< the best score for any entry in this stack */
 } fmap_map1_aux_stack_t;
 
 // TODO

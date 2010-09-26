@@ -11,22 +11,15 @@
   */
 
 /*! 
-  @field  primary  S^{-1}(0), or the primary index of BWT
-  @field  sa_intv  the suffix array interval (sampled)
-  @field  seq_len  the length of the reference sequence
-  @field  is_rev   1 if the reference sequence was reversed, 0 otherwise
-  @field  n_sa     number of suffix array entries
-  @field  sa       pointer to the suffix array entries
-  @field  is_shm   1 if loaded from shared memory, 0 otherwise
   */
 typedef struct {
-    uint32_t primary; // S^{-1}(0), or the primary index of BWT
-    uint32_t sa_intv; // a power of 2
-    uint32_t seq_len;  
-    uint32_t is_rev;
-    uint32_t n_sa;
-    uint32_t *sa;
-    uint32_t is_shm;
+    uint32_t primary;  /*!< S^{-1}(0), or the primary index of BWT */
+    uint32_t sa_intv;  /*!< the suffix array interval (sampled) */
+    uint32_t seq_len;  /*!< the length of the reference sequence */
+    uint32_t is_rev;  /*!< 1 if the reference sequence was reversed, 0 otherwise */
+    uint32_t n_sa;  /*!< number of suffix array entries */
+    uint32_t *sa;  /*!< pointer to the suffix array entries */
+    uint32_t is_shm;  /*!< 1 if loaded from shared memory, 0 otherwise */
 } fmap_sa_t;
 
 /*! 
@@ -82,7 +75,7 @@ void
 fmap_sa_destroy(fmap_sa_t *sa);
 
 /*! 
-    returns the suffix array position given the occurence position
+  returns the suffix array position given the occurence position
   @param  sa   the suffix array
   @param  bwt  the bwt structure 
   @param  k    the suffix array position
@@ -90,7 +83,6 @@ fmap_sa_destroy(fmap_sa_t *sa);
 */
 uint32_t 
 fmap_sa_pac_pos(const fmap_sa_t *sa, const fmap_bwt_t *bwt, uint32_t k);
-
 /*! 
   @param  fn_fasta  the FASTA file name
   @param  intv      the suffix array interval
@@ -110,7 +102,7 @@ fmap_sa_gen_short(const uint8_t *T, int32_t *SA, uint32_t n);
 
 
 /*! 
-     main-like function for 'fmap bwt2sa'
+  main-like function for 'fmap bwt2sa'
   @param  argc  the number of arguments
   @param  argv  the argument list
   @return       0 if executed successful

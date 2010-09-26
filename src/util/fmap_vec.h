@@ -82,29 +82,26 @@
   @return    the memory capacity
 */
 #define fmap_vec_max(v) ((v).m)
-
 /*! 
-     resizes the given vector
+  resizes the given vector
   @param  type  the type of values [type]
   @param  v     the vector 
   @param  s     the new memory size
 */
 #define fmap_vec_resize(type, v, s)  ((v).m = (s), (v).a = (type*)fmap_realloc((v).a, sizeof(type) * (v).m, "(v).a"))
-
 /*! 
-     copies vector v0 into vector v1
+  copies vector v0 into vector v1
   @param  type  the type of values [type]
   @param  v1    the destination vector
   @param  v0    the source vector
 */
 #define fmap_vec_copy(type, v1, v0) do { \
-    if ((v1).m < (v0).n) fmap_vec_resize(type, v1, (v0).n); \
-    (v1).n = (v0).n; \
-    memcpy((v1).a, (v0).a, sizeof(type) * (v0).n); \
+  if ((v1).m < (v0).n) fmap_vec_resize(type, v1, (v0).n); \
+  (v1).n = (v0).n; \
+  memcpy((v1).a, (v0).a, sizeof(type) * (v0).n); \
 } while (0) \
-
 /*! 
-     adds the give element to the vector
+  adds the give element to the vector
   @param  type  the type of values [type]
   @param  v     the vector
   @param  x     the element to add

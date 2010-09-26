@@ -7,22 +7,18 @@
   */
 
 /*! 
-  @field  offset  the number of (read) bases used so far in this search (one-based)
-  @field  hi      the hash index of the SA interval if the offset is less than or equal to the hash width
-  @field  k       the lower occurrence of the SA interval
-  @field  l       the upper occurrence of the SA interval
   details    hi is set to UINT32_MAX if the offset is greater than the hash width.  If l is set to
-                 UINT32_MAX then that value is unavailable. 
+  UINT32_MAX then that value is unavailable. 
   */
 typedef struct {
-    uint32_t offset;
-    uint32_t hi;
-    uint32_t k;
-    uint32_t l;
+    uint32_t offset;  /*!< the number of (read) bases used so far in this search (one-based) */
+    uint32_t hi;  /*!< the hash index of the SA interval if the offset is less than or equal to the hash width */
+    uint32_t k;  /*!< the lower occurrence of the SA interval */
+    uint32_t l;  /*!< the upper occurrence of the SA interval */
 } fmap_bwt_match_occ_t;
 
 /*! 
-        analagous function to fmap_bwt_occ but using a hash
+  analagous function to fmap_bwt_occ but using a hash
   @param  bwt      pointer to the bwt structure 
   @param  prev     pointer to the previous match structure
   @param  c        base in two-bit integer format
@@ -33,7 +29,7 @@ inline void
 fmap_bwt_match_occ(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, uint8_t c, fmap_bwt_match_occ_t *next);
 
 /*! 
-        analagous function to fmap_bwt_2occ but using a hash
+  analagous function to fmap_bwt_2occ but using a hash
   @param  bwt      pointer to the bwt structure 
   @param  prev     pointer to the previous match structure
   @param  c        base in two-bit integer format
@@ -44,7 +40,7 @@ inline void
 fmap_bwt_match_2occ(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, uint8_t c, fmap_bwt_match_occ_t *next);
 
 /*! 
-        analagous function to fmap_bwt_occ4 but using a hash
+  analagous function to fmap_bwt_occ4 but using a hash
   @param  bwt      pointer to the bwt structure 
   @param  prev     pointer to the previous match structure
   @param  next     pointer to the next match structure
@@ -53,7 +49,7 @@ inline void
 fmap_bwt_match_occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt_match_occ_t next[4]);
 
 /*! 
-        analagous function to fmap_bwt_2occ4 but using a hash
+  analagous function to fmap_bwt_2occ4 but using a hash
   @param  bwt      pointer to the bwt structure 
   @param  prev     pointer to the previous match structure
   @param  next     pointer to the next match structure
@@ -62,13 +58,11 @@ inline void
 fmap_bwt_match_2occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt_match_occ_t next[4]);
 
 /*! 
-   stores the lower bound of the number of mismatches in the string from [i,len-1].
-  @field  w    the maximum number of occurrences
-  @field  bid  the minimum number of mismatches
+  stores the lower bound of the number of mismatches in the string from [i,len-1].
   */
 typedef struct {
-    uint32_t w;
-    int32_t bid;
+    uint32_t w;  /*!< the maximum number of occurrences */
+    int32_t bid;  /*!< the minimum number of mismatches */
 } fmap_bwt_match_width_t;
 
 /*! 
@@ -80,9 +74,8 @@ typedef struct {
 */
 void
 fmap_bwt_match_cal_width(const fmap_bwt_t *bwt, int len, const char *str, fmap_bwt_match_width_t *width);
-
 /*! 
-         computes the SA interval for the given sequence (if any), using forward search
+  computes the SA interval for the given sequence (if any), using forward search
   @param  bwt       pointer to the bwt structure 
   @param  len       the length of the sequence
   @param  str       the DNA sequence in 2-bit format
@@ -93,7 +86,7 @@ int
 fmap_bwt_match_exact(const fmap_bwt_t *bwt, int len, const uint8_t *str, fmap_bwt_match_occ_t *match_sa);
 
 /*! 
-         computes the SA interval for the given sequence (if any), using forward search
+  computes the SA interval for the given sequence (if any), using forward search
   @param  bwt       pointer to the bwt structure 
   @param  len       the length of the sequence
   @param  str       the DNA sequence in 2-bit format

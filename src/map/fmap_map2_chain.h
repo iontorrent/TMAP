@@ -8,7 +8,7 @@
   */
 
 /*! 
-      structure to resolve chaining for Smith-Waterman extension
+  structure to resolve chaining for Smith-Waterman extension
   @param  tbeg   the lower suffix array interval for the target
   @param  tend   the upper suffix array interval for the target
   @param  qbeg   the lower suffix array interval for the query
@@ -25,7 +25,7 @@ typedef struct {
 } fmap_map2_chain_t;
 
 /*! 
-    filters multiple seeds within a given band
+  filters multiple seeds within a given band
   @param  opt  the function options
   @param  len  the sequence length
   @param  b    pointer to the alignment

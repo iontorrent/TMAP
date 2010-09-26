@@ -145,7 +145,7 @@ inline uint32_t
 fmap_log2(uint32_t v);
 
 /*! 
-       gets the name of a specific file based on the reference sequence
+  gets the name of a specific file based on the reference sequence
   @param  prefix   the prefix of the file to be written, usually the fasta file name 
   @param  type    the type of file based on this reference sequence
   @return         a pointer to the file name string
@@ -154,7 +154,6 @@ inline char *
 fmap_get_file_name(const char *prefix, int32_t type);
 
 /*! 
-       
   @param  optarg  the string of the file format
   @return         the format type
   */
@@ -162,7 +161,7 @@ int
 fmap_get_reads_file_format_int(char *optarg);
 
 /*! 
-             checks the extension of the file to recognize its format     
+  checks the extension of the file to recognize its format     
   @param  fn            the file name 
   @param  reads_format  pointer to the reads format, if any (unknown|fastq|fq|fasta|fa|sff)
   @param  compr_type    pointer the type of compression used, if any (none|gz|bz2)
@@ -172,7 +171,6 @@ void
 fmap_get_reads_file_format_from_fn_int(char *fn, int32_t *reads_format, int32_t *compr_type);
 
 /*! 
-       
   @param  format  the interger file format specifier
   @return         the format type (string)
   */

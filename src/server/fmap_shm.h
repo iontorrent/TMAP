@@ -32,19 +32,14 @@ enum {
 };
 
 /*! 
-  @field  key    the key of the shared memory 
-  @field  size   the size of the shared memory
-  @field  shmid  the id of the shared memory
-  @field  ptr    pointer to the first byte of the shared memory
-  @field  buf    pointer to the first byte of the data stored in the shared memory
   details   four bytes begin the shared memory for lazy synchronization
   */
 typedef struct {
-    key_t key;
-    size_t size;
-    int32_t shmid;
-    void *ptr;
-    void *buf;
+    key_t key;  /*!< the key of the shared memory  */
+    size_t size;  /*!< the size of the shared memory */
+    int32_t shmid;  /*!< the id of the shared memory */
+    void *ptr;  /*!< pointer to the first byte of the shared memory */
+    void *buf;  /*!< pointer to the first byte of the data stored in the shared memory */
 } fmap_shm_t;
 
 /*! 

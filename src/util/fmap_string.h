@@ -10,14 +10,11 @@
 extern uint8_t nt_char_to_rc_char[256];
 
 /*! 
-  @field  l  the length of the string
-  @field  m  the memory allocated for this string
-  @field  s  the pointer to the string
   */
 typedef struct {
-    size_t l;
-    size_t m;
-    char *s;
+    size_t l;  /*!< the length of the string */
+    size_t m;  /*!< the memory allocated for this string */
+    char *s;  /*!< the pointer to the string */
 } fmap_string_t;
 
 /*! 
@@ -34,13 +31,12 @@ inline void
 fmap_string_destroy(fmap_string_t *str);
 
 /*! 
-     analagous to strcpy
+  analagous to strcpy
   @param  dest  pointer to the destination string
   @param  src   pointer to the source string
 */
 inline void
 fmap_string_copy(fmap_string_t *dest, fmap_string_t *src);
-
 /*! 
   @param  str  a pointer to the string to clone
   @return      a pointer to the cloned string
@@ -59,14 +55,13 @@ inline void
 fmap_string_lsprintf(fmap_string_t *dest, int32_t l, const char *format, ...);
 
 /*! 
-    reverse the characters in the string
+  reverse the characters in the string
   @param  str  pointer to the string
 */
 inline void
 fmap_string_reverse(fmap_string_t *str);
-
 /*! 
-         reverse compliments the string
+  reverse compliments the string
   @param  str       pointer to the string
   @param  is_int    1 if the sequence is in integer format, 0 otherwise
   */

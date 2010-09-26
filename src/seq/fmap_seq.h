@@ -18,15 +18,12 @@ enum {
 };
 
 /*! 
-  @field  type  the type associated with this structure
-  @field  fq    the pointer to the fastq structure
-  @field  sff   the pointer to the sff structure
   */
 typedef struct {
-    int8_t type;
+    int8_t type;  /*!< the type associated with this structure */
     union {
-        fmap_fq_t *fq;
-        fmap_sff_t *sff;
+        fmap_fq_t *fq;  /*!< the pointer to the fastq structure */
+        fmap_sff_t *sff;  /*!< the pointer to the sff structure */
     } data;
 } fmap_seq_t;
 

@@ -16,77 +16,50 @@
   */
 
 /*! 
-  @field  magic           the magic number for this file
-  @field  version         the version number
-  @field  index_offset    not currently used (value is 0)
-  @field  index_length    not currently used (value is 0)
-  @field  n_reads         the number of reads in the file
-  @field  gheader_length  the number of bytes in the global header including padding
-  @field  key_length      the length of the key sequence used with these reads
-  @field  flow_length      the number of nucleotide flows used in this experiment
-  @field  flowgram_format  the manner in which signal values are encoded (value is 1)
-  @field  flow             the string specifying the ith nucleotide flowed 
-  @field  key             the string specifying the ith nucleotide of the sequence key
   */
 typedef struct {
-    uint32_t magic;
-    uint32_t version;
-    uint64_t index_offset;
-    uint32_t index_length;
-    uint32_t n_reads;
-    uint32_t gheader_length;
-    uint16_t key_length;
-    uint16_t flow_length;
-    uint8_t flowgram_format;
-    fmap_string_t *flow;
-    fmap_string_t *key;
+    uint32_t magic;  /*!< the magic number for this file */
+    uint32_t version;  /*!< the version number */
+    uint64_t index_offset;  /*!< not currently used (value is 0) */
+    uint32_t index_length;  /*!< not currently used (value is 0) */
+    uint32_t n_reads;  /*!< the number of reads in the file */
+    uint32_t gheader_length;  /*!< the number of bytes in the global header including padding */
+    uint16_t key_length;  /*!< the length of the key sequence used with these reads */
+    uint16_t flow_length;  /*!< the number of nucleotide flows used in this experiment */
+    uint8_t flowgram_format;  /*!< the manner in which signal values are encoded (value is 1) */
+    fmap_string_t *flow;  /*!< the string specifying the ith nucleotide flowed  */
+    fmap_string_t *key;  /*!< the string specifying the ith nucleotide of the sequence key */
 } fmap_sff_header_t;
 
 /*! 
-  @field  rheader_length      the number of bytes in the 
-  @field  name_length         the number of characters in the name of the read (not including the null-terminator)
-  @field  n_bases             the number of bases in the read
-  @field  clip_qual_left      the 1-based coordinate of the first base after the (quality) left clipped region (zero if no clipping has been applied)
-  @field  clip_qual_right     the 1-based coordinate of the first base after the (quality) right clipped region (zero if no clipping has been applied)
-  @field  clip_adapter_left   the 1-based coordinate of the first base after the (adapter) left clipped region (zero if no clipping has been applied)
-  @field  clip_adapter_right  the 1-based coordinate of the first base after the (adapter) right clipped region (zero if no clipping has been applied)
-  @field  name                the read name 
   */
 typedef struct {
-    uint16_t rheader_length;
-    uint16_t name_length;
-    uint32_t n_bases;
-    uint16_t clip_qual_left;
-    uint16_t clip_qual_right;
-    uint16_t clip_adapter_left;
-    uint16_t clip_adapter_right;
-    fmap_string_t *name;
+    uint16_t rheader_length;  /*!< the number of bytes in the  */
+    uint16_t name_length;  /*!< the number of characters in the name of the read (not including the null-terminator) */
+    uint32_t n_bases;  /*!< the number of bases in the read */
+    uint16_t clip_qual_left;  /*!< the 1-based coordinate of the first base after the (quality) left clipped region (zero if no clipping has been applied) */
+    uint16_t clip_qual_right;  /*!< the 1-based coordinate of the first base after the (quality) right clipped region (zero if no clipping has been applied) */
+    uint16_t clip_adapter_left;  /*!< the 1-based coordinate of the first base after the (adapter) left clipped region (zero if no clipping has been applied) */
+    uint16_t clip_adapter_right;  /*!< the 1-based coordinate of the first base after the (adapter) right clipped region (zero if no clipping has been applied) */
+    fmap_string_t *name;  /*!< the read name  */
 } fmap_sff_read_header_t;
 
 /*! 
-  @field  flowgram    the flowgram 
-  @field  flow_index  the 1-based flow index for each base called
-  @field  bases      the called bases
-  @field  quality    the quality score for each base call
   */
 typedef struct {
-    uint16_t *flowgram;   
-    uint8_t *flow_index; 
-    fmap_string_t *bases;
-    fmap_string_t *quality;
+    uint16_t *flowgram;  /*!< the flowgram  */
+    uint8_t *flow_index;  /*!< the 1-based flow index for each base called */
+    fmap_string_t *bases;  /*!< the called bases */
+    fmap_string_t *quality;  /*!< the quality score for each base call */
 } fmap_sff_read_t;
 
 /*! 
-  @field  gheader  pointer to the global header
-  @field  rheader  pointer to the read header
-  @field  read     pointer to the read
-  @field  is_int   1 if the bases are integer values, 0 otherwise
   */
 typedef struct {
-    fmap_sff_header_t *gheader;
-    fmap_sff_read_header_t *rheader;
-    fmap_sff_read_t *read;
-    int32_t is_int;
+    fmap_sff_header_t *gheader;  /*!< pointer to the global header */
+    fmap_sff_read_header_t *rheader;  /*!< pointer to the read header */
+    fmap_sff_read_t *read;  /*!< pointer to the read */
+    int32_t is_int;  /*!< 1 if the bases are integer values, 0 otherwise */
 } fmap_sff_t;
 
 /*! 
@@ -146,23 +119,19 @@ fmap_sff_destroy(fmap_sff_t *sff);
 */
 fmap_sff_t *
 fmap_sff_clone(fmap_sff_t *sff);
-
 /*! 
   @param  sff  a pointer to the sff 
 */
 void
 fmap_sff_reverse_compliment(fmap_sff_t *sff);
-
 /*! 
   @param  sff  a pointer to the sff 
 */
 void
 fmap_sff_to_int(fmap_sff_t *sff);
-
 /*! 
   @param  sff  a pointer to the sff 
 */
 void
 fmap_sff_to_char(fmap_sff_t *sff);
-
 #endif

@@ -47,35 +47,24 @@
 #define fmap_refseq_seq_i(_refseq, _i) ((_refseq->seq[fmap_refseq_seq_byte_i(_i)] >> fmap_refseq_seq_byte_shift(_i)) & 0x3)
 
 /*! 
-  @field  name    the name of the contig
-  @field  len     the length of the current contig 
-  @field  offset  the offset from the start of the reference
   */
 typedef struct {
-    fmap_string_t *name;
-    uint64_t len;
-    uint64_t offset;
+    fmap_string_t *name;  /*!< the name of the contig */
+    uint64_t len;  /*!< the length of the current contig  */
+    uint64_t offset;  /*!< the offset from the start of the reference */
 } fmap_anno_t;
 
 /*! 
-  @field  version_id  the version id of this file
-  @field  seed        the random base generator seed
-  @field  seq         the packed nucleotide sequence, with contigs concatenated
-  @field  annos       the annotations about the contigs
-  @field  num_annos   the number of contigs (and annotations)
-  @field  len         the total length of the reference sequence
-  @field  is_rev      1 if the reference sequence was reversed, 0 otherwise
-  @field  is_shm      1 if loaded from shared memory, 0 otherwise
   */
 typedef struct {
-    uint64_t version_id;
-    uint32_t seed;
-    uint8_t *seq;
-    fmap_anno_t *annos;
-    uint32_t num_annos;
-    uint64_t len;
-    uint32_t is_rev;
-    uint32_t is_shm;
+    uint64_t version_id;  /*!< the version id of this file */
+    uint32_t seed;  /*!< the random base generator seed */
+    uint8_t *seq;  /*!< the packed nucleotide sequence, with contigs concatenated */
+    fmap_anno_t *annos;  /*!< the annotations about the contigs */
+    uint32_t num_annos;  /*!< the number of contigs (and annotations) */
+    uint64_t len;  /*!< the total length of the reference sequence */
+    uint32_t is_rev;  /*!< 1 if the reference sequence was reversed, 0 otherwise */
+    uint32_t is_shm;  /*!< 1 if loaded from shared memory, 0 otherwise */
 } fmap_refseq_t;
 
 /*! 
@@ -157,7 +146,7 @@ inline uint32_t
 fmap_refseq_pac2real(const fmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos);
 
 /*! 
-     main-like function for 'fmap fasta2pac'
+  main-like function for 'fmap fasta2pac'
   @param  argc  the number of arguments
   @param  argv  the argument list
   @return       0 if executed successful

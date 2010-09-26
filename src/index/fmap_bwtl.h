@@ -9,27 +9,18 @@
 
 /*! 
   a light-weight BWT structure
-  @field  seq_len   sequence length
-  @field  bwt_size  size of the bwt in bytes
-  @field  n_occ     number of occurences
-  @field  primary   S^{-1}(0), or the primary index of BWT
-  @field  bwt       burrows-wheeler transform
-  @field  occ       the occurence array
-  @field  sa        the suffix array
-  @field  L2        C(), cumulative count
-  @field  cnt_table occurrence array
   details  this structure contains the occurrence array, bwt string, and suffix array
   */
 typedef struct {
-    uint32_t seq_len;
-    uint32_t bwt_size;
-    uint32_t n_occ;
-    uint32_t primary;
-    uint32_t *bwt;
-    uint32_t *occ;
-    uint32_t *sa;
-    uint32_t L2[5];
-    uint32_t cnt_table[256];
+    uint32_t seq_len;  /*!< sequence length */
+    uint32_t bwt_size;  /*!< size of the bwt in bytes */
+    uint32_t n_occ;  /*!< number of occurences */
+    uint32_t primary;  /*!< S^{-1}(0), or the primary index of BWT */
+    uint32_t *bwt;  /*!< burrows-wheeler transform */
+    uint32_t *occ;  /*!< the occurence array */
+    uint32_t *sa;  /*!< the suffix array */
+    uint32_t L2[5];  /*!< C(), cumulative count */
+    uint32_t cnt_table[256];  /*!< occurrence array */
 } fmap_bwtl_t;
 
 /*! 
@@ -42,7 +33,7 @@ typedef struct {
 #define fmap_bwtl_B0(b, k) ((b)->bwt[(k)>>4]>>((~(k)&0xf)<<1)&3)
 
 /*! 
-    creates a light-weight bwt from the given sequence
+  creates a light-weight bwt from the given sequence
   @param  len  the sequence length
   @param  seq  the sequence
   @return      a pointer to the initalized bwt-light-weight structure
@@ -51,7 +42,7 @@ fmap_bwtl_t *
 fmap_bwtl_seq2bwtl(int32_t len, const uint8_t *seq);
 
 /*! 
-     calculates the next occurrence given the previous occurence and the next base
+  calculates the next occurrence given the previous occurence and the next base
   @param  bwtl  pointer to the bwt structure 
   @param  k     previous occurence
   @param  c     base in two-bit integer format
@@ -61,7 +52,7 @@ inline uint32_t
 fmap_bwtl_occ(const fmap_bwtl_t *bwtl, uint32_t k, uint8_t c);
 
 /*! 
-     calculates the next occurrences given the previous occurence for all four bases
+  calculates the next occurrences given the previous occurence for all four bases
   @param  bwtl  pointer to the bwt structure 
   @param  k     previous occurence
   @param  cnt   pointer to the next occurences for all four bases
@@ -70,7 +61,7 @@ inline void
 fmap_bwtl_occ4(const fmap_bwtl_t *bwtl, uint32_t k, uint32_t cnt[4]);
 
 /*! 
-     calculates the next SA intervals given the previous SA intervals for all four bases
+  calculates the next SA intervals given the previous SA intervals for all four bases
   @param  bwtl  pointer to the bwt structure 
   @param  k     previous lower occurence
   @param  l     previous upper occurence
