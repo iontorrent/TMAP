@@ -45,7 +45,7 @@
 
 /* This is the smallest integer. It might be CPU-dependent in very RARE cases. */
 //#define FMAP_SW_MINOR_INF -1073741823
-#define FMAP_SW_MINOR_INF INT32_MIN
+#define FMAP_SW_MINOR_INF INT32_MIN/2
 
 typedef struct
 {
