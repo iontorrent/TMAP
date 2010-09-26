@@ -55,11 +55,12 @@ typedef struct __fmap_map2_mempool_t {
     fmap_vec_t(fmap_map2_entry_p) pool;
 } fmap_map2_mempool_t;
 
-/*! @typedef
-  @abstract         a two-level memory stack
-  @field  n_pending  the number of elements in the pending stack
-  @field  stack0     the main stack
-  @field  pool       a memory pool
+/*! 
+  @brief            a two-level memory stack
+  @param  n_pending  the number of elements in the pending stack
+  @param  stack0     the main stack
+  @param  pending    the pending stack
+  @param  pool       a memory pool
 */
 typedef struct {
     int32_t n_pending;
