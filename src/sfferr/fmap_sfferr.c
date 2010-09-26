@@ -6,7 +6,6 @@
 #include "../util/fmap_progress.h"
 #include "../seq/fmap_seq.h"
 #include "../io/fmap_seq_io.h"
-#include "fmap_sfferr_aux.h"
 #include "fmap_sfferr.h"
 
 static void 
@@ -22,9 +21,9 @@ usage(fmap_sfferr_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "Usage: %s sfferr [options]", PACKAGE);
   fmap_file_fprintf(fmap_file_stderr, "\n");
   fmap_file_fprintf(fmap_file_stderr, "Options (optional):\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -r FILE     the reads file name [%s]\n", (NULL == opt->fn_reads) ? "stdin" : opt->fn_reads);
+  fmap_file_fprintf(fmap_file_stderr, "         -r FILE     the reads file name [%s]\n", (NULL == opt->fn_sff) ? "stdin" : opt->fn_sff);
   fmap_file_fprintf(fmap_file_stderr, "         -F STRING   the reads file format (fastq|fq|fasta|fa|sff) [%s]\n", reads_format);
-  fmap_file_fprintf(fmap_file_stderr, "         -R FLOAT    the fraction of reads to sample [%.2lf]\n", opt.rand_sample_num);
+  fmap_file_fprintf(fmap_file_stderr, "         -R FLOAT    the fraction of reads to sample [%.2lf]\n", opt->rand_sample_num);
   fmap_file_fprintf(fmap_file_stderr, "         -j          the input is bz2 compressed (bzip2) [%s]\n",
                     (FMAP_FILE_BZ2_COMPRESSION == opt->input_compr) ? "true" : "false");
   fmap_file_fprintf(fmap_file_stderr, "         -z          the input is gz compressed (gzip) [%s]\n",
@@ -39,7 +38,7 @@ usage(fmap_sfferr_opt_t *opt)
 }
 
 int 
-fmap_sfferr(int argc, char *argv[])
+fmap_sfferr_main(int argc, char *argv[])
 {
   int c;
   fmap_sfferr_opt_t opt;
@@ -54,11 +53,13 @@ fmap_sfferr(int argc, char *argv[])
   opt.rand_sample_num = 1.0;
   opt.input_compr = FMAP_FILE_NO_COMPRESSION;
 
-  while((c = getopt(argc, argv, "r:F:R:jzvh")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:R:jzvh")) >= 0) {
       switch(c) {
+        case 'f':
+          opt->fn_fasta = fmap_strdup(optarg); break;
         case 'r':
-          opt.fn_reads = fmap_strdup(optarg); 
-          fmap_get_reads_file_format_from_fn_int(opt.fn_reads, &opt.reads_format, &opt.input_compr);
+          opt.fn_sff = fmap_strdup(optarg); 
+          fmap_get_reads_file_format_from_fn_int(opt.fn_sff, &opt.reads_format, &opt.input_compr);
           break;
         case 'F':
           opt.reads_format = fmap_get_reads_file_format_int(optarg); break;
@@ -66,11 +67,11 @@ fmap_sfferr(int argc, char *argv[])
           opt.rand_sample_num = atof(optarg); break;
         case 'j':
           opt.input_compr = FMAP_FILE_BZ2_COMPRESSION; 
-          fmap_get_reads_file_format_from_fn_int(opt.fn_reads, &opt.reads_format, &opt.input_compr);
+          fmap_get_reads_file_format_from_fn_int(opt.fn_sff, &opt.reads_format, &opt.input_compr);
           break;
         case 'z':
           opt.input_compr = FMAP_FILE_GZ_COMPRESSION; 
-          fmap_get_reads_file_format_from_fn_int(opt.fn_reads, &opt.reads_format, &opt.input_compr);
+          fmap_get_reads_file_format_from_fn_int(opt.fn_sff, &opt.reads_format, &opt.input_compr);
           break;
         case 'v':
           fmap_progress_set_verbosity(1); break;
@@ -84,7 +85,7 @@ fmap_sfferr(int argc, char *argv[])
       return usage(&opt);
   }
   else { // check command line arguments
-      if(NULL == opt.fn_reads) {
+      if(NULL == opt.fn_sff) {
           fmap_error("option -r must be specified", Exit, CommandLineArgument);
       }
       if(FMAP_READS_FORMAT_UNKNOWN == opt.reads_format) {
@@ -96,7 +97,7 @@ fmap_sfferr(int argc, char *argv[])
 
   fmap_sfferr_core(&opt);
 
-  free(opt.fn_reads);
+  free(opt.fn_sff);
 
   fmap_progress_print2("terminating successfully");
 
