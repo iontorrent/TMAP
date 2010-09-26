@@ -56,7 +56,7 @@ fmap_sfferr_main(int argc, char *argv[])
   while((c = getopt(argc, argv, "f:r:F:R:jzvh")) >= 0) {
       switch(c) {
         case 'f':
-          opt->fn_fasta = fmap_strdup(optarg); break;
+          opt.fn_fasta = fmap_strdup(optarg); break;
         case 'r':
           opt.fn_sff = fmap_strdup(optarg); 
           fmap_get_reads_file_format_from_fn_int(opt.fn_sff, &opt.reads_format, &opt.input_compr);
