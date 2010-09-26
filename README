@@ -1,6 +1,12 @@
 FMAP - flow mapper
 
+=== Pre-requisites ===
+1. SAMtools:
+  The samtools directory must be placed in this directory.  The 
+  easiest way to do this is to a symbolic link:
+    ln -s <path to samtools> samtools 
+
 === To Install ===
 
 1. Run:
- sh autogen.sh && ./configure && make
+  sh autogen.sh && ./configure && make

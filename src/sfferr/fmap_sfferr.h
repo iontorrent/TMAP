@@ -17,6 +17,7 @@ typedef struct {
     int32_t reads_format;  /*!< the reads file format (-F) */
     double rand_sample_num;  /*!< the fraction of reads to sample (-R) */
     int32_t input_compr;  /*!< the input compression type (-j and -z) */
+    key_t shm_key;  /*!< the shared memory key (-s) */
 } fmap_sfferr_opt_t;
 
 /*! 
