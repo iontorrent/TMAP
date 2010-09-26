@@ -61,37 +61,27 @@
 #define truncateRight(value, offset)			( (value) >> (offset) << (offset) )
 #define DNA_OCC_SUM_EXCEPTION(sum)			((sum & 0xfefefeff) == 0)
 
-typedef struct SaIndexRange {
-    uint32_t startSaIndex;
-    uint32_t endSaIndex;
-} SaIndexRange;
+/*!
+ Structure used to generate large BWT strings
+ */
+typedef struct {
+    uint32_t textLength;  /*!<  length of the text */
+    uint32_t inverseSa0;  /*!<  SA-1[0] */
+    uint32_t *cumulativeFreq;  /*!<  cumulative frequency */
+    uint32_t *bwtCode;  /*!<  BWT code */
+    uint32_t *occValue;  /*!<  Occurrence values stored explicitly */
+    uint32_t *occValueMajor;  /*!<  Occurrence values stored explicitly */
+    uint32_t *inverseSa;  /*!<  Inverse SA stored explicitly */
+    uint32_t *decodeTable;  /*!<  For decoding BWT by table lookup */
+    uint32_t bwtSizeInWord;  /*!<  Temporary variable to hold the memory allocated */
+    uint32_t occSizeInWord;  /*!<  Temporary variable to hold the memory allocated */
+} fmap_bwt_gen_t;
 
-typedef struct BWT {
-    uint32_t textLength;			// length of the text
-    uint32_t saInterval;			// interval between two SA values stored explicitly
-    uint32_t inverseSaInterval;		// interval between two inverse SA stored explicitly
-    uint32_t inverseSa0;			// SA-1[0]
-    uint32_t *cumulativeFreq;		// cumulative frequency
-    uint32_t *bwtCode;				// BWT code
-    uint32_t *occValue;				// Occurrence values stored explicitly
-    uint32_t *occValueMajor;		// Occurrence values stored explicitly
-    uint32_t *saValue;				// SA values stored explicitly
-    uint32_t *inverseSa;			// Inverse SA stored explicitly
-    SaIndexRange *saIndexRange;			// SA index range
-    uint32_t saIndexRangeNumOfChar;			// Number of characters indexed in SA index range
-    uint32_t *saValueOnBoundary;	// Pre-calculated frequently referred data
-    uint32_t *decodeTable;			// For decoding BWT by table lookup
-    uint32_t decodeTableGenerated;	// == TRUE if decode table is generated on load and will be freed
-    uint32_t bwtSizeInWord;			// Temporary variable to hold the memory allocated
-    uint32_t occSizeInWord;			// Temporary variable to hold the memory allocated
-    uint32_t occMajorSizeInWord;	// Temporary variable to hold the memory allocated
-    uint32_t saValueSize;			// Temporary variable to hold the memory allocated
-    uint32_t inverseSaSize;			// Temporary variable to hold the memory allocated
-    uint32_t saIndexRangeSize;		// Temporary variable to hold the memory allocated
-} BWT;
-
-typedef struct BWTInc {
-    BWT *bwt;
+/*!
+ Structure used to generate large BWT strings; for each iteration
+ */
+typedef struct {
+    fmap_bwt_gen_t *bwt;
     uint32_t numberOfIterationDone;
     uint32_t *cumulativeCountInCurrentBuild;
     uint32_t availableWord;
@@ -105,7 +95,7 @@ typedef struct BWTInc {
     uint32_t *packedText;
     uint8_t *textBuffer;
     uint32_t *packedShift;
-} BWTInc;
+} fmap_bwt_gen_inc_t;
 /* END -- large BWT construction code */
 
 /*! 
