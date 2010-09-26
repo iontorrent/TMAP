@@ -16,7 +16,11 @@
   @constant  LastActionType  dummy action type
   @discussion  the type of action to take upon the detection of an error
   */
-enum {Exit, Warn, LastActionType};
+enum {
+    Exit, 
+    Warn, 
+    LastActionType
+};
 
 /*! @enum  Error Type
   @abstract                   the type of error
