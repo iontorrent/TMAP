@@ -38,7 +38,6 @@ AC_DEFINE_UNQUOTED(GIT_REV, "${GITREV}", [Define to be the git revision number])
 AC_ARG_ENABLE(intel64, [  --enable-intel64        optimize for Intel64 CPU such as Xeon and Core2], [extended_CFLAGS="${extended_CFLAGS} -mtune=nocona"], [])
 AC_ARG_ENABLE(bz2, [  --disable-bz2         use this option to disable bz2 support], [AC_DEFINE(DISABLE_BZ2,1,[Define 1 if we want to disable bz2 support])], [AC_CHECK_LIB([bz2], [BZ2_bzRead])])
 
-
 CFLAGS="${default_CFLAGS} ${extended_CFLAGS}";
 
 # Checks for typedefs, structures, and compiler characteristics.
@@ -73,6 +72,17 @@ AC_HEADER_STDC
 AC_CHECK_HEADERS([stdlib.h stdio.h stdint.h string.h sys/time.h unistd.h float.h zlib.h bzlib.h pthread.h limits.h netinet/in.h])
 
 AC_C_INLINE
+
+# test for SAMtools
+AC_MSG_CHECKING(for samtools)
+if test -d "samtools" ; then
+	AC_MSG_RESULT(yes)
+	LDFLAGS="${LDFLAGS} -L./samtools -lbam";
+	AC_DEFINE(HAVE_SAMTOOLS, 1, [Define 1 if the samtools library is present]) 
+else 
+	AC_MSG_RESULT(no)
+	AC_MSG_WARN(could not find the samtools source sub-directory; some commands disabled)
+fi
 
 AC_CONFIG_FILES([Makefile])
 

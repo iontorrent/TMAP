@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <config.h>
 #include <math.h>
 #include "../util/fmap_error.h"
 #include "../util/fmap_alloc.h"
@@ -7,6 +8,8 @@
 #include "../seq/fmap_seq.h"
 #include "../io/fmap_seq_io.h"
 #include "fmap_sfferr.h"
+
+#ifdef HAVE_SAMTOOLS
 
 static void 
 fmap_sfferr_core(fmap_sfferr_opt_t *opt)
@@ -48,12 +51,12 @@ fmap_sfferr_main(int argc, char *argv[])
   // program defaults
   opt.argv = argv;
   opt.argc = argc;
-  opt.fn_sff = NULL;
+  opt.fn_fasta = opt.fn_sff = opt.fn_sam = NULL;
   opt.reads_format = FMAP_READS_FORMAT_UNKNOWN;
   opt.rand_sample_num = 1.0;
   opt.input_compr = FMAP_FILE_NO_COMPRESSION;
 
-  while((c = getopt(argc, argv, "f:r:F:R:jzvh")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:R:S:jzvh")) >= 0) {
       switch(c) {
         case 'f':
           opt.fn_fasta = fmap_strdup(optarg); break;
@@ -63,6 +66,8 @@ fmap_sfferr_main(int argc, char *argv[])
           break;
         case 'F':
           opt.reads_format = fmap_get_reads_file_format_int(optarg); break;
+        case 'S':
+          opt.fn_sam = fmap_strdup(optarg); break;
         case 'R':
           opt.rand_sample_num = atof(optarg); break;
         case 'j':
@@ -97,9 +102,13 @@ fmap_sfferr_main(int argc, char *argv[])
 
   fmap_sfferr_core(&opt);
 
+  free(opt.fn_fasta);
   free(opt.fn_sff);
+  free(opt.fn_sam);
 
   fmap_progress_print2("terminating successfully");
 
   return 0;
 }
+
+#endif /* HAVE_SAMTOOLS */

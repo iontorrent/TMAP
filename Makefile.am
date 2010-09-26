@@ -39,7 +39,7 @@ fmap_SOURCES = \
 			   src/map/fmap_map2_mempool.h src/map/fmap_map2_mempool.c \
 			   src/fmap_main.h src/fmap_main.c
 
-fmap_LDADD =
+fmap_LDADD = 
 
 EXTRA_DIST = LICENSE \
 			 autogen.sh 
