@@ -28,6 +28,10 @@
 
 #include <stdint.h>
 
+/*! @header
+  @abstract  Functions for Performing Efficient Smith-Waterman
+  */
+
 // TODO: document
 
 #define FMAP_SW_FROM_M 0
@@ -40,7 +44,8 @@
 #define FMAP_SW_TYPE_EXTEND 2
 
 /* This is the smallest integer. It might be CPU-dependent in very RARE cases. */
-#define FMAP_SW_MINOR_INF -1073741823
+//#define FMAP_SW_MINOR_INF -1073741823
+#define FMAP_SW_MINOR_INF INT32_MIN
 
 typedef struct
 {
