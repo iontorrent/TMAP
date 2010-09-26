@@ -19,7 +19,8 @@ enum {
 
 /*! 
   @field  type  the type associated with this structure
-  @field  data  pointer to the particular read data structure
+  @field  fq    the pointer to the fastq structure
+  @field  sff   the pointer to the sff structure
   */
 typedef struct {
     int8_t type;

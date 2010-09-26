@@ -13,7 +13,8 @@
 
 /*! 
   @field  type  the type of io associated with this structure
-  @field  io    pointer to the particular io data structure
+  @field  fqio  the pointer to the fastq io structure
+  @field  sffio  the pointer to the sff io structure
 */
 typedef struct {
     int8_t type;

@@ -14,6 +14,7 @@
   @field  occ_interval  the occurrence array interval (-o)
   @field  hash_width    the occurrence hash width (-w)
   @field  sa_interval   the suffix array interval (-i)
+  @field  is_large      0 to use the short BWT construction algorith, 1 otherwise (large BWT construction algorithm)
   */
 typedef struct {
     char *fn_fasta;

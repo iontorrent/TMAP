@@ -48,7 +48,6 @@ typedef struct {
     BZFILE *bz2;
 #endif
     int32_t c;
-
 #ifndef DISABLE_BZ2
     char unused[BZ_MAX_UNUSED];
     int32_t n_unused;

@@ -62,6 +62,7 @@ typedef struct {
   @field  seed        the random base generator seed
   @field  seq         the packed nucleotide sequence, with contigs concatenated
   @field  annos       the annotations about the contigs
+  @field  num_annos   the number of contigs (and annotations)
   @field  len         the total length of the reference sequence
   @field  is_rev      1 if the reference sequence was reversed, 0 otherwise
   @field  is_shm      1 if loaded from shared memory, 0 otherwise

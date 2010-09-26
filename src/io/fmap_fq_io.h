@@ -48,6 +48,7 @@
   @field  begin    the index of the next character in the buffer
   @field  end      the number of characters last read
   @field  is_eof   1 if the EOF marker has been reached, 0 otherwise
+  @field  f        the file pointer associated with this stream
   @field  bufsize  the size of the character buffer
   */
 typedef struct {
