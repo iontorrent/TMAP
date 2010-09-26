@@ -9,7 +9,7 @@
   */
 
 /*! 
-  details  the type of DNA sequence data
+  @details  the type of DNA sequence data
   */
 enum {
     FMAP_SEQ_TYPE_NOTYPE = -1, /*!< unknown type */

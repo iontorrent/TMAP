@@ -162,7 +162,7 @@ fmap_bwt_occ4(const fmap_bwt_t *bwt, uint32_t k, uint32_t cnt[4]);
   @param  c    base in two-bit integer format
   @param  ok   the next lower occurence
   @param  ol   the next upper occurence
-  details  more efficient version of bwt_occ but requires that k <= l (not checked)
+  @details     more efficient version of bwt_occ but requires that k <= l (not checked)
   */
 inline void 
 fmap_bwt_2occ(const fmap_bwt_t *bwt, uint32_t k, uint32_t l, uint8_t c, uint32_t *ok, uint32_t *ol);
@@ -174,7 +174,7 @@ fmap_bwt_2occ(const fmap_bwt_t *bwt, uint32_t k, uint32_t l, uint8_t c, uint32_t
   @param  l     previous upper occurence
   @param  cntk  next upper occurences
   @param  cntl  next lower occurences
-  details   more efficient version of bwt_occ4 but requires that k <= l (not checked)
+  @details      more efficient version of bwt_occ4 but requires that k <= l (not checked)
   */
 inline void 
 fmap_bwt_2occ4(const fmap_bwt_t *bwt, uint32_t k, uint32_t l, uint32_t cntk[4], uint32_t cntl[4]);
@@ -186,7 +186,7 @@ fmap_bwt_2occ4(const fmap_bwt_t *bwt, uint32_t k, uint32_t l, uint32_t cntk[4], 
   @param  b   pointer to the bwt structure
   @param  k   the zero-based index of the bwt character to retrieve
   @return     the bwt character from the $-removed BWT string.
-  details Note that fmap_bwt_t::bwt is not exactly the BWT string 
+  @details    Note that fmap_bwt_t::bwt is not exactly the BWT string 
   and therefore this define is called fmap_bwt_B0 instead of fmap_bwt_B. 
   */
 #define fmap_bwt_B0(b, k) (fmap_bwt_bwt(b, k)>>((~(k)&0xf)<<1)&3)

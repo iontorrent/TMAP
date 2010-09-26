@@ -22,7 +22,7 @@
   @param  _size           the size of the memory block, in bytes
   @param  _variable_name  the variable name to be assigned this memory in the calling function
   @return 		  upon success, a pointer to the memory block allocated by the function; a null pointer otherwise.
-  details		  the ptr must be a memory block previously allocated with malloc, calloc, or realloc to be reallocated; if the ptr is NULL, a new block of memory will be allocated. 
+  @details		  the ptr must be a memory block previously allocated with malloc, calloc, or realloc to be reallocated; if the ptr is NULL, a new block of memory will be allocated. 
   */
 #define fmap_realloc(_ptr, _size, _variable_name) \
   fmap_realloc1(_ptr, _size, __func__, _variable_name)
@@ -62,7 +62,7 @@ fmap_malloc1(size_t size, const char *function_name, const char *variable_name);
   @param  function_name  the calling function name 
   @param  variable_name  the variable name to be assigned this memory in the calling function
   @return 		 upon success, a pointer to the memory block allocated by the function; a null pointer otherwise.
-  details		 the ptr must be a memory block previously allocated with malloc, calloc, or realloc to be reallocated; if the ptr is NULL, a new block of memory will be allocated. 
+  @details		 the ptr must be a memory block previously allocated with malloc, calloc, or realloc to be reallocated; if the ptr is NULL, a new block of memory will be allocated. 
   */
 inline void *
 fmap_realloc1(void *ptr, size_t size, const char *function_name, const char *variable_name);

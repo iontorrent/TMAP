@@ -11,7 +11,7 @@
 
 /*! 
   the type of action to be taken
-  details  the type of action to take upon the detection of an error
+  @details  the type of action to take upon the detection of an error
   */
 enum {
     Exit,  /*!< exit the program */
@@ -21,7 +21,7 @@ enum {
 
 /*! 
   the type of error
-  details  the type of error detected
+  @details  the type of error detected
   */
 enum {
     OutOfRange=0,  /*!< value was out of range */
@@ -49,7 +49,7 @@ enum {
   @param  lower   the lower integer value (inclusive)
   @param  upper   the upper integer value (inclusive)
   @param  option  the option being checked 
-  details    throws a command line argument error if the value is not within the bounds
+  @details        throws a command line argument error if the value is not within the bounds
   */
 void
 fmap_error_cmd_check_int(int32_t val, int32_t lower, int32_t upper, char *option);

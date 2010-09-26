@@ -12,7 +12,7 @@
 //#define FMAP_SERVER_SLEEP 15
 
 /*! 
-  details  The command to the server.
+  @details  The command to the server.
  */
 enum {
     FMAP_SERVER_UNKNOWN = -1, /*!< Unknown command */
@@ -23,7 +23,7 @@ enum {
 
 /*! 
   @param  signal  the signal to catch
-  details  use this function to catch a SIGINT signal
+  @details        use this function to catch a SIGINT signal
 */
 void
 fmap_server_sigint(int signal);
@@ -52,7 +52,7 @@ fmap_server_stop(key_t key);
 /*! 
   kills the server with the given key
   @param  key  the server key
-  details  the shared memory will be destroyed by the calling process 
+  @details     the shared memory will be destroyed by the calling process 
   */
 void
 fmap_server_kill(key_t key);

@@ -5,7 +5,7 @@
 #define FMAP_INDEX_TOO_BIG_GENOME 0x100000000 
 
 /*! 
-  details  Constructs the packed reference sequence, BWT string, and Suffix Array.
+  @details  Constructs the packed reference sequence, BWT string, and Suffix Array.
   */
 
 /*! 

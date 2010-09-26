@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 /*! 
-  details  A Generic String Library
+  A Generic String Library
   */
 
 extern uint8_t nt_char_to_rc_char[256];
@@ -49,7 +49,7 @@ fmap_string_clone(fmap_string_t *str);
   @param  l       the number of leading characters to skip
   @param  format  the format for the string
   @param  ...     the arguments to fill in the format
-  details     the first l characters will not be modified
+  @details        the first l characters will not be modified
  */
 inline void
 fmap_string_lsprintf(fmap_string_t *dest, int32_t l, const char *format, ...);

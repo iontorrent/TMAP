@@ -14,7 +14,7 @@
   */
 
 /*! 
-  details  the various supported file compression types
+  @details  the various supported file compression types
   */
 enum {
     FMAP_FILE_NO_COMPRESSION=0,  /*!< no compression */
@@ -23,7 +23,7 @@ enum {
 };
 
 /*! 
-  details  the type of bzip2 stream (read/write)
+  @details  the type of bzip2 stream (read/write)
   */
 enum {
     FMAP_FILE_BZ2_READ=0,  /*!< a reading bzip2 stream  */
