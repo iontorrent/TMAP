@@ -273,6 +273,11 @@ fmap_sff_read_read(fmap_file_t *fp, fmap_sff_header_t *gh, fmap_sff_read_header_
       r->quality->s[i] = QUAL2CHAR(r->quality->s[i]);
   }
 
+  // convert flowgram to host order
+  for(i=0;i<gh->flow_length;i++) {
+      r->flowgram[i] = ntohs(r->flowgram[i]);
+  }
+
   n += fmap_sff_read_padding(fp, n);
 
 #ifdef FMAP_SFF_DEBUG
