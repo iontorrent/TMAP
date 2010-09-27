@@ -156,11 +156,12 @@ inline fmap_string_t *
 fmap_sff_get_qualities(fmap_sff_t *sff);
 
 /*! 
+  removes the key sequence from the read and quality fields
   @param  sff  pointer to the structure to convert
   @details     this will only remove the key sequence from the SFF
   structure, and then only the read and quality (not the read header etc.)
   */
-void
-fmap_sff_remove_key_sffuence(fmap_sff_t *sff);
+inline void
+fmap_sff_remove_key_sequence(fmap_sff_t *sff);
 
 #endif

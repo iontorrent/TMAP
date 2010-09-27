@@ -8,6 +8,14 @@
   The BWA-like (long-read) Mapping Algorithm
   */
 
+enum {
+    FMAP_MAP2_ALN_OUTPUT_MODE_RAND           = 0,  /*!< Output a random alignment > */
+    FMAP_MAP2_ALN_OUTPUT_MODE_SCORE_LEN_NORM = 1,  /*!< Output the best scoring alignment normalized by alignment length */
+    FMAP_MAP2_ALN_OUTPUT_MODE_SCORE          = 2,  /*!< Output the best scoring alignment */
+    FMAP_MAP2_ALN_OUTPUT_MODE_LEN            = 3,  /*!< Output the longest alignment */
+    FMAP_MAP2_ALN_OUTPUT_MODE_ALL            = 4   /*!< Output all alignments */
+};
+
 /*! 
   structure to store the command line options for 'fmap map2'
   */
@@ -27,10 +35,11 @@ typedef struct {
     int32_t band_width;  /*!< the band width (-w)  */
     int32_t score_thr;  /*!< the score threshold (match-score-scaled) (-T) */
     int32_t max_seed_intv;  /*!< the maximum seed interval (-S) */
-    int32_t z_best;  /*!< the number of top scoring hits to keep (-Z) */
+    int32_t z_best;  /*!< the number of top scoring hits to keep (-b) */
     int32_t seeds_rev;  /*!< the maximum number of seeds for which reverse alignment is triggered (-N) */
     int32_t reads_queue_size;  /*!< the reads queue size (-q) */
     int32_t num_threads;  /*!< the number of threads (-n) */
+    int32_t aln_output_mode;  /*!< specifies how to choose alignments (-a)  */
     int32_t input_compr;  /*!< the input compression type (-j and -z) */
     int32_t output_compr;  /*!< the output compression type (-J and -Z) */
     key_t shm_key;  /*!< the shared memory key (-s) */

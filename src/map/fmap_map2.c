@@ -30,6 +30,56 @@ static int32_t fmap_map2_read_lock_low = 0;
 #define FMAP_MAP1_THREAD_BLOCK_SIZE 1024
 #endif
 
+static inline double
+fmap_map2_sam_get_score(fmap_seq_t *seq, fmap_map2_sam_entry_t *sam, int32_t aln_output_mode)
+{
+  //int32_t seq_len = fmap_seq_get_bases(seq)->l;
+  switch(aln_output_mode) {
+    case FMAP_MAP2_ALN_OUTPUT_MODE_SCORE_LEN_NORM:
+      return sam->AS / (double)fmap_seq_get_bases(seq)->l; break;
+    case FMAP_MAP2_ALN_OUTPUT_MODE_SCORE:
+      return (double)sam->AS; break;
+    case FMAP_MAP2_ALN_OUTPUT_MODE_LEN:
+      return (double)fmap_seq_get_bases(seq)->l; break;
+    default:
+      return 0.0; break;
+  }
+}
+
+static void
+fmap_map2_filter_sam(fmap_seq_t *seq, fmap_map2_sam_t *sam, int32_t aln_output_mode)
+{
+  int32_t i, best_index = 0;
+  double best_score, cur_score;
+  if(FMAP_MAP2_ALN_OUTPUT_MODE_ALL == aln_output_mode
+     || sam->num_entries <= 1) return;
+
+  if(FMAP_MAP2_ALN_OUTPUT_MODE_RAND == aln_output_mode) { // get a random
+      best_index = drand48() * sam->num_entries;
+  } 
+  else {
+      best_index = 0;
+      best_score = fmap_map2_sam_get_score(seq, &sam->entries[0], aln_output_mode);
+      for(i=0;i<sam->num_entries;i++) {
+          cur_score = fmap_map2_sam_get_score(seq, &sam->entries[i], aln_output_mode);
+          if(best_score < cur_score) {
+              best_score = cur_score;
+              best_index = i;
+          }
+      }
+  }
+
+  // copy to the front
+  if(0 != best_index) {
+      free(sam->entries[0].cigar);
+      sam->entries[0] = sam->entries[best_index];
+      sam->entries[best_index].cigar  = NULL;
+  }
+
+  // reallocate
+  fmap_map2_sam_realloc(sam, 1);
+}
+
 static void
 fmap_map2_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map2_sam_entry_t *sam)
 {
@@ -308,11 +358,15 @@ fmap_map2_core(fmap_map2_opt_t *opt)
 
       for(i=0;i<seq_buffer_length;i++) {
           if(NULL != sams[i] && 0 < sams[i]->num_entries) {
+              // filter
+              fmap_map2_filter_sam(seq_buffer[i], sams[i], opt->aln_output_mode);
+              // print mapped reads
               for(j=0;j<sams[i]->num_entries;j++) {
                   fmap_map2_print_sam(seq_buffer[i], refseq, &sams[i]->entries[j]);
               }
           }
           else {
+              // print unmapped reads
               fmap_sam_print_unmapped(fmap_file_stdout, seq_buffer[i]);
           }
 
@@ -418,6 +472,7 @@ fmap_map2_opt_init()
   opt->max_seed_intv = 3; opt->z_best = 1; opt->seeds_rev = 5;
   opt->reads_queue_size = 65536;
   opt->num_threads = 1;
+  opt->aln_output_mode = FMAP_MAP2_ALN_OUTPUT_MODE_SCORE_LEN_NORM; 
   opt->input_compr = FMAP_FILE_NO_COMPRESSION;
   opt->output_compr = FMAP_FILE_NO_COMPRESSION;
   opt->shm_key = 0;
@@ -441,7 +496,7 @@ fmap_map2_main(int argc, char *argv[])
   opt = fmap_map2_opt_init(argc, argv);
   opt->argc = argc; opt->argv = argv;
 
-  while((c = getopt(argc, argv, "f:r:F:A:M:O:E:y:m:c:w:T:S:a:N:q:n:jzJZs:vh")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:A:M:O:E:y:m:c:w:T:S:b:N:q:n:a:jzJZs:vh")) >= 0) {
       switch (c) {
         case 'f':
           opt->fn_fasta = fmap_strdup(optarg); break;
@@ -473,7 +528,7 @@ fmap_map2_main(int argc, char *argv[])
           opt->score_thr = atoi(optarg); break;
         case 'S':
           opt->max_seed_intv = atoi(optarg); break;
-        case 'a': 
+        case 'b': 
           opt->z_best= atoi(optarg); break;
         case 'N':
           opt->seeds_rev = atoi(optarg); break;
@@ -481,6 +536,8 @@ fmap_map2_main(int argc, char *argv[])
           opt->reads_queue_size = atoi(optarg); break;
         case 'n':
           opt->num_threads = atoi(optarg); break;
+        case 'a':
+          opt->aln_output_mode = atoi(optarg); break;
         case 'j':
           opt->input_compr = FMAP_FILE_BZ2_COMPRESSION;
           fmap_get_reads_file_format_from_fn_int(opt->fn_reads, &opt->reads_format, &opt->input_compr);

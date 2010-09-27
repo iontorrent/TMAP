@@ -104,16 +104,16 @@ fmap_map1_aln_filter(fmap_map1_opt_t *opt, fmap_map1_aln_t ***alns, int32_t *n_a
       num_all_sa += (*alns)[i]->l - (*alns)[i]->k + 1;
   }
 
-  if(FMAP_ALN_OUTPUT_MODE_ALL == opt->aln_output_mode) { // all hits
+  if(FMAP_MAP1_ALN_OUTPUT_MODE_ALL == opt->aln_output_mode) { // all hits
       for(i=0;i<(*n_alns);i++) {
           (*alns)[i]->mapq = 0;
       }
       (*alns)[0]->mapq = fmap_map1_aln_mapq(num_best_sa, num_all_sa, max_mm, (*alns)[0]->n_mm);
   }
-  else if(FMAP_ALN_OUTPUT_MODE_BEST == opt->aln_output_mode  // unique best hit 
-          || FMAP_ALN_OUTPUT_MODE_BEST_RAND == opt->aln_output_mode) { // random best hit
+  else if(FMAP_MAP1_ALN_OUTPUT_MODE_BEST == opt->aln_output_mode  // unique best hit 
+          || FMAP_MAP1_ALN_OUTPUT_MODE_BEST_RAND == opt->aln_output_mode) { // random best hit
 
-      if(1 < num_best_sa && FMAP_ALN_OUTPUT_MODE_BEST_RAND == opt->aln_output_mode) { // pick a random one
+      if(1 < num_best_sa && FMAP_MAP1_ALN_OUTPUT_MODE_BEST_RAND == opt->aln_output_mode) { // pick a random one
           int32_t best_index = 0, rand;
           rand = drand48() * num_best_sa; 
           for(i=0;i<num_best;i++) { // get the "rand"th best score
@@ -149,7 +149,7 @@ fmap_map1_aln_filter(fmap_map1_opt_t *opt, fmap_map1_aln_t ***alns, int32_t *n_a
           (*n_alns) = 0;
       }
       else {
-          if(FMAP_ALN_OUTPUT_MODE_BEST_RAND == opt->aln_output_mode && 1 == was_rand) {
+          if(FMAP_MAP1_ALN_OUTPUT_MODE_BEST_RAND == opt->aln_output_mode && 1 == was_rand) {
               (*alns)[0]->mapq = 0;
           }
           else {
@@ -165,7 +165,7 @@ fmap_map1_aln_filter(fmap_map1_opt_t *opt, fmap_map1_aln_t ***alns, int32_t *n_a
           (*n_alns) = 1;
       }
   }
-  else if(FMAP_ALN_OUTPUT_MODE_BEST_ALL == opt->aln_output_mode) { // all best hits
+  else if(FMAP_MAP1_ALN_OUTPUT_MODE_BEST_ALL == opt->aln_output_mode) { // all best hits
       for(i=0;i<num_best;i++) {
           (*alns)[i]->mapq = fmap_map1_aln_mapq(num_best_sa, num_all_sa, max_mm, (*alns)[i]->n_mm);
       }
@@ -644,7 +644,7 @@ fmap_map1_opt_init()
   opt->reads_queue_size = 65536; // TODO: move this to a define block
   opt->max_entries= 2000000; // TODO: move this to a define block
   opt->num_threads = 1;
-  opt->aln_output_mode = 1; // TODO: move this to a define block
+  opt->aln_output_mode = FMAP_MAP1_ALN_OUTPUT_MODE_BEST_RAND; // TODO: move this to a define block
   opt->input_compr = FMAP_FILE_NO_COMPRESSION;
   opt->output_compr = FMAP_FILE_NO_COMPRESSION;
   opt->shm_key = 0;
