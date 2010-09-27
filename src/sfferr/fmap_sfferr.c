@@ -13,6 +13,7 @@
 #include "../server/fmap_shm.h"
 #include "../seq/fmap_seq.h"
 #include "../io/fmap_seq_io.h"
+#include "fmap_sfferr_aux.h"
 #include "fmap_sfferr.h"
 
 #ifdef HAVE_SAMTOOLS
@@ -28,6 +29,8 @@ fmap_sfferr_core(fmap_sfferr_opt_t *opt)
   bam1_t *bam = NULL;
   fmap_sff_t *sff = NULL;
   char *name_bam_prev = NULL;
+  fmap_sfferr_aux_pr_flow_given_call_t *ptr1 = NULL;
+  uint32_t ctr = 0;
 
   if(0 == opt->shm_key) {
       fmap_progress_print("reading in reference data");
@@ -47,11 +50,14 @@ fmap_sfferr_core(fmap_sfferr_opt_t *opt)
   fp_sff = fmap_file_fopen(opt->fn_sff, "rb", opt->input_compr);
   sffio = fmap_sff_io_init(fp_sff);
   fp_sam = samopen(opt->fn_sam, (0 == opt->is_bam) ? "r" : "rb", NULL);
+  ptr1 = fmap_sfferr_aux_pr_flow_given_call_init(sffio->gheader);
 
+  fmap_progress_print("processing reads");
   bam = bam_init1();
   sff = fmap_sff_init();
   while(0 < samread(fp_sam, bam) 
         && 0 < fmap_sff_io_read(sffio, sff)) {
+
       // check that the alignment does not have two of the same records
       if(NULL != name_bam_prev && 0 == strcmp(bam1_qname(bam), name_bam_prev)) {
           fmap_error("two SAM/BAM records with the same read name found", Exit, OutOfRange); 
@@ -68,16 +74,31 @@ fmap_sfferr_core(fmap_sfferr_opt_t *opt)
       }
 
       // process
-      // TODO
+      fmap_sfferr_aux(refseq, sff, bam, ptr1);
 
       // free structures
       bam_destroy1(bam);
       bam = bam_init1();
+      
+      ctr++;
+      if(0 == (ctr & 0xFFFFF)) { // ctr % 2^20
+          fmap_progress_print2("processed %u reads", ctr);
+      }
   }
   // free structures
   free(name_bam_prev);
   bam_destroy1(bam);
   fmap_sff_destroy(sff);
+  fmap_progress_print2("processed %u reads", ctr);
+
+  // write results
+  //fmap_progress_print("writing table: Pr(flow signal | polymer call, flow index)");
+  //fmap_sfferr_aux_pr_flow_given_call_write(ptr1, fp_ptr1);
+  //fmap_progress_print("writing table: Pr(polymer call | reference polymer, flow index)");
+  //TODO
+
+  // destroy results
+  fmap_sfferr_aux_pr_flow_given_call_destroy(ptr1);
 
   // close the input files
   fmap_sff_io_destroy(sffio);
