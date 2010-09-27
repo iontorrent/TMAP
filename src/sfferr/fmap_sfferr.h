@@ -13,8 +13,8 @@ typedef struct {
     int argc;  /*!< the number of command line arguments passed */
     char *fn_fasta;  /*!< the fasta reference file name (-f) */
     char *fn_sff;  /*!< the sff file name (-r) */
-    char *fn_sam;  /*!< the SAM file name (-S) */
-    int32_t reads_format;  /*!< the reads file format (-F) */
+    char *fn_sam;  /*!< the SAM/BAM file name (-S) */
+    int32_t is_bam;  /*!< the input is a BAM file (-b) */
     double rand_sample_num;  /*!< the fraction of reads to sample (-R) */
     int32_t input_compr;  /*!< the input compression type (-j and -z) */
     key_t shm_key;  /*!< the shared memory key (-s) */
