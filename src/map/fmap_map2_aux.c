@@ -303,8 +303,9 @@ fmap_map2_aux_gen_cigar(fmap_map2_opt_t *opt, uint8_t *queries[2],
       beg = (p->flag & 0x10)? query_length - p->end : p->beg;
       end = (p->flag & 0x10)? query_length - p->beg : p->end;
       query = queries[(p->flag & 0x10)? 1 : 0] + beg;
-      for(k = p->k; k < p->k + p->len; ++k) // in principle, no out-of-boundary here
+      for(k = p->k; k < p->k + p->len; ++k) { // in principle, no out-of-boundary here
         target[k - p->k] = fmap_refseq_seq_i(refseq, k);
+      }
       score = fmap_sw_global_core(target, p->len, query, end - beg, &par, path, &path_len);
       b->cigar[i] = fmap_sw_path2cigar32(path, path_len, &b->n_cigar[i]);
       if(beg != 0 || end < query_length) { // write soft clipping

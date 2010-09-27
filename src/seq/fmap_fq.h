@@ -92,4 +92,18 @@ fmap_fq_to_int(fmap_fq_t *fq);
 void
 fmap_fq_to_char(fmap_fq_t *fq);
 
+/*!
+  gets the read's bases
+  @param  fq  a pointer to a sequence structure
+ */
+inline fmap_string_t *
+fmap_fq_get_bases(fmap_fq_t *fq);
+
+/*!
+  gets the read's qualities
+  @param  fq  a pointer to a sequence structure
+ */
+inline fmap_string_t *
+fmap_fq_get_qualities(fmap_fq_t *fq);
+
 #endif

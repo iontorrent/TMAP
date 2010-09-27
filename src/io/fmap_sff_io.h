@@ -1,6 +1,7 @@
 #ifndef FMAP_SFF_IO_H_
 #define FMAP_SFF_IO_H_
 
+#include <stdint.h>
 #include "../seq/fmap_sff.h"
 #include "fmap_file.h"
 

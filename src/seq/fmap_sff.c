@@ -178,7 +178,7 @@ fmap_sff_read_header_read(fmap_file_t *fp)
 #ifdef FMAP_SFF_DEBUG
   fmap_sff_read_header_print(stderr, rh);
 #endif
-  
+
   if(rh->rheader_length != n) {
       fmap_error("SFF read header length did not match", Exit, ReadFileError);
   }
@@ -398,4 +398,29 @@ fmap_sff_to_char(fmap_sff_t *sff)
       sff->read->bases->s[i] = "ACGTN"[(int)sff->read->bases->s[i]];
   }
   sff->is_int = 0;
+}
+
+inline fmap_string_t *
+fmap_sff_get_bases(fmap_sff_t *sff)
+{
+  return sff->read->bases;
+}
+
+inline fmap_string_t *
+fmap_sff_get_qualities(fmap_sff_t *sff)
+{
+  return sff->read->quality;
+}
+
+inline void
+fmap_sff_remove_key_sequence(fmap_sff_t *sff)
+{
+  int32_t i;
+  // remove the key sequence
+  for(i=0;i<sff->rheader->n_bases - sff->gheader->key_length;i++) { 
+      sff->read->bases->s[i] = sff->read->bases->s[i+sff->gheader->key_length];
+      sff->read->quality->s[i] = sff->read->quality->s[i+sff->gheader->key_length];
+  }
+  sff->read->bases->l -= sff->gheader->key_length;
+  sff->read->quality->l -= sff->gheader->key_length;
 }

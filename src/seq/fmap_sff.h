@@ -121,19 +121,46 @@ fmap_sff_destroy(fmap_sff_t *sff);
 */
 fmap_sff_t *
 fmap_sff_clone(fmap_sff_t *sff);
+
 /*! 
   @param  sff  a pointer to the sff 
 */
 void
 fmap_sff_reverse_compliment(fmap_sff_t *sff);
+
 /*! 
   @param  sff  a pointer to the sff 
 */
 void
 fmap_sff_to_int(fmap_sff_t *sff);
+
 /*! 
   @param  sff  a pointer to the sff 
 */
 void
 fmap_sff_to_char(fmap_sff_t *sff);
+/*!
+  gets the read's bases
+  @param  sff  a pointer to a sequence structure
+  @details     this will include the key sequence qualities
+ */
+inline fmap_string_t *
+fmap_sff_get_bases(fmap_sff_t *sff);
+
+/*!
+  gets the read's qualities
+  @param  sff  a pointer to a sequence structure
+  @details     this will include the key sequence qualities
+ */
+inline fmap_string_t *
+fmap_sff_get_qualities(fmap_sff_t *sff);
+
+/*! 
+  @param  sff  pointer to the structure to convert
+  @details     this will only remove the key sequence from the SFF
+  structure, and then only the read and quality (not the read header etc.)
+  */
+void
+fmap_sff_remove_key_sffuence(fmap_sff_t *sff);
+
 #endif

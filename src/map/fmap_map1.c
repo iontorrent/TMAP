@@ -191,12 +191,18 @@ fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fma
       uint32_t pos = 0, seqid = 0, pacpos = 0; 
       int32_t aln_ref_l = 0;
       int32_t seq_len = 0;
+      int32_t sff_soft_clip = 0;
       fmap_string_t *name=NULL, *bases=NULL, *qualities=NULL;
 
       name = fmap_seq_get_name(seq);
       bases = fmap_seq_get_bases(seq);
       qualities = fmap_seq_get_qualities(seq);
       seq_len = bases->l;
+
+      if(FMAP_SEQ_TYPE_SFF == seq->type) {
+          sff_soft_clip = seq->data.sff->gheader->key_length; // soft clip the key sequence
+          seq_len -= sff_soft_clip;
+      }
 
       // get the number of non-inserted bases 
       for(j=0;j<a->cigar_length;j++) {
@@ -221,8 +227,16 @@ fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fma
           fmap_file_fprintf(fmap_file_stdout, "%s\t%u\t%s\t%u\t%u\t",
                             name->s, flag, refseq->annos[seqid].name->s,
                             pos, a->mapq);
+          // Note: we assume there is no soft clipping at the start or end of
+          // the cigar
+          if(0 < sff_soft_clip && 0 == a->strand) { // forward
+              fmap_file_fprintf(fmap_file_stdout, "%dS", sff_soft_clip);
+          }
           for(j=0;j<a->cigar_length;j++) {
               fmap_file_fprintf(fmap_file_stdout, "%d%c", (a->cigar[j]>>4), "MIDNSHP"[a->cigar[j] & 0xf]);
+          }
+          if(0 < sff_soft_clip && 1 == a->strand) { // reversed
+              fmap_file_fprintf(fmap_file_stdout, "%dS", sff_soft_clip);
           }
           fmap_file_fprintf(fmap_file_stdout, "\t*\t0\t0\t%s\t%s",
                             bases->s, qualities->s);
@@ -289,12 +303,18 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
           fmap_map1_opt_t opt_local = (*opt); // copy over values
           fmap_seq_t *seq[2]={NULL, NULL}, *orig_seq=NULL;
           orig_seq = seq_buffer[low];
-          fmap_string_t *orig_bases = NULL, *bases[2]={NULL, NULL};
+          fmap_string_t *bases[2]={NULL, NULL};
           int32_t n_alns;
 
-          // clone the sequence and get the reverse compliment
+          // clone the sequence 
           seq[0] = fmap_seq_clone(orig_seq);
           seq[1] = fmap_seq_clone(orig_seq);
+
+          // Adjust for SFF
+          fmap_seq_remove_key_sequence(seq[0]);
+          fmap_seq_remove_key_sequence(seq[1]);
+
+          // reverse compliment
           fmap_seq_reverse_compliment(seq[1]);
 
           // convert to integers
@@ -302,25 +322,23 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
           fmap_seq_to_int(seq[1]);
 
           // get bases
-          orig_bases = fmap_seq_get_bases(orig_seq); 
           bases[0] = fmap_seq_get_bases(seq[0]);
           bases[1] = fmap_seq_get_bases(seq[1]);
 
           // remember to round up
-          opt_local.max_mm = (opt->max_mm < 0) ? (int)(0.99 + opt->max_mm_frac * orig_bases->l) : opt->max_mm; 
-          opt_local.max_gape = (opt->max_gape < 0) ? (int)(0.99 + opt->max_gape_frac * orig_bases->l) : opt->max_gape; 
-          opt_local.max_gapo = (opt->max_gapo < 0) ? (int)(0.99 + opt->max_gapo_frac * orig_bases->l) : opt->max_gapo; 
-
-          if(width_length < orig_bases->l) {
+          opt_local.max_mm = (opt->max_mm < 0) ? (int)(0.99 + opt->max_mm_frac * bases[0]->l) : opt->max_mm; 
+          opt_local.max_gape = (opt->max_gape < 0) ? (int)(0.99 + opt->max_gape_frac * bases[0]->l) : opt->max_gape; 
+          opt_local.max_gapo = (opt->max_gapo < 0) ? (int)(0.99 + opt->max_gapo_frac * bases[0]->l) : opt->max_gapo; 
+          if(width_length < bases[0]->l) {
               free(width[0]); free(width[1]);
-              width_length = orig_bases->l;
+              width_length = bases[0]->l;
               width[0] = fmap_calloc(width_length, sizeof(fmap_bwt_match_width_t), "width[0]");
               width[1] = fmap_calloc(width_length, sizeof(fmap_bwt_match_width_t), "width[1]");
           }
           fmap_bwt_match_cal_width(bwt[0], bases[0]->l, bases[0]->s, width[0]);
           fmap_bwt_match_cal_width(bwt[0], bases[1]->l, bases[1]->s, width[1]);
 
-          if(orig_bases->l < opt->seed_length) {
+          if(bases[0]->l < opt->seed_length) {
               opt_local.seed_length = -1;
           }
           else {

@@ -30,17 +30,19 @@ static int32_t fmap_map2_read_lock_low = 0;
 #define FMAP_MAP1_THREAD_BLOCK_SIZE 1024
 #endif
 
-
 static void
 fmap_map2_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map2_sam_entry_t *sam)
 {
-  int32_t i, seq_len = 0;
+  int32_t i, sff_soft_clip = 0, cigar_start, cigar_end;
   fmap_string_t *name=NULL, *bases=NULL, *qualities=NULL;
 
   name = fmap_seq_get_name(seq);
   bases = fmap_seq_get_bases(seq);
   qualities = fmap_seq_get_qualities(seq);
-  seq_len = bases->l;
+
+  if(FMAP_SEQ_TYPE_SFF == seq->type) {
+      sff_soft_clip = seq->data.sff->gheader->key_length; // soft clip the key sequence
+  }
 
   if(1 == sam->strand) { // reverse for the output
       fmap_string_reverse_compliment(bases, 0);
@@ -51,9 +53,32 @@ fmap_map2_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map2_sam_entry_
                     name->s, (1 == sam->strand) ? 0x10 : 0, refseq->annos[sam->seqid].name->s, 
                     sam->pos + 1,
                     sam->mapq);
-  for(i=0;i<sam->n_cigar;i++) {
+  // Note: we must check if the cigar starts or ends with a soft clip
+  cigar_start = 0;
+  cigar_end = sam->n_cigar;
+  if(0 < sff_soft_clip) {
+      if(0 == sam->strand) {  // forward strand sff soft clip
+          if(0 < sam->n_cigar && 4 == sam->cigar[0]) {
+              sff_soft_clip += (sam->cigar[0]>>4);
+              cigar_start++; // do not print out the first cigar op, this will be printed out later
+          }
+          fmap_file_fprintf(fmap_file_stdout, "%dS", sff_soft_clip);
+      }
+      else {  // reverse strand sff soft clip
+          if(0 < sam->n_cigar && 4 == sam->cigar[cigar_end-1]) {
+              sff_soft_clip += (sam->cigar[cigar_end-1]>>4);
+              cigar_end--; // do not print out the last cigar op, this will be printed out later
+          }
+      }
+  }
+  // print out the cigar
+  for(i=cigar_start;i<cigar_end;i++) {
       fmap_file_fprintf(fmap_file_stdout, "%d%c",
                         sam->cigar[i]>>4, "MIDNSHP"[sam->cigar[i]&0xf]);
+  }
+  // add trailing soft clipping if necessary
+  if(0 < sff_soft_clip && 1 == sam->strand) {  // reverse strand sff soft clip
+      fmap_file_fprintf(fmap_file_stdout, "%dS", sff_soft_clip);
   }
   fmap_file_fprintf(fmap_file_stdout, "\t*\t0\t0\t%s\t%s",
                     bases->s, qualities->s);
@@ -104,8 +129,19 @@ fmap_map2_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
       high = seq_buffer_length; // process all
 #endif
       while(low<high) {
+
+          fmap_seq_t *seq = NULL;
+
+          // Clone the buffer
+          seq = fmap_seq_clone(seq_buffer[low]);
+          // Adjust for SFF
+          fmap_seq_remove_key_sequence(seq);
+
           // process
-          sams[low] = fmap_map2_aux_core(opt, seq_buffer[low], refseq, bwt, sa, pool);
+          sams[low] = fmap_map2_aux_core(opt, seq, refseq, bwt, sa, pool);
+
+          // destroy
+          fmap_seq_destroy(seq);
 
           // next
           low++;

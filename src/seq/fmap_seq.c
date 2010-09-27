@@ -118,15 +118,15 @@ fmap_seq_get_name(fmap_seq_t *seq)
   return NULL;
 }
 
-fmap_string_t *
+inline fmap_string_t *
 fmap_seq_get_bases(fmap_seq_t *seq)
 {
   switch(seq->type) {
     case FMAP_SEQ_TYPE_FQ:
-      return seq->data.fq->seq;
+      return fmap_fq_get_bases(seq->data.fq);
       break;
     case FMAP_SEQ_TYPE_SFF:
-      return seq->data.sff->read->bases;
+      return fmap_sff_get_bases(seq->data.sff);
       break;
     default:
       fmap_error("type is unrecognized", Exit, OutOfRange);
@@ -135,21 +135,28 @@ fmap_seq_get_bases(fmap_seq_t *seq)
   return NULL;
 }
 
-fmap_string_t *
+inline fmap_string_t *
 fmap_seq_get_qualities(fmap_seq_t *seq)
 {
   switch(seq->type) {
     case FMAP_SEQ_TYPE_FQ:
-      return seq->data.fq->qual;
+      return fmap_fq_get_qualities(seq->data.fq);
       break;
     case FMAP_SEQ_TYPE_SFF:
-      return seq->data.sff->read->quality;
+      return fmap_sff_get_qualities(seq->data.sff);
       break;
     default:
       fmap_error("type is unrecognized", Exit, OutOfRange);
       break;
   }
   return NULL;
+}
+
+inline void
+fmap_seq_remove_key_sequence(fmap_seq_t *seq)
+{
+  if(FMAP_SEQ_TYPE_SFF != seq->type) return; // ignore
+  fmap_sff_remove_key_sequence(seq->data.sff);
 }
 
 fmap_seq_t *

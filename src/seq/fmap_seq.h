@@ -70,15 +70,23 @@ fmap_seq_get_name(fmap_seq_t *seq);
   @param  seq  pointer to the structure to clone
   @return      a pointer to the base sequence string
   */
-fmap_string_t *
+inline fmap_string_t *
 fmap_seq_get_bases(fmap_seq_t *seq);
 
 /*! 
   @param  seq  pointer to the structure to clone
   @return      a pointer to the quality string
   */
-fmap_string_t *
+inline fmap_string_t *
 fmap_seq_get_qualities(fmap_seq_t *seq);
+
+/*! 
+  @param  seq  pointer to the structure to convert
+  @details     this will only remove the key sequence from a SFF 
+  structure, and then only the read and quality (not the read header etc.)
+  */
+void
+fmap_seq_remove_key_sequence(fmap_seq_t *seq);
 
 /*! 
   @param  seq  pointer to the structure to convert

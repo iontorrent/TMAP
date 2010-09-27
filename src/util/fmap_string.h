@@ -37,6 +37,7 @@ fmap_string_destroy(fmap_string_t *str);
 */
 inline void
 fmap_string_copy(fmap_string_t *dest, fmap_string_t *src);
+
 /*! 
   @param  str  a pointer to the string to clone
   @return      a pointer to the cloned string
@@ -60,6 +61,7 @@ fmap_string_lsprintf(fmap_string_t *dest, int32_t l, const char *format, ...);
 */
 inline void
 fmap_string_reverse(fmap_string_t *str);
+
 /*! 
   reverse compliments the string
   @param  str       pointer to the string

@@ -72,3 +72,15 @@ fmap_fq_to_char(fmap_fq_t *fq)
   }
   fq->is_int = 0;
 }
+
+inline fmap_string_t *
+fmap_fq_get_bases(fmap_fq_t *fq)
+{
+  return fq->seq;
+}
+
+inline fmap_string_t *
+fmap_fq_get_qualities(fmap_fq_t *fq)
+{
+  return fq->qual;
+}
