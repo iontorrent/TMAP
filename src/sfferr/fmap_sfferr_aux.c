@@ -156,12 +156,18 @@ fmap_sfferr_aux_pr_flow_given_call_add(fmap_sfferr_aux_pr_flow_given_call_t *ptr
 }
 
 void
+fmap_sffer_aux_pr_call_given_polymer_add(fmap_refseq_t *refseq, fmap_sff_t *sff, bam1_t *bam)
+{
+  // TODO
+}
+
+void
 fmap_sfferr_aux(fmap_refseq_t *refseq, fmap_sff_t *sff, bam1_t *bam,
                 fmap_sfferr_aux_pr_flow_given_call_t *ptr1
                 )
 {
   // Pr(flow signal | polymer call, flow index)
-  fmap_sfferr_aux_pr_flow_given_call_add(ptr1, sff);
+  if(NULL != ptr1) fmap_sfferr_aux_pr_flow_given_call_add(ptr1, sff);
 
   // Pr(polymer call | reference polymer, flow index)
   // TODO
