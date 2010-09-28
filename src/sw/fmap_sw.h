@@ -220,58 +220,58 @@ fmap_sw_path2cigar(const fmap_sw_path_t *path, int32_t path_len, int32_t *n_ciga
  ********************/
 
 /*!
-  @var  fmap_sw_param_short  alignment parameters for short read alignment [ACGTN]
+  alignment parameters for short read alignment [ACGTN]
   */
 extern fmap_sw_param_t fmap_sw_param_short; /* = { 13,  2,  2, fmap_sw_sm_short, 5, 50 }; */
 /*!
-  @var  fmap_sw_param_blast  alignment parameters for blast read alignment [ACGTN]
+  alignment parameters for blast read alignment [ACGTN]
   */
 extern fmap_sw_param_t fmap_sw_param_blast; /* = {  5,  2,  2, fmap_sw_sm_blast, 5, 50 }; */
 /*!
-  @var  fmap_sw_param_nt2nt  alignment parameters for ... 
+  alignment parameters for ... 
   */
 extern fmap_sw_param_t fmap_sw_param_nt2nt; /* = {  8,  2,  2, fmap_sw_sm_nt, 16, 75 }; */
 /*!
-  @var  fmap_sw_param_rd2rd  alignment parameters for ...
+  alignment parameters for ...
   */
 extern fmap_sw_param_t fmap_sw_param_rd2rd; /* = {  1, 19, 19, fmap_sw_sm_read, 16, 75 }; */
 /*!
-  @var  fmap_sw_param_aa2aa  alignment parameters for ...
+  alignment parameters for ...
   */
 extern fmap_sw_param_t fmap_sw_param_aa2aa; /* = { 10,  2,  2, fmap_sw_sm_blosum62, 22, 50 }; */
 
 /*!
-  @var  fmap_sw_sm_short  substitution matrix for short read alignment 
+  substitution matrix for short read alignment 
   */
 extern int32_t fmap_sw_sm_short[];
 
 /*!
-  @var  fmap_sw_sm_blast  substitution matrix for blast
+  substitution matrix for blast
   */
 extern int32_t fmap_sw_sm_blast[];
 
 /*!
-  @var  fmap_sw_sm_blast  substitution matrix for ...
+  substitution matrix for ...
   */
 extern int32_t fmap_sw_sm_nt[];
 
 /*!
-  @var  fmap_sw_sm_read  substitution matrix for ...
+  substitution matrix for ...
   */
 extern int32_t fmap_sw_sm_read[];
 
 /*!
-  @var  fmap_sw_sm_read  substitution matrix for BLOSUM62
+  substitution matrix for BLOSUM62
   */
 extern int32_t fmap_sw_sm_blosum62[];
 
 /*!
-  @var  fmap_sw_sm_read  substitution matrix for BLOSUM45
+  substitution matrix for BLOSUM45
   */
 extern int32_t fmap_sw_sm_blosum45[];
 
 /*!
-  @var  fmap_sw_sm_hs  substitution matrix for human to mouse
+  substitution matrix for human to mouse
   */
 extern int32_t           fmap_sw_sm_hs[];
 
