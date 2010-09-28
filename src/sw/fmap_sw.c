@@ -260,81 +260,81 @@ fmap_sw_aln_destroy(fmap_sw_aln_t *aa)
 #define FMAP_SW_NT_LOCAL_SHIFT 16
 #define FMAP_SW_NT_LOCAL_MASK 0xffff
 
-#define SET_INF(s) (s).M = (s).I = (s).D = FMAP_SW_MINOR_INF;
+#define FMAP_SW_SET_INF(s) (s).match_score = (s).ins_score = (s).del_score = FMAP_SW_MINOR_INF
 
-#define set_M(MM, cur, p, sc) \
+#define fmap_sw_set_match(MM, cur, p, sc) \
 { \
-  if ((p)->M >= (p)->I) { \
-      if ((p)->M >= (p)->D) { \
-          (MM) = (p)->M + (sc); (cur)->Mt = FMAP_SW_FROM_M; \
+  if ((p)->match_score >= (p)->ins_score) { \
+      if ((p)->match_score >= (p)->del_score) { \
+          (MM) = (p)->match_score + (sc); (cur)->match_from = FMAP_SW_FROM_M; \
       } else { \
-          (MM) = (p)->D + (sc); (cur)->Mt = FMAP_SW_FROM_D; \
+          (MM) = (p)->del_score + (sc); (cur)->match_from = FMAP_SW_FROM_D; \
       } \
   } else { \
-      if ((p)->I > (p)->D) { \
-          (MM) = (p)->I + (sc); (cur)->Mt = FMAP_SW_FROM_I; \
+      if ((p)->ins_score > (p)->del_score) { \
+          (MM) = (p)->ins_score + (sc); (cur)->match_from = FMAP_SW_FROM_I; \
       } else { \
-          (MM) = (p)->D + (sc); (cur)->Mt = FMAP_SW_FROM_D; \
+          (MM) = (p)->del_score + (sc); (cur)->match_from = FMAP_SW_FROM_D; \
       } \
   } \
 }
 
-#define set_I(II, cur, p) \
+#define fmap_sw_set_ins(II, cur, p) \
 { \
-  if ((p)->M - gap_open > (p)->I) { \
-      (cur)->It = FMAP_SW_FROM_M; \
-      (II) = (p)->M - gap_open - gap_ext; \
+  if ((p)->match_score - gap_open > (p)->ins_score) { \
+      (cur)->ins_from = FMAP_SW_FROM_M; \
+      (II) = (p)->match_score - gap_open - gap_ext; \
   } else { \
-      (cur)->It = FMAP_SW_FROM_I; \
-      (II) = (p)->I - gap_ext; \
+      (cur)->ins_from = FMAP_SW_FROM_I; \
+      (II) = (p)->ins_score - gap_ext; \
   } \
 }
 
-#define set_end_I(II, cur, p) \
+#define fmap_sw_set_end_ins(II, cur, p) \
 { \
   if (gap_end >= 0) { \
-      if ((p)->M - gap_open > (p)->I) { \
-          (cur)->It = FMAP_SW_FROM_M; \
-          (II) = (p)->M - gap_open - gap_end; \
+      if ((p)->match_score - gap_open > (p)->ins_score) { \
+          (cur)->ins_from = FMAP_SW_FROM_M; \
+          (II) = (p)->match_score - gap_open - gap_end; \
       } else { \
-          (cur)->It = FMAP_SW_FROM_I; \
-          (II) = (p)->I - gap_end; \
+          (cur)->ins_from = FMAP_SW_FROM_I; \
+          (II) = (p)->ins_score - gap_end; \
       } \
-  } else set_I(II, cur, p); \
+  } else fmap_sw_set_ins(II, cur, p); \
 }
 
-#define set_D(DD, cur, p) \
+#define fmap_sw_set_del(DD, cur, p) \
 { \
-  if ((p)->M - gap_open > (p)->D) { \
-      (cur)->Dt = FMAP_SW_FROM_M; \
-      (DD) = (p)->M - gap_open - gap_ext; \
+  if ((p)->match_score - gap_open > (p)->del_score) { \
+      (cur)->del_from = FMAP_SW_FROM_M; \
+      (DD) = (p)->match_score - gap_open - gap_ext; \
   } else { \
-      (cur)->Dt = FMAP_SW_FROM_D; \
-      (DD) = (p)->D - gap_ext; \
+      (cur)->del_from = FMAP_SW_FROM_D; \
+      (DD) = (p)->del_score - gap_ext; \
   } \
 }
 
-#define set_end_D(DD, cur, p) \
+#define fmap_sw_set_end_del(DD, cur, p) \
 { \
   if (gap_end >= 0) { \
-      if ((p)->M - gap_open > (p)->D) { \
-          (cur)->Dt = FMAP_SW_FROM_M; \
-          (DD) = (p)->M - gap_open - gap_end; \
+      if ((p)->match_score - gap_open > (p)->del_score) { \
+          (cur)->del_from = FMAP_SW_FROM_M; \
+          (DD) = (p)->match_score - gap_open - gap_end; \
       } else { \
-          (cur)->Dt = FMAP_SW_FROM_D; \
-          (DD) = (p)->D - gap_end; \
+          (cur)->del_from = FMAP_SW_FROM_D; \
+          (DD) = (p)->del_score - gap_end; \
       } \
-  } else set_D(DD, cur, p); \
+  } else fmap_sw_set_del(DD, cur, p); \
 }
 
 typedef struct
 {
-  uint8_t Mt:3, It:2, Dt:2;
+  uint8_t match_from:3, ins_from:2, del_from:2;
 } fmap_sw_dpcell_t;
 
 typedef struct
 {
-  int32_t M, I, D;
+  int32_t match_score, ins_score, del_score;
 } fmap_sw_dpscore_t;
 
 /* build score profile for accelerating alignment, in theory */
@@ -403,96 +403,96 @@ fmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
   last = fmap_malloc(sizeof(fmap_sw_dpscore_t) * (len1 + 1), "last");
 
   /* set first row */
-  SET_INF(*curr); curr->M = 0;
+  FMAP_SW_SET_INF(*curr); curr->match_score = 0;
   for (i = 1, s = curr + 1; i < b1; ++i, ++s) {
-      SET_INF(*s);
-      set_end_D(s->D, dpcell[0] + i, s - 1);
+      FMAP_SW_SET_INF(*s);
+      fmap_sw_set_end_del(s->del_score, dpcell[0] + i, s - 1);
   }
   s = curr; curr = last; last = s;
 
   /* core dynamic programming, part 1 */
   tmp_end = (b2 < len2)? b2 : len2 - 1;
   for (j = 1; j <= tmp_end; ++j) {
-      q = dpcell[j]; s = curr; SET_INF(*s);
-      set_end_I(s->I, q, last);
+      q = dpcell[j]; s = curr; FMAP_SW_SET_INF(*s);
+      fmap_sw_set_end_ins(s->ins_score, q, last);
       end = (j + b1 <= len1 + 1)? (j + b1 - 1) : len1;
       mat = score_matrix + seq2[j] * N_MATRIX_ROW;
       ++s; ++q;
       for (i = 1; i != end; ++i, ++s, ++q) {
-          set_M(s->M, q, last + i - 1, mat[seq1[i]]); /* this will change s->M ! */
-          set_I(s->I, q, last + i);
-          set_D(s->D, q, s - 1);
+          fmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]]); /* this will change s->match_score ! */
+          fmap_sw_set_ins(s->ins_score, q, last + i);
+          fmap_sw_set_del(s->del_score, q, s - 1);
       }
-      set_M(s->M, q, last + i - 1, mat[seq1[i]]);
-      set_D(s->D, q, s - 1);
+      fmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]]);
+      fmap_sw_set_del(s->del_score, q, s - 1);
       if (j + b1 - 1 > len1) { /* bug fixed, 040227 */
-          set_end_I(s->I, q, last + i);
-      } else s->I = FMAP_SW_MINOR_INF;
+          fmap_sw_set_end_ins(s->ins_score, q, last + i);
+      } else s->ins_score = FMAP_SW_MINOR_INF;
       s = curr; curr = last; last = s;
   }
-  /* last row for part 1, use set_end_D() instead of set_D() */
+  /* last row for part 1, use fmap_sw_set_end_del() instead of fmap_sw_set_del() */
   if (j == len2 && b2 != len2 - 1) {
-      q = dpcell[j]; s = curr; SET_INF(*s);
-      set_end_I(s->I, q, last);
+      q = dpcell[j]; s = curr; FMAP_SW_SET_INF(*s);
+      fmap_sw_set_end_ins(s->ins_score, q, last);
       end = (j + b1 <= len1 + 1)? (j + b1 - 1) : len1;
       mat = score_matrix + seq2[j] * N_MATRIX_ROW;
       ++s; ++q;
       for (i = 1; i != end; ++i, ++s, ++q) {
-          set_M(s->M, q, last + i - 1, mat[seq1[i]]); /* this will change s->M ! */
-          set_I(s->I, q, last + i);
-          set_end_D(s->D, q, s - 1);
+          fmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]]); /* this will change s->match_score ! */
+          fmap_sw_set_ins(s->ins_score, q, last + i);
+          fmap_sw_set_end_del(s->del_score, q, s - 1);
       }
-      set_M(s->M, q, last + i - 1, mat[seq1[i]]);
-      set_end_D(s->D, q, s - 1);
+      fmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]]);
+      fmap_sw_set_end_del(s->del_score, q, s - 1);
       if (j + b1 - 1 > len1) { /* bug fixed, 040227 */
-          set_end_I(s->I, q, last + i);
-      } else s->I = FMAP_SW_MINOR_INF;
+          fmap_sw_set_end_ins(s->ins_score, q, last + i);
+      } else s->ins_score = FMAP_SW_MINOR_INF;
       s = curr; curr = last; last = s;
       ++j;
   }
 
   /* core dynamic programming, part 2 */
   for (; j <= len2 - b2 + 1; ++j) {
-      SET_INF(curr[j - b2]);
+      FMAP_SW_SET_INF(curr[j - b2]);
       mat = score_matrix + seq2[j] * N_MATRIX_ROW;
       end = j + b1 - 1;
       for (i = j - b2 + 1, q = dpcell[j] + i, s = curr + i; i != end; ++i, ++s, ++q) {
-          set_M(s->M, q, last + i - 1, mat[seq1[i]]);
-          set_I(s->I, q, last + i);
-          set_D(s->D, q, s - 1);
+          fmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]]);
+          fmap_sw_set_ins(s->ins_score, q, last + i);
+          fmap_sw_set_del(s->del_score, q, s - 1);
       }
-      set_M(s->M, q, last + i - 1, mat[seq1[i]]);
-      set_D(s->D, q, s - 1);
-      s->I = FMAP_SW_MINOR_INF;
+      fmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]]);
+      fmap_sw_set_del(s->del_score, q, s - 1);
+      s->ins_score = FMAP_SW_MINOR_INF;
       s = curr; curr = last; last = s;
   }
 
   /* core dynamic programming, part 3 */
   for (; j < len2; ++j) {
-      SET_INF(curr[j - b2]);
+      FMAP_SW_SET_INF(curr[j - b2]);
       mat = score_matrix + seq2[j] * N_MATRIX_ROW;
       for (i = j - b2 + 1, q = dpcell[j] + i, s = curr + i; i < len1; ++i, ++s, ++q) {
-          set_M(s->M, q, last + i - 1, mat[seq1[i]]);
-          set_I(s->I, q, last + i);
-          set_D(s->D, q, s - 1);
+          fmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]]);
+          fmap_sw_set_ins(s->ins_score, q, last + i);
+          fmap_sw_set_del(s->del_score, q, s - 1);
       }
-      set_M(s->M, q, last + len1 - 1, mat[seq1[i]]);
-      set_end_I(s->I, q, last + i);
-      set_D(s->D, q, s - 1);
+      fmap_sw_set_match(s->match_score, q, last + len1 - 1, mat[seq1[i]]);
+      fmap_sw_set_end_ins(s->ins_score, q, last + i);
+      fmap_sw_set_del(s->del_score, q, s - 1);
       s = curr; curr = last; last = s;
   }
   /* last row */
   if (j == len2) {
-      SET_INF(curr[j - b2]);
+      FMAP_SW_SET_INF(curr[j - b2]);
       mat = score_matrix + seq2[j] * N_MATRIX_ROW;
       for (i = j - b2 + 1, q = dpcell[j] + i, s = curr + i; i < len1; ++i, ++s, ++q) {
-          set_M(s->M, q, last + i - 1, mat[seq1[i]]);
-          set_I(s->I, q, last + i);
-          set_end_D(s->D, q, s - 1);
+          fmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]]);
+          fmap_sw_set_ins(s->ins_score, q, last + i);
+          fmap_sw_set_end_del(s->del_score, q, s - 1);
       }
-      set_M(s->M, q, last + len1 - 1, mat[seq1[i]]);
-      set_end_I(s->I, q, last + i);
-      set_end_D(s->D, q, s - 1);
+      fmap_sw_set_match(s->match_score, q, last + len1 - 1, mat[seq1[i]]);
+      fmap_sw_set_end_ins(s->ins_score, q, last + i);
+      fmap_sw_set_end_del(s->del_score, q, s - 1);
       s = curr; curr = last; last = s;
   }
 
@@ -500,9 +500,9 @@ fmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
   i = len1; j = len2;
   q = dpcell[j] + i;
   s = last + len1;
-  max = s->M; type = q->Mt; ctype = FMAP_SW_FROM_M;
-  if (s->I > max) { max = s->I; type = q->It; ctype = FMAP_SW_FROM_I; }
-  if (s->D > max) { max = s->D; type = q->Dt; ctype = FMAP_SW_FROM_D; }
+  max = s->match_score; type = q->match_from; ctype = FMAP_SW_FROM_M;
+  if (s->ins_score > max) { max = s->ins_score; type = q->ins_from; ctype = FMAP_SW_FROM_I; }
+  if (s->del_score > max) { max = s->del_score; type = q->del_from; ctype = FMAP_SW_FROM_D; }
 
   p = path;
   p->ctype = ctype; p->i = i; p->j = j; /* bug fixed 040408 */
@@ -516,9 +516,9 @@ fmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
       q = dpcell[j] + i;
       ctype = type;
       switch (type) {
-        case FMAP_SW_FROM_M: type = q->Mt; break;
-        case FMAP_SW_FROM_I: type = q->It; break;
-        case FMAP_SW_FROM_D: type = q->Dt; break;
+        case FMAP_SW_FROM_M: type = q->match_from; break;
+        case FMAP_SW_FROM_I: type = q->ins_from; break;
+        case FMAP_SW_FROM_D: type = q->del_from; break;
       }
       p->ctype = ctype; p->i = i; p->j = j;
       ++p;

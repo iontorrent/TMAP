@@ -47,7 +47,7 @@ enum {
   */
 enum {
     FMAP_SW_TYPE_LOCAL  = 0, /*!< local alignment */
-    FMAP_SW_TYPE_GLOBAL = 1, /*!< globa alignment */
+    FMAP_SW_TYPE_GLOBAL = 1, /*!< global alignment */
     FMAP_SW_TYPE_EXTEND = 2  /*!< extend an alignment */
 };
 
