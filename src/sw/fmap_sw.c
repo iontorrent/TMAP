@@ -31,7 +31,7 @@
 #include "fmap_sw.h"
 
 /* char -> 17 (=16+1) nucleotides */
-unsigned char fmap_sw_nt16_table[256] = {
+uint8_t fmap_sw_nt16_table[256] = {
     15,15,15,15, 15,15,15,15, 15,15,15,15, 15,15,15,15,
     15,15,15,15, 15,15,15,15, 15,15,15,15, 15,15,15,15,
     15,15,15,15, 15,15,15,15, 15,15,15,15, 15,16 /*'-'*/,15,15,
@@ -52,7 +52,7 @@ unsigned char fmap_sw_nt16_table[256] = {
 char *fmap_sw_nt16_rev_table = "XAGRCMSVTWKDYHBN-";
 
 /* char -> 5 (=4+1) nucleotides */
-unsigned char fmap_sw_nt4_table[256] = {
+uint8_t fmap_sw_nt4_table[256] = {
     4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4, 
     4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4, 
     4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 5 /*'-'*/, 4, 4,
@@ -73,7 +73,7 @@ unsigned char fmap_sw_nt4_table[256] = {
 char *fmap_sw_nt4_rev_table = "AGCTN-";
 
 /* char -> 22 (=20+1+1) amino acids */
-unsigned char fmap_sw_aa_table[256] = {
+uint8_t fmap_sw_aa_table[256] = {
     21,21,21,21, 21,21,21,21, 21,21,21,21, 21,21,21,21,
     21,21,21,21, 21,21,21,21, 21,21,21,21, 21,21,21,21,
     21,21,21,21, 21,21,21,21, 21,21,20,21, 21,22 /*'-'*/,21,21,
@@ -95,7 +95,7 @@ char *fmap_sw_aa_rev_table = "ARNDCQEGHILKMFPSTWYV*X-";
 /* 01234567890123456789012 */
 
 /* translation table. They are useless in stdaln.c, but when you realize you need it, you need not write the table again. */
-unsigned char fmap_sw_trans_table_eu[66] = {
+uint8_t fmap_sw_trans_table_eu[66] = {
     11,11, 2, 2,  1, 1,15,15, 16,16,16,16,  9,12, 9, 9,
     6, 6, 3, 3,  7, 7, 7, 7,  0, 0, 0, 0, 19,19,19,19,
     5, 5, 8, 8,  1, 1, 1, 1, 14,14,14,14, 10,10,10,10,
@@ -103,7 +103,64 @@ unsigned char fmap_sw_trans_table_eu[66] = {
 };
 char *fmap_sw_trans_table_eu_char = "KKNNRRSSTTTTIMIIEEDDGGGGAAAAVVVVQQHHRRRRPPPPLLLL**YY*WCCSSSSLLFFX";
 /* 01234567890123456789012345678901234567890123456789012345678901234 */
-int fmap_sw_sm_blosum62[] = {
+
+int32_t fmap_sw_sm_short[] = {
+    11, -19, -19, -19, -13,
+    -19, 11, -19, -19, -13,
+    -19, -19, 11, -19, -13,
+    -19, -19, -19, 11, -13,
+    -13, -13, -13, -13, -13
+};
+
+int32_t fmap_sw_sm_blast[] = {
+    1, -3, -3, -3, -2,
+    -3, 1, -3, -3, -2,
+    -3, -3, 1, -3, -2,
+    -3, -3, -3, 1, -2,
+    -2, -2, -2, -2, -2
+};
+
+int32_t fmap_sw_sm_nt[] = {
+    /*	 X  A  G  R  C  M  S  V  T  W  K  D  Y  H  B  N */
+    -2,-2,-2,-2,-2,-2,-2,-2,-2,-2,-2,-2,-2,-2,-2,-2,
+    -2, 2,-1, 1,-2, 1,-2, 0,-2, 1,-2, 0,-2, 0,-2, 0,
+    -2,-1, 2, 1,-2,-2, 1, 0,-2,-2, 1, 0,-2,-2, 0, 0,
+    -2, 1, 1, 1,-2,-1,-1, 0,-2,-1,-1, 0,-2, 0, 0, 0,
+    -2,-2,-2,-2, 2, 1, 1, 0,-1,-2,-2,-2, 1, 0, 0, 0,
+    -2, 1,-2,-1, 1, 1,-1, 0,-2,-1,-2, 0,-1, 0, 0, 0,
+    -2,-2, 1,-1, 1,-1, 1, 0,-2,-2,-1, 0,-1, 0, 0, 0,
+    -2, 0, 0, 0, 0, 0, 0, 0,-2, 0, 0, 0, 0, 0, 0, 0,
+    -2,-2,-2,-2,-1,-2,-2,-2, 2, 1, 1, 0, 1, 0, 0, 0,
+    -2, 1,-2,-1,-2,-1,-2, 0, 1, 1,-1, 0,-1, 0, 0, 0,
+    -2,-2, 1,-1,-2,-2,-1, 0, 1,-1, 1, 0,-1, 0, 0, 0,
+    -2, 0, 0, 0,-2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    -2,-2,-2,-2, 1,-1,-1, 0, 1,-1,-1, 0, 1, 0, 0, 0,
+    -2, 0,-2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    -2,-2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    -2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
+
+int32_t fmap_sw_sm_read[] = {
+    /*	  X   A   G   R   C   M   S   V   T   W   K   D   Y   H   B   N  */
+    -17,-17,-17,-17,-17,-17,-17,-17,-17,-17,-17,-17,-17,-17,-17,-17,
+    -17,  2,-17,  1,-17,  1,-17,  0,-17,  1,-17,  0,-17,  0,-17,  0,
+    -17,-17,  2,  1,-17,-17,  1,  0,-17,-17,  1,  0,-17,-17,  0,  0,
+    -17,  1,  1,  1,-17,-17,-17,  0,-17,-17,-17,  0,-17,  0,  0,  0,
+    -17,-17,-17,-17,  2,  1,  1,  0,-17,-17,-17,-17,  1,  0,  0,  0,
+    -17,  1,-17,-17,  1,  1,-17,  0,-17,-17,-17,  0,-17,  0,  0,  0,
+    -17,-17,  1,-17,  1,-17,  1,  0,-17,-17,-17,  0,-17,  0,  0,  0,
+    -17,  0,  0,  0,  0,  0,  0,  0,-17,  0,  0,  0,  0,  0,  0,  0,
+    -17,-17,-17,-17,-17,-17,-17,-17,  2,  1,  1,  0,  1,  0,  0,  0,
+    -17,  1,-17,-17,-17,-17,-17,  0,  1,  1,-17,  0,-17,  0,  0,  0,
+    -17,-17,  1,-17,-17,-17,-17,  0,  1,-17,  1,  0,-17,  0,  0,  0,
+    -17,  0,  0,  0,-17,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    -17,-17,-17,-17,  1,-17,-17,  0,  1,-17,-17,  0,  1,  0,  0,  0,
+    -17,  0,-17,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    -17,-17,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    -17,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
+};
+
+int32_t fmap_sw_sm_blosum62[] = {
     /*	 A  R  N  D  C  Q  E  G  H  I  L  K  M  F  P  S  T  W  Y  V  *  X */
     4,-1,-2,-2, 0,-1,-1, 0,-2,-1,-1,-1,-1,-2,-1, 1, 0,-3,-2, 0,-4, 0,
     -1, 5, 0,-2,-3, 1, 0,-2, 0,-3,-2, 2,-1,-3,-2,-1,-1,-3,-2,-3,-4,-1,
@@ -129,7 +186,7 @@ int fmap_sw_sm_blosum62[] = {
     0,-1,-1,-1,-2,-1,-1,-1,-1,-1,-1,-1,-1,-1,-2, 0, 0,-2,-1,-1,-4,-1
 };
 
-int fmap_sw_sm_blosum45[] = {
+int32_t fmap_sw_sm_blosum45[] = {
     /*	 A  R  N  D  C  Q  E  G  H  I  L  K  M  F  P  S  T  W  Y  V  *  X */
     5,-2,-1,-2,-1,-1,-1, 0,-2,-1,-1,-1,-1,-2,-1, 1, 0,-2,-2, 0,-5, 0,
     -2, 7, 0,-1,-3, 1, 0,-2, 0,-3,-2, 3,-1,-2,-2,-1,-1,-2,-1,-2,-5,-1,
@@ -155,47 +212,7 @@ int fmap_sw_sm_blosum45[] = {
     0,-1,-1,-1,-2,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, 0, 0,-2,-1,-1,-5,-1
 };
 
-int fmap_sw_sm_nt[] = {
-    /*	 X  A  G  R  C  M  S  V  T  W  K  D  Y  H  B  N */
-    -2,-2,-2,-2,-2,-2,-2,-2,-2,-2,-2,-2,-2,-2,-2,-2,
-    -2, 2,-1, 1,-2, 1,-2, 0,-2, 1,-2, 0,-2, 0,-2, 0,
-    -2,-1, 2, 1,-2,-2, 1, 0,-2,-2, 1, 0,-2,-2, 0, 0,
-    -2, 1, 1, 1,-2,-1,-1, 0,-2,-1,-1, 0,-2, 0, 0, 0,
-    -2,-2,-2,-2, 2, 1, 1, 0,-1,-2,-2,-2, 1, 0, 0, 0,
-    -2, 1,-2,-1, 1, 1,-1, 0,-2,-1,-2, 0,-1, 0, 0, 0,
-    -2,-2, 1,-1, 1,-1, 1, 0,-2,-2,-1, 0,-1, 0, 0, 0,
-    -2, 0, 0, 0, 0, 0, 0, 0,-2, 0, 0, 0, 0, 0, 0, 0,
-    -2,-2,-2,-2,-1,-2,-2,-2, 2, 1, 1, 0, 1, 0, 0, 0,
-    -2, 1,-2,-1,-2,-1,-2, 0, 1, 1,-1, 0,-1, 0, 0, 0,
-    -2,-2, 1,-1,-2,-2,-1, 0, 1,-1, 1, 0,-1, 0, 0, 0,
-    -2, 0, 0, 0,-2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    -2,-2,-2,-2, 1,-1,-1, 0, 1,-1,-1, 0, 1, 0, 0, 0,
-    -2, 0,-2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    -2,-2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    -2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-
-int fmap_sw_sm_read[] = {
-    /*	  X   A   G   R   C   M   S   V   T   W   K   D   Y   H   B   N  */
-    -17,-17,-17,-17,-17,-17,-17,-17,-17,-17,-17,-17,-17,-17,-17,-17,
-    -17,  2,-17,  1,-17,  1,-17,  0,-17,  1,-17,  0,-17,  0,-17,  0,
-    -17,-17,  2,  1,-17,-17,  1,  0,-17,-17,  1,  0,-17,-17,  0,  0,
-    -17,  1,  1,  1,-17,-17,-17,  0,-17,-17,-17,  0,-17,  0,  0,  0,
-    -17,-17,-17,-17,  2,  1,  1,  0,-17,-17,-17,-17,  1,  0,  0,  0,
-    -17,  1,-17,-17,  1,  1,-17,  0,-17,-17,-17,  0,-17,  0,  0,  0,
-    -17,-17,  1,-17,  1,-17,  1,  0,-17,-17,-17,  0,-17,  0,  0,  0,
-    -17,  0,  0,  0,  0,  0,  0,  0,-17,  0,  0,  0,  0,  0,  0,  0,
-    -17,-17,-17,-17,-17,-17,-17,-17,  2,  1,  1,  0,  1,  0,  0,  0,
-    -17,  1,-17,-17,-17,-17,-17,  0,  1,  1,-17,  0,-17,  0,  0,  0,
-    -17,-17,  1,-17,-17,-17,-17,  0,  1,-17,  1,  0,-17,  0,  0,  0,
-    -17,  0,  0,  0,-17,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    -17,-17,-17,-17,  1,-17,-17,  0,  1,-17,-17,  0,  1,  0,  0,  0,
-    -17,  0,-17,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    -17,-17,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    -17,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
-};
-
-int fmap_sw_sm_hs[] = {
+int32_t fmap_sw_sm_hs[] = {
     /*     A    G    C    T    N */
     91, -31,-114,-123, -44,
     -31, 100,-125,-114, -42,
@@ -204,41 +221,17 @@ int fmap_sw_sm_hs[] = {
     -44, -42, -42, -42, -43
 };
 
-int fmap_sw_sm_maq[] = {
-    11, -19, -19, -19, -13,
-    -19, 11, -19, -19, -13,
-    -19, -19, 11, -19, -13,
-    -19, -19, -19, 11, -13,
-    -13, -13, -13, -13, -13
-};
-
-int fmap_sw_sm_blast[] = {
-    1, -3, -3, -3, -2,
-    -3, 1, -3, -3, -2,
-    -3, -3, 1, -3, -2,
-    -3, -3, -3, 1, -2,
-    -2, -2, -2, -2, -2
-};
-
-int fmap_sw_sm_bwa[] = {
-    3, -9, -9, -9, -6,
-    -9,  3, -9, -9, -6,
-    -9, -9, 3, -9, -6,
-    -9, -9, -9, 3, -6,
-    -6, -6, -6, -6, -6
-};
-
 /********************/
 /* START OF align.c */
 /********************/
 
+fmap_sw_param_t fmap_sw_param_short   = { 13,  2,  2, fmap_sw_sm_short, 5, 50 }; /* e=1.21%; T=2.18 */
 fmap_sw_param_t fmap_sw_param_blast   = {  5,  2,  2, fmap_sw_sm_blast, 5, 50 };
-fmap_sw_param_t fmap_sw_param_bwa     = { 13,  2,  2, fmap_sw_sm_bwa, 5, 50 }; /* e=1.21%; T=2.18 */
 fmap_sw_param_t fmap_sw_param_nt2nt   = {  8,  2,  2, fmap_sw_sm_nt, 16, 75 };
 fmap_sw_param_t fmap_sw_param_rd2rd   = {  1, 19, 19, fmap_sw_sm_read, 16, 75 };
 fmap_sw_param_t fmap_sw_param_aa2aa   = { 10,  2,  2, fmap_sw_sm_blosum62, 22, 50 };
 
-static fmap_sw_aln_t *
+fmap_sw_aln_t *
 fmap_sw_aln_init()
 {
   fmap_sw_aln_t *aa;
@@ -249,7 +242,7 @@ fmap_sw_aln_init()
   return aa;
 }
 
-static void 
+void 
 fmap_sw_aln_destroy(fmap_sw_aln_t *aa)
 {
   free(aa->path); free(aa->cigar32);
@@ -336,7 +329,7 @@ fmap_sw_aln_destroy(fmap_sw_aln_t *aa)
 
 typedef struct
 {
-  unsigned char Mt:3, It:2, Dt:2;
+  uint8_t Mt:3, It:2, Dt:2;
 } fmap_sw_dpcell_t;
 
 typedef struct
@@ -346,9 +339,9 @@ typedef struct
 
 /* build score profile for accelerating alignment, in theory */
 void 
-fmap_sw_score_array_init(unsigned char *seq, int len, int row, int *score_matrix, int **s_array)
+fmap_sw_score_array_init(uint8_t *seq, int32_t len, int32_t row, int32_t *score_matrix, int32_t **s_array)
 {
-  int *tmp, *tmp2, i, k;
+  int32_t *tmp, *tmp2, i, k;
   for (i = 0; i != row; ++i) {
       tmp = score_matrix + i * row;
       tmp2 = s_array[i];
@@ -360,9 +353,9 @@ fmap_sw_score_array_init(unsigned char *seq, int len, int row, int *score_matrix
 /***************************
  * banded global alignment *
  ***************************/
-int 
-fmap_sw_global_core(unsigned char *seq1, int len1, unsigned char *seq2, int len2, const fmap_sw_param_t *ap,
-                    fmap_sw_path_t *path, int *path_len)
+int32_t 
+fmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const fmap_sw_param_t *ap,
+                    fmap_sw_path_t *path, int32_t *path_len)
 {
   register int32_t i, j;
   fmap_sw_dpcell_t **dpcell, *q;
@@ -370,7 +363,7 @@ fmap_sw_global_core(unsigned char *seq1, int len1, unsigned char *seq2, int len2
   fmap_sw_path_t *p;
   int32_t b1, b2, tmp_end;
   int32_t *mat, end, max;
-  unsigned char type, ctype;
+  uint8_t type, ctype;
 
   int32_t gap_open, gap_ext, gap_end, b;
   int32_t *score_matrix, N_MATRIX_ROW;
@@ -546,25 +539,25 @@ fmap_sw_global_core(unsigned char *seq1, int len1, unsigned char *seq2, int len2
 /*************************************************
  * local alignment combined with banded strategy *
  *************************************************/
-int 
-fmap_sw_local_core(unsigned char *seq1, int len1, unsigned char *seq2, int len2, const fmap_sw_param_t *ap,
-                   fmap_sw_path_t *path, int *path_len, int _thres, int *_subo)
+int32_t 
+fmap_sw_local_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const fmap_sw_param_t *ap,
+                   fmap_sw_path_t *path, int32_t *path_len, int32_t _thres, int32_t *_subo)
 {
   register FMAP_SW_NT_LOCAL_SCORE *s;
-  register int i;
-  int q, r, qr, tmp_len, qr_shift;
-  int **s_array, *score_array;
-  int e, f;
-  int is_overflow, of_base;
+  register int32_t i;
+  int32_t q, r, qr, tmp_len, qr_shift;
+  int32_t **s_array, *score_array;
+  int32_t e, f;
+  int32_t is_overflow, of_base;
   FMAP_SW_NT_LOCAL_SCORE *eh, curr_h, last_h, curr_last_h;
-  int j, start_i, start_j, end_i, end_j;
+  int32_t j, start_i, start_j, end_i, end_j;
   fmap_sw_path_t *p;
-  int score_f, score_r, score_g;
-  int start, end, max_score;
-  int thres, *suba, *ss;
+  int32_t score_f, score_r, score_g;
+  int32_t start, end, max_score;
+  int32_t thres, *suba, *ss;
 
-  int gap_open, gap_ext, b;
-  int *score_matrix, N_MATRIX_ROW;
+  int32_t gap_open, gap_ext, b;
+  int32_t *score_matrix, N_MATRIX_ROW;
 
   /* initialize some align-related parameters. just for compatibility */
   gap_open = ap->gap_open;
@@ -577,11 +570,11 @@ fmap_sw_local_core(unsigned char *seq1, int len1, unsigned char *seq2, int len2,
   if (len1 == 0 || len2 == 0) return -1;
 
   /* allocate memory */
-  suba = fmap_malloc(sizeof(int) * (len2 + 1), "suba");
+  suba = fmap_malloc(sizeof(int32_t) * (len2 + 1), "suba");
   eh = fmap_malloc(sizeof(FMAP_SW_NT_LOCAL_SCORE) * (len1 + 1), "eh");
-  s_array = fmap_malloc(sizeof(int*) * N_MATRIX_ROW, "s_array");
+  s_array = fmap_malloc(sizeof(int32_t*) * N_MATRIX_ROW, "s_array");
   for (i = 0; i != N_MATRIX_ROW; ++i)
-    s_array[i] = fmap_malloc(sizeof(int) * len1, "s_array[i]");
+    s_array[i] = fmap_malloc(sizeof(int32_t) * len1, "s_array[i]");
   /* initialization */
   fmap_sw_score_array_init(seq1, len1, N_MATRIX_ROW, score_matrix, s_array);
   q = gap_open;
@@ -602,7 +595,7 @@ fmap_sw_local_core(unsigned char *seq1, int len1, unsigned char *seq2, int len2,
   is_overflow = of_base = 0;
   suba[0] = 0;
   for (j = 1, ss = suba + 1; j <= len2; ++j, ++ss) {
-      int subo = 0;
+      int32_t subo = 0;
       last_h = f = 0;
       score_array = s_array[seq2[j]];
       if (is_overflow) { /* adjust eh[] array if overflow occurs. */
@@ -612,7 +605,7 @@ fmap_sw_local_core(unsigned char *seq1, int len1, unsigned char *seq2, int len2,
            * Acually, smaller FMAP_SW_LOCAL_OVERFLOW_REDUCE might also help to reduce the
            * number of assignments because it sets some cells to zero when overflow
            * happens. */
-          int tmp, tmp2;
+          int32_t tmp, tmp2;
           score_f -= FMAP_SW_LOCAL_OVERFLOW_REDUCE;
           of_base += FMAP_SW_LOCAL_OVERFLOW_REDUCE;
           is_overflow = 0;
@@ -673,7 +666,7 @@ fmap_sw_local_core(unsigned char *seq1, int len1, unsigned char *seq2, int len2,
       last_h = f = 0;
       score_array = s_array[seq2[j]];
       if (is_overflow) { /* adjust eh[] array if overflow occurs. */
-          int tmp, tmp2;
+          int32_t tmp, tmp2;
           score_r -= FMAP_SW_LOCAL_OVERFLOW_REDUCE;
           of_base += FMAP_SW_LOCAL_OVERFLOW_REDUCE;
           is_overflow = 0;
@@ -717,10 +710,10 @@ fmap_sw_local_core(unsigned char *seq1, int len1, unsigned char *seq2, int len2,
   }
 
   if (_subo) {
-      int tmp2 = 0, tmp = (int)(start_j - .33 * (end_j - start_j) + .499);
+      int32_t tmp2 = 0, tmp = (int32_t)(start_j - .33 * (end_j - start_j) + .499);
       for (j = 1; j <= tmp; ++j)
         if (tmp2 < suba[j]) tmp2 = suba[j];
-      tmp = (int)(end_j + .33 * (end_j - start_j) + .499);
+      tmp = (int32_t)(end_j + .33 * (end_j - start_j) + .499);
       for (j = tmp; j <= len2; ++j)
         if (tmp2 < suba[j]) tmp2 = suba[j];
       *_subo = tmp2;
@@ -780,13 +773,14 @@ end_func:
   free(s_array);
   return score_f;
 }
+
 fmap_sw_aln_t *
 fmap_sw_stdaln_aux(const char *seq1, const char *seq2, const fmap_sw_param_t *ap,
-                       int type, int thres, int len1, int len2)
+                       int32_t type, int32_t thres, int32_t len1, int32_t len2)
 {
-  unsigned char *seq11, *seq22;
-  int score;
-  int i, j, l;
+  uint8_t *seq11, *seq22;
+  int32_t score;
+  int32_t i, j, l;
   fmap_sw_path_t *p;
   char *out1, *out2, *outm;
   fmap_sw_aln_t *aa;
@@ -795,25 +789,25 @@ fmap_sw_stdaln_aux(const char *seq1, const char *seq2, const fmap_sw_param_t *ap
   if (len2 < 0) len2 = strlen(seq2);
 
   aa = fmap_sw_aln_init();
-  seq11 = fmap_malloc(sizeof(unsigned char) * len1, "seq11");
-  seq22 = fmap_malloc(sizeof(unsigned char) * len2, "seq22");
+  seq11 = fmap_malloc(sizeof(uint8_t) * len1, "seq11");
+  seq22 = fmap_malloc(sizeof(uint8_t) * len2, "seq22");
   aa->path = fmap_malloc(sizeof(fmap_sw_path_t) * (len1 + len2 + 1), "aa->path");
 
   if (ap->row < 10) { /* 4-nucleotide alignment */
       for (i = 0; i < len1; ++i)
-        seq11[i] = fmap_sw_nt4_table[(int)seq1[i]];
+        seq11[i] = fmap_sw_nt4_table[(int32_t)seq1[i]];
       for (j = 0; j < len2; ++j)
-        seq22[j] = fmap_sw_nt4_table[(int)seq2[j]];
+        seq22[j] = fmap_sw_nt4_table[(int32_t)seq2[j]];
   } else if (ap->row < 20) { /* 16-nucleotide alignment */
       for (i = 0; i < len1; ++i)
-        seq11[i] = fmap_sw_nt16_table[(int)seq1[i]];
+        seq11[i] = fmap_sw_nt16_table[(int32_t)seq1[i]];
       for (j = 0; j < len2; ++j)
-        seq22[j] = fmap_sw_nt16_table[(int)seq2[j]];
+        seq22[j] = fmap_sw_nt16_table[(int32_t)seq2[j]];
   } else { /* amino acids */
       for (i = 0; i < len1; ++i)
-        seq11[i] = fmap_sw_aa_table[(int)seq1[i]];
+        seq11[i] = fmap_sw_aa_table[(int32_t)seq1[i]];
       for (j = 0; j < len2; ++j)
-        seq22[j] = fmap_sw_aa_table[(int)seq2[j]];
+        seq22[j] = fmap_sw_aa_table[(int32_t)seq2[j]];
   }
 
   if (type == FMAP_SW_TYPE_GLOBAL) score = fmap_sw_global_core(seq11, len1, seq22, len2, ap, aa->path, &aa->path_len);
@@ -857,43 +851,29 @@ fmap_sw_stdaln_aux(const char *seq1, const char *seq2, const fmap_sw_param_t *ap
   aa->end1 = aa->path->i;
   aa->start2 = p->j? p->j : 1;
   aa->end2 = aa->path->j;
-  aa->cigar32 = fmap_sw_path2cigar32(aa->path, aa->path_len, &aa->n_cigar);
+  aa->cigar32 = fmap_sw_path2cigar(aa->path, aa->path_len, &aa->n_cigar);
 
   return aa;
 }
 
 fmap_sw_aln_t *
-fmap_sw_stdaln(const char *seq1, const char *seq2, const fmap_sw_param_t *ap, int type, int thres)
+fmap_sw_stdaln(const char *seq1, const char *seq2, const fmap_sw_param_t *ap, int32_t type, int32_t thres)
 {
   return fmap_sw_stdaln_aux(seq1, seq2, ap, type, thres, -1, -1);
 }
 
-/* for backward compatibility */
-uint16_t *
-fmap_sw_path2cigar(const fmap_sw_path_t *path, int path_len, int *n_cigar)
-{
-  uint32_t *cigar32;
-  uint16_t *cigar;
-  int i;
-  cigar32 = fmap_sw_path2cigar32(path, path_len, n_cigar);
-  cigar = (uint16_t*)cigar32;
-  for (i = 0; i < *n_cigar; ++i)
-    cigar[i] = (cigar32[i]&0xf)<<14 | (cigar32[i]>>4&0x3fff);
-  return cigar;
-}
-
 /* newly added functions (2009-07-21) */
-int 
-fmap_sw_extend_core(unsigned char *seq1, int len1, unsigned char *seq2, int len2, const fmap_sw_param_t *ap,
-                    fmap_sw_path_t *path, int *path_len, int G0, uint8_t *_mem)
+int32_t 
+fmap_sw_extend_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const fmap_sw_param_t *ap,
+                    fmap_sw_path_t *path, int32_t *path_len, int32_t G0, uint8_t *_mem)
 {
-  int q, r, qr, tmp_len;
+  int32_t q, r, qr, tmp_len;
   int32_t **s_array, *score_array;
-  int is_overflow, of_base;
+  int32_t is_overflow, of_base;
   uint32_t *eh;
-  int i, j, end_i, end_j;
-  int score, start, end;
-  int *score_matrix, N_MATRIX_ROW;
+  int32_t i, j, end_i, end_j;
+  int32_t score, start, end;
+  int32_t *score_matrix, N_MATRIX_ROW;
   uint8_t *mem, *_p;
 
   /* initialize some align-related parameters. just for compatibility */
@@ -927,8 +907,8 @@ fmap_sw_extend_core(unsigned char *seq1, int len1, unsigned char *seq2, int len2
   memset(eh, 0, 4 * (len1 + 2));
   eh[1] = (uint32_t)G0<<16;
   for (j = 1; j <= len2; ++j) {
-      int _start, _end;
-      int h1 = 0, f = 0;
+      int32_t _start, _end;
+      int32_t h1 = 0, f = 0;
       score_array = s_array[seq2[j]];
       /* set start and end */
       _start = j - ap->band_width;
@@ -940,7 +920,7 @@ fmap_sw_extend_core(unsigned char *seq1, int len1, unsigned char *seq2, int len2
       if (start == end) break;
       /* adjust eh[] array if overflow occurs. */
       if (is_overflow) {
-          int tmp, tmp2;
+          int32_t tmp, tmp2;
           score -= FMAP_SW_LOCAL_OVERFLOW_REDUCE;
           of_base += FMAP_SW_LOCAL_OVERFLOW_REDUCE;
           is_overflow = 0;
@@ -963,8 +943,8 @@ fmap_sw_extend_core(unsigned char *seq1, int len1, unsigned char *seq2, int len2
              h1    -> h[j,i-1]
              */
           uint32_t *s = &eh[i];
-          int h = (int)(*s >> 16);
-          int e = *s & 0xffff; /* this is e[j,i] */
+          int32_t h = (int32_t)(*s >> 16);
+          int32_t e = *s & 0xffff; /* this is e[j,i] */
           *s = (uint32_t)h1 << 16; /* eh[i] now stores h[j,i-1]<<16 */
           h += h? score_array[i] : 0; /* this is left_core() specific */
           /* calculate h[j,i]; don't need to test 0, as {e,f}>=0 */
@@ -1009,7 +989,7 @@ fmap_sw_extend_core(unsigned char *seq1, int len1, unsigned char *seq2, int len2
   }
 
     { /* call global alignment to fill the path */
-      int score_g = 0;
+      int32_t score_g = 0;
       j = (end_i - 1 > end_j - 1)? end_i - 1 : end_j - 1;
       ++j; /* j is the maximum band_width */
       for (i = ap->band_width;; i <<= 1) {
@@ -1033,11 +1013,11 @@ end_left_func:
 }
 
 uint32_t *
-fmap_sw_path2cigar32(const fmap_sw_path_t *path, int path_len, int *n_cigar)
+fmap_sw_path2cigar(const fmap_sw_path_t *path, int32_t path_len, int32_t *n_cigar)
 {
-  int i, n;
+  int32_t i, n;
   uint32_t *cigar;
-  unsigned char last_type;
+  uint8_t last_type;
 
   if (path_len == 0 || path == 0) {
       *n_cigar = 0;

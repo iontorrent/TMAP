@@ -32,92 +32,247 @@
   Functions for Performing Efficient Smith-Waterman
   */
 
-// TODO: document
+/*!
+  From which cell; helps recovert the best scoring path.
+  */
+enum {
+    FMAP_SW_FROM_M = 0, /*!< from a mismatch cell*/
+    FMAP_SW_FROM_I = 1, /*!< from an insertion cell */
+    FMAP_SW_FROM_D = 2, /*!< from a deletion cell */
+    FMAP_SW_FROM_S = 3  /*!< from a start cell */
+};
 
-#define FMAP_SW_FROM_M 0
-#define FMAP_SW_FROM_I 1
-#define FMAP_SW_FROM_D 2
-#define FMAP_SW_FROM_S 3
+/*!
+  The type of Smith-Waterman to perform.
+  */
+enum {
+    FMAP_SW_TYPE_LOCAL  = 0, /*!< local alignment */
+    FMAP_SW_TYPE_GLOBAL = 1, /*!< globa alignment */
+    FMAP_SW_TYPE_EXTEND = 2  /*!< extend an alignment */
+};
 
-#define FMAP_SW_TYPE_LOCAL  0
-#define FMAP_SW_TYPE_GLOBAL 1
-#define FMAP_SW_TYPE_EXTEND 2
-
-/* This is the smallest integer. It might be CPU-dependent in very RARE cases. */
-//#define FMAP_SW_MINOR_INF -1073741823
+/*! This is the smallest integer for Smith-Waterman alignment. It might be CPU-dependent in very RARE cases. */
 #define FMAP_SW_MINOR_INF INT32_MIN/2
+//#define FMAP_SW_MINOR_INF -1073741823
 
+/*!
+  Parameters for the Smith-Waterman alignment.
+  @details  The gap penalties should be positive (they will be subtracted)
+  while the substitution score should be positive for matches, and negative for
+  mismatches (they will be added).
+  */
 typedef struct
 {
-  int32_t gap_open;
-  int32_t gap_ext;
-  int32_t gap_end;
-
-  int32_t *matrix;
-  int32_t row;
-  int32_t band_width;
+  int32_t gap_open; /*!< gap open penalty (positive) */
+  int32_t gap_ext; /*!< gap extension penalty (positive) */
+  int32_t gap_end; /*!< gap end penalty (positive */
+  int32_t *matrix; /*!< substitution matrix (see details)*/
+  int32_t row; /*!< the alphabet size */  
+  int32_t band_width; /*!< for Smith-Waterman banding */
 } fmap_sw_param_t;
 
+/*!
+  The best-scoring alignment path.
+  */
 typedef struct
 {
-  int32_t i, j;
-  unsigned char ctype;
+  int32_t i; /*!< the seq1 index (0-based) */
+  int32_t j; /*!< the seq2 index (0-based) */
+  uint8_t ctype; /*!< the edit operator applied */
 } fmap_sw_path_t;
 
+/*!
+  Stores a Smith Waterman alignment.
+  */
 typedef struct
 {
-  fmap_sw_path_t *path; /* for advanced users... :-) */
-  int32_t path_len; /* for advanced users... :-) */
-  int32_t start1, end1; /* start and end of the first sequence, coordinations are 1-based */
-  int32_t start2, end2; /* start and end of the second sequence, coordinations are 1-based */
-  int32_t score, subo; /* score */
-
-  char *out1, *out2; /* print32_t them, and then you will know */
-  char *outm;
-
-  int32_t n_cigar;
-  uint32_t *cigar32;
+  fmap_sw_path_t *path; /*!< Smith-Waterman alignment path */
+  int32_t path_len; /*!< The path length */
+  int32_t start1; /*!< the start of the first sequence (1-based) */
+  int32_t end1; /*!< the end of the first sequence (1-based) */
+  int32_t start2; /*!< the start of the second sequence (1-based) */
+  int32_t end2; /*!< the end of the second sequence (1-based) */
+  int32_t score; /*!< the alignment score */
+  int32_t subo; /*!< the sub-optimal alignment score (next best) */
+  char *out1; /*!< sequence 1 alignment string */ 
+  char *out2; /*!< sequence 2 alignment string */ 
+  char *outm; /*!< match/indel alignment string */
+  int32_t n_cigar; /*!< the number of cigar operators */
+  uint32_t *cigar32; /*!< the cigar operators */
 } fmap_sw_aln_t;
 
+/*!
+  Initialize an alignment
+  @return  a pointer to the initialized memory
+  */
+fmap_sw_aln_t *
+fmap_sw_aln_init();
+
+/*!
+  Destroy an alignment
+  @param  aa  pointer to the alignment
+  */
+void
+fmap_sw_aln_destroy(fmap_sw_aln_t *aa);
+
+/*!
+  Performs Smith-Waterman alignment.
+  @details  actually, it performs banded Smith-Waterman.
+  @param  seq1   the first DNA sequence (character array)
+  @param  seq2   the second DNA sequence (character array)
+  @param  ap     the alignment parameters
+  @param  type   the Smith-Waterman type (global, local, extend)
+  @param  thres  the scoring threshold for local alignment only (the absolute value will be taken); a value zero or negative value will cause no path to be filled
+  @param  len1   the length of the first sequence to align, or -1 to align the full sequence
+  @param  len2   the length of the second sequence to align, or -1 to align the full sequence
+  @return        the Smith-Waterman alignment
+  */
 fmap_sw_aln_t *
 fmap_sw_stdaln_aux(const char *seq1, const char *seq2, const fmap_sw_param_t *ap,
-                       int32_t type, int32_t do_align, int32_t len1, int32_t len2);
+                   int32_t type, int32_t thres , int32_t len1, int32_t len2);
 
+/*!
+  Performs Smith-Waterman alignment.
+  @details  actually, it performs banded Smith-Waterman.
+  @param  seq1   the first DNA sequence (in 2-bit format)
+  @param  seq2   the second DNA sequence (in 2-bit format)
+  @param  ap     the alignment parameters
+  @param  type   the Smith-Waterman type (global, local, extend)
+  @param  thres  the scoring threshold for local alignment only (the absolute value will be taken); a value zero or negative value will cause no path to be filled
+  @return        the Smith-Waterman alignment
+  */
 fmap_sw_aln_t *
-fmap_sw_stdaln(const char *seq1, const char *seq2, const fmap_sw_param_t *ap, int32_t type, int32_t do_align);
+fmap_sw_stdaln(const char *seq1, const char *seq2, const fmap_sw_param_t *ap, int32_t type, int32_t thres);
 
-void fmap_sw_free_fmap_sw_aln_t(fmap_sw_aln_t *aa);
-
-int32_t fmap_sw_global_core(unsigned char *seq1, int32_t len1, unsigned char *seq2, int32_t len2, const fmap_sw_param_t *ap,
+/*!
+  Performs the global Smith-Waterman alignment.
+  @details          actually, it performs it with banding.
+  @param  seq1      the first DNA sequence (in 2-bit format)
+  @param  len1      the length of the first sequence
+  @param  seq2      the second DNA sequence (in 2-bit format)
+  @param  len2      the length of the second sequence
+  @param  ap        the alignment parameters
+  @param  path      the Smith-Waterman alignment path
+  @param  path_len  the Smith-Waterman alignment path length
+  @return           the alignment score, 0 if none was found
+  */
+int32_t 
+fmap_sw_global_core(uint8_t *seq1, int32_t len1, 
+                    uint8_t *seq2, int32_t len2, 
+                    const fmap_sw_param_t *ap,
                     fmap_sw_path_t *path, int32_t *path_len);
-int32_t fmap_sw_local_core(unsigned char *seq1, int32_t len1, unsigned char *seq2, int32_t len2, const fmap_sw_param_t *ap,
-                   fmap_sw_path_t *path, int32_t *path_len, int32_t _thres, int32_t *_subo);
-int32_t fmap_sw_extend_core(unsigned char *seq1, int32_t len1, unsigned char *seq2, int32_t len2, const fmap_sw_param_t *ap,
-                    fmap_sw_path_t *path, int32_t *path_len, int32_t G0, uint8_t *_mem);
-uint16_t *fmap_sw_path2cigar(const fmap_sw_path_t *path, int32_t path_len, int32_t *n_cigar);
-uint32_t *fmap_sw_path2cigar32(const fmap_sw_path_t *path, int32_t path_len, int32_t *n_cigar);
+
+/*!
+  Performs the local Smith-Waterman alignment.
+  @details          actually, it performs it with banding.
+  @param  seq1      the first DNA sequence (in 2-bit format)
+  @param  len1      the length of the first sequence
+  @param  seq2      the second DNA sequence (in 2-bit format)
+  @param  len2      the length of the second sequence
+  @param  ap        the alignment parameters
+  @param  path      the Smith-Waterman alignment path
+  @param  path_len  the Smith-Waterman alignment path length
+  @param  _thres    the scoring threshold for local alignment only (the absolute value will be taken); a value zero or negative value will cause no path to be filled
+  @param  _subo     the sub-optimal alignment score (next best) 
+  @return           the alignment score, 0 if none was found
+  */
+int32_t 
+fmap_sw_local_core(uint8_t *seq1, int32_t len1, 
+                   uint8_t *seq2, int32_t len2, 
+                   const fmap_sw_param_t *ap,
+                   fmap_sw_path_t *path, int32_t *path_len, 
+                   int32_t _thres, int32_t *_subo);
+
+/*!
+  Extens an alignment with the local Smith-Waterman.
+  @details          actually, it performs it with banding.
+  @param  seq1      the first DNA sequence (in 2-bit format)
+  @param  len1      the length of the first sequence
+  @param  seq2      the second DNA sequence (in 2-bit format)
+  @param  len2      the length of the second sequence
+  @param  ap        the alignment parameters
+  @param  path      the Smith-Waterman alignment path
+  @param  path_len  the Smith-Waterman alignment path length
+  @param  G0        the initial alignment score
+  @param  _mem      allocated memory with size of (len1+2)*(ap->row+1)*4
+  @return           the alignment score, 0 if none was found
+  */
+int32_t 
+fmap_sw_extend_core(uint8_t *seq1, int32_t len1, 
+                    uint8_t *seq2, int32_t len2, 
+                    const fmap_sw_param_t *ap,
+                    fmap_sw_path_t *path, int32_t *path_len, 
+                    int32_t G0, uint8_t *_mem);
+
+/*!
+  Creates a cigar array from an alignment path
+  @param  path      the Smith-Waterman alignment path
+  @param  path_len  the Smith-Waterman alignment path length
+  @param  n_cigar   pointer to the returned number of cigar operations
+  @return           the cigar array, NULL if the path is NULL or the path length is zero 
+  */
+uint32_t *
+fmap_sw_path2cigar(const fmap_sw_path_t *path, int32_t path_len, int32_t *n_cigar);
 
 
 /********************
  * global variables *
  ********************/
 
-extern fmap_sw_param_t fmap_sw_param_bwa;   /* = { 37,  9,  0, fmap_sw_sm_maq, 5, 50 }; */
+/*!
+  @var  fmap_sw_param_short  alignment parameters for short read alignment [ACGTN]
+  */
+extern fmap_sw_param_t fmap_sw_param_short; /* = { 13,  2,  2, fmap_sw_sm_short, 5, 50 }; */
+/*!
+  @var  fmap_sw_param_blast  alignment parameters for blast read alignment [ACGTN]
+  */
 extern fmap_sw_param_t fmap_sw_param_blast; /* = {  5,  2,  2, fmap_sw_sm_blast, 5, 50 }; */
-extern fmap_sw_param_t fmap_sw_param_nt2nt; /* = { 10,  2,  2, fmap_sw_sm_nt, 16, 75 }; */
-extern fmap_sw_param_t fmap_sw_param_aa2aa; /* = { 20, 19, 19, fmap_sw_sm_read, 16, 75 }; */
-extern fmap_sw_param_t fmap_sw_param_rd2rd; /* = { 12,  2,  2, fmap_sw_sm_blosum62, 22, 50 }; */
+/*!
+  @var  fmap_sw_param_nt2nt  alignment parameters for ... 
+  */
+extern fmap_sw_param_t fmap_sw_param_nt2nt; /* = {  8,  2,  2, fmap_sw_sm_nt, 16, 75 }; */
+/*!
+  @var  fmap_sw_param_rd2rd  alignment parameters for ...
+  */
+extern fmap_sw_param_t fmap_sw_param_rd2rd; /* = {  1, 19, 19, fmap_sw_sm_read, 16, 75 }; */
+/*!
+  @var  fmap_sw_param_aa2aa  alignment parameters for ...
+  */
+extern fmap_sw_param_t fmap_sw_param_aa2aa; /* = { 10,  2,  2, fmap_sw_sm_blosum62, 22, 50 }; */
 
-/* common nucleotide score matrix for 16 bases */
-extern int32_t           fmap_sw_sm_nt[], fmap_sw_sm_bwa[];
+/*!
+  @var  fmap_sw_sm_short  substitution matrix for short read alignment 
+  */
+extern int32_t fmap_sw_sm_short[];
 
-/* BLOSUM62 and BLOSUM45 */
-extern int32_t           fmap_sw_sm_blosum62[], fmap_sw_sm_blosum45[];
+/*!
+  @var  fmap_sw_sm_blast  substitution matrix for blast
+  */
+extern int32_t fmap_sw_sm_blast[];
 
-/* common read for 16 bases. note that read alignment is quite different from common nucleotide alignment */
-extern int32_t           fmap_sw_sm_read[];
+/*!
+  @var  fmap_sw_sm_blast  substitution matrix for ...
+  */
+extern int32_t fmap_sw_sm_nt[];
 
-/* human-mouse score matrix for 4 bases */
+/*!
+  @var  fmap_sw_sm_read  substitution matrix for ...
+  */
+extern int32_t fmap_sw_sm_read[];
+
+/*!
+  @var  fmap_sw_sm_read  substitution matrix for BLOSUM62
+  */
+extern int32_t fmap_sw_sm_blosum62[];
+
+/*!
+  @var  fmap_sw_sm_read  substitution matrix for BLOSUM45
+  */
+extern int32_t fmap_sw_sm_blosum45[];
+
+/*!
+  @var  fmap_sw_sm_hs  substitution matrix for human to mouse
+  */
 extern int32_t           fmap_sw_sm_hs[];
 
 #endif

@@ -307,7 +307,7 @@ fmap_map2_aux_gen_cigar(fmap_map2_opt_t *opt, uint8_t *queries[2],
         target[k - p->k] = fmap_refseq_seq_i(refseq, k);
       }
       score = fmap_sw_global_core(target, p->len, query, end - beg, &par, path, &path_len);
-      b->cigar[i] = fmap_sw_path2cigar32(path, path_len, &b->n_cigar[i]);
+      b->cigar[i] = fmap_sw_path2cigar(path, path_len, &b->n_cigar[i]);
       if(beg != 0 || end < query_length) { // write soft clipping
           b->cigar[i] = fmap_realloc(b->cigar[i], sizeof(uint32_t) * (b->n_cigar[i] + 2), "b->cigar");
           if(beg != 0) {
