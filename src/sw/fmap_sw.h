@@ -56,6 +56,26 @@ enum {
 //#define FMAP_SW_MINOR_INF -1073741823
 
 /*!
+  Stores from which cell the current cell was extended
+ */
+typedef struct
+{
+    uint8_t match_from:3; /*!< from cell for match */
+    uint8_t ins_from:2; /*!< from cell for insertion */
+    uint8_t del_from:2; /*!< from cell for deletion */
+} fmap_sw_dpcell_t;
+
+/*!
+  Stores the score for the current cell
+  */
+typedef struct
+{
+    int32_t match_score; /*!< match score */
+    int32_t ins_score; /*!< insertion score */
+    int32_t del_score; /*! <deletion score */
+} fmap_sw_dpscore_t;
+
+/*!
   Parameters for the Smith-Waterman alignment.
   @details  The gap penalties should be positive (they will be subtracted)
   while the substitution score should be positive for matches, and negative for

@@ -327,16 +327,6 @@ fmap_sw_aln_destroy(fmap_sw_aln_t *aa)
   } else fmap_sw_set_del(DD, cur, p); \
 }
 
-typedef struct
-{
-  uint8_t match_from:3, ins_from:2, del_from:2;
-} fmap_sw_dpcell_t;
-
-typedef struct
-{
-  int32_t match_score, ins_score, del_score;
-} fmap_sw_dpscore_t;
-
 /* build score profile for accelerating alignment, in theory */
 void 
 fmap_sw_score_array_init(uint8_t *seq, int32_t len, int32_t row, int32_t *score_matrix, int32_t **s_array)
