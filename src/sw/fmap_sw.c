@@ -260,8 +260,6 @@ fmap_sw_aln_destroy(fmap_sw_aln_t *aa)
 #define FMAP_SW_NT_LOCAL_SHIFT 16
 #define FMAP_SW_NT_LOCAL_MASK 0xffff
 
-#define FMAP_SW_SET_INF(s) (s).match_score = (s).ins_score = (s).del_score = FMAP_SW_MINOR_INF
-
 #define fmap_sw_set_match(MM, cur, p, sc) \
 { \
   if ((p)->match_score >= (p)->ins_score) { \
@@ -495,7 +493,7 @@ fmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
   if (s->del_score > max) { max = s->del_score; type = q->del_from; ctype = FMAP_SW_FROM_D; }
 
   p = path;
-  p->ctype = ctype; p->i = i; p->j = j; /* bug fixed 040408 */
+  p->ctype = ctype; p->i = i; p->j = j; 
   ++p;
   do {
       switch (ctype) {

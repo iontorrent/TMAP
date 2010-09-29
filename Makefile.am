@@ -28,6 +28,7 @@ fmap_SOURCES = \
 			   src/server/fmap_server.h src/server/fmap_server.c \
 			   src/server/fmap_shm.h src/server/fmap_shm.c \
 			   src/sw/fmap_sw.h src/sw/fmap_sw.c \
+			   src/sw/fmap_fsw.h src/sw/fmap_fsw.c \
 			   src/sfferr/fmap_sfferr.h src/sfferr/fmap_sfferr.c \
 			   src/sfferr/fmap_sfferr_aux.h src/sfferr/fmap_sfferr_aux.c \
 			   src/debug/fmap_debug_exact.h src/debug/fmap_debug_exact.c \

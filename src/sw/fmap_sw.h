@@ -55,6 +55,9 @@ enum {
 #define FMAP_SW_MINOR_INF INT32_MIN/2
 //#define FMAP_SW_MINOR_INF -1073741823
 
+#define FMAP_SW_SET_INF(s) (s).match_score = (s).ins_score = (s).del_score = FMAP_SW_MINOR_INF
+
+
 /*!
   Stores from which cell the current cell was extended
  */

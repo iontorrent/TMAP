@@ -27,5 +27,7 @@ fmap_sfferr_main(int argc, char *argv[]);
 #endif
 extern int 
 fmap_debug_exact(int argc, char *argv[]);
+extern int
+fmap_fsw_main(int argc, char *argv[]);
 
 #endif

@@ -43,6 +43,7 @@ static int usage()
   fprintf(stderr, "\n");
   fprintf(stderr, "Debugging:\n");
   fprintf(stderr, "         exact          perform simple exact matching\n");
+  fprintf(stderr, "         fsw            perform flow Smith-Waterman\n");
   return 1;
 }
 
@@ -71,6 +72,7 @@ int main(int argc, char *argv[])
       else if (0 == strcmp("sfferr", argv[1])) ret = fmap_sfferr_main(argc-1, argv+1);
 #endif
       else if (0 == strcmp("exact", argv[1])) ret = fmap_debug_exact(argc-1, argv+1);
+      else if (0 == strcmp("fsw", argv[1])) ret = fmap_fsw_main(argc-1, argv+1);
       else {
           fmap_error1(PACKAGE, "Unknown command", Exit, CommandLineArgument);
       }
