@@ -391,6 +391,7 @@ fmap_map1_core(fmap_map1_opt_t *opt)
   fmap_seq_t **seq_buffer = NULL;
   fmap_map1_aln_t ***alns = NULL;
   fmap_shm_t *shm = NULL;
+  int32_t reads_queue_size;
 
   // For suffix search we need the reverse bwt/sa and forward refseq
   if(0 == opt->shm_key) {
@@ -426,8 +427,14 @@ fmap_map1_core(fmap_map1_opt_t *opt)
   fmap_sam_print_header(fmap_file_stdout, refseq, opt->argc, opt->argv);
 
   // allocate the buffer
-  seq_buffer = fmap_malloc(sizeof(fmap_seq_t*)*opt->reads_queue_size, "seq_buffer");
-  alns = fmap_malloc(sizeof(fmap_map1_aln_t**)*opt->reads_queue_size, "alns");
+  if(-1 == opt->reads_queue_size) {
+      reads_queue_size = 1;
+  }
+  else {
+      reads_queue_size = opt->reads_queue_size;
+  }
+  seq_buffer = fmap_malloc(sizeof(fmap_seq_t*)*reads_queue_size, "seq_buffer");
+  alns = fmap_malloc(sizeof(fmap_map1_aln_t**)*reads_queue_size, "alns");
 
   if(NULL == opt->fn_reads) {
       fp_reads = fmap_file_fdopen(fileno(stdin), "rb", opt->input_compr);
@@ -439,13 +446,13 @@ fmap_map1_core(fmap_map1_opt_t *opt)
     case FMAP_READS_FORMAT_FASTA:
     case FMAP_READS_FORMAT_FASTQ:
       seqio = fmap_seq_io_init(fp_reads, FMAP_SEQ_TYPE_FQ);
-      for(i=0;i<opt->reads_queue_size;i++) { // initialize the buffer
+      for(i=0;i<reads_queue_size;i++) { // initialize the buffer
           seq_buffer[i] = fmap_seq_init(FMAP_SEQ_TYPE_FQ);
       }
       break;
     case FMAP_READS_FORMAT_SFF:
       seqio = fmap_seq_io_init(fp_reads, FMAP_SEQ_TYPE_SFF);
-      for(i=0;i<opt->reads_queue_size;i++) { // initialize the buffer
+      for(i=0;i<reads_queue_size;i++) { // initialize the buffer
           seq_buffer[i] = fmap_seq_init(FMAP_SEQ_TYPE_SFF);
       }
       break;
@@ -455,7 +462,7 @@ fmap_map1_core(fmap_map1_opt_t *opt)
   }
 
   fmap_progress_print("processing reads");
-  while(0 < (seq_buffer_length = fmap_seq_io_read_buffer(seqio, seq_buffer, opt->reads_queue_size))) {
+  while(0 < (seq_buffer_length = fmap_seq_io_read_buffer(seqio, seq_buffer, reads_queue_size))) {
 
       // do alignment
 #ifdef HAVE_LIBPTHREAD
@@ -530,6 +537,10 @@ fmap_map1_core(fmap_map1_opt_t *opt)
           alns[i] = NULL;
       }
 
+      if(-1 == opt->reads_queue_size) {
+          fmap_file_fflush(fmap_file_stdout, 1);
+      }
+
       n_reads_processed += seq_buffer_length;
       fmap_progress_print2("processed %d reads", n_reads_processed);
   }
@@ -538,7 +549,7 @@ fmap_map1_core(fmap_map1_opt_t *opt)
   fmap_file_fclose(fmap_file_stdout);
 
   // free memory
-  for(i=0;i<opt->reads_queue_size;i++) {
+  for(i=0;i<reads_queue_size;i++) {
       fmap_seq_destroy(seq_buffer[i]);
   }
   free(seq_buffer);
@@ -594,7 +605,7 @@ usage(fmap_map1_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "         -d INT      the maximum number of CALs to extend a deletion [%d]\n", opt->max_cals_del); 
   fmap_file_fprintf(fmap_file_stderr, "         -i INT      indels are not allowed within INT number of bps from the end of the read [%d]\n", opt->indel_ends_bound);
   fmap_file_fprintf(fmap_file_stderr, "         -b INT      stop searching when INT optimal CALs have been found [%d]\n", opt->max_best_cals);
-  fmap_file_fprintf(fmap_file_stderr, "         -q INT      the queue size for the reads [%d]\n", opt->reads_queue_size);
+  fmap_file_fprintf(fmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
   fmap_file_fprintf(fmap_file_stderr, "         -Q INT      maximum number of alignment nodes [%d]\n", opt->max_entries);
   fmap_file_fprintf(fmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
   fmap_file_fprintf(fmap_file_stderr, "         -a INT      output filter [%d]\n", opt->aln_output_mode);
@@ -769,10 +780,15 @@ fmap_map1_main(int argc, char *argv[])
       fmap_error_cmd_check_int(opt->max_cals_del, 1, INT32_MAX, "-d");
       fmap_error_cmd_check_int(opt->indel_ends_bound, 0, INT32_MAX, "-i");
       fmap_error_cmd_check_int(opt->max_best_cals, 0, INT32_MAX, "-b");
-      fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
+      if(-1 != opt->reads_queue_size) fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
       fmap_error_cmd_check_int(opt->max_entries, 1, INT32_MAX, "-Q");
       fmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
       fmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
+
+      if(FMAP_FILE_BZ2_COMPRESSION == opt->output_compr 
+         && -1 == opt->reads_queue_size) {
+          fmap_error("cannot buffer reads with bzip2 output (options \"-q 1 -J\")", Exit, OutOfRange);
+      }
   }
 
   fmap_map1_core(opt);
