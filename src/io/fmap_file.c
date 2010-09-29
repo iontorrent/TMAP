@@ -359,3 +359,35 @@ fmap_file_fprintf(fmap_file_t *fp, const char *format, ...)
 
   return n;
 } 
+
+int32_t
+fmap_file_fflush(fmap_file_t *fp, int32_t gz_flush)
+{
+  int32_t ret = EOF;
+
+  switch(fp->c) {
+    case FMAP_FILE_NO_COMPRESSION:
+      ret = fflush(fp->fp);
+      break;
+#ifndef DISABLE_BZ2 
+    case FMAP_FILE_BZ2_COMPRESSION:
+      // do nothign
+      ret = 0;
+      break;
+#endif
+    case FMAP_FILE_GZ_COMPRESSION:
+      if(Z_OK == gzflush(fp->gz, (0 == gz_flush) ? Z_SYNC_FLUSH : Z_FULL_FLUSH)) {
+          ret = 0;
+      }
+      break;
+    default:
+      fmap_error("fp->c", Exit, OutOfRange);
+      break;
+  }
+
+  if(0 != ret) {
+      fmap_error(NULL, Exit, WriteFileError);
+  }
+
+  return ret;
+}
