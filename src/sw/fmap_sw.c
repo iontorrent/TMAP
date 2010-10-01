@@ -733,7 +733,7 @@ fmap_sw_local_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, con
           ap_real.gap_end = -1;
           ap_real.band_width = i;
           score_g = fmap_sw_global_core(seq1 + start_i, end_i - start_i + 1, seq2 + start_j,
-                                    end_j - start_j + 1, &ap_real, path, path_len);
+                                        end_j - start_j + 1, &ap_real, path, path_len);
           if (score_g == score_r || score_f == score_g) break;
           if (i > j) break;
       }
@@ -766,7 +766,7 @@ end_func:
 
 fmap_sw_aln_t *
 fmap_sw_stdaln_aux(const char *seq1, const char *seq2, const fmap_sw_param_t *ap,
-                       int32_t type, int32_t thres, int32_t len1, int32_t len2)
+                   int32_t type, int32_t thres, int32_t len1, int32_t len2)
 {
   uint8_t *seq11, *seq22;
   int32_t score;
@@ -892,7 +892,6 @@ fmap_sw_extend_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
   /* convert the coordinate */
   --seq1; --seq2;
   for (i = 0; i != N_MATRIX_ROW; ++i) --s_array[i];
-
   /* dynamic programming */
   memset(eh, 0, 4 * (len1 + 2));
   eh[1] = (uint32_t)G0<<16;
