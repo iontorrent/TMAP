@@ -169,7 +169,7 @@ fmap_map2_aln_destroy(fmap_map2_aln_t *a)
 #define fmap_map2_rseq_i(_refseq, _i) (fmap_refseq_seq_i(_refseq, _refseq->len-_i-1))
 
 #define fmap_map2_aux_reverse_query(_query, _ql) \
-  for(i=0;i<(_ql>>2);i++) { \
+  for(i=0;i<(_ql>>1);i++) { \
       uint8_t tmp = _query[i]; \
       _query[i] = _query[_ql-1-i]; \
       _query[_ql-1-i] = tmp; \
@@ -304,7 +304,7 @@ fmap_map2_aux_gen_cigar(fmap_map2_opt_t *opt, uint8_t *queries[2],
       end = (p->flag & 0x10)? query_length - p->beg : p->end;
       query = queries[(p->flag & 0x10)? 1 : 0] + beg;
       for(k = p->k; k < p->k + p->len; ++k) { // in principle, no out-of-boundary here
-        target[k - p->k] = fmap_refseq_seq_i(refseq, k);
+          target[k - p->k] = fmap_refseq_seq_i(refseq, k);
       }
       score = fmap_sw_global_core(target, p->len, query, end - beg, &par, path, &path_len);
       b->cigar[i] = fmap_sw_path2cigar(path, path_len, &b->n_cigar[i]);
@@ -609,7 +609,6 @@ fmap_map2_aux_core(fmap_map2_opt_t *_opt,
 
   // set opt->score_thr
   opt.score_thr = _opt->score_thr; // reset opt->score_thr
-  opt.score_thr = _opt->score_thr;
   if(opt.score_thr < log(l) * opt.length_coef) opt.score_thr = (int)(log(l) * opt.length_coef + .499);
   if(pool->max_l < l) { // then enlarge working space for fmap_sw_extend_core()
       int32_t tmp = ((l + 1) / 2 * opt.score_match + opt.pen_gape) / opt.pen_gape + l;
@@ -623,7 +622,7 @@ fmap_map2_aux_core(fmap_map2_opt_t *_opt,
   i = (l * opt.score_match - opt.score_match - opt.score_thr) / opt.pen_gape;
   if(k > i) k = i;
   if(k < 1) k = 1; // I do not know if k==0 causes troubles
-  opt.band_width= _opt->band_width< k ? _opt->band_width: k;
+  opt.band_width= _opt->band_width < k ? _opt->band_width: k;
 
   // set seq[2] and rseq[2]
   seq[0] = fmap_string_init(l);
@@ -642,7 +641,7 @@ fmap_map2_aux_core(fmap_map2_opt_t *_opt,
   }
   seq[0]->l = seq[1]->l = rseq[0]->l = rseq[1]->l = l;
 
-  // score threshold
+  // will we always be lower than the score threshold
   if(l - k < opt.score_thr) {
       fmap_string_destroy(seq[0]);
       fmap_string_destroy(seq[1]);

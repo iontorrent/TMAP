@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "../util/fmap_vec.h"
+#include "../index/fmap_bwt_match.h"
 
 /*! 
   Memory Pools for Map2
@@ -12,8 +13,7 @@
 /*! 
  */
 typedef struct {
-    uint32_t qk;  /*!< lower suffix array interval of the query */
-    uint32_t ql;  /*!< upper suffix array interval of the query */
+    fmap_bwt_match_occ_t match_sa; /*!< lower and upper interval for the query */
     int32_t I;  /*!< insertion score */
     int32_t D;  /*!< deletion score */
     int32_t G;  /*!< maximum of the match/mismatch/insertion/deletion scores */

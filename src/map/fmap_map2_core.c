@@ -20,7 +20,7 @@ FMAP_HASH_MAP_INIT_INT64(64, uint64_t)
 FMAP_SORT_INIT_GENERIC(int32_t)
 
 // TODO: document
-static const fmap_map2_cell_t fmap_map2_core_default_cell = { 0, 0, FMAP_MAP2_MINUS_INF, FMAP_MAP2_MINUS_INF,
+static const fmap_map2_cell_t fmap_map2_core_default_cell = { {0, 0, 0, 0}, FMAP_MAP2_MINUS_INF, FMAP_MAP2_MINUS_INF,
      FMAP_MAP2_MINUS_INF, 0, 0, 0, -1, -1, {-1, -1, -1, -1} };
 
 /* --- BEGIN: utilities --- */
@@ -71,7 +71,7 @@ fmap_map2_core_cut_tail(fmap_map2_entry_t *u, int32_t T, fmap_map2_entry_t *aux)
   }
   a = (int*)aux->array;
   for(i = n = 0; i != u->n; ++i)
-    if(u->array[i].ql && u->array[i].G > 0)
+    if(u->array[i].match_sa.l && u->array[i].G > 0)
       a[n++] = -u->array[i].G;
   if(n <= T) return;
   x = -fmap_sort_small(int32_t, n, a, T);
@@ -80,7 +80,8 @@ fmap_map2_core_cut_tail(fmap_map2_entry_t *u, int32_t T, fmap_map2_entry_t *aux)
       fmap_map2_cell_t *p = u->array + i;
       if(p->G == x) ++n;
       if(p->G < x || (p->G == x && n >= T)) {
-          p->qk = p->ql = 0; p->G = 0;
+          p->match_sa.k = p->match_sa.l = 0; p->G = 0;
+          p->match_sa.hi = p->match_sa.offset = 0;
           if(p->ppos >= 0) u->array[p->ppos].cpos[p->pj] = -1;
       }
   }
@@ -95,8 +96,8 @@ fmap_map2_core_remove_duplicate(fmap_map2_entry_t *u, fmap_hash_t(64) *hash)
   fmap_hash_clear(64, hash);
   for(i = 0; i != u->n; ++i) {
       fmap_map2_cell_t *p = u->array + i;
-      if(p->ql == 0) continue;
-      key = (uint64_t)p->qk << 32 | p->ql;
+      if(p->match_sa.l== 0) continue;
+      key = (uint64_t)p->match_sa.k << 32 | p->match_sa.l;
       k = fmap_hash_put(64, hash, key, &ret);
       j = -1;
       if(ret == 0) {
@@ -108,7 +109,8 @@ fmap_map2_core_remove_duplicate(fmap_map2_entry_t *u, fmap_hash_t(64) *hash)
       } else fmap_hash_value(hash, k) = (uint64_t)i<<32 | p->G;
       if(j >= 0) {
           p = u->array + j;
-          p->qk = p->ql = 0; p->G = 0;
+          p->match_sa.k = p->match_sa.l = 0; p->G = 0;
+          p->match_sa.hi = p->match_sa.offset = 0;
           if(p->ppos >= 0) u->array[p->ppos].cpos[p->pj] = -3;
       }
   }
@@ -166,7 +168,7 @@ fmap_map2_core_save_hits(const fmap_bwtl_t *bwtl, int32_t thres, fmap_map2_hit_t
               q = hits + beg * 2;
           } else if(p->G > hits[beg*2+1].G) q = hits + beg * 2 + 1;
           if(q) {
-              q->k = p->qk; q->l = p->ql; q->len = p->qlen; q->G = p->G;
+              q->k = p->match_sa.k; q->l = p->match_sa.l; q->len = p->qlen; q->G = p->G;
               q->beg = beg; q->end = end; q->G2 = q->k == q->l? 0 : q->G;
               q->flag = q->n_seeds = 0;
           }
@@ -181,19 +183,20 @@ fmap_map2_save_narrow_hits(const fmap_bwtl_t *bwtl, fmap_map2_entry_t *u, fmap_m
   for(i = 0; i < u->n; ++i) {
       fmap_map2_hit_t *q;
       fmap_map2_cell_t *p = u->array + i;
-      if(p->G >= t && p->ql - p->qk + 1 <= IS) { // good narrow hit
+      if(p->G >= t && p->match_sa.l - p->match_sa.k + 1 <= IS) { // good narrow hit
           if(b1->max == b1->n) {
               b1->max = b1->max? b1->max<<1 : 4;
               b1->hits = fmap_realloc(b1->hits, b1->max * sizeof(fmap_map2_hit_t), "b1->hits");
           }
           q = &b1->hits[b1->n++];
-          q->k = p->qk; q->l = p->ql;
+          q->k = p->match_sa.k; q->l = p->match_sa.l;
           q->len = p->qlen;
           q->G = p->G; q->G2 = 0;
           q->beg = bwtl->sa[u->tk]; q->end = q->beg + p->tlen;
           q->flag = 0;
           // delete p
-          p->qk = p->ql = 0; p->G = 0;
+          p->match_sa.k = p->match_sa.l = 0; p->G = 0;
+          p->match_sa.hi = p->match_sa.offset = 0;
           if(p->ppos >= 0) u->array[p->ppos].cpos[p->pj] = -3;
       }
   }
@@ -225,7 +228,9 @@ fmap_map2_core_init(const fmap_bwtl_t *target, const fmap_bwt_t *query_bwt, fmap
   u->tk = 0; u->tl = target->seq_len;
   x = fmap_map2_core_push_array_p(u);
   *x = fmap_map2_core_default_cell;
-  x->G = 0; x->qk = 0; x->ql = query_bwt->seq_len;
+  x->G = 0; 
+  x->match_sa.k = 0; x->match_sa.l = query_bwt->seq_len;
+  x->match_sa.hi = 0; x->match_sa.offset = 0;
   u->n++;
   fmap_map2_stack_push0(s, u);
 }
@@ -256,7 +261,7 @@ fmap_map2_core_aln(const fmap_map2_opt_t *opt, const fmap_bwtl_t *target,
   b->n = b->max = target->seq_len * 2;
   b->hits = fmap_calloc(b->max, sizeof(fmap_map2_hit_t), "b->hits");
   b1 = fmap_calloc(1, sizeof(fmap_map2_aln_t), "b1");
-  b_ret = fmap_calloc(2, sizeof(void*), "b_ret");
+  b_ret = fmap_calloc(2, sizeof(fmap_map2_aln_t*), "b_ret");
   b_ret[0] = b; b_ret[1] = b1;
   // the main loop: traversal of the DAG
   while(!fmap_map2_stack_isempty(stack)) {
@@ -269,9 +274,10 @@ fmap_map2_core_aln(const fmap_map2_opt_t *opt, const fmap_bwtl_t *target,
 
       for(i = 0; i < v->n; ++i) { // test max depth and band width
           fmap_map2_cell_t *p = v->array + i;
-          if(p->ql == 0) continue;
+          if(p->match_sa.l == 0) continue;
           if(p->tlen - (int)p->qlen > opt->band_width || (int)p->qlen - p->tlen > opt->band_width) {
-              p->qk = p->ql = 0;
+              p->match_sa.k = p->match_sa.l = 0;
+              p->match_sa.hi = p->match_sa.offset = 0;
               if(p->ppos >= 0) v->array[p->ppos].cpos[p->pj] = -5;
           }
       }
@@ -279,7 +285,7 @@ fmap_map2_core_aln(const fmap_map2_opt_t *opt, const fmap_bwtl_t *target,
       // get Occ for the DAG
       fmap_bwtl_2occ4(target, v->tk - 1, v->tl, tcntk, tcntl);
       for(tj = 0; tj != 4; ++tj) { // descend to the children
-          uint32_t qcntk[4], qcntl[4];
+          fmap_bwt_match_occ_t qnext[4];
           int32_t qj, *curr_score_mat = score_mat + tj * 4;
           fmap_hash_iter_t iter;
           fmap_map2_entry_t *u;
@@ -298,7 +304,7 @@ fmap_map2_core_aln(const fmap_map2_opt_t *opt, const fmap_bwtl_t *target,
           for(i = 0; i < v->n; ++i) {
               fmap_map2_cell_t *p = v->array + i, *x, *c[4]; // c[0]=>current, c[1]=>I, c[2]=>D, c[3]=>G
               int32_t is_added = 0;
-              if(p->ql == 0) continue; // deleted node
+              if(p->match_sa.l == 0) continue; // deleted node
               c[0] = x = fmap_map2_core_push_array_p(u);
               x->G = FMAP_MAP2_MINUS_INF;
               p->upos = x->upos = -1;
@@ -322,7 +328,9 @@ fmap_map2_core_aln(const fmap_map2_opt_t *opt, const fmap_bwtl_t *target,
               }
               if(is_added) { // x has been added to u->array. fill the remaining variables
                   x->cpos[0] = x->cpos[1] = x->cpos[2] = x->cpos[3] = -1;
-                  x->pj = p->pj; x->qk = p->qk; x->ql = p->ql; x->qlen = p->qlen; x->tlen = p->tlen + 1;
+                  x->pj = p->pj; 
+                  x->match_sa = p->match_sa;
+                  x->qlen = p->qlen; x->tlen = p->tlen + 1;
                   if(x->G > -heap[0]) {
                       heap[0] = -x->G;
                       fmap_sort_heapadjust(int32_t, 0, heap_size, heap);
@@ -330,16 +338,18 @@ fmap_map2_core_aln(const fmap_map2_opt_t *opt, const fmap_bwtl_t *target,
               }
               if((x->G > opt->pen_gapo + opt->pen_gape && x->G >= -heap[0]) || i < old_n) { // good node in u, or in v
                   if(p->cpos[0] == -1 || p->cpos[1] == -1 || p->cpos[2] == -1 || p->cpos[3] == -1) {
-                      fmap_bwt_2occ4(query_bwt, p->qk - 1, p->ql, qcntk, qcntl); // TODO: use hash
+                      fmap_bwt_match_2occ4(query_bwt, &p->match_sa, qnext);
+                      //fmap_bwt_2occ4(query_bwt, p->match_sa.k - 1, p->match_sa.l, qcntk, qcntl); // TODO: use hash
                       for(qj = 0; qj != 4; ++qj) { // descend to the prefix trie
                           if(p->cpos[qj] != -1) continue; // this node will be visited later
-                          k = query_bwt->L2[qj] + qcntk[qj] + 1;
-                          l = query_bwt->L2[qj] + qcntl[qj];
+                          k = qnext[qj].k;
+                          l = qnext[qj].l;
                           if(k > l) { p->cpos[qj] = -2; continue; }
                           x = fmap_map2_core_push_array_p(v);
                           p = v->array + i; // p may not point to the correct position after realloc
                           x->G = x->I = x->D = FMAP_MAP2_MINUS_INF;
-                          x->qk = k; x->ql = l; x->pj = qj; x->qlen = p->qlen + 1; x->ppos = i; x->tlen = p->tlen;
+                          x->match_sa = qnext[qj];
+                          x->pj = qj; x->qlen = p->qlen + 1; x->ppos = i; x->tlen = p->tlen;
                           x->cpos[0] = x->cpos[1] = x->cpos[2] = x->cpos[3] = -1;
                           p->cpos[qj] = v->n++;
                       } // ~for(qj)
