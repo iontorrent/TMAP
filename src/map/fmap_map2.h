@@ -30,8 +30,8 @@ typedef struct {
     int32_t pen_gapo;  /*!< the indel open penalty (-O) */
     int32_t pen_gape;  /*!< the indel extension penalty (-E) */
     double yita;  /*!< the error recurrence coefficient (-y)  */
-    int32_t mask_level;  /*!< the mask level (-m) */
-    int32_t length_coef;  /*!< the coefficient of length-threshold adjustment (-c) */
+    double mask_level;  /*!< the mask level (-m) */
+    double length_coef;  /*!< the coefficient of length-threshold adjustment (-c) */
     int32_t band_width;  /*!< the band width (-w)  */
     int32_t score_thr;  /*!< the score threshold (match-score-scaled) (-T) */
     int32_t max_seed_intv;  /*!< the maximum seed interval (-S) */
