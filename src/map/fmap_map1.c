@@ -765,7 +765,7 @@ fmap_map1_main(int argc, char *argv[])
       if(FMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
           fmap_error("the reads format (-r) was unrecognized", Exit, CommandLineArgument);
       }
-      if(-1 != opt->seed_length) fmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "-s");
+      if(-1 != opt->seed_length) fmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "-l");
 
       // this will take care of the case where they are both < 0
       fmap_error_cmd_check_int((opt->max_mm_frac < 0) ? opt->max_mm : (int32_t)opt->max_mm_frac, 0, INT32_MAX, "-m"); 
