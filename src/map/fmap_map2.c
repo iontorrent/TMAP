@@ -423,7 +423,7 @@ fmap_map2_opt_init()
   opt->reads_format = FMAP_READS_FORMAT_UNKNOWN;
   opt->score_match = 1; opt->pen_mm = 3; opt->pen_gapo = 5; opt->pen_gape = 2;
   opt->yita = 5.5f; opt->mask_level = 0.50; opt->length_coef = 5.5f;
-  opt->band_width = 50; opt->score_thr = 20;
+  opt->band_width = 50; opt->score_thr = 30;
   opt->max_seed_intv = 3; opt->z_best = 1; opt->seeds_rev = 5;
   opt->reads_queue_size = 65536;
   opt->num_threads = 1;
