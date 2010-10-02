@@ -214,7 +214,7 @@ fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fma
       if(0 < fmap_refseq_pac2real(refseq, pacpos, seq_len, &seqid, &pos)) {
 
           fmap_sam_print_mapped(fmap_file_stdout, seq, refseq,
-                                a->strand, seqid, pos, 
+                                a->strand, seqid, pos-1, 
                                 a->mapq, a->cigar, a->n_cigar, 
                                 "\tAS:i:%d\tNM:i:%d\tXM:i:%d\tXO:i:%d\tXG:i:%d",
                                 a->score,
