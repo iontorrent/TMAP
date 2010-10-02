@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
+#include <float.h>
 #include <config.h>
 #ifdef HAVE_LIBPTHREAD
 #include <pthread.h>
@@ -19,6 +20,7 @@
 #include "../index/fmap_sa.h"
 #include "../io/fmap_seq_io.h"
 #include "../server/fmap_shm.h"
+#include "fmap_map_util.h"
 #include "fmap_map2_mempool.h"
 #include "fmap_map2_aux.h"
 #include "fmap_map2_core.h"
@@ -30,54 +32,58 @@ static int32_t fmap_map2_read_lock_low = 0;
 #define FMAP_MAP1_THREAD_BLOCK_SIZE 1024
 #endif
 
-static inline double
-fmap_map2_sam_get_score(fmap_seq_t *seq, fmap_map2_sam_entry_t *sam, int32_t aln_output_mode)
-{
-  //int32_t seq_len = fmap_seq_get_bases(seq)->l;
-  switch(aln_output_mode) {
-    case FMAP_MAP2_ALN_OUTPUT_MODE_SCORE_LEN_NORM:
-      return sam->AS / (double)fmap_seq_get_bases(seq)->l; break;
-    case FMAP_MAP2_ALN_OUTPUT_MODE_SCORE:
-      return (double)sam->AS; break;
-    case FMAP_MAP2_ALN_OUTPUT_MODE_LEN:
-      return (double)fmap_seq_get_bases(seq)->l; break;
-    default:
-      return 0.0; break;
-  }
-}
-
 static void
 fmap_map2_filter_sam(fmap_seq_t *seq, fmap_map2_sam_t *sam, int32_t aln_output_mode)
 {
-  int32_t i, best_index = 0;
+  int32_t i, j;
+  int32_t n_best = 0;
   double best_score, cur_score;
-  if(FMAP_MAP2_ALN_OUTPUT_MODE_ALL == aln_output_mode
-     || sam->num_entries <= 1) return;
+  if(FMAP_MAP_UTIL_ALN_MODE_ALL == aln_output_mode || sam->num_entries <= 1) {
+      return;
+  }
 
-  if(FMAP_MAP2_ALN_OUTPUT_MODE_RAND == aln_output_mode) { // get a random
-      best_index = drand48() * sam->num_entries;
+  if(FMAP_MAP_UTIL_ALN_MODE_RAND == aln_output_mode) { // get a random
+      i = drand48() * sam->num_entries;
+      if(0 != i ) {
+          free(sam->entries[0].cigar);
+          sam->entries[0] = sam->entries[i];
+          sam->entries[i].cigar = NULL;
+      }
+      // reallocate
+      fmap_map2_sam_realloc(sam, 1);
   } 
   else {
-      best_index = 0;
-      best_score = fmap_map2_sam_get_score(seq, &sam->entries[0], aln_output_mode);
+      best_score = DBL_MIN;
+      n_best = 0;
       for(i=0;i<sam->num_entries;i++) {
-          cur_score = fmap_map2_sam_get_score(seq, &sam->entries[i], aln_output_mode);
+          cur_score = fmap_map_util_get_score(seq, sam->entries[i].AS, aln_output_mode);
           if(best_score < cur_score) {
               best_score = cur_score;
-              best_index = i;
+              n_best = 1;
+          }
+          else if(!(cur_score < best_score)) { // equal
+              n_best++;
           }
       }
-  }
 
-  // copy to the front
-  if(0 != best_index) {
-      free(sam->entries[0].cigar);
-      sam->entries[0] = sam->entries[best_index];
-      sam->entries[best_index].cigar  = NULL;
+      // copy to the front
+      if(n_best < sam->num_entries) {
+          for(i=j=0;i<sam->num_entries;i++) {
+              cur_score = fmap_map_util_get_score(seq, sam->entries[i].AS, aln_output_mode);
+              if(cur_score < best_score) { // not the best
+                  free(sam->entries[i].cigar);
+                  sam->entries[i].cigar = NULL;
+              }
+              else if(j < i) { // copy if we are not on the same index
+                  sam->entries[j] = sam->entries[i];
+                  sam->entries[i].cigar = NULL;
+                  j++;
+              }
+          }
+          // reallocate
+          fmap_map2_sam_realloc(sam, n_best);
+      }
   }
-
-  // reallocate
-  fmap_map2_sam_realloc(sam, 1);
 }
 
 static inline void
@@ -86,17 +92,17 @@ fmap_map2_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map2_sam_entry_
 
   if(0 < sam->XI) {
       fmap_sam_print_mapped(fmap_file_stdout, seq, refseq, 
-                          sam->strand, sam->seqid, sam->pos, sam->mapq,
-                          sam->cigar, sam->n_cigar, 
-                          "\tAS:i:%d\tXS:i:%d\tXF:i:%d\tXE:i:%d\tXI:i:%d",
-                          sam->AS, sam->XS, sam->XF, sam->XE, sam->XI);
+                            sam->strand, sam->seqid, sam->pos, sam->mapq,
+                            sam->cigar, sam->n_cigar, 
+                            "\tAS:i:%d\tXS:i:%d\tXF:i:%d\tXE:i:%d\tXI:i:%d",
+                            sam->AS, sam->XS, sam->XF, sam->XE, sam->XI);
   }
   else {
       fmap_sam_print_mapped(fmap_file_stdout, seq, refseq, 
-                          sam->strand, sam->seqid, sam->pos, sam->mapq,
-                          sam->cigar, sam->n_cigar, 
-                          "\tAS:i:%d\tXS:i:%d\tXF:i:%d\tXE:i:%d",
-                          sam->AS, sam->XS, sam->XF, sam->XE);
+                            sam->strand, sam->seqid, sam->pos, sam->mapq,
+                            sam->cigar, sam->n_cigar, 
+                            "\tAS:i:%d\tXS:i:%d\tXF:i:%d\tXE:i:%d",
+                            sam->AS, sam->XS, sam->XF, sam->XE);
   }
 }
 
@@ -143,6 +149,11 @@ fmap_map2_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
 
           // process
           sams[low] = fmap_map2_aux_core(opt, seq, refseq, bwt, sa, pool);
+              
+          // filter
+          if(NULL != sams[low]) {
+              fmap_map2_filter_sam(seq_buffer[low], sams[low], opt->aln_output_mode);
+          }
 
           // destroy
           fmap_seq_destroy(seq);
@@ -189,7 +200,7 @@ fmap_map2_core(fmap_map2_opt_t *opt)
                       exp(-opt->pen_gapo / scalar),
                       exp(-opt->pen_gape / scalar));
 
-  // adjust opt for opt->a
+  // adjust opt for opt->score_match
   opt->score_thr *= opt->score_match;
   opt->length_coef *= opt->score_match;
 
@@ -319,8 +330,6 @@ fmap_map2_core(fmap_map2_opt_t *opt)
 
       for(i=0;i<seq_buffer_length;i++) {
           if(NULL != sams[i] && 0 < sams[i]->num_entries) {
-              // filter
-              fmap_map2_filter_sam(seq_buffer[i], sams[i], opt->aln_output_mode);
               // print mapped reads
               for(j=0;j<sams[i]->num_entries;j++) {
                   fmap_map2_print_sam(seq_buffer[i], refseq, &sams[i]->entries[j]);
@@ -418,7 +427,7 @@ fmap_map2_opt_init()
   opt->max_seed_intv = 3; opt->z_best = 1; opt->seeds_rev = 5;
   opt->reads_queue_size = 65536;
   opt->num_threads = 1;
-  opt->aln_output_mode = FMAP_MAP2_ALN_OUTPUT_MODE_SCORE_LEN_NORM; 
+  opt->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_SCORE; 
   opt->input_compr = FMAP_FILE_NO_COMPRESSION;
   opt->output_compr = FMAP_FILE_NO_COMPRESSION;
   opt->shm_key = 0;

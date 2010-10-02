@@ -27,6 +27,7 @@ typedef struct {
     int32_t pen_mm;  /*!< the mismatch penalty (-M) */
     int32_t pen_gapo;  /*!< the indel open penalty (-O) */
     int32_t pen_gape;  /*!< the indel extension penalty (-E) */
+    int32_t score_thr;  /*!< the score threshold (match-score-scaled) (-T) */
     int32_t reads_queue_size;  /*!< the reads queue size (-q) */
     int32_t num_threads;  /*!< the number of threads (-n) */
     int32_t aln_output_mode;  /*!< specifies how to choose alignments (-a)  */
@@ -35,20 +36,27 @@ typedef struct {
     key_t shm_key;  /*!< the shared memory key (-s) */
 } fmap_map3_opt_t;
 
-// TODO: document
+/*!
+  Structure for a final hit
+ */ 
 typedef struct {
-    uint16_t strand:1;
-    int32_t seqid;
-    int32_t pos;
-    int32_t score;
-    uint16_t n_seeds:15;
-    int32_t n_cigar;
-    uint32_t *cigar;
+    uint16_t strand:1; /*!< the strand */
+    uint32_t seqid;  /*!< the sequence index (0-based) */
+    uint32_t pos; /*!< the position (0-based) */
+    int32_t score; /*!< the alignment score */
+    int32_t score_subo; /*!< the alignment score of the sub-optimal hit */
+    uint8_t mapq; /*!< the mapping quality */
+    uint16_t n_seeds:15; /*!< the number seeds in this hit */
+    int32_t n_cigar; /*!< the number of cigar operators */
+    uint32_t *cigar; /*!< the cigar operator array */
 } fmap_map3_hit_t;
 
+/*!
+ Stucture for holding alignment hits
+ */
 typedef struct {
-    int32_t n;
-    fmap_map3_hit_t *hits;
+    int32_t n; /*!< the number of hits */
+    fmap_map3_hit_t *hits; /*!< array of hits */
 } fmap_map3_aln_t;
 
 #ifdef HAVE_LIBPTHREAD

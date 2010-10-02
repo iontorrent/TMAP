@@ -38,6 +38,26 @@ fmap_map3_aln_init()
 }
 
 void
+fmap_map3_aln_realloc(fmap_map3_aln_t *aln, int32_t n)
+{
+  int32_t i;
+
+  for(i=n;i<aln->n;i++) {
+      free(aln->hits[i].cigar);
+  }
+  aln->hits = fmap_realloc(aln->hits, sizeof(fmap_map3_hit_t)*n, "aln->hits");
+  for(i=aln->n;i<n;i++) { // overly paranoid?
+      aln->hits[i].strand = 0;
+      aln->hits[i].seqid = aln->hits[i].pos = 0;
+      aln->hits[i].score = 0;
+      aln->hits[i].n_seeds = 0;
+      aln->hits[i].n_cigar = 0;
+      aln->hits[i].cigar = NULL;
+  }
+  aln->n = n;
+}
+
+void
 fmap_map3_aln_destroy(fmap_map3_aln_t *aln)
 {
   int32_t i;
@@ -48,9 +68,7 @@ fmap_map3_aln_destroy(fmap_map3_aln_t *aln)
   free(aln);
 }
 
-// TODO: memory pool for seeds
-// Assumes seq[1] has been reverse complimented
-// Assumes seq[0] and seq[1] are in 2-bit format
+// TODO: memory pools?
 fmap_map3_aln_t *
 fmap_map3_aux_core(fmap_seq_t *seq[2], 
                    fmap_refseq_t *refseq,
@@ -70,7 +88,7 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
   int32_t matrix[25];
   fmap_sw_param_t par;
   fmap_sw_path_t *path = NULL;
-  int32_t path_len, score;
+  int32_t path_len, score, score_subo;
 
   fmap_map3_aux_seed_t *seeds[2];
   int32_t m_seeds[2], n_seeds[2];
@@ -183,7 +201,7 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
               target = fmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
           }
           for(pacpos=ref_start;pacpos<=ref_end;pacpos++) {
-          
+
               // add contig offset and make zero based
               target[pacpos-ref_start] = fmap_refseq_seq_i(refseq, pacpos + refseq->annos[hits[i][end].seqid].offset-1);
           }
@@ -196,13 +214,14 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
 
           // threshold the score by assuming that one seed's worth of
           // matches occurs in the alignment
-          score = fmap_sw_local_core(target, target_len, query, seq_len[i], &par, path, &path_len, opt->seed_length * opt->score_match, NULL);
+          score = fmap_sw_local_core(target, target_len, query, seq_len[i], &par, path, &path_len, opt->seed_length * opt->score_match, &score_subo);
 
           // i - target
           // j - query
 
           if(0 < score) {
               fmap_map3_hit_t *hit;
+
               aln->n++;
               aln->hits = fmap_realloc(aln->hits, aln->n*sizeof(fmap_map3_hit_t), "aln->hits");
 
@@ -212,6 +231,7 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
               hit->seqid = hits[i][start].seqid; 
               hit->pos = (ref_start-1) + (path[path_len-1].i-1); // zero-based 
               hit->score = score;
+              hit->score_subo = score_subo;
               hit->n_seeds = ((1 << 15) < end - start + 1) ? (1 << 15) : (end - start + 1);
               hit->cigar = fmap_sw_path2cigar(path, path_len, &hit->n_cigar);
 

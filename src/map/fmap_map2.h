@@ -8,14 +8,6 @@
   The BWA-like (long-read) Mapping Algorithm
   */
 
-enum {
-    FMAP_MAP2_ALN_OUTPUT_MODE_RAND           = 0,  /*!< Output a random alignment > */
-    FMAP_MAP2_ALN_OUTPUT_MODE_SCORE_LEN_NORM = 1,  /*!< Output the best scoring alignment normalized by alignment length */
-    FMAP_MAP2_ALN_OUTPUT_MODE_SCORE          = 2,  /*!< Output the best scoring alignment */
-    FMAP_MAP2_ALN_OUTPUT_MODE_LEN            = 3,  /*!< Output the longest alignment */
-    FMAP_MAP2_ALN_OUTPUT_MODE_ALL            = 4   /*!< Output all alignments */
-};
-
 /*! 
   structure to store the command line options for 'fmap map2'
   */
