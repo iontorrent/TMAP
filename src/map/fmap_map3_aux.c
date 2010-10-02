@@ -119,8 +119,14 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
 
       for(j=0;j<n_seeds[i];j++) { // go through all seeds
           for(k=seeds[i][j].k;k<=seeds[i][j].l;k++) { // through all occurrences
-              pacpos = bwt->seq_len - fmap_sa_pac_pos(sa, bwt, k) - seeds[i][j].offset + 1;
-              if(0 < fmap_refseq_pac2real(refseq, pacpos, 0,
+              pacpos = fmap_sa_pac_pos(sa, bwt, k);
+              if(bwt->seq_len < pacpos + seeds[i][j].offset + 1) { // before the beginning of the reference sequence
+                  pacpos = 0;
+              }
+              else {
+                  pacpos = bwt->seq_len - pacpos - seeds[i][j].offset + 1;
+              }
+              if(0 < fmap_refseq_pac2real(refseq, pacpos, 1,
                                           &hits[i][n_hits[i]].seqid, &hits[i][n_hits[i]].pos)) {
                   hits[i][n_hits[i]].pos -= opt->seed_length;
                   hits[i][n_hits[i]].offset = seeds[i][j].offset;
