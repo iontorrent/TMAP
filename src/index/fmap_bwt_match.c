@@ -131,7 +131,7 @@ fmap_bwt_match_cal_width(const fmap_bwt_t *bwt, int len, const char *str, fmap_b
   }
 }
 
-int
+uint32_t
 fmap_bwt_match_exact(const fmap_bwt_t *bwt, int len, const uint8_t *str, fmap_bwt_match_occ_t *match_sa)
 {
   int32_t i;
@@ -155,7 +155,7 @@ fmap_bwt_match_exact(const fmap_bwt_t *bwt, int len, const uint8_t *str, fmap_bw
   return prev.l - prev.k + 1;
 }
 
-int
+uint32_t
 fmap_bwt_match_exact_alt(const fmap_bwt_t *bwt, int len, const uint8_t *str, fmap_bwt_match_occ_t *match_sa)
 {
   int i;
