@@ -68,9 +68,9 @@ fmap_map1_aln_overwrite(fmap_map1_aln_t *dest, fmap_map1_aln_t *src)
   // cigar
   free(dest->cigar);
   dest->cigar = src->cigar;
-  dest->cigar_length = src->cigar_length;
+  dest->n_cigar = src->n_cigar;
   src->cigar = NULL;
-  src->cigar_length = 0;
+  src->n_cigar = 0;
 
   // rest
   dest->score = src->score;
@@ -187,25 +187,18 @@ fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fma
   uint32_t i, j, n = 0;
 
   for(i=a->k;i<=a->l;i++) {
-      uint16_t flag = 0x0000;
       uint32_t pos = 0, seqid = 0, pacpos = 0; 
       int32_t aln_ref_l = 0;
       int32_t seq_len = 0;
-      int32_t sff_soft_clip = 0;
-      fmap_string_t *name=NULL, *bases=NULL, *qualities=NULL;
 
-      name = fmap_seq_get_name(seq);
-      bases = fmap_seq_get_bases(seq);
-      qualities = fmap_seq_get_qualities(seq);
-      seq_len = bases->l;
+      seq_len = fmap_seq_get_bases(seq)->l;
 
       if(FMAP_SEQ_TYPE_SFF == seq->type) {
-          sff_soft_clip = seq->data.sff->gheader->key_length; // soft clip the key sequence
-          seq_len -= sff_soft_clip;
+          seq_len -= seq->data.sff->gheader->key_length; // soft clip the key sequence
       }
 
       // get the number of non-inserted bases 
-      for(j=0;j<a->cigar_length;j++) {
+      for(j=0;j<a->n_cigar;j++) {
           switch((a->cigar[j] & 0xf)) {
             case BAM_CMATCH:
             case BAM_CDEL:
@@ -219,41 +212,15 @@ fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fma
       pacpos = bwt->seq_len - fmap_sa_pac_pos(sa, bwt, i) - aln_ref_l + 1;
 
       if(0 < fmap_refseq_pac2real(refseq, pacpos, seq_len, &seqid, &pos)) {
-          if(1 == a->strand) { // reverse for the output
-              flag |= 0x0010;
-              fmap_string_reverse_compliment(bases, 0);
-              fmap_string_reverse(qualities);
-          }
-          fmap_file_fprintf(fmap_file_stdout, "%s\t%u\t%s\t%u\t%u\t",
-                            name->s, flag, refseq->annos[seqid].name->s,
-                            pos, a->mapq);
-          // Note: we assume there is no soft clipping at the start or end of
-          // the cigar
-          if(0 < sff_soft_clip && 0 == a->strand) { // forward
-              fmap_file_fprintf(fmap_file_stdout, "%dS", sff_soft_clip);
-          }
-          for(j=0;j<a->cigar_length;j++) {
-              fmap_file_fprintf(fmap_file_stdout, "%d%c", (a->cigar[j]>>4), "MIDNSHP"[a->cigar[j] & 0xf]);
-          }
-          if(0 < sff_soft_clip && 1 == a->strand) { // reversed
-              fmap_file_fprintf(fmap_file_stdout, "%dS", sff_soft_clip);
-          }
-          fmap_file_fprintf(fmap_file_stdout, "\t*\t0\t0\t%s\t%s",
-                            bases->s, qualities->s);
-          // AS optional tag
-          fmap_file_fprintf(fmap_file_stdout, "\tAS:i:%d", a->score);
-          // NM
-          fmap_file_fprintf(fmap_file_stdout, "\tNM:i:%d", (a->n_mm + a->n_gapo + a->n_gape));
-          // XM/XO/XG
-          fmap_file_fprintf(fmap_file_stdout, "\tXM:i:%d\tXO:i:%d\tXG:i:%d",
-                            a->n_mm, a->n_gapo, a->n_gape);
 
-          // new line
-          fmap_file_fprintf(fmap_file_stdout, "\n");
-          if(1 == a->strand) { // reverse back
-              fmap_string_reverse_compliment(bases, 0);
-              fmap_string_reverse(qualities);
-          }
+          fmap_sam_print_mapped(fmap_file_stdout, seq, refseq,
+                                a->strand, seqid, pos, 
+                                a->mapq, a->cigar, a->n_cigar, 
+                                "\tAS:i:%d\tNM:i:%d\tXM:i:%d\tXO:i:%d\tXG:i:%d",
+                                a->score,
+                                (a->n_mm + a->n_gapo + a->n_gape),
+                                a->n_mm, a->n_gapo, a->n_gape);
+
           n++;
       }
   }

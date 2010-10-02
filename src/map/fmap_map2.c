@@ -80,70 +80,24 @@ fmap_map2_filter_sam(fmap_seq_t *seq, fmap_map2_sam_t *sam, int32_t aln_output_m
   fmap_map2_sam_realloc(sam, 1);
 }
 
-static void
+static inline void
 fmap_map2_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map2_sam_entry_t *sam)
 {
-  int32_t i, sff_soft_clip = 0, cigar_start, cigar_end;
-  fmap_string_t *name=NULL, *bases=NULL, *qualities=NULL;
 
-  name = fmap_seq_get_name(seq);
-  bases = fmap_seq_get_bases(seq);
-  qualities = fmap_seq_get_qualities(seq);
-
-  if(FMAP_SEQ_TYPE_SFF == seq->type) {
-      sff_soft_clip = seq->data.sff->gheader->key_length; // soft clip the key sequence
+  if(0 < sam->XI) {
+      fmap_sam_print_mapped(fmap_file_stdout, seq, refseq, 
+                          sam->strand, sam->seqid, sam->pos, sam->mapq,
+                          sam->cigar, sam->n_cigar, 
+                          "\tAS:i:%d\tXS:i:%d\tXF:i:%d\tXE:i:%d\tXI:i:%d",
+                          sam->AS, sam->XS, sam->XF, sam->XE, sam->XI);
   }
-
-  if(1 == sam->strand) { // reverse for the output
-      fmap_string_reverse_compliment(bases, 0);
-      fmap_string_reverse(qualities);
+  else {
+      fmap_sam_print_mapped(fmap_file_stdout, seq, refseq, 
+                          sam->strand, sam->seqid, sam->pos, sam->mapq,
+                          sam->cigar, sam->n_cigar, 
+                          "\tAS:i:%d\tXS:i:%d\tXF:i:%d\tXE:i:%d",
+                          sam->AS, sam->XS, sam->XF, sam->XE);
   }
-
-  fmap_file_fprintf(fmap_file_stdout, "%s\t%u\t%s\t%u\t%u\t",
-                    name->s, (1 == sam->strand) ? 0x10 : 0, refseq->annos[sam->seqid].name->s, 
-                    sam->pos + 1,
-                    sam->mapq);
-  // Note: we must check if the cigar starts or ends with a soft clip
-  cigar_start = 0;
-  cigar_end = sam->n_cigar;
-  if(0 < sff_soft_clip) {
-      if(0 == sam->strand) {  // forward strand sff soft clip
-          if(0 < sam->n_cigar && 4 == sam->cigar[0]) {
-              sff_soft_clip += (sam->cigar[0]>>4);
-              cigar_start++; // do not print out the first cigar op, this will be printed out later
-          }
-          fmap_file_fprintf(fmap_file_stdout, "%dS", sff_soft_clip);
-      }
-      else {  // reverse strand sff soft clip
-          if(0 < sam->n_cigar && 4 == sam->cigar[cigar_end-1]) {
-              sff_soft_clip += (sam->cigar[cigar_end-1]>>4);
-              cigar_end--; // do not print out the last cigar op, this will be printed out later
-          }
-      }
-  }
-  // print out the cigar
-  for(i=cigar_start;i<cigar_end;i++) {
-      fmap_file_fprintf(fmap_file_stdout, "%d%c",
-                        sam->cigar[i]>>4, "MIDNSHP"[sam->cigar[i]&0xf]);
-  }
-  // add trailing soft clipping if necessary
-  if(0 < sff_soft_clip && 1 == sam->strand) {  // reverse strand sff soft clip
-      fmap_file_fprintf(fmap_file_stdout, "%dS", sff_soft_clip);
-  }
-  fmap_file_fprintf(fmap_file_stdout, "\t*\t0\t0\t%s\t%s",
-                    bases->s, qualities->s);
-  // optional tags
-  fmap_file_fprintf(fmap_file_stdout, "\tAS:i:%d\tXS:i:%d\tXF:i:%d\tXE:i:%d",
-                    sam->AS, sam->XS, sam->XF, sam->XE);
-  if(0 < sam->XI) fmap_file_fprintf(fmap_file_stdout, "\tXI:i:%d", sam->XI);
-  // new line
-  fmap_file_fprintf(fmap_file_stdout, "\n");
-
-  if(1 == sam->strand) { // reverse back
-      fmap_string_reverse_compliment(bases, 0);
-      fmap_string_reverse(qualities);
-  }
-
 }
 
 static void

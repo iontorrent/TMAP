@@ -15,15 +15,12 @@
 #include "fmap_map2_chain.h"
 #include "fmap_map2_core.h"
 #include "fmap_map2_aux.h"
-//#include "utils.h"
-//#include "stdaln.h"
 
 #define __left_lt(a, b) ((a).end > (b).end)
 FMAP_SORT_INIT(hit, fmap_map2_hit_t, __left_lt)
 
 #define __hitG_lt(a, b) ((a).G > (b).G)
 FMAP_SORT_INIT(hitG, fmap_map2_hit_t, __hitG_lt)
-
 
 int32_t
 fmap_map2_aux_resolve_duphits(const fmap_bwt_t *bwt, const fmap_sa_t *sa, fmap_map2_aln_t *b, int32_t IS)
@@ -583,7 +580,6 @@ fmap_map1_aux_store_hits(fmap_refseq_t *refseq, fmap_map2_opt_t *opt,
   return sam;
 }
 
-// TODO: return value
 fmap_map2_sam_t *
 fmap_map2_aux_core(fmap_map2_opt_t *_opt,
                    fmap_seq_t *query,

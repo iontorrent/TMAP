@@ -6,7 +6,7 @@
 #include "../io/fmap_file.h"
 
 /*! 
-  */
+*/
 
 /*! 
   prints out a SAM header
@@ -26,5 +26,13 @@ fmap_sam_print_header(fmap_file_t *fp, fmap_refseq_t *refseq, int argc, char *ar
   */
 inline void
 fmap_sam_print_unmapped(fmap_file_t *fp, fmap_seq_t *seq);
+
+
+// TODO: document
+inline void
+fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, fmap_refseq_t *refseq,
+                    uint8_t strand, uint32_t seqid, uint32_t pos,
+                    int32_t mapq, uint32_t *cigar, int32_t n_cigar,
+                    const char *format, ...);
 
 #endif

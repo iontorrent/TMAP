@@ -202,9 +202,9 @@ fmap_map1_aux_get_bam_state(int state)
 
 #define __add_to_cigar() do { \
     if(0 < op_len) { \
-        if(aln->cigar_length <= cigar_i) { \
-            aln->cigar_length++; \
-            aln->cigar = fmap_realloc(aln->cigar, sizeof(uint32_t)*aln->cigar_length, "aln->cigar"); \
+        if(aln->n_cigar <= cigar_i) { \
+            aln->n_cigar++; \
+            aln->cigar = fmap_realloc(aln->cigar, sizeof(uint32_t)*aln->n_cigar, "aln->cigar"); \
         } \
         aln->cigar[cigar_i] = (op_len << 4 ) | fmap_map1_aux_get_bam_state(op); \
         cigar_i++; \
@@ -395,8 +395,8 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
               aln->l = cur->match_sa.l;
 
               // cigar
-              aln->cigar_length = 1 + cur->n_gapo;
-              aln->cigar = fmap_malloc(sizeof(uint32_t)*aln->cigar_length, "aln->cigar");
+              aln->n_cigar = 1 + cur->n_gapo;
+              aln->cigar = fmap_malloc(sizeof(uint32_t)*aln->n_cigar, "aln->cigar");
               cigar_i = 0;
 
               if(offset < len) { // we used 'fmap_bwt_match_exact_alt' 
@@ -421,25 +421,17 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
               }
               __add_to_cigar();
 
-              if(cigar_i < aln->cigar_length) { // reallocate to fit
-                  aln->cigar_length = cigar_i;
-                  aln->cigar = fmap_realloc(aln->cigar, sizeof(uint32_t)*aln->cigar_length, "aln->cigar");
+              if(cigar_i < aln->n_cigar) { // reallocate to fit
+                  aln->n_cigar = cigar_i;
+                  aln->cigar = fmap_realloc(aln->cigar, sizeof(uint32_t)*aln->n_cigar, "aln->cigar");
               }
 
               // reverse the cigar 
-              for(cigar_i=0;cigar_i<(aln->cigar_length >> 1);cigar_i++) {
-                  op = aln->cigar[aln->cigar_length-1-cigar_i];
-                  aln->cigar[aln->cigar_length-1-cigar_i] = aln->cigar[cigar_i];
+              for(cigar_i=0;cigar_i<(aln->n_cigar >> 1);cigar_i++) {
+                  op = aln->cigar[aln->n_cigar-1-cigar_i];
+                  aln->cigar[aln->n_cigar-1-cigar_i] = aln->cigar[cigar_i];
                   aln->cigar[cigar_i] = op;
               }
-
-              // print
-              /*
-                 for(cigar_i=0;cigar_i<aln->cigar_length;cigar_i++) {
-                 fprintf(stderr, "%d%c", (aln->cigar[cigar_i] >> 4), "MIDNSHP"[aln->cigar[cigar_i] & 0xf]);
-                 }
-                 fputc('\n', stderr);
-                 */
 
               // TODO: use the shadow ?
               //fmap_map1_aux_stack_shadow(l - k + 1, len, bwt->seq_len, e->last_diff_offset, width_cur);

@@ -339,7 +339,6 @@ fmap_map2_core_aln(const fmap_map2_opt_t *opt, const fmap_bwtl_t *target,
               if((x->G > opt->pen_gapo + opt->pen_gape && x->G >= -heap[0]) || i < old_n) { // good node in u, or in v
                   if(p->cpos[0] == -1 || p->cpos[1] == -1 || p->cpos[2] == -1 || p->cpos[3] == -1) {
                       fmap_bwt_match_2occ4(query_bwt, &p->match_sa, qnext);
-                      //fmap_bwt_2occ4(query_bwt, p->match_sa.k - 1, p->match_sa.l, qcntk, qcntl); // TODO: use hash
                       for(qj = 0; qj != 4; ++qj) { // descend to the prefix trie
                           if(p->cpos[qj] != -1) continue; // this node will be visited later
                           k = qnext[qj].k;
