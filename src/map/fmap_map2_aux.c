@@ -475,8 +475,10 @@ fmap_map2_sam_t *
 fmap_map2_sam_init(int32_t n)
 {
   fmap_map2_sam_t *sam = NULL;
-  sam = fmap_calloc(n, sizeof(fmap_map2_sam_t), "sams");
-  sam->entries = fmap_calloc(n, sizeof(fmap_map2_sam_entry_t), "sams->entries");
+
+  sam = fmap_calloc(1, sizeof(fmap_map2_sam_t), "sam");
+  if(0 < n) sam->entries = fmap_calloc(n, sizeof(fmap_map2_sam_entry_t), "sams->entries");
+  else sam->entries = NULL;
   sam->num_entries = n;
 
   return sam;
@@ -670,7 +672,10 @@ fmap_map2_aux_core(fmap_map2_opt_t *_opt,
   fmap_map2_aux_gen_cigar(&opt, _seq, l, refseq, b[0]);
   sam = fmap_map1_aux_store_hits(refseq, &opt, b[0]);
   // free
-  free(seq[0]);
+  fmap_string_destroy(seq[0]);
+  fmap_string_destroy(seq[1]);
+  fmap_string_destroy(rseq[0]);
+  fmap_string_destroy(rseq[1]);
   fmap_map2_aln_destroy(b[0]);
 
   return sam;

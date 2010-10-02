@@ -368,8 +368,9 @@ fmap_map3_core(fmap_map3_opt_t *opt)
       fmap_progress_print2("processed %d reads", n_reads_processed);
   }
 
-  // close the output
+  // close the input/output
   fmap_file_fclose(fmap_file_stdout);
+  fmap_file_fclose(fp_reads);
 
   // free memory
   for(i=0;i<reads_queue_size;i++) {
@@ -377,7 +378,6 @@ fmap_map3_core(fmap_map3_opt_t *opt)
   }
   free(seq_buffer);
   free(alns);
-  fmap_file_fclose(fp_reads);
   fmap_refseq_destroy(refseq);
   fmap_bwt_destroy(bwt);
   fmap_sa_destroy(sa);

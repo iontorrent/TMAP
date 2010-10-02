@@ -149,7 +149,7 @@ fmap_map2_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
 
           // process
           sams[low] = fmap_map2_aux_core(opt, seq, refseq, bwt, sa, pool);
-              
+
           // filter
           if(NULL != sams[low]) {
               fmap_map2_filter_sam(seq_buffer[low], sams[low], opt->aln_output_mode);
@@ -353,7 +353,8 @@ fmap_map2_core(fmap_map2_opt_t *opt)
       fmap_progress_print2("processed %d reads", n_reads_processed);
   }
 
-  // close the output
+  // close the input/output
+  fmap_file_fclose(fp_reads);
   fmap_file_fclose(fmap_file_stdout);
 
   // free memory
@@ -367,6 +368,10 @@ fmap_map2_core(fmap_map2_opt_t *opt)
   fmap_bwt_destroy(bwt[1]);
   fmap_sa_destroy(sa[0]);
   fmap_sa_destroy(sa[1]);
+  fmap_seq_io_destroy(seqio);
+  if(0 < opt->shm_key) {
+      fmap_shm_destroy(shm, 0);
+  }
 }
 
 static int
@@ -438,6 +443,8 @@ fmap_map2_opt_init()
 static void
 fmap_map2_opt_destroy(fmap_map2_opt_t *opt)
 {
+  free(opt->fn_fasta);
+  free(opt->fn_reads);
   free(opt);
 }
 
