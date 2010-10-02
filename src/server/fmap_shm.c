@@ -161,9 +161,11 @@ fmap_shm_init(key_t key, size_t size, int32_t create)
       shm->size += sizeof(uint32_t); // add for on/off bits for listing what is in memory
       shm->size += 32*sizeof(size_t); // add for the byte size of each listing
       shmflg = IPC_CREAT | IPC_EXCL | 0666;
+      shm->creator = 1;
   }
   else {
       shmflg = 0666;
+      shm->creator = 0;
   }
 
   // get the shared memory id
@@ -217,7 +219,7 @@ fmap_shm_destroy(fmap_shm_t *shm, int32_t force)
   fmap_shmdt(shm->ptr);
 
   fmap_shmctl(shm->shmid, IPC_STAT, &buf);
-  if(1 == force || buf.shm_cpid == getpid()) { // delete the shared memory
+  if(1 == force || 1 == shm->creator) { // delete the shared memory
       fmap_shmctl(shm->shmid, IPC_RMID, NULL);
   }
   free(shm);

@@ -40,6 +40,7 @@ typedef struct {
     int32_t shmid;  /*!< the id of the shared memory */
     void *ptr;  /*!< pointer to the first byte of the shared memory */
     void *buf;  /*!< pointer to the first byte of the data stored in the shared memory */
+    int32_t creator; /*!< 1 if this structure created the shared memory, 0 otherwise */
 } fmap_shm_t;
 
 /*! 

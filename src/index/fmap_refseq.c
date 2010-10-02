@@ -390,6 +390,8 @@ fmap_refseq_shm_unpack(uint8_t *buf)
 {
   int32_t i;
   fmap_refseq_t *refseq = NULL;
+  
+  if(NULL == buf) return NULL;
 
   refseq = fmap_calloc(1, sizeof(fmap_refseq_t), "refseq");
 
