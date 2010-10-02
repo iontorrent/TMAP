@@ -96,8 +96,8 @@ typedef struct
   */
 typedef struct
 {
-  int32_t i; /*!< the seq1 index (0-based) */
-  int32_t j; /*!< the seq2 index (0-based) */
+  int32_t i; /*!< the seq1 index (1-based) */
+  int32_t j; /*!< the seq2 index (1-based) */
   uint8_t ctype; /*!< the edit operator applied */
 } fmap_sw_path_t;
 

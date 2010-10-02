@@ -120,7 +120,7 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
       for(j=0;j<n_seeds[i];j++) { // go through all seeds
           for(k=seeds[i][j].k;k<=seeds[i][j].l;k++) { // through all occurrences
               pacpos = bwt->seq_len - fmap_sa_pac_pos(sa, bwt, k) - seeds[i][j].offset + 1;
-              if(0 < fmap_refseq_pac2real(refseq, pacpos, seeds[i][j].offset, 
+              if(0 < fmap_refseq_pac2real(refseq, pacpos, 0,
                                           &hits[i][n_hits[i]].seqid, &hits[i][n_hits[i]].pos)) {
                   hits[i][n_hits[i]].pos -= opt->seed_length;
                   hits[i][n_hits[i]].offset = seeds[i][j].offset;
@@ -168,9 +168,6 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
               // off the end)
               ref_end = refseq->annos[hits[i][end].seqid].len;
           }
-          // add contig offset and make zero based
-          ref_start += refseq->annos[hits[i][end].seqid].offset-1;
-          ref_end += refseq->annos[hits[i][end].seqid].offset-1;
 
           // get the target sequence
           target_len = ref_end - ref_start + 1;
@@ -180,7 +177,9 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
               target = fmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
           }
           for(pacpos=ref_start;pacpos<=ref_end;pacpos++) {
-              target[pacpos-ref_start] = fmap_refseq_seq_i(refseq, pacpos);
+          
+              // add contig offset and make zero based
+              target[pacpos-ref_start] = fmap_refseq_seq_i(refseq, pacpos + refseq->annos[hits[i][end].seqid].offset-1);
           }
 
           // get the band width
@@ -193,17 +192,39 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
           // matches occurs in the alignment
           score = fmap_sw_local_core(target, target_len, query, seq_len[i], &par, path, &path_len, opt->seed_length * opt->score_match, NULL);
 
+          // i - target
+          // j - query
+
           if(0 < score) {
+              fmap_map3_hit_t *hit;
               aln->n++;
               aln->hits = fmap_realloc(aln->hits, aln->n*sizeof(fmap_map3_hit_t), "aln->hits");
 
-              // save
-              aln->hits[aln->n-1].strand = i;
-              aln->hits[aln->n-1].seqid = hits[i][start].seqid; 
-              aln->hits[aln->n-1].pos = ref_start + path[path_len-1].j - 1; // zero-based 
-              aln->hits[aln->n-1].score = score;
-              aln->hits[aln->n-1].n_seeds = ((1 << 15) < end - start + 1) ? (1 << 15) : (end - start + 1);
-              aln->hits[aln->n-1].cigar = fmap_sw_path2cigar(path, path_len, &aln->hits[aln->n-1].n_cigar);
+              // save the hit
+              hit = &aln->hits[aln->n-1]; // for easy of writing code
+              hit->strand = i;
+              hit->seqid = hits[i][start].seqid; 
+              hit->pos = (ref_start-1) + (path[path_len-1].i-1); // zero-based 
+              hit->score = score;
+              hit->n_seeds = ((1 << 15) < end - start + 1) ? (1 << 15) : (end - start + 1);
+              hit->cigar = fmap_sw_path2cigar(path, path_len, &hit->n_cigar);
+
+              // add soft clipping after local alignment
+              if(1 < path[path_len-1].j) {
+                  // soft clip the front of the read
+                  hit->cigar = fmap_realloc(hit->cigar, sizeof(uint32_t)*(1+hit->n_cigar), "hit->cigar");
+                  for(j=hit->n_cigar-1;0<=j;j--) { // shift up
+                      hit->cigar[j+1] = hit->cigar[j];
+                  }
+                  hit->cigar[0] = ((path[path_len-1].j-1) << 4) | 4; 
+                  hit->n_cigar++;
+              }
+              if(path[0].j < seq_len[i]) { // 
+                  // soft clip the end of the read
+                  hit->cigar = fmap_realloc(hit->cigar, sizeof(uint32_t)*(1+hit->n_cigar), "hit->cigar");
+                  hit->cigar[hit->n_cigar] = ((seq_len[i] - path[0].j) << 4) | 4; 
+                  hit->n_cigar++;
+              }
           }
 
           // free
