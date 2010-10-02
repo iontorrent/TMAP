@@ -61,7 +61,7 @@ fmap_map3_aln_filter(fmap_seq_t *seq, fmap_map3_aln_t *aln,
       mapq = 0;
   }
   else {
-      double c = 1.0;
+      double c = 0.5;
       if(best_subo < score_thr) best_subo = score_thr;
       if(n_seeds < 2) c *= 0.2;
       mapq = (int32_t)(c * (best_score - best_subo) * (250.0 / best_score + 0.03 / score_match) + .499);
@@ -458,7 +458,7 @@ fmap_map3_opt_init()
   opt->sw_offset = 10; // move this to a define block
   opt->score_match = 1;
   opt->pen_mm = 3; opt->pen_gapo = 5; opt->pen_gape = 2; // TODO: move this to a define block
-  opt->score_thr = 30;
+  opt->score_thr = 20;
   opt->reads_queue_size = 65536; // TODO: move this to a define block
   opt->num_threads = 1;
   opt->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_SCORE; // TODO: move this to a define block
