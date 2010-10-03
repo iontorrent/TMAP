@@ -27,6 +27,18 @@ static pthread_mutex_t fmap_map3_read_lock = PTHREAD_MUTEX_INITIALIZER;
 static int32_t fmap_map3_read_lock_low = 0;
 #define FMAP_MAP3_THREAD_BLOCK_SIZE 1024
 #endif
+      
+static int32_t
+fmap_map3_get_seed_length(uint64_t ref_len)
+{
+  int32_t k = 0;
+  while(0 < ref_len) {
+      ref_len >>= 2; // divide by four
+      k++;
+  }
+  // add two just to be sure
+  return k+2;
+}
 
 static inline void
 fmap_map3_aln_filter(fmap_seq_t *seq, fmap_map3_aln_t *aln, 
@@ -256,6 +268,12 @@ fmap_map3_core(fmap_map3_opt_t *opt)
       fmap_progress_print2("reference data retrieved from shared memory");
   }
 
+  // Set the seed length
+  if(-1 == opt->seed_length) {
+      opt->seed_length = fmap_map3_get_seed_length(refseq->len);
+      fmap_progress_print("setting the seed length to %d", opt->seed_length);
+  }
+
   // Note: 'fmap_file_stdout' should not have been previously modified
   fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "wb", opt->output_compr);
 
@@ -406,7 +424,7 @@ usage(fmap_map3_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "         -f FILE     the FASTA reference file name [%s]\n", opt->fn_fasta);
   fmap_file_fprintf(fmap_file_stderr, "         -r FILE     the reads file name [%s]\n", (NULL == opt->fn_reads) ? "stdin" : opt->fn_reads);
   fmap_file_fprintf(fmap_file_stderr, "         -F STRING   the reads file format (fastq|fq|fasta|fa|sff) [%s]\n", reads_format);
-  fmap_file_fprintf(fmap_file_stderr, "         -l INT      the k-mer length to seed CALs [%d]\n", opt->seed_length);
+  fmap_file_fprintf(fmap_file_stderr, "         -l INT      the k-mer length to seed CALs (-1 tunes to the genome size) [%d]\n", opt->seed_length);
   fmap_file_fprintf(fmap_file_stderr, "         -S INT      the maximum number of hits returned by a seed [%d]\n", opt->max_seed_hits);
   fmap_file_fprintf(fmap_file_stderr, "         -b INT      the band width to group seeds [%d]\n", opt->max_seed_band);
   fmap_file_fprintf(fmap_file_stderr, "         -w INT      the extra bases to add before and after the target during Smith-Waterman [%d]\n", opt->sw_offset);
@@ -452,7 +470,7 @@ fmap_map3_opt_init()
   opt->argc = -1;
   opt->fn_fasta = opt->fn_reads = NULL;
   opt->reads_format = FMAP_READS_FORMAT_UNKNOWN;
-  opt->seed_length = 16; // move this to a define block
+  opt->seed_length = -1; // move this to a define block
   opt->max_seed_hits = 8; // move this to a define block
   opt->max_seed_band = 50; // move this to a define block
   opt->sw_offset = 10; // move this to a define block
@@ -461,7 +479,7 @@ fmap_map3_opt_init()
   opt->score_thr = 20;
   opt->reads_queue_size = 65536; // TODO: move this to a define block
   opt->num_threads = 1;
-  opt->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_SCORE; // TODO: move this to a define block
+  opt->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_SCORE;
   opt->input_compr = FMAP_FILE_NO_COMPRESSION;
   opt->output_compr = FMAP_FILE_NO_COMPRESSION;
   opt->shm_key = 0;
@@ -559,7 +577,7 @@ fmap_map3_main(int argc, char *argv[])
       if(FMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
           fmap_error("the reads format (-r) was unrecognized", Exit, CommandLineArgument);
       }
-      fmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "-l");
+      if(-1 != opt->seed_length) fmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "-l");
       fmap_error_cmd_check_int(opt->max_seed_hits, 1, INT32_MAX, "-S");
       fmap_error_cmd_check_int(opt->max_seed_hits, 1, INT32_MAX, "-b");
       fmap_error_cmd_check_int(opt->sw_offset, 1, INT32_MAX, "-w");

@@ -432,7 +432,7 @@ fmap_map2_opt_init()
   opt->max_seed_intv = 3; opt->z_best = 1; opt->seeds_rev = 5;
   opt->reads_queue_size = 65536;
   opt->num_threads = 1;
-  opt->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_SCORE; 
+  opt->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_RAND; 
   opt->input_compr = FMAP_FILE_NO_COMPRESSION;
   opt->output_compr = FMAP_FILE_NO_COMPRESSION;
   opt->shm_key = 0;
