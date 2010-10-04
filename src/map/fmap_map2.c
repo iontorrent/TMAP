@@ -396,6 +396,7 @@ usage(fmap_map2_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "         -S INT      maximum seeding interval size [%d]\n", opt->max_seed_intv);
   fmap_file_fprintf(fmap_file_stderr, "         -a INT      Z-best [%d]\n", opt->z_best);
   fmap_file_fprintf(fmap_file_stderr, "         -N INT      # seeds to trigger reverse alignment [%d]\n", opt->seeds_rev);
+  fmap_file_fprintf(fmap_file_stderr, "         -g          align the full read (global alignment) [%s]\n", (0 == opt->aln_global) ? "false" : "true");
   fmap_file_fprintf(fmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
   fmap_file_fprintf(fmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
   fmap_file_fprintf(fmap_file_stderr, "         -j          the input is bz2 compressed (bzip2) [%s]\n",
@@ -430,6 +431,7 @@ fmap_map2_opt_init()
   opt->yita = 5.5f; opt->mask_level = 0.50; opt->length_coef = 5.5f;
   opt->band_width = 50; opt->score_thr = 30;
   opt->max_seed_intv = 3; opt->z_best = 1; opt->seeds_rev = 5;
+  opt->aln_global = 0;
   opt->reads_queue_size = 65536;
   opt->num_threads = 1;
   opt->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_RAND; 
@@ -458,7 +460,7 @@ fmap_map2_main(int argc, char *argv[])
   opt = fmap_map2_opt_init(argc, argv);
   opt->argc = argc; opt->argv = argv;
 
-  while((c = getopt(argc, argv, "f:r:F:A:M:O:E:y:m:c:w:T:S:b:N:q:n:a:jzJZs:vh")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:A:M:O:E:y:m:c:w:T:S:b:N:g:q:n:a:jzJZs:vh")) >= 0) {
       switch (c) {
         case 'f':
           opt->fn_fasta = fmap_strdup(optarg); break;
@@ -494,6 +496,8 @@ fmap_map2_main(int argc, char *argv[])
           opt->z_best= atoi(optarg); break;
         case 'N':
           opt->seeds_rev = atoi(optarg); break;
+        case 'g':
+          opt->aln_global = 1; break;
         case 'q':
           opt->reads_queue_size = atoi(optarg); break;
         case 'n':

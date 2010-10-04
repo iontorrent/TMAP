@@ -214,7 +214,7 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
 
           // threshold the score by assuming that one seed's worth of
           // matches occurs in the alignment
-          score = fmap_sw_local_core(target, target_len, query, seq_len[i], &par, path, &path_len, opt->score_thr, &score_subo);
+          score = fmap_sw_local_core(target, target_len, query, seq_len[i], &par, path, &path_len, 0, opt->aln_global, opt->score_thr, &score_subo);
 
           if(0 < score && 0 < path_len) {
               fmap_map3_hit_t *hit;

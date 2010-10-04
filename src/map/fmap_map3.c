@@ -438,6 +438,7 @@ usage(fmap_map3_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "         -O INT      the indel start penalty [%d]\n", opt->pen_gapo); 
   fmap_file_fprintf(fmap_file_stderr, "         -E INT      the indel extend penalty [%d]\n", opt->pen_gape); 
   fmap_file_fprintf(fmap_file_stderr, "         -T INT      score threshold divided by the match score [%d]\n", opt->score_thr);
+  fmap_file_fprintf(fmap_file_stderr, "         -g          align the full read (global alignment) [%s]\n", (0 == opt->aln_global) ? "false" : "true");
   fmap_file_fprintf(fmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
   fmap_file_fprintf(fmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
   fmap_file_fprintf(fmap_file_stderr, "         -a INT      output filter [%d]\n", opt->aln_output_mode);
@@ -482,6 +483,7 @@ fmap_map3_opt_init()
   opt->score_match = 1;
   opt->pen_mm = 3; opt->pen_gapo = 5; opt->pen_gape = 2; // TODO: move this to a define block
   opt->score_thr = 20;
+  opt->aln_global = 0;
   opt->reads_queue_size = 65536; // TODO: move this to a define block
   opt->num_threads = 1;
   opt->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_SCORE;
@@ -510,7 +512,7 @@ fmap_map3_main(int argc, char *argv[])
   opt = fmap_map3_opt_init(argv, argc);
   opt->argc = argc; opt->argv = argv;
 
-  while((c = getopt(argc, argv, "f:r:F:l:S:b:w:A:M:O:E:q:n:a:jzJZs:vh")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:l:S:b:w:A:M:O:E:T:gq:n:a:jzJZs:vh")) >= 0) {
       switch(c) {
         case 'f':
           opt->fn_fasta = fmap_strdup(optarg); break;
@@ -538,6 +540,8 @@ fmap_map3_main(int argc, char *argv[])
           opt->pen_gape = atoi(optarg); break;
         case 'T':
           opt->score_thr = atoi(optarg); break;
+        case 'g':
+          opt->aln_global = 1; break;
         case 'q': 
           opt->reads_queue_size = atoi(optarg); break;
         case 'n':

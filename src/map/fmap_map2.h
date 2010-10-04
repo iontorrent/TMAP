@@ -29,6 +29,7 @@ typedef struct {
     int32_t max_seed_intv;  /*!< the maximum seed interval (-S) */
     int32_t z_best;  /*!< the number of top scoring hits to keep (-b) */
     int32_t seeds_rev;  /*!< the maximum number of seeds for which reverse alignment is triggered (-N) */
+    int32_t aln_global; /*!< align the full read (-g) */
     int32_t reads_queue_size;  /*!< the reads queue size (-q) */
     int32_t num_threads;  /*!< the number of threads (-n) */
     int32_t aln_output_mode;  /*!< specifies how to choose alignments (-a)  */
