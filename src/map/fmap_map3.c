@@ -27,7 +27,7 @@ static pthread_mutex_t fmap_map3_read_lock = PTHREAD_MUTEX_INITIALIZER;
 static int32_t fmap_map3_read_lock_low = 0;
 #define FMAP_MAP3_THREAD_BLOCK_SIZE 1024
 #endif
-      
+
 static int32_t
 fmap_map3_get_seed_length(uint64_t ref_len)
 {
@@ -64,10 +64,15 @@ fmap_map3_aln_filter(fmap_seq_t *seq, fmap_map3_aln_t *aln,
       else if(!(cur_score < best_score)) { // qual
           n_best++;
       }
-      cur_score = aln->hits[i].score_subo;
-      if(best_subo < cur_score) {
-          best_subo = cur_score;
-      } 
+      else {
+          if(best_subo < cur_score) {
+              best_subo = cur_score;
+          }
+          cur_score = aln->hits[i].score_subo;
+          if(best_subo < cur_score) {
+              best_subo = cur_score;
+          } 
+      }
   }
   if(1 < n_best) {
       mapq = 0;
@@ -100,7 +105,7 @@ fmap_map3_aln_filter(fmap_seq_t *seq, fmap_map3_aln_t *aln,
   }
   else {
       best_score = DBL_MIN;
-  n_best = 0;
+      n_best = 0;
       for(i=0;i<aln->n;i++) {
           cur_score = fmap_map_util_get_score(seq, aln->hits[i].score, aln_output_mode);
           if(best_score < cur_score) {
@@ -242,8 +247,8 @@ fmap_map3_core(fmap_map3_opt_t *opt)
   fmap_shm_t *shm = NULL;
   int32_t reads_queue_size;
 
-    // adjust opt for opt->score_match
-    opt->score_thr *= opt->score_match;
+  // adjust opt for opt->score_match
+  opt->score_thr *= opt->score_match;
 
   // For suffix search we need the reverse bwt/sa and forward refseq
   if(0 == opt->shm_key) {
@@ -432,7 +437,7 @@ usage(fmap_map3_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "         -M INT      the mismatch penalty [%d]\n", opt->pen_mm); 
   fmap_file_fprintf(fmap_file_stderr, "         -O INT      the indel start penalty [%d]\n", opt->pen_gapo); 
   fmap_file_fprintf(fmap_file_stderr, "         -E INT      the indel extend penalty [%d]\n", opt->pen_gape); 
-    fmap_file_fprintf(fmap_file_stderr, "         -T INT      score threshold divided by the match score [%d]\n", opt->score_thr);
+  fmap_file_fprintf(fmap_file_stderr, "         -T INT      score threshold divided by the match score [%d]\n", opt->score_thr);
   fmap_file_fprintf(fmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
   fmap_file_fprintf(fmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
   fmap_file_fprintf(fmap_file_stderr, "         -a INT      output filter [%d]\n", opt->aln_output_mode);
@@ -531,8 +536,8 @@ fmap_map3_main(int argc, char *argv[])
           opt->pen_gapo = atoi(optarg); break;
         case 'E':
           opt->pen_gape = atoi(optarg); break;
-                  case 'T':
-                    opt->score_thr = atoi(optarg); break;
+        case 'T':
+          opt->score_thr = atoi(optarg); break;
         case 'q': 
           opt->reads_queue_size = atoi(optarg); break;
         case 'n':
