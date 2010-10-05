@@ -226,11 +226,11 @@ fmap_server_main(int argc, char *argv[])
   key_t key=13;
   uint32_t listing = 0;
 
-  while((c = getopt(argc, argv, "f:a:k:rRbBsSvh")) >= 0) {
+  while((c = getopt(argc, argv, "f:c:k:rRbBsSvh")) >= 0) {
       switch(c) {
         case 'f':
           fn_fasta = fmap_strdup(optarg); break;
-        case 'a':
+        case 'c':
           cmd = fmap_server_get_command_int(optarg); break;
         case 'k': 
           key = atoi(optarg); break;
