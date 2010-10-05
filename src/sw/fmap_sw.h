@@ -57,6 +57,8 @@ enum {
 
 #define FMAP_SW_SET_INF(s) (s).match_score = (s).ins_score = (s).del_score = FMAP_SW_MINOR_INF
 
+#define FMAP_SW_SET_FROM(s, from) (s).match_from = (s).ins_from = (s).del_from = from 
+
 
 /*!
   Stores from which cell the current cell was extended
@@ -195,8 +197,6 @@ fmap_sw_global_core(uint8_t *seq1, int32_t len1,
   @param  ap        the alignment parameters
   @param  path      the Smith-Waterman alignment path
   @param  path_len  the Smith-Waterman alignment path length
-  @param  seq1_fit   1 if the whole of seq1 should be aligned, 0 otherwise
-  @param  seq2_fit   1 if the whole of seq2 should be aligned, 0 otherwise
   @param  _thres    the scoring threshold for local alignment only (the absolute value will be taken); a value zero or negative value will cause no path to be filled
   @param  _subo     the sub-optimal alignment score (next best) 
   @return           the alignment score, 0 if none was found
@@ -206,7 +206,6 @@ fmap_sw_local_core(uint8_t *seq1, int32_t len1,
                    uint8_t *seq2, int32_t len2, 
                    const fmap_sw_param_t *ap,
                    fmap_sw_path_t *path, int32_t *path_len, 
-                   int32_t seq1_fit, int32_t seq2_fit,
                    int32_t _thres, int32_t *_subo);
 
 /*!
@@ -219,9 +218,8 @@ fmap_sw_local_core(uint8_t *seq1, int32_t len1,
   @param  ap        the alignment parameters
   @param  path      the Smith-Waterman alignment path
   @param  path_len  the Smith-Waterman alignment path length
-  @param  seq1_fit   1 if the whole of seq1 should be aligned, 0 otherwise
-  @param  seq2_fit   1 if the whole of seq2 should be aligned, 0 otherwise
   @param  G0        the initial alignment score
+  @param  seq2_fit   fit seq2 inside seq1
   @param  _mem      allocated memory with size of (len1+2)*(ap->row+1)*4
   @return           the alignment score, 0 if none was found
   */
@@ -230,8 +228,22 @@ fmap_sw_extend_core(uint8_t *seq1, int32_t len1,
                     uint8_t *seq2, int32_t len2, 
                     const fmap_sw_param_t *ap,
                     fmap_sw_path_t *path, int32_t *path_len, 
-                    int32_t seq1_fit, int32_t seq2_fit,
-                    int32_t G0, uint8_t *_mem);
+                    int32_t G0, int32_t seq2_fit, uint8_t *_mem);
+
+/*!
+  Performs a fitting aligment, whereby seq2 is fit into seq1
+  @param  seq1      the first DNA sequence (in 2-bit format)
+  @param  len1      the length of the first sequence
+  @param  seq2      the second DNA sequence (in 2-bit format)
+  @param  len2      the length of the second sequence
+  @param  ap        the alignment parameters
+  @param  path      the Smith-Waterman alignment path
+  @param  path_len  the Smith-Waterman alignment path length
+  @return           the alignment score, 0 if none was found
+  */
+int32_t
+fmap_sw_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const fmap_sw_param_t *ap,
+                                fmap_sw_path_t *path, int32_t *path_len);
 
 /*!
   Creates a cigar array from an alignment path
