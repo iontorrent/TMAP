@@ -201,7 +201,7 @@ fmap_fsw_extend_core(uint8_t *flow, uint8_t *bc1, uint16_t *flowgram1, int32_t f
                      const fmap_fsw_param_t *ap,
                      fmap_fsw_path_t *path, int32_t *path_len)
 {
-// TODO: banded
+  // TODO: banded
   /* Notes:
      - rows are the read, cols are the reference
      - ignore offsets in the first row/col
@@ -226,7 +226,7 @@ fmap_fsw_extend_core(uint8_t *flow, uint8_t *bc1, uint16_t *flowgram1, int32_t f
   int32_t gap_open, gap_ext, gap_end;
   int32_t *score_matrix, N_MATRIX_ROW;
   uint8_t offset, cur_offset = 0;
-  
+
   int32_t best_i=-1, best_j=-1;
   uint8_t best_ctype=0;
   int64_t best_score = FMAP_SW_MINOR_INF;
@@ -278,7 +278,6 @@ fmap_fsw_extend_core(uint8_t *flow, uint8_t *bc1, uint16_t *flowgram1, int32_t f
   // swap curr and last
   s = curr; curr = last; last = s; 
 
-
   // core loop
   for(i=1;i<=flowlen1;i++) { // for each row
       // fill in the columns
@@ -291,30 +290,30 @@ fmap_fsw_extend_core(uint8_t *flow, uint8_t *bc1, uint16_t *flowgram1, int32_t f
 
       // Update best
       if(min_flowlen1 <= i && min_len2 <= j) {
-      for(j=1;j<=len2;j++) {
-          if(best_score < curr[j].match_score) {
-              best_score = curr[j].match_score;
-              best_ctype = FMAP_FSW_FROM_M;
-              best_i = i; best_j = j;
+          for(j=1;j<=len2;j++) {
+              if(best_score < curr[j].match_score) {
+                  best_score = curr[j].match_score;
+                  best_ctype = FMAP_FSW_FROM_M;
+                  best_i = i; best_j = j;
+              }
+              if(best_score < curr[j].ins_score) {
+                  best_score = curr[j].ins_score;
+                  best_ctype = FMAP_FSW_FROM_I;
+                  best_i = i; best_j = j;
+              }
+              if(best_score < curr[j].del_score) {
+                  best_score = curr[j].del_score;
+                  best_ctype = FMAP_FSW_FROM_D;
+                  best_i = i; best_j = j;
+              }
           }
-          if(best_score < curr[j].ins_score) {
-              best_score = curr[j].ins_score;
-              best_ctype = FMAP_FSW_FROM_I;
-              best_i = i; best_j = j;
-          }
-          if(best_score < curr[j].del_score) {
-              best_score = curr[j].del_score;
-              best_ctype = FMAP_FSW_FROM_D;
-              best_i = i; best_j = j;
-          }
-      }
       }
 
       // swap curr and last
       s = curr; curr = last; last = s; 
   }
 
-  if(best_i < 0 || best_j < 0) { // was not update
+  if(best_i < 0 || best_j < 0) { // was not updated
       (*path_len) = 0;
       return 0;
   }
@@ -448,19 +447,19 @@ fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_ci
 }
 
 /* IDEAS
-  1. function to do forward local alignment
-  - returns the score, end row, and end column of the best scoring alignment
-  - Note: we could also return the start row and start column (need two extra int arrays)
-  2. function to do reverse local alignment, given the forward alignment
-  - returns the score, start row, and start column of the best scoring alignment
-  3. function to do local alignment
-  - use the foward local alignment to find the best score, end row, and end column
-  - use the reverse local alignment to find the start row, and start col
-  - call global alignment on the start row, start col, end row, end col, and score
-  5. function to do a fitting alignment?
-  - finds the best scoring alignment fitting the entire read into part of the reference
-  Functions 1-3 are not going to be used at present
- */
+   1. function to do forward local alignment
+   - returns the score, end row, and end column of the best scoring alignment
+   - Note: we could also return the start row and start column (need two extra int arrays)
+   2. function to do reverse local alignment, given the forward alignment
+   - returns the score, start row, and start column of the best scoring alignment
+   3. function to do local alignment
+   - use the foward local alignment to find the best score, end row, and end column
+   - use the reverse local alignment to find the start row, and start col
+   - call global alignment on the start row, start col, end row, end col, and score
+   5. function to do a fitting alignment?
+   - finds the best scoring alignment fitting the entire read into part of the reference
+   Functions 1-3 are not going to be used at present
+   */
 
 int fmap_fsw_main(int argc, char *argv[])
 {
