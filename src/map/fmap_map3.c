@@ -46,16 +46,17 @@ fmap_map3_aln_filter(fmap_seq_t *seq, fmap_map3_aln_t *aln,
 {
   int32_t i, j;
   int32_t n_best = 0;
-  double best_score, cur_score, best_subo;
-  int32_t n_seeds = 0;
+  int32_t best_score, cur_score, best_subo;
+  int32_t n_seeds = 0, tot_seeds = 0;
   int32_t mapq;
 
   // estimate mapping quality TODO: this needs to be refined
-  best_score = DBL_MIN;
-  best_subo = DBL_MIN;
+  best_score = INT32_MIN;
+  best_subo = INT32_MIN;
   n_best = 0;
   for(i=0;i<aln->n;i++) {
       cur_score = aln->hits[i].score;
+      tot_seeds += aln->hits[i].n_seeds;
       if(best_score < cur_score) {
           best_score = cur_score;
           n_best = 1;
@@ -78,9 +79,9 @@ fmap_map3_aln_filter(fmap_seq_t *seq, fmap_map3_aln_t *aln,
       mapq = 0;
   }
   else {
-      double c = 0.5;
+      double c = 0.0;
+      c = n_seeds / (double)tot_seeds;
       if(best_subo < score_thr) best_subo = score_thr;
-      if(n_seeds < 2) c *= 0.2;
       mapq = (int32_t)(c * (best_score - best_subo) * (250.0 / best_score + 0.03 / score_match) + .499);
       if(mapq > 250) mapq = 250;
   }

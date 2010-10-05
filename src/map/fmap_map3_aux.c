@@ -214,7 +214,14 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
 
           // threshold the score by assuming that one seed's worth of
           // matches occurs in the alignment
-          score = fmap_sw_local_core(target, target_len, query, seq_len[i], &par, path, &path_len, 0, opt->aln_global, opt->score_thr, &score_subo);
+          // TODO opt->aln_global
+          if(0 == opt->aln_global) {
+              score = fmap_sw_local_core(target, target_len, query, seq_len[i], &par, path, &path_len, opt->score_thr, &score_subo);
+          }
+          else {
+              score = fmap_sw_fitting_core(target, target_len, query, seq_len[i], &par, path, &path_len);
+              score_subo = INT32_MIN;
+          }
 
           if(0 < score && 0 < path_len) {
               fmap_map3_hit_t *hit;
@@ -226,12 +233,17 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
               hit = &aln->hits[aln->n-1]; // for easy of writing code
               hit->strand = i;
               hit->seqid = hits[i][start].seqid; 
-              hit->pos = (ref_start-1) + (path[path_len-1].i-1); // zero-based 
+              if(0 == opt->aln_global) {
+                  hit->pos = (ref_start-1) + (path[path_len-1].i-1); // zero-based 
+              }
+              else {
+                  hit->pos = (ref_start-1) + path[path_len-1].i; // zero-based 
+              }
               hit->score = score;
               hit->score_subo = score_subo;
               hit->n_seeds = ((1 << 15) < end - start + 1) ? (1 << 15) : (end - start + 1);
               hit->cigar = fmap_sw_path2cigar(path, path_len, &hit->n_cigar);
-
+          
               // add soft clipping after local alignment
               if(1 < path[path_len-1].j) {
                   // soft clip the front of the read
