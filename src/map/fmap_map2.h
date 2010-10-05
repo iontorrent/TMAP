@@ -8,14 +8,6 @@
   The BWA-like (long-read) Mapping Algorithm
   */
 
-enum {
-    FMAP_MAP2_ALN_OUTPUT_MODE_RAND           = 0,  /*!< Output a random alignment > */
-    FMAP_MAP2_ALN_OUTPUT_MODE_SCORE_LEN_NORM = 1,  /*!< Output the best scoring alignment normalized by alignment length */
-    FMAP_MAP2_ALN_OUTPUT_MODE_SCORE          = 2,  /*!< Output the best scoring alignment */
-    FMAP_MAP2_ALN_OUTPUT_MODE_LEN            = 3,  /*!< Output the longest alignment */
-    FMAP_MAP2_ALN_OUTPUT_MODE_ALL            = 4   /*!< Output all alignments */
-};
-
 /*! 
   structure to store the command line options for 'fmap map2'
   */
@@ -30,13 +22,14 @@ typedef struct {
     int32_t pen_gapo;  /*!< the indel open penalty (-O) */
     int32_t pen_gape;  /*!< the indel extension penalty (-E) */
     double yita;  /*!< the error recurrence coefficient (-y)  */
-    int32_t mask_level;  /*!< the mask level (-m) */
-    int32_t length_coef;  /*!< the coefficient of length-threshold adjustment (-c) */
+    double mask_level;  /*!< the mask level (-m) */
+    double length_coef;  /*!< the coefficient of length-threshold adjustment (-c) */
     int32_t band_width;  /*!< the band width (-w)  */
     int32_t score_thr;  /*!< the score threshold (match-score-scaled) (-T) */
     int32_t max_seed_intv;  /*!< the maximum seed interval (-S) */
     int32_t z_best;  /*!< the number of top scoring hits to keep (-b) */
     int32_t seeds_rev;  /*!< the maximum number of seeds for which reverse alignment is triggered (-N) */
+    int32_t aln_global; /*!< align the full read (-g) */
     int32_t reads_queue_size;  /*!< the reads queue size (-q) */
     int32_t num_threads;  /*!< the number of threads (-n) */
     int32_t aln_output_mode;  /*!< specifies how to choose alignments (-a)  */

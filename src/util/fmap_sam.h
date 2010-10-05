@@ -6,7 +6,7 @@
 #include "../io/fmap_file.h"
 
 /*! 
-  */
+*/
 
 /*! 
   prints out a SAM header
@@ -26,5 +26,26 @@ fmap_sam_print_header(fmap_file_t *fp, fmap_refseq_t *refseq, int argc, char *ar
   */
 inline void
 fmap_sam_print_unmapped(fmap_file_t *fp, fmap_seq_t *seq);
+
+
+/*! 
+  prints out a mapped SAM record 
+  @param  fp       the file pointer to which to print
+  @param  seq      the sequence that is mapped
+  @param  refseq   pointer to the reference sequence (forward)
+  @param  strand   the strand of the mapping
+  @param  seqid    the sequence index (0-based)
+  @param  pos      the position (0-based)
+  @param  mapq     the mapping quality
+  @param  cigar    the cigar array
+  @param  n_cigar  the number of cigar operations
+  @param  format   optional tag format (printf-style)
+  @param  ...      arguments for the format
+  */
+inline void
+fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, fmap_refseq_t *refseq,
+                    uint8_t strand, uint32_t seqid, uint32_t pos,
+                    uint8_t mapq, uint32_t *cigar, int32_t n_cigar,
+                    const char *format, ...);
 
 #endif

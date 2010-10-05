@@ -252,6 +252,8 @@ fmap_bwt_shm_unpack(uint8_t *buf)
   fmap_bwt_t *bwt = NULL;
   int32_t i;
 
+  if(NULL == buf) return NULL;
+
   bwt = fmap_calloc(1, sizeof(fmap_bwt_t), "bwt");
 
   // fixed length data

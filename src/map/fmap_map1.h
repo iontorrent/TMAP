@@ -62,7 +62,7 @@ typedef struct {
     uint8_t strand;  /*!< the strand of the alignment */
     uint32_t k;  /*!< the lower range of the SA interval */
     uint32_t l;  /*!< the upper range of the SA interval */
-    uint32_t cigar_length;  /*!< the length of the cigar array */
+    uint32_t n_cigar;  /*!< the length of the cigar array */
     uint32_t *cigar;  /*!< the cigar array */
 } fmap_map1_aln_t;
 #ifdef HAVE_LIBPTHREAD

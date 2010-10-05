@@ -25,7 +25,7 @@ fmap_server_sigint(int signal)
       fmap_error("will try to destroy the shared memory", Warn, SigInt); // warn
       // try to destroy the shared memory
       fmap_shm_set_dead(fmap_server_shm_ptr);
-      fmap_shm_destroy(fmap_server_shm_ptr, 0);
+      fmap_shm_destroy(fmap_server_shm_ptr, 1);
       fmap_server_shm_ptr = NULL;
       fmap_error("shared memory destroyed", Exit, SigInt); //exit
   }

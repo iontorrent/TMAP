@@ -18,7 +18,7 @@ inline void *
 fmap_realloc1(void *ptr, size_t size, const char *function_name, const char *variable_name)
 {
   ptr = realloc(ptr, size);
-  if(NULL == ptr) {
+  if(0 != size && NULL == ptr) {
       fmap_error1(function_name, variable_name, Exit, ReallocMemory);
   }
   return ptr;

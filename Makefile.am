@@ -32,6 +32,7 @@ fmap_SOURCES = \
 			   src/sfferr/fmap_sfferr.h src/sfferr/fmap_sfferr.c \
 			   src/sfferr/fmap_sfferr_aux.h src/sfferr/fmap_sfferr_aux.c \
 			   src/debug/fmap_debug_exact.h src/debug/fmap_debug_exact.c \
+			   src/map/fmap_map_util.h src/map/fmap_map_util.c \
 			   src/map/fmap_map1.h src/map/fmap_map1.c \
 			   src/map/fmap_map1_aux.h src/map/fmap_map1_aux.c \
 			   src/map/fmap_map2.h src/map/fmap_map2.c \
@@ -39,6 +40,8 @@ fmap_SOURCES = \
 			   src/map/fmap_map2_chain.h src/map/fmap_map2_chain.c \
 			   src/map/fmap_map2_core.h src/map/fmap_map2_core.c \
 			   src/map/fmap_map2_mempool.h src/map/fmap_map2_mempool.c \
+			   src/map/fmap_map3.h src/map/fmap_map3.c \
+			   src/map/fmap_map3_aux.h src/map/fmap_map3_aux.c \
 			   src/fmap_main.h src/fmap_main.c
 
 fmap_LDADD = 

@@ -82,7 +82,7 @@ fmap_bwt_match_cal_width(const fmap_bwt_t *bwt, int len, const char *str, fmap_b
   @param  match_sa  pointer to the match structure to be returned
   @return           the size of the SA interval, 0 if none found
   */
-int
+uint32_t
 fmap_bwt_match_exact(const fmap_bwt_t *bwt, int len, const uint8_t *str, fmap_bwt_match_occ_t *match_sa);
 
 /*! 
@@ -94,7 +94,7 @@ fmap_bwt_match_exact(const fmap_bwt_t *bwt, int len, const uint8_t *str, fmap_bw
   @return           the size of the SA interval, 0 if none found
   @details          the search will be started at SA interval [k0,l0], with the results returned as [k0,l0]
   */
-int
+uint32_t
 fmap_bwt_match_exact_alt(const fmap_bwt_t *bwt, int len, const uint8_t *str, fmap_bwt_match_occ_t *match_sa);
 
 #endif

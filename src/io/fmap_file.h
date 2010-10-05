@@ -138,4 +138,14 @@ fmap_file_vfprintf(fmap_file_t *fp, const char *format, va_list ap);
   */
 int32_t
 fmap_file_fprintf(fmap_file_t *fp, const char *format, ...);
+
+/*!
+  emulates fflush from stdio.h
+  @param  fp       pointer to the file structure to which to flush (the file should have been opened for writing)
+  @param  gz_flush  if the file is writing gzip compressed output, 0 will flush the compressed buffer and 1 will flush all data
+  @details         this will have no effect if the file is writing bzip2 data. 
+  */
+int32_t
+fmap_file_fflush(fmap_file_t *fp, int32_t gz_flush);
+
 #endif

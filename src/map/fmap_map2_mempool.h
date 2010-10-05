@@ -3,17 +3,17 @@
 
 #include <stdint.h>
 #include "../util/fmap_vec.h"
+#include "../index/fmap_bwt_match.h"
 
 /*! 
   Memory Pools for Map2
   */
 
-// TODO: document
 /*! 
+ The Dynamic Programming cell for the DAWG vs. BWT alignment
  */
 typedef struct {
-    uint32_t qk;  /*!< lower suffix array interval of the query */
-    uint32_t ql;  /*!< upper suffix array interval of the query */
+    fmap_bwt_match_occ_t match_sa; /*!< lower and upper interval for the query */
     int32_t I;  /*!< insertion score */
     int32_t D;  /*!< deletion score */
     int32_t G;  /*!< maximum of the match/mismatch/insertion/deletion scores */
@@ -26,6 +26,7 @@ typedef struct {
 } fmap_map2_cell_t;
 
 /*! 
+ The Dynamic Programming row for the DAWG vs. BWT alignment
 */
 typedef struct {
   int32_t n;  /*!< the index of the next cell */
@@ -34,6 +35,7 @@ typedef struct {
   uint32_t tl;  /*!< upper suffix array interval of the target  */
   fmap_map2_cell_t *array;  /*!< the array of cells */
 } fmap_map2_entry_t, *fmap_map2_entry_p;
+
 /*! 
   a memory pool
 */
@@ -41,6 +43,7 @@ typedef struct __fmap_map2_mempool_t {
   int32_t cnt;  /*!< the size of the memory pool */
   fmap_vec_t(fmap_map2_entry_p) pool;  /*!< the memory pool vector */
 } fmap_map2_mempool_t;
+
 /*! 
   @brief            a two-level memory stack
   @param  n_pending  the number of elements in the pending stack
@@ -53,6 +56,7 @@ typedef struct {
   fmap_vec_t(fmap_map2_entry_p) stack0, pending;
   struct __fmap_map2_mempool_t *pool;
 } fmap_map2_stack_t;
+
 /*! 
   a global memory pool
 */
@@ -61,6 +65,7 @@ typedef struct {
   int32_t max_l;  /*!< the working memory length */
   uint8_t *aln_mem;  /*!< working memory */
 } fmap_map2_global_mempool_t;
+
 /*! 
   destroys the stack
   @param  stack  a pointer to the stack

@@ -13,6 +13,8 @@ extern int
 fmap_map1_main(int argc, char *argv[]);
 extern int
 fmap_map2_main(int argc, char *argv[]);
+extern int
+fmap_map3_main(int argc, char *argv[]);
 extern int 
 fmap_refseq_fasta2pac_main(int argc, char *argv[]);
 extern int 

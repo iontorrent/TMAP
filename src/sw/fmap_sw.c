@@ -529,7 +529,7 @@ fmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
  *************************************************/
 int32_t 
 fmap_sw_local_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const fmap_sw_param_t *ap,
-                   fmap_sw_path_t *path, int32_t *path_len, int32_t _thres, int32_t *_subo)
+                   fmap_sw_path_t *path, int32_t *path_len, int32_t seq1_fit, int32_t seq2_fit, int32_t _thres, int32_t *_subo)
 {
   register FMAP_SW_NT_LOCAL_SCORE *s;
   register int32_t i;
@@ -623,8 +623,11 @@ fmap_sw_local_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, con
           last_h = curr_h;
           if (subo < curr_h) subo = curr_h;
           if (score_f < curr_h) {
-              score_f = curr_h; end_i = i; end_j = j;
-              if (score_f > FMAP_SW_LOCAL_OVERFLOW_THRESHOLD) is_overflow = 1;
+              if((0 == seq2_fit || j == len2) &&
+                 (0 == seq1_fit || i == tmp_len-1)) { // (0 == seq1_fit || i == len1)
+                  score_f = curr_h; end_i = i; end_j = j;
+                  if (score_f > FMAP_SW_LOCAL_OVERFLOW_THRESHOLD) is_overflow = 1;
+              }
           }
       }
       *s = last_h << FMAP_SW_NT_LOCAL_SHIFT;
@@ -731,7 +734,7 @@ fmap_sw_local_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, con
           ap_real.gap_end = -1;
           ap_real.band_width = i;
           score_g = fmap_sw_global_core(seq1 + start_i, end_i - start_i + 1, seq2 + start_j,
-                                    end_j - start_j + 1, &ap_real, path, path_len);
+                                        end_j - start_j + 1, &ap_real, path, path_len);
           if (score_g == score_r || score_f == score_g) break;
           if (i > j) break;
       }
@@ -764,7 +767,7 @@ end_func:
 
 fmap_sw_aln_t *
 fmap_sw_stdaln_aux(const char *seq1, const char *seq2, const fmap_sw_param_t *ap,
-                       int32_t type, int32_t thres, int32_t len1, int32_t len2)
+                   int32_t type, int32_t thres, int32_t len1, int32_t len2)
 {
   uint8_t *seq11, *seq22;
   int32_t score;
@@ -799,8 +802,8 @@ fmap_sw_stdaln_aux(const char *seq1, const char *seq2, const fmap_sw_param_t *ap
   }
 
   if (type == FMAP_SW_TYPE_GLOBAL) score = fmap_sw_global_core(seq11, len1, seq22, len2, ap, aa->path, &aa->path_len);
-  else if (type == FMAP_SW_TYPE_LOCAL) score = fmap_sw_local_core(seq11, len1, seq22, len2, ap, aa->path, &aa->path_len, thres, &aa->subo);
-  else if (type == FMAP_SW_TYPE_EXTEND)  score = fmap_sw_extend_core(seq11, len1, seq22, len2, ap, aa->path, &aa->path_len, 1, 0);
+  else if (type == FMAP_SW_TYPE_LOCAL) score = fmap_sw_local_core(seq11, len1, seq22, len2, ap, aa->path, &aa->path_len, 0, 0, thres, &aa->subo);
+  else if (type == FMAP_SW_TYPE_EXTEND)  score = fmap_sw_extend_core(seq11, len1, seq22, len2, ap, aa->path, &aa->path_len, 0, 0, 1, 0);
   else {
       free(seq11); free(seq22); free(aa->path);
       fmap_sw_aln_destroy(aa);
@@ -853,7 +856,7 @@ fmap_sw_stdaln(const char *seq1, const char *seq2, const fmap_sw_param_t *ap, in
 /* newly added functions (2009-07-21) */
 int32_t 
 fmap_sw_extend_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const fmap_sw_param_t *ap,
-                    fmap_sw_path_t *path, int32_t *path_len, int32_t G0, uint8_t *_mem)
+                    fmap_sw_path_t *path, int32_t *path_len, int32_t seq1_fit, int32_t seq2_fit, int32_t G0, uint8_t *_mem)
 {
   int32_t q, r, qr, tmp_len;
   int32_t **s_array, *score_array;
@@ -890,7 +893,6 @@ fmap_sw_extend_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
   /* convert the coordinate */
   --seq1; --seq2;
   for (i = 0; i != N_MATRIX_ROW; ++i) --s_array[i];
-
   /* dynamic programming */
   memset(eh, 0, 4 * (len1 + 2));
   eh[1] = (uint32_t)G0<<16;
@@ -942,7 +944,9 @@ fmap_sw_extend_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
           if (h > 0) {
               if (_start == 0) _start = i;
               _end = i;
-              if (score < h) {
+              if (score < h 
+                  && (0 == seq1_fit || i == len1)
+                  && (0 == seq2_fit || j == len2)) {
                   score = h; end_i = i; end_j = j;
                   if (score > FMAP_SW_LOCAL_OVERFLOW_THRESHOLD) is_overflow = 1;
               }

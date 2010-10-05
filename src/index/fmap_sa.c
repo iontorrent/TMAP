@@ -153,6 +153,8 @@ fmap_sa_shm_unpack(uint8_t *buf)
 {
   fmap_sa_t *sa = NULL;
 
+  if(NULL == buf) return NULL;
+
   sa = fmap_calloc(1, sizeof(fmap_sa_t), "sa");
 
   // fixed length data

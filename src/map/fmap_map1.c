@@ -68,9 +68,9 @@ fmap_map1_aln_overwrite(fmap_map1_aln_t *dest, fmap_map1_aln_t *src)
   // cigar
   free(dest->cigar);
   dest->cigar = src->cigar;
-  dest->cigar_length = src->cigar_length;
+  dest->n_cigar = src->n_cigar;
   src->cigar = NULL;
-  src->cigar_length = 0;
+  src->n_cigar = 0;
 
   // rest
   dest->score = src->score;
@@ -187,25 +187,18 @@ fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fma
   uint32_t i, j, n = 0;
 
   for(i=a->k;i<=a->l;i++) {
-      uint16_t flag = 0x0000;
       uint32_t pos = 0, seqid = 0, pacpos = 0; 
       int32_t aln_ref_l = 0;
       int32_t seq_len = 0;
-      int32_t sff_soft_clip = 0;
-      fmap_string_t *name=NULL, *bases=NULL, *qualities=NULL;
 
-      name = fmap_seq_get_name(seq);
-      bases = fmap_seq_get_bases(seq);
-      qualities = fmap_seq_get_qualities(seq);
-      seq_len = bases->l;
+      seq_len = fmap_seq_get_bases(seq)->l;
 
       if(FMAP_SEQ_TYPE_SFF == seq->type) {
-          sff_soft_clip = seq->data.sff->gheader->key_length; // soft clip the key sequence
-          seq_len -= sff_soft_clip;
+          seq_len -= seq->data.sff->gheader->key_length; // soft clip the key sequence
       }
 
       // get the number of non-inserted bases 
-      for(j=0;j<a->cigar_length;j++) {
+      for(j=0;j<a->n_cigar;j++) {
           switch((a->cigar[j] & 0xf)) {
             case BAM_CMATCH:
             case BAM_CDEL:
@@ -219,41 +212,15 @@ fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fma
       pacpos = bwt->seq_len - fmap_sa_pac_pos(sa, bwt, i) - aln_ref_l + 1;
 
       if(0 < fmap_refseq_pac2real(refseq, pacpos, seq_len, &seqid, &pos)) {
-          if(1 == a->strand) { // reverse for the output
-              flag |= 0x0010;
-              fmap_string_reverse_compliment(bases, 0);
-              fmap_string_reverse(qualities);
-          }
-          fmap_file_fprintf(fmap_file_stdout, "%s\t%u\t%s\t%u\t%u\t",
-                            name->s, flag, refseq->annos[seqid].name->s,
-                            pos, a->mapq);
-          // Note: we assume there is no soft clipping at the start or end of
-          // the cigar
-          if(0 < sff_soft_clip && 0 == a->strand) { // forward
-              fmap_file_fprintf(fmap_file_stdout, "%dS", sff_soft_clip);
-          }
-          for(j=0;j<a->cigar_length;j++) {
-              fmap_file_fprintf(fmap_file_stdout, "%d%c", (a->cigar[j]>>4), "MIDNSHP"[a->cigar[j] & 0xf]);
-          }
-          if(0 < sff_soft_clip && 1 == a->strand) { // reversed
-              fmap_file_fprintf(fmap_file_stdout, "%dS", sff_soft_clip);
-          }
-          fmap_file_fprintf(fmap_file_stdout, "\t*\t0\t0\t%s\t%s",
-                            bases->s, qualities->s);
-          // AS optional tag
-          fmap_file_fprintf(fmap_file_stdout, "\tAS:i:%d", a->score);
-          // NM
-          fmap_file_fprintf(fmap_file_stdout, "\tNM:i:%d", (a->n_mm + a->n_gapo + a->n_gape));
-          // XM/XO/XG
-          fmap_file_fprintf(fmap_file_stdout, "\tXM:i:%d\tXO:i:%d\tXG:i:%d",
-                            a->n_mm, a->n_gapo, a->n_gape);
 
-          // new line
-          fmap_file_fprintf(fmap_file_stdout, "\n");
-          if(1 == a->strand) { // reverse back
-              fmap_string_reverse_compliment(bases, 0);
-              fmap_string_reverse(qualities);
-          }
+          fmap_sam_print_mapped(fmap_file_stdout, seq, refseq,
+                                a->strand, seqid, pos-1, 
+                                a->mapq, a->cigar, a->n_cigar, 
+                                "\tAS:i:%d\tNM:i:%d\tXM:i:%d\tXO:i:%d\tXG:i:%d",
+                                a->score,
+                                (a->n_mm + a->n_gapo + a->n_gape),
+                                a->n_mm, a->n_gapo, a->n_gape);
+
           n++;
       }
   }
@@ -391,6 +358,7 @@ fmap_map1_core(fmap_map1_opt_t *opt)
   fmap_seq_t **seq_buffer = NULL;
   fmap_map1_aln_t ***alns = NULL;
   fmap_shm_t *shm = NULL;
+  int32_t reads_queue_size;
 
   // For suffix search we need the reverse bwt/sa and forward refseq
   if(0 == opt->shm_key) {
@@ -426,8 +394,14 @@ fmap_map1_core(fmap_map1_opt_t *opt)
   fmap_sam_print_header(fmap_file_stdout, refseq, opt->argc, opt->argv);
 
   // allocate the buffer
-  seq_buffer = fmap_malloc(sizeof(fmap_seq_t*)*opt->reads_queue_size, "seq_buffer");
-  alns = fmap_malloc(sizeof(fmap_map1_aln_t**)*opt->reads_queue_size, "alns");
+  if(-1 == opt->reads_queue_size) {
+      reads_queue_size = 1;
+  }
+  else {
+      reads_queue_size = opt->reads_queue_size;
+  }
+  seq_buffer = fmap_malloc(sizeof(fmap_seq_t*)*reads_queue_size, "seq_buffer");
+  alns = fmap_malloc(sizeof(fmap_map1_aln_t**)*reads_queue_size, "alns");
 
   if(NULL == opt->fn_reads) {
       fp_reads = fmap_file_fdopen(fileno(stdin), "rb", opt->input_compr);
@@ -439,13 +413,13 @@ fmap_map1_core(fmap_map1_opt_t *opt)
     case FMAP_READS_FORMAT_FASTA:
     case FMAP_READS_FORMAT_FASTQ:
       seqio = fmap_seq_io_init(fp_reads, FMAP_SEQ_TYPE_FQ);
-      for(i=0;i<opt->reads_queue_size;i++) { // initialize the buffer
+      for(i=0;i<reads_queue_size;i++) { // initialize the buffer
           seq_buffer[i] = fmap_seq_init(FMAP_SEQ_TYPE_FQ);
       }
       break;
     case FMAP_READS_FORMAT_SFF:
       seqio = fmap_seq_io_init(fp_reads, FMAP_SEQ_TYPE_SFF);
-      for(i=0;i<opt->reads_queue_size;i++) { // initialize the buffer
+      for(i=0;i<reads_queue_size;i++) { // initialize the buffer
           seq_buffer[i] = fmap_seq_init(FMAP_SEQ_TYPE_SFF);
       }
       break;
@@ -455,7 +429,7 @@ fmap_map1_core(fmap_map1_opt_t *opt)
   }
 
   fmap_progress_print("processing reads");
-  while(0 < (seq_buffer_length = fmap_seq_io_read_buffer(seqio, seq_buffer, opt->reads_queue_size))) {
+  while(0 < (seq_buffer_length = fmap_seq_io_read_buffer(seqio, seq_buffer, reads_queue_size))) {
 
       // do alignment
 #ifdef HAVE_LIBPTHREAD
@@ -530,6 +504,10 @@ fmap_map1_core(fmap_map1_opt_t *opt)
           alns[i] = NULL;
       }
 
+      if(-1 == opt->reads_queue_size) {
+          fmap_file_fflush(fmap_file_stdout, 1);
+      }
+
       n_reads_processed += seq_buffer_length;
       fmap_progress_print2("processed %d reads", n_reads_processed);
   }
@@ -538,7 +516,7 @@ fmap_map1_core(fmap_map1_opt_t *opt)
   fmap_file_fclose(fmap_file_stdout);
 
   // free memory
-  for(i=0;i<opt->reads_queue_size;i++) {
+  for(i=0;i<reads_queue_size;i++) {
       fmap_seq_destroy(seq_buffer[i]);
   }
   free(seq_buffer);
@@ -594,7 +572,7 @@ usage(fmap_map1_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "         -d INT      the maximum number of CALs to extend a deletion [%d]\n", opt->max_cals_del); 
   fmap_file_fprintf(fmap_file_stderr, "         -i INT      indels are not allowed within INT number of bps from the end of the read [%d]\n", opt->indel_ends_bound);
   fmap_file_fprintf(fmap_file_stderr, "         -b INT      stop searching when INT optimal CALs have been found [%d]\n", opt->max_best_cals);
-  fmap_file_fprintf(fmap_file_stderr, "         -q INT      the queue size for the reads [%d]\n", opt->reads_queue_size);
+  fmap_file_fprintf(fmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
   fmap_file_fprintf(fmap_file_stderr, "         -Q INT      maximum number of alignment nodes [%d]\n", opt->max_entries);
   fmap_file_fprintf(fmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
   fmap_file_fprintf(fmap_file_stderr, "         -a INT      output filter [%d]\n", opt->aln_output_mode);
@@ -754,7 +732,7 @@ fmap_map1_main(int argc, char *argv[])
       if(FMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
           fmap_error("the reads format (-r) was unrecognized", Exit, CommandLineArgument);
       }
-      if(-1 != opt->seed_length) fmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "-s");
+      if(-1 != opt->seed_length) fmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "-l");
 
       // this will take care of the case where they are both < 0
       fmap_error_cmd_check_int((opt->max_mm_frac < 0) ? opt->max_mm : (int32_t)opt->max_mm_frac, 0, INT32_MAX, "-m"); 
@@ -769,10 +747,15 @@ fmap_map1_main(int argc, char *argv[])
       fmap_error_cmd_check_int(opt->max_cals_del, 1, INT32_MAX, "-d");
       fmap_error_cmd_check_int(opt->indel_ends_bound, 0, INT32_MAX, "-i");
       fmap_error_cmd_check_int(opt->max_best_cals, 0, INT32_MAX, "-b");
-      fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
+      if(-1 != opt->reads_queue_size) fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
       fmap_error_cmd_check_int(opt->max_entries, 1, INT32_MAX, "-Q");
       fmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
       fmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
+
+      if(FMAP_FILE_BZ2_COMPRESSION == opt->output_compr 
+         && -1 == opt->reads_queue_size) {
+          fmap_error("cannot buffer reads with bzip2 output (options \"-q 1 -J\")", Exit, OutOfRange);
+      }
   }
 
   fmap_map1_core(opt);

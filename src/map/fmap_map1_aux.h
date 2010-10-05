@@ -25,6 +25,7 @@ typedef struct {
 } fmap_map1_aux_stack_entry_t;
 
 /*! 
+ Entry stack for searching.
   */
 typedef struct {
     fmap_map1_aux_stack_entry_t **entry_pool;  /*!<  the memory pool of entries */
@@ -34,11 +35,17 @@ typedef struct {
     int32_t best_score;  /*!< the best score for any entry in this stack */
 } fmap_map1_aux_stack_t;
 
-// TODO
+/*
+  Initializes the entry stack
+  @return  a pointer to the initialized stack
+ */
 fmap_map1_aux_stack_t *
 fmap_map1_aux_stack_init();
 
-// TODO
+/*
+  Destroys the entry stack
+  @param  stack  the stack structure to destroy
+ */
 void
 fmap_map1_aux_stack_destroy(fmap_map1_aux_stack_t *stack);
 
