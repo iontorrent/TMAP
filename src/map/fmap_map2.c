@@ -460,7 +460,7 @@ fmap_map2_main(int argc, char *argv[])
   opt = fmap_map2_opt_init(argc, argv);
   opt->argc = argc; opt->argv = argv;
 
-  while((c = getopt(argc, argv, "f:r:F:A:M:O:E:y:m:c:w:T:S:b:N:g:q:n:a:jzJZs:vh")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:A:M:O:E:y:m:c:w:T:S:b:N:gq:n:a:jzJZs:vh")) >= 0) {
       switch (c) {
         case 'f':
           opt->fn_fasta = fmap_strdup(optarg); break;
