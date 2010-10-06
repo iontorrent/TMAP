@@ -59,7 +59,6 @@ enum {
 
 #define FMAP_SW_SET_FROM(s, from) (s).match_from = (s).ins_from = (s).del_from = from 
 
-
 /*!
   Stores from which cell the current cell was extended
  */
