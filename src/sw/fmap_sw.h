@@ -46,9 +46,11 @@ enum {
   The type of Smith-Waterman to perform.
   */
 enum {
-    FMAP_SW_TYPE_LOCAL  = 0, /*!< local alignment */
-    FMAP_SW_TYPE_GLOBAL = 1, /*!< global alignment */
-    FMAP_SW_TYPE_EXTEND = 2  /*!< extend an alignment */
+    FMAP_SW_TYPE_LOCAL          = 0, /*!< local alignment */
+    FMAP_SW_TYPE_GLOBAL         = 1, /*!< global alignment */
+    FMAP_SW_TYPE_EXTEND         = 2, /*!< extend an alignment */
+    FMAP_SW_TYPE_EXTEND_FITTING = 3, /*!< extend an alignment but align the entire the read */
+    FMAP_SW_TYPE_FITTING        = 4  /*!< align the entire read */
 };
 
 /*! This is the smallest integer for Smith-Waterman alignment. It might be CPU-dependent in very RARE cases. */
@@ -140,35 +142,6 @@ void
 fmap_sw_aln_destroy(fmap_sw_aln_t *aa);
 
 /*!
-  Performs Smith-Waterman alignment.
-  @details  actually, it performs banded Smith-Waterman.
-  @param  seq1   the first DNA sequence (character array)
-  @param  seq2   the second DNA sequence (character array)
-  @param  ap     the alignment parameters
-  @param  type   the Smith-Waterman type (global, local, extend)
-  @param  thres  the scoring threshold for local alignment only (the absolute value will be taken); a value zero or negative value will cause no path to be filled
-  @param  len1   the length of the first sequence to align, or -1 to align the full sequence
-  @param  len2   the length of the second sequence to align, or -1 to align the full sequence
-  @return        the Smith-Waterman alignment
-  */
-fmap_sw_aln_t *
-fmap_sw_stdaln_aux(const char *seq1, const char *seq2, const fmap_sw_param_t *ap,
-                   int32_t type, int32_t thres , int32_t len1, int32_t len2);
-
-/*!
-  Performs Smith-Waterman alignment.
-  @details  actually, it performs banded Smith-Waterman.
-  @param  seq1   the first DNA sequence (in 2-bit format)
-  @param  seq2   the second DNA sequence (in 2-bit format)
-  @param  ap     the alignment parameters
-  @param  type   the Smith-Waterman type (global, local, extend)
-  @param  thres  the scoring threshold for local alignment only (the absolute value will be taken); a value zero or negative value will cause no path to be filled
-  @return        the Smith-Waterman alignment
-  */
-fmap_sw_aln_t *
-fmap_sw_stdaln(const char *seq1, const char *seq2, const fmap_sw_param_t *ap, int32_t type, int32_t thres);
-
-/*!
   Performs the global Smith-Waterman alignment.
   @details          actually, it performs it with banding.
   @param  seq1      the first DNA sequence (in 2-bit format)
@@ -209,25 +182,46 @@ fmap_sw_local_core(uint8_t *seq1, int32_t len1,
 
 /*!
   Extens an alignment with the local Smith-Waterman.
-  @details          actually, it performs it with banding.
-  @param  seq1      the first DNA sequence (in 2-bit format)
-  @param  len1      the length of the first sequence
-  @param  seq2      the second DNA sequence (in 2-bit format)
-  @param  len2      the length of the second sequence
-  @param  ap        the alignment parameters
-  @param  path      the Smith-Waterman alignment path
-  @param  path_len  the Smith-Waterman alignment path length
-  @param  G0        the initial alignment score
-  @param  seq2_fit   fit seq2 inside seq1
-  @param  _mem      allocated memory with size of (len1+2)*(ap->row+1)*4
-  @return           the alignment score, 0 if none was found
+  @details            actually, it performs it with banding.
+  @param  seq1        the first DNA sequence (in 2-bit format)
+  @param  len1        the length of the first sequence
+  @param  seq2        the second DNA sequence (in 2-bit format)
+  @param  len2        the length of the second sequence
+  @param  ap          the alignment parameters
+  @param  path        the Smith-Waterman alignment path
+  @param  path_len    the Smith-Waterman alignment path length
+  @param  prev_score  the initial alignment score
+  @param  _mem        allocated memory with size of (len1+2)*(ap->row+1)*4
+  @return             the alignment score, 0 if none was found
   */
 int32_t 
 fmap_sw_extend_core(uint8_t *seq1, int32_t len1, 
                     uint8_t *seq2, int32_t len2, 
                     const fmap_sw_param_t *ap,
                     fmap_sw_path_t *path, int32_t *path_len, 
-                    int32_t G0, int32_t seq2_fit, uint8_t *_mem);
+                    int32_t prev_score, uint8_t *_mem);
+
+/*!
+  Extens an alignment with the local Smith-Waterman and aligns the entire seq2.
+  @details            actually, it performs it with banding.
+  @param  seq1        the first DNA sequence (in 2-bit format)
+  @param  len1        the length of the first sequence
+  @param  seq2        the second DNA sequence (in 2-bit format)
+  @param  len2        the length of the second sequence
+  @param  ap          the alignment parameters
+  @param  path        the Smith-Waterman alignment path
+  @param  path_len    the Smith-Waterman alignment path length
+  @param  prev_score  the initial alignment score
+  @param  seq2_fit     fit seq2 inside seq1
+  @param  _mem        allocated memory with size of (len1+2)*(ap->row+1)*4
+  @return             the alignment score, 0 if none was found
+  */
+int32_t 
+fmap_sw_extend_fitting_core(uint8_t *seq1, int32_t len1, 
+                    uint8_t *seq2, int32_t len2, 
+                    const fmap_sw_param_t *ap,
+                    fmap_sw_path_t *path, int32_t *path_len, 
+                    int32_t prev_score, uint8_t *_mem);
 
 /*!
   Performs a fitting aligment, whereby seq2 is fit into seq1

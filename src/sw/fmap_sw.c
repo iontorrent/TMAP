@@ -262,14 +262,14 @@ fmap_sw_aln_destroy(fmap_sw_aln_t *aa)
 
 #define fmap_sw_set_match(MM, cur, p, sc) \
 { \
-  if ((p)->match_score >= (p)->ins_score) { \
-      if ((p)->match_score >= (p)->del_score) { \
+  if((p)->match_score >= (p)->ins_score) { \
+      if((p)->match_score >= (p)->del_score) { \
           (MM) = (p)->match_score + (sc); (cur)->match_from = FMAP_SW_FROM_M; \
       } else { \
           (MM) = (p)->del_score + (sc); (cur)->match_from = FMAP_SW_FROM_D; \
       } \
   } else { \
-      if ((p)->ins_score > (p)->del_score) { \
+      if((p)->ins_score > (p)->del_score) { \
           (MM) = (p)->ins_score + (sc); (cur)->match_from = FMAP_SW_FROM_I; \
       } else { \
           (MM) = (p)->del_score + (sc); (cur)->match_from = FMAP_SW_FROM_D; \
@@ -279,7 +279,7 @@ fmap_sw_aln_destroy(fmap_sw_aln_t *aa)
 
 #define fmap_sw_set_ins(II, cur, p) \
 { \
-  if ((p)->match_score - gap_open > (p)->ins_score) { \
+  if((p)->match_score - gap_open > (p)->ins_score) { \
       (cur)->ins_from = FMAP_SW_FROM_M; \
       (II) = (p)->match_score - gap_open - gap_ext; \
   } else { \
@@ -290,8 +290,8 @@ fmap_sw_aln_destroy(fmap_sw_aln_t *aa)
 
 #define fmap_sw_set_end_ins(II, cur, p) \
 { \
-  if (gap_end >= 0) { \
-      if ((p)->match_score - gap_open > (p)->ins_score) { \
+  if(gap_end >= 0) { \
+      if((p)->match_score - gap_open > (p)->ins_score) { \
           (cur)->ins_from = FMAP_SW_FROM_M; \
           (II) = (p)->match_score - gap_open - gap_end; \
       } else { \
@@ -303,7 +303,7 @@ fmap_sw_aln_destroy(fmap_sw_aln_t *aa)
 
 #define fmap_sw_set_del(DD, cur, p) \
 { \
-  if ((p)->match_score - gap_open > (p)->del_score) { \
+  if((p)->match_score - gap_open > (p)->del_score) { \
       (cur)->del_from = FMAP_SW_FROM_M; \
       (DD) = (p)->match_score - gap_open - gap_ext; \
   } else { \
@@ -314,8 +314,8 @@ fmap_sw_aln_destroy(fmap_sw_aln_t *aa)
 
 #define fmap_sw_set_end_del(DD, cur, p) \
 { \
-  if (gap_end >= 0) { \
-      if ((p)->match_score - gap_open > (p)->del_score) { \
+  if(gap_end >= 0) { \
+      if((p)->match_score - gap_open > (p)->del_score) { \
           (cur)->del_from = FMAP_SW_FROM_M; \
           (DD) = (p)->match_score - gap_open - gap_end; \
       } else { \
@@ -330,10 +330,10 @@ void
 fmap_sw_score_array_init(uint8_t *seq, int32_t len, int32_t row, int32_t *score_matrix, int32_t **s_array)
 {
   int32_t *tmp, *tmp2, i, k;
-  for (i = 0; i != row; ++i) {
+  for(i = 0; i != row; ++i) {
       tmp = score_matrix + i * row;
       tmp2 = s_array[i];
-      for (k = 0; k != len; ++k)
+      for(k = 0; k != len; ++k)
         tmp2[k] = tmp[seq[k]];
   }
 }
@@ -364,35 +364,35 @@ fmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
   score_matrix = ap->matrix;
   N_MATRIX_ROW = ap->row;
 
-  if (len1 == 0 || len2 == 0) {
+  if(len1 == 0 || len2 == 0) {
       *path_len = 0;
       return 0;
   }
   /* calculate b1 and b2 */
-  if (len1 > len2) {
+  if(len1 > len2) {
       b1 = len1 - len2 + b;
       b2 = b;
   } else {
       b1 = b;
       b2 = len2 - len1 + b;
   }
-  if (b1 > len1) b1 = len1;
-  if (b2 > len2) b2 = len2;
+  if(b1 > len1) b1 = len1;
+  if(b2 > len2) b2 = len2;
   --seq1; --seq2;
 
   /* allocate memory */
   end = (b1 + b2 <= len1)? (b1 + b2 + 1) : (len1 + 1);
   dpcell = fmap_malloc(sizeof(fmap_sw_dpcell_t*) * (len2 + 1), "dpcell");
-  for (j = 0; j <= len2; ++j)
+  for(j = 0; j <= len2; ++j)
     dpcell[j] = fmap_malloc(sizeof(fmap_sw_dpcell_t) * end, "dpcell[j]");
-  for (j = b2 + 1; j <= len2; ++j)
+  for(j = b2 + 1; j <= len2; ++j)
     dpcell[j] -= j - b2;
   curr = fmap_malloc(sizeof(fmap_sw_dpscore_t) * (len1 + 1), "curr");
   last = fmap_malloc(sizeof(fmap_sw_dpscore_t) * (len1 + 1), "last");
 
   /* set first row */
   FMAP_SW_SET_INF(*curr); curr->match_score = 0;
-  for (i = 1, s = curr + 1; i < b1; ++i, ++s) {
+  for(i = 1, s = curr + 1; i < b1; ++i, ++s) {
       FMAP_SW_SET_INF(*s);
       fmap_sw_set_end_del(s->del_score, dpcell[0] + i, s - 1);
   }
@@ -400,39 +400,39 @@ fmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
 
   /* core dynamic programming, part 1 */
   tmp_end = (b2 < len2)? b2 : len2 - 1;
-  for (j = 1; j <= tmp_end; ++j) {
+  for(j = 1; j <= tmp_end; ++j) {
       q = dpcell[j]; s = curr; FMAP_SW_SET_INF(*s);
       fmap_sw_set_end_ins(s->ins_score, q, last);
       end = (j + b1 <= len1 + 1)? (j + b1 - 1) : len1;
       mat = score_matrix + seq2[j] * N_MATRIX_ROW;
       ++s; ++q;
-      for (i = 1; i != end; ++i, ++s, ++q) {
+      for(i = 1; i != end; ++i, ++s, ++q) {
           fmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]]); /* this will change s->match_score ! */
           fmap_sw_set_ins(s->ins_score, q, last + i);
           fmap_sw_set_del(s->del_score, q, s - 1);
       }
       fmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]]);
       fmap_sw_set_del(s->del_score, q, s - 1);
-      if (j + b1 - 1 > len1) { /* bug fixed, 040227 */
+      if(j + b1 - 1 > len1) { /* bug fixed, 040227 */
           fmap_sw_set_end_ins(s->ins_score, q, last + i);
       } else s->ins_score = FMAP_SW_MINOR_INF;
       s = curr; curr = last; last = s;
   }
   /* last row for part 1, use fmap_sw_set_end_del() instead of fmap_sw_set_del() */
-  if (j == len2 && b2 != len2 - 1) {
+  if(j == len2 && b2 != len2 - 1) {
       q = dpcell[j]; s = curr; FMAP_SW_SET_INF(*s);
       fmap_sw_set_end_ins(s->ins_score, q, last);
       end = (j + b1 <= len1 + 1)? (j + b1 - 1) : len1;
       mat = score_matrix + seq2[j] * N_MATRIX_ROW;
       ++s; ++q;
-      for (i = 1; i != end; ++i, ++s, ++q) {
+      for(i = 1; i != end; ++i, ++s, ++q) {
           fmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]]); /* this will change s->match_score ! */
           fmap_sw_set_ins(s->ins_score, q, last + i);
           fmap_sw_set_end_del(s->del_score, q, s - 1);
       }
       fmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]]);
       fmap_sw_set_end_del(s->del_score, q, s - 1);
-      if (j + b1 - 1 > len1) { /* bug fixed, 040227 */
+      if(j + b1 - 1 > len1) { /* bug fixed, 040227 */
           fmap_sw_set_end_ins(s->ins_score, q, last + i);
       } else s->ins_score = FMAP_SW_MINOR_INF;
       s = curr; curr = last; last = s;
@@ -440,11 +440,11 @@ fmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
   }
 
   /* core dynamic programming, part 2 */
-  for (; j <= len2 - b2 + 1; ++j) {
+  for(; j <= len2 - b2 + 1; ++j) {
       FMAP_SW_SET_INF(curr[j - b2]);
       mat = score_matrix + seq2[j] * N_MATRIX_ROW;
       end = j + b1 - 1;
-      for (i = j - b2 + 1, q = dpcell[j] + i, s = curr + i; i != end; ++i, ++s, ++q) {
+      for(i = j - b2 + 1, q = dpcell[j] + i, s = curr + i; i != end; ++i, ++s, ++q) {
           fmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]]);
           fmap_sw_set_ins(s->ins_score, q, last + i);
           fmap_sw_set_del(s->del_score, q, s - 1);
@@ -456,10 +456,10 @@ fmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
   }
 
   /* core dynamic programming, part 3 */
-  for (; j < len2; ++j) {
+  for(; j < len2; ++j) {
       FMAP_SW_SET_INF(curr[j - b2]);
       mat = score_matrix + seq2[j] * N_MATRIX_ROW;
-      for (i = j - b2 + 1, q = dpcell[j] + i, s = curr + i; i < len1; ++i, ++s, ++q) {
+      for(i = j - b2 + 1, q = dpcell[j] + i, s = curr + i; i < len1; ++i, ++s, ++q) {
           fmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]]);
           fmap_sw_set_ins(s->ins_score, q, last + i);
           fmap_sw_set_del(s->del_score, q, s - 1);
@@ -470,10 +470,10 @@ fmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
       s = curr; curr = last; last = s;
   }
   /* last row */
-  if (j == len2) {
+  if(j == len2) {
       FMAP_SW_SET_INF(curr[j - b2]);
       mat = score_matrix + seq2[j] * N_MATRIX_ROW;
-      for (i = j - b2 + 1, q = dpcell[j] + i, s = curr + i; i < len1; ++i, ++s, ++q) {
+      for(i = j - b2 + 1, q = dpcell[j] + i, s = curr + i; i < len1; ++i, ++s, ++q) {
           fmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]]);
           fmap_sw_set_ins(s->ins_score, q, last + i);
           fmap_sw_set_end_del(s->del_score, q, s - 1);
@@ -489,21 +489,21 @@ fmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
   q = dpcell[j] + i;
   s = last + len1;
   max = s->match_score; type = q->match_from; ctype = FMAP_SW_FROM_M;
-  if (s->ins_score > max) { max = s->ins_score; type = q->ins_from; ctype = FMAP_SW_FROM_I; }
-  if (s->del_score > max) { max = s->del_score; type = q->del_from; ctype = FMAP_SW_FROM_D; }
+  if(s->ins_score > max) { max = s->ins_score; type = q->ins_from; ctype = FMAP_SW_FROM_I; }
+  if(s->del_score > max) { max = s->del_score; type = q->del_from; ctype = FMAP_SW_FROM_D; }
 
   p = path;
   p->ctype = ctype; p->i = i; p->j = j; 
   ++p;
   do {
-      switch (ctype) {
+      switch(ctype) {
         case FMAP_SW_FROM_M: --i; --j; break;
         case FMAP_SW_FROM_I: --j; break;
         case FMAP_SW_FROM_D: --i; break;
       }
       q = dpcell[j] + i;
       ctype = type;
-      switch (type) {
+      switch(type) {
         case FMAP_SW_FROM_M: type = q->match_from; break;
         case FMAP_SW_FROM_I: type = q->ins_from; break;
         case FMAP_SW_FROM_D: type = q->del_from; break;
@@ -514,9 +514,9 @@ fmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
   (*path_len) = p - path - 1;
 
   /* free memory */
-  for (j = b2 + 1; j <= len2; ++j)
+  for(j = b2 + 1; j <= len2; ++j)
     dpcell[j] += j - b2;
-  for (j = 0; j <= len2; ++j)
+  for(j = 0; j <= len2; ++j)
     free(dpcell[j]);
   free(dpcell);
   free(curr); free(last);
@@ -555,13 +555,13 @@ fmap_sw_local_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, con
   N_MATRIX_ROW = ap->row;
   thres = _thres > 0? _thres : -_thres;
 
-  if (len1 == 0 || len2 == 0) return -1;
+  if(len1 == 0 || len2 == 0) return -1;
 
   /* allocate memory */
   suba = fmap_malloc(sizeof(int32_t) * (len2 + 1), "suba");
   eh = fmap_malloc(sizeof(FMAP_SW_NT_LOCAL_SCORE) * (len1 + 1), "eh");
   s_array = fmap_malloc(sizeof(int32_t*) * N_MATRIX_ROW, "s_array");
-  for (i = 0; i != N_MATRIX_ROW; ++i)
+  for(i = 0; i != N_MATRIX_ROW; ++i)
     s_array[i] = fmap_malloc(sizeof(int32_t) * len1, "s_array[i]");
   /* initialization */
   fmap_sw_score_array_init(seq1, len1, N_MATRIX_ROW, score_matrix, s_array);
@@ -570,22 +570,22 @@ fmap_sw_local_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, con
   qr = q + r;
   qr_shift = (qr+1) << FMAP_SW_NT_LOCAL_SHIFT;
   start_i = start_j = end_i = end_j = 0;
-  for (i = 0, max_score = 0; i != N_MATRIX_ROW * N_MATRIX_ROW; ++i)
-    if (max_score < score_matrix[i]) max_score = score_matrix[i];
+  for(i = 0, max_score = 0; i != N_MATRIX_ROW * N_MATRIX_ROW; ++i)
+    if(max_score < score_matrix[i]) max_score = score_matrix[i];
   /* convert the coordinate */
   --seq1; --seq2;
-  for (i = 0; i != N_MATRIX_ROW; ++i) --s_array[i];
+  for(i = 0; i != N_MATRIX_ROW; ++i) --s_array[i];
 
   /* forward dynamic programming */
-  for (i = 0, s = eh; i != len1 + 1; ++i, ++s) *s = 0;
+  for(i = 0, s = eh; i != len1 + 1; ++i, ++s) *s = 0;
   score_f = 0;
   is_overflow = of_base = 0;
   suba[0] = 0;
-  for (j = 1, ss = suba + 1; j <= len2; ++j, ++ss) {
+  for(j = 1, ss = suba + 1; j <= len2; ++j, ++ss) {
       int32_t subo = 0;
       last_h = f = 0;
       score_array = s_array[seq2[j]];
-      if (is_overflow) { /* adjust eh[] array if overflow occurs. */
+      if(is_overflow) { /* adjust eh[] array if overflow occurs. */
           /* If FMAP_SW_LOCAL_OVERFLOW_REDUCE is too small, optimal alignment might be missed.
            * If it is too large, this block will be excuted frequently and therefore
            * slow down the whole program.
@@ -596,34 +596,34 @@ fmap_sw_local_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, con
           score_f -= FMAP_SW_LOCAL_OVERFLOW_REDUCE;
           of_base += FMAP_SW_LOCAL_OVERFLOW_REDUCE;
           is_overflow = 0;
-          for (i = 1, s = eh; i <= len1 + 1; ++i, ++s) {
+          for(i = 1, s = eh; i <= len1 + 1; ++i, ++s) {
               tmp = *s >> FMAP_SW_NT_LOCAL_SHIFT; tmp2 = *s & FMAP_SW_NT_LOCAL_MASK;
-              if (tmp2 < FMAP_SW_LOCAL_OVERFLOW_REDUCE) tmp2 = 0;
+              if(tmp2 < FMAP_SW_LOCAL_OVERFLOW_REDUCE) tmp2 = 0;
               else tmp2 -= FMAP_SW_LOCAL_OVERFLOW_REDUCE;
-              if (tmp < FMAP_SW_LOCAL_OVERFLOW_REDUCE) tmp = 0;
+              if(tmp < FMAP_SW_LOCAL_OVERFLOW_REDUCE) tmp = 0;
               else tmp -= FMAP_SW_LOCAL_OVERFLOW_REDUCE;
               *s = (tmp << FMAP_SW_NT_LOCAL_SHIFT) | tmp2;
           }
       }
-      for (i = 1, s = eh; i != len1 + 1; ++i, ++s) {
+      for(i = 1, s = eh; i != len1 + 1; ++i, ++s) {
           /* prepare for calculate current h */
           curr_h = (*s >> FMAP_SW_NT_LOCAL_SHIFT) + score_array[i];
-          if (curr_h < 0) curr_h = 0;
-          if (last_h > 0) { /* initialize f */
+          if(curr_h < 0) curr_h = 0;
+          if(last_h > 0) { /* initialize f */
               f = (f > last_h - q)? f - r : last_h - qr;
-              if (curr_h < f) curr_h = f;
+              if(curr_h < f) curr_h = f;
           }
-          if (*(s+1) >= qr_shift) { /* initialize e */
+          if(*(s+1) >= qr_shift) { /* initialize e */
               curr_last_h = *(s+1) >> FMAP_SW_NT_LOCAL_SHIFT;
               e = ((*s & FMAP_SW_NT_LOCAL_MASK) > curr_last_h - q)? (*s & FMAP_SW_NT_LOCAL_MASK) - r : curr_last_h - qr;
-              if (curr_h < e) curr_h = e;
+              if(curr_h < e) curr_h = e;
               *s = (last_h << FMAP_SW_NT_LOCAL_SHIFT) | e;
           } else *s = last_h << FMAP_SW_NT_LOCAL_SHIFT; /* e = 0 */
           last_h = curr_h;
-          if (subo < curr_h) subo = curr_h;
-          if (score_f < curr_h) {
+          if(subo < curr_h) subo = curr_h;
+          if(score_f < curr_h) {
               score_f = curr_h; end_i = i; end_j = j;
-              if (score_f > FMAP_SW_LOCAL_OVERFLOW_THRESHOLD) is_overflow = 1;
+              if(score_f > FMAP_SW_LOCAL_OVERFLOW_THRESHOLD) is_overflow = 1;
           }
       }
       *s = last_h << FMAP_SW_NT_LOCAL_SHIFT;
@@ -631,82 +631,82 @@ fmap_sw_local_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, con
   }
   score_f += of_base;
 
-  if (score_f < thres) { /* no matching residue at all, 090218 */
+  if(score_f < thres) { /* no matching residue at all, 090218 */
       *path_len = 0;
       goto end_func;
   }
-  if (path == 0) goto end_func; /* skip path-filling */
+  if(path == 0) goto end_func; /* skip path-filling */
 
   /* reverse dynamic programming */
-  for (i = end_i, s = eh + end_i; i >= 0; --i, --s) *s = 0;
-  if (end_i == 0 || end_j == 0) goto end_func; /* no local match */
+  for(i = end_i, s = eh + end_i; i >= 0; --i, --s) *s = 0;
+  if(end_i == 0 || end_j == 0) goto end_func; /* no local match */
   score_r = score_matrix[seq1[end_i] * N_MATRIX_ROW + seq2[end_j]];
   is_overflow = of_base = 0;
   start_i = end_i; start_j = end_j;
   eh[end_i] = ((FMAP_SW_NT_LOCAL_SCORE)(qr + score_r)) << FMAP_SW_NT_LOCAL_SHIFT; /* in order to initialize f and e, 040408 */
   start = end_i - 1;
   end = end_i - 3;
-  if (end <= 0) end = 0;
+  if(end <= 0) end = 0;
 
   /* second pass DP can be done in a band, speed will thus be enhanced */
-  for (j = end_j - 1; j != 0; --j) {
+  for(j = end_j - 1; j != 0; --j) {
       last_h = f = 0;
       score_array = s_array[seq2[j]];
-      if (is_overflow) { /* adjust eh[] array if overflow occurs. */
+      if(is_overflow) { /* adjust eh[] array if overflow occurs. */
           int32_t tmp, tmp2;
           score_r -= FMAP_SW_LOCAL_OVERFLOW_REDUCE;
           of_base += FMAP_SW_LOCAL_OVERFLOW_REDUCE;
           is_overflow = 0;
-          for (i = start, s = eh + start + 1; i >= end; --i, --s) {
+          for(i = start, s = eh + start + 1; i >= end; --i, --s) {
               tmp = *s >> FMAP_SW_NT_LOCAL_SHIFT; tmp2 = *s & FMAP_SW_NT_LOCAL_MASK;
-              if (tmp2 < FMAP_SW_LOCAL_OVERFLOW_REDUCE) tmp2 = 0;
+              if(tmp2 < FMAP_SW_LOCAL_OVERFLOW_REDUCE) tmp2 = 0;
               else tmp2 -= FMAP_SW_LOCAL_OVERFLOW_REDUCE;
-              if (tmp < FMAP_SW_LOCAL_OVERFLOW_REDUCE) tmp = 0;
+              if(tmp < FMAP_SW_LOCAL_OVERFLOW_REDUCE) tmp = 0;
               else tmp -= FMAP_SW_LOCAL_OVERFLOW_REDUCE;
               *s = (tmp << FMAP_SW_NT_LOCAL_SHIFT) | tmp2;
           }
       }
-      for (i = start, s = eh + start + 1; i != end; --i, --s) {
+      for(i = start, s = eh + start + 1; i != end; --i, --s) {
           /* prepare for calculate current h */
           curr_h = (*s >> FMAP_SW_NT_LOCAL_SHIFT) + score_array[i];
-          if (curr_h < 0) curr_h = 0;
-          if (last_h > 0) { /* initialize f */
+          if(curr_h < 0) curr_h = 0;
+          if(last_h > 0) { /* initialize f */
               f = (f > last_h - q)? f - r : last_h - qr;
-              if (curr_h < f) curr_h = f;
+              if(curr_h < f) curr_h = f;
           }
           curr_last_h = *(s-1) >> FMAP_SW_NT_LOCAL_SHIFT;
           e = ((*s & FMAP_SW_NT_LOCAL_MASK) > curr_last_h - q)? (*s & FMAP_SW_NT_LOCAL_MASK) - r : curr_last_h - qr;
-          if (e < 0) e = 0;
-          if (curr_h < e) curr_h = e;
+          if(e < 0) e = 0;
+          if(curr_h < e) curr_h = e;
           *s = (last_h << FMAP_SW_NT_LOCAL_SHIFT) | e;
           last_h = curr_h;
-          if (score_r < curr_h) {
+          if(score_r < curr_h) {
               score_r = curr_h; start_i = i; start_j = j;
-              if (score_r + of_base - qr == score_f) {
+              if(score_r + of_base - qr == score_f) {
                   j = 1; break;
               }
-              if (score_r > FMAP_SW_LOCAL_OVERFLOW_THRESHOLD) is_overflow = 1;
+              if(score_r > FMAP_SW_LOCAL_OVERFLOW_THRESHOLD) is_overflow = 1;
           }
       }
       *s = last_h << FMAP_SW_NT_LOCAL_SHIFT;
       /* recalculate start and end, the boundaries of the band */
-      if ((eh[start] >> FMAP_SW_NT_LOCAL_SHIFT) <= qr) --start;
-      if (start <= 0) start = 0;
+      if((eh[start] >> FMAP_SW_NT_LOCAL_SHIFT) <= qr) --start;
+      if(start <= 0) start = 0;
       end = start_i - (start_j - j) - (score_r + of_base + (start_j - j) * max_score) / r - 1;
-      if (end <= 0) end = 0;
+      if(end <= 0) end = 0;
   }
 
-  if (_subo) {
+  if(_subo) {
       int32_t tmp2 = 0, tmp = (int32_t)(start_j - .33 * (end_j - start_j) + .499);
-      for (j = 1; j <= tmp; ++j)
-        if (tmp2 < suba[j]) tmp2 = suba[j];
+      for(j = 1; j <= tmp; ++j)
+        if(tmp2 < suba[j]) tmp2 = suba[j];
       tmp = (int32_t)(end_j + .33 * (end_j - start_j) + .499);
-      for (j = tmp; j <= len2; ++j)
-        if (tmp2 < suba[j]) tmp2 = suba[j];
+      for(j = tmp; j <= len2; ++j)
+        if(tmp2 < suba[j]) tmp2 = suba[j];
       *_subo = tmp2;
   }
 
-  if (path_len == 0) {
+  if(path_len == 0) {
       path[0].i = start_i; path[0].j = start_j;
       path[1].i = end_i; path[1].j = end_j;
       goto end_func;
@@ -717,30 +717,30 @@ fmap_sw_local_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, con
 
 #ifdef DEBUG
   /* this seems not a bug */
-  if (score_f != score_r)
-    fprintf(stderr, "[aln_local_core] unknown flaw occurs: score_f(%d) != score_r(%d)\n", score_f, score_r);
+  if(score_f != score_r)
+    fprintf(stderr, "[fmap_sw_local_core] unknown flaw occurs: score_f(%d) != score_r(%d)\n", score_f, score_r);
 #endif
 
-  if (_thres > 0) { /* call global alignment to fill the path */
+  if(_thres > 0) { /* call global alignment to fill the path */
       score_g = 0;
       j = (end_i - start_i > end_j - start_j)? end_i - start_i : end_j - start_j;
       ++j; /* j is the maximum band_width */
-      for (i = ap->band_width;; i <<= 1) {
+      for(i = ap->band_width;; i <<= 1) {
           fmap_sw_param_t ap_real = *ap;
           ap_real.gap_end = -1;
           ap_real.band_width = i;
           score_g = fmap_sw_global_core(seq1 + start_i, end_i - start_i + 1, seq2 + start_j,
                                         end_j - start_j + 1, &ap_real, path, path_len);
-          if (score_g == score_r || score_f == score_g) break;
-          if (i > j) break;
+          if(score_g == score_r || score_f == score_g) break;
+          if(i > j) break;
       }
-      if (score_r > score_g && score_f > score_g) {
-          fprintf(stderr, "[aln_local_core] Potential bug: (%d,%d) > %d\n", score_f, score_r, score_g);
+      if(score_r > score_g && score_f > score_g) {
+          fprintf(stderr, "[fmap_sw_local_core] Potential bug: (%d,%d) > %d\n", score_f, score_r, score_g);
           score_f = score_r = -1;
       } else score_f = score_g;
 
       /* convert coordinate */
-      for (p = path + *path_len - 1; p >= path; --p) {
+      for(p = path + *path_len - 1; p >= path; --p) {
           p->i += start_i - 1;
           p->j += start_j - 1;
       }
@@ -753,7 +753,7 @@ fmap_sw_local_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, con
 end_func:
   /* free */
   free(eh); free(suba);
-  for (i = 0; i != N_MATRIX_ROW; ++i) {
+  for(i = 0; i != N_MATRIX_ROW; ++i) {
       ++s_array[i];
       free(s_array[i]);
   }
@@ -761,98 +761,9 @@ end_func:
   return score_f;
 }
 
-fmap_sw_aln_t *
-fmap_sw_stdaln_aux(const char *seq1, const char *seq2, const fmap_sw_param_t *ap,
-                   int32_t type, int32_t thres, int32_t len1, int32_t len2)
-{
-  uint8_t *seq11, *seq22;
-  int32_t score;
-  int32_t i, j, l;
-  fmap_sw_path_t *p;
-  char *out1, *out2, *outm;
-  fmap_sw_aln_t *aa;
-
-  if (len1 < 0) len1 = strlen(seq1);
-  if (len2 < 0) len2 = strlen(seq2);
-
-  aa = fmap_sw_aln_init();
-  seq11 = fmap_malloc(sizeof(uint8_t) * len1, "seq11");
-  seq22 = fmap_malloc(sizeof(uint8_t) * len2, "seq22");
-  aa->path = fmap_malloc(sizeof(fmap_sw_path_t) * (len1 + len2 + 1), "aa->path");
-
-  if (ap->row < 10) { /* 4-nucleotide alignment */
-      for (i = 0; i < len1; ++i)
-        seq11[i] = fmap_sw_nt4_table[(int32_t)seq1[i]];
-      for (j = 0; j < len2; ++j)
-        seq22[j] = fmap_sw_nt4_table[(int32_t)seq2[j]];
-  } else if (ap->row < 20) { /* 16-nucleotide alignment */
-      for (i = 0; i < len1; ++i)
-        seq11[i] = fmap_sw_nt16_table[(int32_t)seq1[i]];
-      for (j = 0; j < len2; ++j)
-        seq22[j] = fmap_sw_nt16_table[(int32_t)seq2[j]];
-  } else { /* amino acids */
-      for (i = 0; i < len1; ++i)
-        seq11[i] = fmap_sw_aa_table[(int32_t)seq1[i]];
-      for (j = 0; j < len2; ++j)
-        seq22[j] = fmap_sw_aa_table[(int32_t)seq2[j]];
-  }
-
-  if (type == FMAP_SW_TYPE_GLOBAL) score = fmap_sw_global_core(seq11, len1, seq22, len2, ap, aa->path, &aa->path_len);
-  else if (type == FMAP_SW_TYPE_LOCAL) score = fmap_sw_local_core(seq11, len1, seq22, len2, ap, aa->path, &aa->path_len, thres, &aa->subo);
-  else if (type == FMAP_SW_TYPE_EXTEND)  score = fmap_sw_extend_core(seq11, len1, seq22, len2, ap, aa->path, &aa->path_len, 1, 0, 0);
-  else {
-      free(seq11); free(seq22); free(aa->path);
-      fmap_sw_aln_destroy(aa);
-      return 0;
-  }
-  aa->score = score;
-
-  if (thres > 0) {
-      out1 = aa->out1 = fmap_malloc(sizeof(char) * (aa->path_len + 1), "out1");
-      out2 = aa->out2 = fmap_malloc(sizeof(char) * (aa->path_len + 1), "out2");
-      outm = aa->outm = fmap_malloc(sizeof(char) * (aa->path_len + 1), "outm");
-
-      --seq1; --seq2;
-      --seq11; --seq22;
-
-      p = aa->path + aa->path_len - 1;
-
-      for (l = 0; p >= aa->path; --p, ++l) {
-          switch (p->ctype) {
-            case FMAP_SW_FROM_M: out1[l] = seq1[p->i]; out2[l] = seq2[p->j];
-                                 outm[l] = (seq11[p->i] == seq22[p->j] && seq11[p->i] != ap->row)? '|' : ' ';
-                                 break;
-            case FMAP_SW_FROM_I: out1[l] = '-'; out2[l] = seq2[p->j]; outm[l] = ' '; break;
-            case FMAP_SW_FROM_D: out1[l] = seq1[p->i]; out2[l] = '-'; outm[l] = ' '; break;
-          }
-      }
-      out1[l] = out2[l] = outm[l] = '\0';
-      ++seq11; ++seq22;
-  }
-
-  free(seq11);
-  free(seq22);
-
-  p = aa->path + aa->path_len - 1;
-  aa->start1 = p->i? p->i : 1;
-  aa->end1 = aa->path->i;
-  aa->start2 = p->j? p->j : 1;
-  aa->end2 = aa->path->j;
-  aa->cigar32 = fmap_sw_path2cigar(aa->path, aa->path_len, &aa->n_cigar);
-
-  return aa;
-}
-
-fmap_sw_aln_t *
-fmap_sw_stdaln(const char *seq1, const char *seq2, const fmap_sw_param_t *ap, int32_t type, int32_t thres)
-{
-  return fmap_sw_stdaln_aux(seq1, seq2, ap, type, thres, -1, -1);
-}
-
-/* newly added functions (2009-07-21) */
-int32_t 
-fmap_sw_extend_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const fmap_sw_param_t *ap,
-                    fmap_sw_path_t *path, int32_t *path_len, int32_t G0, int32_t seq2_fit, uint8_t *_mem)
+static int32_t 
+fmap_sw_extend_aux(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const fmap_sw_param_t *ap,
+                    fmap_sw_path_t *path, int32_t *path_len, int32_t prev_score, int32_t seq2_fit, uint8_t *_mem)
 {
   int32_t q, r, qr;
   int32_t **s_array, *score_array;
@@ -870,14 +781,14 @@ fmap_sw_extend_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
   score_matrix = ap->matrix;
   N_MATRIX_ROW = ap->row;
 
-  if (len1 == 0 || len2 == 0) return -1;
+  if(len1 == 0 || len2 == 0) return -1;
 
   /* allocate memory */
   mem = _mem ? _mem : fmap_calloc((len1 + 2) * (N_MATRIX_ROW + 1), sizeof(uint32_t), "mem");
   _p = mem;
   eh = (uint32_t*)_p, _p += 4 * (len1 + 2);
   s_array = fmap_calloc(N_MATRIX_ROW, sizeof(void*), "s_array");
-  for (i = 0; i != N_MATRIX_ROW; ++i)
+  for(i = 0; i != N_MATRIX_ROW; ++i)
     s_array[i] = (int32_t*)_p, _p += 4 * len1;
   /* initialization */
   fmap_sw_score_array_init(seq1, len1, N_MATRIX_ROW, score_matrix, s_array);
@@ -887,41 +798,41 @@ fmap_sw_extend_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
   is_overflow = of_base = 0;
   /* convert the coordinate */
   --seq1; --seq2;
-  for (i = 0; i != N_MATRIX_ROW; ++i) --s_array[i];
+  for(i = 0; i != N_MATRIX_ROW; ++i) --s_array[i];
   /* dynamic programming */
   memset(eh, 0, 4 * (len1 + 2));
-  eh[1] = (uint32_t)G0<<16;
-  for (j = 1; j <= len2; ++j) {
+  eh[1] = (uint32_t)prev_score<<16;
+  for(j = 1; j <= len2; ++j) {
       int32_t _start, _end;
       int32_t h1 = 0, f = 0;
       score_array = s_array[seq2[j]];
       /* set start and end */
       _start = j - ap->band_width;
-      if (_start < 1) _start = 1;
-      if (_start > start) start = _start;
+      if(_start < 1) _start = 1;
+      if(_start > start) start = _start;
       _end = j + ap->band_width;
-      if (_end > len1 + 1) _end = len1 + 1;
-      if (_end < end) end = _end;
-      if (start == end) break;
+      if(_end > len1 + 1) _end = len1 + 1;
+      if(_end < end) end = _end;
+      if(start == end) break;
       /* adjust eh[] array if overflow occurs. */
-      if (is_overflow) {
+      if(is_overflow) {
           int32_t tmp, tmp2;
           score -= FMAP_SW_LOCAL_OVERFLOW_REDUCE;
           of_base += FMAP_SW_LOCAL_OVERFLOW_REDUCE;
           is_overflow = 0;
-          for (i = start; i <= end; ++i) {
+          for(i = start; i <= end; ++i) {
               uint32_t *s = &eh[i];
               tmp = *s >> 16; tmp2 = *s & 0xffff;
-              if (tmp2 < FMAP_SW_LOCAL_OVERFLOW_REDUCE) tmp2 = 0;
+              if(tmp2 < FMAP_SW_LOCAL_OVERFLOW_REDUCE) tmp2 = 0;
               else tmp2 -= FMAP_SW_LOCAL_OVERFLOW_REDUCE;
-              if (tmp < FMAP_SW_LOCAL_OVERFLOW_REDUCE) tmp = 0;
+              if(tmp < FMAP_SW_LOCAL_OVERFLOW_REDUCE) tmp = 0;
               else tmp -= FMAP_SW_LOCAL_OVERFLOW_REDUCE;
               *s = (tmp << 16) | tmp2;
           }
       }
       _start = _end = 0;
       /* the inner loop */
-      for (i = start; i < end; ++i) {
+      for(i = start; i < end; ++i) {
           /* At the beginning of each cycle:
              eh[i] -> h[j-1,i-1]<<16 | e[j,i]
              f     -> f[j,i]
@@ -936,13 +847,13 @@ fmap_sw_extend_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
           h = h > e? h : e;
           h = h > f? h : f; /* h now is h[j,i] */
           h1 = h;
-          if (h > 0) {
-              if (_start == 0) _start = i;
+          if(h > 0) {
+              if(_start == 0) _start = i;
               _end = i;
               if(score < h &&
                  (0 == seq2_fit || j == len2)) { // align all of seq2
                   score = h; end_i = i; end_j = j;
-                  if (score > FMAP_SW_LOCAL_OVERFLOW_THRESHOLD) is_overflow = 1;
+                  if(score > FMAP_SW_LOCAL_OVERFLOW_THRESHOLD) is_overflow = 1;
               }
           }
           /* calculate e[j+1,i] and f[j,i+1] */
@@ -956,45 +867,60 @@ fmap_sw_extend_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
       }			
       eh[end] = h1 << 16;
       /* recalculate start and end, the boundaries of the band */
-      if (_end <= 0) break; /* no cell in this row has a positive score */
+      if(_end <= 0) break; /* no cell in this row has a positive score */
       start = _start;
       end = _end + 3;
   }
 
   score += of_base - 1;
-  if (score <= 0) {
-      if (path_len) *path_len = 0;
-      goto end_left_func;
+
+  if(NULL == path) {
+      // do nothing
   }
-
-  if (path == 0) goto end_left_func;
-
-  if (path_len == 0) {
+  else if(NULL == path_len) {
       path[0].i = end_i; path[0].j = end_j;
-      goto end_left_func;
+  }
+  else if(score <= 0) {
+      (*path_len) = 0;
+  }
+  else {
+      /* call global alignment to fill the path */
+      int32_t score_g = 0;
+      j = (end_i - 1 > end_j - 1)? end_i - 1 : end_j - 1;
+      ++j; /* j is the maximum band_width */
+      for(i = ap->band_width;; i <<= 1) {
+          fmap_sw_param_t ap_real = *ap;
+          ap_real.gap_end = -1;
+          ap_real.band_width = i;
+          score_g = fmap_sw_global_core(seq1 + 1, end_i, seq2 + 1, end_j, &ap_real, path, path_len);
+          if(score - prev_score == score_g) break; // TODO: is this correct?
+          //if(score == score_g) break;
+          if(i > j) break;
+      }
+      if(score > score_g) {
+          fmap_error("no suitable band width", Exit, OutOfRange);
+      }
+      score = score_g + prev_score;
   }
 
-  /* call global alignment to fill the path */
-  int32_t score_g = 0;
-  j = (end_i - 1 > end_j - 1)? end_i - 1 : end_j - 1;
-  ++j; /* j is the maximum band_width */
-  for (i = ap->band_width;; i <<= 1) {
-      fmap_sw_param_t ap_real = *ap;
-      ap_real.gap_end = -1;
-      ap_real.band_width = i;
-      score_g = fmap_sw_global_core(seq1 + 1, end_i, seq2 + 1, end_j, &ap_real, path, path_len);
-      if (score == score_g) break;
-      if (i > j) break;
-  }
-  if (score > score_g)
-    fprintf(stderr, "[aln_left_core] no suitable bandwidth: %d < %d\n", score_g, score);
-  score = score_g;
-
-end_left_func:
   /* free */
   free(s_array);
-  if (!_mem) free(mem);
+  if(!_mem) free(mem);
   return score;
+}
+
+int32_t 
+fmap_sw_extend_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const fmap_sw_param_t *ap,
+                    fmap_sw_path_t *path, int32_t *path_len, int32_t prev_score, uint8_t *_mem)
+{
+  return fmap_sw_extend_aux(seq1, len1, seq2, len2, ap, path, path_len, prev_score, 0, _mem);
+}
+
+int32_t 
+fmap_sw_extend_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const fmap_sw_param_t *ap,
+                    fmap_sw_path_t *path, int32_t *path_len, int32_t prev_score, uint8_t *_mem)
+{
+  return fmap_sw_extend_aux(seq1, len1, seq2, len2, ap, path, path_len, prev_score, 1, _mem);
 }
 
 // TODO: optimize similar to fmap_sw_local
@@ -1144,14 +1070,14 @@ fmap_sw_path2cigar(const fmap_sw_path_t *path, int32_t path_len, int32_t *n_ciga
   uint32_t *cigar;
   uint8_t last_type;
 
-  if (path_len == 0 || path == 0) {
+  if(path_len == 0 || path == 0) {
       *n_cigar = 0;
       return 0;
   }
 
   last_type = path->ctype;
-  for (i = n = 1; i < path_len; ++i) {
-      if (last_type != path[i].ctype) ++n;
+  for(i = n = 1; i < path_len; ++i) {
+      if(last_type != path[i].ctype) ++n;
       last_type = path[i].ctype;
   }
   *n_cigar = n;
@@ -1159,8 +1085,8 @@ fmap_sw_path2cigar(const fmap_sw_path_t *path, int32_t path_len, int32_t *n_ciga
 
   cigar[0] = 1u << 4 | path[path_len-1].ctype;
   last_type = path[path_len-1].ctype;
-  for (i = path_len - 2, n = 0; i >= 0; --i) {
-      if (path[i].ctype == last_type) cigar[n] += 1u << 4;
+  for(i = path_len - 2, n = 0; i >= 0; --i) {
+      if(path[i].ctype == last_type) cigar[n] += 1u << 4;
       else {
           cigar[++n] = 1u << 4 | path[i].ctype;
           last_type = path[i].ctype;

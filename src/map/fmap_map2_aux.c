@@ -215,7 +215,12 @@ fmap_map2_aux_extend_left(fmap_map2_opt_t *opt, fmap_map2_aln_t *b,
             target[j++] = fmap_refseq_seq_i(refseq, k);
       }
       lt = j;
-      score = fmap_sw_extend_core(target, lt, query + query_length - p->beg, p->beg, &par, &path, 0, p->G, opt->aln_global, _mem);
+      if(0 == opt->aln_global) {
+          score = fmap_sw_extend_core(query + query_length - p->beg, p->beg, target, lt, &par, &path, 0, p->G, _mem);
+      }
+      else {
+          score = fmap_sw_extend_fitting_core(query + query_length - p->beg, p->beg, target, lt, &par, &path, 0, p->G, _mem);
+      }
       if(score > p->G) { // extensible
           p->G = score;
           p->len += path.i;
@@ -256,7 +261,12 @@ fmap_map2_aux_extend_right(fmap_map2_opt_t *opt, fmap_map2_aln_t *b,
             target[j++] = fmap_refseq_seq_i(refseq, k);
       }
       lt = j;
-      score = fmap_sw_extend_core(target, lt, query + p->beg, query_length - p->beg, &par, &path, 0, 1, opt->aln_global, _mem);
+      if(0 == opt->aln_global) {
+          score = fmap_sw_extend_core(query + p->beg, query_length - p->beg, target, lt, &par, &path, 0, 1, _mem);
+      }
+      else {
+          score = fmap_sw_extend_fitting_core(query + p->beg, query_length - p->beg, target, lt, &par, &path, 0, 1, _mem);
+      }
       if(score >= p->G) {
           p->G = score;
           p->len = path.i;
