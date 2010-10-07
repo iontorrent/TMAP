@@ -149,7 +149,7 @@ fmap_fsw_sub_core(uint8_t flow_base, uint8_t base_call, uint16_t flow_signal,
       // get flow score for "(i-low_offset)" bases
       flow_score = (flow_signal < 100*i) ? (100*i - flow_signal) : (flow_signal - 100*i);
       flow_score *= ap->fscore / 100;
-      for(j=1;j<=len2;j++) { // for each col
+      for(j=0;j<=len2;j++) { // for each col
           FMAP_FSW_ADD_FSCORE(sub_score[i][j], flow_score);
       }
   }
@@ -294,6 +294,16 @@ fmap_fsw_extend_core(uint8_t *flow, uint8_t *bc1, uint16_t *flowgram1, int32_t f
                         dpcell[i-1], last,
                         dpcell[i], curr);
 
+      /*
+         for(j=0;j<=len2;j++) {
+         fprintf(stderr, "i=%d j=%d M:%d:%d:%d I:%d:%d:%d D:%d:%d:%d\n",
+         i, j,
+         dpcell[i][j].match_from, dpcell[i][j].match_offset, (int)curr[j].match_score,
+         dpcell[i][j].ins_from, dpcell[i][j].ins_offset, (int)curr[j].ins_score,
+         dpcell[i][j].del_from, dpcell[i][j].del_offset, (int)curr[j].del_score);
+         }
+         */
+
       // Update best
       if(min_flowlen1 <= i && min_len2 <= j) {
           for(j=1;j<=len2;j++) {
@@ -383,7 +393,7 @@ fmap_fsw_extend_core(uint8_t *flow, uint8_t *bc1, uint16_t *flowgram1, int32_t f
           // move the row and column (as necessary)
           switch(ctype) {
             case FMAP_FSW_FROM_M: 
-              --i; --j; break;
+              --i; j -= n_bases; break;
             case FMAP_FSW_FROM_I: 
               --i; break;
             case FMAP_FSW_FROM_D: 
@@ -494,7 +504,7 @@ fmap_fsw_main_opt_init()
   opt->param.gap_ext = 2*100;
   opt->param.gap_end = 2*100;
   opt->param.matrix = fmap_fsw_sm_short;
-  opt->param.fscore = 22;
+  opt->param.fscore = 26*100; // set this to score_match + gap_open + gap_ext
   opt->param.offset = 0;
   opt->param.row = 5;
   opt->param.band_width = 50;
@@ -578,7 +588,7 @@ fmap_fsw_main_get_flowgram(char *flowgram, int32_t *flowgram_length)
   }
   j++;
   if(1 != state && 3 != state) {
-     fmap_error("ended with a comma or a decimal point", Exit, OutOfRange);
+      fmap_error("ended with a comma or a decimal point", Exit, OutOfRange);
   } 
 
   (*flowgram_length) = j;
@@ -689,7 +699,7 @@ int fmap_fsw_main(int argc, char *argv[])
       if(NULL == opt->flow) {
           fmap_error("option -k must be specified", Exit, CommandLineArgument);
       }
-      fmap_error_cmd_check_int(opt->param.fscore, 1, INT32_MAX, "-F");
+      fmap_error_cmd_check_int(opt->param.fscore, 0, INT32_MAX, "-F");
       fmap_error_cmd_check_int(opt->param.offset, 0, INT32_MAX, "-o");
   }
 
@@ -698,7 +708,7 @@ int fmap_fsw_main(int argc, char *argv[])
 
   // get the flow base calls
   base_calls = fmap_fsw_main_get_base_calls(opt->base_calls, flowgram_length, opt->flow);
-  
+
   // convert the target to 2-bit format 
   for(i=0;i<opt->target_length;i++) {
       opt->target[i] = nt_char_to_int[(int)opt->target[i]];
@@ -716,7 +726,7 @@ int fmap_fsw_main(int argc, char *argv[])
                                        &opt->param,
                                        path, &path_len);
 
-  fprintf(stderr, "score=%lld path_len=%d\n", (long long int)score/100, path_len);
+  fprintf(stderr, "score=%lld path_len=%d\n", (long long int)score, path_len);
   // ref
   fprintf(stderr, "REF:  ");
   for(i=path_len-1;0<=i;i--) {
@@ -733,11 +743,16 @@ int fmap_fsw_main(int argc, char *argv[])
   for(i=path_len-1;0<=i;i--) {
       switch(path[i].ctype) {
         case FMAP_FSW_FROM_M:
-          fputc('|', stderr); break;
+          if(toupper(opt->flow[path[i].i & 3]) == "ACGT"[(int)opt->target[path[i].j]]) {
+              fputc('|', stderr); break;
+          }
+          else { 
+              fputc(' ', stderr); break;
+          }
         case FMAP_FSW_FROM_I:
-          fputc('-', stderr); break;
-        case FMAP_FSW_FROM_D:
           fputc('+', stderr); break;
+        case FMAP_FSW_FROM_D:
+          fputc('-', stderr); break;
         default:
           fputc(' ', stderr); break;
       }
