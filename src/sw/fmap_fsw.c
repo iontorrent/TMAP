@@ -1,8 +1,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <unistd.h>
+#include <string.h>
+#include <ctype.h>
 
 #include "../util/fmap_alloc.h"
+#include "../util/fmap_progress.h"
+#include "../util/fmap_definitions.h"
+#include "../io/fmap_file.h"
 #include "fmap_sw.h"
 #include "fmap_fsw.h"
 
@@ -281,7 +287,7 @@ fmap_fsw_extend_core(uint8_t *flow, uint8_t *bc1, uint16_t *flowgram1, int32_t f
   // core loop
   for(i=1;i<=flowlen1;i++) { // for each row
       // fill in the columns
-      fmap_fsw_sub_core(flow[i-1], bc1[i-1], flowgram1[i-1],
+      fmap_fsw_sub_core(flow[(i-1) & 3], bc1[i-1], flowgram1[i-1], // Note: %4 is the same as &3
                         seq2, len2,
                         ap,
                         sub_dpcell, sub_score,
@@ -446,6 +452,16 @@ fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_ci
   return cigar;
 }
 
+typedef struct {
+    char *flow;
+    char *base_calls;
+    char *flowgram;
+    int32_t flowgram_length;
+    char *target;
+    int32_t target_length;
+    fmap_fsw_param_t param;
+} fmap_fsw_main_opt_t;
+
 /* IDEAS
    1. function to do forward local alignment
    - returns the score, end row, and end column of the best scoring alignment
@@ -461,47 +477,288 @@ fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_ci
    Functions 1-3 are not going to be used at present
    */
 
-int fmap_fsw_main(int argc, char *argv[])
+fmap_fsw_main_opt_t *
+fmap_fsw_main_opt_init()
 {
-  int32_t i;
-  uint8_t flow[] = {
-      0, 1, 2, 3,
-      0, 1, 2, 3,
-  };
-  uint8_t bc1[] = { 
-      1, 1, 1, 0, 
-      1, 0, 1, 0, 
-      1, 0, 1, 0, 
-  };
-  uint16_t flowgram1[] = {
-      100, 105, 100, 0, 
-      100, 0, 100, 0,
-  };
-  int32_t flowlen1 = 3;
-  uint8_t seq2[] = {
-      0, 2, 0, 2,
-      0, 2, 0, 2,
-  };
-  int32_t len2 = 2;
-  fmap_fsw_param_t fmap_fsw_param_short = {
-      13*100,  2*100,  2*100, fmap_fsw_sm_short, 22*100, 1, 5, 50 
-  }; 
-  fmap_fsw_path_t *path=NULL;
-  int32_t path_len = 0;
+  fmap_fsw_main_opt_t *opt = NULL;
+  opt = fmap_calloc(1, sizeof(fmap_fsw_main_opt_t), "opt");
 
-  path = fmap_malloc(sizeof(fmap_fsw_path_t)*(1 + len2 * (flowlen1 + 1) * (1 + fmap_fsw_param_short.offset)), "path");
+  opt->flow = fmap_strdup("TAGC");
+  opt->base_calls = NULL;
+  opt->flowgram = NULL;
+  opt->target = NULL;
+  opt->target_length = 0;
 
-  int64_t score = fmap_fsw_global_core(flow, bc1, flowgram1, flowlen1,
-                                       seq2, len2,
-                                       &fmap_fsw_param_short,
-                                       path, &path_len);
+  // param
+  opt->param.gap_open = 13*100;
+  opt->param.gap_ext = 2*100;
+  opt->param.gap_end = 2*100;
+  opt->param.matrix = fmap_fsw_sm_short;
+  opt->param.fscore = 22;
+  opt->param.offset = 0;
+  opt->param.row = 5;
+  opt->param.band_width = 50;
 
-  fprintf(stderr, "score=%lld path_len=%d\n", (long long int)score, path_len);
-  for(i=0;i<path_len;i++) {
-      fprintf(stderr, "i=%d j=%d ctype=%c base=%d\n",
-              path[i].i, path[i].j, "MIDS"[path[i].ctype], flow[path[i].i]);
+  return opt;
+}
+
+void
+fmap_fsw_main_opt_destroy(fmap_fsw_main_opt_t *opt)
+{
+  free(opt->flow);
+  free(opt->base_calls);
+  free(opt->flowgram);
+  free(opt->target);
+  free(opt);
+}
+
+static uint16_t*
+fmap_fsw_main_get_flowgram(char *flowgram, int32_t *flowgram_length)
+{
+  int32_t i, j, m;
+  uint16_t *f = NULL;
+  int32_t state = 0;
+  int32_t v;
+
+  // state  |  todo
+  // 0      |  read in before decimal
+  // 1      |  read in decimal or comma
+  // 2      |  read in after decimal
+  // 3      |  read in comma
+
+  m = 4;
+  f = fmap_calloc(m, sizeof(uint16_t), "f");
+
+  i=j=0;
+  while('\0' != flowgram[i]) {
+      //fprintf(stderr, "state=%d flowgram[%d]=\"%s\" j=%d\n", state, i, flowgram+i, j);
+      if('.' == flowgram[i]) {
+          if(1 != state) {
+              fmap_error("unexpected decimal point", Exit, OutOfRange);
+          }
+          i++; // skip over the decimal
+          state = 2;
+      }
+      else if(',' == flowgram[i]) {
+          if(1 != state && 3 != state) {
+              fmap_error("unexpected comma", Exit, OutOfRange);
+          }
+          i++; // skip over the comma
+          j++; // next flowgram
+          state = 0;
+      }
+      else if(0 != isgraph(flowgram[i])) {
+          if(0 != state && 2 != state) {
+              fmap_error("unexpected digits", Exit, OutOfRange);
+          }
+          if(m <= j) { // more memory
+              m <<= 1;
+              f = fmap_realloc(f, m*sizeof(uint16_t), "f");
+          }
+          if(0 == state) {
+              v = atoi(flowgram + i);
+              f[j] = 100*v;
+          }
+          else { // state 2
+              int32_t x = 10;
+              // keep only the 2 left-most digits
+              for(v=0;v<2 && '0'<=flowgram[i+v] && flowgram[i+v] <= '9';v++) {
+                  f[j] += x * ((int)(flowgram[i+v]) - (int)'0');
+                  x /= 10;
+              }
+          }
+          while('\0' != flowgram[i] && '0' <= flowgram[i] && flowgram[i] <= '9') { // skip over
+              i++;
+          }
+          state++;
+      }
+      else {
+          fmap_error("could not parse the flowgram", Exit, OutOfRange);
+      }
+  }
+  j++;
+  if(1 != state && 3 != state) {
+     fmap_error("ended with a comma or a decimal point", Exit, OutOfRange);
+  } 
+
+  (*flowgram_length) = j;
+  f = fmap_realloc(f, (*flowgram_length)*sizeof(uint16_t), "f");
+  return f;
+}
+
+uint8_t *
+fmap_fsw_main_get_base_calls(char *optarg, int32_t flowgram_length, char *flow)
+{
+  int32_t i, j, k;
+  uint8_t *base_calls = NULL;
+
+  base_calls = fmap_calloc(flowgram_length, sizeof(uint8_t), "base_calls");
+
+  for(i=j=0;i<strlen(optarg);i++) {
+      k=0;
+      while(toupper(flow[j & 3]) != toupper(optarg[i])) {
+          j++; k++;
+          if(3 < k) fmap_error("could not understand the base", Exit, OutOfRange);
+      }
+      base_calls[j]++;
+  }
+  j++;
+  while(j < flowgram_length) {
+      base_calls[j]=0;
+      j++;
   }
 
+  return base_calls;
+}
+
+static int32_t
+usage(fmap_fsw_main_opt_t *opt)
+{
+  fmap_file_fprintf(fmap_file_stderr, "\n");
+  fmap_file_fprintf(fmap_file_stderr, "Usage: %s fsw [options]", PACKAGE);
+  fmap_file_fprintf(fmap_file_stderr, "\n");
+  fmap_file_fprintf(fmap_file_stderr, "Options (required):\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -b STRING   base calls ([ACGT]+) [%s]\n",
+                    opt->base_calls);
+  fmap_file_fprintf(fmap_file_stderr, "         -f STRING   flowgram float values (comma separated) [%s]\n",
+                    opt->flowgram);
+  fmap_file_fprintf(fmap_file_stderr, "         -t STRING   target sequence ([ACGT]+) [%s]\n",
+                    opt->target);
+  fmap_file_fprintf(fmap_file_stderr, "\n");
+  fmap_file_fprintf(fmap_file_stderr, "Options (optional):\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -k STRING   they flow order ([ACGT]{4}) [%s]\n",
+                    opt->flow);
+  fmap_file_fprintf(fmap_file_stderr, "         -F INT      flow penalty [%d]\n", opt->param.fscore);
+  fmap_file_fprintf(fmap_file_stderr, "         -o INT      search for homopolymer errors +- offset [%d]\n", opt->param.offset);
+  fmap_file_fprintf(fmap_file_stderr, "         -v          print verbose progress information\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -h          print this message\n");
+  fmap_file_fprintf(fmap_file_stderr, "\n");
+
+  return 1;
+}
+
+int fmap_fsw_main(int argc, char *argv[])
+{
+  int32_t i, c;
+  fmap_fsw_path_t *path=NULL;
+  int32_t path_len = 0;
+  fmap_fsw_main_opt_t *opt;
+  int32_t flowgram_length = 0;
+  uint16_t *flowgram = NULL;
+  uint8_t *base_calls = NULL;
+  uint8_t flow[5];
+
+  opt = fmap_fsw_main_opt_init();
+
+  while((c = getopt(argc, argv, "b:f:t:k:F:o:vh")) >= 0) {
+      switch(c) {
+        case 'b':
+          opt->base_calls = fmap_strdup(optarg); break;
+        case 'f':
+          opt->flowgram = fmap_strdup(optarg); break;
+        case 't':
+          opt->target = fmap_strdup(optarg); opt->target_length = strlen(opt->target); break;
+        case 'k':
+          free(opt->flow);
+          opt->flow = fmap_strdup(optarg); break;
+        case 'F':
+          opt->param.fscore = 100*atoi(optarg); break;
+        case 'o':
+          opt->param.offset = atoi(optarg); break;
+        case 'v':
+          fmap_progress_set_verbosity(1); break;
+        case 'h':
+        default:
+          return usage(opt);
+      }
+  }
+
+  if(argc != optind || 1 == argc) {
+      return usage(opt);
+  }
+  else { // check the command line options
+      if(NULL == opt->base_calls) {
+          fmap_error("option -b must be specified", Exit, CommandLineArgument);
+      }
+      if(NULL == opt->flowgram) {
+          fmap_error("option -f must be specified", Exit, CommandLineArgument);
+      }
+      if(NULL == opt->target) {
+          fmap_error("option -t must be specified", Exit, CommandLineArgument);
+      }
+      if(NULL == opt->flow) {
+          fmap_error("option -k must be specified", Exit, CommandLineArgument);
+      }
+      fmap_error_cmd_check_int(opt->param.fscore, 1, INT32_MAX, "-F");
+      fmap_error_cmd_check_int(opt->param.offset, 0, INT32_MAX, "-o");
+  }
+
+  // get the flowgram
+  flowgram = fmap_fsw_main_get_flowgram(opt->flowgram, &flowgram_length); 
+
+  // get the flow base calls
+  base_calls = fmap_fsw_main_get_base_calls(opt->base_calls, flowgram_length, opt->flow);
+  
+  // convert the target to 2-bit format 
+  for(i=0;i<opt->target_length;i++) {
+      opt->target[i] = nt_char_to_int[(int)opt->target[i]];
+  }
+
+  for(i=0;i<5;i++) {
+      flow[i] = nt_char_to_int[(int)opt->flow[i]];
+  }
+
+  path = fmap_malloc(sizeof(fmap_fsw_path_t)*(1 + opt->target_length * (flowgram_length + 1) * (1 + opt->param.offset)), "path");
+
+  int64_t score = fmap_fsw_global_core(flow, base_calls, 
+                                       flowgram, flowgram_length, 
+                                       (uint8_t*)opt->target, opt->target_length,
+                                       &opt->param,
+                                       path, &path_len);
+
+  fprintf(stderr, "score=%lld path_len=%d\n", (long long int)score/100, path_len);
+  // ref
+  fprintf(stderr, "REF:  ");
+  for(i=path_len-1;0<=i;i--) {
+      if(FMAP_FSW_FROM_M == path[i].ctype || FMAP_FSW_FROM_D == path[i].ctype) {
+          fputc("ACGTN"[(int)opt->target[path[i].j]], stderr);
+      }
+      else {
+          fputc(' ', stderr);
+      }
+  }
+  fputc('\n', stderr);
+  // alignment string
+  fprintf(stderr, "      ");
+  for(i=path_len-1;0<=i;i--) {
+      switch(path[i].ctype) {
+        case FMAP_FSW_FROM_M:
+          fputc('|', stderr); break;
+        case FMAP_FSW_FROM_I:
+          fputc('-', stderr); break;
+        case FMAP_FSW_FROM_D:
+          fputc('+', stderr); break;
+        default:
+          fputc(' ', stderr); break;
+      }
+  }
+  fputc('\n', stderr);
+  // read
+  fprintf(stderr, "READ: ");
+  for(i=path_len-1;0<=i;i--) {
+      if(FMAP_FSW_FROM_M == path[i].ctype || FMAP_FSW_FROM_I == path[i].ctype) {
+          fputc(opt->flow[path[i].i & 3], stderr);
+      }
+      else {
+          fputc(' ', stderr);
+      }
+  }
+  fputc('\n', stderr);
+
+  fmap_fsw_main_opt_destroy(opt);
+  free(flowgram);
+  free(base_calls);
   free(path);
+
   return 0;
 }

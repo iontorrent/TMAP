@@ -98,7 +98,7 @@ fmap_fsw_sub_core(uint8_t flow_base, uint8_t base_call, uint16_t flow_signal,
 
 /*
    Performs global flow-space Smith-Waterman alignment
-   @param  flow        for each flow, the 2-bit DNA base flowed
+   @param  flow        for each of the four flows, the 2-bit DNA base flowed
    @param  bc1        for each flow, the number of bases called [0-255]
    @param  flowgram1   for each flow, the flowgram signal (100*signal) 
    @param  flowlen1    the number of flows
