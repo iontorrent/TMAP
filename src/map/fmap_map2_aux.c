@@ -262,10 +262,10 @@ fmap_map2_aux_extend_right(fmap_map2_opt_t *opt, fmap_map2_aln_t *b,
       }
       lt = j;
       if(0 == opt->aln_global) {
-          score = fmap_sw_extend_core(query + p->beg, query_length - p->beg, target, lt, &par, &path, 0, 1, _mem);
+          score = fmap_sw_extend_core(query + p->beg, query_length - p->beg, target, lt, &par, &path, NULL, p->G, _mem);
       }
       else {
-          score = fmap_sw_extend_fitting_core(query + p->beg, query_length - p->beg, target, lt, &par, &path, 0, 1, _mem);
+          score = fmap_sw_extend_fitting_core(query + p->beg, query_length - p->beg, target, lt, &par, &path, NULL, p->G, _mem);
       }
       if(score >= p->G) {
           p->G = score;
@@ -315,14 +315,14 @@ fmap_map2_aux_gen_cigar(fmap_map2_opt_t *opt, uint8_t *queries[2],
       }
       score = fmap_sw_global_core(target, p->len, query, end - beg, &par, path, &path_len);
       b->cigar[i] = fmap_sw_path2cigar(path, path_len, &b->n_cigar[i]);
-      if(beg != 0 || end < query_length) { // write soft clipping
+      if(0 < beg || end < query_length) { // add soft clipping
           b->cigar[i] = fmap_realloc(b->cigar[i], sizeof(uint32_t) * (b->n_cigar[i] + 2), "b->cigar");
-          if(beg != 0) {
+          if(0 < beg) { // soft clipping at the front
               memmove(b->cigar[i] + 1, b->cigar[i], b->n_cigar[i] * 4);
               b->cigar[i][0] = beg<<4 | 4;
               ++b->n_cigar[i];
-          }
-          if(end < query_length) {
+          } 
+          if(end < query_length) { // soft clipping at the end
               b->cigar[i][b->n_cigar[i]] = (query_length - end)<<4 | 4;
               ++b->n_cigar[i];
           }

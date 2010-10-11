@@ -252,24 +252,6 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
   match_sa_start.k = 0;
   match_sa_start.l = bwt->seq_len;
 
-  /*
-     int i;
-     for(i=0;i<2;i++) {
-     fprintf(stderr, "width[%d][j].w:\n", i);
-     for(j=0;j<bases[i]->l;j++) {
-     if(0 < j) fputc(',', stderr);
-     fprintf(stderr, "%u", width[i][j].w);
-     }
-     fputc('\n', stderr);
-     fprintf(stderr, "width[%d][j].bid:\n", i);
-     for(j=0;j<bases[i]->l;j++) {
-     if(0 < j) fputc(',', stderr);
-     fprintf(stderr, "%d", width[i][j].bid);
-     }
-     fputc('\n', stderr);
-     }
-     */
-
   fmap_map1_aux_stack_reset(stack); // reset stack
   fmap_map1_aux_stack_push(stack, 0, 0, &match_sa_start, 0, 0, 0, STATE_M, 0, NULL, opt);
   fmap_map1_aux_stack_push(stack, 1, 0, &match_sa_start, 0, 0, 0, STATE_M, 0, NULL, opt);
@@ -308,13 +290,6 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
           seed_width_cur = NULL;
       }
 
-      /*
-         fprintf(stderr, "strand=%d offset=%d k=%u l=%u hi=%u e->n_mm=%d e->n_gapo=%d e->n_gape=%d score=%d base=%c\n",
-         strand, match_sa_cur.offset, match_sa_cur.k, match_sa_cur.l, match_sa_cur.hi, e->n_mm, e->n_gapo, e->n_gape, e->score, "ACGTN"[(int)str[offset]]);
-         fprintf(stderr, "n_gapo=%d n_gape=%d n_mm=%d width_cur[%d].bid=%d\n",
-         n_gapo, n_gape, n_mm, offset, width_cur[offset].bid);
-         */
-
       // if there are no more gaps, check if we are allowed mismatches
       if(0 == n_gapo && 0 == n_gape && offset < len && n_mm < width_cur[offset].bid) {
           continue;
@@ -328,15 +303,10 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
       else if(0 == n_mm // no mismatches from any state
               && (e->state == STATE_M && 0 == n_gapo) // in STATE_M but no more gap opens
               && (e->state != STATE_M && 0 == n_gape)) { // in STATE_I/STATE_D but no more extensions
-          /*
-             fprintf(stderr, "fmap_bwt_match_exact_alt(bwt, %d, str, {k=%u,l=%u})\n",
-             offset, match_sa_cur.k, match_sa_cur.l);
-             */
           if(0 < fmap_bwt_match_exact_alt(bwt, offset, str, &match_sa_cur)) { // the alignment must match exactly to hit
               hit_found = 1;
           }
           else {
-              //fprintf(stderr, "no exact hit\n");
               continue; // no hit, skip
           }
       }
@@ -344,7 +314,6 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
       if(1 == hit_found) { // alignment found
           int32_t score = aln_score(e->n_mm, e->n_gapo, e->n_gape, opt);
           int32_t do_add = 1;
-          //fprintf(stderr, "hit found: %d %d:(%u,%u)\n", score, e->n_mm+e->n_gapo+e->n_gape, match_sa_cur.k, match_sa_cur.l);
           if(alns_num == 0) {
               best_score = score;
               best_cnt = 0;
@@ -460,25 +429,10 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
                       allow_mm = 0;
                   }
               }
-              /*
-                 fprintf(stderr, "strand=%d offset=%d n_mm-1=%d width[%d].bid=%d width[%d].bid=%d width[%d].w=%d width[%d].w=%d allow_diff=%d allow_mm=%d\n",
-                 strand, offset, n_mm-1,
-                 offset, width_cur[offset].bid,
-                 offset+1, width_cur[offset+1].bid,
-                 offset, width_cur[offset].w,
-                 offset+1, width_cur[offset+1].w,
-                 allow_diff, allow_mm);
-                 */
           }
 
           // retrieve the next SA interval
           fmap_bwt_match_2occ4(bwt, &e->match_sa, match_sa_next); 
-
-          /*
-             fprintf(stderr, "e->match_sa.k=%u e->match_sa.l=%u match_sa_next[%d].k=%u match_sa_next[%d].l=%u\n",
-             e->match_sa.k, e->match_sa.l, j, match_sa_next[j].k, j, match_sa_next[j].l);
-             fprintf(stderr, "offset=%d allow_mm=%d\n", offset, allow_mm);
-             */
 
           // insertions/deletions
           if(opt->indel_ends_bound <= offset && offset < len - opt->indel_ends_bound) { // do not add gaps round the ends
@@ -523,10 +477,6 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
               for(j=0;j<4;j++) {
                   int32_t c = (str[offset] + j) & 3;
                   int32_t is_mm = (0 < j || 3 < str[offset]);
-                  /*
-                     fprintf(stderr, "fuzzy pushing offset=%d e->n_mm+is_mm=%d strand=%d str[%d]=%c c=%c match_sa_next[c].k=%u match_sa_next[c].l=%u\n",
-                     offset+1, e->n_mm+is_mm, strand, offset, "ACGTN"[(int)str[offset]], "ACGTN"[c], match_sa_next[c].k, match_sa_next[c].l);
-                     */
                   if(match_sa_next[c].k <= match_sa_next[c].l) {
                       fmap_map1_aux_stack_push(stack, strand, offset+1, &match_sa_next[c], e->n_mm + is_mm, e->n_gapo, e->n_gape, STATE_M, is_mm, e, opt);
                   }
@@ -534,10 +484,6 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
           } 
           else if(str[offset] < 4) { // try exact match only
               int32_t c = str[offset] & 3;
-              /*
-                 fprintf(stderr, "exact c=%c match_sa_next[c].k=%u match_sa_next[c].l=%u\n",
-                 "ACGTN"[c], match_sa_next[c].k, match_sa_next[c].l);
-                 */
               if(match_sa_next[c].k <= match_sa_next[c].l) {
                   fmap_map1_aux_stack_push(stack, strand, offset+1, &match_sa_next[c], e->n_mm, e->n_gapo, e->n_gape, STATE_M, 0, e, opt);
               }

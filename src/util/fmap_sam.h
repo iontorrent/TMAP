@@ -27,7 +27,6 @@ fmap_sam_print_header(fmap_file_t *fp, fmap_refseq_t *refseq, int argc, char *ar
 inline void
 fmap_sam_print_unmapped(fmap_file_t *fp, fmap_seq_t *seq);
 
-
 /*! 
   prints out a mapped SAM record 
   @param  fp       the file pointer to which to print
@@ -41,6 +40,7 @@ fmap_sam_print_unmapped(fmap_file_t *fp, fmap_seq_t *seq);
   @param  n_cigar  the number of cigar operations
   @param  format   optional tag format (printf-style)
   @param  ...      arguments for the format
+  @details         the format should not include the MD tag, which will be outputted automatically
   */
 inline void
 fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, fmap_refseq_t *refseq,
