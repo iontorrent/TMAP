@@ -17,6 +17,7 @@ fmap_string_init(int32_t mem)
       str->m = mem;
       str->s = fmap_calloc(str->m, sizeof(char), "str->s");
       str->l = 0;
+      str->s[str->l] = '\0';
   }
 
   return str;
