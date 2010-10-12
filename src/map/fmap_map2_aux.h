@@ -17,66 +17,50 @@
 
 /*! 
   stores an alignment hit
-  @param  k        the lower suffix array interval, or suffix array position 
-  @param  l        the upper suffix array interval, or 0 when k is the suffix array position
-  @param  flag      records the origin of the hit (forward/reverse bwt in the 17th/18th bit respectively); the strand in the 5th bit; the first bit stores if the hit was repetitive
-  @param  n_seeds  the number of seeds used in the forward alignment
-  @param  len      the length of the alignment
-  @param  G        the alignment score
-  @param  G2       the sub-optimal alignment score
-  @param  beg      the beginning of the alignment (0-based)
-  @param  end      the end of the alignment (0-based)
   */
 typedef struct {
-    uint32_t k, l, flag:18, n_seeds:14;
-    int32_t len, G, G2;
-    int32_t beg, end;
+    uint32_t k;  /*!< the lower suffix array interval, or suffix array position  */
+    uint32_t l;  /*!< the upper suffix array interval, or 0 when k is the suffix array position */
+    uint32_t flag:18;  /*!< records the origin of the hit (forward/reverse bwt in the 17th/18th bit respectively); the strand in the 5th bit; the first bit stores if the hit was repetitive */
+    uint32_t n_seeds:14;  /*!< the number of seeds used in the forward alignment */
+    int32_t len;  /*!< the length of the alignment */
+    int32_t G;  /*!< the alignment score */
+    int32_t G2;  /*!< the sub-optimal alignment score */
+    int32_t beg;  /*!< the beginning of the alignment (0-based) */
+    int32_t end;  /*!< the end of the alignment (0-based) */
 } fmap_map2_hit_t;
 
 /*! 
   stores alignment hits
-  @param  n        the number of hits
-  @param  max      the maximum memory for the number of hits
-  @param  hits     the hits
-  @param  n_cigar  the number of cigar operations per hit
-  @param  cigar    the cigar operations per hit
   */
 typedef struct {
-    int32_t n, max;
-    fmap_map2_hit_t *hits;
-    int32_t *n_cigar;
-    uint32_t **cigar;
+    int32_t n;  /*!< the number of hits */
+    int32_t max;  /*!< the maximum memory for the number of hits */
+    fmap_map2_hit_t *hits;  /*!< the hits */
+    int32_t *n_cigar;  /*!< the number of cigar operations per hit */
+    uint32_t **cigar;  /*!< the cigar operations per hit */
 } fmap_map2_aln_t;
 
 /*! 
-  @param  strand   the strand
-  @param  seqid    the zero-based reference contig index
-  @param  pos      the zero-based reference position
-  @param  mapq     the mapping quality
-  @param  n_cigar  the number of cigar operaters
-  @param  cigar    the cigar operators
-  @param  AS       the alignment score
-  @param  XS       the sub-optimal alignment score
-  @param  XF       support for the forward/reverse alignment (1-forward 2-reverse 3-both)
-  @param  XE       the number of supporting seeds
-  @param  XI       the suffix interval size
   */
 typedef struct {
-    uint8_t strand:1; // 1-bit
-    uint32_t seqid, pos; // zero-based
-    uint8_t mapq;
-    int32_t n_cigar;
-    uint32_t *cigar;
-    int32_t AS;
-    int32_t XS;
-    uint16_t XF:2, XE:14;
-    int32_t XI;
+    uint8_t strand:1;  /*!< the strand */
+    uint32_t seqid;  /*!< the zero-based reference contig index */
+    uint32_t pos;  /*!< the zero-based reference position */
+    uint8_t mapq;  /*!< the mapping quality */
+    int32_t n_cigar;  /*!< the number of cigar operaters */
+    uint32_t *cigar;  /*!< the cigar operators */
+    int32_t AS;  /*!< the alignment score */
+    int32_t XS;  /*!< the sub-optimal alignment score */
+    uint16_t XF:2;  /*!< support for the forward/reverse alignment (1-forward 2-reverse 3-both) */
+    uint16_t XE:14;  /*!< the number of supporting seeds */
+    int32_t XI;  /*!< the suffix interval size */
 } fmap_map2_sam_entry_t;
 
 /*! 
   stores sam entries to be printed
-  @param  num_entries  the number of entries
-  @param  entries      the array of entries
+  @field  num_entries  the number of entries
+  @field  entries      the array of entries
   */
 typedef struct __fmap_map2_sam_t {
     int32_t num_entries;
