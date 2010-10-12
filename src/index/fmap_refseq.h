@@ -52,7 +52,7 @@
 typedef struct {
     fmap_string_t *name;  /*!< the name of the contig */
     uint64_t len;  /*!< the length of the current contig  */
-    uint64_t offset;  /*!< the offset from the start of the reference */
+    uint64_t offset;  /*!< the offset from the start of the reference (zero-based) */
 } fmap_anno_t;
 
 /*! 
