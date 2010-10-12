@@ -24,8 +24,8 @@
   @param  len      the length of the alignment
   @param  G        the alignment score
   @param  G2       the sub-optimal alignment score
-  @param  beg      the beginning of the alignment
-  @param  end      the end of the alignment
+  @param  beg      the beginning of the alignment (0-based)
+  @param  end      the end of the alignment (0-based)
   */
 typedef struct {
     uint32_t k, l, flag:18, n_seeds:14;

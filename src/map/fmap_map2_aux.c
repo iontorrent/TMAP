@@ -182,13 +182,15 @@ fmap_map2_aux_extend_left(fmap_map2_opt_t *opt, fmap_map2_aln_t *b,
   int32_t i, matrix[25];
   uint32_t k;
   uint8_t *target = NULL;
+  int32_t target_length;
   fmap_sw_param_t par;
 
   par.matrix = matrix;
   __gen_ap(par, opt);
   // sort according to the descending order of query end
   fmap_sort_introsort(hit, b->n, b->hits);
-  target = fmap_calloc(((query_length + 1) / 2 * opt->score_match + opt->pen_gape) / opt->pen_gape + query_length, sizeof(uint8_t), "target");
+  target_length = ((query_length + 1) / 2 * opt->score_match + opt->pen_gape) / opt->pen_gape + query_length;
+  target = fmap_calloc(target_length, sizeof(uint8_t), "target");
   fmap_map2_aux_reverse_query(query, query_length); // reverse the query
   // core loop
   for(i = 0; i < b->n; ++i) {
@@ -196,6 +198,7 @@ fmap_map2_aux_extend_left(fmap_map2_opt_t *opt, fmap_map2_aln_t *b,
       int32_t lt = ((p->beg + 1) / 2 * opt->score_match + opt->pen_gape) / opt->pen_gape + query_length;
       int32_t score, j;
       fmap_sw_path_t path;
+      if(target_length < lt) fmap_error("target_length < lt", Exit, OutOfRange);
       p->n_seeds = 1;
       if(p->l || p->k == 0) continue;
       for(j = score = 0; j < i; ++j) {
@@ -216,10 +219,10 @@ fmap_map2_aux_extend_left(fmap_map2_opt_t *opt, fmap_map2_aln_t *b,
       }
       lt = j;
       if(0 == opt->aln_global) {
-          score = fmap_sw_extend_core(query + query_length - p->beg, p->beg, target, lt, &par, &path, 0, p->G, _mem);
+          score = fmap_sw_extend_core(target, lt, query + query_length - p->beg, p->beg, &par, &path, 0, p->G, _mem);
       }
       else {
-          score = fmap_sw_extend_fitting_core(query + query_length - p->beg, p->beg, target, lt, &par, &path, 0, p->G, _mem);
+          score = fmap_sw_extend_fitting_core(target, lt, query + query_length - p->beg, p->beg, &par, &path, 0, p->G, _mem);
       }
       if(score > p->G) { // extensible
           p->G = score;
@@ -242,11 +245,13 @@ fmap_map2_aux_extend_right(fmap_map2_opt_t *opt, fmap_map2_aln_t *b,
   int32_t i, matrix[25];
   uint32_t k;
   uint8_t *target = NULL;
+  int32_t target_length;
   fmap_sw_param_t par;
 
   par.matrix = matrix;
   __gen_ap(par, opt);
-  target = fmap_calloc(((query_length + 1) / 2 * opt->score_match + opt->pen_gape) / opt->pen_gape + query_length, sizeof(uint8_t), "target");
+  target_length = ((query_length + 1) / 2 * opt->score_match + opt->pen_gape) / opt->pen_gape + query_length;
+  target = fmap_calloc(target_length, sizeof(uint8_t), "target");
   for(i = 0; i < b->n; ++i) {
       fmap_map2_hit_t *p = b->hits + i;
       int32_t lt = ((query_length - p->beg + 1) / 2 * opt->score_match + opt->pen_gape) / opt->pen_gape + query_length;
@@ -262,10 +267,10 @@ fmap_map2_aux_extend_right(fmap_map2_opt_t *opt, fmap_map2_aln_t *b,
       }
       lt = j;
       if(0 == opt->aln_global) {
-          score = fmap_sw_extend_core(query + p->beg, query_length - p->beg, target, lt, &par, &path, NULL, p->G, _mem);
+          score = fmap_sw_extend_core(target, lt, query + p->beg, query_length - p->beg, &par, &path, NULL, p->G, _mem);
       }
       else {
-          score = fmap_sw_extend_fitting_core(query + p->beg, query_length - p->beg, target, lt, &par, &path, NULL, p->G, _mem);
+          score = fmap_sw_extend_fitting_core(target, lt, query + p->beg, query_length - p->beg, &par, &path, NULL, p->G, _mem);
       }
       if(score >= p->G) {
           p->G = score;

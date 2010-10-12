@@ -40,7 +40,7 @@ typedef struct {
   a memory pool
 */
 typedef struct __fmap_map2_mempool_t {
-  int32_t cnt;  /*!< the size of the memory pool */
+  int32_t cnt;  /*!< the number of entries being used in the memory pool */
   fmap_vec_t(fmap_map2_entry_p) pool;  /*!< the memory pool vector */
 } fmap_map2_mempool_t;
 
@@ -104,7 +104,7 @@ fmap_map2_stack_pop(fmap_map2_stack_t *stack);
   @details    this will allocate more memory if necessary
   */
 inline fmap_map2_entry_p
-fmap_map2_mempool_alloc(fmap_map2_mempool_t *mp);
+fmap_map2_mempool_pop(fmap_map2_mempool_t *mp);
 
 /*! 
   relinquishes the entry back to the memory pool
@@ -112,7 +112,7 @@ fmap_map2_mempool_alloc(fmap_map2_mempool_t *mp);
   @param  e   pointer to the entry to relinquish
   */
 void
-fmap_map2_mempool_free(fmap_map2_mempool_t *mp, fmap_map2_entry_t *e);
+fmap_map2_mempool_push(fmap_map2_mempool_t *mp, fmap_map2_entry_t *e);
 
 /*! 
   destroys the memory pool

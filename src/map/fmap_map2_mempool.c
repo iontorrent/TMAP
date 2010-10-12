@@ -30,7 +30,7 @@ fmap_map2_stack_pop(fmap_map2_stack_t *s)
 }
 
 inline fmap_map2_entry_p
-fmap_map2_mempool_alloc(fmap_map2_mempool_t *mp)
+fmap_map2_mempool_pop(fmap_map2_mempool_t *mp)
 {
   mp->cnt++;
   if(fmap_vec_size(mp->pool) == 0) {
@@ -42,7 +42,7 @@ fmap_map2_mempool_alloc(fmap_map2_mempool_t *mp)
 }
 
 void 
-fmap_map2_mempool_free(fmap_map2_mempool_t *mp, fmap_map2_entry_t *e)
+fmap_map2_mempool_push(fmap_map2_mempool_t *mp, fmap_map2_entry_t *e)
 {
   mp->cnt--;
   e->n = 0;
@@ -53,6 +53,8 @@ void
 fmap_map2_mempool_destroy(fmap_map2_mempool_t *mp)
 {
   int32_t i;
+
+  if(0 != mp->cnt) fmap_error("memory leak detected", Exit, OutOfRange);
 
   for(i=0;i<fmap_vec_size(mp->pool);i++) {
       free(fmap_vec_A(mp->pool, i)->array);
