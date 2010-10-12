@@ -23,7 +23,9 @@ fmap_shmget(key_t key, size_t size, int32_t shmflg, int32_t create)
           if(0 <= (shmid = shmget(key, size, shmflg))) {
               return shmid;
           }
-          fmap_progress_print("could not get shared memory, %d more retries", FMAP_SHMGET_RETRIES-i-1);
+          fmap_progress_print("could not get shared memory, %d more %s", 
+                              FMAP_SHMGET_RETRIES-i-1,
+                              (1 != FMAP_SHMGET_RETRIES-i-1) ? "retries" : "retry");
           fmap_progress_print("retrying in %d seconds", FMAP_SHMGET_SLEEP);
           // sleep and retry
           sleep(FMAP_SHMGET_SLEEP);
