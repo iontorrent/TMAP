@@ -224,7 +224,7 @@ fmap_map2_core_init(const fmap_bwtl_t *target, const fmap_bwt_t *query_bwt, fmap
   fmap_map2_entry_t *u;
   fmap_map2_cell_t *x;
 
-  u = fmap_map2_mempool_alloc(s->pool);
+  u = fmap_map2_mempool_pop(s->pool);
   u->tk = 0; u->tl = target->seq_len;
   x = fmap_map2_core_push_array_p(u);
   *x = fmap_map2_core_default_cell;
@@ -297,7 +297,7 @@ fmap_map2_core_aln(const fmap_map2_opt_t *opt, const fmap_bwtl_t *target,
           iter = fmap_hash_get(64, chash, (uint64_t)k<<32 | l);
           --fmap_hash_value(chash, iter);
           // initialization
-          u = fmap_map2_mempool_alloc(stack->pool);
+          u = fmap_map2_mempool_pop(stack->pool);
           u->tk = k; u->tl = l;
           memset(heap, 0, sizeof(int) * opt->z_best);
           // loop through all the nodes in v
@@ -376,23 +376,23 @@ fmap_map2_core_aln(const fmap_map2_opt_t *opt, const fmap_bwtl_t *target,
                       fmap_vec_A(stack->pending, pos-1) = 0;
                       --stack->n_pending;
                   }
-                  fmap_map2_mempool_free(stack->pool, u);
+                  fmap_map2_mempool_push(stack->pool, u);
               } else if(cnt) { // the first time
                   if(u->n) { // push to the pending queue
                       ++stack->n_pending;
                       fmap_vec_push(fmap_map2_entry_p, stack->pending, u);
                       fmap_hash_value(chash, iter) = (uint64_t)fmap_vec_size(stack->pending)<<32 | cnt;
-                  } else fmap_map2_mempool_free(stack->pool, u);
+                  } else fmap_map2_mempool_push(stack->pool, u);
               } else { // cnt == 0, then push to the stack
-                  fmap_map2_entry_t *w = fmap_map2_mempool_alloc(stack->pool);
+                  fmap_map2_entry_t *w = fmap_map2_mempool_pop(stack->pool);
                   fmap_map2_save_narrow_hits(target, u, b1, opt->score_thr, opt->max_seed_intv);
                   fmap_map2_core_cut_tail(u, opt->z_best, w);
-                  fmap_map2_mempool_free(stack->pool, w);
+                  fmap_map2_mempool_push(stack->pool, w);
                   fmap_map2_stack_push0(stack, u);
               }
             }
       } // ~for(tj)
-      fmap_map2_mempool_free(stack->pool, v);
+      fmap_map2_mempool_push(stack->pool, v);
   } // while(top)
   fmap_map2_aux_resolve_duphits(query_bwt, query_sa, b, opt->max_seed_intv);
   fmap_map2_aux_resolve_duphits(query_bwt, query_sa, b1, opt->max_seed_intv);

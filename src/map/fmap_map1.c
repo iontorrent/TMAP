@@ -57,7 +57,6 @@ fmap_map1_aln_mapq(int32_t num_best_sa, int32_t num_all_sa, int32_t max_mm, int3
       n = 255;
   }
 
-  //fprintf(stderr, "g_log_n[%d]=%d\n", n, g_log_n[n]);
   // use MAQ-like mapping qualities
   return (23 < g_log_n[n])? 0 : 23 - g_log_n[n];
 }

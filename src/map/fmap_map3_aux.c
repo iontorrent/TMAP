@@ -183,9 +183,18 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
               }
           }
 
-          // get the target range
-          if(hits[i][start].pos < opt->sw_offset) ref_start = 1;
-          else ref_start = hits[i][start].pos - opt->sw_offset;
+          // get the start of the target range
+          if(hits[i][start].pos < opt->sw_offset) {
+              ref_start = 1;
+          }
+          else {
+              ref_start = hits[i][start].pos - opt->sw_offset + 1;
+              // check bounds
+              if(ref_start < 1) {
+                  ref_start = 1;
+              }
+          }
+          // get the end of the target range
           ref_end = hits[i][end].pos + seq_len[i] + opt->sw_offset - 1;
           if(refseq->annos[hits[i][end].seqid].len < ref_end) {
               // this assumes that the seed matched correctly (do not run
