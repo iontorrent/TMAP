@@ -45,7 +45,7 @@ fmap_sam_md(fmap_refseq_t *refseq, char *read_bases, // read bases are character
             uint32_t *cigar, int32_t n_cigar)
 {
   int32_t i, j;
-  int32_t ref_i, read_i;
+  uint32_t ref_i, read_i;
   int32_t l = 0; // the length of the last md op
   uint8_t read_base, ref_base;
   fmap_string_t *md=NULL;
