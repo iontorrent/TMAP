@@ -84,7 +84,7 @@ fmap_sam_md(fmap_refseq_t *refseq, char *read_bases, // read bases are character
           read_i += op_len;
       }
       else if(BAM_CDEL == op) {
-          fmap_string_lsprintf(md, md->l, "%d", l);
+          fmap_string_lsprintf(md, md->l, "%d^", l);
           for(j=0;j<op_len;j++) {
               if(refseq->len <= ref_i) break; // out of boundary
               ref_base = fmap_refseq_seq_i(refseq, ref_i);
@@ -189,7 +189,7 @@ fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, fmap_refseq_t *refseq,
 
   // MD
   md = fmap_sam_md(refseq, bases->s, seqid, pos, cigar_tmp, n_cigar);
-  fmap_file_fprintf(fp, "\tMD:Z:%s\n", md->s);
+  fmap_file_fprintf(fp, "\tMD:Z:%s", md->s);
   fmap_string_destroy(md);
 
   // optional tags
