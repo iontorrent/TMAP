@@ -74,7 +74,7 @@ typedef struct
    @param  seq          the 2-bit DNA reference sequence 
    @param  len          the length of the second sequence
    @param  flow_base     the base associated with this flow
-   @param  base_call    the number of bases called
+   @param  base_call    the number of bases called (do not inclue the key base(s))
    @param  flow_signal   the flow signal of this flow (100*signal)
    @param  ap           the alignment parameters
    @param  sub_dpcell   pre-allocated DP cells of minimum dimensions [base_call+2*(ap->offset+1),len+1]
@@ -83,8 +83,9 @@ typedef struct
    @param  score_last   the last score row in the DP matrix
    @param  dpcell_curr  the current cell row in the DP matrix
    @param  score_curr   the current score row in the DP matrix
+   @param  key_bases    the number of key bases that are part of this flow
    @param  type         the Smith-Waterman type (global, local, extend)
-   @details             this assumes that the ap parameter scores have been multiplied by 100
+   @details             this assumes that the ap parameter scores have been multiplied by 100; only include non-key flows
    */
 inline void
 fmap_fsw_sub_core(uint8_t *seq, int32_t len,
@@ -96,6 +97,7 @@ fmap_fsw_sub_core(uint8_t *seq, int32_t len,
                   fmap_fsw_dpscore_t *score_last,
                   fmap_fsw_dpcell_t *dpcell_curr,
                   fmap_fsw_dpscore_t *score_curr,
+                  uint8_t key_bases,
                   int32_t type);
 
 /*
@@ -106,15 +108,18 @@ fmap_fsw_sub_core(uint8_t *seq, int32_t len,
    @param  base_calls  for each flow, the number of bases called [0-255]
    @param  flowgram     for each flow, the flowgram signal (100*signal) 
    @param  num_flows    the number of flows
+   @param  key_index   the 0-based index of the key base if the key is part of the first or last flow (should be -1, 0, or num_flow-1).
+   @param  key_bases   the number of bases part of the key_index flow that are explained by the key sequence
    @param  ap          the alignment parameters
    @param  path        the returned alignment path with maximum length of (1 + [len * (num_flows + 1) * (ap->offset + 1)])
    @param  path_len    the returned path_len
    @return             the returned alignment score
-   @details            this assumes that the ap parameter scores have been multiplied by 100
+   @details            this assumes that the ap parameter scores have been multiplied by 100; only include non-key flows
    */
 int64_t
 fmap_fsw_global_core(uint8_t *seq, int32_t len,
                      uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram, int32_t num_flows,
+                     int32_t key_index, int32_t key_bases,
                      const fmap_fsw_param_t *ap,
                      fmap_fsw_path_t *path, int32_t *path_len);
 /*
@@ -125,17 +130,20 @@ fmap_fsw_global_core(uint8_t *seq, int32_t len,
    @param  base_calls  for each flow, the number of bases called [0-255]
    @param  flowgram     for each flow, the flowgram signal (100*signal) 
    @param  num_flows    the number of flows
+   @param  key_index   the 0-based index of the key base if the key is part of the first or last flow (should be -1, 0, or num_flow-1).
+   @param  key_bases   the number of bases part of the key_index flow that are explained by the key sequence
    @param  ap          the alignment parameters
    @param  path        the returned alignment path with maximum length of (1 + [len * (num_flows + 1) * (ap->offset + 1)])
    @param  path_len    the returned path_len
    @param  _thres      the scoring threshold for local alignment only (the absolute value will be taken); a value zero or negative value will cause no path to be filled
    @param  _subo       the sub-optimal alignment score (next best)
    @return             the returned alignment score
-   @details            this assumes that the ap parameter scores have been multiplied by 100
+   @details            this assumes that the ap parameter scores have been multiplied by 100; only include non-key flows
    */
 int64_t
 fmap_fsw_local_core(uint8_t *seq, int32_t len,
                      uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram, int32_t num_flows,
+                     int32_t key_index, int32_t key_bases,
                      const fmap_fsw_param_t *ap,
                      fmap_fsw_path_t *path, int32_t *path_len,
                      int32_t _thres, int32_t *_subo);
@@ -148,16 +156,19 @@ fmap_fsw_local_core(uint8_t *seq, int32_t len,
    @param  base_calls  for each flow, the number of bases called [0-255]
    @param  flowgram     for each flow, the flowgram signal (100*signal) 
    @param  num_flows    the number of flows
+   @param  key_index   the 0-based index of the key base if the key is part of the first or last flow (should be -1, 0, or num_flow-1).
+   @param  key_bases   the number of bases part of the key_index flow that are explained by the key sequence
    @param  ap          the alignment parameters
    @param  path        the returned alignment path with maximum length of (1 + [len * (num_flows + 1) * (ap->offset + 1)])
    @param  path_len    the returned path_len
    @param  prev_score  the alignment score up to this point
    @return             the returned alignment score
-   @details            this assumes that the ap parameter scores have been multiplied by 100.  
+   @details            this assumes that the ap parameter scores have been multiplied by 100; only include non-key flows
    */
 int64_t
 fmap_fsw_extend_core(uint8_t *seq, int32_t len,
                      uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram, int32_t num_flows,
+                     int32_t key_index, int32_t key_bases,
                      const fmap_fsw_param_t *ap,
                      fmap_fsw_path_t *path, int32_t *path_len,
                      int32_t prev_score);
@@ -170,16 +181,19 @@ fmap_fsw_extend_core(uint8_t *seq, int32_t len,
    @param  base_calls  for each flow, the number of bases called [0-255]
    @param  flowgram     for each flow, the flowgram signal (100*signal) 
    @param  num_flows    the number of flows
+   @param  key_index   the 0-based index of the key base if the key is part of the first or last flow (should be -1, 0, or num_flow-1).
+   @param  key_bases   the number of bases part of the key_index flow that are explained by the key sequence
    @param  ap          the alignment parameters
    @param  path        the returned alignment path with maximum length of (1 + [len * (num_flows + 1) * (ap->offset + 1)])
    @param  path_len    the returned path_len
    @param  prev_score  the alignment score up to this point
    @return             the returned alignment score
-   @details            this assumes that the ap parameter scores have been multiplied by 100.  
+   @details            this assumes that the ap parameter scores have been multiplied by 100; only include non-key flows
    */
 int64_t
 fmap_fsw_extend_fitting_core(uint8_t *seq, int32_t len,
                      uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram, int32_t num_flows,
+                     int32_t key_index, int32_t key_bases,
                      const fmap_fsw_param_t *ap,
                      fmap_fsw_path_t *path, int32_t *path_len,
                      int32_t prev_score);
@@ -192,15 +206,18 @@ fmap_fsw_extend_fitting_core(uint8_t *seq, int32_t len,
    @param  base_calls  for each flow, the number of bases called [0-255]
    @param  flowgram     for each flow, the flowgram signal (100*signal) 
    @param  num_flows    the number of flows
+   @param  key_index   the 0-based index of the key base if the key is part of the first or last flow (should be -1, 0, or num_flow-1).
+   @param  key_bases   the number of bases part of the key_index flow that are explained by the key sequence
    @param  ap          the alignment parameters
    @param  path        the returned alignment path with maximum length of (1 + [len * (num_flows + 1) * (ap->offset + 1)])
    @param  path_len    the returned path_len
    @return             the returned alignment score
-   @details            this assumes that the ap parameter scores have been multiplied by 100.  
+   @details            this assumes that the ap parameter scores have been multiplied by 100; only include non-key flows
    */
 int64_t
 fmap_fsw_fitting_core(uint8_t *seq, int32_t len,
                      uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram, int32_t num_flows,
+                     int32_t key_index, int32_t key_bases,
                      const fmap_fsw_param_t *ap,
                      fmap_fsw_path_t *path, int32_t *path_len);
 

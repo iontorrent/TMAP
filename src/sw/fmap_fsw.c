@@ -124,13 +124,15 @@ fmap_fsw_sub_core(uint8_t *seq, int32_t len,
                   fmap_fsw_dpscore_t *dpscore_last,
                   fmap_fsw_dpcell_t *dpcell_curr,
                   fmap_fsw_dpscore_t *dpscore_curr,
+                  uint8_t key_bases,
                   int32_t type)
 {
   register int32_t i, j;
   int32_t low_offset, high_offset, flow_score;
   int32_t gap_open, gap_ext, gap_end, bw;
   int32_t *mat, *score_matrix, N_MATRIX_ROW;
-  uint8_t offset, use_dpcell;;
+  uint8_t offset;
+  int32_t num_bases; 
 
   gap_open = ap->gap_open;
   gap_ext = ap->gap_ext;
@@ -147,144 +149,82 @@ fmap_fsw_sub_core(uint8_t *seq, int32_t len,
   // scoring matrix will always be the same
   mat = score_matrix + flow_base * N_MATRIX_ROW;
 
-  // should we just keep the score ?
-  use_dpcell = (NULL == dpcell_last || NULL == dpcell_curr) ? 0 : 1;
+  // copy previous row
+  for(j=0;j<=len;j++) {
+      sub_dpscore[0][j] = dpscore_last[j];
+      sub_dpcell[0][j] = dpcell_last[j];
+  }
 
-  if(1 == use_dpcell) {
-      // copy previous row
-      for(j=0;j<=len;j++) {
-          sub_dpscore[0][j] = dpscore_last[j];
-          sub_dpcell[0][j] = dpcell_last[j];
+  // fill in sub_dpcell and sub_dpscore
+  for(i=1;i<=high_offset;i++) { // for each row in the sub-alignment
+      // initialize the first column
+      FMAP_FSW_SET_SCORE_INF(sub_dpscore[i][0]); 
+      FMAP_FSW_INIT_CELL(sub_dpcell[i][0], 0, FMAP_FSW_FROM_S);
+      sub_dpscore[i][0].ins_score = fmap_fsw_set_end_ins(sub_dpcell[i], sub_dpscore[i-1], gap_open, gap_ext, gap_end);
+      // fill in the rest of the columns
+      for(j=1;j<=len;j++) { // for each col
+          sub_dpscore[i][j].match_score = fmap_fsw_set_match(sub_dpcell[i] + j, 
+                                                             sub_dpscore[i-1]+j-1, mat[seq[j-1]]);
+          sub_dpscore[i][j].ins_score = fmap_fsw_set_ins(sub_dpcell[i]+j, sub_dpscore[i-1]+j, gap_open, gap_ext);
+          sub_dpscore[i][j].del_score = fmap_fsw_set_del(sub_dpcell[i]+j, sub_dpscore[i]+j-1, gap_open, gap_ext);
       }
+  }
 
-      // fill in sub_dpcell and sub_dpscore
-      for(i=1;i<=high_offset;i++) { // for each row in the sub-alignment
-          // initialize the first column
-          FMAP_FSW_SET_SCORE_INF(sub_dpscore[i][0]); 
-          FMAP_FSW_INIT_CELL(sub_dpcell[i][0], 0, FMAP_FSW_FROM_S);
-          sub_dpscore[i][0].ins_score = fmap_fsw_set_end_ins(sub_dpcell[i], sub_dpscore[i-1], gap_open, gap_ext, gap_end);
-          // fill in the rest of the columns
-          for(j=1;j<=len;j++) { // for each col
-              sub_dpscore[i][j].match_score = fmap_fsw_set_match(sub_dpcell[i] + j, 
-                                                                 sub_dpscore[i-1]+j-1, mat[seq[j-1]]);
-              sub_dpscore[i][j].ins_score = fmap_fsw_set_ins(sub_dpcell[i]+j, sub_dpscore[i-1]+j, gap_open, gap_ext);
-              sub_dpscore[i][j].del_score = fmap_fsw_set_del(sub_dpcell[i]+j, sub_dpscore[i]+j-1, gap_open, gap_ext);
-          }
-      }
-
-      // add flow scores
-      for(i=low_offset;i<=high_offset;i++) { // for each possible base call within +-offset
-          // get flow score for "(i-low_offset)" bases
-          flow_score = (flow_signal < 100*i) ? (100*i - flow_signal) : (flow_signal - 100*i);
-          flow_score *= ap->fscore / 100;
-          for(j=0;j<=len;j++) { // for each col
-              FMAP_FSW_ADD_FSCORE(sub_dpscore[i][j], flow_score);
-          }
-      }
-
-      // set the best cell to be [low_offset][0,len]
+  // add flow scores
+  for(i=low_offset;i<=high_offset;i++) { // for each possible base call within +-offset
+      // get flow score for "(i-low_offset)" bases
+      num_bases = i + key_bases; // key bases will shift this
+      flow_score = (flow_signal < 100*num_bases) ? (100*num_bases - flow_signal) : (flow_signal - 100*num_bases);
+      flow_score *= ap->fscore / 100;
       for(j=0;j<=len;j++) { // for each col
-          dpcell_curr[j] = sub_dpcell[low_offset][j];
-          dpcell_curr[j].match_offset = dpcell_curr[j].ins_offset = dpcell_curr[j].del_offset = 0;
-          dpscore_curr[j] = sub_dpscore[low_offset][j];
-          if(FMAP_SW_TYPE_LOCAL == type) {
-              if(dpscore_curr[j].match_score < 0) {
-                  dpscore_curr[j].match_score = 0;
-                  dpcell_curr[j].match_from = FMAP_FSW_FROM_S;
-                  dpcell_curr[j].match_offset = 0;
-              }
-              if(dpscore_curr[j].ins_score < 0) {
-                  dpscore_curr[j].ins_score = 0;
-                  dpcell_curr[j].ins_from = FMAP_FSW_FROM_S;
-                  dpcell_curr[j].ins_offset = 0;
-              }
-              if(dpscore_curr[j].del_score < 0) {
-                  dpscore_curr[j].del_score = 0;
-                  dpcell_curr[j].del_from = FMAP_FSW_FROM_S;
-                  dpcell_curr[j].del_offset = 0;
-              }
-          }
+          FMAP_FSW_ADD_FSCORE(sub_dpscore[i][j], flow_score);
       }
+  }
 
-      // get the best cells within [low_offset+1,high_offset][0,len]
-      for(i=low_offset+1;i<=high_offset;i++) {
-          for(j=0;j<=len;j++) { // for each col
-              // match
-              if(dpscore_curr[j].match_score < sub_dpscore[i][j].match_score) {
-                  dpcell_curr[j].match_from = sub_dpcell[i][j].match_from;
-                  dpcell_curr[j].match_offset = i - low_offset;
-                  dpscore_curr[j].match_score = sub_dpscore[i][j].match_score;
-              }
-              // ins
-              if(dpscore_curr[j].ins_score < sub_dpscore[i][j].ins_score) {
-                  dpcell_curr[j].ins_from = sub_dpcell[i][j].ins_from;
-                  dpcell_curr[j].ins_offset = i - low_offset;
-                  dpscore_curr[j].ins_score = sub_dpscore[i][j].ins_score;
-              }
-              // del
-              if(dpscore_curr[j].del_score < sub_dpscore[i][j].del_score) {
-                  dpcell_curr[j].del_from = sub_dpcell[i][j].del_from;
-                  dpcell_curr[j].del_offset = i - low_offset;
-                  dpscore_curr[j].del_score = sub_dpscore[i][j].del_score;
-              }
+  // set the best cell to be [low_offset][0,len]
+  for(j=0;j<=len;j++) { // for each col
+      dpcell_curr[j] = sub_dpcell[low_offset][j];
+      dpcell_curr[j].match_offset = dpcell_curr[j].ins_offset = dpcell_curr[j].del_offset = 0;
+      dpscore_curr[j] = sub_dpscore[low_offset][j];
+      if(FMAP_SW_TYPE_LOCAL == type) {
+          if(dpscore_curr[j].match_score < 0) {
+              dpscore_curr[j].match_score = 0;
+              dpcell_curr[j].match_from = FMAP_FSW_FROM_S;
+              dpcell_curr[j].match_offset = 0;
+          }
+          if(dpscore_curr[j].ins_score < 0) {
+              dpscore_curr[j].ins_score = 0;
+              dpcell_curr[j].ins_from = FMAP_FSW_FROM_S;
+              dpcell_curr[j].ins_offset = 0;
+          }
+          if(dpscore_curr[j].del_score < 0) {
+              dpscore_curr[j].del_score = 0;
+              dpcell_curr[j].del_from = FMAP_FSW_FROM_S;
+              dpcell_curr[j].del_offset = 0;
           }
       }
   }
-  else {
-      // copy previous row
-      for(j=0;j<=len;j++) {
-          sub_dpscore[0][j] = dpscore_last[j];
-      }
 
-      // fill in sub_dpscore
-      for(i=1;i<=high_offset;i++) { // for each row in the sub-alignment
-          // initialize the first column
-          FMAP_FSW_SET_SCORE_INF(sub_dpscore[i][0]); 
-          sub_dpscore[i][0].ins_score = fmap_fsw_set_end_ins(NULL, sub_dpscore[i-1], gap_open, gap_ext, gap_end);
-          // fill in the rest of the columns
-          for(j=1;j<=len;j++) { // for each col
-              sub_dpscore[i][j].match_score = fmap_fsw_set_match(NULL,
-                                                                 sub_dpscore[i-1]+j-1, mat[seq[j-1]]);
-              sub_dpscore[i][j].ins_score = fmap_fsw_set_ins(NULL, sub_dpscore[i-1]+j, gap_open, gap_ext);
-              sub_dpscore[i][j].del_score = fmap_fsw_set_del(NULL, sub_dpscore[i]+j-1, gap_open, gap_ext);
-          }
-      }
-
-      // add flow scores
-      for(i=low_offset;i<=high_offset;i++) { // for each possible base call within +-offset
-          // get flow score for "(i-low_offset)" bases
-          flow_score = (flow_signal < 100*i) ? (100*i - flow_signal) : (flow_signal - 100*i);
-          flow_score *= ap->fscore / 100;
-          for(j=0;j<=len;j++) { // for each col
-              FMAP_FSW_ADD_FSCORE(sub_dpscore[i][j], flow_score);
-          }
-      }
-
-      // set the best cell to be [low_offset][0,len]
+  // get the best cells within [low_offset+1,high_offset][0,len]
+  for(i=low_offset+1;i<=high_offset;i++) {
       for(j=0;j<=len;j++) { // for each col
-          dpscore_curr[j] = sub_dpscore[low_offset][j];
-          if(FMAP_SW_TYPE_LOCAL == type) {
-              if(dpscore_curr[j].match_score < 0) dpscore_curr[j].match_score = 0;
-              if(dpscore_curr[j].ins_score < 0) dpscore_curr[j].ins_score = 0;
-              if(dpscore_curr[j].del_score < 0) dpscore_curr[j].del_score = 0;
+          // match
+          if(dpscore_curr[j].match_score < sub_dpscore[i][j].match_score) {
+              dpcell_curr[j].match_from = sub_dpcell[i][j].match_from;
+              dpcell_curr[j].match_offset = i - low_offset;
+              dpscore_curr[j].match_score = sub_dpscore[i][j].match_score;
           }
-      }
-
-      // get the best cells within [low_offset+1,high_offset][0,len]
-      for(i=low_offset+1;i<=high_offset;i++) {
-          for(j=0;j<=len;j++) { // for each col
-              // match
-              if(dpscore_curr[j].match_score < sub_dpscore[i][j].match_score) {
-                  dpscore_curr[j].match_score = sub_dpscore[i][j].match_score;
-              }
-              // ins
-              if(dpscore_curr[j].ins_score < sub_dpscore[i][j].ins_score) {
-                  dpscore_curr[j].ins_score = sub_dpscore[i][j].ins_score;
-              }
-              // del
-              if(dpscore_curr[j].del_score < sub_dpscore[i][j].del_score) {
-                  dpscore_curr[j].del_score = sub_dpscore[i][j].del_score;
-              }
+          // ins
+          if(dpscore_curr[j].ins_score < sub_dpscore[i][j].ins_score) {
+              dpcell_curr[j].ins_from = sub_dpcell[i][j].ins_from;
+              dpcell_curr[j].ins_offset = i - low_offset;
+              dpscore_curr[j].ins_score = sub_dpscore[i][j].ins_score;
+          }
+          // del
+          if(dpscore_curr[j].del_score < sub_dpscore[i][j].del_score) {
+              dpcell_curr[j].del_from = sub_dpcell[i][j].del_from;
+              dpcell_curr[j].del_offset = i - low_offset;
+              dpscore_curr[j].del_score = sub_dpscore[i][j].del_score;
           }
       }
   }
@@ -375,9 +315,13 @@ fmap_fsw_get_path(uint8_t *base_calls, fmap_fsw_dpcell_t **dpcell, int32_t offse
   (*path_len) = p - path;
 }
 
+/*
+Notes: key_index is zero-base and should be -1, 0, or (num_flows-1)
+*/
 static int64_t
 fmap_fsw_stdaln_aux(uint8_t *seq, int32_t len, 
                     uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram, int32_t num_flows,
+                    int32_t key_index, int32_t key_bases,
                     const fmap_fsw_param_t *ap,
                     fmap_fsw_path_t *path, int32_t *path_len, 
                     int32_t type, int32_t prev_score,
@@ -472,6 +416,7 @@ fmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
                         sub_dpcell, sub_dpscore,
                         dpcell[i-1], dpscore_last,
                         dpcell[i], dpscore_curr,
+                        ((key_index+1) == i) ? key_bases : 0,
                         type);
 
       // Update best
@@ -582,10 +527,12 @@ fmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
 int64_t
 fmap_fsw_global_core(uint8_t *seq, int32_t len, 
                      uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram, int32_t num_flows,
+                     int32_t key_index, int32_t key_bases,
                      const fmap_fsw_param_t *ap,
                      fmap_fsw_path_t *path, int32_t *path_len)
 {
   return fmap_fsw_stdaln_aux(seq, len, flow, base_calls, flowgram, num_flows,
+                             key_index, key_bases,
                              ap, path, path_len, FMAP_SW_TYPE_GLOBAL, 0,
                              0, NULL);
 }
@@ -593,10 +540,12 @@ fmap_fsw_global_core(uint8_t *seq, int32_t len,
 int64_t
 fmap_fsw_local_core(uint8_t *seq, int32_t len, 
                     uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram, int32_t num_flows,
+                    int32_t key_index, int32_t key_bases,
                     const fmap_fsw_param_t *ap,
                     fmap_fsw_path_t *path, int32_t *path_len, int32_t _thres, int32_t *_subo)
 {
   return fmap_fsw_stdaln_aux(seq, len, flow, base_calls, flowgram, num_flows,
+                             key_index, key_bases,
                              ap, path, path_len, FMAP_SW_TYPE_GLOBAL, 0,
                              _thres, _subo);
 }
@@ -604,10 +553,12 @@ fmap_fsw_local_core(uint8_t *seq, int32_t len,
 int64_t
 fmap_fsw_extend_core(uint8_t *seq, int32_t len, 
                      uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram, int32_t num_flows,
+                     int32_t key_index, int32_t key_bases,
                      const fmap_fsw_param_t *ap,
                      fmap_fsw_path_t *path, int32_t *path_len, int32_t prev_score)
 {
   return fmap_fsw_stdaln_aux(seq, len, flow, base_calls, flowgram, num_flows,
+                             key_index, key_bases,
                              ap, path, path_len, FMAP_SW_TYPE_EXTEND, prev_score,
                              0, NULL);
 }
@@ -615,10 +566,12 @@ fmap_fsw_extend_core(uint8_t *seq, int32_t len,
 int64_t
 fmap_fsw_extend_fitting_core(uint8_t *seq, int32_t len, 
                              uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram, int32_t num_flows,
+                             int32_t key_index, int32_t key_bases,
                              const fmap_fsw_param_t *ap,
                              fmap_fsw_path_t *path, int32_t *path_len, int32_t prev_score)
 {
   return fmap_fsw_stdaln_aux(seq, len, flow, base_calls, flowgram, num_flows,
+                             key_index, key_bases,
                              ap, path, path_len, FMAP_SW_TYPE_EXTEND_FITTING, prev_score,
                              0, NULL);
 }
@@ -626,10 +579,12 @@ fmap_fsw_extend_fitting_core(uint8_t *seq, int32_t len,
 int64_t
 fmap_fsw_fitting_core(uint8_t *seq, int32_t len, 
                       uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram, int32_t num_flows,
+                      int32_t key_index, int32_t key_bases,
                       const fmap_fsw_param_t *ap,
                       fmap_fsw_path_t *path, int32_t *path_len)
 {
   return fmap_fsw_stdaln_aux(seq, len, flow, base_calls, flowgram, num_flows,
+                             key_index, key_bases,
                              ap, path, path_len, FMAP_SW_TYPE_FITTING, 0,
                              0, NULL);
 }
@@ -914,6 +869,7 @@ int fmap_fsw_main(int argc, char *argv[])
 
   int64_t score = fmap_fsw_global_core((uint8_t*)opt->target, opt->target_length,
                                        flow, base_calls, flowgram, num_flows, 
+                                       -1, 0,
                                        &opt->param,
                                        path, &path_len);
 
