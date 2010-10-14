@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <netinet/in.h>
+#include <config.h>
 
 #include "../util/fmap_error.h"
 #include "../util/fmap_alloc.h"
@@ -365,8 +366,8 @@ fmap_sff_reverse_compliment(fmap_sff_t *sff)
 {
   int32_t i;
 
-  // reverse flow index
-  for(i=0;i<(sff->gheader->flow_length>>2);i++) {
+  // reverse flowgram
+  for(i=0;i<(sff->gheader->flow_length>>1);i++) {
       uint16_t tmp = sff->read->flowgram[sff->gheader->flow_length-1-i];
       sff->read->flowgram[sff->gheader->flow_length-1-i] = sff->read->flowgram[i];
       sff->read->flowgram[i] = tmp;
