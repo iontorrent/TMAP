@@ -645,7 +645,7 @@ fmap_map2_aux_core(fmap_map2_opt_t *_opt,
 
   // convert sequences to 2-bit representation
   for(i=k=0;i<l;i++) {
-      uint8_t c = (uint8_t)nt_char_to_int[(int)bases->s[i]];
+      uint8_t c = (uint8_t)fmap_nt_char_to_int[(int)bases->s[i]];
       if(c >= 4) { c = (int)(drand48() * 4); ++k; } // FIXME: ambiguous bases are not properly handled
       seq[0]->s[i] = c;
       seq[1]->s[l-1-i] = 3 - c; // reverse compliment

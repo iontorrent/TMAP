@@ -65,7 +65,7 @@ fmap_sam_md(fmap_refseq_t *refseq, char *read_bases, // read bases are character
           for(j=0;j<op_len;j++) {
               if(refseq->len <= ref_i) break; // out of boundary
 
-              read_base = nt_char_to_int[(int)read_bases[read_i]]; 
+              read_base = fmap_nt_char_to_int[(int)read_bases[read_i]]; 
               ref_base = fmap_refseq_seq_i(refseq, ref_i);
 
               if(read_base == ref_base) { // a match

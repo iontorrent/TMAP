@@ -13,19 +13,6 @@
 #include "fmap_fsw.h"
 
 /* TODO/IDEAS
-   1. function to do forward local alignment
-   - returns the score, end row, and end column of the best scoring alignment
-   - Note: we could also return the start row and start column (need two extra int arrays)
-   2. function to do reverse local alignment, given the forward alignment
-   - returns the score, start row, and start column of the best scoring alignment
-   3. function to do local alignment
-   - use the foward local alignment to find the best score, end row, and end column
-   - use the reverse local alignment to find the start row, and start col
-   - call global alignment on the start row, start col, end row, end col, and score
-   5. function to do a fitting alignment?
-   - finds the best scoring alignment fitting the entire read into part of the reference
-   Functions 1-3 are not going to be used at present
-
    - do we need a transition probability added for going from one flow to the next?  For example, if we have a few flows that are empty, there is a certain probability of observing this... or this considered in your flow probabilities.  Basically, longer base alignments should be better, but using more flows is good/bad?
    - TODO: optimize memory usage by pre-allocating the cells/scores
    */
@@ -37,81 +24,103 @@ int32_t fmap_fsw_sm_short[] = {
     -19*100, 11*100, -19*100, -19*100, -13*100,
     -19*100, -19*100, 11*100, -19*100, -13*100,
     -19*100, -19*100, -19*100, 11*100, -13*100,
-    -13*100, -13*100, -13*100, -13*100, -13
+    -13*100, -13*100, -13*100, -13*100, -13*100
 };
 
-static inline int64_t
-fmap_fsw_set_match(fmap_fsw_dpcell_t *cur, fmap_fsw_dpscore_t *p, int64_t sc) 
+static inline void
+fmap_fsw_set_match(fmap_fsw_dpcell_t **dpcell, fmap_fsw_dpscore_t **dpscore, 
+                   int32_t i, int32_t j, 
+                   int64_t score, int32_t sub_path) 
 { 
-  if (p->match_score >= p->ins_score) { 
-      if (p->match_score >= p->del_score) { 
-          if(NULL != cur) cur->match_from = FMAP_FSW_FROM_M; 
-          return p->match_score + (sc); 
-      } else { 
-          if(NULL != cur) cur->match_from = FMAP_FSW_FROM_D;
-          return p->del_score + (sc);
+  if(dpscore[i-1][j-1].match_score >= dpscore[i-1][j-1].ins_score) {
+      if(dpscore[i-1][j-1].match_score >= dpscore[i-1][j-1].del_score) {
+          if(1 == sub_path) dpcell[i][j].match_from = FMAP_FSW_FROM_M | 4; 
+          else dpcell[i][j].match_from = 4 + dpcell[i-1][j-1].match_from;
+          dpcell[i][j].match_bc = 1 + dpcell[i-1][j-1].match_bc;
+          dpscore[i][j].match_score = dpscore[i-1][j-1].match_score + score;
+      } 
+      else { 
+          if(1 == sub_path) dpcell[i][j].match_from = FMAP_FSW_FROM_D | 4;
+          else dpcell[i][j].match_from = 4 + dpcell[i-1][j-1].del_from; 
+          dpcell[i][j].match_bc = 1 + dpcell[i-1][j-1].del_bc;
+          dpscore[i][j].match_score = dpscore[i-1][j-1].del_score + score;
       }
   } else {
-      if (p->ins_score > p->del_score) {
-          if(NULL != cur) cur->match_from = FMAP_FSW_FROM_I;
-          return p->ins_score + (sc);
-      } else {
-          if(NULL != cur) cur->match_from = FMAP_FSW_FROM_D;
-          return p->del_score + (sc);
+      if(dpscore[i-1][j-1].ins_score >= dpscore[i-1][j-1].del_score) {
+          if(1 == sub_path) dpcell[i][j].match_from = FMAP_FSW_FROM_I | 4;
+          else dpcell[i][j].match_from = 4 + dpcell[i-1][j-1].ins_from; 
+          dpcell[i][j].match_bc = 1 + dpcell[i-1][j-1].ins_bc;
+          dpscore[i][j].match_score = dpscore[i-1][j-1].ins_score + score;
+      } 
+      else {
+          if(1 == sub_path) dpcell[i][j].match_from = FMAP_FSW_FROM_D | 4;
+          else dpcell[i][j].match_from = 4 + dpcell[i-1][j-1].del_from; 
+          dpcell[i][j].match_bc = 1 + dpcell[i-1][j-1].del_bc;
+          dpscore[i][j].match_score = dpscore[i-1][j-1].del_score + score;
       }
   }
 }
 
-static inline int64_t
-fmap_fsw_set_ins(fmap_fsw_dpcell_t *cur, fmap_fsw_dpscore_t *p, int32_t gap_open, int32_t gap_ext)
+static inline void 
+fmap_fsw_set_ins(fmap_fsw_dpcell_t **dpcell, fmap_fsw_dpscore_t **dpscore, 
+                 int32_t i, int32_t j, 
+                 int32_t gap_open, int32_t gap_ext, int32_t sub_path) 
 {
-  if (p->match_score - gap_open > p->ins_score) {
-      if(NULL != cur) cur->ins_from = FMAP_FSW_FROM_M;
-      return p->match_score - gap_open - gap_ext;
+  if(dpscore[i-1][j].match_score - gap_open > dpscore[i-1][j].ins_score) {
+      if(1 == sub_path) dpcell[i][j].ins_from = FMAP_FSW_FROM_M;
+      else dpcell[i][j].ins_from = dpcell[i-1][j].match_from;
+      dpcell[i][j].ins_bc = 1 + dpcell[i-1][j].match_bc;
+      dpscore[i][j].ins_score = dpscore[i-1][j].match_score - gap_open - gap_ext;
   } else {
-      if(NULL != cur) cur->ins_from = FMAP_FSW_FROM_I;
-      return p->ins_score - gap_ext;
+      if(1 == sub_path) dpcell[i][j].ins_from = FMAP_FSW_FROM_I;
+      else dpcell[i][j].ins_from = dpcell[i-1][j].ins_from;
+      dpcell[i][j].ins_bc = 1 + dpcell[i-1][j].ins_bc;
+      dpscore[i][j].ins_score = dpscore[i-1][j].ins_score - gap_ext;
   }
 }
 
-static inline int64_t
-fmap_fsw_set_end_ins(fmap_fsw_dpcell_t *cur, fmap_fsw_dpscore_t *p, int32_t gap_open, int32_t gap_ext, int32_t gap_end)
+static inline void 
+fmap_fsw_set_end_ins(fmap_fsw_dpcell_t **dpcell, fmap_fsw_dpscore_t **dpscore, 
+                     int32_t i, int32_t j, 
+                     int32_t gap_open, int32_t gap_ext, int32_t gap_end, int32_t sub_path) 
 {
-  if (gap_end >= 0) {
-      if (p->match_score - gap_open > p->ins_score) {
-          if(NULL != cur) cur->ins_from = FMAP_FSW_FROM_M;
-          return p->match_score - gap_open - gap_end;
-      } else {
-          if(NULL != cur) cur->ins_from = FMAP_FSW_FROM_I;
-          return p->ins_score - gap_end;
-      }
-  } else return fmap_fsw_set_ins(cur, p, gap_open, gap_ext);
-}
-
-static inline int64_t
-fmap_fsw_set_del(fmap_fsw_dpcell_t *cur, fmap_fsw_dpscore_t *p, int32_t gap_open, int32_t gap_ext)
-{
-  if (p->match_score - gap_open > p->del_score) {
-      if(NULL != cur) cur->del_from = FMAP_FSW_FROM_M;
-      return p->match_score - gap_open - gap_ext;
-  } else {
-      if(NULL != cur) cur->del_from = FMAP_FSW_FROM_D;
-      return p->del_score - gap_ext;
+  if(gap_end >= 0) {
+      fmap_fsw_set_ins(dpcell, dpscore, i, j, gap_open, gap_end, sub_path);
+  }
+  else {
+      fmap_fsw_set_ins(dpcell, dpscore, i, j, gap_open, gap_ext, sub_path);
   }
 }
 
-static inline int64_t
-fmap_fsw_set_end_del(fmap_fsw_dpcell_t *cur, fmap_fsw_dpscore_t *p, int32_t gap_open, int32_t gap_ext, int32_t gap_end)
+static inline void 
+fmap_fsw_set_del(fmap_fsw_dpcell_t **dpcell, fmap_fsw_dpscore_t **dpscore, 
+                 int32_t i, int32_t j, 
+                 int32_t gap_open, int32_t gap_ext, int32_t sub_path) 
 {
-  if (gap_end >= 0) {
-      if (p->match_score - gap_open > p->del_score) {
-          if(NULL != cur) cur->del_from = FMAP_FSW_FROM_M;
-          return p->match_score - gap_open - gap_end;
-      } else {
-          if(NULL != cur) cur->del_from = FMAP_FSW_FROM_D;
-          return p->del_score - gap_end;
-      }
-  } else return fmap_fsw_set_del(cur, p, gap_open, gap_ext);
+  if(dpscore[i][j-1].match_score - gap_open > dpscore[i][j-1].del_score) {
+      if(1 == sub_path) dpcell[i][j].del_from = FMAP_FSW_FROM_M | 4;
+      else dpcell[i][j].del_from = 4 + dpcell[i][j-1].match_from;
+      dpcell[i][j].del_bc = dpcell[i][j-1].match_bc;
+      dpscore[i][j].del_score = dpscore[i][j-1].match_score - gap_open - gap_ext;
+  } else {
+      if(1 == sub_path) dpcell[i][j].del_from = FMAP_FSW_FROM_I | 4;
+      else dpcell[i][j].del_from = 4 + dpcell[i][j-1].del_from;
+      dpcell[i][j].del_bc = dpcell[i][j-1].del_bc;
+      dpscore[i][j].del_score = dpscore[i][j-1].del_score - gap_ext;
+  }
+}
+
+static inline void 
+fmap_fsw_set_end_del(fmap_fsw_dpcell_t **dpcell, fmap_fsw_dpscore_t **dpscore, 
+                     int32_t i, int32_t j, 
+                     int32_t gap_open, int32_t gap_ext, int32_t gap_end, int32_t sub_path) 
+{
+  if(gap_end >= 0) {
+      fmap_fsw_set_del(dpcell, dpscore, i, j, gap_open, gap_end, sub_path);
+  }
+  else {
+      fmap_fsw_set_del(dpcell, dpscore, i, j, gap_open, gap_ext, sub_path);
+  }
 }
 
 inline void
@@ -124,6 +133,7 @@ fmap_fsw_sub_core(uint8_t *seq, int32_t len,
                   fmap_fsw_dpscore_t *dpscore_last,
                   fmap_fsw_dpcell_t *dpcell_curr,
                   fmap_fsw_dpscore_t *dpscore_curr,
+                  fmap_fsw_path_t *path, int32_t *path_len, int32_t best_ctype,
                   uint8_t key_bases,
                   int32_t type)
 {
@@ -133,6 +143,7 @@ fmap_fsw_sub_core(uint8_t *seq, int32_t len,
   int32_t *mat, *score_matrix, N_MATRIX_ROW;
   uint8_t offset;
   int32_t num_bases; 
+  int32_t sub_path;
 
   gap_open = ap->gap_open;
   gap_ext = ap->gap_ext;
@@ -146,29 +157,51 @@ fmap_fsw_sub_core(uint8_t *seq, int32_t len,
   low_offset = (base_call < offset) ? 0 : base_call - offset;
   high_offset = base_call + offset;
 
+  //fprintf(stderr, "base_call=%d low_offset=%d high_offset=%d\n", base_call, low_offset, high_offset);
+
   // scoring matrix will always be the same
   mat = score_matrix + flow_base * N_MATRIX_ROW;
+
+  sub_path = (NULL == path) ? 0 : 1; // only if we wish to recover the path  
 
   // copy previous row
   for(j=0;j<=len;j++) {
       sub_dpscore[0][j] = dpscore_last[j];
-      sub_dpcell[0][j] = dpcell_last[j];
+      FMAP_FSW_INIT_CELL(sub_dpcell[0][j]); // empty
+      sub_dpcell[0][j].match_from = FMAP_FSW_FROM_M;
+      sub_dpcell[0][j].ins_from = FMAP_FSW_FROM_I;
+      sub_dpcell[0][j].del_from = FMAP_FSW_FROM_D;
+      sub_dpcell[0][j].match_bc = sub_dpcell[0][j].ins_bc = sub_dpcell[0][j].del_bc = 0;
   }
 
   // fill in sub_dpcell and sub_dpscore
   for(i=1;i<=high_offset;i++) { // for each row in the sub-alignment
       // initialize the first column
       FMAP_FSW_SET_SCORE_INF(sub_dpscore[i][0]); 
-      FMAP_FSW_INIT_CELL(sub_dpcell[i][0], 0, FMAP_FSW_FROM_S);
-      sub_dpscore[i][0].ins_score = fmap_fsw_set_end_ins(sub_dpcell[i], sub_dpscore[i-1], gap_open, gap_ext, gap_end);
+      FMAP_FSW_INIT_CELL(sub_dpcell[i][0]);
+      fmap_fsw_set_end_ins(sub_dpcell, sub_dpscore, i, 0, gap_open, gap_ext, gap_end, sub_path);
       // fill in the rest of the columns
       for(j=1;j<=len;j++) { // for each col
-          sub_dpscore[i][j].match_score = fmap_fsw_set_match(sub_dpcell[i] + j, 
-                                                             sub_dpscore[i-1]+j-1, mat[seq[j-1]]);
-          sub_dpscore[i][j].ins_score = fmap_fsw_set_ins(sub_dpcell[i]+j, sub_dpscore[i-1]+j, gap_open, gap_ext);
-          sub_dpscore[i][j].del_score = fmap_fsw_set_del(sub_dpcell[i]+j, sub_dpscore[i]+j-1, gap_open, gap_ext);
+          // HERE
+          //if(1 == i) fprintf(stderr, "j=%d flow_base=%d seq[j-1]=%d mat[seq[j-1]]=%d\n", j, flow_base, seq[j-1], mat[seq[j-1]]); 
+          fmap_fsw_set_match(sub_dpcell, sub_dpscore, i, j, mat[seq[j-1]], sub_path);
+          fmap_fsw_set_ins(sub_dpcell, sub_dpscore, i, j, gap_open, gap_ext, sub_path);
+          fmap_fsw_set_del(sub_dpcell, sub_dpscore, i, j, gap_open, gap_ext, sub_path);
       }
   }
+
+  /*
+     fprintf(stderr, "BEFORE\n");
+     for(i=low_offset;i<=high_offset;i++) { // for each row in the sub-alignment
+     for(j=0;j<=len;j++) { // for each col
+     fprintf(stderr, "(%d,%d M[%d,%d,%d,%d] I[%d,%d,%d,%d] D[%d,%d,%d,%d])\n",
+     i, j,
+     sub_dpcell[i][j].match_bc, sub_dpcell[i][j].match_from & 0x3, sub_dpcell[i][j].match_from >> 2, (int)sub_dpscore[i][j].match_score,
+     sub_dpcell[i][j].ins_bc, sub_dpcell[i][j].ins_from & 0x3, sub_dpcell[i][j].ins_from >> 2, (int)sub_dpscore[i][j].ins_score,
+     sub_dpcell[i][j].del_bc, sub_dpcell[i][j].del_from & 0x3, sub_dpcell[i][j].del_from >> 2, (int)sub_dpscore[i][j].del_score);
+     }
+     }
+     */
 
   // add flow scores
   for(i=low_offset;i<=high_offset;i++) { // for each possible base call within +-offset
@@ -176,130 +209,124 @@ fmap_fsw_sub_core(uint8_t *seq, int32_t len,
       num_bases = i + key_bases; // key bases will shift this
       flow_score = (flow_signal < 100*num_bases) ? (100*num_bases - flow_signal) : (flow_signal - 100*num_bases);
       flow_score *= ap->fscore / 100;
+      // factor out extra match scores for over calls.  Is this correct?
+      //if(base_call < i) flow_score += mat[flow_base] * (i - base_call);
+      //fprintf(stderr, "flow_score=%d i=%d\n", flow_score, i);
       for(j=0;j<=len;j++) { // for each col
           FMAP_FSW_ADD_FSCORE(sub_dpscore[i][j], flow_score);
       }
   }
 
-  // set the best cell to be [low_offset][0,len]
-  for(j=0;j<=len;j++) { // for each col
-      dpcell_curr[j] = sub_dpcell[low_offset][j];
-      dpcell_curr[j].match_offset = dpcell_curr[j].ins_offset = dpcell_curr[j].del_offset = 0;
-      dpscore_curr[j] = sub_dpscore[low_offset][j];
-      if(FMAP_SW_TYPE_LOCAL == type) {
-          if(dpscore_curr[j].match_score < 0) {
-              dpscore_curr[j].match_score = 0;
-              dpcell_curr[j].match_from = FMAP_FSW_FROM_S;
-              dpcell_curr[j].match_offset = 0;
-          }
-          if(dpscore_curr[j].ins_score < 0) {
-              dpscore_curr[j].ins_score = 0;
-              dpcell_curr[j].ins_from = FMAP_FSW_FROM_S;
-              dpcell_curr[j].ins_offset = 0;
-          }
-          if(dpscore_curr[j].del_score < 0) {
-              dpscore_curr[j].del_score = 0;
-              dpcell_curr[j].del_from = FMAP_FSW_FROM_S;
-              dpcell_curr[j].del_offset = 0;
-          }
-      }
-  }
 
-  // get the best cells within [low_offset+1,high_offset][0,len]
-  for(i=low_offset+1;i<=high_offset;i++) {
+  if(NULL != dpcell_curr && NULL != dpscore_curr) {
+      /*
+     fprintf(stderr, "AFTER\n");
+     for(i=low_offset;i<=high_offset;i++) { // for each row in the sub-alignment
+        for(j=0;j<=len;j++) { // for each col
+     fprintf(stderr, "(%d,%d M[%d,%d,%d,%d] I[%d,%d,%d,%d] D[%d,%d,%d,%d])\n",
+     i, j,
+     sub_dpcell[i][j].match_bc, sub_dpcell[i][j].match_from & 0x3, sub_dpcell[i][j].match_from >> 2, (int)sub_dpscore[i][j].match_score,
+     sub_dpcell[i][j].ins_bc, sub_dpcell[i][j].ins_from & 0x3, sub_dpcell[i][j].ins_from >> 2, (int)sub_dpscore[i][j].ins_score,
+     sub_dpcell[i][j].del_bc, sub_dpcell[i][j].del_from & 0x3, sub_dpcell[i][j].del_from >> 2, (int)sub_dpscore[i][j].del_score);
+     }
+     }
+  */
+      // set the best cell to be [base_call][0,len]
+      // NOTE: set this to the original base call to get consistency between
+      // calling homopolymer over/under calls
       for(j=0;j<=len;j++) { // for each col
-          // match
-          if(dpscore_curr[j].match_score < sub_dpscore[i][j].match_score) {
-              dpcell_curr[j].match_from = sub_dpcell[i][j].match_from;
-              dpcell_curr[j].match_offset = i - low_offset;
-              dpscore_curr[j].match_score = sub_dpscore[i][j].match_score;
-          }
-          // ins
-          if(dpscore_curr[j].ins_score < sub_dpscore[i][j].ins_score) {
-              dpcell_curr[j].ins_from = sub_dpcell[i][j].ins_from;
-              dpcell_curr[j].ins_offset = i - low_offset;
-              dpscore_curr[j].ins_score = sub_dpscore[i][j].ins_score;
-          }
-          // del
-          if(dpscore_curr[j].del_score < sub_dpscore[i][j].del_score) {
-              dpcell_curr[j].del_from = sub_dpcell[i][j].del_from;
-              dpcell_curr[j].del_offset = i - low_offset;
-              dpscore_curr[j].del_score = sub_dpscore[i][j].del_score;
-          }
-      }
-  }
-}
-
-static void
-fmap_fsw_get_path(uint8_t *base_calls, fmap_fsw_dpcell_t **dpcell, int32_t offset, 
-                  int32_t best_i, int32_t best_j, uint8_t best_ctype,
-                  fmap_fsw_path_t *path, int32_t *path_len)
-{
-  register int32_t i, j, k;
-  uint8_t ctype, ctype_next = 0;
-  fmap_fsw_path_t *p;
-  uint8_t cur_offset = 0;
-  int32_t n_bases = 0;
-
-  // get best scoring end cell
-  i = best_i; j = best_j; p = path;
-  ctype = best_ctype;
-
-  while(FMAP_FSW_FROM_S != ctype && (0 < i || 0 < j)) {
-      // get:
-      // - # of read bases called from the flow
-      // - the next cell type 
-      // - the dpscore_current offset
-      switch(ctype) { 
-        case FMAP_FSW_FROM_M: 
-          n_bases = base_calls[i-1] + dpcell[i][j].match_offset - offset;
-          ctype_next = dpcell[i][j].match_from;
-          cur_offset = dpcell[i][j].match_offset;
-          break;
-        case FMAP_FSW_FROM_I: 
-          n_bases = base_calls[i-1] + dpcell[i][j].ins_offset - offset;
-          ctype_next = dpcell[i][j].ins_from;
-          cur_offset = dpcell[i][j].ins_offset;
-          break;
-        case FMAP_FSW_FROM_D: 
-          n_bases = 1; // no base call
-          ctype_next = dpcell[i][j].del_from;
-          cur_offset = dpcell[i][j].del_offset;
-          break;
-        default:
-          fmap_error(NULL, Exit, OutOfRange);
-      }
-      if(n_bases < 0) n_bases = 0;
-
-      // are there bases called or a deletion?
-      if(0 == n_bases && (FMAP_FSW_FROM_M == ctype
-                          || FMAP_FSW_FROM_I == ctype)) { 
-          // Note: this is a dummy row, a placeholder for a flow
-          i--; // move to the previous flow
-          // do not change the cell type
-      } 
-      else {
-
-          // add the dpscore_current type to the path
-          if(0 < i) { // bases left
-              // add in # of aligned bases
-              for(k=0;k<n_bases;k++) {
-                  p->ctype = ctype; 
-                  p->i = i-1; p->j = j-1; 
-                  ++p;
+          dpcell_curr[j] = sub_dpcell[base_call][j];
+          dpscore_curr[j] = sub_dpscore[base_call][j];
+          if(FMAP_SW_TYPE_LOCAL == type) { // local alignment
+              if(dpscore_curr[j].match_score < 0) {
+                  dpcell_curr[j].match_from = FMAP_FSW_FROM_S;
+                  dpcell_curr[j].match_bc = 0;
+                  dpscore_curr[j].match_score = 0;
+              }
+              if(dpscore_curr[j].ins_score < 0) {
+                  dpcell_curr[j].ins_from = FMAP_FSW_FROM_S;
+                  dpcell_curr[j].ins_bc = 0;
+                  dpscore_curr[j].ins_score = 0;
+              }
+              if(dpscore_curr[j].del_score < 0) {
+                  dpcell_curr[j].del_from = FMAP_FSW_FROM_S;
+                  dpcell_curr[j].del_bc = 0;
+                  dpscore_curr[j].del_score = 0;
               }
           }
-          else {
-              // must be starting with a deletion
-              p->ctype = ctype; 
-              p->i = i-1; p->j = j-1; 
-              ++p;
+      }
+
+      // get the best cells within [low_offset+1,high_offset][0,len]
+      for(i=low_offset;i<=high_offset;i++) {
+          for(j=0;j<=len;j++) { // for each col
+              // match
+              if(dpscore_curr[j].match_score < sub_dpscore[i][j].match_score) {
+                  dpcell_curr[j].match_from = sub_dpcell[i][j].match_from;
+                  dpcell_curr[j].match_bc = sub_dpcell[i][j].match_bc;
+                  dpscore_curr[j].match_score = sub_dpscore[i][j].match_score;
+              }
+              // ins
+              if(dpscore_curr[j].ins_score < sub_dpscore[i][j].ins_score) {
+                  dpcell_curr[j].ins_from = sub_dpcell[i][j].ins_from;
+                  dpcell_curr[j].ins_bc = sub_dpcell[i][j].ins_bc;
+                  dpscore_curr[j].ins_score = sub_dpscore[i][j].ins_score;
+              }
+              // del
+              if(dpscore_curr[j].del_score < sub_dpscore[i][j].del_score) {
+                  dpcell_curr[j].del_from = sub_dpcell[i][j].del_from;
+                  dpcell_curr[j].del_bc = sub_dpcell[i][j].del_bc;
+                  dpscore_curr[j].del_score = sub_dpscore[i][j].del_score;
+              }
           }
+      }
+      /*
+         fprintf(stderr, "STORED\n");
+         for(j=0;j<=len;j++) { // for each col
+         fprintf(stderr, "(%d M[%d,%d,%d,%d] I[%d,%d,%d,%d] D[%d,%d,%d,%d])\n",
+         j,
+         dpcell_curr[j].match_bc, dpcell_curr[j].match_from & 0x3, dpcell_curr[j].match_from >> 2, (int)dpscore_curr[j].match_score,
+         dpcell_curr[j].ins_bc, dpcell_curr[j].ins_from & 0x3, dpcell_curr[j].ins_from >> 2, (int)dpscore_curr[j].ins_score,
+         dpcell_curr[j].del_bc, dpcell_curr[j].del_from & 0x3, dpcell_curr[j].del_from >> 2, (int)dpscore_curr[j].del_score);
+         }
+         */
+  }
+
+  if(NULL != path) {
+      int32_t ctype, ctype_next = 0;
+      fmap_fsw_path_t *p;
+
+      p = path;
+      i = high_offset; j = len; 
+      ctype = best_ctype;
+
+      //fprintf(stderr, "  START sub_core i=%d j=%d ctype=%d\n", i, j, ctype);
+      while(FMAP_FSW_FROM_S != ctype && 0 < i) {
+          //fprintf(stderr, "  sub_core i=%d j=%d ctype=%d\n", i, j, ctype);
+          if(i < 0 || j < 0) fmap_error("bug encountered", Exit, OutOfRange);
+
+          switch(ctype) { 
+            case FMAP_FSW_FROM_M: 
+              ctype_next = sub_dpcell[i][j].match_from & 0x3;
+              break;
+            case FMAP_FSW_FROM_I: 
+              ctype_next = sub_dpcell[i][j].ins_from & 0x3;
+              break;
+            case FMAP_FSW_FROM_D: 
+              ctype_next = sub_dpcell[i][j].del_from & 0x3;
+              break;
+            default:
+              fmap_error(NULL, Exit, OutOfRange);
+          }
+
+          p->ctype = ctype;
+          p->i = i-1;
+          p->j = j-1;
+          p++;
 
           // move the row and column (as necessary)
           switch(ctype) {
             case FMAP_FSW_FROM_M: 
-              --i; j -= n_bases; break;
+              --i; --j; break;
             case FMAP_FSW_FROM_I: 
               --i; break;
             case FMAP_FSW_FROM_D: 
@@ -311,8 +338,182 @@ fmap_fsw_get_path(uint8_t *base_calls, fmap_fsw_dpcell_t **dpcell, int32_t offse
           // move to the next cell type
           ctype = ctype_next;
       }
+      (*path_len) = p - path;
+  }
+  else if(NULL != path_len) {
+      (*path_len) = 0;
+  }
+}
+
+static void
+fmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram,
+                  int32_t key_index, int32_t key_bases,
+                  fmap_fsw_dpcell_t **dpcell, fmap_fsw_dpscore_t **dpscore,
+                  fmap_fsw_dpcell_t **sub_dpcell,
+                  fmap_fsw_dpscore_t **sub_dpscore, 
+                  const fmap_fsw_param_t *ap,
+                  int32_t best_i, int32_t best_j, uint8_t best_ctype,
+                  fmap_fsw_path_t *path, int32_t *path_len)
+{
+  register int32_t i, j;
+  int32_t k, l;
+  int32_t base_call = 0, col_offset = 0, base_call_diff = 0;
+  uint8_t ctype, ctype_next = 0;
+  fmap_fsw_path_t *p;
+  fmap_fsw_path_t *sub_path = NULL;
+  int32_t sub_path_len = 0, sub_path_mem = 0;
+
+  /*
+     fprintf(stderr, "PRINTING\n");
+     for(i=0;i<=best_i;i++) {
+     for(j=0;j<=best_j;j++) {
+     fprintf(stderr, "(%d,%d M[%d,%d,%d,%d] I[%d,%d,%d,%d] D[%d,%d,%d,%d])\n",
+     i, j,
+     dpcell[i][j].match_bc, dpcell[i][j].match_from & 0x3, dpcell[i][j].match_from >> 2, (int)dpscore[i][j].match_score,
+     dpcell[i][j].ins_bc, dpcell[i][j].ins_from & 0x3, dpcell[i][j].ins_from >> 2, (int)dpscore[i][j].ins_score,
+     dpcell[i][j].del_bc, dpcell[i][j].del_from & 0x3, dpcell[i][j].del_from >> 2, (int)dpscore[i][j].del_score);
+     }
+     }
+     */
+
+  // get best scoring end cell
+  i = best_i; j = best_j; p = path;
+  ctype = best_ctype;
+
+  /*
+     fprintf(stderr, "GETTING PATH\n");
+     fprintf(stderr, "best_i=%d best_j=%d ctype=%d\n",
+     best_i, best_j, ctype);
+     */
+
+  while(FMAP_FSW_FROM_S != ctype && (0 < i || 0 < j)) {
+      base_call = 0;
+      col_offset = 0;
+      base_call_diff = 0;
+
+      //fprintf(stderr, "CORE i=%d j=%d ctype=%d\n", i, j, ctype);
+      switch(ctype) { 
+        case FMAP_FSW_FROM_M: 
+          if(i < 0 || j < 0) fmap_error("bug encountered", Exit, OutOfRange);
+          base_call = dpcell[i][j].match_bc;
+          col_offset = dpcell[i][j].match_from >> 2;
+          ctype_next = dpcell[i][j].match_from & 0x3;
+          break;
+        case FMAP_FSW_FROM_I: 
+          if(i < 0 || j < 0) fmap_error("bug encountered", Exit, OutOfRange);
+          base_call = dpcell[i][j].ins_bc;
+          col_offset = dpcell[i][j].ins_from >> 2;
+          ctype_next = dpcell[i][j].ins_from & 0x3;
+          break;
+        case FMAP_FSW_FROM_D: 
+          if(i < 0 || j < 0) fmap_error("bug encountered", Exit, OutOfRange);
+          base_call = dpcell[i][j].del_bc;
+          col_offset = dpcell[i][j].del_from >> 2;
+          ctype_next = dpcell[i][j].del_from & 0x3;
+          break;
+        default:
+          fmap_error(NULL, Exit, OutOfRange);
+      }
+
+      /*
+         fprintf(stderr, "base_call=%d col_offset=%d ctype_next=%d\n",
+         base_call, col_offset, ctype_next);
+         fprintf(stderr, "base_calls[%d]=%d\n", i-1,
+         (0 < i) ? base_calls[i-1] : 0);
+         */
+
+      if(j <= 0) {
+          // starts with an insertion?
+          // TODO
+          for(k=0;k<base_call;k++) {
+              p->i = i-1;
+              p->j = j-1;
+              p->ctype = FMAP_FSW_FROM_I;
+              p++;
+          }
+      }
+      else if(i <= 0) {
+          // starts with a deletion?
+          // TODO
+          p->i = i-1;
+          p->j = j-1;
+          p->ctype = FMAP_FSW_FROM_D;
+          p++;
+          j--;
+      }
+      else if(0 == base_call) {
+          if(0 < i && 0 < base_calls[i-1]) {
+              for(k=0;k<base_calls[i-1];k++) {
+                  p->j = j - 1;
+                  p->i = i - 1;
+                  p->ctype = FMAP_FSW_FROM_HP_MINUS;
+                  p++;
+              }
+          }
+      }
+      else {
+          while(sub_path_mem < col_offset + ap->offset + 1) { // more memory please
+              sub_path_mem = (0 == sub_path_mem) ? 4 : (sub_path_mem << 1);
+              sub_path = fmap_realloc(sub_path, sizeof(fmap_fsw_path_t) * sub_path_mem, "sub_path"); 
+          } 
+
+          fmap_fsw_param_t ap_tmp;
+          ap_tmp = (*ap);
+          ap_tmp.offset = 0; // no offset, since we will use the previous base call
+
+          // solve the sub-problem and get the path
+          if(j - col_offset < 0) fmap_error("bug encountered", Exit, OutOfRange);
+          fmap_fsw_sub_core(seq, j,
+                            flow[(i-1) & 3], base_call, flowgram[i-1], // Note: %4 is the same as &3
+                            &ap_tmp,
+                            sub_dpcell, sub_dpscore,
+                            dpcell[i-1], dpscore[i-1],
+                            NULL, NULL, // do not update
+                            sub_path, &sub_path_len, ctype, // get the path
+                            ((key_index+1) == i) ? key_bases : 0,
+                            ctype);
+
+          base_call_diff = base_call - base_calls[i-1];
+          // if base_call_diff > 0, add insertions
+          // if base_call_diff < 0, add deletions
+
+          k = j - 1; // for base_call_diff < 0
+          //fprintf(stderr, "sub_path_len=%d base_call_diff=%d\n", sub_path_len, base_call_diff);
+          for(l=0;l<sub_path_len;l++) {
+              (*p) = sub_path[l]; // store p->j and p->ctype
+              p->i = i - 1; // same flow index
+              k = p->j; // for base_call_diff < 0
+
+                 
+              if(0 < base_call_diff // there are bases left that were inserted
+                 && FMAP_FSW_FROM_M == sub_path[l].ctype) { // delete a "match"
+                  // change the type to a deletion
+                  p->ctype = FMAP_FSW_FROM_HP_PLUS;
+                  base_call_diff--;
+              }
+
+              p++;
+          }
+          while(base_call_diff < 0) { // there are bases left that were deleted
+              p->ctype = FMAP_FSW_FROM_HP_MINUS; // add an insertion
+              p->i = i - 1;
+              p++;
+              base_call_diff++;
+          }
+      }
+
+      // move the row and column (as necessary)
+      j -= col_offset;
+      i--;
+
+      // move to the next cell type
+      ctype = ctype_next;
+
+      //fprintf(stderr, "HERE i=%d j=%d ctype=%d\n", i, j, ctype);
   }
   (*path_len) = p - path;
+
+  free(sub_path);
 }
 
 /*
@@ -329,11 +530,10 @@ fmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
 {
   register int32_t i, j;
   int32_t max_bc = 0, bw;
-  int64_t max = 0;
 
   // main cells 
   fmap_fsw_dpcell_t **dpcell;
-  fmap_fsw_dpscore_t *dpscore_curr, *dpscore_last, *dpscore_tmp;
+  fmap_fsw_dpscore_t **dpscore;
 
   // for homopolymer re-calling 
   fmap_fsw_dpcell_t **sub_dpcell;
@@ -367,6 +567,8 @@ fmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
       }
   }
 
+  //fprintf(stderr, "max_bc=%d offset=%d len=%d\n", max_bc, offset, len);
+
   // allocate memory for the sub-cells
   sub_dpcell = fmap_malloc(sizeof(fmap_fsw_dpcell_t*) * (max_bc + offset + 1), "sub_dpcell");
   sub_dpscore = fmap_malloc(sizeof(fmap_fsw_dpscore_t*) * (max_bc + offset + 1), "sub_dpscore");
@@ -377,45 +579,48 @@ fmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
 
   // allocate memory for the main cells
   dpcell = fmap_malloc(sizeof(fmap_fsw_dpcell_t*) * (num_flows + 1), "dpcell");
+  dpscore = fmap_malloc(sizeof(fmap_fsw_dpscore_t*) * (num_flows + 1), "dpscore");
   for(i=0;i<=num_flows;i++) {
       dpcell[i] = fmap_malloc(sizeof(fmap_fsw_dpcell_t) * (len + 1), "dpcell");
+      dpscore[i] = fmap_malloc(sizeof(fmap_fsw_dpscore_t) * (len + 1), "dpscore");
   }
-  dpscore_curr = fmap_malloc(sizeof(fmap_fsw_dpscore_t) * (len + 1), "dpscore_curr");
-  dpscore_last = fmap_malloc(sizeof(fmap_fsw_dpscore_t) * (len + 1), "dpscore_curr");
 
   // set first row
-  FMAP_FSW_SET_SCORE_INF(dpscore_curr[0]); 
-  FMAP_FSW_INIT_CELL(dpcell[0][0], 0, FMAP_FSW_FROM_S);
+  FMAP_FSW_SET_SCORE_INF(dpscore[0][0]); 
+  FMAP_FSW_INIT_CELL(dpcell[0][0]);
   if(FMAP_SW_TYPE_EXTEND == type
      || FMAP_SW_TYPE_EXTEND_FITTING == type) {
-      dpscore_curr[0].match_score = prev_score;
+      dpscore[0][0].match_score = prev_score;
+  }
+  else {
+      dpscore[0][0].match_score = 0;
   }
   for(j=1;j<=len;j++) { // for each col
-      FMAP_FSW_SET_SCORE_INF(dpscore_curr[j]);
-      FMAP_FSW_INIT_CELL(dpcell[0][j], 0, FMAP_FSW_FROM_S);
+      FMAP_FSW_SET_SCORE_INF(dpscore[0][j]);
+      FMAP_FSW_INIT_CELL(dpcell[0][j]);
       switch(type) {
         case FMAP_SW_TYPE_LOCAL:
-          dpscore_curr[j].match_score = 0; // the alignment can start anywhere
+          dpscore[0][j].match_score = 0; // the alignment can start anywhere
           break;
         case FMAP_SW_TYPE_GLOBAL:
         case FMAP_SW_TYPE_EXTEND:
         case FMAP_SW_TYPE_EXTEND_FITTING:
-          dpscore_curr[j].del_score = fmap_fsw_set_end_del(dpcell[0]+j, dpscore_curr+j-1, gap_open, gap_ext, gap_end);
+          fmap_fsw_set_end_del(dpcell, dpscore, 0, j, gap_open, gap_ext, gap_end, 0);
           break;
       }
   }
-  // swap curr and last
-  dpscore_tmp = dpscore_curr; dpscore_curr = dpscore_last; dpscore_last = dpscore_tmp;
 
   // core loop
   for(i=1;i<=num_flows;i++) { // for each row
       // fill in the columns
+      //fprintf(stderr, "i=%d num_flows=%d\n", i, num_flows);
       fmap_fsw_sub_core(seq, len,
                         flow[(i-1) & 3], base_calls[i-1], flowgram[i-1], // Note: %4 is the same as &3
                         ap,
                         sub_dpcell, sub_dpscore,
-                        dpcell[i-1], dpscore_last,
-                        dpcell[i], dpscore_curr,
+                        dpcell[i-1], dpscore[i-1],
+                        dpcell[i], dpscore[i],
+                        NULL, NULL, 0,
                         ((key_index+1) == i) ? key_bases : 0,
                         type);
 
@@ -424,57 +629,57 @@ fmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
         case FMAP_SW_TYPE_LOCAL:
         case FMAP_SW_TYPE_EXTEND:
           for(j=1;j<=len;j++) {
-              if(best_score < dpscore_curr[j].match_score) {
-                  best_score = dpscore_curr[j].match_score;
+              if(best_score < dpscore[i][j].match_score) {
+                  best_score = dpscore[i][j].match_score;
                   best_ctype = FMAP_FSW_FROM_M;
                   best_i = i; best_j = j;
               }
-              if(best_score < dpscore_curr[j].ins_score) {
-                  best_score = dpscore_curr[j].ins_score;
+              if(best_score < dpscore[i][j].ins_score) {
+                  best_score = dpscore[i][j].ins_score;
                   best_ctype = FMAP_FSW_FROM_I;
                   best_i = i; best_j = j;
               }
-              if(best_score < dpscore_curr[j].del_score) {
-                  best_score = dpscore_curr[j].del_score;
+              if(best_score < dpscore[i][j].del_score) {
+                  best_score = dpscore[i][j].del_score;
                   best_ctype = FMAP_FSW_FROM_D;
                   best_i = i; best_j = j;
               }
           }
           break;
         case FMAP_SW_TYPE_GLOBAL:
-          if(i == num_flows && j == len) {
-              if(best_score < dpscore_curr[j].match_score) {
-                  best_score = dpscore_curr[j].match_score;
+          if(i == num_flows) {
+              if(best_score < dpscore[i][len].match_score) {
+                  best_score = dpscore[i][len].match_score;
                   best_ctype = FMAP_FSW_FROM_M;
-                  best_i = i; best_j = j;
+                  best_i = i; best_j = len;
               }
-              if(best_score < dpscore_curr[j].ins_score) {
-                  best_score = dpscore_curr[j].ins_score;
+              if(best_score < dpscore[i][len].ins_score) {
+                  best_score = dpscore[i][len].ins_score;
                   best_ctype = FMAP_FSW_FROM_I;
-                  best_i = i; best_j = j;
+                  best_i = i; best_j = len;
               }
-              if(best_score < dpscore_curr[j].del_score) {
-                  best_score = dpscore_curr[j].del_score;
+              if(best_score < dpscore[i][len].del_score) {
+                  best_score = dpscore[i][len].del_score;
                   best_ctype = FMAP_FSW_FROM_D;
-                  best_i = i; best_j = j;
+                  best_i = i; best_j = len;
               }
           }
           break;
         case FMAP_SW_TYPE_EXTEND_FITTING:
           if(num_flows == i) {
               for(j=1;j<=len;j++) {
-                  if(best_score < dpscore_curr[j].match_score) {
-                      best_score = dpscore_curr[j].match_score;
+                  if(best_score < dpscore[i][j].match_score) {
+                      best_score = dpscore[i][j].match_score;
                       best_ctype = FMAP_FSW_FROM_M;
                       best_i = i; best_j = j;
                   }
-                  if(best_score < dpscore_curr[j].ins_score) {
-                      best_score = dpscore_curr[j].ins_score;
+                  if(best_score < dpscore[i][j].ins_score) {
+                      best_score = dpscore[i][j].ins_score;
                       best_ctype = FMAP_FSW_FROM_I;
                       best_i = i; best_j = j;
                   }
-                  if(best_score < dpscore_curr[j].del_score) {
-                      best_score = dpscore_curr[j].del_score;
+                  if(best_score < dpscore[i][j].del_score) {
+                      best_score = dpscore[i][j].del_score;
                       best_ctype = FMAP_FSW_FROM_D;
                       best_i = i; best_j = j;
                   }
@@ -482,9 +687,6 @@ fmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
           }
           break;
       }
-
-      // swap curr and last
-      dpscore_tmp = dpscore_curr; dpscore_curr = dpscore_last; dpscore_last = dpscore_tmp;
   }
 
   if(best_i < 0 || best_j < 0) { // was not updated
@@ -498,12 +700,17 @@ fmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
   else if(NULL == path_len) {
       path[0].i = best_i; path[0].j = best_j;
   }
-  else if(best_score <= 0) {
+  else if(best_score <= _thres) {
       (*path_len) = 0;
   }
   else {
       // recover the path
-      fmap_fsw_get_path(base_calls, dpcell, offset, best_i, best_j, best_ctype, 
+      fmap_fsw_get_path(seq, flow, base_calls, flowgram,
+                        key_index, key_bases,
+                        dpcell, dpscore, 
+                        sub_dpcell, sub_dpscore, 
+                        ap, 
+                        best_i, best_j, best_ctype, 
                         path, path_len);
   }
 
@@ -518,10 +725,12 @@ fmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
   // free memory for the main cells
   for(i=0;i<=num_flows;i++) {
       free(dpcell[i]);
+      free(dpscore[i]);
   }
   free(dpcell);
+  free(dpscore);
 
-  return max;
+  return best_score;
 }
 
 int64_t
@@ -534,7 +743,7 @@ fmap_fsw_global_core(uint8_t *seq, int32_t len,
   return fmap_fsw_stdaln_aux(seq, len, flow, base_calls, flowgram, num_flows,
                              key_index, key_bases,
                              ap, path, path_len, FMAP_SW_TYPE_GLOBAL, 0,
-                             0, NULL);
+                             INT32_MIN, NULL);
 }
 
 int64_t
@@ -573,7 +782,7 @@ fmap_fsw_extend_fitting_core(uint8_t *seq, int32_t len,
   return fmap_fsw_stdaln_aux(seq, len, flow, base_calls, flowgram, num_flows,
                              key_index, key_bases,
                              ap, path, path_len, FMAP_SW_TYPE_EXTEND_FITTING, prev_score,
-                             0, NULL);
+                             INT32_MIN, NULL);
 }
 
 int64_t
@@ -586,7 +795,7 @@ fmap_fsw_fitting_core(uint8_t *seq, int32_t len,
   return fmap_fsw_stdaln_aux(seq, len, flow, base_calls, flowgram, num_flows,
                              key_index, key_bases,
                              ap, path, path_len, FMAP_SW_TYPE_FITTING, 0,
-                             0, NULL);
+                             INT32_MIN, NULL);
 }
 
 uint32_t *
@@ -624,6 +833,66 @@ fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_ci
   return cigar;
 }
 
+void 
+fmap_fsw_print_aln(int64_t score, fmap_fsw_path_t *path, int32_t path_len,
+                        uint8_t *flow, uint8_t *target)
+{
+  int32_t i;
+
+  fprintf(stderr, "score=%lld\n", (long long int)score);
+  // ref
+  fprintf(stderr, "REF:  ");
+  for(i=path_len-1;0<=i;i--) {
+      if(FMAP_FSW_FROM_M == path[i].ctype 
+         || FMAP_FSW_FROM_D == path[i].ctype
+         || FMAP_FSW_FROM_HP_PLUS == path[i].ctype) {
+          fputc("ACGTN"[target[path[i].j]], stderr);
+      }
+      else {
+          fputc('-', stderr);
+      }
+  }
+  fputc('\n', stderr);
+  // alignment string
+  fprintf(stderr, "      ");
+  for(i=path_len-1;0<=i;i--) {
+      switch(path[i].ctype) {
+        case FMAP_FSW_FROM_M:
+          if(flow[path[i].i & 3] == target[path[i].j]) {
+              fputc('|', stderr); break;
+          }
+          else { 
+              fputc(' ', stderr); break;
+          }
+        case FMAP_FSW_FROM_I:
+          fputc('+', stderr); break;
+        case FMAP_FSW_FROM_D:
+          fputc('-', stderr); break;
+        case FMAP_FSW_FROM_HP_PLUS: // overcall
+          fputc('h', stderr); break;
+        case FMAP_FSW_FROM_HP_MINUS: // undercall
+          fputc('H', stderr); break;
+        default:
+          fputc(' ', stderr); break;
+      }
+  }
+  fputc('\n', stderr);
+  // read
+  fprintf(stderr, "READ: ");
+  for(i=path_len-1;0<=i;i--) {
+      if(FMAP_FSW_FROM_M == path[i].ctype 
+         || FMAP_FSW_FROM_I == path[i].ctype
+         || FMAP_FSW_FROM_HP_MINUS == path[i].ctype) {
+          fputc("ACGT"[flow[path[i].i & 3]], stderr);
+      }
+      else {
+          fputc('-', stderr);
+      }
+  }
+  fputc('\n', stderr);
+  fputc('\n', stderr);
+}
+
 typedef struct {
     char *flow;
     char *base_calls;
@@ -650,7 +919,7 @@ fmap_fsw_main_opt_init()
   opt->param.gap_open = 13*100;
   opt->param.gap_ext = 2*100;
   opt->param.gap_end = 2*100;
-  opt->param.matrix = fmap_fsw_sm_short;
+  opt->param.matrix = fmap_fsw_sm_short; // 11*100 - match, -19*100 - mismatch
   opt->param.fscore = 26*100; // set this to score_match + gap_open + gap_ext
   opt->param.offset = 0;
   opt->param.row = 5;
@@ -858,65 +1127,27 @@ int fmap_fsw_main(int argc, char *argv[])
 
   // convert the target to 2-bit format 
   for(i=0;i<opt->target_length;i++) {
-      opt->target[i] = nt_char_to_int[(int)opt->target[i]];
+      opt->target[i] = fmap_nt_char_to_int[(int)opt->target[i]];
   }
 
-  for(i=0;i<5;i++) {
-      flow[i] = nt_char_to_int[(int)opt->flow[i]];
+  for(i=0;i<4;i++) {
+      flow[i] = fmap_nt_char_to_int[(int)opt->flow[i]];
   }
 
-  path = fmap_malloc(sizeof(fmap_fsw_path_t)*(1 + opt->target_length * (num_flows + 1) * (1 + opt->param.offset)), "path");
+  path = fmap_malloc(sizeof(fmap_fsw_path_t)*FMAP_FSW_MAX_PATH_LENGTH(opt->target_length, num_flows, opt->param.offset), "path");
 
+  // align
   int64_t score = fmap_fsw_global_core((uint8_t*)opt->target, opt->target_length,
                                        flow, base_calls, flowgram, num_flows, 
                                        -1, 0,
                                        &opt->param,
                                        path, &path_len);
 
-  fprintf(stderr, "score=%lld path_len=%d\n", (long long int)score, path_len);
-  // ref
-  fprintf(stderr, "REF:  ");
-  for(i=path_len-1;0<=i;i--) {
-      if(FMAP_FSW_FROM_M == path[i].ctype || FMAP_FSW_FROM_D == path[i].ctype) {
-          fputc("ACGTN"[(int)opt->target[path[i].j]], stderr);
-      }
-      else {
-          fputc(' ', stderr);
-      }
-  }
-  fputc('\n', stderr);
-  // alignment string
-  fprintf(stderr, "      ");
-  for(i=path_len-1;0<=i;i--) {
-      switch(path[i].ctype) {
-        case FMAP_FSW_FROM_M:
-          if(toupper(opt->flow[path[i].i & 3]) == "ACGT"[(int)opt->target[path[i].j]]) {
-              fputc('|', stderr); break;
-          }
-          else { 
-              fputc(' ', stderr); break;
-          }
-        case FMAP_FSW_FROM_I:
-          fputc('+', stderr); break;
-        case FMAP_FSW_FROM_D:
-          fputc('-', stderr); break;
-        default:
-          fputc(' ', stderr); break;
-      }
-  }
-  fputc('\n', stderr);
-  // read
-  fprintf(stderr, "READ: ");
-  for(i=path_len-1;0<=i;i--) {
-      if(FMAP_FSW_FROM_M == path[i].ctype || FMAP_FSW_FROM_I == path[i].ctype) {
-          fputc(opt->flow[path[i].i & 3], stderr);
-      }
-      else {
-          fputc(' ', stderr);
-      }
-  }
-  fputc('\n', stderr);
+  // print
+  fmap_fsw_print_aln(score, path, path_len,
+                     flow, (uint8_t*)opt->target);
 
+  // destroy memory
   fmap_fsw_main_opt_destroy(opt);
   free(flowgram);
   free(base_calls);

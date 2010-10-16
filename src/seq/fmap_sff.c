@@ -390,7 +390,7 @@ fmap_sff_to_int(fmap_sff_t *sff)
   int32_t i;
   if(1 == sff->is_int) return;
   for(i=0;i<sff->read->bases->l;i++) {
-      sff->read->bases->s[i] = nt_char_to_int[(int)sff->read->bases->s[i]];
+      sff->read->bases->s[i] = fmap_nt_char_to_int[(int)sff->read->bases->s[i]];
   }
   sff->is_int = 1;
 }

@@ -97,7 +97,7 @@ fmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
 
       // fill the buffer
       for(i=0;i<l;i++) {
-          int c = nt_char_to_int[(int)seq->data.fq->seq->s[i]];
+          int c = fmap_nt_char_to_int[(int)seq->data.fq->seq->s[i]];
           if(4 <= c) c = lrand48() & 0x3; // random base
           if(buffer_length == (FMAP_REFSEQ_BUFFER_SIZE << 2)) { // 2-bit
               if(fmap_refseq_seq_memory(buffer_length) != fmap_file_fwrite(buffer, sizeof(uint8_t), fmap_refseq_seq_memory(buffer_length), fp_pac)) {

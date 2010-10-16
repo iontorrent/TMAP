@@ -6,29 +6,33 @@
 
 #define FMAP_FSW_SET_SCORE_INF(s) (s).match_score = (s).ins_score = (s).del_score = FMAP_SW_MINOR_INF
 #define FMAP_FSW_SET_FROM(s, from) (s).match_from = (s).ins_from = (s).del_from = from 
-#define FMAP_FSW_SET_OFFSET(s, offset) (s).match_offset = (s).ins_offset = (s).del_offset = offset
-#define FMAP_FSW_INIT_CELL(s, offset, from) (FMAP_FSW_SET_FROM(s, from), FMAP_FSW_SET_OFFSET(s, offset))
+#define FMAP_FSW_SET_BC(s, bc) (s).match_bc = (s).ins_bc = (s).del_bc = bc
+#define FMAP_FSW_INIT_CELL(s) (FMAP_FSW_SET_FROM(s,FMAP_FSW_FROM_S), FMAP_FSW_SET_BC(s, 0))
+
+#define FMAP_FSW_MAX_PATH_LENGTH(ref_len, flow_len, offset) ((1 + (ref_len * (flow_len + 1) * (offset + 1))))
 
 /*!
  *   From which cell; helps recovert the best scoring path.
  *     */
 enum {
-    FMAP_FSW_FROM_M = 0, /*!< from a mismatch cell*/
+    FMAP_FSW_FROM_M = 0, /*!< from a match/mismatch cell*/
     FMAP_FSW_FROM_I = 1, /*!< from an insertion cell */
     FMAP_FSW_FROM_D = 2, /*!< from a deletion cell */
-    FMAP_FSW_FROM_S = 3  /*!< from a start cell */
+    FMAP_FSW_FROM_S = 3, /*!< from a start cell */
+    FMAP_FSW_FROM_HP_PLUS = 4, /*!< from a match/mismatch cell, but a hp overcall error */
+    FMAP_FSW_FROM_HP_MINUS = 5 /*!< from a match/mismatch cell, but a hp undercall error */
 };
 
 /*!
   @details  the valid offset in this implementation is only +-7
   */
 typedef struct {
-    uint8_t match_from:2; /*!< from cell for match */
-    uint8_t match_offset:6; /*!< the difference between the original base call and the aligned base call, shifted by the offset*/
-    uint8_t ins_from:2; /*!< from cell for insertion */
-    uint8_t ins_offset:6; /*!< the difference between the original base call and the aligned base call, shifted by the offset*/
-    uint8_t del_from:2; /*!< from cell for deletion */
-    uint8_t del_offset:6; /*!< the difference between the original base call and the aligned base call, shifted by the offset*/
+    uint8_t match_bc; /*!< the base call for a match */
+    uint8_t match_from; /*!< the from cell in the lower 2 bits, and the column offset in the upper 6 bits */
+    uint8_t ins_bc; /*!< the base call for a insertion */
+    uint8_t ins_from; /*!< the from cell in the lower 2 bits, and the column offset in the upper 6 bits */
+    uint8_t del_bc; /*!< the base call for a deletion */
+    uint8_t del_from; /*!< the from cell in the lower 2 bits, and the column offset in the upper 6 bits */
 } fmap_fsw_dpcell_t;
 
 /*!
@@ -83,6 +87,9 @@ typedef struct
    @param  score_last   the last score row in the DP matrix
    @param  dpcell_curr  the current cell row in the DP matrix
    @param  score_curr   the current score row in the DP matrix
+   @param  path         the sub-alignment path, NULL if not required
+   @param  path_len     the returned sub-alignment path length, 0 if path is NULL
+   @param  best_ctype   the sub-cell from which to backtrace if path is not NULL
    @param  key_bases    the number of key bases that are part of this flow
    @param  type         the Smith-Waterman type (global, local, extend)
    @details             this assumes that the ap parameter scores have been multiplied by 100; only include non-key flows
@@ -97,6 +104,7 @@ fmap_fsw_sub_core(uint8_t *seq, int32_t len,
                   fmap_fsw_dpscore_t *score_last,
                   fmap_fsw_dpcell_t *dpcell_curr,
                   fmap_fsw_dpscore_t *score_curr,
+                  fmap_fsw_path_t *path, int32_t *path_len, int32_t best_ctype,
                   uint8_t key_bases,
                   int32_t type);
 
@@ -170,7 +178,7 @@ fmap_fsw_extend_core(uint8_t *seq, int32_t len,
                      uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram, int32_t num_flows,
                      int32_t key_index, int32_t key_bases,
                      const fmap_fsw_param_t *ap,
-                     fmap_fsw_path_t *path, int32_t *path_len,
+                     fmap_fsw_path_t *path, int32_t *path_len, 
                      int32_t prev_score);
 
 /*
@@ -195,7 +203,7 @@ fmap_fsw_extend_fitting_core(uint8_t *seq, int32_t len,
                      uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram, int32_t num_flows,
                      int32_t key_index, int32_t key_bases,
                      const fmap_fsw_param_t *ap,
-                     fmap_fsw_path_t *path, int32_t *path_len,
+                     fmap_fsw_path_t *path, int32_t *path_len, 
                      int32_t prev_score);
 
 /*
@@ -229,7 +237,19 @@ fmap_fsw_fitting_core(uint8_t *seq, int32_t len,
   @return           the cigar array, NULL if the path is NULL or the path length is zero 
   */
 uint32_t *
-emap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_cigar);
+fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_cigar);
+
+/*!
+  Pretty-prints an alignment
+  @param  score     the flow space alignment score
+  @param  path      the alignment path
+  @param  path_len  the alignment path length
+  @param  flow       for each of the four flows, the 2-bit DNA base flowed
+  @param  target    the 2-bit DNA reference sequence 
+  */
+void 
+fmap_fsw_print_aln(int64_t score, fmap_fsw_path_t *path, int32_t path_len,
+                                                uint8_t *flow, uint8_t *target);
 
 /*! 
   main-like function for 'fmap fsw'

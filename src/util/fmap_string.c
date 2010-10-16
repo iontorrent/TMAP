@@ -110,11 +110,11 @@ fmap_string_reverse_compliment(fmap_string_t *str, int32_t is_int)
   else { // bases are ASCII values
       for(i = 0; i < (str->l >> 1); ++i) {
           char tmp = str->s[str->l-1-i];
-          str->s[str->l-1-i] = nt_char_to_rc_char[(int)str->s[i]]; 
-          str->s[i] = nt_char_to_rc_char[(int)tmp];
+          str->s[str->l-1-i] = fmap_nt_char_to_rc_char[(int)str->s[i]]; 
+          str->s[i] = fmap_nt_char_to_rc_char[(int)tmp];
       }
       if(1 == (str->l & 1)) { // mod 2
-          str->s[i] = nt_char_to_rc_char[(int)str->s[i]];
+          str->s[i] = fmap_nt_char_to_rc_char[(int)str->s[i]];
       }
   }
 }

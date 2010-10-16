@@ -91,12 +91,12 @@ enum {
 /*! @var  nt_char_to_int
   @details  converts a DNA base in ASCII format to its 2-bit format [0-4]. 
   */
-extern uint8_t nt_char_to_int[256];
+extern uint8_t fmap_nt_char_to_int[256];
 
 /*! @var  nt_char_to_rc_char
   @details  converts a DNA base in ASCII format to reverse compliment in ASCII format.
   */
-extern uint8_t nt_char_to_rc_char[256];
+extern uint8_t fmap_nt_char_to_rc_char[256];
 
 /*! 
   @param  c  the quality value in ASCII format

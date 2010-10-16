@@ -7,7 +7,7 @@
 
 // Input: ASCII character
 // Output: 2-bit DNA value
-uint8_t nt_char_to_int[256] = {
+uint8_t fmap_nt_char_to_int[256] = {
     4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
     4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
     4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
@@ -28,7 +28,7 @@ uint8_t nt_char_to_int[256] = {
 
 // Input: ASCII character
 // Output: ASCII reverse complimented DNA value
-uint8_t nt_char_to_rc_char[256] = {
+uint8_t fmap_nt_char_to_rc_char[256] = {
     'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
     'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
     'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',

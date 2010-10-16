@@ -57,7 +57,7 @@ fmap_fq_to_int(fmap_fq_t *fq)
   int i;
   if(1 == fq->is_int) return;
   for(i=0;i<fq->seq->l;i++) {
-      fq->seq->s[i] = nt_char_to_int[(int)fq->seq->s[i]];
+      fq->seq->s[i] = fmap_nt_char_to_int[(int)fq->seq->s[i]];
   }
   fq->is_int = 1;
 }

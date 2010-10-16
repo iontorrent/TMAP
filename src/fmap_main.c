@@ -39,7 +39,7 @@ static int usage()
   fprintf(stderr, "         bwt2sa         creates the SA file from the BWT string file\n");
   fprintf(stderr, "         sff2fq         converts a SFF file to a FASTQ file\n");
 #ifdef HAVE_SAMTOOLS
-  fprintf(stderr, "         sfferr         creates an error profile frm an sff file and sam file\n");
+  fprintf(stderr, "         sam2fs         pretty print SAM records in flow space\n");
 #endif
   fprintf(stderr, "\n");
   fprintf(stderr, "Debugging:\n");
@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
       else if (0 == strcmp("bwt2sa", argv[1])) ret = fmap_sa_bwt2sa_main(argc-1, argv+1);
       else if (0 == strcmp("sff2fq", argv[1])) ret = fmap_seq_io_sff2fq_main(argc-1, argv+1);
 #ifdef HAVE_SAMTOOLS
-      else if (0 == strcmp("sfferr", argv[1])) ret = fmap_sfferr_main(argc-1, argv+1);
+      else if (0 == strcmp("sam2fs", argv[1])) ret = fmap_sam2fs_main(argc-1, argv+1);
 #endif
       else if (0 == strcmp("exact", argv[1])) ret = fmap_debug_exact(argc-1, argv+1);
       else if (0 == strcmp("fsw", argv[1])) ret = fmap_fsw_main(argc-1, argv+1);
