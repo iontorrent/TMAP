@@ -369,13 +369,13 @@ fmap_sam2fs_main(int argc, char *argv[])
       }
   }
 
-
   if(argc != optind+1 || 1 == argc) {
       return usage(flow_order, flow_score, flow_offset);
   }
   else { // check command line options
       fmap_error_cmd_check_int(flow_score, 0, INT32_MAX, "-F");
       fmap_error_cmd_check_int(flow_offset, 0, INT32_MAX, "-o");
+      fmap_error_cmd_check_int((int)strlen(flow_order), 4, 4, "-f");
   }
 
   fmap_sam2fs_core(argv[optind], sam_open_flags, flow_order, flow_score, flow_offset);
