@@ -452,7 +452,7 @@ fmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *fl
           }
       }
       else {
-          while(sub_path_mem < col_offset + ap->offset + 1) { // more memory please
+          while(sub_path_mem < j + ap->offset + 1) { // more memory please
               sub_path_mem = (0 == sub_path_mem) ? 4 : (sub_path_mem << 1);
               sub_path = fmap_realloc(sub_path, sizeof(fmap_fsw_path_t) * sub_path_mem, "sub_path"); 
           } 
@@ -835,7 +835,7 @@ fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_ci
 
 void
 fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
-                 uint8_t *flow, uint8_t *target,
+                 uint8_t *flow, uint8_t *target, uint8_t strand,
                  char **ref, char **read, char **aln)
 {
   int32_t i, j;
@@ -894,15 +894,25 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
       }
   }
   (*read)[path_len] = '\0';
+
+  if(1 == strand) {
+      for(i=0;i<(path_len>>1);i++) {
+          char tmp;
+
+          tmp = (*ref)[i]; (*ref)[i] = (*ref)[path_len-i-1]; (*ref)[path_len-i-1] = tmp;
+          tmp = (*read)[i]; (*read)[i] = (*read)[path_len-i-1]; (*read)[path_len-i-1] = tmp;
+          tmp = (*aln)[i]; (*aln)[i] = (*aln)[path_len-i-1]; (*aln)[path_len-i-1] = tmp;
+      }
+  }
 }
 
 void 
 fmap_fsw_print_aln(int64_t score, fmap_fsw_path_t *path, int32_t path_len,
-                        uint8_t *flow, uint8_t *target)
+                        uint8_t *flow, uint8_t *target, uint8_t strand)
 {
   char *ref=NULL, *read=NULL, *aln=NULL;
 
-  fmap_fsw_get_aln(path, path_len, flow, target, &ref, &read, &aln);
+  fmap_fsw_get_aln(path, path_len, flow, target, strand, &ref, &read, &aln);
   
   fprintf(stderr, "score=%lld\n", (long long int)score);
   fprintf(stderr, "REF:  %s\n", ref);
@@ -1167,7 +1177,7 @@ int fmap_fsw_main(int argc, char *argv[])
 
   // print
   fmap_fsw_print_aln(score, path, path_len,
-                     flow, (uint8_t*)opt->target);
+                     flow, (uint8_t*)opt->target, 0);
 
   // destroy memory
   fmap_fsw_main_opt_destroy(opt);

@@ -150,11 +150,11 @@ fmap_fsw_global_core(uint8_t *seq, int32_t len,
    */
 int64_t
 fmap_fsw_local_core(uint8_t *seq, int32_t len,
-                     uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram, int32_t num_flows,
-                     int32_t key_index, int32_t key_bases,
-                     const fmap_fsw_param_t *ap,
-                     fmap_fsw_path_t *path, int32_t *path_len,
-                     int32_t _thres, int32_t *_subo);
+                    uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram, int32_t num_flows,
+                    int32_t key_index, int32_t key_bases,
+                    const fmap_fsw_param_t *ap,
+                    fmap_fsw_path_t *path, int32_t *path_len,
+                    int32_t _thres, int32_t *_subo);
 
 /*
    Performs flow-space Smith-Waterman alignment extension
@@ -200,11 +200,11 @@ fmap_fsw_extend_core(uint8_t *seq, int32_t len,
    */
 int64_t
 fmap_fsw_extend_fitting_core(uint8_t *seq, int32_t len,
-                     uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram, int32_t num_flows,
-                     int32_t key_index, int32_t key_bases,
-                     const fmap_fsw_param_t *ap,
-                     fmap_fsw_path_t *path, int32_t *path_len, 
-                     int32_t prev_score);
+                             uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram, int32_t num_flows,
+                             int32_t key_index, int32_t key_bases,
+                             const fmap_fsw_param_t *ap,
+                             fmap_fsw_path_t *path, int32_t *path_len, 
+                             int32_t prev_score);
 
 /*
    Performs flow-space Smith-Waterman alignment and aligns the entire flowgram
@@ -224,10 +224,10 @@ fmap_fsw_extend_fitting_core(uint8_t *seq, int32_t len,
    */
 int64_t
 fmap_fsw_fitting_core(uint8_t *seq, int32_t len,
-                     uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram, int32_t num_flows,
-                     int32_t key_index, int32_t key_bases,
-                     const fmap_fsw_param_t *ap,
-                     fmap_fsw_path_t *path, int32_t *path_len);
+                      uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram, int32_t num_flows,
+                      int32_t key_index, int32_t key_bases,
+                      const fmap_fsw_param_t *ap,
+                      fmap_fsw_path_t *path, int32_t *path_len);
 
 /*!
   Creates a cigar array from an alignment path
@@ -245,13 +245,14 @@ fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_ci
   @param  path_len  the alignment path length
   @param  flow       for each of the four flows, the 2-bit DNA base flowed
   @param  target    the 2-bit DNA reference sequence 
+  @param  strand    0 for the forward strand, 1 for the reverse
   @param  ref       pointer to the returned reference string
   @param  read      pointer to the returned read string
   @param  aln       pointer to the returned alignment string
   */
 void
 fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
-                 uint8_t *flow, uint8_t *target,
+                 uint8_t *flow, uint8_t *target, uint8_t strand,
                  char **ref, char **read, char **aln);
 
 /*!
@@ -261,10 +262,11 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
   @param  path_len  the alignment path length
   @param  flow       for each of the four flows, the 2-bit DNA base flowed
   @param  target    the 2-bit DNA reference sequence 
+  @param  strand    0 for the forward strand, 1 for the reverse
   */
 void 
 fmap_fsw_print_aln(int64_t score, fmap_fsw_path_t *path, int32_t path_len,
-                                                uint8_t *flow, uint8_t *target);
+                   uint8_t *flow, uint8_t *target, uint8_t strand);
 
 /*! 
   main-like function for 'fmap fsw'
