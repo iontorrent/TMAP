@@ -833,64 +833,86 @@ fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_ci
   return cigar;
 }
 
+void
+fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
+                 uint8_t *flow, uint8_t *target,
+                 char **ref, char **read, char **aln)
+{
+  int32_t i, j;
+
+  (*ref) = fmap_malloc(sizeof(char) * (1 + path_len), "(*ref)");
+  (*read) = fmap_malloc(sizeof(char) * (1 + path_len), "(*read)");
+  (*aln) = fmap_malloc(sizeof(char) * (1 + path_len), "(*aln)");
+
+  // ref
+  for(i=path_len-1,j=0;0<=i;i--,j++) {
+      if(FMAP_FSW_FROM_M == path[i].ctype 
+         || FMAP_FSW_FROM_D == path[i].ctype
+         || FMAP_FSW_FROM_HP_PLUS == path[i].ctype) {
+          (*ref)[j] = "ACGTN"[target[path[i].j]];
+      }
+      else {
+          (*ref)[j] = '-';
+      }
+  }
+  (*ref)[path_len] = '\0';
+
+  // alignment string
+  for(i=path_len-1,j=0;0<=i;i--,j++) {
+      switch(path[i].ctype) {
+        case FMAP_FSW_FROM_M:
+          if(flow[path[i].i & 3] == target[path[i].j]) {
+              (*aln)[j] = '|';
+          }
+          else { 
+              (*aln)[j] = ' ';
+          }
+          break;
+        case FMAP_FSW_FROM_I:
+          (*aln)[j] = '+'; break;
+        case FMAP_FSW_FROM_D:
+          (*aln)[j] = '-'; break;
+        case FMAP_FSW_FROM_HP_PLUS: // overcall
+          (*aln)[j] = 'h'; break;
+        case FMAP_FSW_FROM_HP_MINUS: // undercall
+          (*aln)[j] = 'H'; break;
+        default:
+          (*aln)[j] = ' '; break;
+      }
+  }
+  (*aln)[path_len] = '\0';
+
+  // read
+  for(i=path_len-1,j=0;0<=i;i--,j++) {
+      if(FMAP_FSW_FROM_M == path[i].ctype 
+         || FMAP_FSW_FROM_I == path[i].ctype
+         || FMAP_FSW_FROM_HP_MINUS == path[i].ctype) {
+          (*read)[j] = "ACGTN"[flow[path[i].i & 3]];
+      }
+      else {
+          (*read)[j] = '-';
+      }
+  }
+  (*read)[path_len] = '\0';
+}
+
 void 
 fmap_fsw_print_aln(int64_t score, fmap_fsw_path_t *path, int32_t path_len,
                         uint8_t *flow, uint8_t *target)
 {
-  int32_t i;
+  char *ref=NULL, *read=NULL, *aln=NULL;
 
+  fmap_fsw_get_aln(path, path_len, flow, target, &ref, &read, &aln);
+  
   fprintf(stderr, "score=%lld\n", (long long int)score);
-  // ref
-  fprintf(stderr, "REF:  ");
-  for(i=path_len-1;0<=i;i--) {
-      if(FMAP_FSW_FROM_M == path[i].ctype 
-         || FMAP_FSW_FROM_D == path[i].ctype
-         || FMAP_FSW_FROM_HP_PLUS == path[i].ctype) {
-          fputc("ACGTN"[target[path[i].j]], stderr);
-      }
-      else {
-          fputc('-', stderr);
-      }
-  }
+  fprintf(stderr, "REF:  %s\n", ref);
+  fprintf(stderr, "      %s\n", aln);
+  fprintf(stderr, "READ: %s\n", read);
   fputc('\n', stderr);
-  // alignment string
-  fprintf(stderr, "      ");
-  for(i=path_len-1;0<=i;i--) {
-      switch(path[i].ctype) {
-        case FMAP_FSW_FROM_M:
-          if(flow[path[i].i & 3] == target[path[i].j]) {
-              fputc('|', stderr); break;
-          }
-          else { 
-              fputc(' ', stderr); break;
-          }
-        case FMAP_FSW_FROM_I:
-          fputc('+', stderr); break;
-        case FMAP_FSW_FROM_D:
-          fputc('-', stderr); break;
-        case FMAP_FSW_FROM_HP_PLUS: // overcall
-          fputc('h', stderr); break;
-        case FMAP_FSW_FROM_HP_MINUS: // undercall
-          fputc('H', stderr); break;
-        default:
-          fputc(' ', stderr); break;
-      }
-  }
-  fputc('\n', stderr);
-  // read
-  fprintf(stderr, "READ: ");
-  for(i=path_len-1;0<=i;i--) {
-      if(FMAP_FSW_FROM_M == path[i].ctype 
-         || FMAP_FSW_FROM_I == path[i].ctype
-         || FMAP_FSW_FROM_HP_MINUS == path[i].ctype) {
-          fputc("ACGT"[flow[path[i].i & 3]], stderr);
-      }
-      else {
-          fputc('-', stderr);
-      }
-  }
-  fputc('\n', stderr);
-  fputc('\n', stderr);
+
+  free(ref);
+  free(read);
+  free(aln);
 }
 
 typedef struct {

@@ -30,32 +30,6 @@ extern int32_t fmap_fsw_sm_short[];
 #define FMAP_SAM2FS_FLOW_SNP 'S'
 #define FMAP_SAM2FS_FLOW_PAD ' '
 
-static inline void
-fmap_sam2fs_add_padding(char read_base, char *flow_order, int32_t *flow_j, 
-                        uint8_t **read_flowgram, uint8_t **ref_flowgram, uint8_t **aln_flowgram, 
-                        int32_t * flow_len, int32_t * flow_mem,
-                        uint8_t aln_pad)
-{
-  int32_t k, padding = 0;
-
-  while(flow_order[(*flow_j)] != read_base) {
-      (*flow_j) = ((*flow_j)+1) & 0x3;
-      padding++;
-      if(4 <= padding) fmap_error("bug encountered", Exit, OutOfRange);
-  }
-  while((*flow_mem) <= (*flow_len) + padding + 1) { // padding 
-      (*flow_mem) <<= 1;
-      (*read_flowgram) = fmap_realloc((*read_flowgram), sizeof(uint8_t)*(*flow_mem), "read_flowgram");
-      (*ref_flowgram) = fmap_realloc((*ref_flowgram), sizeof(uint8_t)*(*flow_mem), "ref_flowgram");
-      (*aln_flowgram) = fmap_realloc((*aln_flowgram), sizeof(uint8_t)*(*flow_mem), "aln_flowgram");
-  }
-  for(k=0;k<padding;k++) {
-      (*read_flowgram)[(*flow_len)+k] = (*ref_flowgram)[(*flow_len)+k] = 0;
-      (*aln_flowgram)[(*flow_len)+k] = aln_pad;
-  }
-  (*flow_len) += padding;
-}
-
 static inline int32_t
 fmap_sam2fs_is_DNA(char c)
 {
@@ -71,8 +45,9 @@ fmap_sam2fs_is_DNA(char c)
   }
 }
 
-static void 
-fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_offset)
+void 
+fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_offset,
+                char **ref, char **read, char **aln)
 {
   int32_t i, j, k, l;
 
@@ -282,12 +257,16 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
 
   // re-align 
   score = fmap_fsw_global_core((uint8_t*)ref_bases, ref_bases_len,
-                       flow_order_tmp, base_calls, flowgram, flow_len,
-                       -1, 0,
-                       &param, path, &path_len);
+                               flow_order_tmp, base_calls, flowgram, flow_len,
+                               -1, 0,
+                               &param, path, &path_len);
 
-  // print
-  fmap_fsw_print_aln(score, path, path_len, flow_order_tmp, (uint8_t*)ref_bases);
+  if(NULL == ref || NULL == read || NULL == aln) {
+      fmap_fsw_print_aln(score, path, path_len, flow_order_tmp, (uint8_t*)ref_bases);
+  }
+  else {
+      fmap_fsw_get_aln(path, path_len, flow_order_tmp, (uint8_t*)ref_bases, ref, read, aln);
+  }
 
   // free memory
   free(path);
@@ -326,9 +305,9 @@ fmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, char *flow_order
   fp_in = samopen(fn_in, sam_open_flags, 0);
 
   b = bam_init1();
-  while(0 < samread(fp_in, b)) {
-      // process
-      fmap_sam2fs_aux(b, flow_order, flow_score, flow_offset);
+  while(0 < samread(fp_in, b)) { 
+      // process 
+      fmap_sam2fs_aux(b, flow_order, flow_score, flow_offset, NULL, NULL, NULL);
       // destroy the bam
       bam_destroy1(b);
       // reinitialize

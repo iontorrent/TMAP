@@ -24,7 +24,7 @@ enum {
 };
 
 /*!
-  @details  the valid offset in this implementation is only +-7
+  The path for the current cell
   */
 typedef struct {
     uint8_t match_bc; /*!< the base call for a match */
@@ -238,6 +238,21 @@ fmap_fsw_fitting_core(uint8_t *seq, int32_t len,
   */
 uint32_t *
 fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_cigar);
+
+/*!
+  Gets the pretty-print alignment
+  @param  path      the alignment path
+  @param  path_len  the alignment path length
+  @param  flow       for each of the four flows, the 2-bit DNA base flowed
+  @param  target    the 2-bit DNA reference sequence 
+  @param  ref       pointer to the returned reference string
+  @param  read      pointer to the returned read string
+  @param  aln       pointer to the returned alignment string
+  */
+void
+fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
+                 uint8_t *flow, uint8_t *target,
+                 char **ref, char **read, char **aln);
 
 /*!
   Pretty-prints an alignment
