@@ -264,11 +264,11 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
   if(NULL == ref || NULL == read || NULL == aln) {
       fmap_fsw_print_aln(score, path, path_len, flow_order_tmp, 
                         (uint8_t*)ref_bases,
-                        (BAM_FREVERSE & bam->core.flag));
+                        (BAM_FREVERSE & bam->core.flag) ? 1 : 0);
   }
   else {
       fmap_fsw_get_aln(path, path_len, flow_order_tmp, 
-                       (uint8_t*)ref_bases, (BAM_FREVERSE & bam->core.flag),
+                       (uint8_t*)ref_bases, (BAM_FREVERSE & bam->core.flag) ? 1 : 0,
                        ref, read, aln);
   }
 

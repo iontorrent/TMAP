@@ -898,7 +898,6 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
   if(1 == strand) {
       for(i=0;i<(path_len>>1);i++) {
           char tmp;
-
           tmp = (*ref)[i]; (*ref)[i] = (*ref)[path_len-i-1]; (*ref)[path_len-i-1] = tmp;
           tmp = (*read)[i]; (*read)[i] = (*read)[path_len-i-1]; (*read)[path_len-i-1] = tmp;
           tmp = (*aln)[i]; (*aln)[i] = (*aln)[path_len-i-1]; (*aln)[path_len-i-1] = tmp;
