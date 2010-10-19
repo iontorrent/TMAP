@@ -119,8 +119,7 @@ fmap_map2_core_remove_duplicate(fmap_map2_entry_t *u, fmap_hash_t(64) *hash)
 // merge two entries
 static void 
 fmap_map2_core_merge_entry(const fmap_map2_opt_t * __restrict opt, 
-                           fmap_map2_entry_t *u, fmap_map2_entry_t *v, 
-                           fmap_map2_aln_t *b)
+                           fmap_map2_entry_t *u, fmap_map2_entry_t *v)
 {
   int32_t i;
   if(u->n + v->n >= u->max) {
@@ -366,7 +365,7 @@ fmap_map2_core_aln(const fmap_map2_opt_t *opt, const fmap_bwtl_t *target,
                       if(w->n < u->n) { // swap
                           w = u; u = fmap_vec_A(stack->pending, pos-1); fmap_vec_A(stack->pending, pos-1) = w;
                       }
-                      fmap_map2_core_merge_entry(opt, w, u, b);
+                      fmap_map2_core_merge_entry(opt, w, u);
                   }
                   if(cnt == 0) { // move from pending to stack0
                       fmap_map2_core_remove_duplicate(w, rhash);
@@ -394,8 +393,8 @@ fmap_map2_core_aln(const fmap_map2_opt_t *opt, const fmap_bwtl_t *target,
       } // ~for(tj)
       fmap_map2_mempool_push(stack->pool, v);
   } // while(top)
-  fmap_map2_aux_resolve_duphits(query_bwt, query_sa, b, opt->max_seed_intv);
-  fmap_map2_aux_resolve_duphits(query_bwt, query_sa, b1, opt->max_seed_intv);
+  fmap_map2_aux_resolve_duphits(query_bwt, query_sa, b, opt->max_seed_intv, 0);
+  fmap_map2_aux_resolve_duphits(query_bwt, query_sa, b1, opt->max_seed_intv, 0);
   // free
   free(heap);
   fmap_hash_destroy(64, rhash);

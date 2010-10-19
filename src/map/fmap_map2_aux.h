@@ -76,13 +76,15 @@ fmap_map2_aln_destroy(fmap_map2_aln_t *a);
 
 /*! 
   resolves duplicate hits
-  @param  bwt  pointer to the bwt structure
-  @param  sa   pointer to the suffix array
-  @param  b    pointer to the alignment
-  @param  IS   the maximum occurrence interval for seeding
+  @param  bwt     pointer to the bwt structure
+  @param  sa      pointer to the suffix array
+  @param  b       pointer to the alignment
+  @param  IS      the maximum occurrence interval for seeding
+  @param  min_as  the minimum alignment score to accept a hit
   */ 
 int32_t
-fmap_map2_aux_resolve_duphits(const fmap_bwt_t *bwt, const fmap_sa_t *sa, fmap_map2_aln_t *b, int32_t IS);
+fmap_map2_aux_resolve_duphits(const fmap_bwt_t *bwt, const fmap_sa_t *sa, fmap_map2_aln_t *b, 
+                              int32_t IS, int32_t min_as);
 
 /*! 
   initializes a container for sam entries
