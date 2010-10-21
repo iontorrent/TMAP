@@ -234,7 +234,7 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
               score_subo = INT32_MIN;
           }
 
-          if(0 < score && 0 < path_len) {
+          if(0 < path_len) {
               fmap_map3_hit_t *hit;
 
               aln->n++;
@@ -244,12 +244,7 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
               hit = &aln->hits[aln->n-1]; // for easy of writing code
               hit->strand = i;
               hit->seqid = hits[i][start].seqid; 
-              if(0 == opt->aln_global) {
-                  hit->pos = (ref_start-1) + (path[path_len-1].i-1); // zero-based 
-              }
-              else {
-                  hit->pos = (ref_start-1) + path[path_len-1].i; // zero-based 
-              }
+              hit->pos = (ref_start-1) + (path[path_len-1].i-1); // zero-based 
               hit->score = score;
               hit->score_subo = score_subo;
               hit->n_seeds = ((1 << 15) < end - start + 1) ? (1 << 15) : (end - start + 1);
