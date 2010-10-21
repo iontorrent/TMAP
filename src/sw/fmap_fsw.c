@@ -103,7 +103,7 @@ fmap_fsw_set_del(fmap_fsw_dpcell_t **dpcell, fmap_fsw_dpscore_t **dpscore,
       dpcell[i][j].del_bc = dpcell[i][j-1].match_bc;
       dpscore[i][j].del_score = dpscore[i][j-1].match_score - gap_open - gap_ext;
   } else {
-      if(1 == sub_path) dpcell[i][j].del_from = FMAP_FSW_FROM_I | 4;
+      if(1 == sub_path) dpcell[i][j].del_from = FMAP_FSW_FROM_D | 4;
       else dpcell[i][j].del_from = 4 + dpcell[i][j-1].del_from;
       dpcell[i][j].del_bc = dpcell[i][j-1].del_bc;
       dpscore[i][j].del_score = dpscore[i][j-1].del_score - gap_ext;
@@ -317,7 +317,6 @@ fmap_fsw_sub_core(uint8_t *seq, int32_t len,
             default:
               fmap_error(NULL, Exit, OutOfRange);
           }
-
           p->ctype = ctype;
           p->i = i-1;
           p->j = j-1;
@@ -337,7 +336,9 @@ fmap_fsw_sub_core(uint8_t *seq, int32_t len,
 
           // move to the next cell type
           ctype = ctype_next;
+          //fprintf(stderr, "  sub_core i=%d j=%d ctype_next=%d\n", i, j, ctype_next);
       }
+
       (*path_len) = p - path;
   }
   else if(NULL != path_len) {
@@ -418,8 +419,7 @@ fmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *fl
       /*
          fprintf(stderr, "base_call=%d col_offset=%d ctype_next=%d\n",
          base_call, col_offset, ctype_next);
-         fprintf(stderr, "base_calls[%d]=%d\n", i-1,
-         (0 < i) ? base_calls[i-1] : 0);
+         fprintf(stderr, "base_calls[%d]=%d\n", i-1, (0 < i) ? base_calls[i-1] : 0);
          */
 
       if(j <= 0) {
@@ -431,10 +431,10 @@ fmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *fl
               p->ctype = FMAP_FSW_FROM_I;
               p++;
           }
+          i--;
       }
       else if(i <= 0) {
           // starts with a deletion?
-          // TODO
           p->i = i-1;
           p->j = j-1;
           p->ctype = FMAP_FSW_FROM_D;
@@ -450,6 +450,8 @@ fmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *fl
                   p++;
               }
           }
+          i--;
+          j -= col_offset;
       }
       else {
           while(sub_path_mem < j + ap->offset + 1) { // more memory please
@@ -500,11 +502,11 @@ fmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *fl
               p++;
               base_call_diff++;
           }
+      
+          // move the row and column (as necessary)
+          i--;
+          j -= col_offset;
       }
-
-      // move the row and column (as necessary)
-      j -= col_offset;
-      i--;
 
       // move to the next cell type
       ctype = ctype_next;
