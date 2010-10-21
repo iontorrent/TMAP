@@ -88,7 +88,7 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
   int32_t matrix[25];
   fmap_sw_param_t par;
   fmap_sw_path_t *path = NULL;
-  int32_t path_len, score, score_subo;
+  int32_t path_len, path_mem=0, score, score_subo;
 
   fmap_map3_aux_seed_t *seeds[2];
   int32_t m_seeds[2], n_seeds[2];
@@ -219,7 +219,10 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
           par.band_width = hits[i][end].pos - hits[i][start].pos;
           par.band_width += 2 * opt->sw_offset; // add bases to the window
 
-          path = fmap_calloc(2*target_len, sizeof(fmap_sw_path_t), "path");
+          while(path_mem <= target_len + seq_len[i]) { // lengthen the path
+              path_mem = (0 == path_mem) ? 64 : (path_mem << 1); 
+              path = fmap_realloc(path, sizeof(fmap_sw_path_t)*path_mem, "path");
+          }
 
           // threshold the score by assuming that one seed's worth of
           // matches occurs in the alignment
@@ -270,9 +273,6 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
               }
           }
 
-          // free
-          free(path);
-
           // update start/end
           end++;
           start = end;
@@ -284,6 +284,9 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
       free(hits[i]);
   }
   free(target);
+          
+  // free
+  free(path);
 
   return aln;
 }
