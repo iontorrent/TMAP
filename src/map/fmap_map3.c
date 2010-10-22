@@ -94,7 +94,46 @@ fmap_map3_aln_filter(fmap_seq_t *seq, fmap_map3_aln_t *aln,
       return;
   }
 
-  if(FMAP_MAP_UTIL_ALN_MODE_RAND == aln_output_mode) { // get a random
+  best_score = INT32_MIN;
+  n_best = 0;
+  for(i=0;i<aln->n;i++) {
+      cur_score = aln->hits[i].score;
+      if(best_score < cur_score) {
+          best_score = cur_score;
+          n_best = 1;
+      }
+      else if(!(cur_score < best_score)) { // equal
+          n_best++;
+      }
+  }
+
+  // copy to the front
+  if(n_best < aln->n) {
+      for(i=j=0;i<aln->n;i++) {
+          cur_score = aln->hits[i].score;
+          if(cur_score < best_score) { // not the best
+              free(aln->hits[i].cigar);
+              aln->hits[i].cigar = NULL;
+              aln->hits[i].n_cigar = 0;
+          }
+          else {
+              if(j < i) { // copy if we are not on the same index
+                  aln->hits[j] = aln->hits[i];
+                  aln->hits[i].cigar = NULL;
+              }
+              j++;
+          }
+      }
+      // reallocate
+      fmap_map3_aln_realloc(aln, n_best);
+  }
+
+  if(FMAP_MAP_UTIL_ALN_MODE_UNIQ_BEST == aln_output_mode) {
+      if(1 < n_best) { // there can only be one
+          fmap_map3_aln_realloc(aln, 0);
+      }
+  }
+  else if(FMAP_MAP_UTIL_ALN_MODE_RAND_BEST == aln_output_mode) { // get a random
       i = (int32_t)(drand48() * aln->n);
       if(0 != i) {
           free(aln->hits[0].cigar);
@@ -104,41 +143,11 @@ fmap_map3_aln_filter(fmap_seq_t *seq, fmap_map3_aln_t *aln,
       // reallocate
       fmap_map3_aln_realloc(aln, 1);
   }
+  else if(FMAP_MAP_UTIL_ALN_MODE_ALL_BEST == aln_output_mode) {
+      // do nothing
+  }
   else {
-      best_score = DBL_MIN;
-      n_best = 0;
-      for(i=0;i<aln->n;i++) {
-          cur_score = fmap_map_util_get_score(seq, aln->hits[i].score, aln_output_mode);
-          if(best_score < cur_score) {
-              best_score = cur_score;
-              n_best = 1;
-          }
-          else if(!(cur_score < best_score)) { // equal
-              n_best++;
-          }
-      }
-
-
-      // copy to the front
-      if(n_best < aln->n) {
-          for(i=j=0;i<aln->n;i++) {
-              cur_score = fmap_map_util_get_score(seq, aln->hits[i].score, aln_output_mode);
-              if(cur_score < best_score) { // not the best
-                  free(aln->hits[i].cigar);
-                  aln->hits[i].cigar = NULL;
-                  aln->hits[i].n_cigar = 0;
-              }
-              else {
-                  if(j < i) { // copy if we are not on the same index
-                      aln->hits[j] = aln->hits[i];
-                      aln->hits[i].cigar = NULL;
-                  }
-                  j++;
-              }
-          }
-          // reallocate
-          fmap_map3_aln_realloc(aln, n_best);
-      }
+      fmap_error("bug encountered", Exit, OutOfRange);
   }
 }
 
@@ -487,7 +496,7 @@ fmap_map3_opt_init()
   opt->aln_global = 0;
   opt->reads_queue_size = 65536; // TODO: move this to a define block
   opt->num_threads = 1;
-  opt->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_SCORE;
+  opt->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_RAND_BEST;
   opt->input_compr = FMAP_FILE_NO_COMPRESSION;
   opt->output_compr = FMAP_FILE_NO_COMPRESSION;
   opt->shm_key = 0;

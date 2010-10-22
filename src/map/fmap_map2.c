@@ -37,13 +37,50 @@ fmap_map2_filter_sam(fmap_seq_t *seq, fmap_map2_sam_t *sam, int32_t aln_output_m
 {
   int32_t i, j;
   int32_t n_best = 0;
-  double best_score, cur_score;
+  int32_t best_score, cur_score;
   if(FMAP_MAP_UTIL_ALN_MODE_ALL == aln_output_mode || sam->num_entries <= 1) {
       return;
   }
 
-  if(FMAP_MAP_UTIL_ALN_MODE_RAND == aln_output_mode) { // get a random
-      i = drand48() * sam->num_entries;
+  best_score = INT32_MIN;
+  n_best = 0;
+  for(i=0;i<sam->num_entries;i++) {
+      cur_score = sam->entries[i].AS;
+      if(best_score < cur_score) {
+          best_score = cur_score;
+          n_best = 1;
+      }
+      else if(!(cur_score < best_score)) { // equal
+          n_best++;
+      }
+  }
+
+  // copy to the front
+  if(n_best < sam->num_entries) {
+      for(i=j=0;i<sam->num_entries;i++) {
+          cur_score = sam->entries[i].AS;
+          if(cur_score < best_score) { // not the best
+              free(sam->entries[i].cigar);
+              sam->entries[i].cigar = NULL;
+          }
+          else if(j < i) { // copy if we are not on the same index
+              sam->entries[j] = sam->entries[i];
+              sam->entries[i].cigar = NULL;
+              j++;
+          }
+      }
+      // reallocate
+      fmap_map2_sam_realloc(sam, n_best);
+  }
+
+  if(FMAP_MAP_UTIL_ALN_MODE_UNIQ_BEST == aln_output_mode) {
+      if(1 < n_best) { // there can only be one
+          fmap_map2_sam_realloc(sam, 0);
+      }
+  } 
+  else if(FMAP_MAP_UTIL_ALN_MODE_RAND_BEST == aln_output_mode) {
+      // get a random
+      i = drand48() * n_best;
       if(0 != i ) {
           free(sam->entries[0].cigar);
           sam->entries[0] = sam->entries[i];
@@ -51,38 +88,12 @@ fmap_map2_filter_sam(fmap_seq_t *seq, fmap_map2_sam_t *sam, int32_t aln_output_m
       }
       // reallocate
       fmap_map2_sam_realloc(sam, 1);
-  } 
+  }
+  else if(FMAP_MAP_UTIL_ALN_MODE_ALL_BEST == aln_output_mode) {
+      // do nothing
+  }
   else {
-      best_score = DBL_MIN;
-      n_best = 0;
-      for(i=0;i<sam->num_entries;i++) {
-          cur_score = fmap_map_util_get_score(seq, sam->entries[i].AS, aln_output_mode);
-          if(best_score < cur_score) {
-              best_score = cur_score;
-              n_best = 1;
-          }
-          else if(!(cur_score < best_score)) { // equal
-              n_best++;
-          }
-      }
-
-      // copy to the front
-      if(n_best < sam->num_entries) {
-          for(i=j=0;i<sam->num_entries;i++) {
-              cur_score = fmap_map_util_get_score(seq, sam->entries[i].AS, aln_output_mode);
-              if(cur_score < best_score) { // not the best
-                  free(sam->entries[i].cigar);
-                  sam->entries[i].cigar = NULL;
-              }
-              else if(j < i) { // copy if we are not on the same index
-                  sam->entries[j] = sam->entries[i];
-                  sam->entries[i].cigar = NULL;
-                  j++;
-              }
-          }
-          // reallocate
-          fmap_map2_sam_realloc(sam, n_best);
-      }
+      fmap_error("bug encountered", Exit, OutOfRange);
   }
 }
 
@@ -394,11 +405,16 @@ usage(fmap_map2_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "         -w INT      band width [%d]\n", opt->band_width);
   fmap_file_fprintf(fmap_file_stderr, "         -T INT      score threshold divided by the match score [%d]\n", opt->score_thr);
   fmap_file_fprintf(fmap_file_stderr, "         -S INT      maximum seeding interval size [%d]\n", opt->max_seed_intv);
-  fmap_file_fprintf(fmap_file_stderr, "         -a INT      Z-best [%d]\n", opt->z_best);
+  fmap_file_fprintf(fmap_file_stderr, "         -b INT      Z-best [%d]\n", opt->z_best);
   fmap_file_fprintf(fmap_file_stderr, "         -N INT      # seeds to trigger reverse alignment [%d]\n", opt->seeds_rev);
   fmap_file_fprintf(fmap_file_stderr, "         -g          align the full read (global alignment) [%s]\n", (0 == opt->aln_global) ? "false" : "true");
   fmap_file_fprintf(fmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
   fmap_file_fprintf(fmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
+  fmap_file_fprintf(fmap_file_stderr, "         -a INT      output filter [%d]\n", opt->aln_output_mode);
+  fmap_file_fprintf(fmap_file_stderr, "                             0 - unique best hits\n");
+  fmap_file_fprintf(fmap_file_stderr, "                             1 - random best hit\n");
+  fmap_file_fprintf(fmap_file_stderr, "                             2 - all best hits\n");
+  fmap_file_fprintf(fmap_file_stderr, "                             3 - all alignments\n");
   fmap_file_fprintf(fmap_file_stderr, "         -j          the input is bz2 compressed (bzip2) [%s]\n",
                     (FMAP_FILE_BZ2_COMPRESSION == opt->input_compr) ? "true" : "false");
   fmap_file_fprintf(fmap_file_stderr, "         -z          the input is gz compressed (gzip) [%s]\n",
@@ -434,7 +450,7 @@ fmap_map2_opt_init()
   opt->aln_global = 0;
   opt->reads_queue_size = 65536;
   opt->num_threads = 1;
-  opt->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_RAND; 
+  opt->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_RAND_BEST; 
   opt->input_compr = FMAP_FILE_NO_COMPRESSION;
   opt->output_compr = FMAP_FILE_NO_COMPRESSION;
   opt->shm_key = 0;
