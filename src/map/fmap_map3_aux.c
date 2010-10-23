@@ -12,7 +12,7 @@
 
 #define __fmap_map3_hit_sort_lt(a, b) ( ((a).seqid < (b).seqid \
                                          || ( (a).seqid == (b).seqid && (a).pos < (b).pos ) \
-                                         || ( (a).seqid == (b).seqid && (a).pos == (b).pos && (a).offset < (b).offset )) \
+                                         || ( (a).seqid == (b).seqid && (a).pos == (b).pos && (a).start < (b).start )) \
                                        ? 1 : 0)
 
 FMAP_SORT_INIT(fmap_map3_aux_hit_t, fmap_map3_aux_hit_t, __fmap_map3_hit_sort_lt)
@@ -68,6 +68,189 @@ fmap_map3_aln_destroy(fmap_map3_aln_t *aln)
   free(aln);
 }
 
+static inline void 
+fmap_map3_aux_seed_add(fmap_map3_aux_seed_t **seeds,
+                       int32_t *n_seeds,
+                       int32_t *m_seeds,
+                       int32_t k,
+                       int32_t l,
+                       int32_t start, 
+                       int32_t offset)
+{
+  if((*m_seeds) <= (*n_seeds)) {
+      (*m_seeds) = (0 == (*m_seeds)) ? 64 : ((*m_seeds) << 1);
+      (*seeds) = fmap_realloc((*seeds), sizeof(fmap_map3_aux_seed_t)*(*m_seeds), "(*seeds)");
+  }
+  (*seeds)[(*n_seeds)].k = k;
+  (*seeds)[(*n_seeds)].l = l;
+  (*seeds)[(*n_seeds)].start = start;
+  (*seeds)[(*n_seeds)].offset = offset;
+  (*n_seeds)++;
+}
+
+static inline void
+fmap_map3_aux_core_seed_helper(uint8_t *query,
+                               int32_t query_length,
+                               int32_t offset,
+                               uint8_t *flow_order,
+                               uint8_t flow_i,
+                               fmap_refseq_t *refseq,
+                               fmap_bwt_t *bwt,
+                               fmap_sa_t *sa,
+                               fmap_map3_opt_t *opt,
+                               fmap_map3_aux_seed_t **seeds,
+                               int32_t *n_seeds,
+                               int32_t *m_seeds)
+{ 
+  int32_t i, k;
+  int32_t n_bases;;
+  fmap_bwt_match_occ_t prev_sa, cur_sa, next_sa, tmp_sa;
+
+  // DEBUGGING
+  if(query_length <= offset) return;
+  if(flow_order[flow_i] != query[offset]) {
+      fmap_error("bug encountered", Exit, OutOfRange);
+  }
+
+  // initialize prev
+  prev_sa.k = 0;
+  prev_sa.l = bwt->seq_len;
+  prev_sa.hi = 0;
+  prev_sa.offset = 0;
+
+  i = offset;
+  while(i < query_length) {
+      // reached the seed length
+      if(opt->seed_length < i - offset) { 
+          break;
+      }
+
+      // get the homopolymer length
+      n_bases = 0;
+      if(flow_order[flow_i] == query[i]) { // non-empty flow
+          n_bases = 1;
+          while(i + n_bases < query_length && query[i] == query[i+n_bases]) {
+              n_bases++;
+          }
+      }
+
+
+      // move through the homopolymer, trying deletions if possible
+      next_sa = prev_sa;
+      for(k=0;k<n_bases;k++) {
+          // reached the seed length
+          if(opt->seed_length < i - offset + k) { 
+              break;
+          }
+
+          // only delete if there are bases available and we are not deleting
+          // the entire first flow 
+          int32_t bases_to_align = opt->seed_length - (i - offset + k);
+          int32_t bases_left = query_length - i - n_bases;
+          if(0 < n_bases - k // bases to delete
+             && n_bases - k <= opt->hp_diff // not too many to delete
+             && (i != offset || 0 != k) // do not delete the entire flow
+             && bases_to_align <= bases_left) { // enough bases 
+              // match exactly from here onwards
+              tmp_sa = next_sa;
+              if(0 < fmap_bwt_match_exact_alt(bwt, bases_to_align, query + i + n_bases, &tmp_sa)
+                 && (tmp_sa.l - tmp_sa.k + 1) <= opt->max_seed_hits) {
+                  fmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, tmp_sa.k, tmp_sa.l, offset, n_bases-k);
+              }
+          }
+
+          // move past this base in the hp
+          tmp_sa = next_sa;
+          fmap_bwt_match_2occ(bwt, &tmp_sa, flow_order[flow_i], &next_sa);
+          if(next_sa.l < next_sa.k) { // no match, return
+              return;
+          }
+      }
+
+      // insert hp bases
+      if(i + n_bases < offset + opt->seed_length) { // not the last flow
+          cur_sa = next_sa; // already considered the 'n_bases' of this flow
+          // insert
+          for(k=1;k<=opt->hp_diff;k++) { // # of bases to insert
+              fmap_bwt_match_2occ(bwt, &cur_sa, flow_order[flow_i], &tmp_sa);
+              if(tmp_sa.l < tmp_sa.k) { // no match, do not continue
+                  break;
+              }
+              // match exactly from here onwards
+              if(0 < fmap_bwt_match_exact_alt(bwt, opt->seed_length - (i - offset) - n_bases, query + i + n_bases, &tmp_sa)
+                 && (tmp_sa.l - tmp_sa.k + 1) <= opt->max_seed_hits) {
+                  fmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, tmp_sa.k, tmp_sa.l, offset, k);
+              }
+              // move to the next
+              cur_sa = tmp_sa;
+          }
+      }
+
+      // next flow
+      flow_i = (1+flow_i) & 3;
+      i += n_bases;
+      prev_sa = next_sa;
+  }
+
+  if(i - offset < opt->seed_length) fmap_error("bug encountered", Exit, OutOfRange);
+
+  // add in the seed with no hp indels
+  if((next_sa.l - next_sa.k + 1) <= opt->max_seed_hits) {
+      fmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, next_sa.k, next_sa.l, offset, 0);
+  }
+}
+
+static inline void
+fmap_map3_aux_core_seed(uint8_t *query,
+                        int32_t query_length,
+                        uint8_t *flow_order,
+                        fmap_refseq_t *refseq,
+                        fmap_bwt_t *bwt,
+                        fmap_sa_t *sa,
+                        fmap_map3_opt_t *opt,
+                        fmap_map3_aux_seed_t **seeds,
+                        int32_t *n_seeds,
+                        int32_t *m_seeds)
+{
+  int32_t i, j, flow_i;
+
+  if(0 < opt->hp_diff) {
+      i=flow_i=0;
+      while(i<query_length - opt->seed_length + 1) {
+          // move to the next flow
+          j=0;
+          while(query[i] != flow_order[flow_i]) {
+              flow_i = (flow_i + 1) & 3;
+              // sanity check
+              j++;
+              if(4 <= j) fmap_error("bug encountered", Exit, OutOfRange);
+          }
+
+          // add seeds
+          fmap_map3_aux_core_seed_helper(query, query_length, i, flow_order, flow_i,
+                                         refseq, bwt, sa, opt, seeds, n_seeds, m_seeds);
+
+          // skip over this hp
+          i++;
+          while(i<query_length) {
+              if(query[i] != query[i-1]) {
+                  break;
+              }
+              i++;
+          }
+      }
+  }
+  else {
+      fmap_bwt_match_occ_t cur_sa;
+      for(i=0;i<query_length-opt->seed_length+1;i++) {
+          if(0 < fmap_bwt_match_exact(bwt, opt->seed_length, query + i, &cur_sa)
+                 && (cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
+              fmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, 0);
+          }
+      }
+  }
+}
+
 // TODO: memory pools?
 fmap_map3_aln_t *
 fmap_map3_aux_core(fmap_seq_t *seq[2], 
@@ -79,7 +262,6 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
   int32_t i, j;
   int32_t seq_len[2];
   fmap_string_t *bases;
-  fmap_bwt_match_occ_t match_sa;
   uint8_t *query;
   uint32_t k, pacpos;
   uint32_t ref_start, ref_end;
@@ -104,50 +286,52 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
 
   aln = fmap_map3_aln_init();
 
+  // HERE
+  uint8_t flow_order[4] = {3, 0, 1, 2};
+
   // seeds
   for(i=0;i<2;i++) { // forward/reverse-compliment
       bases = fmap_seq_get_bases(seq[i]);
       seq_len[i] = bases->l;
       query = (uint8_t*)bases->s;
 
-      // allocate mmemory
+      // pre-allocate mmemory
       n_seeds[i] = 0;
       m_seeds[i] = seq_len[i] - opt->seed_length + 1; // maximum number of seeds possible
       seeds[i] = fmap_malloc(m_seeds[i]*sizeof(fmap_map3_aux_seed_t), "seeds[i]");
 
-      m_hits[i] = 0; // store the number of hits that are needed
-
-      for(j=0;j<seq_len[i] - opt->seed_length + 1;j++) { // all valid offsets
-          if(0 < fmap_bwt_match_exact(bwt, opt->seed_length, query + j, &match_sa)
-             && (match_sa.l - match_sa.k + 1) <= opt->max_seed_hits) {
-              seeds[i][n_seeds[i]].k = match_sa.k;
-              seeds[i][n_seeds[i]].l = match_sa.l;
-              seeds[i][n_seeds[i]].offset = j;
-              n_seeds[i]++;
-              m_hits[i] += match_sa.l - match_sa.k + 1;
-          }
-      }
+      fmap_map3_aux_core_seed(query, seq_len[i], flow_order, 
+                              refseq, bwt, sa, opt, &seeds[i], &n_seeds[i], &m_seeds[i]);
   }
 
   // convert seeds to chr/pos
   for(i=0;i<2;i++) { // forward/reverse-compliment
       // allocate mmemory
+      m_hits[i] = 0; // store the number of hits that are needed
+      for(j=0;j<n_seeds[i];j++) {
+          m_hits[i] += seeds[i][j].l - seeds[i][j].k + 1;
+      }
       hits[i] = fmap_malloc(m_hits[i]*sizeof(fmap_map3_aux_hit_t), "hits[i]");
       n_hits[i] = 0;
 
       for(j=0;j<n_seeds[i];j++) { // go through all seeds
           for(k=seeds[i][j].k;k<=seeds[i][j].l;k++) { // through all occurrences
               pacpos = fmap_sa_pac_pos(sa, bwt, k);
-              if(bwt->seq_len < pacpos + seeds[i][j].offset + 1) { // before the beginning of the reference sequence
+              if(bwt->seq_len < pacpos + seeds[i][j].start + 1) { // before the beginning of the reference sequence
                   pacpos = 0;
               }
               else {
-                  pacpos = bwt->seq_len - pacpos - seeds[i][j].offset + 1;
+                  pacpos = bwt->seq_len - pacpos - seeds[i][j].start - 1;
               }
               if(0 < fmap_refseq_pac2real(refseq, pacpos, 1,
                                           &hits[i][n_hits[i]].seqid, &hits[i][n_hits[i]].pos)) {
-                  hits[i][n_hits[i]].pos -= opt->seed_length;
-                  hits[i][n_hits[i]].offset = seeds[i][j].offset;
+                  if(hits[i][n_hits[i]].pos < opt->seed_length + seeds[i][j].offset - 1 ) {
+                      hits[i][n_hits[i]].pos = 0;
+                  }
+                  else {
+                      hits[i][n_hits[i]].pos -= opt->seed_length + seeds[i][j].offset - 1;
+                  }
+                  hits[i][n_hits[i]].start = seeds[i][j].start;
                   n_hits[i]++;
               }
           }
@@ -249,7 +433,7 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
               hit->score_subo = score_subo;
               hit->n_seeds = ((1 << 15) < end - start + 1) ? (1 << 15) : (end - start + 1);
               hit->cigar = fmap_sw_path2cigar(path, path_len, &hit->n_cigar);
-          
+
               // add soft clipping after local alignment
               if(1 < path[path_len-1].j) {
                   // soft clip the front of the read
@@ -279,7 +463,7 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
       free(hits[i]);
   }
   free(target);
-          
+
   // free
   free(path);
 

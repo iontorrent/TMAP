@@ -3,15 +3,14 @@
 
 #include "fmap_map3.h"
 
-// TODO: document
-
 /*!
   Holds the seed matches
   */
 typedef struct {
     uint32_t k; /*!< the lower SA interval */
     uint32_t l; /*!< the upper SA interval */
-    uint32_t offset; /*!< the offset from the start of the read (0-based) */
+    uint16_t start; /*!< the # of bases from the start of the read (0-based) */
+    int16_t offset; /*!< the # of bases inserted or deleted from the read */
 } fmap_map3_aux_seed_t;
 
 /*! 
@@ -20,7 +19,8 @@ typedef struct {
 typedef struct {
     uint32_t seqid; /*!< the sequence index (0-based) */
     uint32_t pos; /*!< the position (0-based) */
-    uint32_t offset; /*!< the offset from the start of the read (0-based) */
+    uint16_t start; /*!< the # of bases from the start of the read (0-based) */
+    // int16_t offset; /*!< the # of bases inserted (+) or deleted (-) from the seed */
 } fmap_map3_aux_hit_t;
 
 /*!

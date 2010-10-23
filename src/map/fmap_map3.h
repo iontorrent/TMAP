@@ -21,14 +21,13 @@ typedef struct {
     int32_t max_seed_hits; /*!< the maximum number of hits returned by a seed (-S) */
     int32_t max_seed_band; /*!< the band to group seeds (-b)*/
     int32_t sw_offset; /*!< the extra bases to add before and after the target during Smith-Waterman (-w) */
-    // TODO: vary the offsets of the kmers
-
     int32_t score_match;  /*!< the match score (-A) */
     int32_t pen_mm;  /*!< the mismatch penalty (-M) */
     int32_t pen_gapo;  /*!< the indel open penalty (-O) */
     int32_t pen_gape;  /*!< the indel extension penalty (-E) */
     int32_t score_thr;  /*!< the score threshold (match-score-scaled) (-T) */
     int32_t aln_global; /*!< align the full read (-g) */
+    int32_t hp_diff; /*!< single homopolymer error difference for enumeration (-H) */
     int32_t reads_queue_size;  /*!< the reads queue size (-q) */
     int32_t num_threads;  /*!< the number of threads (-n) */
     int32_t aln_output_mode;  /*!< specifies how to choose alignments (-a)  */

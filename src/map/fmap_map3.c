@@ -494,6 +494,7 @@ fmap_map3_opt_init()
   opt->pen_mm = 3; opt->pen_gapo = 5; opt->pen_gape = 2; // TODO: move this to a define block
   opt->score_thr = 20;
   opt->aln_global = 0;
+  opt->hp_diff = 0;
   opt->reads_queue_size = 65536; // TODO: move this to a define block
   opt->num_threads = 1;
   opt->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_RAND_BEST;
@@ -522,7 +523,7 @@ fmap_map3_main(int argc, char *argv[])
   opt = fmap_map3_opt_init(argv, argc);
   opt->argc = argc; opt->argv = argv;
 
-  while((c = getopt(argc, argv, "f:r:F:l:S:b:w:A:M:O:E:T:gq:n:a:jzJZs:vh")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:l:S:b:w:A:M:O:E:T:gH:q:n:a:jzJZs:vh")) >= 0) {
       switch(c) {
         case 'f':
           opt->fn_fasta = fmap_strdup(optarg); break;
@@ -554,6 +555,8 @@ fmap_map3_main(int argc, char *argv[])
           opt->aln_global = 1; break;
         case 'q': 
           opt->reads_queue_size = atoi(optarg); break;
+        case 'H':
+          opt->hp_diff = atoi(optarg); break;
         case 'n':
           opt->num_threads = atoi(optarg); break;
         case 'a':
@@ -609,6 +612,7 @@ fmap_map3_main(int argc, char *argv[])
       if(-1 != opt->reads_queue_size) fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
       fmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
       fmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
+      fmap_error_cmd_check_int(opt->aln_output_mode, 0, INT32_MAX, "-H");
 
       if(FMAP_FILE_BZ2_COMPRESSION == opt->output_compr 
          && -1 == opt->reads_queue_size) {
