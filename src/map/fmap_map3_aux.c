@@ -260,9 +260,11 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
                    fmap_map3_opt_t *opt)
 {
   int32_t i, j;
+
   int32_t seq_len[2];
   fmap_string_t *bases;
   uint8_t *query;
+
   uint32_t k, pacpos;
   uint32_t ref_start, ref_end;
   uint8_t *target = NULL;
@@ -354,7 +356,7 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
       bases = fmap_seq_get_bases(seq[i]);
       seq_len[i] = bases->l;
       query = (uint8_t*)bases->s;
-
+  
       int32_t start, end;
       start = end = 0;
       while(end < n_hits[i]) {

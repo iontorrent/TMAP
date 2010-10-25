@@ -38,8 +38,7 @@ typedef struct {
 /*!
   Stores the score for the current cell
   */
-typedef struct
-{
+typedef struct {
   int64_t match_score; /*!< match score */
   int64_t ins_score; /*!< insertion score */
   int64_t del_score; /*! <deletion score */
@@ -51,8 +50,7 @@ typedef struct
   while the substitution score should be positive for matches, and negative for
   mismatches (they will be added).
   */
-typedef struct
-{
+typedef struct {
   int32_t gap_open; /*!< gap open penalty (positive) */
   int32_t gap_ext; /*!< gap extension penalty (positive) */
   int32_t gap_end; /*!< gap end penalty (positive */
@@ -66,12 +64,20 @@ typedef struct
 /*!
   The best-scoring alignment path.
   */
-typedef struct
-{
+typedef struct {
   int32_t i; /*!< the flowgram index (0-based) */
   int32_t j; /*!< the seq index (0-based) */
   uint8_t ctype; /*!< the edit operator applied */
 } fmap_fsw_path_t;
+
+typedef struct {
+   uint8_t *flow; /*!< for each of the four flows, the 2-bit DNA base flowed */
+   uint8_t *base_calls; /*!< for each flow, the number of bases called [0-255] */
+   uint16_t *flowgram; /*!< for each flow, the flowgram signal (100*signal)  */
+   int32_t num_flows; /*!< the number of flows */
+   int32_t key_index; /*!< the 0-based index of the key base if the key is part of the first or last flow (should be -1, 0, or num_flow-1). */
+   int32_t key_bases; /*!< the number of bases part of the key_index flow that are explained by the key sequence */
+} fmap_fsw_flowseq_t;
 
 /*
    Fills in a row for one flow-space Smith-Waterman alignment
@@ -112,12 +118,7 @@ fmap_fsw_sub_core(uint8_t *seq, int32_t len,
    Performs global flow-space Smith-Waterman alignment
    @param  seq         the 2-bit DNA reference sequence 
    @param  len         the length of the second sequence
-   @param  flow         for each of the four flows, the 2-bit DNA base flowed
-   @param  base_calls  for each flow, the number of bases called [0-255]
-   @param  flowgram     for each flow, the flowgram signal (100*signal) 
-   @param  num_flows    the number of flows
-   @param  key_index   the 0-based index of the key base if the key is part of the first or last flow (should be -1, 0, or num_flow-1).
-   @param  key_bases   the number of bases part of the key_index flow that are explained by the key sequence
+   @param  flowseq      the flow sequence structure to align
    @param  ap          the alignment parameters
    @param  path        the returned alignment path with maximum length of (1 + [len * (num_flows + 1) * (ap->offset + 1)])
    @param  path_len    the returned path_len
@@ -126,20 +127,14 @@ fmap_fsw_sub_core(uint8_t *seq, int32_t len,
    */
 int64_t
 fmap_fsw_global_core(uint8_t *seq, int32_t len,
-                     uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram, int32_t num_flows,
-                     int32_t key_index, int32_t key_bases,
+                     fmap_fsw_flowseq_t *flowseq,
                      const fmap_fsw_param_t *ap,
                      fmap_fsw_path_t *path, int32_t *path_len);
 /*
    Performs local flow-space Smith-Waterman alignment
    @param  seq         the 2-bit DNA reference sequence 
    @param  len         the length of the second sequence
-   @param  flow         for each of the four flows, the 2-bit DNA base flowed
-   @param  base_calls  for each flow, the number of bases called [0-255]
-   @param  flowgram     for each flow, the flowgram signal (100*signal) 
-   @param  num_flows    the number of flows
-   @param  key_index   the 0-based index of the key base if the key is part of the first or last flow (should be -1, 0, or num_flow-1).
-   @param  key_bases   the number of bases part of the key_index flow that are explained by the key sequence
+   @param  flowseq      the flow sequence structure to align
    @param  ap          the alignment parameters
    @param  path        the returned alignment path with maximum length of (1 + [len * (num_flows + 1) * (ap->offset + 1)])
    @param  path_len    the returned path_len
@@ -150,8 +145,7 @@ fmap_fsw_global_core(uint8_t *seq, int32_t len,
    */
 int64_t
 fmap_fsw_local_core(uint8_t *seq, int32_t len,
-                    uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram, int32_t num_flows,
-                    int32_t key_index, int32_t key_bases,
+                    fmap_fsw_flowseq_t *flowseq,
                     const fmap_fsw_param_t *ap,
                     fmap_fsw_path_t *path, int32_t *path_len,
                     int32_t _thres, int32_t *_subo);
@@ -160,12 +154,7 @@ fmap_fsw_local_core(uint8_t *seq, int32_t len,
    Performs flow-space Smith-Waterman alignment extension
    @param  seq         the 2-bit DNA reference sequence 
    @param  len         the length of the second sequence
-   @param  flow         for each of the four flows, the 2-bit DNA base flowed, this must be shifted if previous bases were aligned
-   @param  base_calls  for each flow, the number of bases called [0-255]
-   @param  flowgram     for each flow, the flowgram signal (100*signal) 
-   @param  num_flows    the number of flows
-   @param  key_index   the 0-based index of the key base if the key is part of the first or last flow (should be -1, 0, or num_flow-1).
-   @param  key_bases   the number of bases part of the key_index flow that are explained by the key sequence
+   @param  flowseq      the flow sequence structure to align
    @param  ap          the alignment parameters
    @param  path        the returned alignment path with maximum length of (1 + [len * (num_flows + 1) * (ap->offset + 1)])
    @param  path_len    the returned path_len
@@ -175,8 +164,7 @@ fmap_fsw_local_core(uint8_t *seq, int32_t len,
    */
 int64_t
 fmap_fsw_extend_core(uint8_t *seq, int32_t len,
-                     uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram, int32_t num_flows,
-                     int32_t key_index, int32_t key_bases,
+                     fmap_fsw_flowseq_t *flowseq,
                      const fmap_fsw_param_t *ap,
                      fmap_fsw_path_t *path, int32_t *path_len, 
                      int32_t prev_score);
@@ -185,12 +173,7 @@ fmap_fsw_extend_core(uint8_t *seq, int32_t len,
    Performs flow-space Smith-Waterman alignment extension and aligns the entire flowgram
    @param  seq         the 2-bit DNA reference sequence 
    @param  len         the length of the second sequence
-   @param  flow         for each of the four flows, the 2-bit DNA base flowed, this must be shifted if previous bases were aligned
-   @param  base_calls  for each flow, the number of bases called [0-255]
-   @param  flowgram     for each flow, the flowgram signal (100*signal) 
-   @param  num_flows    the number of flows
-   @param  key_index   the 0-based index of the key base if the key is part of the first or last flow (should be -1, 0, or num_flow-1).
-   @param  key_bases   the number of bases part of the key_index flow that are explained by the key sequence
+   @param  flowseq      the flow sequence structure to align
    @param  ap          the alignment parameters
    @param  path        the returned alignment path with maximum length of (1 + [len * (num_flows + 1) * (ap->offset + 1)])
    @param  path_len    the returned path_len
@@ -200,8 +183,7 @@ fmap_fsw_extend_core(uint8_t *seq, int32_t len,
    */
 int64_t
 fmap_fsw_extend_fitting_core(uint8_t *seq, int32_t len,
-                             uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram, int32_t num_flows,
-                             int32_t key_index, int32_t key_bases,
+                             fmap_fsw_flowseq_t *flowseq,
                              const fmap_fsw_param_t *ap,
                              fmap_fsw_path_t *path, int32_t *path_len, 
                              int32_t prev_score);
@@ -210,12 +192,7 @@ fmap_fsw_extend_fitting_core(uint8_t *seq, int32_t len,
    Performs flow-space Smith-Waterman alignment and aligns the entire flowgram
    @param  seq         the 2-bit DNA reference sequence 
    @param  len         the length of the second sequence
-   @param  flow         for each of the four flows, the 2-bit DNA base flowed, this must be shifted if previous bases were aligned
-   @param  base_calls  for each flow, the number of bases called [0-255]
-   @param  flowgram     for each flow, the flowgram signal (100*signal) 
-   @param  num_flows    the number of flows
-   @param  key_index   the 0-based index of the key base if the key is part of the first or last flow (should be -1, 0, or num_flow-1).
-   @param  key_bases   the number of bases part of the key_index flow that are explained by the key sequence
+   @param  flowseq      the flow sequence structure to align
    @param  ap          the alignment parameters
    @param  path        the returned alignment path with maximum length of (1 + [len * (num_flows + 1) * (ap->offset + 1)])
    @param  path_len    the returned path_len
@@ -224,8 +201,7 @@ fmap_fsw_extend_fitting_core(uint8_t *seq, int32_t len,
    */
 int64_t
 fmap_fsw_fitting_core(uint8_t *seq, int32_t len,
-                      uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram, int32_t num_flows,
-                      int32_t key_index, int32_t key_bases,
+                      fmap_fsw_flowseq_t *flowseq,
                       const fmap_fsw_param_t *ap,
                       fmap_fsw_path_t *path, int32_t *path_len);
 

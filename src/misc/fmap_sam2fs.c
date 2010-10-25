@@ -256,9 +256,15 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
   path = fmap_calloc(FMAP_FSW_MAX_PATH_LENGTH(ref_bases_len, flow_len, param.offset), sizeof(fmap_fsw_path_t), "path"); 
 
   // re-align 
+  fmap_fsw_flowseq_t flowseq;
+  flowseq.flow = flow_order_tmp;
+  flowseq.base_calls = base_calls;
+  flowseq.flowgram = flowgram;
+  flowseq.num_flows = flow_len;
+  flowseq.key_index = -1;
+  flowseq.key_bases = 0;
   score = fmap_fsw_global_core((uint8_t*)ref_bases, ref_bases_len,
-                               flow_order_tmp, base_calls, flowgram, flow_len,
-                               -1, 0,
+                               &flowseq,
                                &param, path, &path_len);
 
   if(NULL == ref || NULL == read || NULL == aln) {
