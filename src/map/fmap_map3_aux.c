@@ -7,6 +7,7 @@
 #include "../index/fmap_sa.h"
 #include "../index/fmap_bwt_match.h"
 #include "../sw/fmap_sw.h"
+#include "../sw/fmap_fsw.h"
 #include "fmap_map3.h"
 #include "fmap_map3_aux.h"
 
@@ -254,6 +255,7 @@ fmap_map3_aux_core_seed(uint8_t *query,
 // TODO: memory pools?
 fmap_map3_aln_t *
 fmap_map3_aux_core(fmap_seq_t *seq[2], 
+                   fmap_fsw_flowseq_t *fseq[2],
                    fmap_refseq_t *refseq,
                    fmap_bwt_t *bwt,
                    fmap_sa_t *sa,

@@ -1017,7 +1017,7 @@ fmap_fsw_sff_to_flowseq(fmap_sff_t *sff)
 }
 
 void
-fmap_fsw_flowsq_reverse_compliment(fmap_fsw_flowseq_t *flowseq)
+fmap_fsw_flowseq_reverse_compliment(fmap_fsw_flowseq_t *flowseq)
 {
   int32_t i;
 

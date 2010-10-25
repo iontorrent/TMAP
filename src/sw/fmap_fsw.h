@@ -1,6 +1,8 @@
 #ifndef FMAP_FSW_H_
 #define FMAP_FSW_H_
 
+#include "../seq/fmap_sff.h"
+
 // We have 6-bits total, so 3-bits for above, and 3-bits for below
 #define FMAP_FSW_MAX_OFFSET 7
 
@@ -243,6 +245,28 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
 void 
 fmap_fsw_print_aln(int64_t score, fmap_fsw_path_t *path, int32_t path_len,
                    uint8_t *flow, uint8_t *target, uint8_t strand);
+
+/*!
+  Create a structure for flow-space Smith Waterman from an SFF structure
+  @param  sff  the SFF structure
+  @return      pointer to the flowseq structure
+  */
+fmap_fsw_flowseq_t *
+fmap_fsw_sff_to_flowseq(fmap_sff_t *sff);
+
+/*!
+  Reverse compliments this flow sequence
+  @param  flowseq  pointer the flow sequence
+  */
+void
+fmap_fsw_flowseq_reverse_compliment(fmap_fsw_flowseq_t *flowseq);
+
+/*!
+  Frees the memory associated with this structure
+  @param  flowseq  pointer the flow sequence to free
+  */
+void
+fmap_fsw_flowseq_destroy(fmap_fsw_flowseq_t *flowseq);
 
 /*! 
   main-like function for 'fmap fsw'

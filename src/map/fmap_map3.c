@@ -18,6 +18,7 @@
 #include "../index/fmap_sa.h"
 #include "../io/fmap_seq_io.h"
 #include "../server/fmap_shm.h"
+#include "../sw/fmap_fsw.h"
 #include "fmap_map_util.h"
 #include "fmap_map3_aux.h"
 #include "fmap_map3.h"
@@ -192,6 +193,7 @@ fmap_map3_core_worker(fmap_seq_t **seq_buffer, fmap_map3_aln_t **alns, int32_t s
 #endif
       while(low<high) {
           fmap_seq_t *seq[2]={NULL, NULL}, *orig_seq=NULL;
+          fmap_fsw_flowseq_t *fseq[2]={NULL, NULL};
           orig_seq = seq_buffer[low];
           fmap_string_t *bases[2]={NULL, NULL};
 
@@ -199,9 +201,16 @@ fmap_map3_core_worker(fmap_seq_t **seq_buffer, fmap_map3_aln_t **alns, int32_t s
           seq[0] = fmap_seq_clone(orig_seq);
           seq[1] = fmap_seq_clone(orig_seq);
 
-          // Adjust for SFF
-          fmap_seq_remove_key_sequence(seq[0]);
-          fmap_seq_remove_key_sequence(seq[1]);
+          if(FMAP_SEQ_TYPE_SFF == orig_seq->type) {
+              // Get the flow sequence for alignment
+              fseq[0] = fmap_fsw_sff_to_flowseq(orig_seq->data.sff);
+              fseq[1] = fmap_fsw_sff_to_flowseq(orig_seq->data.sff);
+              fmap_fsw_flowseq_reverse_compliment(fseq[1]);
+
+              // Adjust for SFF
+              fmap_seq_remove_key_sequence(seq[0]);
+              fmap_seq_remove_key_sequence(seq[1]);
+          }
 
           // reverse compliment
           fmap_seq_reverse_compliment(seq[1]);
@@ -214,7 +223,7 @@ fmap_map3_core_worker(fmap_seq_t **seq_buffer, fmap_map3_aln_t **alns, int32_t s
           bases[0] = fmap_seq_get_bases(seq[0]);
           bases[1] = fmap_seq_get_bases(seq[1]);
 
-          alns[low] = fmap_map3_aux_core(seq, refseq, bwt, sa, opt);
+          alns[low] = fmap_map3_aux_core(seq, fseq, refseq, bwt, sa, opt);
 
           // filter the alignments
           fmap_map3_aln_filter(seq_buffer[low], alns[low],
@@ -223,6 +232,10 @@ fmap_map3_core_worker(fmap_seq_t **seq_buffer, fmap_map3_aln_t **alns, int32_t s
           // destroy
           fmap_seq_destroy(seq[0]);
           fmap_seq_destroy(seq[1]);
+          if(FMAP_SEQ_TYPE_SFF == orig_seq->type) {
+              fmap_fsw_flowseq_destroy(fseq[0]);
+              fmap_fsw_flowseq_destroy(fseq[1]);
+          }
 
           // next
           low++;
