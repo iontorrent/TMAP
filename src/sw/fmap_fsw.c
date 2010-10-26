@@ -934,8 +934,6 @@ fmap_fsw_sff_to_flowseq(fmap_sff_t *sff)
       fmap_sff_to_int(sff);
   }
 
-  // TODO: assumes forward strand only
-
   // key_index/key_bases
   key_bases = 0;
   key_index = -1; // the last key base is not mixed with the first read base
@@ -945,6 +943,9 @@ fmap_fsw_sff_to_flowseq(fmap_sff_t *sff)
           uint8_t c = fmap_nt_char_to_int[(int)sff->gheader->key->s[i]];
           if(c == sff->read->bases->s[0]) {
               key_bases++;
+          }
+          else {
+              break;
           }
       }
       if(0 < key_bases) {
@@ -973,28 +974,42 @@ fmap_fsw_sff_to_flowseq(fmap_sff_t *sff)
   flow = fmap_malloc(sizeof(uint8_t) * 4, "flow");
   for(i=0;i<4;i++) {
       // offset it by the start flow
-      flow[i] = fmap_nt_char_to_int[(int)sff->gheader->flow->s[(i + l) & 4]];
+      flow[i] = fmap_nt_char_to_int[(int)sff->gheader->flow->s[(i + l) & 3]];
   }
 
   // get the number of bases called per flow
-  base_calls = fmap_malloc(num_flows * sizeof(uint8_t), "base_calls");
+  base_calls = fmap_calloc(num_flows, sizeof(uint8_t), "base_calls");
   // i = 0-based index into sff->read->bases->s
-  i = sff->gheader->key_length-1;
+  i = sff->gheader->key_length;
   // j = 0-based index into base_calls 
   j = 0;
   // go through the base calls
   while(i<sff->read->bases->l) {
+      // skip to the correct flow
+      while(j < num_flows 
+            && flow[(j+l) & 3] != sff->read->bases->s[i]) {
+          j++;
+      }
+
       if(num_flows <= j) {
+          fprintf(stderr, "num_flows=%d sff->read->bases->l=%d\n", 
+                  num_flows, (int)sff->read->bases->l);
+          fprintf(stderr, "i=%d j=%d\n", i, j);
           fmap_error("num_flows <= j", Exit, OutOfRange);
       }
       // get the number of bases called in this flow 
-      base_calls[j] = 0;
       while(i < sff->read->bases->l
-            && flow[j & 3] == sff->read->bases->s[i]) {
+            && flow[(j+l) & 3] == sff->read->bases->s[i]) {
           base_calls[j]++;
           i++;
       }
-      // next flow
+      if(0 == base_calls[j]) {
+          fmap_error("bug encountered", Exit, OutOfRange);
+      }
+      j++; // next flow
+  }
+  while(j < num_flows) {
+      base_calls[j] = 0;
       j++;
   }
   if(j != num_flows) {
@@ -1217,7 +1232,7 @@ usage(fmap_fsw_main_opt_t *opt)
                     opt->target);
   fmap_file_fprintf(fmap_file_stderr, "\n");
   fmap_file_fprintf(fmap_file_stderr, "Options (optional):\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -k STRING   they flow order ([ACGT]{4}) [%s]\n",
+  fmap_file_fprintf(fmap_file_stderr, "         -k STRING   the flow order ([ACGT]{4}) [%s]\n",
                     opt->flow);
   fmap_file_fprintf(fmap_file_stderr, "         -F INT      flow penalty [%d]\n", opt->param.fscore);
   fmap_file_fprintf(fmap_file_stderr, "         -o INT      search for homopolymer errors +- offset [%d]\n", opt->param.offset);

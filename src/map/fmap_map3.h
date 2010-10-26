@@ -25,11 +25,13 @@ typedef struct {
     int32_t pen_mm;  /*!< the mismatch penalty (-M) */
     int32_t pen_gapo;  /*!< the indel open penalty (-O) */
     int32_t pen_gape;  /*!< the indel extension penalty (-E) */
+    int32_t fscore;  /*!< the flow score penalty (-X) */
     int32_t score_thr;  /*!< the score threshold (match-score-scaled) (-T) */
     int32_t aln_global; /*!< align the full read (-g) */
     int32_t hp_diff; /*!< single homopolymer error difference for enumeration (-H) */
     int32_t reads_queue_size;  /*!< the reads queue size (-q) */
     int32_t num_threads;  /*!< the number of threads (-n) */
+    char *flow; /*!< the flow order (-k) */
     int32_t aln_output_mode;  /*!< specifies how to choose alignments (-a)  */
     int32_t input_compr;  /*!< the input compression type (-j and -z) */
     int32_t output_compr;  /*!< the output compression type (-J and -Z) */
@@ -64,7 +66,6 @@ typedef struct {
   data to be passed to a thread
   */
 typedef struct {
-    // TODO: return alignments
     fmap_seq_t **seq_buffer;  /*!< the buffer of sequences */
     fmap_map3_aln_t **alns;  /*!< the alignments to output */
     int32_t seq_buffer_length;  /*!< the buffer length */

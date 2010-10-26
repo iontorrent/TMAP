@@ -13,6 +13,21 @@
 
 #define FMAP_FSW_MAX_PATH_LENGTH(ref_len, flow_len, offset) ((1 + (ref_len * (flow_len + 1) * (offset + 1))))
 
+#define __fmap_fsw_gen_ap(par, opt) do { \
+    int32_t i; \
+    for(i=0;i<25;i++) { \
+        (par).matrix[i] = -100 * (opt)->pen_mm; \
+    } \
+    for(i=0;i<4;i++) { \
+        (par).matrix[i*5+i] = 100 * (opt)->score_match; \
+    } \
+    (par).gap_open = 100 * (opt)->pen_gapo; \
+    (par).gap_ext = 100 *(opt)->pen_gape; \
+    (par).gap_end = 100 * (opt)->pen_gape; \
+    (par).fscore = 100 * (opt)->fscore; \
+    (par).row = 5; \
+} while(0)
+
 /*!
  *   From which cell; helps recovert the best scoring path.
  *     */
@@ -41,9 +56,9 @@ typedef struct {
   Stores the score for the current cell
   */
 typedef struct {
-  int64_t match_score; /*!< match score */
-  int64_t ins_score; /*!< insertion score */
-  int64_t del_score; /*! <deletion score */
+    int64_t match_score; /*!< match score */
+    int64_t ins_score; /*!< insertion score */
+    int64_t del_score; /*! <deletion score */
 } fmap_fsw_dpscore_t;
 
 /*!
@@ -53,32 +68,33 @@ typedef struct {
   mismatches (they will be added).
   */
 typedef struct {
-  int32_t gap_open; /*!< gap open penalty (positive) */
-  int32_t gap_ext; /*!< gap extension penalty (positive) */
-  int32_t gap_end; /*!< gap end penalty (positive */
-  int32_t *matrix; /*!< substitution matrix (see details)*/
-  int32_t fscore; /*!< the flow score (positive) */
-  uint8_t offset; 
-  int32_t row; /*!< the alphabet size */
-  int32_t band_width; /*!< for Smith-Waterman banding */
+    int32_t gap_open; /*!< gap open penalty (positive) */
+    int32_t gap_ext; /*!< gap extension penalty (positive) */
+    int32_t gap_end; /*!< gap end penalty (positive */
+    int32_t *matrix; /*!< substitution matrix (see details)*/
+    int32_t fscore; /*!< the flow score (positive) */
+    uint8_t offset; 
+    int32_t row; /*!< the alphabet size */
+    int32_t band_width; /*!< for Smith-Waterman banding */
 } fmap_fsw_param_t;
 
 /*!
   The best-scoring alignment path.
   */
 typedef struct {
-  int32_t i; /*!< the flowgram index (0-based) */
-  int32_t j; /*!< the seq index (0-based) */
-  uint8_t ctype; /*!< the edit operator applied */
+    // TODO: make 1-based to match fmap_sw.{c,h}
+    int32_t i; /*!< the flowgram index (0-based) */
+    int32_t j; /*!< the seq index (0-based) */
+    uint8_t ctype; /*!< the edit operator applied */
 } fmap_fsw_path_t;
 
 typedef struct {
-   uint8_t *flow; /*!< for each of the four flows, the 2-bit DNA base flowed */
-   uint8_t *base_calls; /*!< for each flow, the number of bases called [0-255] */
-   uint16_t *flowgram; /*!< for each flow, the flowgram signal (100*signal)  */
-   int32_t num_flows; /*!< the number of flows */
-   int32_t key_index; /*!< the 0-based index of the key base if the key is part of the first or last flow (should be -1, 0, or num_flow-1). */
-   int32_t key_bases; /*!< the number of bases part of the key_index flow that are explained by the key sequence */
+    uint8_t *flow; /*!< for each of the four flows, the 2-bit DNA base flowed */
+    uint8_t *base_calls; /*!< for each flow, the number of bases called [0-255] */
+    uint16_t *flowgram; /*!< for each flow, the flowgram signal (100*signal)  */
+    int32_t num_flows; /*!< the number of flows */
+    int32_t key_index; /*!< the 0-based index of the key base if the key is part of the first or last flow (should be -1, 0, or num_flow-1). */
+    int32_t key_bases; /*!< the number of bases part of the key_index flow that are explained by the key sequence */
 } fmap_fsw_flowseq_t;
 
 /*

@@ -42,6 +42,153 @@ fmap_map3_get_seed_length(uint64_t ref_len)
 }
 
 static inline void
+fmap_map3_fsw(fmap_sff_t *sff, fmap_map3_aln_t *aln, fmap_refseq_t *refseq,
+              fmap_map3_opt_t *opt)
+{
+  int32_t i, j, k, l;
+  uint8_t *target = NULL;
+  int32_t target_mem = 0, target_len = 0, score_subo;
+
+  fmap_fsw_flowseq_t *fseq[2] = {NULL, NULL};
+  fmap_fsw_param_t par;
+  fmap_fsw_path_t *path = NULL;
+  int32_t path_mem = 0, path_len = 0;
+
+  // generate the alignment parameters
+  __fmap_fsw_gen_ap(par, opt);
+
+  // go through each hit
+  for(i=0;i<aln->n;i++) {
+      fmap_map3_hit_t *h = &aln->hits[i];
+      uint32_t ref_start, ref_end, pacpos;
+      int32_t score, strand;
+
+      strand = h->strand;
+
+      // get flow sequence if necessary
+      if(NULL == fseq[strand]) {
+          fseq[strand] = fmap_fsw_sff_to_flowseq(sff);
+          if(1 == h->strand) fmap_fsw_flowseq_reverse_compliment(fseq[strand]);
+      }
+
+      par.band_width = 0;
+      ref_start = ref_end = h->pos;
+      for(j=0;j<h->n_cigar;j++) {
+          int32_t op, op_len;
+
+          op = h->cigar[j] & 0xf;
+          op_len = h->cigar[j] >> 4;
+
+          switch(op) {
+            case BAM_CMATCH:
+              ref_end += op_len;
+              break;
+            case BAM_CDEL:
+              if(par.band_width < op_len) par.band_width += op_len;
+              ref_end += op_len;
+              break;
+            case BAM_CINS:
+              if(par.band_width < op_len) par.band_width += op_len;
+              break;
+            case BAM_CSOFT_CLIP:
+              if(0 == j) {
+                  if(ref_start <= op_len) {
+                      ref_start = 1;
+                  }
+                  else {
+                      ref_start = ref_start - op_len + 1;
+                  }
+              }
+              else ref_end += op_len;
+              break;
+            default:
+              // ignore
+              break;
+          }
+      }
+
+      // check bounds
+      if(ref_start < 1) ref_start = 1;
+      if(refseq->annos[h->seqid].len < ref_end) {
+          ref_end = refseq->annos[h->seqid].len;
+      }
+
+      // get the target sequence
+      target_len = ref_end - ref_start + 1;
+      if(target_mem < target_len) {
+          target_mem = target_len;
+          fmap_roundup32(target_mem);
+          target = fmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
+      }
+      for(pacpos=ref_start;pacpos<=ref_end;pacpos++) {
+          // add contig offset and make zero-based
+          target[pacpos-ref_start] =
+            fmap_refseq_seq_i(refseq, pacpos + refseq->annos[h->seqid].offset-1);
+      }
+
+      // add to the band width
+      par.band_width += 2 * opt->sw_offset;
+
+      // make sure we have enough memory for the path
+      while(path_mem <= target_len + fseq[strand]->num_flows) { // lengthen the path
+          path_mem = target_len + fseq[strand]->num_flows;
+          fmap_roundup32(path_mem);
+          target = fmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
+      }
+
+      // re-align
+      if(0 == opt->aln_global) {
+          score = fmap_fsw_local_core(target, target_len, fseq[strand], &par, path, &path_len, opt->score_thr, &score_subo);
+      }
+      else {
+          score = fmap_fsw_fitting_core(target, target_len, fseq[strand], &par, path, &path_len);
+          score_subo = INT32_MIN;
+      }
+
+      if(path_len < 0) { // update
+          h->pos = (ref_start-1) + (path[path_len-1].j-1);
+          h->score = score;
+          h->score_subo = score_subo;
+          free(h->cigar);
+          h->cigar = fmap_fsw_path2cigar(path, path_len, &h->n_cigar);
+
+          if(0 < path[path_len-1].i) { // skipped beginning flows
+              // get the number of bases to clip
+              for(j=k=0;j<path[path_len-1].i;j++) {
+                  k += fseq[strand]->base_calls[j];
+              }
+              if(0 < k) { // bases should be soft-clipped
+                  h->cigar = fmap_realloc(h->cigar, sizeof(uint32_t)*(1 + h->n_cigar), "h->cigar");
+                  for(l=h->n_cigar-1;0<=l;l--) {
+                      h->cigar[l+1] = h->cigar[l];
+                  }
+                  h->cigar[0] = (k << 4) | 4;
+                  h->n_cigar++;
+              }
+          }
+
+          if(path[0].i < fseq[strand]->num_flows) { // skipped ending flows
+              // get the number of bases to clip 
+              for(j=path[0].i,k=0;j<fseq[strand]->num_flows;j++) {
+                  k += fseq[strand]->base_calls[j];
+              }
+              if(0 < k) { // bases should be soft-clipped
+                  h->cigar = fmap_realloc(h->cigar, sizeof(uint32_t)*(1 + h->n_cigar), "h->cigar");
+                  h->cigar[h->n_cigar] = (k << 4) | 4;
+                  h->n_cigar++;
+              }
+          }
+      }
+  }
+
+  // free
+  if(NULL != fseq[0]) fmap_fsw_flowseq_destroy(fseq[0]); 
+  if(NULL != fseq[1]) fmap_fsw_flowseq_destroy(fseq[1]); 
+  free(target);
+  free(path);
+}
+
+static inline void
 fmap_map3_aln_filter(fmap_seq_t *seq, fmap_map3_aln_t *aln, 
                      int32_t score_thr, int32_t score_match, int32_t aln_output_mode)
 {
@@ -162,13 +309,21 @@ fmap_map3_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map3_hit_t *hit
                         hit->score, hit->n_seeds);
 }
 
-
 static void
 fmap_map3_core_worker(fmap_seq_t **seq_buffer, fmap_map3_aln_t **alns, int32_t seq_buffer_length, 
                       fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *sa,
                       int32_t tid, fmap_map3_opt_t *opt)
 {
-  int32_t low = 0, high;
+  int32_t i, low = 0, high;
+  uint8_t *flow[2] = {NULL, NULL};
+
+  // set up the flow order
+  flow[0] = fmap_malloc(sizeof(uint8_t) * 4, "flow[0]");
+  flow[1] = fmap_malloc(sizeof(uint8_t) * 4, "flow[1]");
+  for(i=0;i<4;i++) {
+      flow[0][i] = opt->flow[i];
+      flow[1][i] = 3 - opt->flow[i];
+  }
 
   while(low < seq_buffer_length) {
 #ifdef HAVE_LIBPTHREAD
@@ -193,24 +348,12 @@ fmap_map3_core_worker(fmap_seq_t **seq_buffer, fmap_map3_aln_t **alns, int32_t s
 #endif
       while(low<high) {
           fmap_seq_t *seq[2]={NULL, NULL}, *orig_seq=NULL;
-          fmap_fsw_flowseq_t *fseq[2]={NULL, NULL};
           orig_seq = seq_buffer[low];
           fmap_string_t *bases[2]={NULL, NULL};
 
           // clone the sequence 
           seq[0] = fmap_seq_clone(orig_seq);
           seq[1] = fmap_seq_clone(orig_seq);
-
-          if(FMAP_SEQ_TYPE_SFF == orig_seq->type) {
-              // Get the flow sequence for alignment
-              fseq[0] = fmap_fsw_sff_to_flowseq(orig_seq->data.sff);
-              fseq[1] = fmap_fsw_sff_to_flowseq(orig_seq->data.sff);
-              fmap_fsw_flowseq_reverse_compliment(fseq[1]);
-
-              // Adjust for SFF
-              fmap_seq_remove_key_sequence(seq[0]);
-              fmap_seq_remove_key_sequence(seq[1]);
-          }
 
           // reverse compliment
           fmap_seq_reverse_compliment(seq[1]);
@@ -219,28 +362,38 @@ fmap_map3_core_worker(fmap_seq_t **seq_buffer, fmap_map3_aln_t **alns, int32_t s
           fmap_seq_to_int(seq[0]);
           fmap_seq_to_int(seq[1]);
 
+          // remove key sequence - SFF only
+          fmap_seq_remove_key_sequence(seq[0]);
+          fmap_seq_remove_key_sequence(seq[1]);
+
           // get bases
           bases[0] = fmap_seq_get_bases(seq[0]);
           bases[1] = fmap_seq_get_bases(seq[1]);
 
-          alns[low] = fmap_map3_aux_core(seq, fseq, refseq, bwt, sa, opt);
+          // align
+          alns[low] = fmap_map3_aux_core(seq, flow, refseq, bwt, sa, opt);
 
           // filter the alignments
           fmap_map3_aln_filter(seq_buffer[low], alns[low],
                                opt->score_thr, opt->score_match, opt->aln_output_mode);
 
+          // re-align the alignments in flow-space
+          if(FMAP_SEQ_TYPE_SFF == orig_seq->type) {
+              fmap_map3_fsw(orig_seq->data.sff, alns[low], refseq, opt);
+          }
+
           // destroy
           fmap_seq_destroy(seq[0]);
           fmap_seq_destroy(seq[1]);
-          if(FMAP_SEQ_TYPE_SFF == orig_seq->type) {
-              fmap_fsw_flowseq_destroy(fseq[0]);
-              fmap_fsw_flowseq_destroy(fseq[1]);
-          }
 
           // next
           low++;
       }
   }
+
+  // free
+  free(flow[0]);
+  free(flow[1]);
 }
 
 static void *
@@ -460,9 +613,11 @@ usage(fmap_map3_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "         -M INT      the mismatch penalty [%d]\n", opt->pen_mm); 
   fmap_file_fprintf(fmap_file_stderr, "         -O INT      the indel start penalty [%d]\n", opt->pen_gapo); 
   fmap_file_fprintf(fmap_file_stderr, "         -E INT      the indel extend penalty [%d]\n", opt->pen_gape); 
+  fmap_file_fprintf(fmap_file_stderr, "         -X INT      the flow score penalty [%d]\n", opt->fscore); 
   fmap_file_fprintf(fmap_file_stderr, "         -T INT      score threshold divided by the match score [%d]\n", opt->score_thr);
   fmap_file_fprintf(fmap_file_stderr, "         -g          align the full read (global alignment) [%s]\n", (0 == opt->aln_global) ? "false" : "true");
   fmap_file_fprintf(fmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
+  fmap_file_fprintf(fmap_file_stderr, "         -k STRING   the flow orde ([ACGT]{4}) [%s]\n", opt->flow);
   fmap_file_fprintf(fmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
   fmap_file_fprintf(fmap_file_stderr, "         -a INT      output filter [%d]\n", opt->aln_output_mode);
   fmap_file_fprintf(fmap_file_stderr, "                             0 - unique best hits\n");
@@ -505,10 +660,12 @@ fmap_map3_opt_init()
   opt->sw_offset = 10; // move this to a define block
   opt->score_match = 1;
   opt->pen_mm = 3; opt->pen_gapo = 5; opt->pen_gape = 2; // TODO: move this to a define block
+  opt->fscore = 7;
   opt->score_thr = 20;
   opt->aln_global = 0;
   opt->hp_diff = 0;
   opt->reads_queue_size = 65536; // TODO: move this to a define block
+  opt->flow = fmap_strdup("TACG");
   opt->num_threads = 1;
   opt->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_RAND_BEST;
   opt->input_compr = FMAP_FILE_NO_COMPRESSION;
@@ -523,20 +680,21 @@ fmap_map3_opt_destroy(fmap_map3_opt_t *opt)
 {
   free(opt->fn_fasta);
   free(opt->fn_reads);
+  free(opt->flow);
   free(opt);
 }
 
 int 
 fmap_map3_main(int argc, char *argv[])
 {
-  int c;
+  int c, i;
   fmap_map3_opt_t *opt = NULL;
 
   srand48(0); // random seed
   opt = fmap_map3_opt_init(argv, argc);
   opt->argc = argc; opt->argv = argv;
 
-  while((c = getopt(argc, argv, "f:r:F:l:S:b:w:A:M:O:E:T:gH:q:n:a:jzJZs:vh")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:l:S:b:w:A:M:O:E:X:T:gH:q:n:k:a:jzJZs:vh")) >= 0) {
       switch(c) {
         case 'f':
           opt->fn_fasta = fmap_strdup(optarg); break;
@@ -562,6 +720,8 @@ fmap_map3_main(int argc, char *argv[])
           opt->pen_gapo = atoi(optarg); break;
         case 'E':
           opt->pen_gape = atoi(optarg); break;
+        case 'X':
+          opt->fscore = atoi(optarg); break;
         case 'T':
           opt->score_thr = atoi(optarg); break;
         case 'g':
@@ -572,6 +732,8 @@ fmap_map3_main(int argc, char *argv[])
           opt->hp_diff = atoi(optarg); break;
         case 'n':
           opt->num_threads = atoi(optarg); break;
+        case 'k':
+          opt->flow = fmap_strdup(optarg); break;
         case 'a':
           opt->aln_output_mode = atoi(optarg); break;
         case 'j':
@@ -621,9 +783,24 @@ fmap_map3_main(int argc, char *argv[])
       fmap_error_cmd_check_int(opt->pen_mm, 0, INT32_MAX, "-M");
       fmap_error_cmd_check_int(opt->pen_gapo, 0, INT32_MAX, "-O");
       fmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
+      fmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
       fmap_error_cmd_check_int(opt->score_thr, 0, INT32_MAX, "-T");
       if(-1 != opt->reads_queue_size) fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
       fmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
+
+      if(4 != strlen(opt->flow)) fmap_error("the flow must be four bases (-k)", Exit, CommandLineArgument);
+      int32_t ft[4] = {0,0,0,0};
+      for(i=0;i<4;i++) { // convert to int
+          opt->flow[i] = fmap_nt_char_to_int[(int)opt->flow[i]]; 
+          if(opt->flow[i] < 0 || 3 < opt->flow[i]) {
+              fmap_error("the flow bases were unrecognized (-k)", Exit, CommandLineArgument);
+          }
+          ft[(int)opt->flow[i]]++;
+      }
+      if(1 != ft[0] || 1 != ft[1] || 1 != ft[2] || 1 != ft[3]) {
+          fmap_error("ACGT must be present exactly once (-k)", Exit, CommandLineArgument);
+      }
+
       fmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
       fmap_error_cmd_check_int(opt->aln_output_mode, 0, INT32_MAX, "-H");
 

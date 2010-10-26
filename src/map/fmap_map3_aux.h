@@ -2,7 +2,6 @@
 #define FMAP_MAP3_AUX_H_
 
 #include "fmap_map3.h"
-#include "../sw/fmap_fsw.h"
 
 /*!
   Holds the seed matches
@@ -50,7 +49,7 @@ fmap_map3_aln_realloc(fmap_map3_aln_t *aln, int32_t n);
 /*!
   Core mapping routine
   @param  seq     the sequence to align (forward/reverse-compliment)
-  @param  fseq    the flow sequence to align, if available (forward/reverse-compliment)
+  @param  flow     the flow order (forward/reverse-compliment)
   @param  refseq  the reference sequence structure (forward)
   @param  bwt     the BWT structure (reverse)
   @param  sa      the SA structure (reverse)
@@ -59,7 +58,7 @@ fmap_map3_aln_realloc(fmap_map3_aln_t *aln, int32_t n);
   */
 fmap_map3_aln_t *
 fmap_map3_aux_core(fmap_seq_t *seq[2],
-                   fmap_fsw_flowseq_t *fseq[2],
+                   uint8_t *flow[2],
                    fmap_refseq_t *refseq,
                    fmap_bwt_t *bwt,
                    fmap_sa_t *sa,

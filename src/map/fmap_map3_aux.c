@@ -7,7 +7,6 @@
 #include "../index/fmap_sa.h"
 #include "../index/fmap_bwt_match.h"
 #include "../sw/fmap_sw.h"
-#include "../sw/fmap_fsw.h"
 #include "fmap_map3.h"
 #include "fmap_map3_aux.h"
 
@@ -19,7 +18,7 @@
 FMAP_SORT_INIT(fmap_map3_aux_hit_t, fmap_map3_aux_hit_t, __fmap_map3_hit_sort_lt)
 
      // Note: this does not set the band width
-#define __map3_gen_ap(par, op) do { \
+#define __map3_gen_ap(par, opt) do { \
     int32_t i; \
     for(i=0;i<25;i++) { \
         (par).matrix[i] = -(opt)->pen_mm; \
@@ -255,7 +254,7 @@ fmap_map3_aux_core_seed(uint8_t *query,
 // TODO: memory pools?
 fmap_map3_aln_t *
 fmap_map3_aux_core(fmap_seq_t *seq[2], 
-                   fmap_fsw_flowseq_t *fseq[2],
+                   uint8_t *flow[2],
                    fmap_refseq_t *refseq,
                    fmap_bwt_t *bwt,
                    fmap_sa_t *sa,
@@ -290,9 +289,6 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
 
   aln = fmap_map3_aln_init();
 
-  // HERE
-  uint8_t flow_order[4] = {3, 0, 1, 2};
-
   // seeds
   for(i=0;i<2;i++) { // forward/reverse-compliment
       bases = fmap_seq_get_bases(seq[i]);
@@ -304,7 +300,7 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
       m_seeds[i] = seq_len[i] - opt->seed_length + 1; // maximum number of seeds possible
       seeds[i] = fmap_malloc(m_seeds[i]*sizeof(fmap_map3_aux_seed_t), "seeds[i]");
 
-      fmap_map3_aux_core_seed(query, seq_len[i], flow_order, 
+      fmap_map3_aux_core_seed(query, seq_len[i], flow[i],
                               refseq, bwt, sa, opt, &seeds[i], &n_seeds[i], &m_seeds[i]);
   }
 
@@ -407,8 +403,9 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
           par.band_width = hits[i][end].pos - hits[i][start].pos;
           par.band_width += 2 * opt->sw_offset; // add bases to the window
 
-          while(path_mem <= target_len + seq_len[i]) { // lengthen the path
-              path_mem = (0 == path_mem) ? 64 : (path_mem << 1); 
+          if(path_mem <= target_len + seq_len[i]) { // lengthen the path
+              path_mem = target_len + seq_len[i];
+              fmap_roundup32(path_mem);
               path = fmap_realloc(path, sizeof(fmap_sw_path_t)*path_mem, "path");
           }
 
