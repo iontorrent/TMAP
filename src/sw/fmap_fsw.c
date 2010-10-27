@@ -908,18 +908,15 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
 }
 
 void 
-fmap_fsw_print_aln(int64_t score, fmap_fsw_path_t *path, int32_t path_len,
+fmap_fsw_print_aln(fmap_file_t *fp, int64_t score, fmap_fsw_path_t *path, int32_t path_len,
                         uint8_t *flow, uint8_t *target, uint8_t strand)
 {
   char *ref=NULL, *read=NULL, *aln=NULL;
 
   fmap_fsw_get_aln(path, path_len, flow, target, strand, &ref, &read, &aln);
   
-  fprintf(stderr, "score=%lld\n", (long long int)score);
-  fprintf(stderr, "REF:  %s\n", ref);
-  fprintf(stderr, "      %s\n", aln);
-  fprintf(stderr, "READ: %s\n", read);
-  fputc('\n', stderr);
+  fmap_file_fprintf(fp, "%lld\t%s\t%s\t%s\n",
+          (long long int)score, ref, read, aln);
 
   free(ref);
   free(read);
@@ -1175,10 +1172,14 @@ int fmap_fsw_main(int argc, char *argv[])
                                        -1, 0,
                                        &opt->param,
                                        path, &path_len);
+  
+  fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "wb", FMAP_FILE_NO_COMPRESSION);
 
   // print
-  fmap_fsw_print_aln(score, path, path_len,
+  fmap_fsw_print_aln(fmap_file_stdout, score, path, path_len,
                      flow, (uint8_t*)opt->target, 0);
+
+  fmap_file_fclose(fmap_file_stdout);
 
   // destroy memory
   fmap_fsw_main_opt_destroy(opt);

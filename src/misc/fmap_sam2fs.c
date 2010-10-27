@@ -262,7 +262,7 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
                                &param, path, &path_len);
 
   if(NULL == ref || NULL == read || NULL == aln) {
-      fmap_fsw_print_aln(score, path, path_len, flow_order_tmp, 
+      fmap_fsw_print_aln(fmap_file_stdout, score, path, path_len, flow_order_tmp, 
                         (uint8_t*)ref_bases,
                         (BAM_FREVERSE & bam->core.flag) ? 1 : 0);
   }
@@ -306,6 +306,7 @@ fmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, char *flow_order
   samfile_t *fp_in = NULL;
   bam1_t *b = NULL;
 
+  fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "wb", FMAP_FILE_NO_COMPRESSION);
   fp_in = samopen(fn_in, sam_open_flags, 0);
   if(NULL == fp_in) fmap_error(fn_in, Exit, OpenFileError);
 
@@ -321,6 +322,7 @@ fmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, char *flow_order
   bam_destroy1(b);
 
   samclose(fp_in); 
+  fmap_file_fclose(fmap_file_stdout);
 }
 
 int

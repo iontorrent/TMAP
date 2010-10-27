@@ -257,6 +257,7 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
 
 /*!
   Pretty-prints an alignment
+  @param  fp        the file pointer to print
   @param  score     the flow space alignment score
   @param  path      the alignment path
   @param  path_len  the alignment path length
@@ -265,7 +266,7 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
   @param  strand    0 for the forward strand, 1 for the reverse
   */
 void 
-fmap_fsw_print_aln(int64_t score, fmap_fsw_path_t *path, int32_t path_len,
+fmap_fsw_print_aln(fmap_file_t *fp, int64_t score, fmap_fsw_path_t *path, int32_t path_len,
                    uint8_t *flow, uint8_t *target, uint8_t strand);
 
 /*! 
