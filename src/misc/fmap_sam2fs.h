@@ -1,6 +1,26 @@
 #ifndef FMAP_SAM2FS_H_
 #define FMAP_SAM2FS_H_
 
+#include <config.h>
+
+// TODO: doc
+enum {
+    FMAP_SAM2FS_OUTPUT_FLOW = 0,
+    FMAP_SAM2FS_OUTPUT_BASE = 1,
+    FMAP_SAM2FS_OUTPUT_SAM = 2,
+    FMAP_SAM2FS_OUTPUT_BAM = 3
+};
+
+typedef struct {
+    char *flow_order; /*!< flow order (-f) */
+    int32_t flow_score; /*!< flow penalty (-F) */
+    int32_t flow_offset; /*!< search for homopolymer errors +- offset during re-alignment (-o) */
+    int32_t aln_global; /*!< run global alignment (otherwise read fitting) (-g) */
+    int32_t output_type; /*!< the output type: 0-flow space alignment 1-base space alignment 2-SAM (-z) */
+} fmap_sam2fs_opt_t;
+
+#ifdef HAVE_SAMTOOLS
+
 /*!
   @brief
   @param  bam          the SAM/BAM structure to examine
@@ -8,13 +28,15 @@
   @param  flow_score    the flow score for the flow-space Smith-Waterman re-alignment
   @param  flow_offfset  the maximum homopolymer offset to examine
   @param  aln_global   the global alignment will be used if 1, fitting alignment otherwise
-  @param  ref          the returned reference alignment string
-  @param  read         the returned read alignment string 
-  @param  aln          the returned reference/read alignment string
+  @param  output_type  the output type
+  @return              the original SAM/BAM, unless the output type is SAM
+  @details             if the output type is 2, then the bam will be modified
   */
-void 
-fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_offset, int32_t aln_global,
-                                char **ref, char **read, char **aln);
+bam1_t *
+fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_offset, 
+                int32_t aln_global, int32_t output_type);
+
+#endif
 
 /*! 
   @brief        main-like function for 'fmap sam2fs'

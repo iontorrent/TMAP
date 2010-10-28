@@ -885,8 +885,6 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
         case FMAP_FSW_FROM_I:
           (*aln)[j] = '+'; break;
         case FMAP_FSW_FROM_D:
-          // HERE
-          fprintf(stderr, "i=%d j=%d path[i].ctype=%d\n", i, j, path[i].ctype);
           (*aln)[j] = '-'; break;
         case FMAP_FSW_FROM_HP_PLUS: // overcall
           (*aln)[j] = 'h'; break;
