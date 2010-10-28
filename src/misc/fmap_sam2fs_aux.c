@@ -372,7 +372,6 @@ fmap_sam2fs_aux_flow_align(fmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
       else fmap_file_fprintf(fp, "-");
       if(0 < i) fmap_file_fprintf(fp, ","); 
   }
-  fmap_file_fprintf(fp, "\n"); 
 
   // destroy
   for(i=0;i<=f_qseq->l;i++) {
