@@ -14,6 +14,7 @@
 #include "../util/fmap_definitions.h"
 #include "../io/fmap_file.h"
 #include "../sw/fmap_fsw.h"
+#include "fmap_sam2fs_aux.h"
 #include "fmap_sam2fs.h"
 
 #ifdef HAVE_SAMTOOLS
@@ -79,8 +80,8 @@ fmap_sam2fs_copy_to_sam(bam1_t *bam_old, fmap_fsw_path_t *path, int32_t path_len
   // tid, pos, qual
   bam_new->core.tid = bam_old->core.tid;
   bam_new->core.pos = bam_old->core.pos; 
-  if(0 < path[0].j) { // adjust the position
-      bam_new->core.pos += path[0].j;
+  if(0 < path[path_len-1].j) { // adjust the position
+      bam_new->core.pos += path[path_len-1].j;
   }
   bam_new->core.qual = bam_old->core.qual; 
   
@@ -357,9 +358,18 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
 
   switch(output_type) {
     case FMAP_SAM2FS_OUTPUT_FLOW:
-      // TODO
+      /*
+      fprintf(stderr, "path[path_len-1].i=%d path[path_len-1].j=%d\n",
+              path[path_len-1].i, path[path_len-1].j);
+              */
+      fmap_file_fprintf(fmap_file_stdout, "%s\t", bam1_qname(bam));
+      fmap_sam2fs_aux_flow_align(fmap_file_stdout, 
+                                       (uint8_t*)read_bases, read_bases_len,
+                                       (uint8_t*)(ref_bases + path[path_len-1].j), ref_bases_len - path[path_len-1].j,
+                                       flow_order_tmp);
       break;
     case FMAP_SAM2FS_OUTPUT_BASE:
+      fmap_file_fprintf(fmap_file_stdout, "%s\t", bam1_qname(bam));
       fmap_fsw_print_aln(fmap_file_stdout, score, path, path_len, flow_order_tmp, 
                          (uint8_t*)ref_bases,
                          (BAM_FREVERSE & bam->core.flag) ? 1 : 0);
@@ -463,7 +473,7 @@ fmap_sam2fs_opt_init()
   opt = fmap_calloc(1, sizeof(fmap_sam2fs_opt_t), "opt");
 
   opt->flow_order = fmap_strdup("TACG");
-  opt->flow_score = 26*100; // set this to score_match + gap_open + gap_ext
+  opt->flow_score = 26; 
   opt->flow_offset = 1;
   opt->aln_global = 0;
   opt->output_type = 0;
