@@ -7,12 +7,13 @@
   @param  flow_order    the flow order of the four DNA bases
   @param  flow_score    the flow score for the flow-space Smith-Waterman re-alignment
   @param  flow_offfset  the maximum homopolymer offset to examine
+  @param  aln_global   the global alignment will be used if 1, fitting alignment otherwise
   @param  ref          the returned reference alignment string
   @param  read         the returned read alignment string 
   @param  aln          the returned reference/read alignment string
   */
 void 
-fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_offset,
+fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_offset, int32_t aln_global,
                                 char **ref, char **read, char **aln);
 
 /*! 

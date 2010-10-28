@@ -46,7 +46,7 @@ fmap_sam2fs_is_DNA(char c)
 }
 
 void 
-fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_offset,
+fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_offset, int32_t aln_global,
                 char **ref, char **read, char **aln)
 {
   int32_t i, j, k, l;
@@ -256,10 +256,18 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
   path = fmap_calloc(FMAP_FSW_MAX_PATH_LENGTH(ref_bases_len, flow_len, param.offset), sizeof(fmap_fsw_path_t), "path"); 
 
   // re-align 
-  score = fmap_fsw_global_core((uint8_t*)ref_bases, ref_bases_len,
+  if(1 == aln_global) {
+      score = fmap_fsw_global_core((uint8_t*)ref_bases, ref_bases_len,
                                flow_order_tmp, base_calls, flowgram, flow_len,
                                -1, 0,
                                &param, path, &path_len);
+  }
+  else {
+      score = fmap_fsw_fitting_core((uint8_t*)ref_bases, ref_bases_len,
+                               flow_order_tmp, base_calls, flowgram, flow_len,
+                               -1, 0,
+                               &param, path, &path_len);
+  }
 
   if(NULL == ref || NULL == read || NULL == aln) {
       fmap_fsw_print_aln(fmap_file_stdout, score, path, path_len, flow_order_tmp, 
@@ -281,7 +289,7 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
 }
 
 static int
-usage(char *flow_order, int32_t flow_score, int32_t flow_offset)
+usage(char *flow_order, int32_t flow_score, int32_t flow_offset, int32_t aln_global)
 {
   fmap_file_fprintf(fmap_file_stderr, "\n");
   fmap_file_fprintf(fmap_file_stderr, "Usage: %s sam2fs <in.sam/in.bam> [options]", PACKAGE);
@@ -292,6 +300,7 @@ usage(char *flow_order, int32_t flow_score, int32_t flow_offset)
   fmap_file_fprintf(fmap_file_stderr, "         -o INT      search for homopolymer errors +- offset [%d]\n",
                     flow_offset);
   fmap_file_fprintf(fmap_file_stderr, "         -S          the input is a SAM file\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -l          the read should be fitted into the reference (otherwise global) [%d]\n", aln_global);
   fmap_file_fprintf(fmap_file_stderr, "         -v          print verbose progress information\n");
   fmap_file_fprintf(fmap_file_stderr, "         -h          print this message\n");
   fmap_file_fprintf(fmap_file_stderr, "\n");
@@ -301,7 +310,7 @@ usage(char *flow_order, int32_t flow_score, int32_t flow_offset)
 
 static void
 fmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, char *flow_order,
-                 int32_t flow_score, int32_t flow_offset)
+                 int32_t flow_score, int32_t flow_offset, int32_t aln_global)
 {
   samfile_t *fp_in = NULL;
   bam1_t *b = NULL;
@@ -313,7 +322,7 @@ fmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, char *flow_order
   b = bam_init1();
   while(0 < samread(fp_in, b)) { 
       // process 
-      fmap_sam2fs_aux(b, flow_order, flow_score, flow_offset, NULL, NULL, NULL);
+      fmap_sam2fs_aux(b, flow_order, flow_score, flow_offset, aln_global, NULL, NULL, NULL);
       // destroy the bam
       bam_destroy1(b);
       // reinitialize
@@ -332,12 +341,13 @@ fmap_sam2fs_main(int argc, char *argv[])
   char sam_open_flags[16] = "rb";
   char *flow_order=NULL;
   int32_t flow_score, flow_offset;
+  int32_t aln_global = 1;
 
   flow_order = fmap_strdup("TACG");
   flow_score = 26*100; // set this to score_match + gap_open + gap_ext
   flow_offset = 1;
 
-  while((c = getopt(argc, argv, "f:F:o:Svh")) >= 0) {
+  while((c = getopt(argc, argv, "f:F:o:Slvh")) >= 0) {
       switch(c) {
         case 'f':
           strncpy(flow_order, optarg, 4); break;
@@ -347,16 +357,18 @@ fmap_sam2fs_main(int argc, char *argv[])
           flow_offset = atoi(optarg); break;
         case 'S':
           strcpy(sam_open_flags, "r"); break;
+        case 'l':
+          aln_global = 0; break;
         case 'v':
           fmap_progress_set_verbosity(1); break;
         case 'h':
         default:
-          return usage(flow_order, flow_score, flow_offset);
+          return usage(flow_order, flow_score, flow_offset, aln_global);
       }
   }
 
   if(argc != optind+1 || 1 == argc) {
-      return usage(flow_order, flow_score, flow_offset);
+      return usage(flow_order, flow_score, flow_offset, aln_global);
   }
   else { // check command line options
       fmap_error_cmd_check_int(flow_score, 0, INT32_MAX, "-F");
@@ -364,7 +376,7 @@ fmap_sam2fs_main(int argc, char *argv[])
       fmap_error_cmd_check_int((int)strlen(flow_order), 4, 4, "-f");
   }
 
-  fmap_sam2fs_core(argv[optind], sam_open_flags, flow_order, flow_score, flow_offset);
+  fmap_sam2fs_core(argv[optind], sam_open_flags, flow_order, flow_score, flow_offset, aln_global);
 
   free(flow_order);
 

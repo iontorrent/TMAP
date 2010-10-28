@@ -353,7 +353,7 @@ fmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *fl
                   fmap_fsw_dpcell_t **sub_dpcell,
                   fmap_fsw_dpscore_t **sub_dpscore, 
                   const fmap_fsw_param_t *ap,
-                  int32_t best_i, int32_t best_j, uint8_t best_ctype,
+                  int32_t best_i, int32_t best_j, uint8_t best_ctype, int32_t type,
                   fmap_fsw_path_t *path, int32_t *path_len)
 {
   register int32_t i, j;
@@ -391,6 +391,12 @@ fmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *fl
       base_call = 0;
       col_offset = 0;
       base_call_diff = 0;
+
+      // local
+      if(i <= 0
+         && (FMAP_SW_TYPE_LOCAL == type || FMAP_SW_TYPE_FITTING == type)) {
+          break;
+      }
 
       //fprintf(stderr, "CORE i=%d j=%d ctype=%d\n", i, j, ctype);
       switch(ctype) { 
@@ -602,18 +608,23 @@ fmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
       FMAP_FSW_INIT_CELL(dpcell[0][j]);
       switch(type) {
         case FMAP_SW_TYPE_LOCAL:
-          dpscore[0][j].match_score = 0; // the alignment can start anywhere
+        case FMAP_SW_TYPE_FITTING:
+          // the alignment can start anywhere with seq 
+          dpscore[0][j].match_score = 0; 
           break;
         case FMAP_SW_TYPE_GLOBAL:
         case FMAP_SW_TYPE_EXTEND:
         case FMAP_SW_TYPE_EXTEND_FITTING:
           fmap_fsw_set_end_del(dpcell, dpscore, 0, j, gap_open, gap_ext, gap_end, 0);
           break;
+        default:
+          fmap_error("alignment type not understood", Exit, OutOfRange);
       }
   }
 
   // core loop
   for(i=1;i<=num_flows;i++) { // for each row
+
       // fill in the columns
       //fprintf(stderr, "i=%d num_flows=%d\n", i, num_flows);
       fmap_fsw_sub_core(seq, len,
@@ -668,6 +679,7 @@ fmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
           }
           break;
         case FMAP_SW_TYPE_EXTEND_FITTING:
+        case FMAP_SW_TYPE_FITTING:
           if(num_flows == i) {
               for(j=1;j<=len;j++) {
                   if(best_score < dpscore[i][j].match_score) {
@@ -712,7 +724,7 @@ fmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
                         dpcell, dpscore, 
                         sub_dpcell, sub_dpscore, 
                         ap, 
-                        best_i, best_j, best_ctype, 
+                        best_i, best_j, best_ctype, type, 
                         path, path_len);
   }
 
@@ -873,6 +885,8 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
         case FMAP_FSW_FROM_I:
           (*aln)[j] = '+'; break;
         case FMAP_FSW_FROM_D:
+          // HERE
+          fprintf(stderr, "i=%d j=%d path[i].ctype=%d\n", i, j, path[i].ctype);
           (*aln)[j] = '-'; break;
         case FMAP_FSW_FROM_HP_PLUS: // overcall
           (*aln)[j] = 'h'; break;
