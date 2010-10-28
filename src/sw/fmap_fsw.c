@@ -928,7 +928,7 @@ fmap_fsw_print_aln(fmap_file_t *fp, int64_t score, fmap_fsw_path_t *path, int32_
   fmap_fsw_get_aln(path, path_len, flow, target, strand, &ref, &read, &aln);
   
   fmap_file_fprintf(fp, "%lld\t%s\t%s\t%s",
-          (long long int)score, ref, read, aln);
+          (long long int)score, ref, aln, read);
 
   free(ref);
   free(read);
