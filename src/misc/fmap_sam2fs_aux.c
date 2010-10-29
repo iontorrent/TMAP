@@ -94,12 +94,13 @@ static void
 fmap_sam2fs_aux_flow_convert(fmap_sam2fs_aux_flow_t *a, uint8_t *seq, int32_t len, 
                              uint8_t *flow_order, uint8_t *qseq, int32_t qseq_len)
 {
-  int32_t i, k, l;
+  int32_t i, k, l, next_i;
 
   i = k = a->l = a->m = 0;
 
   // move to the first flow
   if(NULL != qseq) {
+      // we skip the flows not found in the qseq
       while('-' == qseq[i]) { // this could move beyond the end if all gaps
           if(qseq_len <= i) {
               fmap_error(NULL, Exit, OutOfRange);
@@ -124,7 +125,20 @@ fmap_sam2fs_aux_flow_convert(fmap_sam2fs_aux_flow_t *a, uint8_t *seq, int32_t le
 
   i=0;
   while(i < len) {
-      // empty flow
+      int32_t before = i;
+
+      // move beyond the initial gaps
+      while(i < len && '-' == seq[i]) {
+          i++;
+      }
+      if(len <= i) break;
+
+      if(3 < seq[i]) {
+          fprintf(stderr, "i=%d seq[i]=%d len=%d NULL=%d\n", i, seq[i], len, (NULL==qseq) ? 1 : 0);
+          fmap_error(NULL, Exit, OutOfRange);
+      }
+
+      // skip over empty flow
       while(flow_order[k] != seq[i]) {
           if(a->m <= a->l) {
               a->m = a->l + 1;
@@ -135,34 +149,48 @@ fmap_sam2fs_aux_flow_convert(fmap_sam2fs_aux_flow_t *a, uint8_t *seq, int32_t le
           a->l++;
           k = (k+1) & 3; // % 4
       }
-      // current flow
-      l = i+1;
-      while(l < len && flow_order[k] == seq[l]) {
-          l++;
+
+      // get the number of bases in current flow
+      next_i = i+1;
+      l = 1;
+      while(next_i < len 
+            && (flow_order[k] == seq[next_i] || '-' == seq[next_i])) {
+          if(flow_order[k] == seq[next_i]) {
+              l++;
+          }
+          next_i++;
       }
-      if(a->m <= a->l) {
+      if(a->m <= a->l) { // more memory?
           a->m = a->l + 1;
           fmap_roundup32(a->m);
           a->flow = fmap_realloc(a->flow, a->m * sizeof(uint8_t), "a->flow");
       }
-      a->flow[a->l] = l-i;
+      a->flow[a->l] = l;
       a->l++;
       k = (k+1) & 3; // % 4
-      i = l;
+      i = next_i;
+      if(i <= before) {
+          fmap_error(NULL, Exit, OutOfRange);
+      }
+      // move beyond the gaps
+      while(i < len && '-' == seq[i]) {
+          i++;
+      }
   }
 
   if(NULL != qseq) {
-      k = (k+3) & 3;
+      k = (k+3) & 3; // move back one flow
 
       // get the last base in qseq
       i = qseq_len-1;
       while('-' == qseq[i]) {
+          i--;
           if(i < 0) {
               fmap_error(NULL, Exit, OutOfRange);
           }
-          i--;
       }
-      
+
+      // add empty flows
       while(flow_order[k] != qseq[i]) {
           if(a->m <= a->l) {
               a->m = a->l + 1;
@@ -432,9 +460,9 @@ fmap_sam2fs_aux_flow_align(fmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
   aln = fmap_sam2fs_aux_aln_init();
 
   /*
-  fprintf(stderr, "f_qseq->l=%d f_tseq->l=%d\n",
-          f_qseq->l, f_tseq->l);
-          */
+     fprintf(stderr, "f_qseq->l=%d f_tseq->l=%d\n",
+     f_qseq->l, f_tseq->l);
+     */
 
   // add in alignment end padding
   for(k=f_qseq->l;i<k;k--) { // insertion

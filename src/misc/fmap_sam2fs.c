@@ -358,6 +358,13 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
 
   switch(output_type) {
     case FMAP_SAM2FS_OUTPUT_ALN:
+      // bound, since we could start with an insertion (read starts with bases,
+      // reference starts with gaps)
+      i = path[0].j;
+      j = path[path_len-1].j;
+      if(ref_bases_len <= i) i = ref_bases_len;
+      if(j < 0) j = 0;
+
       fmap_file_fprintf(fmap_file_stdout, "%s\t", bam1_qname(bam));
       fmap_fsw_print_aln(fmap_file_stdout, score, path, path_len, flow_order_tmp, 
                          (uint8_t*)ref_bases,
@@ -366,8 +373,8 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
       fmap_sam2fs_aux_flow_align(fmap_file_stdout, 
                                        (uint8_t*)read_bases, 
                                        read_bases_len,
-                                       (uint8_t*)(ref_bases + path[path_len-1].j), 
-                                       path[0].j + 1, // in case of local/fitting
+                                       (uint8_t*)(ref_bases + j),
+                                       i - j + 1, 
                                        flow_order_tmp);
       fmap_file_fprintf(fmap_file_stdout, "\n");
       break;
