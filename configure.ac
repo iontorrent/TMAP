@@ -21,6 +21,7 @@ AM_PROG_CC_C_O
 
 AC_PROG_INSTALL
 AC_GNU_SOURCE
+AC_PROG_RANLIB
 
 # set CFLAGS and CXXFLAGS
 default_CFLAGS="-Wall -g -O2 -pthread";
@@ -51,7 +52,7 @@ AC_CHECK_LIB([z], [gzread])
 AC_CHECK_LIB([bz2], [BZ2_bzRead])
 AC_CHECK_LIB([m], [pow])
 AC_CHECK_LIB([pthread], [pthread_create])
-AC_CHECK_FUNCS([pow strdup memset strchr strdup strstr])
+AC_CHECK_FUNCS([pow strdup memset strchr strdup strstr memmove])
 
 # Check types
 AC_TYPE_INT8_T
