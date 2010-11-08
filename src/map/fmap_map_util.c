@@ -45,7 +45,7 @@ fmap_map_util_fsw(fmap_sff_t *sff, fmap_fsw_param_t *par, fmap_map_util_fsw_aln_
   fmap_fsw_path_t *path = NULL;
   int32_t path_mem = 0, path_len = 0;
   fmap_fsw_param_t param;
-
+  
   param = (*par);
 
   // go through each hit
@@ -227,7 +227,7 @@ fmap_map_util_map3_fsw(fmap_sff_t *sff, fmap_map3_aln_t *aln, fmap_refseq_t *ref
   fmap_map_util_fsw_aln_t *x;
   fmap_fsw_param_t par;
   int32_t matrix[25];
-
+  
   x = fmap_map_util_fsw_aln_init(aln->n);
 
   // generate the alignment parameters
