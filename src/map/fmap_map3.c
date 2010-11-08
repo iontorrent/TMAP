@@ -18,7 +18,6 @@
 #include "../index/fmap_sa.h"
 #include "../io/fmap_seq_io.h"
 #include "../server/fmap_shm.h"
-#include "../sw/fmap_fsw.h"
 #include "fmap_map_util.h"
 #include "fmap_map3_aux.h"
 #include "fmap_map3.h"
@@ -200,13 +199,12 @@ fmap_map3_core_worker(fmap_seq_t **seq_buffer, fmap_map3_aln_t **alns, int32_t s
       high = seq_buffer_length; // process all
 #endif
       while(low<high) {
-          fmap_seq_t *seq[2]={NULL, NULL}, *orig_seq=NULL;
-          orig_seq = seq_buffer[low];
+          fmap_seq_t *seq[2]={NULL, NULL};
           fmap_string_t *bases[2]={NULL, NULL};
 
           // clone the sequence 
-          seq[0] = fmap_seq_clone(orig_seq);
-          seq[1] = fmap_seq_clone(orig_seq);
+          seq[0] = fmap_seq_clone(seq_buffer[low]);
+          seq[1] = fmap_seq_clone(seq_buffer[low]);
 
           // reverse compliment
           fmap_seq_reverse_compliment(seq[1]);
@@ -231,8 +229,8 @@ fmap_map3_core_worker(fmap_seq_t **seq_buffer, fmap_map3_aln_t **alns, int32_t s
                                opt->score_thr, opt->score_match, opt->aln_output_mode);
 
           // re-align the alignments in flow-space
-          if(FMAP_SEQ_TYPE_SFF == orig_seq->type) {
-              fmap_map_util_map3_fsw(orig_seq->data.sff, alns[low], refseq, opt);
+          if(FMAP_SEQ_TYPE_SFF == seq_buffer[low]->type) {
+              fmap_map_util_map3_fsw(seq_buffer[low]->data.sff, alns[low], refseq, opt);
           }
 
           // destroy

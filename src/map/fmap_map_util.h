@@ -1,6 +1,7 @@
 #ifndef FMAP_MAP_UTIL_H_
 #define FMAP_MAP_UTIL_H_
 
+#include "fmap_map2_aux.h"
 #include "fmap_map3.h"
 
 #define FMAP_MAP_UTIL_FSW_OFFSET 2
@@ -29,6 +30,9 @@ typedef struct {
     int32_t n; /*!< the number of hits */
     fmap_map_util_hit_t *hits; /*!< array of hits */
 } fmap_map_util_fsw_aln_t;
+
+inline void
+fmap_map_util_map2_fsw(fmap_sff_t *sff, fmap_map2_sam_t *sam, fmap_refseq_t *refseq, fmap_map2_opt_t *opt);
 
 inline void
 fmap_map_util_map3_fsw(fmap_sff_t *sff, fmap_map3_aln_t *aln, fmap_refseq_t *refseq, fmap_map3_opt_t *opt);

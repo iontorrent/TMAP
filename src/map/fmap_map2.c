@@ -33,7 +33,7 @@ static int32_t fmap_map2_read_lock_low = 0;
 #endif
 
 static void
-fmap_map2_filter_sam(fmap_seq_t *seq, fmap_map2_sam_t *sam, int32_t aln_output_mode)
+fmap_map2_filter_sam(fmap_map2_sam_t *sam, int32_t aln_output_mode)
 {
   int32_t i, j;
   int32_t n_best = 0;
@@ -163,12 +163,12 @@ fmap_map2_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
 
           // filter
           if(NULL != sams[low]) {
-              fmap_map2_filter_sam(seq_buffer[low], sams[low], opt->aln_output_mode);
+              fmap_map2_filter_sam(sams[low], opt->aln_output_mode);
           }
 
           // re-align the alignments in flow-space
           if(FMAP_SEQ_TYPE_SFF == seq_buffer[low]->type) {
-              // TODO
+              fmap_map_util_map2_fsw(seq_buffer[low]->data.sff, sams[low], refseq, opt);
           }
 
           // destroy
