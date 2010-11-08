@@ -354,7 +354,7 @@ fmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *fl
                   fmap_fsw_dpcell_t **sub_dpcell,
                   fmap_fsw_dpscore_t **sub_dpscore, 
                   const fmap_fsw_param_t *ap,
-                  int32_t best_i, int32_t best_j, uint8_t best_ctype,
+                  int32_t best_i, int32_t best_j, uint8_t best_ctype, int32_t type,
                   fmap_fsw_path_t *path, int32_t *path_len)
 {
   register int32_t i, j;
@@ -392,6 +392,12 @@ fmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *fl
       base_call = 0;
       col_offset = 0;
       base_call_diff = 0;
+
+      // local
+      if(i <= 0
+         && (FMAP_SW_TYPE_LOCAL == type || FMAP_SW_TYPE_FITTING == type)) {
+          break;
+      }
 
       //fprintf(stderr, "CORE i=%d j=%d ctype=%d\n", i, j, ctype);
       switch(ctype) { 
@@ -602,13 +608,17 @@ fmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
       FMAP_FSW_INIT_CELL(dpcell[0][j]);
       switch(type) {
         case FMAP_SW_TYPE_LOCAL:
-          dpscore[0][j].match_score = 0; // the alignment can start anywhere
+        case FMAP_SW_TYPE_FITTING:
+          // the alignment can start anywhere with seq 
+          dpscore[0][j].match_score = 0; 
           break;
         case FMAP_SW_TYPE_GLOBAL:
         case FMAP_SW_TYPE_EXTEND:
         case FMAP_SW_TYPE_EXTEND_FITTING:
           fmap_fsw_set_end_del(dpcell, dpscore, 0, j, gap_open, gap_ext, gap_end, 0);
           break;
+        default:
+          fmap_error("alignment type not understood", Exit, OutOfRange);
       }
   }
 
@@ -714,7 +724,7 @@ fmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
                         dpcell, dpscore, 
                         sub_dpcell, sub_dpscore, 
                         ap, 
-                        best_i, best_j, best_ctype, 
+                        best_i, best_j, best_ctype, type, 
                         path, path_len);
   }
 
@@ -735,6 +745,30 @@ fmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
   free(dpscore);
 
   return best_score;
+}
+
+fmap_fsw_flowseq_t *
+fmap_fsw_flowseq_init(uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram,
+                                          int32_t num_flows, int32_t key_index, int32_t key_bases)
+{
+  fmap_fsw_flowseq_t *flowseq;
+
+  flowseq = fmap_calloc(1, sizeof(fmap_fsw_flowseq_t), "flowseq");
+
+  flowseq->flow = flow;
+  flowseq->base_calls = base_calls;
+  flowseq->flowgram = flowgram;
+  flowseq->num_flows = num_flows;
+  flowseq->key_index = key_index;
+  flowseq->key_bases = key_bases;
+
+  return flowseq;
+}
+
+void
+fmap_fsw_flowseq_destroy(fmap_fsw_flowseq_t *flowseq)
+{
+  free(flowseq);
 }
 
 int64_t
@@ -900,18 +934,15 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
 }
 
 void 
-fmap_fsw_print_aln(int64_t score, fmap_fsw_path_t *path, int32_t path_len,
+fmap_fsw_print_aln(fmap_file_t *fp, int64_t score, fmap_fsw_path_t *path, int32_t path_len,
                         uint8_t *flow, uint8_t *target, uint8_t strand)
 {
   char *ref=NULL, *read=NULL, *aln=NULL;
 
   fmap_fsw_get_aln(path, path_len, flow, target, strand, &ref, &read, &aln);
   
-  fprintf(stderr, "score=%lld\n", (long long int)score);
-  fprintf(stderr, "REF:  %s\n", ref);
-  fprintf(stderr, "      %s\n", aln);
-  fprintf(stderr, "READ: %s\n", read);
-  fputc('\n', stderr);
+  fmap_file_fprintf(fp, "%lld\t%s\t%s\t%s",
+          (long long int)score, ref, aln, read);
 
   free(ref);
   free(read);
@@ -1062,15 +1093,6 @@ fmap_fsw_flowseq_reverse_compliment(fmap_fsw_flowseq_t *flowseq)
   if(0 < flowseq->key_bases) {
       flowseq->key_index = flowseq->num_flows-1;
   }
-}
-
-void
-fmap_fsw_flowseq_destroy(fmap_fsw_flowseq_t *flowseq)
-{
-  free(flowseq->flow);
-  free(flowseq->base_calls);
-  free(flowseq->flowgram);
-  free(flowseq);
 }
 
 typedef struct {
@@ -1253,7 +1275,7 @@ int fmap_fsw_main(int argc, char *argv[])
   uint16_t *flowgram = NULL;
   uint8_t *base_calls = NULL;
   uint8_t flow[5];
-  fmap_fsw_flowseq_t flowseq;
+  fmap_fsw_flowseq_t *flowseq = NULL;
 
   opt = fmap_fsw_main_opt_init();
 
@@ -1317,28 +1339,29 @@ int fmap_fsw_main(int argc, char *argv[])
 
   path = fmap_malloc(sizeof(fmap_fsw_path_t)*FMAP_FSW_MAX_PATH_LENGTH(opt->target_length, num_flows, opt->param.offset), "path");
 
-  flowseq.flow = flow;
-  flowseq.base_calls = base_calls;
-  flowseq.flowgram = flowgram;
-  flowseq.num_flows = num_flows;
-  flowseq.key_index = -1;
-  flowseq.key_bases = -1;
+  flowseq = fmap_fsw_flowseq_init(flow, base_calls, flowgram, num_flows, -1, -1);
 
   // align
   int64_t score = fmap_fsw_global_core((uint8_t*)opt->target, opt->target_length,
-                                       &flowseq,
+                                       flowseq,
                                        &opt->param,
                                        path, &path_len);
+  
+  fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "wb", FMAP_FILE_NO_COMPRESSION);
 
   // print
-  fmap_fsw_print_aln(score, path, path_len,
+  fmap_fsw_print_aln(fmap_file_stdout, score, path, path_len,
                      flow, (uint8_t*)opt->target, 0);
+  fmap_file_fprintf(fmap_file_stdout, "\n");
+
+  fmap_file_fclose(fmap_file_stdout);
 
   // destroy memory
   fmap_fsw_main_opt_destroy(opt);
   free(flowgram);
   free(base_calls);
   free(path);
+  fmap_fsw_flowseq_destroy(flowseq);
 
   return 0;
 }

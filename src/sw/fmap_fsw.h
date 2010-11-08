@@ -97,27 +97,48 @@ typedef struct {
     int32_t key_bases; /*!< the number of bases part of the key_index flow that are explained by the key sequence */
 } fmap_fsw_flowseq_t;
 
-/*
-   Fills in a row for one flow-space Smith-Waterman alignment
-   @param  seq          the 2-bit DNA reference sequence 
-   @param  len          the length of the second sequence
-   @param  flow_base     the base associated with this flow
-   @param  base_call    the number of bases called (do not inclue the key base(s))
-   @param  flow_signal   the flow signal of this flow (100*signal)
-   @param  ap           the alignment parameters
-   @param  sub_dpcell   pre-allocated DP cells of minimum dimensions [base_call+2*(ap->offset+1),len+1]
-   @param  sub_score    pre-allocated DP scores of minimum dimensions [base_call+2*(ap->offset+1),len+1]
-   @param  dpcell_last  the last cell row in the DP matrix
-   @param  score_last   the last score row in the DP matrix
-   @param  dpcell_curr  the current cell row in the DP matrix
-   @param  score_curr   the current score row in the DP matrix
-   @param  path         the sub-alignment path, NULL if not required
-   @param  path_len     the returned sub-alignment path length, 0 if path is NULL
-   @param  best_ctype   the sub-cell from which to backtrace if path is not NULL
-   @param  key_bases    the number of key bases that are part of this flow
-   @param  type         the Smith-Waterman type (global, local, extend)
-   @details             this assumes that the ap parameter scores have been multiplied by 100; only include non-key flows
-   */
+/*!
+  Stores parameters for flow-space Smith-Waterman
+  @param  flow         for each of the four flows, the 2-bit DNA base flowed 
+  @param  base_calls  for each flow, the number of bases called [0-255] 
+  @param  flowgram     for each flow, the flowgram signal (100*signal)  
+  @param  num_flows    the number of flows 
+  @param  key_index   the 0-based index of the key base if the key is part of the first or last flow (should be -1, 0, or num_flow-1). 
+  @param  key_bases   the number of bases part of the key_index flow that are explained by the key sequence 
+  @return             pointer to the initialized memory
+  */
+fmap_fsw_flowseq_t *
+fmap_fsw_flowseq_init(uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram,
+                      int32_t num_flows, int32_t key_index, int32_t key_bases);
+
+/*!
+  @param  flowseq  pointer to the flow sequence to destroy
+  @details        this does a shallow-destroy
+  */
+void
+fmap_fsw_flowseq_destroy(fmap_fsw_flowseq_t *flowseq);
+
+/*!
+  Fills in a row for one flow-space Smith-Waterman alignment
+  @param  seq          the 2-bit DNA reference sequence 
+  @param  len          the length of the second sequence
+  @param  flow_base     the base associated with this flow
+  @param  base_call    the number of bases called (do not inclue the key base(s))
+  @param  flow_signal   the flow signal of this flow (100*signal)
+  @param  ap           the alignment parameters
+  @param  sub_dpcell   pre-allocated DP cells of minimum dimensions [base_call+2*(ap->offset+1),len+1]
+  @param  sub_score    pre-allocated DP scores of minimum dimensions [base_call+2*(ap->offset+1),len+1]
+  @param  dpcell_last  the last cell row in the DP matrix
+  @param  score_last   the last score row in the DP matrix
+  @param  dpcell_curr  the current cell row in the DP matrix
+  @param  score_curr   the current score row in the DP matrix
+  @param  path         the sub-alignment path, NULL if not required
+  @param  path_len     the returned sub-alignment path length, 0 if path is NULL
+  @param  best_ctype   the sub-cell from which to backtrace if path is not NULL
+  @param  key_bases    the number of key bases that are part of this flow
+  @param  type         the Smith-Waterman type (global, local, extend)
+  @details             this assumes that the ap parameter scores have been multiplied by 100; only include non-key flows
+  */
 inline void
 fmap_fsw_sub_core(uint8_t *seq, int32_t len,
                   uint8_t flow_base, uint8_t base_call, uint16_t flow_signal,
@@ -132,35 +153,35 @@ fmap_fsw_sub_core(uint8_t *seq, int32_t len,
                   uint8_t key_bases,
                   int32_t type);
 
-/*
-   Performs global flow-space Smith-Waterman alignment
-   @param  seq         the 2-bit DNA reference sequence 
-   @param  len         the length of the second sequence
-   @param  flowseq      the flow sequence structure to align
-   @param  ap          the alignment parameters
-   @param  path        the returned alignment path with maximum length of (1 + [len * (num_flows + 1) * (ap->offset + 1)])
-   @param  path_len    the returned path_len
-   @return             the returned alignment score
-   @details            this assumes that the ap parameter scores have been multiplied by 100; only include non-key flows
-   */
+/*!
+  Performs global flow-space Smith-Waterman alignment
+  @param  seq         the 2-bit DNA reference sequence 
+  @param  len         the length of the second sequence
+  @param  flowseq      the flow sequence structure to align
+  @param  ap          the alignment parameters
+  @param  path        the returned alignment path with maximum length of (1 + [len * (num_flows + 1) * (ap->offset + 1)])
+  @param  path_len    the returned path_len
+  @return             the returned alignment score
+  @details            this assumes that the ap parameter scores have been multiplied by 100; only include non-key flows
+  */
 int64_t
 fmap_fsw_global_core(uint8_t *seq, int32_t len,
                      fmap_fsw_flowseq_t *flowseq,
                      const fmap_fsw_param_t *ap,
                      fmap_fsw_path_t *path, int32_t *path_len);
-/*
-   Performs local flow-space Smith-Waterman alignment
-   @param  seq         the 2-bit DNA reference sequence 
-   @param  len         the length of the second sequence
-   @param  flowseq      the flow sequence structure to align
-   @param  ap          the alignment parameters
-   @param  path        the returned alignment path with maximum length of (1 + [len * (num_flows + 1) * (ap->offset + 1)])
-   @param  path_len    the returned path_len
-   @param  _thres      the scoring threshold for local alignment only (the absolute value will be taken); a value zero or negative value will cause no path to be filled
-   @param  _subo       the sub-optimal alignment score (next best)
-   @return             the returned alignment score
-   @details            this assumes that the ap parameter scores have been multiplied by 100; only include non-key flows
-   */
+/*!
+  Performs local flow-space Smith-Waterman alignment
+  @param  seq         the 2-bit DNA reference sequence 
+  @param  len         the length of the second sequence
+  @param  flowseq      the flow sequence structure to align
+  @param  ap          the alignment parameters
+  @param  path        the returned alignment path with maximum length of (1 + [len * (num_flows + 1) * (ap->offset + 1)])
+  @param  path_len    the returned path_len
+  @param  _thres      the scoring threshold for local alignment only (the absolute value will be taken); a value zero or negative value will cause no path to be filled
+  @param  _subo       the sub-optimal alignment score (next best)
+  @return             the returned alignment score
+  @details            this assumes that the ap parameter scores have been multiplied by 100; only include non-key flows
+  */
 int64_t
 fmap_fsw_local_core(uint8_t *seq, int32_t len,
                     fmap_fsw_flowseq_t *flowseq,
@@ -168,18 +189,18 @@ fmap_fsw_local_core(uint8_t *seq, int32_t len,
                     fmap_fsw_path_t *path, int32_t *path_len,
                     int32_t _thres, int32_t *_subo);
 
-/*
-   Performs flow-space Smith-Waterman alignment extension
-   @param  seq         the 2-bit DNA reference sequence 
-   @param  len         the length of the second sequence
-   @param  flowseq      the flow sequence structure to align
-   @param  ap          the alignment parameters
-   @param  path        the returned alignment path with maximum length of (1 + [len * (num_flows + 1) * (ap->offset + 1)])
-   @param  path_len    the returned path_len
-   @param  prev_score  the alignment score up to this point
-   @return             the returned alignment score
-   @details            this assumes that the ap parameter scores have been multiplied by 100; only include non-key flows
-   */
+/*!
+  Performs flow-space Smith-Waterman alignment extension
+  @param  seq         the 2-bit DNA reference sequence 
+  @param  len         the length of the second sequence
+  @param  flowseq      the flow sequence structure to align
+  @param  ap          the alignment parameters
+  @param  path        the returned alignment path with maximum length of (1 + [len * (num_flows + 1) * (ap->offset + 1)])
+  @param  path_len    the returned path_len
+  @param  prev_score  the alignment score up to this point
+  @return             the returned alignment score
+  @details            this assumes that the ap parameter scores have been multiplied by 100; only include non-key flows
+  */
 int64_t
 fmap_fsw_extend_core(uint8_t *seq, int32_t len,
                      fmap_fsw_flowseq_t *flowseq,
@@ -187,18 +208,18 @@ fmap_fsw_extend_core(uint8_t *seq, int32_t len,
                      fmap_fsw_path_t *path, int32_t *path_len, 
                      int32_t prev_score);
 
-/*
-   Performs flow-space Smith-Waterman alignment extension and aligns the entire flowgram
-   @param  seq         the 2-bit DNA reference sequence 
-   @param  len         the length of the second sequence
-   @param  flowseq      the flow sequence structure to align
-   @param  ap          the alignment parameters
-   @param  path        the returned alignment path with maximum length of (1 + [len * (num_flows + 1) * (ap->offset + 1)])
-   @param  path_len    the returned path_len
-   @param  prev_score  the alignment score up to this point
-   @return             the returned alignment score
-   @details            this assumes that the ap parameter scores have been multiplied by 100; only include non-key flows
-   */
+/*!
+  Performs flow-space Smith-Waterman alignment extension and aligns the entire flowgram
+  @param  seq         the 2-bit DNA reference sequence 
+  @param  len         the length of the second sequence
+  @param  flowseq      the flow sequence structure to align
+  @param  ap          the alignment parameters
+  @param  path        the returned alignment path with maximum length of (1 + [len * (num_flows + 1) * (ap->offset + 1)])
+  @param  path_len    the returned path_len
+  @param  prev_score  the alignment score up to this point
+  @return             the returned alignment score
+  @details            this assumes that the ap parameter scores have been multiplied by 100; only include non-key flows
+  */
 int64_t
 fmap_fsw_extend_fitting_core(uint8_t *seq, int32_t len,
                              fmap_fsw_flowseq_t *flowseq,
@@ -206,17 +227,17 @@ fmap_fsw_extend_fitting_core(uint8_t *seq, int32_t len,
                              fmap_fsw_path_t *path, int32_t *path_len, 
                              int32_t prev_score);
 
-/*
-   Performs flow-space Smith-Waterman alignment and aligns the entire flowgram
-   @param  seq         the 2-bit DNA reference sequence 
-   @param  len         the length of the second sequence
-   @param  flowseq      the flow sequence structure to align
-   @param  ap          the alignment parameters
-   @param  path        the returned alignment path with maximum length of (1 + [len * (num_flows + 1) * (ap->offset + 1)])
-   @param  path_len    the returned path_len
-   @return             the returned alignment score
-   @details            this assumes that the ap parameter scores have been multiplied by 100; only include non-key flows
-   */
+/*!
+  Performs flow-space Smith-Waterman alignment and aligns the entire flowgram
+  @param  seq         the 2-bit DNA reference sequence 
+  @param  len         the length of the second sequence
+  @param  flowseq      the flow sequence structure to align
+  @param  ap          the alignment parameters
+  @param  path        the returned alignment path with maximum length of (1 + [len * (num_flows + 1) * (ap->offset + 1)])
+  @param  path_len    the returned path_len
+  @return             the returned alignment score
+  @details            this assumes that the ap parameter scores have been multiplied by 100; only include non-key flows
+  */
 int64_t
 fmap_fsw_fitting_core(uint8_t *seq, int32_t len,
                       fmap_fsw_flowseq_t *flowseq,
@@ -251,6 +272,7 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
 
 /*!
   Pretty-prints an alignment
+  @param  fp        the file pointer to print
   @param  score     the flow space alignment score
   @param  path      the alignment path
   @param  path_len  the alignment path length
@@ -259,7 +281,7 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
   @param  strand    0 for the forward strand, 1 for the reverse
   */
 void 
-fmap_fsw_print_aln(int64_t score, fmap_fsw_path_t *path, int32_t path_len,
+fmap_fsw_print_aln(fmap_file_t *fp, int64_t score, fmap_fsw_path_t *path, int32_t path_len,
                    uint8_t *flow, uint8_t *target, uint8_t strand);
 
 /*!

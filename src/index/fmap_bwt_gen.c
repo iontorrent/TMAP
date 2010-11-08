@@ -1437,7 +1437,9 @@ BWTIncConstructFromPacked(const char *inputFileName, const float targetNBit,
   if ((int)packedFileLen < 0) {
       fmap_error("BWTIncConstructFromPacked: Cannot determine file length", Exit, OutOfRange);
   }
-  fread(&lastByteLength, sizeof( char), 1, packedFile);
+  if(1 != fread(&lastByteLength, sizeof( char), 1, packedFile)) {
+      fmap_error(NULL, Exit, ReadFileError);
+  }
   totalTextLength = TextLengthFromBytePacked(packedFileLen, BIT_PER_CHAR, lastByteLength);
 
   bwtInc = BWTIncCreate(totalTextLength, targetNBit, initialMaxBuildSize, incMaxBuildSize);
@@ -1453,7 +1455,9 @@ BWTIncConstructFromPacked(const char *inputFileName, const float targetNBit,
 
   fseek(packedFile, -2, SEEK_CUR);
   fseek(packedFile, -((int)textSizeInByte), SEEK_CUR);
-  fread(bwtInc->textBuffer, sizeof( char), textSizeInByte + 1, packedFile);
+  if(textSizeInByte + 1 != fread(bwtInc->textBuffer, sizeof( char), textSizeInByte + 1, packedFile)) {
+      fmap_error(NULL, Exit, ReadFileError);
+  }
   fseek(packedFile, -((int)textSizeInByte + 1), SEEK_CUR);
 
   ConvertBytePackedToWordPacked(bwtInc->textBuffer, bwtInc->packedText, ALPHABET_SIZE, textToLoad);
@@ -1468,7 +1472,9 @@ BWTIncConstructFromPacked(const char *inputFileName, const float targetNBit,
       }
       textSizeInByte = textToLoad / CHAR_PER_BYTE;
       fseek(packedFile, -((int)textSizeInByte), SEEK_CUR);
-      fread(bwtInc->textBuffer, sizeof( char), textSizeInByte, packedFile);
+      if(textSizeInByte != fread(bwtInc->textBuffer, sizeof( char), textSizeInByte, packedFile)) {
+          fmap_error(NULL, Exit, ReadFileError);
+      }
       fseek(packedFile, -((int)textSizeInByte), SEEK_CUR);
       ConvertBytePackedToWordPacked(bwtInc->textBuffer, bwtInc->packedText, ALPHABET_SIZE, textToLoad);
       BWTIncConstruct(bwtInc, textToLoad);

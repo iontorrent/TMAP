@@ -21,19 +21,22 @@ AM_PROG_CC_C_O
 
 AC_PROG_INSTALL
 AC_GNU_SOURCE
+AC_PROG_RANLIB
 
 # set CFLAGS and CXXFLAGS
 default_CFLAGS="-Wall -g -O2 -pthread";
 extended_CFLAGS="";# "-m64 -D_FILE_OFFSET_BITS=64";
 
-# Define some variables
-GITREV="Revision: undefined$";
-gitrev="`git log | grep -m 1 commit | awk '{print $2}'`";
+AC_MSG_CHECKING(whether this is a git repository)
+gitrev="`git log 2>/dev/null | grep -m 1 commit | awk '{print $2}'`";
 if test -n "${gitrev}"; then
-	GITREV="${gitrev}";
+    GITREV="${gitrev}";
+    AC_REVISION(["${GITREV}"])
+    AC_DEFINE_UNQUOTED(GIT_REV, "${GITREV}", [Define to be the git revision number])
+    AC_MSG_RESULT(yes)
+else
+    AC_MSG_RESULT(no)
 fi
-AC_REVISION(["${GITREV}"])
-AC_DEFINE_UNQUOTED(GIT_REV, "${GITREV}", [Define to be the git revision number])
 
 AC_ARG_ENABLE(intel64, [  --enable-intel64        optimize for Intel64 CPU such as Xeon and Core2], [extended_CFLAGS="${extended_CFLAGS} -mtune=nocona"], [])
 AC_ARG_ENABLE(bz2, [  --disable-bz2         use this option to disable bz2 support], [AC_DEFINE(DISABLE_BZ2,1,[Define 1 if we want to disable bz2 support])], [AC_CHECK_LIB([bz2], [BZ2_bzRead])])
@@ -49,7 +52,7 @@ AC_CHECK_LIB([z], [gzread])
 AC_CHECK_LIB([bz2], [BZ2_bzRead])
 AC_CHECK_LIB([m], [pow])
 AC_CHECK_LIB([pthread], [pthread_create])
-AC_CHECK_FUNCS([pow strdup memset strchr strdup strstr])
+AC_CHECK_FUNCS([pow strdup memset strchr strdup strstr memmove])
 
 # Check types
 AC_TYPE_INT8_T
@@ -77,7 +80,8 @@ AC_C_INLINE
 AC_MSG_CHECKING(for samtools)
 if test -d "samtools" ; then
 	AC_MSG_RESULT(yes)
-	LDFLAGS="${LDFLAGS} -L./samtools -lbam";
+	LDFLAGS="${LDFLAGS} -L./samtools"
+	LIBS="-lbam ${LIBS}";
 	CFLAGS="${CFLAGS} -I./samtools";
 	AC_DEFINE(HAVE_SAMTOOLS, 1, [Define 1 if the samtools library is present]) 
 else 
