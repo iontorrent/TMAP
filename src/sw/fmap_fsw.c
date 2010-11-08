@@ -954,7 +954,6 @@ fmap_fsw_sff_to_flowseq(fmap_sff_t *sff)
 {
   int32_t was_int;
   int32_t i, j, l;
-  fmap_fsw_flowseq_t *flowseq = NULL;
   uint8_t *flow, *base_calls;
   uint16_t *flowgram;
   int32_t num_flows, key_index, key_bases;
@@ -1051,15 +1050,7 @@ fmap_fsw_sff_to_flowseq(fmap_sff_t *sff)
       fmap_sff_to_char(sff);
   }
 
-  flowseq = fmap_calloc(1, sizeof(fmap_fsw_flowseq_t), "flowseq");
-  flowseq->flow = flow;
-  flowseq->base_calls = base_calls;
-  flowseq->flowgram = flowgram;
-  flowseq->num_flows = num_flows;
-  flowseq->key_index = key_index;
-  flowseq->key_bases = key_bases;
-
-  return flowseq;
+  return fmap_fsw_flowseq_init(flow, base_calls, flowgram, num_flows, key_index, key_bases);
 }
 
 void

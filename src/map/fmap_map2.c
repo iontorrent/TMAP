@@ -166,6 +166,11 @@ fmap_map2_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
               fmap_map2_filter_sam(seq_buffer[low], sams[low], opt->aln_output_mode);
           }
 
+          // re-align the alignments in flow-space
+          if(FMAP_SEQ_TYPE_SFF == seq_buffer[low]->type) {
+              // TODO
+          }
+
           // destroy
           fmap_seq_destroy(seq);
 
@@ -399,10 +404,11 @@ usage(fmap_map2_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "         -M INT      mismatch penalty [%d]\n", opt->pen_mm);
   fmap_file_fprintf(fmap_file_stderr, "         -O INT      gap open penalty [%d]\n", opt->pen_gapo);
   fmap_file_fprintf(fmap_file_stderr, "         -E INT      gap extension penalty [%d]\n", opt->pen_gape);
+  fmap_file_fprintf(fmap_file_stderr, "         -X INT      the flow score penalty [%d]\n", opt->fscore);
   //fmap_file_fprintf(fmap_file_stderr, "         -y FLOAT    error recurrence coef. (4..16) [%.1lf]\n", opt->yita);
   fmap_file_fprintf(fmap_file_stderr, "         -m FLOAT    mask level [%.2f]\n", opt->mask_level);
   fmap_file_fprintf(fmap_file_stderr, "         -c FLOAT    coefficient of length-threshold adjustment [%.1lf]\n", opt->length_coef);
-  fmap_file_fprintf(fmap_file_stderr, "         -w INT      band width [%d]\n", opt->band_width);
+  fmap_file_fprintf(fmap_file_stderr, "         -w INT      band width [%d]\n", opt->sw_offset);
   fmap_file_fprintf(fmap_file_stderr, "         -T INT      score threshold divided by the match score [%d]\n", opt->score_thr);
   fmap_file_fprintf(fmap_file_stderr, "         -S INT      maximum seeding interval size [%d]\n", opt->max_seed_intv);
   fmap_file_fprintf(fmap_file_stderr, "         -b INT      Z-best [%d]\n", opt->z_best);
@@ -444,8 +450,9 @@ fmap_map2_opt_init()
   opt->fn_fasta = opt->fn_reads = NULL;
   opt->reads_format = FMAP_READS_FORMAT_UNKNOWN;
   opt->score_match = 1; opt->pen_mm = 3; opt->pen_gapo = 5; opt->pen_gape = 2;
+  opt->fscore = 7;
   opt->yita = 5.5f; opt->mask_level = 0.50; opt->length_coef = 5.5f;
-  opt->band_width = 50; opt->score_thr = 30;
+  opt->sw_offset= 50; opt->score_thr = 30;
   opt->max_seed_intv = 3; opt->z_best = 5; opt->seeds_rev = 5;
   opt->aln_global = 0;
   opt->reads_queue_size = 65536;
@@ -476,7 +483,7 @@ fmap_map2_main(int argc, char *argv[])
   opt = fmap_map2_opt_init(argc, argv);
   opt->argc = argc; opt->argv = argv;
 
-  while((c = getopt(argc, argv, "f:r:F:A:M:O:E:y:m:c:w:T:S:b:N:gq:n:a:jzJZs:vh")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:A:M:O:E:X:y:m:c:w:T:S:b:N:gq:n:a:jzJZs:vh")) >= 0) {
       switch (c) {
         case 'f':
           opt->fn_fasta = fmap_strdup(optarg); break;
@@ -494,6 +501,8 @@ fmap_map2_main(int argc, char *argv[])
           opt->pen_gapo = atoi(optarg); break;
         case 'E':
           opt->pen_gape = atoi(optarg); break;
+        case 'X':
+          opt->fscore = atoi(optarg); break;
           /*
              case 'y': 
              opt->yita = atof(optarg); break;
@@ -503,7 +512,7 @@ fmap_map2_main(int argc, char *argv[])
         case 'c': 
           opt->length_coef = atof(optarg); break;
         case 'w': 
-          opt->band_width = atoi(optarg); break;
+          opt->sw_offset= atoi(optarg); break;
         case 'T': 
           opt->score_thr = atoi(optarg); break;
         case 'S':
@@ -564,10 +573,11 @@ fmap_map2_main(int argc, char *argv[])
       fmap_error_cmd_check_int(opt->pen_mm, 0, INT32_MAX, "-M");
       fmap_error_cmd_check_int(opt->pen_gapo, 0, INT32_MAX, "-O");
       fmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
+      fmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
       //fmap_error_cmd_check_int(opt->yita, 0, 1, "-y");
       fmap_error_cmd_check_int(opt->mask_level, 0, 1, "-m");
       fmap_error_cmd_check_int(opt->length_coef, 0, INT32_MAX, "-c");
-      fmap_error_cmd_check_int(opt->band_width, 0, INT32_MAX, "-w");
+      fmap_error_cmd_check_int(opt->sw_offset, 0, INT32_MAX, "-w");
       fmap_error_cmd_check_int(opt->score_thr, 0, INT32_MAX, "-T");
       fmap_error_cmd_check_int(opt->max_seed_intv, 0, INT32_MAX, "-S");
       fmap_error_cmd_check_int(opt->z_best, 1, INT32_MAX, "-Z");
