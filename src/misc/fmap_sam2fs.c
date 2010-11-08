@@ -354,7 +354,6 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
   else {
       score = fmap_fsw_fitting_core((uint8_t*)ref_bases, ref_bases_len,
                                     flowseq,
-                                    -1, 0,
                                     &param, path, &path_len);
   }
   fmap_fsw_flowseq_destroy(flowseq);
