@@ -134,7 +134,7 @@ fmap_sam2fs_copy_to_sam(bam1_t *bam_old, fmap_fsw_path_t *path, int32_t path_len
 
 bam1_t *
 fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_offset, 
-                int32_t aln_global, int32_t output_type)
+                int32_t aln_global, int32_t output_type, int32_t j_type)
 {
   int32_t i, j, k, l;
 
@@ -368,7 +368,8 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
       fmap_file_fprintf(fmap_file_stdout, "%s\t", bam1_qname(bam));
       fmap_fsw_print_aln(fmap_file_stdout, score, path, path_len, flow_order_tmp, 
                          (uint8_t*)ref_bases,
-                         (BAM_FREVERSE & bam->core.flag) ? 1 : 0);
+                         (BAM_FREVERSE & bam->core.flag) ? 1 : 0,
+                         j_type);
       fmap_file_fprintf(fmap_file_stdout, "\t");
       fmap_sam2fs_aux_flow_align(fmap_file_stdout, 
                                        (uint8_t*)read_bases, 
@@ -407,6 +408,7 @@ usage(fmap_sam2fs_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "         -S          the input is a SAM file\n");
   fmap_file_fprintf(fmap_file_stderr, "         -g          run global alignment (otherwise read fitting) [%d]\n", opt->aln_global);
   fmap_file_fprintf(fmap_file_stderr, "         -O          the output type: 0-alignment 1-SAM 2-BAM [%d]\n", opt->output_type);
+  fmap_file_fprintf(fmap_file_stderr, "         -l INT      indel justification type: 0 - none, 1 - 5' strand of the reference, 2 - 5' strand of the read [%d]\n", opt->j_type);
   fmap_file_fprintf(fmap_file_stderr, "         -v          print verbose progress information\n");
   fmap_file_fprintf(fmap_file_stderr, "         -h          print this message\n");
   fmap_file_fprintf(fmap_file_stderr, "\n");
@@ -439,7 +441,8 @@ fmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, fmap_sam2fs_opt_
   b = bam_init1();
   while(0 < samread(fp_in, b)) { 
       // process 
-      b = fmap_sam2fs_aux(b, opt->flow_order, opt->flow_score, opt->flow_offset, opt->aln_global, opt->output_type);
+      b = fmap_sam2fs_aux(b, opt->flow_order, opt->flow_score, opt->flow_offset, 
+                          opt->aln_global, opt->output_type, opt->j_type);
       // write to SAM/BAM if necessary
       if(FMAP_SAM2FS_OUTPUT_SAM == opt->output_type
          || FMAP_SAM2FS_OUTPUT_BAM == opt->output_type) {
@@ -479,6 +482,7 @@ fmap_sam2fs_opt_init()
   opt->flow_offset = 1;
   opt->aln_global = 0;
   opt->output_type = FMAP_SAM2FS_OUTPUT_ALN;
+    opt->j_type = FMAP_FSW_NO_JUSTIFY;
 
   return opt;
 }
@@ -499,7 +503,7 @@ fmap_sam2fs_main(int argc, char *argv[])
 
   opt = fmap_sam2fs_opt_init();
 
-  while((c = getopt(argc, argv, "f:F:o:SgO:vh")) >= 0) {
+  while((c = getopt(argc, argv, "f:F:o:SgO:l:vh")) >= 0) {
       switch(c) {
         case 'f':
           strncpy(opt->flow_order, optarg, 4); break;
@@ -513,6 +517,8 @@ fmap_sam2fs_main(int argc, char *argv[])
           opt->aln_global = 1; break;
         case 'O':
           opt->output_type = atoi(optarg); break;
+        case 'l':
+          opt->j_type = atoi(optarg); break;
         case 'v':
           fmap_progress_set_verbosity(1); break;
         case 'h':

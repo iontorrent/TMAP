@@ -220,17 +220,17 @@ fmap_fsw_sub_core(uint8_t *seq, int32_t len,
 
   if(NULL != dpcell_curr && NULL != dpscore_curr) {
       /*
-     fprintf(stderr, "AFTER\n");
-     for(i=low_offset;i<=high_offset;i++) { // for each row in the sub-alignment
-        for(j=0;j<=len;j++) { // for each col
-     fprintf(stderr, "(%d,%d M[%d,%d,%d,%d] I[%d,%d,%d,%d] D[%d,%d,%d,%d])\n",
-     i, j,
-     sub_dpcell[i][j].match_bc, sub_dpcell[i][j].match_from & 0x3, sub_dpcell[i][j].match_from >> 2, (int)sub_dpscore[i][j].match_score,
-     sub_dpcell[i][j].ins_bc, sub_dpcell[i][j].ins_from & 0x3, sub_dpcell[i][j].ins_from >> 2, (int)sub_dpscore[i][j].ins_score,
-     sub_dpcell[i][j].del_bc, sub_dpcell[i][j].del_from & 0x3, sub_dpcell[i][j].del_from >> 2, (int)sub_dpscore[i][j].del_score);
-     }
-     }
-  */
+         fprintf(stderr, "AFTER\n");
+         for(i=low_offset;i<=high_offset;i++) { // for each row in the sub-alignment
+         for(j=0;j<=len;j++) { // for each col
+         fprintf(stderr, "(%d,%d M[%d,%d,%d,%d] I[%d,%d,%d,%d] D[%d,%d,%d,%d])\n",
+         i, j,
+         sub_dpcell[i][j].match_bc, sub_dpcell[i][j].match_from & 0x3, sub_dpcell[i][j].match_from >> 2, (int)sub_dpscore[i][j].match_score,
+         sub_dpcell[i][j].ins_bc, sub_dpcell[i][j].ins_from & 0x3, sub_dpcell[i][j].ins_from >> 2, (int)sub_dpscore[i][j].ins_score,
+         sub_dpcell[i][j].del_bc, sub_dpcell[i][j].del_from & 0x3, sub_dpcell[i][j].del_from >> 2, (int)sub_dpscore[i][j].del_score);
+         }
+         }
+         */
       // set the best cell to be [base_call][0,len]
       // NOTE: set this to the original base call to get consistency between
       // calling homopolymer over/under calls
@@ -492,7 +492,7 @@ fmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *fl
               p->i = i - 1; // same flow index
               k = p->j; // for base_call_diff < 0
 
-                 
+
               if(0 < base_call_diff // there are bases left that were inserted
                  && FMAP_FSW_FROM_M == sub_path[l].ctype) { // delete a "match"
                   // change the type to a deletion
@@ -508,7 +508,7 @@ fmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *fl
               p++;
               base_call_diff++;
           }
-      
+
           // move the row and column (as necessary)
           i--;
           j -= col_offset;
@@ -847,10 +847,82 @@ fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_ci
   return cigar;
 }
 
+static void
+fmap_fsw_left_justify(char *ref, char *read, char *aln, int32_t len)
+{
+  char c;
+  int32_t i, prev_del, prev_ins, start_ins, start_del, end_ins, end_del;
+
+  prev_del = prev_ins = 0;
+  start_del = start_ins = end_del = end_ins = -1;
+
+  for(i=0;i<len;) {
+      if('-' == read[i]) { // deletion
+          if(0 == prev_del) {
+              start_del = i;
+          }
+          prev_del = 1;
+          end_del = i;
+          prev_ins = 0;
+          start_ins = end_ins = -1;
+          i++;
+      }
+      else if('-' == ref[i]) { // insert
+          if(0 == prev_ins) {
+              start_ins = i;
+          }
+          prev_ins = 1;
+          end_ins = i;
+          prev_del = 0;
+          start_del = -1;
+          end_del = -1;
+          i++;
+      }
+      else {
+          if(1 == prev_del) { // previous was an deletion
+              start_del--;
+              while(0 <= start_del && // bases remaining to examine 
+                    read[start_del] != '-' && // hit another deletion 
+                    ref[start_del] != '-' && // hit an insertion 
+                    ref[start_del] == ref[end_del]) { // src ref base matches dest ref base 
+                  // swap end_del and start_del for the read and aln
+                  c = read[end_del]; read[end_del] = read[start_del]; read[start_del] = c;
+                  c = aln[end_del]; aln[end_del] = aln[start_del]; aln[start_del] = c;
+                  start_del--;
+                  end_del--;
+              }
+              end_del++; // we decremented when we exited the loop 
+              i = end_del;
+          }
+          else if(1 == prev_ins) { // previous was an insertion
+              start_ins--;
+              while(0 <= start_ins && // bases remaining to examine
+                    read[start_ins] != '-' && // hit another deletion 
+                    ref[start_ins] != '-' && // hit an insertion 
+                    read[start_ins] == read[end_ins]) { // src read base matches dest read base 
+                  // swap end_ins and start_ins for the ref and aln
+                  c = ref[end_ins]; ref[end_ins] = ref[start_ins]; ref[start_ins] = c;
+                  c = aln[end_ins]; aln[end_ins] = aln[start_ins]; aln[start_ins] = c;
+                  start_ins--;
+                  end_ins--;
+              }
+              end_ins++; // e decremented when we exited the loop 
+              i = end_ins;
+          }
+          else {
+              i++;
+          }
+          // reset
+          prev_del = prev_ins = 0;
+          start_del = start_ins = end_del = end_ins = -1;
+      }
+  }
+}
+
 void
 fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
                  uint8_t *flow, uint8_t *target, uint8_t strand,
-                 char **ref, char **read, char **aln)
+                 char **ref, char **read, char **aln, int32_t j_type)
 {
   int32_t i, j;
 
@@ -909,7 +981,19 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
   }
   (*read)[path_len] = '\0';
 
-  if(1 == strand) {
+  // justify based on the reference '+' strand
+  switch(j_type) {
+    case FMAP_FSW_NO_JUSTIFY:
+      break;
+    case FMAP_FSW_JUSTIFY_LEFT_REF:
+      fmap_fsw_left_justify((*ref), (*read), (*aln), path_len);
+      break;
+    case FMAP_FSW_JUSTIFY_LEFT_READ:
+    default:
+      break;
+  }
+
+  if(1 == strand) { // return based on sequencing order
       for(i=0;i<(path_len>>1);i++) {
           char tmp;
           tmp = (*ref)[i]; (*ref)[i] = (*ref)[path_len-i-1]; (*ref)[path_len-i-1] = tmp;
@@ -917,18 +1001,30 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
           tmp = (*aln)[i]; (*aln)[i] = (*aln)[path_len-i-1]; (*aln)[path_len-i-1] = tmp;
       }
   }
+  
+  // justify based on the read strand
+  switch(j_type) {
+    case FMAP_FSW_NO_JUSTIFY:
+    case FMAP_FSW_JUSTIFY_LEFT_REF:
+      break;
+    case FMAP_FSW_JUSTIFY_LEFT_READ:
+      fmap_fsw_left_justify((*ref), (*read), (*aln), path_len);
+      break;
+    default:
+      break;
+  }
 }
 
 void 
 fmap_fsw_print_aln(fmap_file_t *fp, int64_t score, fmap_fsw_path_t *path, int32_t path_len,
-                        uint8_t *flow, uint8_t *target, uint8_t strand)
+                   uint8_t *flow, uint8_t *target, uint8_t strand, int32_t j_type)
 {
   char *ref=NULL, *read=NULL, *aln=NULL;
 
-  fmap_fsw_get_aln(path, path_len, flow, target, strand, &ref, &read, &aln);
-  
+  fmap_fsw_get_aln(path, path_len, flow, target, strand, &ref, &read, &aln, j_type);
+
   fmap_file_fprintf(fp, "%lld\t%s\t%s\t%s",
-          (long long int)score, ref, aln, read);
+                    (long long int)score, ref, aln, read);
 
   free(ref);
   free(read);
@@ -943,6 +1039,7 @@ typedef struct {
     char *target;
     int32_t target_length;
     fmap_fsw_param_t param;
+    int32_t j_type;
 } fmap_fsw_main_opt_t;
 
 static fmap_fsw_main_opt_t *
@@ -956,6 +1053,7 @@ fmap_fsw_main_opt_init()
   opt->flowgram = NULL;
   opt->target = NULL;
   opt->target_length = 0;
+  opt->j_type = FMAP_FSW_NO_JUSTIFY;
 
   // param
   opt->param.gap_open = 13*100;
@@ -1098,6 +1196,7 @@ usage(fmap_fsw_main_opt_t *opt)
                     opt->flow);
   fmap_file_fprintf(fmap_file_stderr, "         -F INT      flow penalty [%d]\n", opt->param.fscore);
   fmap_file_fprintf(fmap_file_stderr, "         -o INT      search for homopolymer errors +- offset [%d]\n", opt->param.offset);
+  fmap_file_fprintf(fmap_file_stderr, "         -l INT      indel justification type: 0 - none, 1 - 5' strand of the reference, 2 - 5' strand of the read [%d]\n", opt->j_type);
   fmap_file_fprintf(fmap_file_stderr, "         -v          print verbose progress information\n");
   fmap_file_fprintf(fmap_file_stderr, "         -h          print this message\n");
   fmap_file_fprintf(fmap_file_stderr, "\n");
@@ -1118,7 +1217,7 @@ int fmap_fsw_main(int argc, char *argv[])
 
   opt = fmap_fsw_main_opt_init();
 
-  while((c = getopt(argc, argv, "b:f:t:k:F:o:vh")) >= 0) {
+  while((c = getopt(argc, argv, "b:f:t:k:F:o:l:vh")) >= 0) {
       switch(c) {
         case 'b':
           opt->base_calls = fmap_strdup(optarg); break;
@@ -1133,6 +1232,8 @@ int fmap_fsw_main(int argc, char *argv[])
           opt->param.fscore = 100*atoi(optarg); break;
         case 'o':
           opt->param.offset = atoi(optarg); break;
+        case 'l':
+          opt->j_type = atoi(optarg); break;
         case 'v':
           fmap_progress_set_verbosity(1); break;
         case 'h':
@@ -1159,6 +1260,7 @@ int fmap_fsw_main(int argc, char *argv[])
       }
       fmap_error_cmd_check_int(opt->param.fscore, 0, INT32_MAX, "-F");
       fmap_error_cmd_check_int(opt->param.offset, 0, INT32_MAX, "-o");
+      fmap_error_cmd_check_int(opt->param.offset, FMAP_FSW_NO_JUSTIFY, FMAP_FSW_NO_JUSTIFY, "-l");
   }
 
   // get the flowgram
@@ -1184,12 +1286,12 @@ int fmap_fsw_main(int argc, char *argv[])
                                        -1, 0,
                                        &opt->param,
                                        path, &path_len);
-  
+
   fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "wb", FMAP_FILE_NO_COMPRESSION);
 
   // print
   fmap_fsw_print_aln(fmap_file_stdout, score, path, path_len,
-                     flow, (uint8_t*)opt->target, 0);
+                     flow, (uint8_t*)opt->target, 0, opt->j_type);
   fmap_file_fprintf(fmap_file_stdout, "\n");
 
   fmap_file_fclose(fmap_file_stdout);

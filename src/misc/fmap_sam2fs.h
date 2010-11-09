@@ -16,6 +16,7 @@ typedef struct {
     int32_t flow_offset; /*!< search for homopolymer errors +- offset during re-alignment (-o) */
     int32_t aln_global; /*!< run global alignment (otherwise read fitting) (-g) */
     int32_t output_type; /*!< the output type: 0-flow space alignment 1-base space alignment 2-SAM (-z) */
+    int32_t j_type; /*!< how indels are justified in alignment (-l) */
 } fmap_sam2fs_opt_t;
 
 #ifdef HAVE_SAMTOOLS
@@ -28,12 +29,13 @@ typedef struct {
   @param  flow_offfset  the maximum homopolymer offset to examine
   @param  aln_global   the global alignment will be used if 1, fitting alignment otherwise
   @param  output_type  the output type
+  @param  j_type       how indels are justified in alignment 
   @return              the original SAM/BAM, unless the output type is SAM
   @details             if the output type is 2, then the bam will be modified
   */
 bam1_t *
 fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_offset, 
-                int32_t aln_global, int32_t output_type);
+                int32_t aln_global, int32_t output_type, int32_t j_type);
 
 #endif
 
