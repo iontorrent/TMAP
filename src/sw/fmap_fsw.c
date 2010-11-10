@@ -847,11 +847,12 @@ fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_ci
   return cigar;
 }
 
-static void
+static int 
 fmap_fsw_left_justify(char *ref, char *read, char *aln, int32_t len)
 {
   char c;
   int32_t i, prev_del, prev_ins, start_ins, start_del, end_ins, end_del;
+  int32_t justified = 0;
 
   prev_del = prev_ins = 0;
   start_del = start_ins = end_del = end_ins = -1;
@@ -890,6 +891,7 @@ fmap_fsw_left_justify(char *ref, char *read, char *aln, int32_t len)
                   c = aln[end_del]; aln[end_del] = aln[start_del]; aln[start_del] = c;
                   start_del--;
                   end_del--;
+                  justified = 1;
               }
               end_del++; // we decremented when we exited the loop 
               i = end_del;
@@ -905,6 +907,7 @@ fmap_fsw_left_justify(char *ref, char *read, char *aln, int32_t len)
                   c = aln[end_ins]; aln[end_ins] = aln[start_ins]; aln[start_ins] = c;
                   start_ins--;
                   end_ins--;
+                  justified = 1;
               }
               end_ins++; // e decremented when we exited the loop 
               i = end_ins;
@@ -917,6 +920,8 @@ fmap_fsw_left_justify(char *ref, char *read, char *aln, int32_t len)
           start_del = start_ins = end_del = end_ins = -1;
       }
   }
+
+  return justified;
 }
 
 void
@@ -981,37 +986,48 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
   }
   (*read)[path_len] = '\0';
 
-  // justify based on the reference '+' strand
-  switch(j_type) {
-    case FMAP_FSW_NO_JUSTIFY:
-      break;
-    case FMAP_FSW_JUSTIFY_LEFT_REF:
-      fmap_fsw_left_justify((*ref), (*read), (*aln), path_len);
-      break;
-    case FMAP_FSW_JUSTIFY_LEFT_READ:
-    default:
-      break;
+  // return based on sequencing order
+  if(0 == strand) {
+      switch(j_type) {
+        case FMAP_FSW_NO_JUSTIFY:
+        case FMAP_FSW_JUSTIFY_LEFT_REF:
+          fmap_fsw_left_justify((*ref), (*read), (*aln), path_len);
+          break;
+        case FMAP_FSW_JUSTIFY_LEFT_READ:
+        default:
+          break;
+      }
   }
+  else {
+      switch(j_type) {
+        case FMAP_FSW_NO_JUSTIFY:
+        case FMAP_FSW_JUSTIFY_LEFT_REF:
+          // do this before reversing
+          fmap_fsw_left_justify((*ref), (*read), (*aln), path_len);
+          break;
+        case FMAP_FSW_JUSTIFY_LEFT_READ:
+          // do this after reversing
+        default:
+          break;
+      }
 
-  if(1 == strand) { // return based on sequencing order
       for(i=0;i<(path_len>>1);i++) {
           char tmp;
           tmp = (*ref)[i]; (*ref)[i] = (*ref)[path_len-i-1]; (*ref)[path_len-i-1] = tmp;
           tmp = (*read)[i]; (*read)[i] = (*read)[path_len-i-1]; (*read)[path_len-i-1] = tmp;
           tmp = (*aln)[i]; (*aln)[i] = (*aln)[path_len-i-1]; (*aln)[path_len-i-1] = tmp;
       }
-  }
-  
-  // justify based on the read strand
-  switch(j_type) {
-    case FMAP_FSW_NO_JUSTIFY:
-    case FMAP_FSW_JUSTIFY_LEFT_REF:
-      break;
-    case FMAP_FSW_JUSTIFY_LEFT_READ:
-      fmap_fsw_left_justify((*ref), (*read), (*aln), path_len);
-      break;
-    default:
-      break;
+
+      switch(j_type) {
+        case FMAP_FSW_NO_JUSTIFY:
+        case FMAP_FSW_JUSTIFY_LEFT_REF:
+          break;
+        case FMAP_FSW_JUSTIFY_LEFT_READ:
+          fmap_fsw_left_justify((*ref), (*read), (*aln), path_len);
+          break;
+        default:
+          break;
+      }
   }
 }
 

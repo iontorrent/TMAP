@@ -12,6 +12,7 @@
 #include "../util/fmap_alloc.h"
 #include "../util/fmap_progress.h"
 #include "../util/fmap_definitions.h"
+#include "../util/fmap_sam.h"
 #include "../io/fmap_file.h"
 #include "../sw/fmap_fsw.h"
 #include "fmap_sam2fs_aux.h"
@@ -61,12 +62,11 @@ static bam1_t *
 fmap_sam2fs_copy_to_sam(bam1_t *bam_old, fmap_fsw_path_t *path, int32_t path_len)
 {
   bam1_t *bam_new = NULL;
-
   int32_t i, len;
   uint32_t *cigar;
   int32_t n_cigar;
-  bam_new = fmap_calloc(1, sizeof(bam1_t), "bam_new");
 
+  bam_new = fmap_calloc(1, sizeof(bam1_t), "bam_new");
 
   // query name
   bam_new->core.l_qname = bam_old->core.l_qname;
@@ -84,7 +84,7 @@ fmap_sam2fs_copy_to_sam(bam1_t *bam_old, fmap_fsw_path_t *path, int32_t path_len
       bam_new->core.pos += path[path_len-1].j;
   }
   bam_new->core.qual = bam_old->core.qual; 
-  
+
   // no pairing information
   bam_new->core.mtid = -1;
   bam_new->core.mpos = -1;
@@ -141,6 +141,7 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
   uint8_t *md_data = NULL;
   char *md = NULL;
   uint32_t md_i = 0;
+  char *ref, *read, *aln;
 
   uint32_t aln_len = 0;
   uint32_t *cigar = NULL;
@@ -372,15 +373,33 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
                          j_type);
       fmap_file_fprintf(fmap_file_stdout, "\t");
       fmap_sam2fs_aux_flow_align(fmap_file_stdout, 
-                                       (uint8_t*)read_bases, 
-                                       read_bases_len,
-                                       (uint8_t*)(ref_bases + j),
-                                       i - j + 1, 
-                                       flow_order_tmp);
+                                 (uint8_t*)read_bases, 
+                                 read_bases_len,
+                                 (uint8_t*)(ref_bases + j),
+                                 i - j + 1, 
+                                 flow_order_tmp);
       fmap_file_fprintf(fmap_file_stdout, "\n");
       break;
     case FMAP_SAM2FS_OUTPUT_SAM:
       bam = fmap_sam2fs_copy_to_sam(bam, path, path_len);
+
+      if(FMAP_FSW_NO_JUSTIFY != j_type) {
+          
+          fmap_fsw_get_aln(path, path_len, flow_order_tmp, (uint8_t*)ref_bases, (BAM_FREVERSE & bam->core.flag) ? 1 : 0,
+                           &ref, &read, &aln, j_type);
+
+          if((BAM_FREVERSE & bam->core.flag)) { // set it the forward strand of the reference
+              for(i=0;i<(path_len>>1);i++) {
+                  char tmp;
+                  tmp = ref[i]; ref[i] = ref[path_len-i-1]; ref[path_len-i-1] = tmp;
+                  tmp = read[i]; read[i] = read[path_len-i-1]; read[path_len-i-1] = tmp;
+                  tmp = aln[i]; aln[i] = aln[path_len-i-1]; aln[path_len-i-1] = tmp;
+              }
+          }
+
+          fmap_sam_left_justify(bam, ref, read, path_len);
+          free(ref); free(read); free(aln);
+      }
       break;
   }
 
@@ -482,7 +501,7 @@ fmap_sam2fs_opt_init()
   opt->flow_offset = 1;
   opt->aln_global = 0;
   opt->output_type = FMAP_SAM2FS_OUTPUT_ALN;
-    opt->j_type = FMAP_FSW_NO_JUSTIFY;
+  opt->j_type = FMAP_FSW_NO_JUSTIFY;
 
   return opt;
 }

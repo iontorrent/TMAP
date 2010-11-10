@@ -1,6 +1,10 @@
 #ifndef FMAP_SAM_H_
 #define FMAP_SAM_H_
 
+#include <config.h>
+#ifdef HAVE_SAMTOOLS
+#include <bam.h>
+#endif
 #include "../seq/fmap_seq.h"
 #include "../index/fmap_refseq.h"
 #include "../io/fmap_file.h"
@@ -47,5 +51,17 @@ fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, fmap_refseq_t *refseq,
                     uint8_t strand, uint32_t seqid, uint32_t pos,
                     uint8_t mapq, uint32_t *cigar, int32_t n_cigar,
                     const char *format, ...);
+
+#ifdef HAVE_SAMTOOLS
+/*!
+  left-justifies the cigar and MD given the new reference/read alignment
+  @param  b     the SAM/BAM structure
+  @param  ref   the reference
+  @param  read  the read
+  @param  len   the length of the alignment
+ */
+void
+fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len);
+#endif
 
 #endif
