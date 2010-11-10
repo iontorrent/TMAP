@@ -220,6 +220,7 @@ fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, fmap_refseq_t *refseq,
 
 #ifdef HAVE_SAMTOOLS
 // from bam_md.c in SAMtools
+// modified not fill in the NM tag, and not to start the reference a c->pos
 static void 
 bam_fillmd1_core(bam1_t *b, char *ref, int is_equal)
 {
@@ -231,7 +232,7 @@ bam_fillmd1_core(bam1_t *b, char *ref, int is_equal)
   uint8_t *old_md;
 
   str = (kstring_t*)calloc(1, sizeof(kstring_t));
-  for (i = y = 0, x = c->pos; i < c->n_cigar; ++i) {
+  for (i = y = x = 0; i < c->n_cigar; ++i) {
       int j, l = cigar[i]>>4, op = cigar[i]&0xf;
       if (op == BAM_CMATCH) {
           for (j = 0; j < l; ++j) {
@@ -269,7 +270,7 @@ bam_fillmd1_core(bam1_t *b, char *ref, int is_equal)
 
   // update MD
   old_md = bam_aux_get(b, "MD");
-  if (!old_md) {
+  if(NULL != old_md) {
       bam_aux_append(b, "MD", 'Z', str->l + 1, (uint8_t*)str->s);
   }
   else {
@@ -337,20 +338,23 @@ fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
   // resize the data field if necessary
   if(n_cigar < b->core.n_cigar) {
       // shift down
-      for(i=0;i<b->l_aux - b->core.n_cigar + n_cigar;i++) {
+      for(i=0;i<b->data_len - b->core.n_cigar + n_cigar;i++) {
           b->data[i] = b->data[i + b->core.n_cigar - n_cigar];
       }
-      b->l_aux -= b->core.n_cigar - n_cigar;
+      b->data_len -= b->core.n_cigar - n_cigar;
       b->core.n_cigar = n_cigar;
   }
   else if(b->core.n_cigar < n_cigar) {
       // realloc
-      b->data = fmap_realloc(b->data, sizeof(uint8_t) * (b->l_aux + n_cigar - b->core.n_cigar), "b->data");
+      if(b->m_data <= (b->data_len + n_cigar - b->core.n_cigar)) {
+          b->data = fmap_realloc(b->data, sizeof(uint8_t) * (b->data_len + n_cigar - b->core.n_cigar), "b->data");
+      }
       // shift up
-      for(i=b->l_aux-1;0<=i;i--) {
+      for(i=b->data_len-1;0<=i;i--) {
           b->data[i + n_cigar - b->core.n_cigar] = b->data[i];
       }
-      b->l_aux += n_cigar - b->core.n_cigar;
+      b->data_len += n_cigar - b->core.n_cigar;
+      b->m_data = b->data_len;
       b->core.n_cigar = n_cigar;
   }
 
@@ -382,7 +386,7 @@ fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
           j++;
       }
   }
-  ref_tmp[i]='\0';
+  ref_tmp[j]='\0';
   bam_fillmd1(b, ref_tmp, 0);
   free(ref_tmp);
 }

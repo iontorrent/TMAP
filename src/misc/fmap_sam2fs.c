@@ -112,7 +112,6 @@ fmap_sam2fs_copy_to_sam(bam1_t *bam_old, fmap_fsw_path_t *path, int32_t path_len
   }
 
   // qualities
-  bam_new->core.l_qseq = bam_old->core.l_qseq;
   bam_new->data_len += bam_new->core.l_qseq;
   fmap_sam2fs_bam_alloc_data(bam_new, bam_new->data_len);
   for(i=0;i<bam_new->core.l_qseq;i++) {
