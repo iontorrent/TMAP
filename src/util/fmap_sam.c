@@ -270,7 +270,7 @@ bam_fillmd1_core(bam1_t *b, char *ref, int is_equal)
 
   // update MD
   old_md = bam_aux_get(b, "MD");
-  if(NULL != old_md) {
+  if(NULL == old_md) {
       bam_aux_append(b, "MD", 'Z', str->l + 1, (uint8_t*)str->s);
   }
   else {
@@ -324,6 +324,11 @@ fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
   int32_t i, j, n_cigar, last_type;
   char *ref_tmp=NULL;
   uint32_t *cigar;
+  int32_t diff;
+
+  if(b->data_len - b->l_aux != bam1_aux(b) - b->data) {
+      fmap_error("b->data_len - b->l_aux != bam1_aux(b) - b->data", Exit, OutOfRange);
+  }
 
   // get the # of cigar operators
   last_type = fmap_sam_get_type(ref[0], read[0]);
@@ -337,25 +342,31 @@ fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
 
   // resize the data field if necessary
   if(n_cigar < b->core.n_cigar) {
+      diff = sizeof(uint32_t) * (b->core.n_cigar - n_cigar);
       // shift down
-      for(i=0;i<b->data_len - b->core.n_cigar + n_cigar;i++) {
-          b->data[i] = b->data[i + b->core.n_cigar - n_cigar];
+      for(i=0;i<b->data_len - diff;i++) {
+          b->data[i] = b->data[i + diff];
       }
-      b->data_len -= b->core.n_cigar - n_cigar;
+      b->data_len -= diff;
       b->core.n_cigar = n_cigar;
   }
   else if(b->core.n_cigar < n_cigar) {
+      diff = sizeof(uint32_t) * (n_cigar - b->core.n_cigar);
       // realloc
-      if(b->m_data <= (b->data_len + n_cigar - b->core.n_cigar)) {
-          b->data = fmap_realloc(b->data, sizeof(uint8_t) * (b->data_len + n_cigar - b->core.n_cigar), "b->data");
+      if(b->m_data <= (b->data_len + diff)) {
+          b->m_data = b->data_len + diff + 1;
+          fmap_roundup32(b->m_data);
+          b->data = fmap_realloc(b->data, sizeof(uint8_t) * b->m_data, "b->data");
       }
       // shift up
       for(i=b->data_len-1;0<=i;i--) {
-          b->data[i + n_cigar - b->core.n_cigar] = b->data[i];
+          b->data[i + diff] = b->data[i];
       }
-      b->data_len += n_cigar - b->core.n_cigar;
-      b->m_data = b->data_len;
+      b->data_len += diff;
       b->core.n_cigar = n_cigar;
+  }
+  if(b->data_len - b->l_aux != bam1_aux(b) - b->data) {
+      fmap_error("b->data_len - b->l_aux != bam1_aux(b) - b->data", Exit, OutOfRange);
   }
 
   // create the cigar
@@ -377,6 +388,7 @@ fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
       }
       last_type = cur_type;
   }
+  n_cigar++;
 
   // update MD
   ref_tmp = fmap_malloc(sizeof(char) * (1 + len), "ref_tmp");
