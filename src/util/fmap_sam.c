@@ -266,6 +266,7 @@ bam_fillmd1_core(bam1_t *b, char *ref, int is_equal)
       }
   }
   ksprintf(str, "%d", u);
+
   // update MD
   old_md = bam_aux_get(b, "MD");
   if (!old_md) {
@@ -273,14 +274,20 @@ bam_fillmd1_core(bam1_t *b, char *ref, int is_equal)
   }
   else {
       int is_diff = 0;
-      if (strlen((char*)old_md+1) == str->l) {
-          for (i = 0; i < str->l; ++i)
-            if (toupper(old_md[i+1]) != toupper(str->s[i]))
+      if(strlen((char*)old_md+1) == str->l) {
+          for(i = 0; i < str->l; ++i) {
+            if(toupper(old_md[i+1]) != toupper(str->s[i])) {
               break;
-          if (i < str->l) is_diff = 1;
-      } else is_diff = 1;
-      if (is_diff) {
-          //fprintf(stderr, "[bam_fillmd1] different MD for read '%s': '%s' -> '%s'\n", bam1_qname(b), old_md+1, str->s);
+            }
+          }
+          if(i < str->l) {
+              is_diff = 1;
+          }
+      } 
+      else {
+          is_diff = 1;
+      }
+      if(1 == is_diff) {
           bam_aux_del(b, old_md);
           bam_aux_append(b, "MD", 'Z', str->l + 1, (uint8_t*)str->s);
       }
@@ -327,9 +334,6 @@ fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
       last_type = cur_type;
   }
 
-  fprintf(stderr, "HERE SAM:%d->%d\n%s\n%s\n",
-          b->core.n_cigar, n_cigar, ref, read);
-
   // resize the data field if necessary
   if(n_cigar < b->core.n_cigar) {
       // shift down
@@ -361,23 +365,13 @@ fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
       if(cur_type == last_type) {
           // add to the cigar length
           cigar[n_cigar] += 1u << 4; 
-          fprintf(stderr, "1 n_cigar=%d %d %d\n",
-                  n_cigar, cigar[n_cigar] >> 4, cigar[n_cigar] & 0xf);
       }
       else {
           // add to the cigar
           n_cigar++;
           cigar[n_cigar] = 1u << 4 | cur_type; 
-          fprintf(stderr, "2 n_cigar=%d %d %d\n",
-                  n_cigar, cigar[n_cigar] >> 4, cigar[n_cigar] & 0xf);
       }
       last_type = cur_type;
-  }
-
-  cigar = bam1_cigar(b);
-  for(i=0;i<b->core.n_cigar;i++) {
-      fprintf(stderr, "3 n_cigar=%d %d %d\n",
-              i, cigar[i] >> 4, cigar[i] & 0xf);
   }
 
   // update MD
@@ -389,8 +383,7 @@ fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
       }
   }
   ref_tmp[i]='\0';
-  // BUG
-  //bam_fillmd1(b, ref_tmp, 0);
+  bam_fillmd1(b, ref_tmp, 0);
   free(ref_tmp);
 }
 #endif

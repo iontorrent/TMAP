@@ -62,11 +62,12 @@ static bam1_t *
 fmap_sam2fs_copy_to_sam(bam1_t *bam_old, fmap_fsw_path_t *path, int32_t path_len)
 {
   bam1_t *bam_new = NULL;
-  int32_t i, len;
+  int32_t i;
   uint32_t *cigar;
   int32_t n_cigar;
-
+  
   bam_new = fmap_calloc(1, sizeof(bam1_t), "bam_new");
+  bam_new->data_len = bam_new->m_data;;
 
   // query name
   bam_new->core.l_qname = bam_old->core.l_qname;
@@ -119,12 +120,12 @@ fmap_sam2fs_copy_to_sam(bam1_t *bam_old, fmap_fsw_path_t *path, int32_t path_len
   }
 
   // copy over auxiliary data
-  len = sizeof(uint8_t) * ((bam_old->data + bam_old->l_aux) - bam1_aux(bam_old));
-  bam_new->data_len += len;
+  bam_new->data_len += bam_old->l_aux;
   fmap_sam2fs_bam_alloc_data(bam_new, bam_new->data_len);
-  for(i=0;i<len;i++) {
+  for(i=0;i<bam_old->l_aux;i++) {
       bam1_aux(bam_new)[i] = bam1_aux(bam_old)[i];
   }
+  bam_new->l_aux = bam_old->l_aux;
 
   // destroy the old bam
   bam_destroy1(bam_old);
@@ -385,7 +386,8 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
 
       if(FMAP_FSW_NO_JUSTIFY != j_type) {
           
-          fmap_fsw_get_aln(path, path_len, flow_order_tmp, (uint8_t*)ref_bases, (BAM_FREVERSE & bam->core.flag) ? 1 : 0,
+          fmap_fsw_get_aln(path, path_len, flow_order_tmp, (uint8_t*)ref_bases, 
+                           (BAM_FREVERSE & bam->core.flag) ? 1 : 0,
                            &ref, &read, &aln, j_type);
 
           if((BAM_FREVERSE & bam->core.flag)) { // set it the forward strand of the reference
