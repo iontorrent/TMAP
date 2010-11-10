@@ -398,6 +398,8 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
               }
           }
 
+          // do not worry about read fitting since fmap_fsw_get_aln handles this
+          // above
           fmap_sam_left_justify(bam, ref, read, path_len);
           free(ref); free(read); free(aln);
       }
