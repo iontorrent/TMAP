@@ -222,7 +222,7 @@ fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, fmap_refseq_t *refseq,
 // from bam_md.c in SAMtools
 // modified not fill in the NM tag, and not to start the reference a c->pos
 static void 
-bam_fillmd1_core(bam1_t *b, char *ref, int is_equal)
+bam_fillmd1_core(bam1_t *b, char *ref)
 {
   uint8_t *seq = bam1_seq(b);
   uint32_t *cigar = bam1_cigar(b);
@@ -240,7 +240,6 @@ bam_fillmd1_core(bam1_t *b, char *ref, int is_equal)
               int c1 = bam1_seqi(seq, z), c2 = bam_nt16_table[(int)ref[x+j]];
               if (ref[x+j] == 0) break; // out of boundary
               if ((c1 == c2 && c1 != 15 && c2 != 15) || c1 == 0) { // a match
-                  if (is_equal) seq[z/2] &= (z&1)? 0xf0 : 0x0f;
                   ++u;
               } else {
                   ksprintf(str, "%d", u);
@@ -298,9 +297,9 @@ bam_fillmd1_core(bam1_t *b, char *ref, int is_equal)
 
 // from bam_md.c in SAMtools
 static void 
-bam_fillmd1(bam1_t *b, char *ref, int is_equal)
+bam_fillmd1(bam1_t *b, char *ref)
 {
-  bam_fillmd1_core(b, ref, is_equal);
+  bam_fillmd1_core(b, ref);
 }
 
 // soft-clipping is not supported
@@ -399,7 +398,7 @@ fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
       }
   }
   ref_tmp[j]='\0';
-  bam_fillmd1(b, ref_tmp, 0);
+  bam_fillmd1(b, ref_tmp);
   free(ref_tmp);
 }
 #endif
