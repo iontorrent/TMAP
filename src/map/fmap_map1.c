@@ -531,8 +531,8 @@ fmap_map1_core(fmap_map1_opt_t *opt)
   }
 }
 
-static int 
-usage(fmap_map1_opt_t *opt)
+int 
+fmap_map1_usage(fmap_map1_opt_t *opt)
 {
   char *reads_format = fmap_get_reads_file_format_string(opt->reads_format);
   // Future options:
@@ -546,9 +546,11 @@ usage(fmap_map1_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "\n");
   fmap_file_fprintf(fmap_file_stderr, "Usage: %s map1 [options]", PACKAGE);
   fmap_file_fprintf(fmap_file_stderr, "\n");
-  fmap_file_fprintf(fmap_file_stderr, "Options (optional):\n");
+  fmap_file_fprintf(fmap_file_stderr, "Options (required):\n");
   fmap_file_fprintf(fmap_file_stderr, "         -f FILE     the FASTA reference file name [%s]\n", opt->fn_fasta);
   fmap_file_fprintf(fmap_file_stderr, "         -r FILE     the reads file name [%s]\n", (NULL == opt->fn_reads) ? "stdin" : opt->fn_reads);
+  fmap_file_fprintf(fmap_file_stderr, "\n");
+  fmap_file_fprintf(fmap_file_stderr, "Options (optional):\n");
   fmap_file_fprintf(fmap_file_stderr, "         -F STRING   the reads file format (fastq|fq|fasta|fa|sff) [%s]\n", reads_format);
   fmap_file_fprintf(fmap_file_stderr, "         -l INT      the k-mer length to seed CALs (-1 to disable) [%d]\n", opt->seed_length);
   fmap_file_fprintf(fmap_file_stderr, "         -k INT      maximum number of mismatches in the seed [%d]\n", opt->seed_max_mm);
@@ -597,7 +599,7 @@ usage(fmap_map1_opt_t *opt)
   return 1;
 }
 
-static fmap_map1_opt_t *
+fmap_map1_opt_t *
 fmap_map1_opt_init()
 {
   fmap_map1_opt_t *opt = NULL;
@@ -629,7 +631,7 @@ fmap_map1_opt_init()
   return opt;
 }
 
-static void
+void
 fmap_map1_opt_destroy(fmap_map1_opt_t *opt)
 {
   free(opt->fn_fasta);
@@ -637,14 +639,11 @@ fmap_map1_opt_destroy(fmap_map1_opt_t *opt)
   free(opt);
 }
 
-int 
-fmap_map1_main(int argc, char *argv[])
+int32_t 
+fmap_map1_opt_parse(int argc, char *argv[], fmap_map1_opt_t *opt)
 {
   int c;
-  fmap_map1_opt_t *opt = NULL;
 
-  srand48(0); // random seed
-  opt = fmap_map1_opt_init(argv, argc);
   opt->argc = argc; opt->argv = argv;
 
   while((c = getopt(argc, argv, "f:r:F:l:k:m:o:e:M:O:E:d:i:b:q:Q:n:a:jzJZs:vh")) >= 0) {
@@ -711,54 +710,79 @@ fmap_map1_main(int argc, char *argv[])
           fmap_progress_set_verbosity(1); break;
         case 'h':
         default:
-          return usage(opt);
+          return 0;
       }
   }
+  return 1;
+}
 
-  if(argc != optind || 1 == argc) {
-      return usage(opt);
+void 
+fmap_map1_opt_check(fmap_map1_opt_t *opt)
+{
+  if(NULL == opt->fn_fasta && 0 == opt->shm_key) {
+      fmap_error("option -f or option -s must be specified", Exit, CommandLineArgument);
   }
-  else { // check command line arguments
-      if(NULL == opt->fn_fasta && 0 == opt->shm_key) {
-          fmap_error("option -f or option -s must be specified", Exit, CommandLineArgument);
-      }
-      else if(NULL != opt->fn_fasta && 0 < opt->shm_key) {
-          fmap_error("option -f and option -s may not be specified together", Exit, CommandLineArgument);
-      }
-      if(NULL == opt->fn_reads && FMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
-          fmap_error("option -F or option -r must be specified", Exit, CommandLineArgument);
-      }
-      if(FMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
-          fmap_error("the reads format (-r) was unrecognized", Exit, CommandLineArgument);
-      }
-      if(-1 != opt->seed_length) fmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "-l");
+  else if(NULL != opt->fn_fasta && 0 < opt->shm_key) {
+      fmap_error("option -f and option -s may not be specified together", Exit, CommandLineArgument);
+  }
+  if(NULL == opt->fn_reads && FMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
+      fmap_error("option -F or option -r must be specified", Exit, CommandLineArgument);
+  }
+  if(FMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
+      fmap_error("the reads format (-r) was unrecognized", Exit, CommandLineArgument);
+  }
+  if(-1 != opt->seed_length) fmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "-l");
 
-      // this will take care of the case where they are both < 0
-      fmap_error_cmd_check_int((opt->max_mm_frac < 0) ? opt->max_mm : (int32_t)opt->max_mm_frac, 0, INT32_MAX, "-m"); 
-      // this will take care of the case where they are both < 0
-      fmap_error_cmd_check_int((opt->max_gapo_frac < 0) ? opt->max_gapo : (int32_t)opt->max_gapo_frac, 0, INT32_MAX, "-m"); 
-      // this will take care of the case where they are both < 0
-      fmap_error_cmd_check_int((opt->max_gape_frac < 0) ? opt->max_gape : (int32_t)opt->max_gape_frac, 0, INT32_MAX, "-m"); 
+  // this will take care of the case where they are both < 0
+  fmap_error_cmd_check_int((opt->max_mm_frac < 0) ? opt->max_mm : (int32_t)opt->max_mm_frac, 0, INT32_MAX, "-m"); 
+  // this will take care of the case where they are both < 0
+  fmap_error_cmd_check_int((opt->max_gapo_frac < 0) ? opt->max_gapo : (int32_t)opt->max_gapo_frac, 0, INT32_MAX, "-m"); 
+  // this will take care of the case where they are both < 0
+  fmap_error_cmd_check_int((opt->max_gape_frac < 0) ? opt->max_gape : (int32_t)opt->max_gape_frac, 0, INT32_MAX, "-m"); 
 
-      fmap_error_cmd_check_int(opt->pen_mm, 0, INT32_MAX, "-M");
-      fmap_error_cmd_check_int(opt->pen_gapo, 0, INT32_MAX, "-O");
-      fmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
-      fmap_error_cmd_check_int(opt->max_cals_del, 1, INT32_MAX, "-d");
-      fmap_error_cmd_check_int(opt->indel_ends_bound, 0, INT32_MAX, "-i");
-      fmap_error_cmd_check_int(opt->max_best_cals, 0, INT32_MAX, "-b");
-      if(-1 != opt->reads_queue_size) fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
-      fmap_error_cmd_check_int(opt->max_entries, 1, INT32_MAX, "-Q");
-      fmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
-      fmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
+  fmap_error_cmd_check_int(opt->pen_mm, 0, INT32_MAX, "-M");
+  fmap_error_cmd_check_int(opt->pen_gapo, 0, INT32_MAX, "-O");
+  fmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
+  fmap_error_cmd_check_int(opt->max_cals_del, 1, INT32_MAX, "-d");
+  fmap_error_cmd_check_int(opt->indel_ends_bound, 0, INT32_MAX, "-i");
+  fmap_error_cmd_check_int(opt->max_best_cals, 0, INT32_MAX, "-b");
+  if(-1 != opt->reads_queue_size) fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
+  fmap_error_cmd_check_int(opt->max_entries, 1, INT32_MAX, "-Q");
+  fmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
+  fmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
 
-      if(FMAP_FILE_BZ2_COMPRESSION == opt->output_compr 
-         && -1 == opt->reads_queue_size) {
-          fmap_error("cannot buffer reads with bzip2 output (options \"-q 1 -J\")", Exit, OutOfRange);
-      }
+  if(FMAP_FILE_BZ2_COMPRESSION == opt->output_compr 
+     && -1 == opt->reads_queue_size) {
+      fmap_error("cannot buffer reads with bzip2 output (options \"-q 1 -J\")", Exit, OutOfRange);
+  }
+}
+
+int 
+fmap_map1_main(int argc, char *argv[])
+{
+  fmap_map1_opt_t *opt = NULL;
+
+  // random seed
+  srand48(0); 
+
+  // init opt
+  opt = fmap_map1_opt_init();
+
+  // get options
+  if(1 != fmap_map1_opt_parse(argc, argv, opt) // options parsed successfully
+     || argc != optind  // all options should be used
+     || 1 == argc) { // some options should be specified
+      return fmap_map1_usage(opt);
+  }
+  else { 
+      // check command line arguments
+      fmap_map1_opt_check(opt);
   }
 
+  // run map1
   fmap_map1_core(opt);
 
+  // destroy opt
   fmap_map1_opt_destroy(opt);
 
   fmap_progress_print2("terminating successfully");

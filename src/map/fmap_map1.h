@@ -79,6 +79,45 @@ typedef struct {
 } fmap_map1_thread_data_t;
 #endif
 
+/*!
+  Prints the usage of map1
+  @param  opt  the current options
+  @return      always 1
+  */
+int
+fmap_map1_usage(fmap_map1_opt_t *opt);
+
+/*!
+  Gets the initialized options
+  @return  pointer to the initialized options
+  */
+fmap_map1_opt_t *
+fmap_map1_opt_init();
+
+/*!
+  Destroys the memory associated with these options
+  @param  opt  pointer to the options
+  */
+void
+fmap_map1_opt_destroy(fmap_map1_opt_t *opt);
+
+/*!
+  Parses the command line options and stores them in the options structure
+  @param  argc  the number of arguments
+  @param  argv  the argument list
+  @param  opt   pointer to the options
+  @return       1 if successful, 0 otherwise
+  */
+int32_t
+fmap_map1_opt_parse(int argc, char *argv[], fmap_map1_opt_t *opt);
+
+/*!
+  Checks that all options are within range
+  @param  opt   pointer to the options
+  */
+void
+fmap_map1_opt_check(fmap_map1_opt_t *opt);
+
 /*! 
   main-like function for 'fmap map1'
   @param  argc  the number of arguments

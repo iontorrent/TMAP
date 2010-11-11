@@ -420,8 +420,8 @@ fmap_map3_core(fmap_map3_opt_t *opt)
   }
 }
 
-static int 
-usage(fmap_map3_opt_t *opt)
+int 
+fmap_map3_usage(fmap_map3_opt_t *opt)
 {
   char *reads_format = fmap_get_reads_file_format_string(opt->reads_format);
   // Future options:
@@ -435,9 +435,11 @@ usage(fmap_map3_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "\n");
   fmap_file_fprintf(fmap_file_stderr, "Usage: %s map3 [options]", PACKAGE);
   fmap_file_fprintf(fmap_file_stderr, "\n");
-  fmap_file_fprintf(fmap_file_stderr, "Options (optional):\n");
+  fmap_file_fprintf(fmap_file_stderr, "Options (required):\n");
   fmap_file_fprintf(fmap_file_stderr, "         -f FILE     the FASTA reference file name [%s]\n", opt->fn_fasta);
   fmap_file_fprintf(fmap_file_stderr, "         -r FILE     the reads file name [%s]\n", (NULL == opt->fn_reads) ? "stdin" : opt->fn_reads);
+  fmap_file_fprintf(fmap_file_stderr, "\n");
+  fmap_file_fprintf(fmap_file_stderr, "Options (optional):\n");
   fmap_file_fprintf(fmap_file_stderr, "         -F STRING   the reads file format (fastq|fq|fasta|fa|sff) [%s]\n", reads_format);
   fmap_file_fprintf(fmap_file_stderr, "         -l INT      the k-mer length to seed CALs (-1 tunes to the genome size) [%d]\n", opt->seed_length);
   fmap_file_fprintf(fmap_file_stderr, "         -S INT      the maximum number of hits returned by a seed [%d]\n", opt->max_seed_hits);
@@ -474,7 +476,7 @@ usage(fmap_map3_opt_t *opt)
   return 1;
 }
 
-static fmap_map3_opt_t *
+fmap_map3_opt_t *
 fmap_map3_opt_init()
 {
   fmap_map3_opt_t *opt = NULL;
@@ -505,7 +507,7 @@ fmap_map3_opt_init()
   return opt;
 }
 
-static void
+void
 fmap_map3_opt_destroy(fmap_map3_opt_t *opt)
 {
   free(opt->fn_fasta);
@@ -513,14 +515,11 @@ fmap_map3_opt_destroy(fmap_map3_opt_t *opt)
   free(opt);
 }
 
-int 
-fmap_map3_main(int argc, char *argv[])
+int32_t
+fmap_map3_opt_parse(int argc, char *argv[], fmap_map3_opt_t *opt)
 {
   int c;
-  fmap_map3_opt_t *opt = NULL;
 
-  srand48(0); // random seed
-  opt = fmap_map3_opt_init(argv, argc);
   opt->argc = argc; opt->argv = argv;
 
   while((c = getopt(argc, argv, "f:r:F:l:S:b:w:A:M:O:E:T:gH:q:n:a:jzJZs:vh")) >= 0) {
@@ -579,49 +578,74 @@ fmap_map3_main(int argc, char *argv[])
           fmap_progress_set_verbosity(1); break;
         case 'h':
         default:
-          return usage(opt);
+          return 0;
       }
   }
+  return 1;
+}
 
-  if(argc != optind || 1 == argc) {
-      return usage(opt);
+void
+fmap_map3_opt_check(fmap_map3_opt_t *opt)
+{
+  if(NULL == opt->fn_fasta && 0 == opt->shm_key) {
+      fmap_error("option -f or option -s must be specified", Exit, CommandLineArgument);
   }
-  else { // check command line arguments
-      if(NULL == opt->fn_fasta && 0 == opt->shm_key) {
-          fmap_error("option -f or option -s must be specified", Exit, CommandLineArgument);
-      }
-      else if(NULL != opt->fn_fasta && 0 < opt->shm_key) {
-          fmap_error("option -f and option -s may not be specified together", Exit, CommandLineArgument);
-      }
-      if(NULL == opt->fn_reads && FMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
-          fmap_error("option -F or option -r must be specified", Exit, CommandLineArgument);
-      }
-      if(FMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
-          fmap_error("the reads format (-r) was unrecognized", Exit, CommandLineArgument);
-      }
-      if(-1 != opt->seed_length) fmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "-l");
-      fmap_error_cmd_check_int(opt->max_seed_hits, 1, INT32_MAX, "-S");
-      fmap_error_cmd_check_int(opt->max_seed_hits, 1, INT32_MAX, "-b");
-      fmap_error_cmd_check_int(opt->sw_offset, 1, INT32_MAX, "-w");
+  else if(NULL != opt->fn_fasta && 0 < opt->shm_key) {
+      fmap_error("option -f and option -s may not be specified together", Exit, CommandLineArgument);
+  }
+  if(NULL == opt->fn_reads && FMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
+      fmap_error("option -F or option -r must be specified", Exit, CommandLineArgument);
+  }
+  if(FMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
+      fmap_error("the reads format (-r) was unrecognized", Exit, CommandLineArgument);
+  }
+  if(-1 != opt->seed_length) fmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "-l");
+  fmap_error_cmd_check_int(opt->max_seed_hits, 1, INT32_MAX, "-S");
+  fmap_error_cmd_check_int(opt->max_seed_hits, 1, INT32_MAX, "-b");
+  fmap_error_cmd_check_int(opt->sw_offset, 1, INT32_MAX, "-w");
 
-      fmap_error_cmd_check_int(opt->score_match, 0, INT32_MAX, "-A");
-      fmap_error_cmd_check_int(opt->pen_mm, 0, INT32_MAX, "-M");
-      fmap_error_cmd_check_int(opt->pen_gapo, 0, INT32_MAX, "-O");
-      fmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
-      fmap_error_cmd_check_int(opt->score_thr, 0, INT32_MAX, "-T");
-      if(-1 != opt->reads_queue_size) fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
-      fmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
-      fmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
-      fmap_error_cmd_check_int(opt->aln_output_mode, 0, INT32_MAX, "-H");
+  fmap_error_cmd_check_int(opt->score_match, 0, INT32_MAX, "-A");
+  fmap_error_cmd_check_int(opt->pen_mm, 0, INT32_MAX, "-M");
+  fmap_error_cmd_check_int(opt->pen_gapo, 0, INT32_MAX, "-O");
+  fmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
+  fmap_error_cmd_check_int(opt->score_thr, 0, INT32_MAX, "-T");
+  if(-1 != opt->reads_queue_size) fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
+  fmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
+  fmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
+  fmap_error_cmd_check_int(opt->aln_output_mode, 0, INT32_MAX, "-H");
 
-      if(FMAP_FILE_BZ2_COMPRESSION == opt->output_compr 
-         && -1 == opt->reads_queue_size) {
-          fmap_error("cannot buffer reads with bzip2 output (options \"-q 1 -J\")", Exit, OutOfRange);
-      }
+  if(FMAP_FILE_BZ2_COMPRESSION == opt->output_compr 
+     && -1 == opt->reads_queue_size) {
+      fmap_error("cannot buffer reads with bzip2 output (options \"-q 1 -J\")", Exit, OutOfRange);
+  }
+}
+
+int 
+fmap_map3_main(int argc, char *argv[])
+{
+  fmap_map3_opt_t *opt = NULL;
+
+  // random seed
+  srand48(0); 
+
+  // init opt
+  opt = fmap_map3_opt_init();
+
+  // get options
+  if(1 != fmap_map3_opt_parse(argc, argv, opt) // options parsed successfully
+     || argc != optind  // all options should be used
+     || 1 == argc) { // some options should be specified
+      return fmap_map3_usage(opt);
+  }
+  else { 
+      // check command line arguments
+      fmap_map3_opt_check(opt);
   }
 
+  // run map3
   fmap_map3_core(opt);
 
+  // destroy opt
   fmap_map3_opt_destroy(opt);
 
   fmap_progress_print2("terminating successfully");

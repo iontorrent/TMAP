@@ -38,7 +38,7 @@ typedef struct {
 
 /*!
   Structure for a final hit
- */ 
+  */ 
 typedef struct {
     uint16_t strand:1; /*!< the strand */
     uint32_t seqid;  /*!< the sequence index (0-based) */
@@ -52,8 +52,8 @@ typedef struct {
 } fmap_map3_hit_t;
 
 /*!
- Stucture for holding alignment hits
- */
+  Stucture for holding alignment hits
+  */
 typedef struct {
     int32_t n; /*!< the number of hits */
     fmap_map3_hit_t *hits; /*!< array of hits */
@@ -64,7 +64,6 @@ typedef struct {
   data to be passed to a thread
   */
 typedef struct {
-    // TODO: return alignments
     fmap_seq_t **seq_buffer;  /*!< the buffer of sequences */
     fmap_map3_aln_t **alns;  /*!< the alignments to output */
     int32_t seq_buffer_length;  /*!< the buffer length */
@@ -75,6 +74,45 @@ typedef struct {
     fmap_map3_opt_t *opt;  /*!< the options to this program */
 } fmap_map3_thread_data_t;
 #endif
+
+/*!
+  Prints the usage of map3
+  @param  opt  the current options
+  @return      always 1
+  */
+int
+fmap_map3_usage(fmap_map3_opt_t *opt);
+
+/*!
+  Gets the initialized options
+  @return  pointer to the initialized options
+  */
+fmap_map3_opt_t *
+fmap_map3_opt_init();
+
+/*!
+  Destroys the memory associated with these options
+  @param  opt  pointer to the options
+  */
+void
+fmap_map3_opt_destroy(fmap_map3_opt_t *opt);
+
+/*!
+  Parses the command line options and stores them in the options structure
+  @param  argc  the number of arguments
+  @param  argv  the argument list
+  @param  opt   pointer to the options
+  @return       1 if successful, 0 otherwise
+  */
+int32_t
+fmap_map3_opt_parse(int argc, char *argv[], fmap_map3_opt_t *opt);
+
+/*!
+  Checks that all options are within range
+  @param  opt   pointer to the options
+  */
+void
+fmap_map3_opt_check(fmap_map3_opt_t *opt);
 
 /*! 
   main-like function for 'fmap map3'
