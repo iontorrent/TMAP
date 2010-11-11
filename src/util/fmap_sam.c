@@ -343,7 +343,7 @@ fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
   if(n_cigar < b->core.n_cigar) {
       diff = sizeof(uint32_t) * (b->core.n_cigar - n_cigar);
       // shift down
-      for(i=0;i<b->data_len - diff;i++) {
+      for(i=b->core.l_qname;i<b->data_len - diff;i++) {
           b->data[i] = b->data[i + diff];
       }
       b->data_len -= diff;
@@ -358,7 +358,7 @@ fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
           b->data = fmap_realloc(b->data, sizeof(uint8_t) * b->m_data, "b->data");
       }
       // shift up
-      for(i=b->data_len-1;0<=i;i--) {
+      for(i=b->data_len-1;b->core.l_qname<=i;i--) {
           b->data[i + diff] = b->data[i];
       }
       b->data_len += diff;
