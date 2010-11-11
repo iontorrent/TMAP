@@ -16,7 +16,6 @@ typedef struct {
     char *fn_fasta;  /*!< the fasta reference file name (-f) */
     char *fn_reads;  /*!< the reads file name (-r) */
     int32_t reads_format;  /*!< the reads file format (-F)  */
-
     int32_t seed_length; /*!< the kmer seed length (-l) */
     int32_t max_seed_hits; /*!< the maximum number of hits returned by a seed (-S) */
     int32_t max_seed_band; /*!< the band to group seeds (-b)*/

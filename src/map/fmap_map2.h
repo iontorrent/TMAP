@@ -24,7 +24,7 @@ typedef struct {
     double yita;  /*!< the error recurrence coefficient (-y)  */
     double mask_level;  /*!< the mask level (-m) */
     double length_coef;  /*!< the coefficient of length-threshold adjustment (-c) */
-    int32_t band_width;  /*!< the band width (-w)  */
+    int32_t sw_offset;  /*!< the band width (-w)  */
     int32_t score_thr;  /*!< the score threshold (match-score-scaled) (-T) */
     int32_t max_seed_intv;  /*!< the maximum seed interval (-S) */
     int32_t z_best;  /*!< the number of top scoring hits to keep (-b) */

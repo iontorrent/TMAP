@@ -612,7 +612,7 @@ fmap_map3_opt_check(fmap_map3_opt_t *opt)
   if(-1 != opt->reads_queue_size) fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
   fmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
   fmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
-  fmap_error_cmd_check_int(opt->aln_output_mode, 0, INT32_MAX, "-H");
+  fmap_error_cmd_check_int(opt->hp_diff, 0, INT32_MAX, "-H");
 
   if(FMAP_FILE_BZ2_COMPRESSION == opt->output_compr 
      && -1 == opt->reads_queue_size) {

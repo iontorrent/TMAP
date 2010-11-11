@@ -17,7 +17,7 @@ fmap_map2_chain_chaining(const fmap_map2_opt_t *opt, int shift, int n, fmap_map2
           fmap_map2_chain_t *q = chain + k;
           int x = p->qbeg - q->qbeg; // always positive
           int y = p->tbeg - q->tbeg;
-          if (y > 0 && x - y <= opt->band_width && y - x <= opt->band_width) {
+          if (y > 0 && x - y <= opt->sw_offset && y - x <= opt->sw_offset) {
               if (p->qend > q->qend) q->qend = p->qend;
               if (p->tend > q->tend) q->tend = p->tend;
               ++q->chain;
