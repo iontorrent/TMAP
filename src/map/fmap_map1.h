@@ -64,7 +64,16 @@ typedef struct {
     uint32_t l;  /*!< the upper range of the SA interval */
     uint32_t n_cigar;  /*!< the length of the cigar array */
     uint32_t *cigar;  /*!< the cigar array */
+} fmap_map1_hit_t;
+
+/*!
+  Stucture for holding alignment hits
+  */
+typedef struct {
+    int32_t n; /*!< the number of hits */
+    fmap_map1_hit_t *hits; /*!< array of hits */
 } fmap_map1_aln_t;
+
 #ifdef HAVE_LIBPTHREAD
 /*! 
   data to be passed to a thread
@@ -72,12 +81,25 @@ typedef struct {
 typedef struct {
     fmap_seq_t **seq_buffer;  /*!< the buffer of sequences */
     int32_t seq_buffer_length;  /*!< the buffer length */
-    fmap_map1_aln_t ***alns;  /*!< alignments for each sequence */
+    fmap_map1_aln_t **alns;  /*!< alignments for each sequence */
     fmap_bwt_t *bwt[2];  /*!< pointer to the BWT indices (forward/reverse) */
     int32_t tid;  /*!< the zero-based thread id */
     fmap_map1_opt_t *opt;  /*!< the options to this program */
 } fmap_map1_thread_data_t;
 #endif
+
+/*!
+  @return  a pointer tothe initialized memory
+ */
+inline fmap_map1_aln_t *
+fmap_map1_aln_init();
+
+    
+/*!
+  @param  aln  a pointer tothe initialized memory
+ */
+void
+fmap_map1_aln_destroy(fmap_map1_aln_t *aln);
 
 /*!
   Prints the usage of map1

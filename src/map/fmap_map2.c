@@ -205,11 +205,14 @@ fmap_map2_core(fmap_map2_opt_t *opt)
   fmap_map2_sam_t **sams = NULL;
   int32_t reads_queue_size;
 
+
   scalar = opt->score_match / log(opt->yita);
+  /*
   fmap_progress_print( "mismatch: %lf, gap_open: %lf, gap_ext: %lf",
                       exp(-opt->pen_mm / scalar) / opt->yita,
                       exp(-opt->pen_gapo / scalar),
                       exp(-opt->pen_gape / scalar));
+  */
 
   // adjust opt for opt->score_match
   opt->score_thr *= opt->score_match;

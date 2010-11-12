@@ -45,6 +45,7 @@ fmap_SOURCES = \
 			   src/map/fmap_map2_mempool.h src/map/fmap_map2_mempool.c \
 			   src/map/fmap_map3.h src/map/fmap_map3.c \
 			   src/map/fmap_map3_aux.h src/map/fmap_map3_aux.c \
+			   src/map/fmap_map_all.h src/map/fmap_map_all.c \
 			   src/fmap_main.h src/fmap_main.c
 
 fmap_LDADD = 

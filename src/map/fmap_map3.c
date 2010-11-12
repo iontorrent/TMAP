@@ -62,7 +62,7 @@ fmap_map3_aln_filter(fmap_seq_t *seq, fmap_map3_aln_t *aln,
           n_best = 1;
           n_seeds = aln->hits[i].n_seeds;
       }
-      else if(!(cur_score < best_score)) { // qual
+      else if(cur_score == best_score) { // qual
           n_best++;
       }
       else {
@@ -86,7 +86,13 @@ fmap_map3_aln_filter(fmap_seq_t *seq, fmap_map3_aln_t *aln,
       if(mapq > 250) mapq = 250;
   }
   for(i=0;i<aln->n;i++) {
-      aln->hits[i].mapq = mapq;
+      cur_score = aln->hits[i].score;
+      if(cur_score == best_score) { // qual
+          aln->hits[i].mapq = mapq;
+      }
+      else {
+          aln->hits[i].mapq = 0;
+      }
   }
 
   if(FMAP_MAP_UTIL_ALN_MODE_ALL == aln_output_mode

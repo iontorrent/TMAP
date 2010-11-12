@@ -32,6 +32,7 @@ static int usage()
   fprintf(stderr, "         map1           mapping procedure #1\n");
   fprintf(stderr, "         map2           mapping procedure #2\n");
   fprintf(stderr, "         map3           mapping procedure #3\n");
+  fprintf(stderr, "         mapall         multi-mapping procedure\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Utilities:\n");
   fprintf(stderr, "         fasta2pac      creates the packed FASTA file\n");
@@ -66,6 +67,7 @@ int main(int argc, char *argv[])
       else if (0 == strcmp("map1", argv[1])) ret = fmap_map1_main(argc-1, argv+1);
       else if (0 == strcmp("map2", argv[1])) ret = fmap_map2_main(argc-1, argv+1);
       else if (0 == strcmp("map3", argv[1])) ret = fmap_map3_main(argc-1, argv+1);
+      else if (0 == strcmp("map_all", argv[1])) ret = fmap_map_all_main(argc-1, argv+1);
       else if (0 == strcmp("fasta2pac", argv[1])) ret = fmap_refseq_fasta2pac_main(argc-1, argv+1);
       else if (0 == strcmp("pac2bwt", argv[1])) ret = fmap_bwt_pac2bwt_main(argc-1, argv+1);
       else if (0 == strcmp("bwt2sa", argv[1])) ret = fmap_sa_bwt2sa_main(argc-1, argv+1);

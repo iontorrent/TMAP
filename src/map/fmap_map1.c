@@ -62,7 +62,7 @@ fmap_map1_aln_mapq(int32_t num_best_sa, int32_t num_all_sa, int32_t max_mm, int3
 }
 
 static inline void
-fmap_map1_aln_overwrite(fmap_map1_aln_t *dest, fmap_map1_aln_t *src)
+fmap_map1_hit_overwrite(fmap_map1_hit_t *dest, fmap_map1_hit_t *src)
 {
   // cigar
   free(dest->cigar);
@@ -82,32 +82,51 @@ fmap_map1_aln_overwrite(fmap_map1_aln_t *dest, fmap_map1_aln_t *src)
   dest->l = src->l;
 }
 
+inline fmap_map1_aln_t *
+fmap_map1_aln_init()
+{
+  return fmap_calloc(1, sizeof(fmap_map1_aln_t), "return");
+}
+
+inline void
+fmap_map1_aln_destroy(fmap_map1_aln_t *aln)
+{
+  int32_t i;
+  for(i=0;i<aln->n;i++) {
+      free(aln->hits[i].cigar);
+  }
+  free(aln->hits);
+  free(aln);
+}
+
 static inline void
-fmap_map1_aln_filter(fmap_map1_opt_t *opt, fmap_map1_aln_t ***alns, int32_t *n_alns, int32_t max_mm)
+fmap_map1_aln_filter(fmap_map1_opt_t *opt, fmap_map1_aln_t *alns, int32_t max_mm)
 {
   int32_t i, was_rand = 0;
   int32_t num_best_sa, num_best, num_all_sa;
 
-  if(0 == (*n_alns)) return;
+  if(0 == alns->n) {
+      return;
+  }
 
   //Note: assumes that the alignments are sorted by increasing score
   num_best = num_best_sa = num_all_sa = 0;
-  for(i=0;i<(*n_alns);i++) {
-      if((*alns)[0]->score < (*alns)[i]->score) {
+  for(i=0;i<alns->n;i++) {
+      if(alns->hits[0].score < alns->hits[i].score) {
           break;
       }
       num_best++;
-      num_best_sa += (*alns)[i]->l - (*alns)[i]->k + 1;
+      num_best_sa += alns->hits[i].l - alns->hits[i].k + 1;
   }
-  for(i=0;i<(*n_alns);i++) {
-      num_all_sa += (*alns)[i]->l - (*alns)[i]->k + 1;
+  for(i=0;i<alns->n;i++) {
+      num_all_sa += alns->hits[i].l - alns->hits[i].k + 1;
   }
 
   if(FMAP_MAP1_ALN_OUTPUT_MODE_ALL == opt->aln_output_mode) { // all hits
-      for(i=0;i<(*n_alns);i++) {
-          (*alns)[i]->mapq = 0;
+      for(i=0;i<alns->n;i++) {
+          alns->hits[i].mapq = 0;
       }
-      (*alns)[0]->mapq = fmap_map1_aln_mapq(num_best_sa, num_all_sa, max_mm, (*alns)[0]->n_mm);
+      alns->hits[0].mapq = fmap_map1_aln_mapq(num_best_sa, num_all_sa, max_mm, alns->hits[0].n_mm);
   }
   else if(FMAP_MAP1_ALN_OUTPUT_MODE_BEST == opt->aln_output_mode  // unique best hit 
           || FMAP_MAP1_ALN_OUTPUT_MODE_BEST_RAND == opt->aln_output_mode) { // random best hit
@@ -116,21 +135,21 @@ fmap_map1_aln_filter(fmap_map1_opt_t *opt, fmap_map1_aln_t ***alns, int32_t *n_a
           int32_t best_index = 0, rand;
           rand = drand48() * num_best_sa; 
           for(i=0;i<num_best;i++) { // get the "rand"th best score
-              if(rand < (*alns)[i]->l - (*alns)[i]->k + 1) {
+              if(rand < alns->hits[i].l - alns->hits[i].k + 1) {
                   best_index = i;
                   break;
               }
-              rand -= (*alns)[i]->l - (*alns)[i]->k + 1;
+              rand -= alns->hits[i].l - alns->hits[i].k + 1;
           }
           // copy to the front
           if(0 < best_index) {
-              fmap_map1_aln_overwrite((*alns)[0], (*alns)[best_index]);
+              fmap_map1_hit_overwrite(&alns->hits[0], &alns->hits[best_index]);
           }
-          (*alns)[0]->k += rand;
-          if((*alns)[0]->l < (*alns)[0]->k) {
+          alns->hits[0].k += rand;
+          if(alns->hits[0].l < alns->hits[0].k) {
               fmap_error("control reach an unexpected point", Exit, OutOfRange);
           }
-          (*alns)[0]->l = (*alns)[0]->k;
+          alns->hits[0].l = alns->hits[0].k;
           num_best_sa = 1;
           num_best = 1; 
           // WARNING: make sure mapping quality is zero after this
@@ -139,55 +158,47 @@ fmap_map1_aln_filter(fmap_map1_opt_t *opt, fmap_map1_aln_t ***alns, int32_t *n_a
 
       if(1 < num_best_sa) {
           // free them all
-          for(i=0;i<(*n_alns);i++) {
-              free((*alns)[i]->cigar);
-              free((*alns)[i]);
+          for(i=0;i<alns->n;i++) {
+              free(alns->hits[i].cigar);
           }
-          free((*alns));
-          (*alns) = NULL;
-          (*n_alns) = 0;
+          free(alns->hits);
+          alns->n = 0;
       }
       else {
           if(FMAP_MAP1_ALN_OUTPUT_MODE_BEST_RAND == opt->aln_output_mode && 1 == was_rand) {
-              (*alns)[0]->mapq = 0;
+              alns->hits[0].mapq = 0;
           }
           else {
-              (*alns)[0]->mapq = fmap_map1_aln_mapq(num_best_sa, num_all_sa, max_mm, (*alns)[0]->n_mm);
+              alns->hits[0].mapq = fmap_map1_aln_mapq(num_best_sa, num_all_sa, max_mm, alns->hits[0].n_mm);
           }
 
-          for(i=1;i<(*n_alns);i++) { // free the rest
-              free((*alns)[i]->cigar);
-              free((*alns)[i]);
+          // free the rest
+          for(i=1;i<alns->n;i++) { 
+              free(alns->hits[i].cigar);
           }
-          (*alns) = fmap_realloc((*alns), sizeof(fmap_map1_aln_t*)*2, "(*alns)");
-          (*alns)[1] = NULL; // add trailing null
-          (*n_alns) = 1;
+          // save only the first
+          alns->hits = fmap_realloc(alns->hits, sizeof(fmap_map1_hit_t*), "alns->hits");
+          alns->n = 1;
       }
   }
   else if(FMAP_MAP1_ALN_OUTPUT_MODE_BEST_ALL == opt->aln_output_mode) { // all best hits
       for(i=0;i<num_best;i++) {
-          (*alns)[i]->mapq = fmap_map1_aln_mapq(num_best_sa, num_all_sa, max_mm, (*alns)[i]->n_mm);
+          alns->hits[i].mapq = fmap_map1_aln_mapq(num_best_sa, num_all_sa, max_mm, alns->hits[i].n_mm);
       }
-      if(num_best < (*n_alns)) {
-          for(i=num_best;i<(*n_alns);i++) { // free the rest
-              free((*alns)[i]->cigar);
-              free((*alns)[i]);
+      if(num_best < alns->n) {
+          for(i=num_best;i<alns->n;i++) { // free the rest
+              free(alns->hits[i].cigar);
           }
-          (*alns) = fmap_realloc((*alns), sizeof(fmap_map1_aln_t*)*(1+num_best), "(*alns)");
-          (*alns)[num_best] = NULL; // add trailing null
-          (*n_alns) = num_best;
+          alns->hits = fmap_realloc(alns->hits, sizeof(fmap_map1_hit_t*)*num_best, "alns->hits");
+          alns->n = num_best;
       }
   }
 }
 
 static inline int 
-fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *sa, fmap_map1_aln_t *a)
+fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *sa, fmap_map1_hit_t *h)
 {
   uint32_t i, j, n = 0;
-
-  for(i=a->k;i<=a->l;i++) {
-      uint32_t pos = 0, seqid = 0, pacpos = 0; 
-      int32_t aln_ref_l = 0;
       int32_t seq_len = 0;
 
       seq_len = fmap_seq_get_bases(seq)->l;
@@ -196,12 +207,16 @@ fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fma
           seq_len -= seq->data.sff->gheader->key_length; // soft clip the key sequence
       }
 
+  for(i=h->k;i<=h->l;i++) {
+      uint32_t pos = 0, seqid = 0, pacpos = 0; 
+      int32_t aln_ref_l = 0;
+
       // get the number of non-inserted bases 
-      for(j=0;j<a->n_cigar;j++) {
-          switch((a->cigar[j] & 0xf)) {
+      for(j=0;j<h->n_cigar;j++) {
+          switch((h->cigar[j] & 0xf)) {
             case BAM_CMATCH:
             case BAM_CDEL:
-              aln_ref_l += (a->cigar[j] >> 4); break;
+              aln_ref_l += (h->cigar[j] >> 4); break;
             default:
               break;
           }
@@ -213,12 +228,12 @@ fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fma
       if(0 < fmap_refseq_pac2real(refseq, pacpos, seq_len, &seqid, &pos)) {
 
           fmap_sam_print_mapped(fmap_file_stdout, seq, refseq,
-                                a->strand, seqid, pos-1, 
-                                a->mapq, a->cigar, a->n_cigar, 
+                                h->strand, seqid, pos-1, 
+                                h->mapq, h->cigar, h->n_cigar, 
                                 "\tAS:i:%d\tNM:i:%d\tXM:i:%d\tXO:i:%d\tXG:i:%d",
-                                a->score,
-                                (a->n_mm + a->n_gapo + a->n_gape),
-                                a->n_mm, a->n_gapo, a->n_gape);
+                                h->score,
+                                (h->n_mm + h->n_gapo + h->n_gape),
+                                h->n_mm, h->n_gapo, h->n_gape);
 
           n++;
       }
@@ -228,7 +243,7 @@ fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fma
 }
 
 static void
-fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_map1_aln_t ***alns,
+fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_map1_aln_t **alns,
                       fmap_bwt_t *bwt[2], int32_t tid, fmap_map1_opt_t *opt)
 {
   int32_t low = 0, high;
@@ -270,7 +285,6 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
           fmap_seq_t *seq[2]={NULL, NULL}, *orig_seq=NULL;
           orig_seq = seq_buffer[low];
           fmap_string_t *bases[2]={NULL, NULL};
-          int32_t n_alns;
 
           // clone the sequence 
           seq[0] = fmap_seq_clone(orig_seq);
@@ -312,10 +326,10 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
               fmap_bwt_match_cal_width(bwt[0], opt->seed_length, bases[1]->s, seed_width[1]);
           }
 
-          alns[low] = fmap_map1_aux_core(seq, bwt[1], width, (0 < opt_local.seed_length) ? seed_width : NULL, &opt_local, stack, &n_alns);
+          alns[low] = fmap_map1_aux_core(seq, bwt[1], width, (0 < opt_local.seed_length) ? seed_width : NULL, &opt_local, stack);
 
           // filter alignments
-          fmap_map1_aln_filter(&opt_local, &alns[low], &n_alns, opt->max_mm);
+          fmap_map1_aln_filter(&opt_local, alns[low], opt->max_mm);
 
           // destroy
           fmap_seq_destroy(seq[0]);
@@ -355,7 +369,7 @@ fmap_map1_core(fmap_map1_opt_t *opt)
   fmap_file_t *fp_reads=NULL;
   fmap_seq_io_t *seqio = NULL;
   fmap_seq_t **seq_buffer = NULL;
-  fmap_map1_aln_t ***alns = NULL;
+  fmap_map1_aln_t **alns = NULL;
   fmap_shm_t *shm = NULL;
   int32_t reads_queue_size;
 
@@ -400,7 +414,7 @@ fmap_map1_core(fmap_map1_opt_t *opt)
       reads_queue_size = opt->reads_queue_size;
   }
   seq_buffer = fmap_malloc(sizeof(fmap_seq_t*)*reads_queue_size, "seq_buffer");
-  alns = fmap_malloc(sizeof(fmap_map1_aln_t**)*reads_queue_size, "alns");
+  alns = fmap_malloc(sizeof(fmap_map1_aln_t*)*reads_queue_size, "alns");
 
   if(NULL == opt->fn_reads) {
       fp_reads = fmap_file_fdopen(fileno(stdin), "rb", opt->input_compr);
@@ -474,20 +488,13 @@ fmap_map1_core(fmap_map1_opt_t *opt)
 
       fmap_progress_print("writing alignments");
       for(i=0;i<seq_buffer_length;i++) {
-          int32_t n_alns = 0, n_mapped = 0;
-          fmap_map1_aln_t **a = alns[i];
-
-          // get the number of alignments
-          if(a != NULL) {
-              while(NULL != a[n_alns]) {
-                  n_alns++;
-              }
-          }
+          int32_t n_mapped = 0;
+          fmap_map1_aln_t *a = alns[i];
 
           // print alignments
-          if(0 < n_alns) {
-              for(j=0;j<n_alns;j++) { 
-                  n_mapped += fmap_map1_print_sam(seq_buffer[i], refseq, bwt[1], sa, alns[i][j]);
+          if(0 < a->n) {
+              for(j=0;j<a->n;j++) { 
+                  n_mapped += fmap_map1_print_sam(seq_buffer[i], refseq, bwt[1], sa, &a->hits[j]);
               }
           }
           if(0 == n_mapped) {
@@ -495,11 +502,7 @@ fmap_map1_core(fmap_map1_opt_t *opt)
           }
 
           // free alignments
-          for(j=0;j<n_alns;j++) { 
-              free(alns[i][j]->cigar); // free cigar
-              free(alns[i][j]); // free alignment
-          }
-          free(alns[i]);
+          fmap_map1_aln_destroy(alns[i]);
           alns[i] = NULL;
       }
 
