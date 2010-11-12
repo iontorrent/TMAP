@@ -45,10 +45,18 @@ FMAP_SORT_INIT(fmap_map_all_hit_t, fmap_map_all_hit_t, __fmap_map_all_hit_sort_l
 #ifdef HAVE_LIBPTHREAD
      static pthread_mutex_t fmap_map_all_read_lock = PTHREAD_MUTEX_INITIALIZER;
      static int32_t fmap_map_all_read_lock_low = 0;
-#define FMAP_MAP3_THREAD_BLOCK_SIZE 1024
+#define FMAP_MAP_ALL_THREAD_BLOCK_SIZE 1024
 #endif
-  
-static char *algos[3] = {"map1", "map2", "map3"};
+
+
+     static char *algos[6] = {
+         "dummy",
+         "map1", // 0x1 
+         "map2", // 0x2 
+         "dummy",
+         "map3", // 0x4
+         "dummy"
+     };
 
 static inline fmap_map_all_aln_t *
 fmap_map_all_aln_init()
@@ -147,7 +155,6 @@ fmap_map_all_aln_filter(fmap_map_all_aln_t *aln, fmap_map_all_opt_t *opt, int32_
   int32_t i, j, k;
   int32_t n_best = 0;
   int32_t best_score, cur_score;
-
 
   if(FMAP_MAP_UTIL_ALN_MODE_ALL == opt->aln_output_mode
      || aln->n <= 1) {
@@ -375,7 +382,7 @@ fmap_map_all_aln_merge(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt[2
       aln->hits[aln_i].algo_id = FMAP_MAP_ALL_ALGO_MAP3;
       aln->hits[aln_i].strand = h->strand;
       aln->hits[aln_i].seqid = h->seqid;
-      aln->hits[aln_i].pos = h->pos - 1;
+      aln->hits[aln_i].pos = h->pos ;
       aln->hits[aln_i].score = h->score;
       aln->hits[aln_i].cigar = h->cigar;
       aln->hits[aln_i].n_cigar = h->n_cigar;
@@ -498,11 +505,6 @@ fmap_map_all_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map_all_hit_
       fmap_error("hit->algo_id", Exit, OutOfRange);
       break;
   }
-  fmap_sam_print_mapped(fmap_file_stdout, seq, refseq,
-                        hit->strand, hit->seqid, hit->pos,
-                        hit->mapq, hit->cigar, hit->n_cigar,
-                        "\tAS:i:%d\tXS:i:%d",
-                        hit->score, hit->n_seeds);
 }
 
 static void
@@ -538,8 +540,8 @@ fmap_map_all_core_worker(fmap_seq_t **seq_buffer, fmap_map_all_aln_t **alns, int
 
           // update bounds
           low = fmap_map_all_read_lock_low;
-          fmap_map_all_read_lock_low += FMAP_MAP3_THREAD_BLOCK_SIZE;
-          high = low + FMAP_MAP3_THREAD_BLOCK_SIZE;
+          fmap_map_all_read_lock_low += FMAP_MAP_ALL_THREAD_BLOCK_SIZE;
+          high = low + FMAP_MAP_ALL_THREAD_BLOCK_SIZE;
           if(seq_buffer_length < high) {
               high = seq_buffer_length; 
           }
@@ -623,7 +625,7 @@ fmap_map_all_core_worker(fmap_seq_t **seq_buffer, fmap_map_all_aln_t **alns, int
                   for(j=0;j<h->n_cigar;j++) {
                       switch(h->cigar[j] & 0xf) {
                         case BAM_CMATCH:
-                          num_match++;
+                          num_match += h->cigar[j] >> 4;
                           break;
                         default:
                           break;
@@ -657,7 +659,7 @@ fmap_map_all_core_worker(fmap_seq_t **seq_buffer, fmap_map_all_aln_t **alns, int
               // empty
               aln_map3 = fmap_map3_aln_init();
           }
-          
+
           // consolidate mappings
           alns[low] = fmap_map_all_aln_merge(orig_seq, refseq, bwt, sa,
                                              aln_map1, aln_map2, aln_map3, opt);
@@ -717,16 +719,6 @@ fmap_map_all_core(fmap_map_all_opt_t *opt)
   fmap_shm_t *shm = NULL;
   int32_t reads_queue_size;
 
-  // TODO: this could be dangerous if algorithms change, needs to be refactored
-  // adjust mapping algorithm specific options
-  // map1
-  // - none
-  // map2
-  opt->opt_map2->score_thr *= opt->score_match;
-  opt->opt_map2->length_coef *= opt->score_match;
-  // map3
-  opt->opt_map3->score_thr *= opt->score_match;
-
   if(0 == opt->shm_key) {
       fmap_progress_print("reading in reference data");
       refseq = fmap_refseq_read(opt->fn_fasta, 0);
@@ -749,13 +741,28 @@ fmap_map_all_core(fmap_map_all_opt_t *opt)
           fmap_error("the reverse BWT string was not found in shared memory", Exit, SharedMemoryListing);
       }
       if(NULL == (sa[0] = fmap_sa_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SHM_LISTING_SA)))) {
-          fmap_error("the reverse SA was not found in shared memory", Exit, SharedMemoryListing);
+          fmap_error("the SA was not found in shared memory", Exit, SharedMemoryListing);
       }
       if(NULL == (sa[1] = fmap_sa_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SHM_LISTING_REV_SA)))) {
           fmap_error("the reverse SA was not found in shared memory", Exit, SharedMemoryListing);
       }
       fmap_progress_print2("reference data retrieved from shared memory");
 
+  }
+
+  // TODO: this could be dangerous if algorithms change, needs to be refactored
+  // adjust mapping algorithm specific options
+  // map1
+  // - none
+  // map2
+  opt->opt_map2->score_thr *= opt->score_match;
+  opt->opt_map2->length_coef *= opt->score_match;
+  // map3
+  opt->opt_map3->score_thr *= opt->score_match;
+  if(-1 == opt->opt_map3->seed_length) {
+      opt->opt_map3->seed_length = fmap_map3_get_seed_length(refseq->len);
+      fmap_progress_print("setting the seed length to %d for map3",
+                          opt->opt_map3->seed_length);
   }
 
 
@@ -966,6 +973,7 @@ fmap_map_all_opt_init()
   opt->input_compr = FMAP_FILE_NO_COMPRESSION;
   opt->output_compr = FMAP_FILE_NO_COMPRESSION;
   opt->shm_key = 0;
+  opt->algos = 0;
 
   // these must be checked for agreement above later
   opt->opt_map1 = fmap_map1_opt_init();
@@ -1092,18 +1100,21 @@ fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
   while(i<argc) {
       if(0 == strcmp("map1", argv[i])) {
           opt_type_next = FMAP_MAP_ALL_ALGO_MAP1;
+          opt->algos |= opt_type_next;
       }
       else if(0 == strcmp("map2", argv[i])) {
           opt_type_next = FMAP_MAP_ALL_ALGO_MAP2;
+          opt->algos |= opt_type_next;
       }
       else if(0 == strcmp("map3", argv[i])) {
           opt_type_next = FMAP_MAP_ALL_ALGO_MAP3;
+          opt->algos |= opt_type_next;
       }
 
       /*
-      fprintf(stderr, "i=%d start=%d argc=%d opt_type=%d opt_type_next=%d\n",
-              i, start, argc, opt_type, opt_type_next);
-              */
+         fprintf(stderr, "i=%d start=%d argc=%d opt_type=%d opt_type_next=%d argv[%d]=%s\n",
+         i, start, argc, opt_type, opt_type_next, i, argv[i]);
+         */
 
       if(opt_type != opt_type_next
          || i == argc-1) {
@@ -1129,7 +1140,6 @@ fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
                       return 0;
                   }
               }
-              opt->algos |= (1 << opt_type);
               break;
             case FMAP_MAP_ALL_ALGO_MAP2:
               // parse map2 options
@@ -1138,7 +1148,6 @@ fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
                       return 0;
                   }
               }
-              opt->algos |= (1 << opt_type);
               break;
             case FMAP_MAP_ALL_ALGO_MAP3:
               // parse map3 options
@@ -1147,7 +1156,6 @@ fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
                       return 0;
                   }
               }
-              opt->algos |= (1 << opt_type);
               break;
             default:
               fmap_error("bug encountered", Exit, OutOfRange);
@@ -1281,8 +1289,6 @@ fmap_map_all_main(int argc, char *argv[])
   if(1 != fmap_map_all_opt_parse(argc, argv, opt) // options parsed successfully
      || argc != optind  // all options should be used
      || 1 == argc) { // some options should be specified
-      fprintf(stderr, "argc=%d optind=%d\n",
-              argc, optind);
       return fmap_map_all_usage(opt);
   }
   else { 

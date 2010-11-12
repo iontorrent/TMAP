@@ -241,7 +241,7 @@ fmap_map2_core(fmap_map2_opt_t *opt)
           fmap_error("the reverse BWT string was not found in shared memory", Exit, SharedMemoryListing);
       }
       if(NULL == (sa[0] = fmap_sa_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SHM_LISTING_SA)))) {
-          fmap_error("the reverse SA was not found in shared memory", Exit, SharedMemoryListing);
+          fmap_error("the SA was not found in shared memory", Exit, SharedMemoryListing);
       }
       if(NULL == (sa[1] = fmap_sa_shm_unpack(fmap_shm_get_buffer(shm, FMAP_SHM_LISTING_REV_SA)))) {
           fmap_error("the reverse SA was not found in shared memory", Exit, SharedMemoryListing);

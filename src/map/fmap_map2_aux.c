@@ -275,10 +275,10 @@ fmap_map2_aux_extend_right(fmap_map2_opt_t *opt, fmap_map2_aln_t *b,
       }
       lt = j;
       if(0 == opt->aln_global) {
-          score = fmap_sw_extend_core(target, lt, query + p->beg, query_length - p->beg, &par, &path, NULL, p->G, _mem);
+          score = fmap_sw_extend_core(target, lt, query + p->beg, query_length - p->beg, &par, &path, NULL, 1, _mem);
       }
       else {
-          score = fmap_sw_extend_fitting_core(target, lt, query + p->beg, query_length - p->beg, &par, &path, NULL, p->G, _mem);
+          score = fmap_sw_extend_fitting_core(target, lt, query + p->beg, query_length - p->beg, &par, &path, NULL, 1, _mem);
       }
       if(1 == opt->aln_global || score >= p->G) {
           p->G = score;

@@ -75,6 +75,14 @@ typedef struct {
 #endif
 
 /*!
+  Returns the inferred seed length given the reference length
+  @param  ref_len  the reference length
+  @return          the estimated seed length
+  */
+int32_t
+fmap_map3_get_seed_length(uint64_t ref_len);
+
+/*!
   Prints the usage of map3
   @param  opt  the current options
   @return      always 1

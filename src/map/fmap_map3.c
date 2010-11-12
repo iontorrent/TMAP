@@ -28,7 +28,7 @@ static int32_t fmap_map3_read_lock_low = 0;
 #define FMAP_MAP3_THREAD_BLOCK_SIZE 1024
 #endif
 
-static int32_t
+int32_t
 fmap_map3_get_seed_length(uint64_t ref_len)
 {
   int32_t k = 0;
@@ -199,7 +199,6 @@ fmap_map3_core_worker(fmap_seq_t **seq_buffer, fmap_map3_aln_t **alns, int32_t s
       while(low<high) {
           fmap_seq_t *seq[2]={NULL, NULL}, *orig_seq=NULL;
           orig_seq = seq_buffer[low];
-          fmap_string_t *bases[2]={NULL, NULL};
 
           // clone the sequence 
           seq[0] = fmap_seq_clone(orig_seq);
@@ -215,10 +214,6 @@ fmap_map3_core_worker(fmap_seq_t **seq_buffer, fmap_map3_aln_t **alns, int32_t s
           // convert to integers
           fmap_seq_to_int(seq[0]);
           fmap_seq_to_int(seq[1]);
-
-          // get bases
-          bases[0] = fmap_seq_get_bases(seq[0]);
-          bases[1] = fmap_seq_get_bases(seq[1]);
 
           alns[low] = fmap_map3_aux_core(seq, refseq, bwt, sa, opt);
 
