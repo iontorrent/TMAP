@@ -616,9 +616,9 @@ fmap_map1_opt_init()
   opt->reads_format = FMAP_READS_FORMAT_UNKNOWN;
   opt->seed_length = 32; // move this to a define block
   opt->seed_max_mm = 3; // move this to a define block
-  opt->max_mm = -1; opt->max_mm_frac = 0.05; // TODO: move this to a define block 
-  opt->max_gapo = -1; opt->max_gapo_frac = 0.02; // TODO: move this to a define block
-  opt->max_gape = -1; opt->max_gape_frac = 0.10; // TODO: move this to a define block
+  opt->max_mm = -1; opt->max_mm_frac = 0.02; // TODO: move this to a define block 
+  opt->max_gapo = -1; opt->max_gapo_frac = 0.01; // TODO: move this to a define block
+  opt->max_gape = -1; opt->max_gape_frac = 0.025; // TODO: move this to a define block
   opt->pen_mm = 3; opt->pen_gapo = 11; opt->pen_gape = 4; // TODO: move this to a define block
   opt->max_cals_del = 10; // TODO: move this to a define block
   opt->indel_ends_bound = 5; // TODO: move this to a define block
