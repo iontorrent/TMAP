@@ -220,8 +220,9 @@ fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, fmap_refseq_t *refseq,
 
 #ifdef HAVE_SAMTOOLS
 // from bam_md.c in SAMtools
+// modified not fill in the NM tag, and not to start the reference a c->pos
 static void 
-bam_fillmd1_core(bam1_t *b, char *ref, int is_equal)
+bam_fillmd1_core(bam1_t *b, char *ref)
 {
   uint8_t *seq = bam1_seq(b);
   uint32_t *cigar = bam1_cigar(b);
@@ -231,7 +232,7 @@ bam_fillmd1_core(bam1_t *b, char *ref, int is_equal)
   uint8_t *old_md;
 
   str = (kstring_t*)calloc(1, sizeof(kstring_t));
-  for (i = y = 0, x = c->pos; i < c->n_cigar; ++i) {
+  for (i = y = x = 0; i < c->n_cigar; ++i) {
       int j, l = cigar[i]>>4, op = cigar[i]&0xf;
       if (op == BAM_CMATCH) {
           for (j = 0; j < l; ++j) {
@@ -239,7 +240,6 @@ bam_fillmd1_core(bam1_t *b, char *ref, int is_equal)
               int c1 = bam1_seqi(seq, z), c2 = bam_nt16_table[(int)ref[x+j]];
               if (ref[x+j] == 0) break; // out of boundary
               if ((c1 == c2 && c1 != 15 && c2 != 15) || c1 == 0) { // a match
-                  if (is_equal) seq[z/2] &= (z&1)? 0xf0 : 0x0f;
                   ++u;
               } else {
                   ksprintf(str, "%d", u);
@@ -266,21 +266,28 @@ bam_fillmd1_core(bam1_t *b, char *ref, int is_equal)
       }
   }
   ksprintf(str, "%d", u);
+
   // update MD
   old_md = bam_aux_get(b, "MD");
-  if (!old_md) {
+  if(NULL == old_md) {
       bam_aux_append(b, "MD", 'Z', str->l + 1, (uint8_t*)str->s);
   }
   else {
       int is_diff = 0;
-      if (strlen((char*)old_md+1) == str->l) {
-          for (i = 0; i < str->l; ++i)
-            if (toupper(old_md[i+1]) != toupper(str->s[i]))
+      if(strlen((char*)old_md+1) == str->l) {
+          for(i = 0; i < str->l; ++i) {
+            if(toupper(old_md[i+1]) != toupper(str->s[i])) {
               break;
-          if (i < str->l) is_diff = 1;
-      } else is_diff = 1;
-      if (is_diff) {
-          //fprintf(stderr, "[bam_fillmd1] different MD for read '%s': '%s' -> '%s'\n", bam1_qname(b), old_md+1, str->s);
+            }
+          }
+          if(i < str->l) {
+              is_diff = 1;
+          }
+      } 
+      else {
+          is_diff = 1;
+      }
+      if(1 == is_diff) {
           bam_aux_del(b, old_md);
           bam_aux_append(b, "MD", 'Z', str->l + 1, (uint8_t*)str->s);
       }
@@ -290,9 +297,9 @@ bam_fillmd1_core(bam1_t *b, char *ref, int is_equal)
 
 // from bam_md.c in SAMtools
 static void 
-bam_fillmd1(bam1_t *b, char *ref, int is_equal)
+bam_fillmd1(bam1_t *b, char *ref)
 {
-  bam_fillmd1_core(b, ref, is_equal);
+  bam_fillmd1_core(b, ref);
 }
 
 // soft-clipping is not supported
@@ -316,6 +323,11 @@ fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
   int32_t i, j, n_cigar, last_type;
   char *ref_tmp=NULL;
   uint32_t *cigar;
+  int32_t diff;
+
+  if(b->data_len - b->l_aux != bam1_aux(b) - b->data) {
+      fmap_error("b->data_len - b->l_aux != bam1_aux(b) - b->data", Exit, OutOfRange);
+  }
 
   // get the # of cigar operators
   last_type = fmap_sam_get_type(ref[0], read[0]);
@@ -327,27 +339,33 @@ fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
       last_type = cur_type;
   }
 
-  fprintf(stderr, "HERE SAM:%d->%d\n%s\n%s\n",
-          b->core.n_cigar, n_cigar, ref, read);
-
   // resize the data field if necessary
   if(n_cigar < b->core.n_cigar) {
+      diff = sizeof(uint32_t) * (b->core.n_cigar - n_cigar);
       // shift down
-      for(i=0;i<b->l_aux - b->core.n_cigar + n_cigar;i++) {
-          b->data[i] = b->data[i + b->core.n_cigar - n_cigar];
+      for(i=b->core.l_qname;i<b->data_len - diff;i++) {
+          b->data[i] = b->data[i + diff];
       }
-      b->l_aux -= b->core.n_cigar - n_cigar;
+      b->data_len -= diff;
       b->core.n_cigar = n_cigar;
   }
   else if(b->core.n_cigar < n_cigar) {
+      diff = sizeof(uint32_t) * (n_cigar - b->core.n_cigar);
       // realloc
-      b->data = fmap_realloc(b->data, sizeof(uint8_t) * (b->l_aux + n_cigar - b->core.n_cigar), "b->data");
-      // shift up
-      for(i=b->l_aux-1;0<=i;i--) {
-          b->data[i + n_cigar - b->core.n_cigar] = b->data[i];
+      if(b->m_data <= (b->data_len + diff)) {
+          b->m_data = b->data_len + diff + 1;
+          fmap_roundup32(b->m_data);
+          b->data = fmap_realloc(b->data, sizeof(uint8_t) * b->m_data, "b->data");
       }
-      b->l_aux += n_cigar - b->core.n_cigar;
+      // shift up
+      for(i=b->data_len-1;b->core.l_qname<=i;i--) {
+          b->data[i + diff] = b->data[i];
+      }
+      b->data_len += diff;
       b->core.n_cigar = n_cigar;
+  }
+  if(b->data_len - b->l_aux != bam1_aux(b) - b->data) {
+      fmap_error("b->data_len - b->l_aux != bam1_aux(b) - b->data", Exit, OutOfRange);
   }
 
   // create the cigar
@@ -361,24 +379,15 @@ fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
       if(cur_type == last_type) {
           // add to the cigar length
           cigar[n_cigar] += 1u << 4; 
-          fprintf(stderr, "1 n_cigar=%d %d %d\n",
-                  n_cigar, cigar[n_cigar] >> 4, cigar[n_cigar] & 0xf);
       }
       else {
           // add to the cigar
           n_cigar++;
           cigar[n_cigar] = 1u << 4 | cur_type; 
-          fprintf(stderr, "2 n_cigar=%d %d %d\n",
-                  n_cigar, cigar[n_cigar] >> 4, cigar[n_cigar] & 0xf);
       }
       last_type = cur_type;
   }
-
-  cigar = bam1_cigar(b);
-  for(i=0;i<b->core.n_cigar;i++) {
-      fprintf(stderr, "3 n_cigar=%d %d %d\n",
-              i, cigar[i] >> 4, cigar[i] & 0xf);
-  }
+  n_cigar++;
 
   // update MD
   ref_tmp = fmap_malloc(sizeof(char) * (1 + len), "ref_tmp");
@@ -388,9 +397,8 @@ fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
           j++;
       }
   }
-  ref_tmp[i]='\0';
-  // BUG
-  //bam_fillmd1(b, ref_tmp, 0);
+  ref_tmp[j]='\0';
+  bam_fillmd1(b, ref_tmp);
   free(ref_tmp);
 }
 #endif
