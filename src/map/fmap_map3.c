@@ -336,7 +336,11 @@ fmap_map3_core(fmap_map3_opt_t *opt)
 
       // do alignment
 #ifdef HAVE_LIBPTHREAD
-      if(1 == opt->num_threads) {
+      int32_t num_threads = opt->num_threads;
+      if(seq_buffer_length < num_threads * FMAP_MAP3_THREAD_BLOCK_SIZE) {
+          num_threads = 1 + (seq_buffer_length / FMAP_MAP3_THREAD_BLOCK_SIZE);
+      }
+      if(1 == num_threads) {
           fmap_map3_core_worker(seq_buffer, alns, seq_buffer_length, refseq, bwt, sa, 0, opt);
       }
       else {
@@ -347,11 +351,11 @@ fmap_map3_core(fmap_map3_opt_t *opt)
           pthread_attr_init(&attr);
           pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
-          threads = fmap_calloc(opt->num_threads, sizeof(pthread_t), "threads");
-          thread_data = fmap_calloc(opt->num_threads, sizeof(fmap_map3_thread_data_t), "thread_data");
+          threads = fmap_calloc(num_threads, sizeof(pthread_t), "threads");
+          thread_data = fmap_calloc(num_threads, sizeof(fmap_map3_thread_data_t), "thread_data");
           fmap_map3_read_lock_low = 0; // ALWAYS set before running threads 
 
-          for(i=0;i<opt->num_threads;i++) {
+          for(i=0;i<num_threads;i++) {
               thread_data[i].seq_buffer = seq_buffer;
               thread_data[i].seq_buffer_length = seq_buffer_length;
               thread_data[i].alns = alns;
@@ -364,7 +368,7 @@ fmap_map3_core(fmap_map3_opt_t *opt)
                   fmap_error("error creating threads", Exit, ThreadError);
               }
           }
-          for(i=0;i<opt->num_threads;i++) {
+          for(i=0;i<num_threads;i++) {
               if(0 != pthread_join(threads[i], NULL)) {
                   fmap_error("error joining threads", Exit, ThreadError);
               }

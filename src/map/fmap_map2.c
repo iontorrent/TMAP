@@ -29,7 +29,7 @@
 #ifdef HAVE_LIBPTHREAD
 static pthread_mutex_t fmap_map2_read_lock = PTHREAD_MUTEX_INITIALIZER;
 static int32_t fmap_map2_read_lock_low = 0;
-#define FMAP_MAP1_THREAD_BLOCK_SIZE 1024
+#define FMAP_MAP2_THREAD_BLOCK_SIZE 1024
 #endif
 
 static void
@@ -135,8 +135,8 @@ fmap_map2_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
 
           // update bounds
           low = fmap_map2_read_lock_low;
-          fmap_map2_read_lock_low += FMAP_MAP1_THREAD_BLOCK_SIZE;
-          high = low + FMAP_MAP1_THREAD_BLOCK_SIZE;
+          fmap_map2_read_lock_low += FMAP_MAP2_THREAD_BLOCK_SIZE;
+          high = low + FMAP_MAP2_THREAD_BLOCK_SIZE;
           if(seq_buffer_length < high) {
               high = seq_buffer_length;
           }
@@ -296,7 +296,11 @@ fmap_map2_core(fmap_map2_opt_t *opt)
 
       // do alignment
 #ifdef HAVE_LIBPTHREAD
-      if(1 == opt->num_threads) {
+      int32_t num_threads = opt->num_threads;
+      if(seq_buffer_length < num_threads * FMAP_MAP2_THREAD_BLOCK_SIZE) {
+          num_threads = 1 + (seq_buffer_length / FMAP_MAP2_THREAD_BLOCK_SIZE);
+      }
+      if(1 == num_threads) {
           fmap_map2_core_worker(seq_buffer, seq_buffer_length, sams,
                                 refseq, bwt, sa, 0, opt);
       }
@@ -308,11 +312,11 @@ fmap_map2_core(fmap_map2_opt_t *opt)
           pthread_attr_init(&attr);
           pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
-          threads = fmap_calloc(opt->num_threads, sizeof(pthread_t), "threads");
-          thread_data = fmap_calloc(opt->num_threads, sizeof(fmap_map2_thread_data_t), "thread_data");
+          threads = fmap_calloc(num_threads, sizeof(pthread_t), "threads");
+          thread_data = fmap_calloc(num_threads, sizeof(fmap_map2_thread_data_t), "thread_data");
           fmap_map2_read_lock_low = 0; // ALWAYS set before running threads 
 
-          for(i=0;i<opt->num_threads;i++) {
+          for(i=0;i<num_threads;i++) {
               thread_data[i].seq_buffer = seq_buffer;
               thread_data[i].seq_buffer_length = seq_buffer_length;
               thread_data[i].sams = sams;
@@ -327,7 +331,7 @@ fmap_map2_core(fmap_map2_opt_t *opt)
                   fmap_error("error creating threads", Exit, ThreadError);
               }
           }
-          for(i=0;i<opt->num_threads;i++) {
+          for(i=0;i<num_threads;i++) {
               if(0 != pthread_join(threads[i], NULL)) {
                   fmap_error("error joining threads", Exit, ThreadError);
               }
