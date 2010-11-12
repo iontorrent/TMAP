@@ -1086,7 +1086,8 @@ fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
   opt->argc = argc; opt->argv = argv;
 
   // parse common options as well as map1/map2/map3 commands
-  i=start=0;
+  start = 0;
+  i = 1;
   opt_type=opt_type_next=FMAP_MAP_ALL_ALGO_NONE;
   while(i<argc) {
       if(0 == strcmp("map1", argv[i])) {
@@ -1098,15 +1099,24 @@ fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
       else if(0 == strcmp("map3", argv[i])) {
           opt_type_next = FMAP_MAP_ALL_ALGO_MAP3;
       }
-      else if('-' != argv[i][0]) { // not a command line option
-          fmap_error("Unknown command", Exit, CommandLineArgument);
-      }
 
-      if(opt_type != opt_type_next) {
+      /*
+      fprintf(stderr, "i=%d start=%d argc=%d opt_type=%d opt_type_next=%d\n",
+              i, start, argc, opt_type, opt_type_next);
+              */
+
+      if(opt_type != opt_type_next
+         || i == argc-1) {
+          if(i == argc-1) {
+              i++;
+          }
+          optind=1; // needed for getopt
           switch(opt_type) {
             case FMAP_MAP_ALL_ALGO_NONE:
               // parse common options
-              fmap_map_all_opt_parse_common(i, argv, opt);
+              if(0 == fmap_map_all_opt_parse_common(i-start, argv+start, opt)) {
+                  return 0;
+              }
               // copy over common values into the other opts
               __fmap_map_all_opts_copy1(opt, opt->opt_map1);
               __fmap_map_all_opts_copy2(opt, opt->opt_map2);
@@ -1115,21 +1125,27 @@ fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
             case FMAP_MAP_ALL_ALGO_MAP1:
               // parse map1 options
               if(0 < i - start) {
-                  fmap_map1_opt_parse(i, argv + i, opt->opt_map1);
+                  if(0 == fmap_map1_opt_parse(i-start, argv+start, opt->opt_map1)) {
+                      return 0;
+                  }
               }
               opt->algos |= (1 << opt_type);
               break;
             case FMAP_MAP_ALL_ALGO_MAP2:
               // parse map2 options
               if(0 < i - start) {
-                  fmap_map2_opt_parse(i, argv + i, opt->opt_map2);
+                  if(0 == fmap_map2_opt_parse(i-start, argv+start, opt->opt_map2)) {
+                      return 0;
+                  }
               }
               opt->algos |= (1 << opt_type);
               break;
             case FMAP_MAP_ALL_ALGO_MAP3:
               // parse map3 options
               if(0 < i - start) {
-                  fmap_map3_opt_parse(i, argv + i, opt->opt_map3);
+                  if(0 == fmap_map3_opt_parse(i-start, argv+start, opt->opt_map3)) {
+                      return 0;
+                  }
               }
               opt->algos |= (1 << opt_type);
               break;
@@ -1139,7 +1155,12 @@ fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
           opt_type = opt_type_next;
           start = i;
       }
+      i++;
+      if(argc < i) {
+          i = argc;
+      }
   }
+  optind = i;
 
   return 1;
 }
@@ -1260,6 +1281,8 @@ fmap_map_all_main(int argc, char *argv[])
   if(1 != fmap_map_all_opt_parse(argc, argv, opt) // options parsed successfully
      || argc != optind  // all options should be used
      || 1 == argc) { // some options should be specified
+      fprintf(stderr, "argc=%d optind=%d\n",
+              argc, optind);
       return fmap_map_all_usage(opt);
   }
   else { 
