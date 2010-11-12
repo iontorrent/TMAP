@@ -28,6 +28,12 @@
 #include "fmap_map_util.h"
 #include "fmap_map_all.h"
 
+/* Notes:
+   We could avoid some computation give we know which algorithms to 
+   run. This includes stacks, memory pools, as well as not loading 
+   in all reference data.
+   */
+
 // sort by min-seqid, min-position, max-score
 #define __fmap_map_all_hit_sort_lt(a, b) ( ((a).seqid < (b).seqid \
                                             || ( (a).seqid == (b).seqid && (a).pos < (b).pos ) \
