@@ -89,11 +89,10 @@ typedef struct {
 #endif
 
 /*!
-  @return  a pointer tothe initialized memory
+  @return  a pointer to the initialized memory
  */
 inline fmap_map1_aln_t *
 fmap_map1_aln_init();
-
     
 /*!
   @param  aln  a pointer tothe initialized memory

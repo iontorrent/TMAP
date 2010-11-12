@@ -6,10 +6,10 @@
 #include "fmap_map3.h"
 
 enum {
-    FMAP_MAP_ALL_ALGO_NONE = -1,  /*!< dummy algorithm */
-    FMAP_MAP_ALL_ALGO_MAP1 = 0,  /*!< the map1 algorithm */
-    FMAP_MAP_ALL_ALGO_MAP2 = 1,  /*!< the map2 algorithm */
-    FMAP_MAP_ALL_ALGO_MAP3 = 2,  /*!< the map3 algorithm */
+    FMAP_MAP_ALL_ALGO_NONE = 0,  /*!< dummy algorithm */
+    FMAP_MAP_ALL_ALGO_MAP1 = 1,  /*!< the map1 algorithm */
+    FMAP_MAP_ALL_ALGO_MAP2 = 2,  /*!< the map2 algorithm */
+    FMAP_MAP_ALL_ALGO_MAP3 = 3,  /*!< the map3 algorithm */
 };
 
 typedef struct {
@@ -49,6 +49,7 @@ typedef struct {
     // global
     char **argv;  /*!< the command line argv structure */
     int argc;  /*!< the number of command line arguments passed */
+    uint32_t algos;  /*!< the algorithms that should be run, bit-packed */
 
     // common options
     char *fn_fasta;  /*!< the fasta reference file name (-f) */

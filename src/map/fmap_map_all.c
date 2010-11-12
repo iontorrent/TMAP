@@ -101,7 +101,7 @@ fmap_map_all_aln_mapq(fmap_map_all_aln_t *aln, fmap_map_all_opt_t *opt)
               n_best_subo++;
           }
           if(FMAP_MAP_ALL_ALGO_MAP2 == aln->hits[i].algo_id
-             || FMAP_MAP_ALL_ALGO_MAP2 == aln->hits[i].algo_id) {
+             || FMAP_MAP_ALL_ALGO_MAP3 == aln->hits[i].algo_id) {
               cur_score = aln->hits[i].score_subo;
               if(best_subo < cur_score) {
                   best_subo = cur_score;
@@ -604,35 +604,52 @@ fmap_map_all_core_worker(fmap_seq_t **seq_buffer, fmap_map_all_aln_t **alns, int
           // - none
 
           // fmap_map1_aux_core
-          aln_map1 = fmap_map1_aux_core(seq, bwt[1], width_map1, 
-                                        (0 < opt_local_map1.seed_length) ? seed_width_map1 : NULL, 
-                                        &opt_local_map1, stack_map1);
-          // fmap_map2_aux_core
-          aln_map2 = fmap_map2_aux_core(opt->opt_map2, seq_char, refseq, bwt, sa, pool_map2);
-          // fmap_map3_aux_core
-          aln_map3 = fmap_map3_aux_core(seq, refseq, bwt[1], sa[1], opt->opt_map3);
+          if(opt->algos & FMAP_MAP_ALL_ALGO_MAP1) {
+              aln_map1 = fmap_map1_aux_core(seq, bwt[1], width_map1, 
+                                            (0 < opt_local_map1.seed_length) ? seed_width_map1 : NULL, 
+                                            &opt_local_map1, stack_map1);
+              // adjust map1 scoring, since it does not consider opt->score_match
+              for(i=0;i<aln_map1->n;i++) {
+                  fmap_map1_hit_t *h = &aln_map1->hits[i];
+                  int32_t j, num_match;
 
-          // adjust map1 scoring, since it does not consider opt->score_match
-          for(i=0;i<aln_map1->n;i++) {
-              fmap_map1_hit_t *h = &aln_map1->hits[i];
-              int32_t j, num_match;
-              
-              num_match = 0 - h->n_mm; // # of mismatches
-              for(j=0;j<h->n_cigar;j++) {
-                  switch(h->cigar[j] & 0xf) {
-                    case BAM_CMATCH:
-                      num_match++;
-                      break;
-                    default:
-                        break;
+                  num_match = 0 - h->n_mm; // # of mismatches
+                  for(j=0;j<h->n_cigar;j++) {
+                      switch(h->cigar[j] & 0xf) {
+                        case BAM_CMATCH:
+                          num_match++;
+                          break;
+                        default:
+                          break;
+                      }
                   }
+
+                  // update the score
+                  h->score = num_match * opt->score_match;
+                  h->score -= h->n_mm * opt->pen_mm;
+                  h->score -= h->n_gapo * opt->pen_gapo;
+                  h->score -= h->n_gape * opt->pen_gape;
               }
-                
-              // update the score
-              h->score = num_match * opt->score_match;
-              h->score -= h->n_mm * opt->pen_mm;
-              h->score -= h->n_gapo * opt->pen_gapo;
-              h->score -= h->n_gape * opt->pen_gape;
+          }
+          else {
+              // empty
+              aln_map1 = fmap_map1_aln_init();
+          }
+          // fmap_map2_aux_core
+          if(opt->algos & FMAP_MAP_ALL_ALGO_MAP2) {
+              aln_map2 = fmap_map2_aux_core(opt->opt_map2, seq_char, refseq, bwt, sa, pool_map2);
+          }
+          else {
+              // empty
+              aln_map2 = fmap_map2_sam_init(0);
+          }
+          // fmap_map3_aux_core
+          if(opt->algos & FMAP_MAP_ALL_ALGO_MAP3) {
+              aln_map3 = fmap_map3_aux_core(seq, refseq, bwt[1], sa[1], opt->opt_map3);
+          }
+          else {
+              // empty
+              aln_map3 = fmap_map3_aln_init();
           }
           
           // consolidate mappings
@@ -1063,16 +1080,17 @@ fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
   opt->argc = argc; opt->argv = argv;
 
   // parse common options as well as map1/map2/map3 commands
-  i=start=opt_type=opt_type_next=0;
+  i=start=0;
+  opt_type=opt_type_next=FMAP_MAP_ALL_ALGO_NONE;
   while(i<argc) {
       if(0 == strcmp("map1", argv[i])) {
-          opt_type_next = 1;
+          opt_type_next = FMAP_MAP_ALL_ALGO_MAP1;
       }
       else if(0 == strcmp("map2", argv[i])) {
-          opt_type_next = 2;
+          opt_type_next = FMAP_MAP_ALL_ALGO_MAP2;
       }
       else if(0 == strcmp("map3", argv[i])) {
-          opt_type_next = 3;
+          opt_type_next = FMAP_MAP_ALL_ALGO_MAP3;
       }
       else if('-' != argv[i][0]) { // not a command line option
           fmap_error("Unknown command", Exit, CommandLineArgument);
@@ -1080,7 +1098,7 @@ fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
 
       if(opt_type != opt_type_next) {
           switch(opt_type) {
-            case 0:
+            case FMAP_MAP_ALL_ALGO_NONE:
               // parse common options
               fmap_map_all_opt_parse_common(i, argv, opt);
               // copy over common values into the other opts
@@ -1088,23 +1106,26 @@ fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
               __fmap_map_all_opts_copy2(opt, opt->opt_map2);
               __fmap_map_all_opts_copy2(opt, opt->opt_map3);
               break;
-            case 1:
+            case FMAP_MAP_ALL_ALGO_MAP1:
               // parse map1 options
               if(0 < i - start) {
                   fmap_map1_opt_parse(i, argv + i, opt->opt_map1);
               }
+              opt->algos |= (1 << opt_type);
               break;
-            case 2:
+            case FMAP_MAP_ALL_ALGO_MAP2:
               // parse map2 options
               if(0 < i - start) {
                   fmap_map2_opt_parse(i, argv + i, opt->opt_map2);
               }
+              opt->algos |= (1 << opt_type);
               break;
-            case 3:
+            case FMAP_MAP_ALL_ALGO_MAP3:
               // parse map3 options
               if(0 < i - start) {
                   fmap_map3_opt_parse(i, argv + i, opt->opt_map3);
               }
+              opt->algos |= (1 << opt_type);
               break;
             default:
               fmap_error("bug encountered", Exit, OutOfRange);
@@ -1197,6 +1218,10 @@ fmap_map_all_opt_check(fmap_map_all_opt_t *opt)
   fmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
   fmap_error_cmd_check_int(opt->dup_window, 0, INT32_MAX, "-W");
   fmap_error_cmd_check_int(opt->aln_output_mode_ind, 0, 1, "-X");
+
+  if(0 == opt->algos) {
+      fmap_error("no algorithms given", Exit, CommandLineArgument);
+  }
 
   if(FMAP_FILE_BZ2_COMPRESSION == opt->output_compr 
      && -1 == opt->reads_queue_size) {
