@@ -430,6 +430,7 @@ fmap_map_all_aln_merge(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt[2
                   break;
               }
           }
+          // TODO: randomize the best scoring
 
           // copy over the best
           if(j != best_score_i) {
