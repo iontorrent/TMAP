@@ -22,6 +22,8 @@ FMAP_SORT_INIT(hit, fmap_map2_hit_t, __left_lt)
 #define __hitG_lt(a, b) ((a).G > (b).G)
 FMAP_SORT_INIT(hitG, fmap_map2_hit_t, __hitG_lt)
 
+#define FMAP_MAP2_AUX_IS 0
+
 int32_t
 fmap_map2_aux_resolve_duphits(const fmap_bwt_t *bwt, const fmap_sa_t *sa, fmap_map2_aln_t *b, int32_t IS, int32_t min_as)
 {
@@ -92,6 +94,7 @@ fmap_map2_aux_resolve_duphits(const fmap_bwt_t *bwt, const fmap_sa_t *sa, fmap_m
   return b->n;
 }
 
+/*
 static int32_t 
 fmap_map2_aux_resolve_query_overlaps(fmap_map2_aln_t *b, double mask_level, int32_t min_as)
 {
@@ -133,6 +136,7 @@ fmap_map2_aux_resolve_query_overlaps(fmap_map2_aln_t *b, double mask_level, int3
   b->n = j;
   return j;
 }
+*/
 
 void 
 fmap_map2_aln_destroy(fmap_map2_aln_t *a)
@@ -395,13 +399,14 @@ fmap_map2_aux_aln(fmap_map2_opt_t *opt, fmap_refseq_t *refseq,
   for(k = 0; k < 2; ++k) {
       fmap_map2_aux_extend_left(opt, bb[k][1], (uint8_t*)seq[k]->s, seq[k]->l, refseq, is_rev, pool->aln_mem);
       fmap_map2_aux_merge_hits(bb[k], seq[k]->l, 0, 0);
-      fmap_map2_aux_resolve_duphits(NULL, NULL, bb[k][0], 0, (0 == opt->aln_global) ? 0 : FMAP_MAP2_MINUS_INF);
+      fmap_map2_aux_resolve_duphits(NULL, NULL, bb[k][0], FMAP_MAP2_AUX_IS, (0 == opt->aln_global) ? 0 : FMAP_MAP2_MINUS_INF);
       fmap_map2_aux_extend_right(opt, bb[k][0], (uint8_t*)seq[k]->s, seq[k]->l, refseq, is_rev, pool->aln_mem);
       b[k] = bb[k][0];
       free(bb[k]);		
   }
   fmap_map2_aux_merge_hits(b, seq[0]->l, 1, opt->aln_global);
-  fmap_map2_aux_resolve_query_overlaps(b[0], opt->mask_level, (0 == opt->aln_global) ? 0 : FMAP_MAP2_MINUS_INF);
+  // Note: this will give duplicate mappings
+  //fmap_map2_aux_resolve_query_overlaps(b[0], opt->mask_level, (0 == opt->aln_global) ? 0 : FMAP_MAP2_MINUS_INF);
 
   return b[0];
 }
@@ -698,8 +703,9 @@ fmap_map2_aux_core(fmap_map2_opt_t *_opt,
       }
       fmap_map2_aux_flag_fr(b);
       fmap_map2_aux_merge_hits(b, l, 0, opt.aln_global);
-      fmap_map2_aux_resolve_duphits(NULL, NULL, b[0], 0, (0 == opt.aln_global) ? 0 : FMAP_MAP2_MINUS_INF);
-      fmap_map2_aux_resolve_query_overlaps(b[0], opt.mask_level, (0 == opt.aln_global) ? 0 : FMAP_MAP2_MINUS_INF);
+      fmap_map2_aux_resolve_duphits(NULL, NULL, b[0], FMAP_MAP2_AUX_IS, (0 == opt.aln_global) ? 0 : FMAP_MAP2_MINUS_INF);
+      // Note: this will give duplicate mappings
+      //fmap_map2_aux_resolve_query_overlaps(b[0], opt.mask_level, (0 == opt.aln_global) ? 0 : FMAP_MAP2_MINUS_INF);
   } else b[1] = 0;
 
 

@@ -83,6 +83,7 @@ fmap_map_all_aln_realloc(fmap_map_all_aln_t *aln, int32_t n)
       free(aln->hits[i].cigar);
   }
   aln->hits = fmap_realloc(aln->hits, sizeof(fmap_map_all_hit_t) * n, "aln->hits");
+  aln->n = n;
 }
 
 static inline void
@@ -234,7 +235,7 @@ fmap_map_all_aln_filter(fmap_map_all_aln_t *aln, fmap_map_all_opt_t *opt, int32_
   }
   else if(FMAP_MAP_UTIL_ALN_MODE_RAND_BEST == opt->aln_output_mode) { // get a random
       int32_t r = (int32_t)(drand48() * n_best);
-
+          
       // keep the rth one
       if(FMAP_MAP_ALL_ALGO_NONE == algo_id) {
           if(0 != r) {
@@ -406,7 +407,7 @@ fmap_map_all_aln_merge(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt[2
   if(0 == opt->aln_output_mode_ind) {
       // sort
       fmap_sort_introsort(fmap_map_all_hit_t, aln->n, aln->hits);
-      
+
       // remove duplicates within a window
       for(i=j=0;i<aln->n;) {
           int32_t end, best_score_i;
@@ -415,7 +416,7 @@ fmap_map_all_aln_merge(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt[2
           end = best_score_i = i;
           while(end+1< aln->n) {
               if(aln->hits[end].seqid == aln->hits[end+1].seqid
-                 && aln->hits[end].pos <= aln->hits[end+1].pos + opt->dup_window) {
+                 && fabs(aln->hits[end].pos - aln->hits[end+1].pos) <= opt->dup_window) {
                   // track the best scoring
                   if(aln->hits[best_score_i].score < aln->hits[end].score) {
                       best_score_i = end+1;
@@ -671,6 +672,7 @@ fmap_map_all_core_worker(fmap_seq_t **seq_buffer, fmap_map_all_aln_t **alns, int
           // destroy
           fmap_seq_destroy(seq[0]);
           fmap_seq_destroy(seq[1]);
+          fmap_seq_destroy(seq_char);
 
           // map1
           fmap_map1_aln_destroy(aln_map1);

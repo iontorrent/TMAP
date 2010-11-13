@@ -108,7 +108,7 @@ fmap_map3_aln_filter(fmap_seq_t *seq, fmap_map3_aln_t *aln,
           best_score = cur_score;
           n_best = 1;
       }
-      else if(!(cur_score < best_score)) { // equal
+      else if(cur_score == best_score) { // equal
           n_best++;
       }
   }

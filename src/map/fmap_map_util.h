@@ -11,4 +11,6 @@ enum {
     FMAP_MAP_UTIL_ALN_MODE_ALL            = 3   /*!< Output all alignments */
 };
 
+// TODO: have a general struct that stores an alignment
+
 #endif

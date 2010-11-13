@@ -38,7 +38,9 @@ fmap_map2_filter_sam(fmap_seq_t *seq, fmap_map2_sam_t *sam, int32_t aln_output_m
   int32_t i, j;
   int32_t n_best = 0;
   int32_t best_score, cur_score;
-  if(FMAP_MAP_UTIL_ALN_MODE_ALL == aln_output_mode || sam->num_entries <= 1) {
+
+  if(FMAP_MAP_UTIL_ALN_MODE_ALL == aln_output_mode 
+     || sam->num_entries <= 1) {
       return;
   }
 
@@ -50,7 +52,7 @@ fmap_map2_filter_sam(fmap_seq_t *seq, fmap_map2_sam_t *sam, int32_t aln_output_m
           best_score = cur_score;
           n_best = 1;
       }
-      else if(!(cur_score < best_score)) { // equal
+      else if(cur_score == best_score) {
           n_best++;
       }
   }
@@ -59,14 +61,16 @@ fmap_map2_filter_sam(fmap_seq_t *seq, fmap_map2_sam_t *sam, int32_t aln_output_m
   if(n_best < sam->num_entries) {
       for(i=j=0;i<sam->num_entries;i++) {
           cur_score = sam->entries[i].AS;
-          if(cur_score < best_score) { // not the best
+          if(cur_score == best_score) { // the best
+              if(j < i) {
+                  sam->entries[j] = sam->entries[i];
+                  sam->entries[i].cigar = NULL;
+              }
+              j++;
+          }
+          else { // not the best
               free(sam->entries[i].cigar);
               sam->entries[i].cigar = NULL;
-          }
-          else if(j < i) { // copy if we are not on the same index
-              sam->entries[j] = sam->entries[i];
-              sam->entries[i].cigar = NULL;
-              j++;
           }
       }
       // reallocate
@@ -208,11 +212,11 @@ fmap_map2_core(fmap_map2_opt_t *opt)
 
   scalar = opt->score_match / log(opt->yita);
   /*
-  fmap_progress_print( "mismatch: %lf, gap_open: %lf, gap_ext: %lf",
-                      exp(-opt->pen_mm / scalar) / opt->yita,
-                      exp(-opt->pen_gapo / scalar),
-                      exp(-opt->pen_gape / scalar));
-  */
+     fmap_progress_print( "mismatch: %lf, gap_open: %lf, gap_ext: %lf",
+     exp(-opt->pen_mm / scalar) / opt->yita,
+     exp(-opt->pen_gapo / scalar),
+     exp(-opt->pen_gape / scalar));
+     */
 
   // adjust opt for opt->score_match
   opt->score_thr *= opt->score_match;
