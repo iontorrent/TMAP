@@ -155,7 +155,7 @@ fmap_map_all_aln_filter(fmap_map_all_aln_t *aln, fmap_map_all_opt_t *opt, int32_
   int32_t i, j, k;
   int32_t n_best = 0;
   int32_t best_score, cur_score;
-
+  
   if(FMAP_MAP_UTIL_ALN_MODE_ALL == opt->aln_output_mode
      || aln->n <= 1) {
       return;
@@ -286,7 +286,7 @@ fmap_map_all_aln_merge(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt[2
                        fmap_map1_aln_t *aln_map1, fmap_map2_sam_t *aln_map2, fmap_map3_aln_t *aln_map3,
                        fmap_map_all_opt_t *opt)
 {
-  int32_t i, j, aln_i;
+  int32_t i, j, k, aln_i;
   uint32_t pacpos;
   uint32_t seqid, pos;
   fmap_map_all_aln_t *aln = NULL;
@@ -315,7 +315,7 @@ fmap_map_all_aln_merge(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt[2
   for(i=0;i<aln_map1->n;i++) {
       int32_t aln_ref_l = 0;
       fmap_map1_hit_t *h = &aln_map1->hits[i];
-
+      
       // get the reference length
       for(j=0;j<h->n_cigar;j++) {
           switch((h->cigar[j] & 0xf)) {
@@ -337,9 +337,12 @@ fmap_map_all_aln_merge(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt[2
               aln->hits[aln_i].seqid = seqid;
               aln->hits[aln_i].pos = pos - 1; // zero-based
               aln->hits[aln_i].score = h->score;
-              aln->hits[aln_i].cigar = h->cigar;
+              // copy cigar - cannot shallow copy here
+              aln->hits[aln_i].cigar = fmap_malloc(sizeof(uint32_t) * h->n_cigar, "aln->hits[aln_i]");
+              for(k=0;k<h->n_cigar;k++) {
+                  aln->hits[aln_i].cigar[k] = h->cigar[k];
+              }
               aln->hits[aln_i].n_cigar = h->n_cigar;
-              h->cigar = NULL;
 
               // map1 specific info
               aln->hits[aln_i].n_mm = h->n_mm;
@@ -403,7 +406,7 @@ fmap_map_all_aln_merge(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt[2
   if(0 == opt->aln_output_mode_ind) {
       // sort
       fmap_sort_introsort(fmap_map_all_hit_t, aln->n, aln->hits);
-
+      
       // remove duplicates within a window
       for(i=j=0;i<aln->n;) {
           int32_t end, best_score_i;
@@ -415,7 +418,7 @@ fmap_map_all_aln_merge(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt[2
                  && aln->hits[end].pos <= aln->hits[end+1].pos + opt->dup_window) {
                   // track the best scoring
                   if(aln->hits[best_score_i].score < aln->hits[end].score) {
-                      best_score_i = end;
+                      best_score_i = end+1;
                   }
                   end++;
               }
@@ -442,6 +445,7 @@ fmap_map_all_aln_merge(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt[2
       // free cigars
       for(i=j;i<aln->n;i++) {
           free(aln->hits[i].cigar);
+          aln->hits[i].cigar = NULL;
       }
       aln->n = j;
       aln->hits = fmap_realloc(aln->hits, sizeof(fmap_map_all_hit_t) * aln->n, "aln->hits");
@@ -620,7 +624,7 @@ fmap_map_all_core_worker(fmap_seq_t **seq_buffer, fmap_map_all_aln_t **alns, int
               for(i=0;i<aln_map1->n;i++) {
                   fmap_map1_hit_t *h = &aln_map1->hits[i];
                   int32_t j, num_match;
-
+              
                   num_match = 0 - h->n_mm; // # of mismatches
                   for(j=0;j<h->n_cigar;j++) {
                       switch(h->cigar[j] & 0xf) {

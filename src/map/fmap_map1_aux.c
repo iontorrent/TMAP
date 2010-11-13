@@ -402,6 +402,10 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
                   hit->cigar[cigar_i] = op;
               }
 
+              if(NULL == hit->cigar) {
+                  fmap_error(NULL, Exit, OutOfRange);
+              }
+
               // TODO: use the shadow ?
               //fmap_map1_aux_stack_shadow(l - k + 1, len, bwt->seq_len, e->last_diff_offset, width_cur);
           }
@@ -490,8 +494,6 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
           }
       }
   }
-
-  alns->n = alns->n;
 
   return alns;
 }
