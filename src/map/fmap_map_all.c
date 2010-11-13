@@ -957,7 +957,7 @@ fmap_map_all_usage(fmap_map_all_opt_t *opt)
   char *reads_format = fmap_get_reads_file_format_string(opt->reads_format);
 
   fmap_file_fprintf(fmap_file_stderr, "\n");
-  fmap_file_fprintf(fmap_file_stderr, "Usage: %s map_all [options]", PACKAGE);
+  fmap_file_fprintf(fmap_file_stderr, "Usage: %s mapall [common options] (map{1,2,3} [algo-specific options])+", PACKAGE);
   fmap_file_fprintf(fmap_file_stderr, "\n");
   fmap_file_fprintf(fmap_file_stderr, "Options (required):\n");
   fmap_file_fprintf(fmap_file_stderr, "         -f FILE     the FASTA reference file name [%s]\n", opt->fn_fasta);
