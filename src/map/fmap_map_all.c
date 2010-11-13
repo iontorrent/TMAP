@@ -538,10 +538,12 @@ fmap_map_all_core_worker(fmap_seq_t **seq_buffer, fmap_map_all_aln_t **alns, int
   // map1
   for(i=0;i<2;i++) {
       if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP1) {
+          width_map1[i][0] = width_map1[i][1] = NULL;
+          width_length_map1[i] = 0;
           seed_width_map1[i][0] = fmap_calloc(opt->opt_map1[i]->seed_length, sizeof(fmap_bwt_match_width_t), "seed_width[0]");
           seed_width_map1[i][1] = fmap_calloc(opt->opt_map1[i]->seed_length, sizeof(fmap_bwt_match_width_t), "seed_width[1]");
           if(NULL == stack_map1) {
-          stack_map1 = fmap_map1_aux_stack_init();
+              stack_map1 = fmap_map1_aux_stack_init();
           }
       }
       // map2
@@ -742,8 +744,8 @@ fmap_map_all_core_worker(fmap_seq_t **seq_buffer, fmap_map_all_aln_t **alns, int
   for(i=0;i<2;i++) {
       if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP1) {
           if(NULL != stack_map1) {
-          fmap_map1_aux_stack_destroy(stack_map1);
-          stack_map1 = NULL;
+              fmap_map1_aux_stack_destroy(stack_map1);
+              stack_map1 = NULL;
           }
           free(seed_width_map1[i][0]);
           free(seed_width_map1[i][1]);
