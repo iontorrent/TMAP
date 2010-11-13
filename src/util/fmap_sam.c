@@ -50,7 +50,7 @@ fmap_sam_print_unmapped(fmap_file_t *fp, fmap_seq_t *seq)
 static inline fmap_string_t *
 fmap_sam_md(fmap_refseq_t *refseq, char *read_bases, // read bases are characters
             uint32_t seqid, uint32_t pos, // seqid and pos are 0-based
-            uint32_t *cigar, int32_t n_cigar)
+            uint32_t *cigar, int32_t n_cigar, int32_t *nm)
 {
   int32_t i, j;
   uint32_t ref_i, read_i;
@@ -58,7 +58,9 @@ fmap_sam_md(fmap_refseq_t *refseq, char *read_bases, // read bases are character
   uint8_t read_base, ref_base;
   fmap_string_t *md=NULL;
 
+
   md = fmap_string_init(32);
+  (*nm) = 0;
 
   read_i = 0;
   ref_i = refseq->annos[seqid].offset + pos;
@@ -82,6 +84,7 @@ fmap_sam_md(fmap_refseq_t *refseq, char *read_bases, // read bases are character
               else {
                   fmap_string_lsprintf(md, md->l, "%d%c", l, "ACGTN"[ref_base]);
                   l = 0;
+                  (*nm)++;
               }
               read_i++;
               ref_i++; 
@@ -90,6 +93,7 @@ fmap_sam_md(fmap_refseq_t *refseq, char *read_bases, // read bases are character
       }
       else if(BAM_CINS == op) {
           read_i += op_len;
+          (*nm) += op_len;
       }
       else if(BAM_CDEL == op) {
           fmap_string_lsprintf(md, md->l, "%d^", l);
@@ -100,6 +104,7 @@ fmap_sam_md(fmap_refseq_t *refseq, char *read_bases, // read bases are character
               ref_i++;
           }
           if(j < op_len) break;
+          (*nm) += op_len;
           l=0;
       }
       else if(BAM_CREF_SKIP == op) {
@@ -134,6 +139,7 @@ fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, fmap_refseq_t *refseq,
   fmap_string_t *name=NULL, *bases=NULL, *qualities=NULL;
   uint32_t *cigar_tmp = NULL, cigar_tmp_allocated = 0;
   fmap_string_t *md;
+  int32_t nm;
 
   name = fmap_seq_get_name(seq);
   bases = fmap_seq_get_bases(seq);
@@ -196,8 +202,8 @@ fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, fmap_refseq_t *refseq,
                     bases->s, qualities->s);
 
   // MD
-  md = fmap_sam_md(refseq, bases->s, seqid, pos, cigar_tmp, n_cigar);
-  fmap_file_fprintf(fp, "\tMD:Z:%s", md->s);
+  md = fmap_sam_md(refseq, bases->s, seqid, pos, cigar_tmp, n_cigar, &nm);
+  fmap_file_fprintf(fp, "\tMD:Z:%s\tNM:i:%d", md->s, nm);
   fmap_string_destroy(md);
 
   // optional tags
