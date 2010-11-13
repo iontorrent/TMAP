@@ -285,7 +285,7 @@ fmap_map_all_aln_filter(fmap_map_all_aln_t *aln, fmap_map_all_opt_t *opt, int32_
 static fmap_map_all_aln_t *
 fmap_map_all_aln_merge(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt[2], fmap_sa_t *sa[2],
                        fmap_map1_aln_t *aln_map1, fmap_map2_sam_t *aln_map2, fmap_map3_aln_t *aln_map3,
-                       fmap_map_all_opt_t *opt)
+                       int32_t stage, fmap_map_all_opt_t *opt)
 {
   int32_t i, j, k, aln_i;
   uint32_t pacpos;
@@ -334,6 +334,7 @@ fmap_map_all_aln_merge(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt[2
           if(0 < fmap_refseq_pac2real(refseq, pacpos, seq_len, &seqid, &pos)) {
               // common info
               aln->hits[aln_i].algo_id = FMAP_MAP_ALL_ALGO_MAP1;
+              aln->hits[aln_i].algo_stage = stage;
               aln->hits[aln_i].strand = h->strand;
               aln->hits[aln_i].seqid = seqid;
               aln->hits[aln_i].pos = pos - 1; // zero-based
@@ -361,6 +362,7 @@ fmap_map_all_aln_merge(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt[2
 
       // common info
       aln->hits[aln_i].algo_id = FMAP_MAP_ALL_ALGO_MAP2;
+      aln->hits[aln_i].algo_stage = stage;
       aln->hits[aln_i].strand = e->strand;
       aln->hits[aln_i].seqid = e->seqid;
       aln->hits[aln_i].pos = e->pos;
@@ -384,6 +386,7 @@ fmap_map_all_aln_merge(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt[2
 
       // common info
       aln->hits[aln_i].algo_id = FMAP_MAP_ALL_ALGO_MAP3;
+      aln->hits[aln_i].algo_stage = stage;
       aln->hits[aln_i].strand = h->strand;
       aln->hits[aln_i].seqid = h->seqid;
       aln->hits[aln_i].pos = h->pos ;
@@ -478,33 +481,36 @@ fmap_map_all_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map_all_hit_
       fmap_sam_print_mapped(fmap_file_stdout, seq, refseq,
                             hit->strand, hit->seqid, hit->pos,
                             hit->mapq, hit->cigar, hit->n_cigar,
-                            "\tAS:i:%d\tNM:i:%d\tXM:i:%d\tXO:i:%d\tXG:i:%d\tXA:Z:%s",
+                            "\tAS:i:%d\tNM:i:%d\tXM:i:%d\tXO:i:%d\tXG:i:%d\tXA:Z:%s-%d",
                             hit->score, 
                             (hit->n_mm + hit->n_gapo + hit->n_gape),
-                            hit->n_mm, hit->n_gapo, hit->n_gape, algos[hit->algo_id]);
+                            hit->n_mm, hit->n_gapo, hit->n_gape, algos[hit->algo_id], hit->algo_stage);
       break;
     case FMAP_MAP_ALL_ALGO_MAP2:
       if(0 < hit->XI) {
           fmap_sam_print_mapped(fmap_file_stdout, seq, refseq,
                                 hit->strand, hit->seqid, hit->pos, hit->mapq,
                                 hit->cigar, hit->n_cigar,
-                                "\tAS:i:%d\tXS:i:%d\tXF:i:%d\tXE:i:%d\tXI:i:%d\tXA:Z:%s",
-                                hit->score, hit->score_subo, hit->XF, hit->n_seeds, hit->XI, algos[hit->algo_id]);
+                                "\tAS:i:%d\tXS:i:%d\tXF:i:%d\tXE:i:%d\tXI:i:%d\tXA:Z:%s-%d",
+                                hit->score, hit->score_subo, hit->XF, hit->n_seeds, hit->XI, 
+                                algos[hit->algo_id], hit->algo_stage);
       }
       else {
           fmap_sam_print_mapped(fmap_file_stdout, seq, refseq,
                                 hit->strand, hit->seqid, hit->pos, hit->mapq,
                                 hit->cigar, hit->n_cigar,
-                                "\tAS:i:%d\tXS:i:%d\tXF:i:%d\tXE:i:%d\tXA:Z:%s",
-                                hit->score, hit->score_subo, hit->XF, hit->n_seeds, algos[hit->algo_id]);
+                                "\tAS:i:%d\tXS:i:%d\tXF:i:%d\tXE:i:%d\tXA:Z:%s-%d",
+                                hit->score, hit->score_subo, hit->XF, hit->n_seeds, 
+                                algos[hit->algo_id], hit->algo_stage);
       }
       break;
     case FMAP_MAP_ALL_ALGO_MAP3:
       fmap_sam_print_mapped(fmap_file_stdout, seq, refseq,
                             hit->strand, hit->seqid, hit->pos,
                             hit->mapq, hit->cigar, hit->n_cigar,
-                            "\tAS:i:%d\tXS:i:%d\tXA:Z:%s",
-                            hit->score, hit->n_seeds, algos[hit->algo_id]);
+                            "\tAS:i:%d\tXS:i:%d\tXA:Z:%s-%d",
+                            hit->score, hit->n_seeds, 
+                            algos[hit->algo_id], hit->algo_stage);
       break;
     default:
       fmap_error("hit->algo_id", Exit, OutOfRange);
@@ -517,11 +523,11 @@ fmap_map_all_core_worker(fmap_seq_t **seq_buffer, fmap_map_all_aln_t **alns, int
                          fmap_refseq_t *refseq, fmap_bwt_t *bwt[2], fmap_sa_t *sa[2],
                          int32_t tid, fmap_map_all_opt_t *opt)
 {
-  int32_t low = 0, high, i;
+  int32_t low = 0, high, i, j;
   // map1 
-  fmap_bwt_match_width_t *width_map1[2]={NULL,NULL}, *seed_width_map1[2]={NULL,NULL};
-  int32_t width_length_map1 = 0;
-  fmap_map1_aux_stack_t *stack_map1 = NULL;
+  fmap_bwt_match_width_t *width_map1[2][2], *seed_width_map1[2][2];
+  int32_t width_length_map1[2] = {0, 0};
+  fmap_map1_aux_stack_t *stack_map1=NULL;
   fmap_map1_aln_t *aln_map1;
   // map2
   fmap_map2_global_mempool_t *pool_map2 = NULL;
@@ -530,22 +536,24 @@ fmap_map_all_core_worker(fmap_seq_t **seq_buffer, fmap_map_all_aln_t **alns, int
   fmap_map3_aln_t *aln_map3;
 
   // map1
-  if(opt->algos & FMAP_MAP_ALL_ALGO_MAP1) {
-      seed_width_map1[0] = fmap_calloc(opt->opt_map1->seed_length, sizeof(fmap_bwt_match_width_t), "seed_width[0]");
-      seed_width_map1[1] = fmap_calloc(opt->opt_map1->seed_length, sizeof(fmap_bwt_match_width_t), "seed_width[1]");
-      stack_map1 = fmap_map1_aux_stack_init();
-  }
-  // map2
-  if(opt->algos & FMAP_MAP_ALL_ALGO_MAP2) {
-      pool_map2 = fmap_map2_global_mempool_init();
-  }
-  // map2
-  if(opt->algos & FMAP_MAP_ALL_ALGO_MAP2) {
-      // - none
-  }
-  // map3
-  if(opt->algos & FMAP_MAP_ALL_ALGO_MAP3) {
-      // - none
+  for(i=0;i<2;i++) {
+      if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP1) {
+          seed_width_map1[i][0] = fmap_calloc(opt->opt_map1[i]->seed_length, sizeof(fmap_bwt_match_width_t), "seed_width[0]");
+          seed_width_map1[i][1] = fmap_calloc(opt->opt_map1[i]->seed_length, sizeof(fmap_bwt_match_width_t), "seed_width[1]");
+          if(NULL == stack_map1) {
+          stack_map1 = fmap_map1_aux_stack_init();
+          }
+      }
+      // map2
+      if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP2) {
+          if(NULL == pool_map2) {
+              pool_map2 = fmap_map2_global_mempool_init();
+          }
+      }
+      // map3
+      if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP3) {
+          // - none
+      }
   }
 
   while(low < seq_buffer_length) {
@@ -573,19 +581,21 @@ fmap_map_all_core_worker(fmap_seq_t **seq_buffer, fmap_map_all_aln_t **alns, int
           fmap_seq_t *seq[2]={NULL, NULL}, *orig_seq=NULL, *seq_char=NULL;
           orig_seq = seq_buffer[low];
           fmap_string_t *bases[2]={NULL, NULL};
-          fmap_map1_opt_t opt_local_map1;
+          fmap_map1_opt_t opt_local_map1[2];
 
           // map1
-          if(opt->algos & FMAP_MAP_ALL_ALGO_MAP1) {
-              opt_local_map1 = (*opt->opt_map1); // copy over values
-          }
-          // map2
-          if(opt->algos & FMAP_MAP_ALL_ALGO_MAP2) {
-              // - none
-          }
-          // map3
-          if(opt->algos & FMAP_MAP_ALL_ALGO_MAP3) {
-              // - none
+          for(i=0;i<2;i++) {
+              if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP1) {
+                  opt_local_map1[i] = (*opt->opt_map1[i]); // copy over values
+              }
+              // map2
+              if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP2) {
+                  // - none
+              }
+              // map3
+              if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP3) {
+                  // - none
+              }
           }
 
           // clone the sequence 
@@ -610,106 +620,118 @@ fmap_map_all_core_worker(fmap_seq_t **seq_buffer, fmap_map_all_aln_t **alns, int
           bases[1] = fmap_seq_get_bases(seq[1]);
 
           // map1
-          if(opt->algos & FMAP_MAP_ALL_ALGO_MAP1) {
-              opt_local_map1.max_mm = (opt->opt_map1->max_mm < 0) ? (int)(0.99 + opt->opt_map1->max_mm_frac * bases[0]->l) : opt->opt_map1->max_mm;
-              opt_local_map1.max_gape = (opt->opt_map1->max_gape < 0) ? (int)(0.99 + opt->opt_map1->max_gape_frac * bases[0]->l) : opt->opt_map1->max_gape;
-              opt_local_map1.max_gapo = (opt->opt_map1->max_gapo < 0) ? (int)(0.99 + opt->opt_map1->max_gapo_frac * bases[0]->l) : opt->opt_map1->max_gapo;
-              if(width_length_map1 < bases[0]->l) {
-                  free(width_map1[0]); free(width_map1[1]);
-                  width_length_map1 = bases[0]->l;
-                  width_map1[0] = fmap_calloc(width_length_map1, sizeof(fmap_bwt_match_width_t), "width[0]");
-                  width_map1[1] = fmap_calloc(width_length_map1, sizeof(fmap_bwt_match_width_t), "width[1]");
-              }
-              fmap_bwt_match_cal_width(bwt[0], bases[0]->l, bases[0]->s, width_map1[0]);
-              fmap_bwt_match_cal_width(bwt[0], bases[1]->l, bases[1]->s, width_map1[1]);
+          for(i=0;i<2;i++) {
+              if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP1) {
+                  opt_local_map1[i].max_mm = (opt->opt_map1[i]->max_mm < 0) ? (int)(0.99 + opt->opt_map1[i]->max_mm_frac * bases[0]->l) : opt->opt_map1[i]->max_mm;
+                  opt_local_map1[i].max_gape = (opt->opt_map1[i]->max_gape < 0) ? (int)(0.99 + opt->opt_map1[i]->max_gape_frac * bases[0]->l) : opt->opt_map1[i]->max_gape;
+                  opt_local_map1[i].max_gapo = (opt->opt_map1[i]->max_gapo < 0) ? (int)(0.99 + opt->opt_map1[i]->max_gapo_frac * bases[0]->l) : opt->opt_map1[i]->max_gapo;
+                  if(width_length_map1[i] < bases[0]->l) {
+                      free(width_map1[i][0]); free(width_map1[i][1]);
+                      width_length_map1[i] = bases[0]->l;
+                      width_map1[i][0] = fmap_calloc(width_length_map1[i], sizeof(fmap_bwt_match_width_t), "width[0]");
+                      width_map1[i][1] = fmap_calloc(width_length_map1[i], sizeof(fmap_bwt_match_width_t), "width[1]");
+                  }
+                  fmap_bwt_match_cal_width(bwt[0], bases[0]->l, bases[0]->s, width_map1[i][0]);
+                  fmap_bwt_match_cal_width(bwt[0], bases[1]->l, bases[1]->s, width_map1[i][1]);
 
-              if(bases[0]->l < opt->opt_map1->seed_length) {
-                  opt_local_map1.seed_length = -1;
+                  if(bases[0]->l < opt->opt_map1[i]->seed_length) {
+                      opt_local_map1[i].seed_length = -1;
+                  }
+                  else {
+                      fmap_bwt_match_cal_width(bwt[0], opt->opt_map1[i]->seed_length, bases[0]->s, seed_width_map1[i][0]);
+                      fmap_bwt_match_cal_width(bwt[0], opt->opt_map1[i]->seed_length, bases[1]->s, seed_width_map1[i][1]);
+                  }
+              }
+              // map2
+              if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP2) {
+                  // - none
+              }
+              // map3
+              if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP3) {
+                  // - none
+              }
+          }
+
+          // run the core algorithms
+          for(i=0;i<2;i++) {
+              // fmap_map1_aux_core
+              if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP1) {
+                  aln_map1 = fmap_map1_aux_core(seq, bwt[1], width_map1[i], 
+                                                (0 < opt_local_map1[i].seed_length) ? seed_width_map1[i] : NULL, 
+                                                &opt_local_map1[i], stack_map1);
+                  // adjust map1 scoring, since it does not consider opt->score_match
+                  for(j=0;j<aln_map1->n;j++) {
+                      fmap_map1_hit_t *h = &aln_map1->hits[j];
+                      int32_t k, num_match;
+
+                      num_match = 0 - h->n_mm; // # of mismatches
+                      for(k=0;k<h->n_cigar;k++) {
+                          switch(h->cigar[k] & 0xf) {
+                            case BAM_CMATCH:
+                              num_match += h->cigar[k] >> 4;
+                              break;
+                            default:
+                              break;
+                          }
+                      }
+
+                      // update the score
+                      h->score = num_match * opt->score_match;
+                      h->score -= h->n_mm * opt->pen_mm;
+                      h->score -= h->n_gapo * opt->pen_gapo;
+                      h->score -= h->n_gape * opt->pen_gape;
+                  }
               }
               else {
-                  fmap_bwt_match_cal_width(bwt[0], opt->opt_map1->seed_length, bases[0]->s, seed_width_map1[0]);
-                  fmap_bwt_match_cal_width(bwt[0], opt->opt_map1->seed_length, bases[1]->s, seed_width_map1[1]);
+                  // empty
+                  aln_map1 = fmap_map1_aln_init();
+              }
+              // fmap_map2_aux_core
+              if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP2) {
+                  aln_map2 = fmap_map2_aux_core(opt->opt_map2[i], seq_char, refseq, bwt, sa, pool_map2);
+              }
+              else {
+                  // empty
+                  aln_map2 = fmap_map2_sam_init(0);
+              }
+              // fmap_map3_aux_core
+              if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP3) {
+                  aln_map3 = fmap_map3_aux_core(seq, refseq, bwt[1], sa[1], opt->opt_map3[i]);
+              }
+              else {
+                  // empty
+                  aln_map3 = fmap_map3_aln_init();
+              }
+
+              // consolidate mappings
+              alns[low] = fmap_map_all_aln_merge(orig_seq, refseq, bwt, sa,
+                                                 aln_map1, aln_map2, aln_map3, i, opt);
+
+              // destroy
+              // map1
+              if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP1) {
+                  fmap_map1_aln_destroy(aln_map1);
+              }
+              // map2
+              if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP2) {
+                  fmap_map2_sam_destroy(aln_map2);
+              }
+              // map3
+              if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP3) {
+                  fmap_map3_aln_destroy(aln_map3);
+              }
+
+              // check if we found any mappings
+              if(0 < alns[low]->n) {
+                  // yes we did
+                  break;
               }
           }
-          // map2
-          if(opt->algos & FMAP_MAP_ALL_ALGO_MAP2) {
-              // - none
-          }
-          // map3
-          if(opt->algos & FMAP_MAP_ALL_ALGO_MAP3) {
-              // - none
-          }
-
-          // fmap_map1_aux_core
-          if(opt->algos & FMAP_MAP_ALL_ALGO_MAP1) {
-              aln_map1 = fmap_map1_aux_core(seq, bwt[1], width_map1, 
-                                            (0 < opt_local_map1.seed_length) ? seed_width_map1 : NULL, 
-                                            &opt_local_map1, stack_map1);
-              // adjust map1 scoring, since it does not consider opt->score_match
-              for(i=0;i<aln_map1->n;i++) {
-                  fmap_map1_hit_t *h = &aln_map1->hits[i];
-                  int32_t j, num_match;
-
-                  num_match = 0 - h->n_mm; // # of mismatches
-                  for(j=0;j<h->n_cigar;j++) {
-                      switch(h->cigar[j] & 0xf) {
-                        case BAM_CMATCH:
-                          num_match += h->cigar[j] >> 4;
-                          break;
-                        default:
-                          break;
-                      }
-                  }
-
-                  // update the score
-                  h->score = num_match * opt->score_match;
-                  h->score -= h->n_mm * opt->pen_mm;
-                  h->score -= h->n_gapo * opt->pen_gapo;
-                  h->score -= h->n_gape * opt->pen_gape;
-              }
-          }
-          else {
-              // empty
-              aln_map1 = fmap_map1_aln_init();
-          }
-          // fmap_map2_aux_core
-          if(opt->algos & FMAP_MAP_ALL_ALGO_MAP2) {
-              aln_map2 = fmap_map2_aux_core(opt->opt_map2, seq_char, refseq, bwt, sa, pool_map2);
-          }
-          else {
-              // empty
-              aln_map2 = fmap_map2_sam_init(0);
-          }
-          // fmap_map3_aux_core
-          if(opt->algos & FMAP_MAP_ALL_ALGO_MAP3) {
-              aln_map3 = fmap_map3_aux_core(seq, refseq, bwt[1], sa[1], opt->opt_map3);
-          }
-          else {
-              // empty
-              aln_map3 = fmap_map3_aln_init();
-          }
-
-          // consolidate mappings
-          alns[low] = fmap_map_all_aln_merge(orig_seq, refseq, bwt, sa,
-                                             aln_map1, aln_map2, aln_map3, opt);
 
           // destroy
           fmap_seq_destroy(seq[0]);
           fmap_seq_destroy(seq[1]);
           fmap_seq_destroy(seq_char);
-
-          // map1
-          if(opt->algos & FMAP_MAP_ALL_ALGO_MAP1) {
-              fmap_map1_aln_destroy(aln_map1);
-          }
-          // map2
-          if(opt->algos & FMAP_MAP_ALL_ALGO_MAP2) {
-              fmap_map2_sam_destroy(aln_map2);
-          }
-          // map3
-          if(opt->algos & FMAP_MAP_ALL_ALGO_MAP3) {
-              fmap_map3_aln_destroy(aln_map3);
-          }
 
           // next
           low++;
@@ -717,20 +739,28 @@ fmap_map_all_core_worker(fmap_seq_t **seq_buffer, fmap_map_all_aln_t **alns, int
   }
 
   // map1
-  if(opt->algos & FMAP_MAP_ALL_ALGO_MAP1) {
-      fmap_map1_aux_stack_destroy(stack_map1);
-      free(seed_width_map1[0]);
-      free(seed_width_map1[1]);
-      free(width_map1[0]);
-      free(width_map1[1]);
-  }
-  // map2
-  if(opt->algos & FMAP_MAP_ALL_ALGO_MAP2) {
-      fmap_map2_global_mempool_destroy(pool_map2);
-  }
-  // map3
-  if(opt->algos & FMAP_MAP_ALL_ALGO_MAP3) {
-      // - none
+  for(i=0;i<2;i++) {
+      if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP1) {
+          if(NULL != stack_map1) {
+          fmap_map1_aux_stack_destroy(stack_map1);
+          stack_map1 = NULL;
+          }
+          free(seed_width_map1[i][0]);
+          free(seed_width_map1[i][1]);
+          free(width_map1[i][0]);
+          free(width_map1[i][1]);
+      }
+      // map2
+      if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP2) {
+          if(NULL != pool_map2) {
+              fmap_map2_global_mempool_destroy(pool_map2);
+              pool_map2 = NULL;
+          }
+      }
+      // map3
+      if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP3) {
+          // - none
+      }
   }
 }
 
@@ -794,22 +824,24 @@ fmap_map_all_core(fmap_map_all_opt_t *opt)
 
   // TODO: this could be dangerous if algorithms change, needs to be refactored
   // adjust mapping algorithm specific options
-  // map1
-  if(opt->algos & FMAP_MAP_ALL_ALGO_MAP1) {
-      // - none
-  }
-  // map2
-  if(opt->algos & FMAP_MAP_ALL_ALGO_MAP2) {
-      opt->opt_map2->score_thr *= opt->score_match;
-      opt->opt_map2->length_coef *= opt->score_match;
-  }
-  // map3
-  if(opt->algos & FMAP_MAP_ALL_ALGO_MAP3) {
-      opt->opt_map3->score_thr *= opt->score_match;
-      if(-1 == opt->opt_map3->seed_length) {
-          opt->opt_map3->seed_length = fmap_map3_get_seed_length(refseq->len);
-          fmap_progress_print("setting the seed length to %d for map3",
-                              opt->opt_map3->seed_length);
+  for(i=0;i<2;i++) {
+      // map1
+      if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP1) {
+          // - none
+      }
+      // map2
+      if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP2) {
+          opt->opt_map2[i]->score_thr *= opt->score_match;
+          opt->opt_map2[i]->length_coef *= opt->score_match;
+      }
+      // map3
+      if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP3) {
+          opt->opt_map3[i]->score_thr *= opt->score_match;
+          if(-1 == opt->opt_map3[i]->seed_length) {
+              opt->opt_map3[i]->seed_length = fmap_map3_get_seed_length(refseq->len);
+              fmap_progress_print("setting the seed length to %d for map3",
+                                  opt->opt_map3[i]->seed_length);
+          }
       }
   }
 
@@ -957,7 +989,7 @@ fmap_map_all_usage(fmap_map_all_opt_t *opt)
   char *reads_format = fmap_get_reads_file_format_string(opt->reads_format);
 
   fmap_file_fprintf(fmap_file_stderr, "\n");
-  fmap_file_fprintf(fmap_file_stderr, "Usage: %s mapall [common options] (map{1,2,3} [algo-specific options])+", PACKAGE);
+  fmap_file_fprintf(fmap_file_stderr, "Usage: %s mapall [options])+", PACKAGE);
   fmap_file_fprintf(fmap_file_stderr, "\n");
   fmap_file_fprintf(fmap_file_stderr, "Options (required):\n");
   fmap_file_fprintf(fmap_file_stderr, "         -f FILE     the FASTA reference file name [%s]\n", opt->fn_fasta);
@@ -994,6 +1026,7 @@ fmap_map_all_usage(fmap_map_all_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "         -v          print verbose progress information\n");
   fmap_file_fprintf(fmap_file_stderr, "         -h          print this message\n");
   fmap_file_fprintf(fmap_file_stderr, "\n");
+  // TODO: more description of how to use map{1,2,3} and 2-stage algo
 
   free(reads_format);
 
@@ -1003,6 +1036,7 @@ fmap_map_all_usage(fmap_map_all_opt_t *opt)
 fmap_map_all_opt_t *
 fmap_map_all_opt_init()
 {
+  int32_t i;
   fmap_map_all_opt_t *opt = NULL;
 
   opt = fmap_calloc(1, sizeof(fmap_map_all_opt_t), "opt");
@@ -1024,12 +1058,14 @@ fmap_map_all_opt_init()
   opt->input_compr = FMAP_FILE_NO_COMPRESSION;
   opt->output_compr = FMAP_FILE_NO_COMPRESSION;
   opt->shm_key = 0;
-  opt->algos = 0;
 
   // these must be checked for agreement above later
-  opt->opt_map1 = fmap_map1_opt_init();
-  opt->opt_map2 = fmap_map2_opt_init();
-  opt->opt_map3 = fmap_map3_opt_init();
+  for(i=0;i<2;i++) {
+      opt->algos[i] = 0;
+      opt->opt_map1[i] = fmap_map1_opt_init();
+      opt->opt_map2[i] = fmap_map2_opt_init();
+      opt->opt_map3[i] = fmap_map3_opt_init();
+  }
 
   return opt;
 }
@@ -1037,18 +1073,22 @@ fmap_map_all_opt_init()
 void
 fmap_map_all_opt_destroy(fmap_map_all_opt_t *opt)
 {
+  int32_t i;
+
   // free common options
   free(opt->fn_fasta);
   free(opt->fn_reads);
 
-  // since we shallow copied, do not free
-  opt->opt_map1->fn_fasta = opt->opt_map2->fn_fasta = opt->opt_map3->fn_fasta = NULL;
-  opt->opt_map1->fn_reads = opt->opt_map2->fn_reads = opt->opt_map3->fn_reads = NULL;
+  for(i=0;i<2;i++) {
+      // since we shallow copied, do not free
+      opt->opt_map1[i]->fn_fasta = opt->opt_map2[i]->fn_fasta = opt->opt_map3[i]->fn_fasta = NULL;
+      opt->opt_map1[i]->fn_reads = opt->opt_map2[i]->fn_reads = opt->opt_map3[i]->fn_reads = NULL;
 
-  // destroy other opts
-  fmap_map1_opt_destroy(opt->opt_map1);
-  fmap_map2_opt_destroy(opt->opt_map2);
-  fmap_map3_opt_destroy(opt->opt_map3);
+      // destroy other opts
+      fmap_map1_opt_destroy(opt->opt_map1[i]);
+      fmap_map2_opt_destroy(opt->opt_map2[i]);
+      fmap_map3_opt_destroy(opt->opt_map3[i]);
+  }
 
   // free the current opt
   free(opt);
@@ -1070,7 +1110,7 @@ fmap_map_all_opt_destroy(fmap_map_all_opt_t *opt)
     (opt_map_other)->shm_key = (opt_map_all)->shm_key; \
 } while(0)
 
-// for map2
+// for map2 and map3
 #define __fmap_map_all_opts_copy2(opt_map_all, opt_map_other) do { \
     __fmap_map_all_opts_copy1(opt_map_all, opt_map_other); \
     (opt_map_other)->score_match = (opt_map_all)->score_match; \
@@ -1140,26 +1180,45 @@ fmap_map_all_opt_parse_common(int argc, char *argv[], fmap_map_all_opt_t *opt)
 int32_t
 fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
 {
-  int32_t i, start, opt_type, opt_type_next;
+  int32_t i, j, start, opt_type, opt_type_next, opt_stage, opt_stage_next;
 
   opt->argc = argc; opt->argv = argv;
 
   // parse common options as well as map1/map2/map3 commands
   start = 0;
   i = 1;
-  opt_type=opt_type_next=FMAP_MAP_ALL_ALGO_NONE;
+  opt_type = opt_type_next = FMAP_MAP_ALL_ALGO_NONE;
+  opt_stage = opt_stage_next = 0;
   while(i<argc) {
       if(0 == strcmp("map1", argv[i])) {
           opt_type_next = FMAP_MAP_ALL_ALGO_MAP1;
-          opt->algos |= opt_type_next;
+          opt->algos[0] |= opt_type_next;
+          opt_stage_next = 1;
       }
       else if(0 == strcmp("map2", argv[i])) {
           opt_type_next = FMAP_MAP_ALL_ALGO_MAP2;
-          opt->algos |= opt_type_next;
+          opt->algos[0] |= opt_type_next;
+          opt_stage_next = 1;
       }
       else if(0 == strcmp("map3", argv[i])) {
           opt_type_next = FMAP_MAP_ALL_ALGO_MAP3;
-          opt->algos |= opt_type_next;
+          opt->algos[0] |= opt_type_next;
+          opt_stage_next = 1;
+      }
+      else if(0 == strcmp("MAP1", argv[i])) {
+          opt_type_next = FMAP_MAP_ALL_ALGO_MAP1;
+          opt->algos[1] |= opt_type_next;
+          opt_stage_next = 2;
+      }
+      else if(0 == strcmp("MAP2", argv[i])) {
+          opt_type_next = FMAP_MAP_ALL_ALGO_MAP2;
+          opt->algos[1] |= opt_type_next;
+          opt_stage_next = 2;
+      }
+      else if(0 == strcmp("MAP3", argv[i])) {
+          opt_type_next = FMAP_MAP_ALL_ALGO_MAP3;
+          opt->algos[1] |= opt_type_next;
+          opt_stage_next = 2;
       }
 
       /*
@@ -1180,14 +1239,16 @@ fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
                   return 0;
               }
               // copy over common values into the other opts
-              __fmap_map_all_opts_copy1(opt, opt->opt_map1);
-              __fmap_map_all_opts_copy2(opt, opt->opt_map2);
-              __fmap_map_all_opts_copy2(opt, opt->opt_map3);
+              for(j=0;j<2;j++) {
+                  __fmap_map_all_opts_copy1(opt, opt->opt_map1[j]);
+                  __fmap_map_all_opts_copy2(opt, opt->opt_map2[j]);
+                  __fmap_map_all_opts_copy2(opt, opt->opt_map3[j]);
+              }
               break;
             case FMAP_MAP_ALL_ALGO_MAP1:
               // parse map1 options
               if(0 < i - start) {
-                  if(0 == fmap_map1_opt_parse(i-start, argv+start, opt->opt_map1)) {
+                  if(0 == fmap_map1_opt_parse(i-start, argv+start, opt->opt_map1[opt_stage-1])) {
                       return 0;
                   }
               }
@@ -1195,7 +1256,7 @@ fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
             case FMAP_MAP_ALL_ALGO_MAP2:
               // parse map2 options
               if(0 < i - start) {
-                  if(0 == fmap_map2_opt_parse(i-start, argv+start, opt->opt_map2)) {
+                  if(0 == fmap_map2_opt_parse(i-start, argv+start, opt->opt_map2[opt_stage-1])) {
                       return 0;
                   }
               }
@@ -1203,7 +1264,7 @@ fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
             case FMAP_MAP_ALL_ALGO_MAP3:
               // parse map3 options
               if(0 < i - start) {
-                  if(0 == fmap_map3_opt_parse(i-start, argv+start, opt->opt_map3)) {
+                  if(0 == fmap_map3_opt_parse(i-start, argv+start, opt->opt_map3[opt_stage-1])) {
                       return 0;
                   }
               }
@@ -1212,6 +1273,7 @@ fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
               fmap_error("bug encountered", Exit, OutOfRange);
           }
           opt_type = opt_type_next;
+          opt_stage = opt_stage_next;
           start = i;
       }
       i++;
@@ -1281,6 +1343,7 @@ fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
 void
 fmap_map_all_opt_check(fmap_map_all_opt_t *opt)
 {
+  int32_t i;
   // common options
   if(NULL == opt->fn_fasta && 0 == opt->shm_key) {
       fmap_error("option -f or option -s must be specified", Exit, CommandLineArgument);
@@ -1305,8 +1368,8 @@ fmap_map_all_opt_check(fmap_map_all_opt_t *opt)
   fmap_error_cmd_check_int(opt->dup_window, 0, INT32_MAX, "-W");
   fmap_error_cmd_check_int(opt->aln_output_mode_ind, 0, 1, "-X");
 
-  if(0 == opt->algos) {
-      fmap_error("no algorithms given", Exit, CommandLineArgument);
+  if(0 == opt->algos[0]) {
+      fmap_error("no algorithms given for stage 1", Exit, CommandLineArgument);
   }
 
   if(FMAP_FILE_BZ2_COMPRESSION == opt->output_compr 
@@ -1314,15 +1377,17 @@ fmap_map_all_opt_check(fmap_map_all_opt_t *opt)
       fmap_error("cannot buffer reads with bzip2 output (options \"-q 1 -J\")", Exit, OutOfRange);
   }
 
-  // check mapping algorithm specific options
-  fmap_map1_opt_check(opt->opt_map1);
-  fmap_map2_opt_check(opt->opt_map2);
-  fmap_map3_opt_check(opt->opt_map3);
+  for(i=0;i<2;i++) {
+      // check mapping algorithm specific options
+      fmap_map1_opt_check(opt->opt_map1[i]);
+      fmap_map2_opt_check(opt->opt_map2[i]);
+      fmap_map3_opt_check(opt->opt_map3[i]);
 
-  // check that common values match other opt values
-  __fmap_map_all_opts_check_common1(opt, opt->opt_map1);
-  __fmap_map_all_opts_check_common2(opt, opt->opt_map2);
-  __fmap_map_all_opts_check_common2(opt, opt->opt_map3);
+      // check that common values match other opt values
+      __fmap_map_all_opts_check_common1(opt, opt->opt_map1[i]);
+      __fmap_map_all_opts_check_common2(opt, opt->opt_map2[i]);
+      __fmap_map_all_opts_check_common2(opt, opt->opt_map3[i]);
+  }
 }
 
 int 

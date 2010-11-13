@@ -14,6 +14,7 @@ enum {
 
 typedef struct {
     int32_t algo_id; /*< the algorithm id used to obtain this hit */
+    uint8_t algo_stage; /*< the algorithm stage {1,2} */
 
     uint16_t strand:1; /*!< the strand */
     uint32_t seqid;  /*!< the sequence index (0-based) */
@@ -49,7 +50,7 @@ typedef struct {
     // global
     char **argv;  /*!< the command line argv structure */
     int argc;  /*!< the number of command line arguments passed */
-    uint32_t algos;  /*!< the algorithms that should be run, bit-packed */
+    uint32_t algos[2];  /*!< the algorithms that should be run in stage 1 and stage 2, bit-packed */
 
     // common options
     char *fn_fasta;  /*!< the fasta reference file name (-f) */
@@ -72,10 +73,10 @@ typedef struct {
     int32_t dup_window; /*!< remove duplicate alignments from different algorithms within this bp window (-W) */
     int32_t aln_output_mode_ind; /*!< apply the output filter for each algorithm separately */
 
-    // mapping algorithm specific options
-    fmap_map1_opt_t *opt_map1; /*!< map 1 options */
-    fmap_map2_opt_t *opt_map2; /*!< map 2 options */
-    fmap_map3_opt_t *opt_map3; /*!< map 3 options */
+    // stage 1/2 mapping algorithm specific options
+    fmap_map1_opt_t *opt_map1[2]; /*!< map 1 options */
+    fmap_map2_opt_t *opt_map2[2]; /*!< map 2 options */
+    fmap_map3_opt_t *opt_map3[2]; /*!< map 3 options */
 } fmap_map_all_opt_t;
 
 /*! 
