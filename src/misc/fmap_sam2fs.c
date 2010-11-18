@@ -377,7 +377,7 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
       if(ref_bases_len <= i) i = ref_bases_len;
       if(j < 0) j = 0;
 
-      fmap_file_fprintf(fmap_file_stdout, "%s\t", bam1_qname(bam));
+      fmap_file_fprintf(fmap_file_stdout, "%s\t%c\t", bam1_qname(bam), (bam->core.flag & BAM_FREVERSE) ? '-' : '+');
       fmap_fsw_print_aln(fmap_file_stdout, score, path, path_len, flow_order_tmp, 
                          (uint8_t*)ref_bases,
                          (BAM_FREVERSE & bam->core.flag) ? 1 : 0,
