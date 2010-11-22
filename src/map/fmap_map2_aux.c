@@ -684,7 +684,7 @@ fmap_map2_aux_core(fmap_map2_opt_t *_opt,
       fmap_string_destroy(seq[1]);
       fmap_string_destroy(rseq[0]);
       fmap_string_destroy(rseq[1]);
-      return NULL;
+      return fmap_map2_sam_init(0);
   }
 
   // alignment

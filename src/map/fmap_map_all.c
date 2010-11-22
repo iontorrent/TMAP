@@ -714,14 +714,17 @@ fmap_map_all_core_worker(fmap_seq_t **seq_buffer, fmap_map_all_aln_t **alns, int
               // map1
               if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP1) {
                   fmap_map1_aln_destroy(aln_map1);
+                  aln_map1 = NULL;
               }
               // map2
               if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP2) {
                   fmap_map2_sam_destroy(aln_map2);
+                  aln_map2 = NULL;
               }
               // map3
               if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP3) {
                   fmap_map3_aln_destroy(aln_map3);
+                  aln_map3 = NULL;
               }
 
               // check if we found any mappings

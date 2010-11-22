@@ -166,7 +166,7 @@ fmap_map2_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
           sams[low] = fmap_map2_aux_core(opt, seq, refseq, bwt, sa, pool);
 
           // filter
-          if(NULL != sams[low]) {
+          if(0 < sams[low]->num_entries) {
               fmap_map2_filter_sam(seq_buffer[low], sams[low], opt->aln_output_mode);
           }
 
@@ -351,7 +351,7 @@ fmap_map2_core(fmap_map2_opt_t *opt)
       fmap_progress_print("writing alignments");
 
       for(i=0;i<seq_buffer_length;i++) {
-          if(NULL != sams[i] && 0 < sams[i]->num_entries) {
+          if(0 < sams[i]->num_entries) {
               // print mapped reads
               for(j=0;j<sams[i]->num_entries;j++) {
                   fmap_map2_print_sam(seq_buffer[i], refseq, &sams[i]->entries[j]);
