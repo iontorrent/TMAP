@@ -580,8 +580,8 @@ fmap_map1_usage(fmap_map1_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "         -d INT      the maximum number of CALs to extend a deletion [%d]\n", opt->max_cals_del); 
   fmap_file_fprintf(fmap_file_stderr, "         -i INT      indels are not allowed within INT number of bps from the end of the read [%d]\n", opt->indel_ends_bound);
   fmap_file_fprintf(fmap_file_stderr, "         -b INT      stop searching when INT optimal CALs have been found [%d]\n", opt->max_best_cals);
-  fmap_file_fprintf(fmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
   fmap_file_fprintf(fmap_file_stderr, "         -Q INT      maximum number of alignment nodes [%d]\n", opt->max_entries);
+  fmap_file_fprintf(fmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
   fmap_file_fprintf(fmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
   fmap_file_fprintf(fmap_file_stderr, "         -a INT      output filter [%d]\n", opt->aln_output_mode);
   fmap_file_fprintf(fmap_file_stderr, "                             0 - unique best hits\n");
@@ -653,7 +653,7 @@ fmap_map1_opt_parse(int argc, char *argv[], fmap_map1_opt_t *opt)
 
   opt->argc = argc; opt->argv = argv;
 
-  while((c = getopt(argc, argv, "f:r:F:l:k:m:o:e:M:O:E:d:i:b:q:Q:n:a:jzJZs:vh")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:l:k:m:o:e:M:O:E:d:i:b:Q:q:n:a:jzJZs:vh")) >= 0) {
       switch(c) {
         case 'f':
           opt->fn_fasta = fmap_strdup(optarg); break;
@@ -691,10 +691,10 @@ fmap_map1_opt_parse(int argc, char *argv[], fmap_map1_opt_t *opt)
           opt->indel_ends_bound = atoi(optarg); break;
         case 'b':
           opt->max_best_cals = atoi(optarg); break;
-        case 'q': 
-          opt->reads_queue_size = atoi(optarg); break;
         case 'Q': 
           opt->max_entries = atoi(optarg); break;
+        case 'q': 
+          opt->reads_queue_size = atoi(optarg); break;
         case 'n':
           opt->num_threads = atoi(optarg); break;
         case 'a':
@@ -753,8 +753,8 @@ fmap_map1_opt_check(fmap_map1_opt_t *opt)
   fmap_error_cmd_check_int(opt->max_cals_del, 1, INT32_MAX, "-d");
   fmap_error_cmd_check_int(opt->indel_ends_bound, 0, INT32_MAX, "-i");
   fmap_error_cmd_check_int(opt->max_best_cals, 0, INT32_MAX, "-b");
-  if(-1 != opt->reads_queue_size) fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
   fmap_error_cmd_check_int(opt->max_entries, 1, INT32_MAX, "-Q");
+  if(-1 != opt->reads_queue_size) fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
   fmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
   fmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
 

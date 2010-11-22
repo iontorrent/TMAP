@@ -60,7 +60,7 @@ typedef struct {
     int32_t pen_mm;  /*!< the mismatch penalty (-M) */
     int32_t pen_gapo;  /*!< the indel open penalty (-O) */
     int32_t pen_gape;  /*!< the indel extension penalty (-E) */
-    int32_t sw_offset;  /*!< the band width (-w)  */
+    int32_t bw;  /*!< the band width (-w)  */
     int32_t aln_global; /*!< align the full read (-g) */
     int32_t reads_queue_size;  /*!< the reads queue size (-q) */
     int32_t num_threads;  /*!< the number of threads (-n) */

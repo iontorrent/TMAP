@@ -21,13 +21,14 @@ static void fmap_index_core(fmap_index_opt_t *opt)
 
   // pack the reference sequence
   ref_len = fmap_refseq_fasta2pac(opt->fn_fasta, FMAP_FILE_NO_COMPRESSION);
+      
+  if(FMAP_INDEX_TOO_BIG_GENOME <= ref_len) { // too big (2^32 - 1)!
+      fmap_error("Reference sequence too large", Exit, OutOfRange);
+  }
 
   // check returned genome size
   if(opt->is_large < 0) {
-      if(FMAP_INDEX_TOO_BIG_GENOME <= ref_len) { // too big (2^32 - 1)!
-          fmap_error("Reference sequence too large", Exit, OutOfRange);
-      }
-      else if(FMAP_INDEX_LARGE_GENOME <= ref_len) { 
+      if(FMAP_INDEX_LARGE_GENOME <= ref_len) { 
           opt->is_large = 1;
           fmap_progress_print("defaulting to \"bwtsw\" bwt construction algorithm");
       }

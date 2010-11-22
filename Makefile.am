@@ -50,9 +50,8 @@ fmap_SOURCES = \
 
 fmap_LDADD = 
 
-noinst_LIBRARIES = libfmap.a
-
-libfmap_a_SOURCES = ${GLOBAL_SOURCES} 
+#noinst_LIBRARIES = libfmap.a
+#libfmap_a_SOURCES = ${GLOBAL_SOURCES} 
 
 EXTRA_DIST = LICENSE \
 			 autogen.sh 
@@ -60,4 +59,4 @@ EXTRA_DIST = LICENSE \
 SUBDIRS = .
 
 docdir = ${datadir}/doc/${PACKAGE}
-dist_doc_DATA = LICENSE 
+dist_doc_DATA = LICENSE doc/fmap-book.pdf

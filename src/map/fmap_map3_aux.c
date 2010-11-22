@@ -271,6 +271,7 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
   fmap_sw_param_t par;
   fmap_sw_path_t *path = NULL;
   int32_t path_len, path_mem=0, score, score_subo;
+  int32_t bw = 0;
 
   fmap_map3_aux_seed_t *seeds[2];
   int32_t m_seeds[2], n_seeds[2];
@@ -285,6 +286,9 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
   __map3_gen_ap(par, opt);
 
   aln = fmap_map3_aln_init();
+
+  // band width
+  bw = (opt->bw + 1) / 2;
 
   // HERE
   uint8_t flow_order[4] = {3, 0, 1, 2};
@@ -368,18 +372,18 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
           }
 
           // get the start of the target range
-          if(hits[i][start].pos < opt->sw_offset) {
+          if(hits[i][start].pos < bw) {
               ref_start = 1;
           }
           else {
-              ref_start = hits[i][start].pos - opt->sw_offset + 1;
+              ref_start = hits[i][start].pos - bw + 1;
               // check bounds
               if(ref_start < 1) {
                   ref_start = 1;
               }
           }
           // get the end of the target range
-          ref_end = hits[i][end].pos + seq_len[i] + opt->sw_offset - 1;
+          ref_end = hits[i][end].pos + seq_len[i] + bw - 1;
           if(refseq->annos[hits[i][end].seqid].len < ref_end) {
               // this assumes that the seed matched correctly (do not run
               // off the end)
@@ -401,7 +405,7 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
 
           // get the band width
           par.band_width = hits[i][end].pos - hits[i][start].pos;
-          par.band_width += 2 * opt->sw_offset; // add bases to the window
+          par.band_width += 2 * bw; // add bases to the window
 
           while(path_mem <= target_len + seq_len[i]) { // lengthen the path
               path_mem = (0 == path_mem) ? 64 : (path_mem << 1); 

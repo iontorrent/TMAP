@@ -164,7 +164,7 @@ fmap_map2_aln_destroy(fmap_map2_aln_t *a)
     } \
     (par).gap_open = (opt)->pen_gapo; (par).gap_ext = (opt)->pen_gape; \
     (par).gap_end = (opt)->pen_gape; \
-    (par).row = 5; (par).band_width = opt->sw_offset; \
+    (par).row = 5; (par).band_width = opt->bw; \
 } while(0)
 
 // Note: this is the reverse, not the reverse compliment
@@ -653,13 +653,13 @@ fmap_map2_aux_core(fmap_map2_opt_t *_opt,
       pool->aln_mem = fmap_realloc(pool->aln_mem, sizeof(uint8_t) * (tmp + 2) * 24, "pool->aln_mem");
   }
 
-  // set opt->sw_offset
-  opt.sw_offset = _opt->sw_offset;
+  // set opt->bw
+  opt.bw = _opt->bw;
   k = (l * opt.score_match - 2 * opt.pen_gapo) / (2 * opt.pen_gape + opt.score_match);
   i = (l * opt.score_match - opt.score_match - opt.score_thr) / opt.pen_gape;
   if(k > i) k = i;
   if(k < 1) k = 1; // I do not know if k==0 causes troubles
-  opt.sw_offset= _opt->sw_offset < k ? _opt->sw_offset: k;
+  opt.bw= _opt->bw < k ? _opt->bw: k;
 
   // set seq[2] and rseq[2]
   seq[0] = fmap_string_init(l);

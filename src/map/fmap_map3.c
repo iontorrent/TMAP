@@ -448,8 +448,8 @@ fmap_map3_usage(fmap_map3_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "         -F STRING   the reads file format (fastq|fq|fasta|fa|sff) [%s]\n", reads_format);
   fmap_file_fprintf(fmap_file_stderr, "         -l INT      the k-mer length to seed CALs (-1 tunes to the genome size) [%d]\n", opt->seed_length);
   fmap_file_fprintf(fmap_file_stderr, "         -S INT      the maximum number of hits returned by a seed [%d]\n", opt->max_seed_hits);
-  fmap_file_fprintf(fmap_file_stderr, "         -b INT      the band width to group seeds [%d]\n", opt->max_seed_band);
-  fmap_file_fprintf(fmap_file_stderr, "         -w INT      the extra bases to add before and after the target during Smith-Waterman [%d]\n", opt->sw_offset);
+  fmap_file_fprintf(fmap_file_stderr, "         -b INT      the window of bases in which to group seeds [%d]\n", opt->max_seed_band);
+  fmap_file_fprintf(fmap_file_stderr, "         -w INT      the band width [%d]\n", opt->bw);
   fmap_file_fprintf(fmap_file_stderr, "         -A INT      the match score [%d]\n", opt->score_match); 
   fmap_file_fprintf(fmap_file_stderr, "         -M INT      the mismatch penalty [%d]\n", opt->pen_mm); 
   fmap_file_fprintf(fmap_file_stderr, "         -O INT      the indel start penalty [%d]\n", opt->pen_gapo); 
@@ -496,7 +496,7 @@ fmap_map3_opt_init()
   opt->seed_length = -1; // move this to a define block
   opt->max_seed_hits = 8; // move this to a define block
   opt->max_seed_band = 50; // move this to a define block
-  opt->sw_offset = 10; // move this to a define block
+  opt->bw = 50; // move this to a define block
   opt->score_match = 1;
   opt->pen_mm = 3; opt->pen_gapo = 5; opt->pen_gape = 2; // TODO: move this to a define block
   opt->score_thr = 20;
@@ -544,7 +544,7 @@ fmap_map3_opt_parse(int argc, char *argv[], fmap_map3_opt_t *opt)
         case 'b':
           opt->max_seed_band = atoi(optarg); break;
         case 'w':
-          opt->sw_offset = atoi(optarg); break;
+          opt->bw = atoi(optarg); break;
         case 'A':
           opt->score_match = atoi(optarg); break;
         case 'M':
@@ -607,7 +607,7 @@ fmap_map3_opt_check(fmap_map3_opt_t *opt)
   if(-1 != opt->seed_length) fmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "-l");
   fmap_error_cmd_check_int(opt->max_seed_hits, 1, INT32_MAX, "-S");
   fmap_error_cmd_check_int(opt->max_seed_hits, 1, INT32_MAX, "-b");
-  fmap_error_cmd_check_int(opt->sw_offset, 1, INT32_MAX, "-w");
+  fmap_error_cmd_check_int(opt->bw, 0, INT32_MAX, "-w");
 
   fmap_error_cmd_check_int(opt->score_match, 0, INT32_MAX, "-A");
   fmap_error_cmd_check_int(opt->pen_mm, 0, INT32_MAX, "-M");

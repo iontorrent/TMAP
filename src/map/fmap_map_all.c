@@ -995,7 +995,7 @@ fmap_map_all_usage(fmap_map_all_opt_t *opt)
   char *reads_format = fmap_get_reads_file_format_string(opt->reads_format);
 
   fmap_file_fprintf(fmap_file_stderr, "\n");
-  fmap_file_fprintf(fmap_file_stderr, "Usage: %s mapall [options])+", PACKAGE);
+  fmap_file_fprintf(fmap_file_stderr, "Usage: %s mapall [global options] (algorithm [options])+ (ALGORITHM [options])*", PACKAGE);
   fmap_file_fprintf(fmap_file_stderr, "\n");
   fmap_file_fprintf(fmap_file_stderr, "Options (required):\n");
   fmap_file_fprintf(fmap_file_stderr, "         -f FILE     the FASTA reference file name [%s]\n", opt->fn_fasta);
@@ -1007,7 +1007,7 @@ fmap_map_all_usage(fmap_map_all_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "         -M INT      the mismatch penalty [%d]\n", opt->pen_mm); 
   fmap_file_fprintf(fmap_file_stderr, "         -O INT      the indel start penalty [%d]\n", opt->pen_gapo); 
   fmap_file_fprintf(fmap_file_stderr, "         -E INT      the indel extend penalty [%d]\n", opt->pen_gape); 
-  fmap_file_fprintf(fmap_file_stderr, "         -w INT      the extra bases to add before and after the target during Smith-Waterman [%d]\n", opt->sw_offset);
+  fmap_file_fprintf(fmap_file_stderr, "         -w INT      the extra bases to add before and after the target during Smith-Waterman [%d]\n", opt->bw);
   fmap_file_fprintf(fmap_file_stderr, "         -g          align the full read (global alignment) [%s]\n", (0 == opt->aln_global) ? "false" : "true");
   fmap_file_fprintf(fmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
   fmap_file_fprintf(fmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
@@ -1054,7 +1054,7 @@ fmap_map_all_opt_init()
   opt->reads_format = FMAP_READS_FORMAT_UNKNOWN;
   opt->score_match = 1;
   opt->pen_mm = 3; opt->pen_gapo = 5; opt->pen_gape = 2; 
-  opt->sw_offset = 10; 
+  opt->bw = 10; 
   opt->aln_global = 0;
   opt->reads_queue_size = 65536; 
   opt->num_threads = 1;
@@ -1120,7 +1120,7 @@ fmap_map_all_opt_destroy(fmap_map_all_opt_t *opt)
 #define __fmap_map_all_opts_copy2(opt_map_all, opt_map_other) do { \
     __fmap_map_all_opts_copy1(opt_map_all, opt_map_other); \
     (opt_map_other)->score_match = (opt_map_all)->score_match; \
-    (opt_map_other)->sw_offset = (opt_map_all)->sw_offset; \
+    (opt_map_other)->bw = (opt_map_all)->bw; \
     (opt_map_other)->aln_global = (opt_map_all)->aln_global; \
 } while(0)
 
@@ -1146,7 +1146,7 @@ fmap_map_all_opt_parse_common(int argc, char *argv[], fmap_map_all_opt_t *opt)
         case 'E':
           opt->pen_gape = atoi(optarg); break;
         case 'w':
-          opt->sw_offset = atoi(optarg); break;
+          opt->bw = atoi(optarg); break;
         case 'g':
           opt->aln_global = 1; break;
         case 'q': 
@@ -1338,7 +1338,7 @@ fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
     if((opt_map_other)->score_match != (opt_map_all)->score_match) { \
         fmap_error("option -A was specified outside of common options", Exit, CommandLineArgument); \
     } \
-    if((opt_map_other)->sw_offset != (opt_map_all)->sw_offset) { \
+    if((opt_map_other)->bw != (opt_map_all)->bw) { \
         fmap_error("option -w was specified outside of common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->aln_global != (opt_map_all)->aln_global) { \
@@ -1367,7 +1367,7 @@ fmap_map_all_opt_check(fmap_map_all_opt_t *opt)
   fmap_error_cmd_check_int(opt->pen_mm, 0, INT32_MAX, "-M");
   fmap_error_cmd_check_int(opt->pen_gapo, 0, INT32_MAX, "-O");
   fmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
-  fmap_error_cmd_check_int(opt->sw_offset, 1, INT32_MAX, "-w");
+  fmap_error_cmd_check_int(opt->bw, 1, INT32_MAX, "-w");
   if(-1 != opt->reads_queue_size) fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
   fmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
   fmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
