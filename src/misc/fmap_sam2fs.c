@@ -79,7 +79,7 @@ static bam1_t *
 fmap_sam2fs_copy_to_sam(bam1_t *bam_old, fmap_fsw_path_t *path, int32_t path_len, int32_t score)
 {
   bam1_t *bam_new = NULL;
-  int32_t i, j;
+  int32_t i;
   uint32_t *cigar;
   int32_t n_cigar;
   uint8_t *old_score;
@@ -112,27 +112,7 @@ fmap_sam2fs_copy_to_sam(bam1_t *bam_old, fmap_fsw_path_t *path, int32_t path_len
   // cigar
   // TODO: soft-clipping...
   fmap_sam2fs_bam_alloc_data(bam_new, bam_new->data_len);
-  cigar = fmap_fsw_path2cigar(path, path_len, &n_cigar);
-  // remove HP edits
-  for(i=j=0;i<n_cigar;i++) {
-      switch(cigar[i] & 0xf) {
-        case FMAP_FSW_FROM_HP_PLUS: // deletion
-          cigar[i] = ((cigar[i] >> 4) << 4) | FMAP_FSW_FROM_D;
-          break;
-        case FMAP_FSW_FROM_HP_MINUS: // insertion
-          cigar[i] = ((cigar[i] >> 4) << 4) | FMAP_FSW_FROM_I;
-          break;
-        default:
-          break;
-      }
-      if(0 < j && (cigar[j-1] & 0xf) == (cigar[i] & 0xf)) {
-          cigar[j-1] = ((cigar[j-1] >> 4) + (cigar[i] >> 4)) << 4;
-      }
-      else {
-          j++;
-      }
-  }
-  n_cigar = j;
+  cigar = fmap_fsw_path2cigar(path, path_len, &n_cigar, 1);
   // allocate
   bam_new->core.n_cigar = n_cigar;
   bam_new->data_len += bam_new->core.n_cigar * sizeof(uint32_t);
