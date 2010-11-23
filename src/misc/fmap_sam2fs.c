@@ -3,6 +3,10 @@
 #include <config.h>
 #include <ctype.h>
 
+#ifdef HAVE_LIBPTHREAD
+#include <pthread.h>
+#endif
+
 #ifdef HAVE_SAMTOOLS
 #include <sam.h>
 #include <bam.h>
@@ -20,6 +24,12 @@
 
 #ifdef HAVE_SAMTOOLS
 
+#ifdef HAVE_LIBPTHREAD
+static pthread_mutex_t fmap_sam2fs_read_lock = PTHREAD_MUTEX_INITIALIZER;
+static int32_t fmap_sam2fs_read_lock_low = 0;
+#define FMAP_SAM2FS_THREAD_BLOCK_SIZE 1024
+#endif
+
 // from bam.h
 extern char *bam_nt16_rev_table;
 
@@ -31,6 +41,13 @@ extern int32_t fmap_fsw_sm_short[];
 #define FMAP_SAM2FS_FLOW_DEL '-'
 #define FMAP_SAM2FS_FLOW_SNP 'S'
 #define FMAP_SAM2FS_FLOW_PAD ' '
+
+typedef struct {
+    bam1_t **bams;
+    int32_t buffer_length;
+    int32_t tid;
+    fmap_sam2fs_opt_t *opt;
+} fmap_sam2fs_thread_data_t;
 
 static inline int32_t
 fmap_sam2fs_is_DNA(char c)
@@ -452,6 +469,50 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
   return bam;
 }
 
+static void
+fmap_sam2fs_aux_worker(bam1_t **bams, int32_t buffer_length, fmap_sam2fs_opt_t *opt)
+{
+  int32_t low = 0, high;
+
+  while(low < buffer_length) {
+#ifdef HAVE_LIBPTHREAD
+      if(1 < opt->num_threads) {
+          pthread_mutex_lock(&fmap_sam2fs_read_lock);
+
+          // update bounds
+          low = fmap_sam2fs_read_lock_low;
+          fmap_sam2fs_read_lock_low += FMAP_SAM2FS_THREAD_BLOCK_SIZE;
+          high = low + FMAP_SAM2FS_THREAD_BLOCK_SIZE;
+          if(buffer_length < high) {
+              high = buffer_length;
+          }
+
+          pthread_mutex_unlock(&fmap_sam2fs_read_lock);
+      }
+      else {
+          high = buffer_length; // process all
+      }
+#else
+      high = buffer_length; // process all
+#endif
+      while(low < high) {
+          bams[low] = fmap_sam2fs_aux(bams[low], opt->flow_order, opt->flow_score, opt->flow_offset, 
+                                opt->aln_global, opt->output_type, opt->j_type);
+          low++;
+      }
+  }
+}
+
+static void *
+fmap_sam2fs_aux_thread_worker(void *arg)
+{
+  fmap_sam2fs_thread_data_t *thread_data = (fmap_sam2fs_thread_data_t*)arg;
+  fmap_sam2fs_aux_worker(thread_data->bams, thread_data->buffer_length, thread_data->opt);
+
+  return arg;
+}
+          
+
 static int
 usage(fmap_sam2fs_opt_t *opt)
 {
@@ -467,6 +528,8 @@ usage(fmap_sam2fs_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "         -g          run global alignment (otherwise read fitting) [%d]\n", opt->aln_global);
   fmap_file_fprintf(fmap_file_stderr, "         -O          the output type: 0-alignment 1-SAM 2-BAM [%d]\n", opt->output_type);
   fmap_file_fprintf(fmap_file_stderr, "         -l INT      indel justification type: 0 - none, 1 - 5' strand of the reference, 2 - 5' strand of the read [%d]\n", opt->j_type);
+    fmap_file_fprintf(fmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
+  fmap_file_fprintf(fmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
   fmap_file_fprintf(fmap_file_stderr, "         -v          print verbose progress information\n");
   fmap_file_fprintf(fmap_file_stderr, "         -h          print this message\n");
   fmap_file_fprintf(fmap_file_stderr, "\n");
@@ -477,9 +540,13 @@ usage(fmap_sam2fs_opt_t *opt)
 static void
 fmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, fmap_sam2fs_opt_t *opt)
 {
+  int32_t i;
   samfile_t *fp_in = NULL;
   samfile_t *fp_out = NULL;
   bam1_t *b = NULL;
+  bam1_t **bams = NULL;
+  int32_t reads_queue_size;
+  int32_t buffer_length;
 
   fp_in = samopen(fn_in, sam_open_flags, 0);
   if(NULL == fp_in) fmap_error(fn_in, Exit, OpenFileError);
@@ -495,25 +562,114 @@ fmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, fmap_sam2fs_opt_
       fp_out = samopen("-", "wb", fp_in->header);
       break;
   }
-
-  b = bam_init1();
-  while(0 < samread(fp_in, b)) { 
-      // process 
-      b = fmap_sam2fs_aux(b, opt->flow_order, opt->flow_score, opt->flow_offset, 
-                          opt->aln_global, opt->output_type, opt->j_type);
-      // write to SAM/BAM if necessary
-      if(FMAP_SAM2FS_OUTPUT_SAM == opt->output_type
-         || FMAP_SAM2FS_OUTPUT_BAM == opt->output_type) {
-          if(samwrite(fp_out, b) < 0) {
-              fmap_error(NULL, Exit, WriteFileError);
-          }
+      
+  if(FMAP_SAM2FS_OUTPUT_SAM == opt->output_type
+     || FMAP_SAM2FS_OUTPUT_BAM == opt->output_type) {
+      // allocate the buffer
+      if(-1 == opt->reads_queue_size) {
+          reads_queue_size = 1;
       }
-      // destroy the bam
-      bam_destroy1(b);
-      // reinitialize
-      b = bam_init1();
+      else {
+          reads_queue_size = opt->reads_queue_size;
+      }
+      bams = fmap_malloc(sizeof(bam1_t*)*reads_queue_size, "bams");
+
+      do {
+          // init
+          for(i=0;i<reads_queue_size;i++) {
+              bams[i] = bam_init1();
+          }
+
+          // read into the buffer
+          for(i=buffer_length=0;i<reads_queue_size;i++) {
+              if(samread(fp_in, bams[i]) <= 0) {
+                  break;
+              }
+              buffer_length++;
+          }
+
+          // process
+#ifdef HAVE_LIBPTHREAD
+          int32_t num_threads = opt->num_threads;
+          if(buffer_length < num_threads * FMAP_SAM2FS_THREAD_BLOCK_SIZE) {
+              num_threads = 1 + (buffer_length / FMAP_SAM2FS_THREAD_BLOCK_SIZE);
+          }
+          if(1 == num_threads) {
+              fmap_sam2fs_aux_worker(bams, buffer_length, opt);
+          }
+          else {
+              pthread_attr_t attr;
+              pthread_t *threads = NULL;
+              fmap_sam2fs_thread_data_t *thread_data=NULL;
+
+              pthread_attr_init(&attr);
+              pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+
+              threads = fmap_calloc(num_threads, sizeof(pthread_t), "threads");
+              thread_data = fmap_calloc(num_threads, sizeof(fmap_sam2fs_thread_data_t), "thread_data");
+              fmap_sam2fs_read_lock_low = 0; // ALWAYS set before running threads 
+
+              for(i=0;i<num_threads;i++) {
+                  thread_data[i].bams = bams;
+                  thread_data[i].buffer_length = buffer_length;
+                  thread_data[i].tid = i;
+                  thread_data[i].opt = opt;
+                  if(0 != pthread_create(&threads[i], &attr, fmap_sam2fs_aux_thread_worker, &thread_data[i])) {
+                      fmap_error("error creating threads", Exit, ThreadError);
+                  }
+              }
+              for(i=0;i<num_threads;i++) {
+                  if(0 != pthread_join(threads[i], NULL)) {
+                      fmap_error("error joining threads", Exit, ThreadError);
+                  }
+              }
+
+              free(threads);
+              free(thread_data);
+
+          }
+#else
+          fmap_sam2fs_aux_worker(bams, buffer_length, opt);
+#endif
+
+          // write to SAM/BAM if necessary
+          for(i=0;i<buffer_length;i++) {
+              if(samwrite(fp_out, bams[i]) < 0) {
+                  fmap_error(NULL, Exit, WriteFileError);
+              }
+          }
+
+          // destroy
+          for(i=0;i<reads_queue_size;i++) {
+              bam_destroy1(bams[i]);
+              bams[i] = NULL;
+          }
+      } while(0 < buffer_length);
+  
+      // free
+      free(bams);
   }
-  bam_destroy1(b);
+  else {
+
+      b = bam_init1();
+      while(0 < samread(fp_in, b)) { 
+          // process 
+          b = fmap_sam2fs_aux(b, opt->flow_order, opt->flow_score, opt->flow_offset, 
+                              opt->aln_global, opt->output_type, opt->j_type);
+          // write to SAM/BAM if necessary
+          if(FMAP_SAM2FS_OUTPUT_SAM == opt->output_type
+             || FMAP_SAM2FS_OUTPUT_BAM == opt->output_type) {
+              if(samwrite(fp_out, b) < 0) {
+                  fmap_error(NULL, Exit, WriteFileError);
+              }
+          }
+          // destroy the bam
+          bam_destroy1(b);
+          // reinitialize
+          b = bam_init1();
+      }
+      bam_destroy1(b);
+  }
 
   // close
   samclose(fp_in); 
@@ -541,6 +697,9 @@ fmap_sam2fs_opt_init()
   opt->aln_global = 0;
   opt->output_type = FMAP_SAM2FS_OUTPUT_ALN;
   opt->j_type = FMAP_FSW_NO_JUSTIFY;
+  opt->reads_queue_size = 65536; 
+  opt->num_threads = 1;
+
 
   return opt;
 }
@@ -561,7 +720,7 @@ fmap_sam2fs_main(int argc, char *argv[])
 
   opt = fmap_sam2fs_opt_init();
 
-  while((c = getopt(argc, argv, "f:F:o:SgO:l:vh")) >= 0) {
+  while((c = getopt(argc, argv, "f:F:o:SgO:l:q:n:vh")) >= 0) {
       switch(c) {
         case 'f':
           strncpy(opt->flow_order, optarg, 4); break;
@@ -577,6 +736,10 @@ fmap_sam2fs_main(int argc, char *argv[])
           opt->output_type = atoi(optarg); break;
         case 'l':
           opt->j_type = atoi(optarg); break;
+        case 'q':
+          opt->reads_queue_size = atoi(optarg); break;
+        case 'n':
+          opt->num_threads = atoi(optarg); break;
         case 'v':
           fmap_progress_set_verbosity(1); break;
         case 'h':
@@ -593,6 +756,8 @@ fmap_sam2fs_main(int argc, char *argv[])
       fmap_error_cmd_check_int(opt->flow_offset, 0, INT32_MAX, "-o");
       fmap_error_cmd_check_int((int)strlen(opt->flow_order), 4, 4, "-f");
       fmap_error_cmd_check_int(opt->output_type, 0, 2, "-z");
+      if(-1 != opt->reads_queue_size) fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
+      fmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
   }
 
   fmap_sam2fs_core(argv[optind], sam_open_flags, opt);

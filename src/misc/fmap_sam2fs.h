@@ -17,6 +17,8 @@ typedef struct {
     int32_t aln_global; /*!< run global alignment (otherwise read fitting) (-g) */
     int32_t output_type; /*!< the output type: 0-flow space alignment 1-base space alignment 2-SAM (-z) */
     int32_t j_type; /*!< how indels are justified in alignment (-l) */
+    int32_t reads_queue_size;  /*!< the reads queue size (-q) */
+    int32_t num_threads;  /*!< the number of threads (-n) */
 } fmap_sam2fs_opt_t;
 
 #ifdef HAVE_SAMTOOLS
