@@ -386,10 +386,11 @@ fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
 
   // create the cigar
   cigar = bam1_cigar(b);
-  for(i=0;i<n_cigar;i++) {
+  for(i=0;i<n_cigar;i++) { // clear
       cigar[0] = 0;
   }
-  cigar[0] = 1u << 4 | fmap_sam_get_type(ref[0], read[0]);
+  last_type = fmap_sam_get_type(ref[0], read[0]);
+  cigar[0] = 1u << 4 | last_type;
   for(i=1,n_cigar=0;i<len;i++) {
       int32_t cur_type = fmap_sam_get_type(ref[i], read[i]);
       if(cur_type == last_type) {
