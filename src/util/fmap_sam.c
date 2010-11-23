@@ -228,7 +228,7 @@ fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, fmap_refseq_t *refseq,
 // from bam_md.c in SAMtools
 // modified not fill in the NM tag, and not to start the reference a c->pos
 static void 
-bam_fillmd1_core(bam1_t *b, char *ref)
+fmap_sam_md1_core(bam1_t *b, char *ref)
 {
   uint8_t *seq = bam1_seq(b);
   uint32_t *cigar = bam1_cigar(b);
@@ -302,10 +302,21 @@ bam_fillmd1_core(bam1_t *b, char *ref)
 }
 
 // from bam_md.c in SAMtools
-static void 
-bam_fillmd1(bam1_t *b, char *ref)
+void 
+fmap_sam_md1(bam1_t *b, char *ref, int32_t len)
 {
-  bam_fillmd1_core(b, ref);
+  int32_t i, j;
+  char *ref_tmp = NULL;
+  ref_tmp = fmap_malloc(sizeof(char) * (1 + len), "ref_tmp");
+  for(i=j=0;i<len;i++) {
+      if('-' != ref[i] && 'H' != ref[i]) {
+          ref_tmp[j] = ref[i];
+          j++;
+      }
+  }
+  ref_tmp[j]='\0';
+  fmap_sam_md1_core(b, ref_tmp);
+  free(ref_tmp);
 }
 
 // soft-clipping is not supported
@@ -326,8 +337,7 @@ fmap_sam_get_type(char ref, char read)
 void
 fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
 {
-  int32_t i, j, n_cigar, last_type;
-  char *ref_tmp=NULL;
+  int32_t i, n_cigar, last_type;
   uint32_t *cigar;
   int32_t diff;
 
@@ -394,17 +404,5 @@ fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
       last_type = cur_type;
   }
   n_cigar++;
-
-  // update MD
-  ref_tmp = fmap_malloc(sizeof(char) * (1 + len), "ref_tmp");
-  for(i=j=0;i<len;i++) {
-      if('-' != ref[i]) {
-          ref_tmp[j] = ref[i];
-          j++;
-      }
-  }
-  ref_tmp[j]='\0';
-  bam_fillmd1(b, ref_tmp);
-  free(ref_tmp);
 }
 #endif

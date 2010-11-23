@@ -62,7 +62,7 @@ static bam1_t *
 fmap_sam2fs_copy_to_sam(bam1_t *bam_old, fmap_fsw_path_t *path, int32_t path_len, int32_t score)
 {
   bam1_t *bam_new = NULL;
-  int32_t i;
+  int32_t i, j;
   uint32_t *cigar;
   int32_t n_cigar;
   uint8_t *old_score;
@@ -96,9 +96,31 @@ fmap_sam2fs_copy_to_sam(bam1_t *bam_old, fmap_fsw_path_t *path, int32_t path_len
   // TODO: soft-clipping...
   fmap_sam2fs_bam_alloc_data(bam_new, bam_new->data_len);
   cigar = fmap_fsw_path2cigar(path, path_len, &n_cigar);
+  // remove HP edits
+  for(i=j=0;i<n_cigar;i++) {
+      switch(cigar[i] & 0xf) {
+        case FMAP_FSW_FROM_HP_PLUS: // deletion
+          cigar[i] = ((cigar[i] >> 4) << 4) | FMAP_FSW_FROM_D;
+          break;
+        case FMAP_FSW_FROM_HP_MINUS: // insertion
+          cigar[i] = ((cigar[i] >> 4) << 4) | FMAP_FSW_FROM_I;
+          break;
+        default:
+          break;
+      }
+      if(0 < j && (cigar[j-1] & 0xf) == (cigar[i] & 0xf)) {
+          cigar[j-1] = ((cigar[j-1] >> 4) + (cigar[i] >> 4)) << 4;
+      }
+      else {
+          j++;
+      }
+  }
+  n_cigar = j;
+  // allocate
   bam_new->core.n_cigar = n_cigar;
   bam_new->data_len += bam_new->core.n_cigar * sizeof(uint32_t);
   fmap_sam2fs_bam_alloc_data(bam_new, bam_new->data_len);
+  // copy over
   for(i=0;i<bam_new->core.n_cigar;i++) {
       bam1_cigar(bam_new)[i] = cigar[i];
   }
@@ -394,26 +416,29 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
     case FMAP_SAM2FS_OUTPUT_SAM:
       bam = fmap_sam2fs_copy_to_sam(bam, path, path_len, score);
 
-      if(FMAP_FSW_NO_JUSTIFY != j_type) {
-          
-          fmap_fsw_get_aln(path, path_len, flow_order_tmp, (uint8_t*)ref_bases, 
-                           (BAM_FREVERSE & bam->core.flag) ? 1 : 0,
-                           &ref, &read, &aln, j_type);
+      fmap_fsw_get_aln(path, path_len, flow_order_tmp, (uint8_t*)ref_bases, 
+                       (BAM_FREVERSE & bam->core.flag) ? 1 : 0,
+                       &ref, &read, &aln, j_type);
 
-          if((BAM_FREVERSE & bam->core.flag)) { // set it the forward strand of the reference
-              for(i=0;i<(path_len>>1);i++) {
-                  char tmp;
-                  tmp = ref[i]; ref[i] = ref[path_len-i-1]; ref[path_len-i-1] = tmp;
-                  tmp = read[i]; read[i] = read[path_len-i-1]; read[path_len-i-1] = tmp;
-                  tmp = aln[i]; aln[i] = aln[path_len-i-1]; aln[path_len-i-1] = tmp;
-              }
+      if((BAM_FREVERSE & bam->core.flag)) { // set it the forward strand of the reference
+          for(i=0;i<(path_len>>1);i++) {
+              char tmp;
+              tmp = ref[i]; ref[i] = ref[path_len-i-1]; ref[path_len-i-1] = tmp;
+              tmp = read[i]; read[i] = read[path_len-i-1]; read[path_len-i-1] = tmp;
+              tmp = aln[i]; aln[i] = aln[path_len-i-1]; aln[path_len-i-1] = tmp;
           }
-
-          // do not worry about read fitting since fmap_fsw_get_aln handles this
-          // above
-          fmap_sam_left_justify(bam, ref, read, path_len);
-          free(ref); free(read); free(aln);
       }
+
+      // do not worry about read fitting since fmap_fsw_get_aln handles this
+      // above
+      if(FMAP_FSW_NO_JUSTIFY != j_type) {
+          fmap_sam_left_justify(bam, ref, read, path_len);
+      }
+
+      // update MD
+      fmap_sam_md1(bam, ref, path_len);
+
+      free(ref); free(read); free(aln); 
       break;
   }
 
