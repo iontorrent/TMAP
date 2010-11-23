@@ -546,7 +546,7 @@ fmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, fmap_sam2fs_opt_
   bam1_t *b = NULL;
   bam1_t **bams = NULL;
   int32_t reads_queue_size;
-  int32_t buffer_length;
+  int32_t buffer_length, n_reads_processed = 0;
 
   fp_in = samopen(fn_in, sam_open_flags, 0);
   if(NULL == fp_in) fmap_error(fn_in, Exit, OpenFileError);
@@ -574,6 +574,7 @@ fmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, fmap_sam2fs_opt_
       }
       bams = fmap_malloc(sizeof(bam1_t*)*reads_queue_size, "bams");
 
+      fmap_progress_print("processing reads");
       do {
           // init
           for(i=0;i<reads_queue_size;i++) {
@@ -633,6 +634,7 @@ fmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, fmap_sam2fs_opt_
 #endif
 
           // write to SAM/BAM if necessary
+          fmap_progress_print("writing alignments");
           for(i=0;i<buffer_length;i++) {
               if(samwrite(fp_out, bams[i]) < 0) {
                   fmap_error(NULL, Exit, WriteFileError);
@@ -644,6 +646,9 @@ fmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, fmap_sam2fs_opt_
               bam_destroy1(bams[i]);
               bams[i] = NULL;
           }
+
+          n_reads_processed += buffer_length;
+          fmap_progress_print2("processed %d reads", n_reads_processed);
       } while(0 < buffer_length);
   
       // free
