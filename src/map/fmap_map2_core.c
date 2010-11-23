@@ -274,7 +274,7 @@ fmap_map2_core_aln(const fmap_map2_opt_t *opt, const fmap_bwtl_t *target,
       for(i = 0; i < v->n; ++i) { // test max depth and band width
           fmap_map2_cell_t *p = v->array + i;
           if(p->match_sa.l == 0) continue;
-          if(p->tlen - (int)p->qlen > opt->sw_offset || (int)p->qlen - p->tlen > opt->sw_offset) {
+          if(p->tlen - (int)p->qlen > opt->bw || (int)p->qlen - p->tlen > opt->bw) {
               p->match_sa.k = p->match_sa.l = 0;
               p->match_sa.hi = p->match_sa.offset = 0;
               if(p->ppos >= 0) v->array[p->ppos].cpos[p->pj] = -5;

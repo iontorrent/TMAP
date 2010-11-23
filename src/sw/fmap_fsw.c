@@ -826,12 +826,28 @@ fmap_fsw_fitting_core(uint8_t *seq, int32_t len,
                              INT32_MIN, NULL);
 }
 
+static inline
+uint32_t fmap_fsw_path2cigar_get_type(uint32_t ctype)
+{
+  switch(ctype) {
+    case FMAP_FSW_FROM_HP_PLUS: // deletion
+      return FMAP_FSW_FROM_D;
+      break;
+    case FMAP_FSW_FROM_HP_MINUS: // insertion
+      return FMAP_FSW_FROM_I;
+      break;
+    default:
+      break;
+  }
+  return ctype;
+}
+
 uint32_t *
-fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_cigar)
+fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_cigar, int32_t rm_hp)
 {
   int32_t i, n;
   uint32_t *cigar;
-  uint8_t dpscore_last_type;
+  uint8_t dpscore_last_type, dpscore_cur_type;
 
   // Note: we could just use the function 'fmap_sw_path2cigar'
 
@@ -840,21 +856,48 @@ fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_ci
       return 0;
   }
 
-  dpscore_last_type = path->ctype;
-  for (i = n = 1; i < path_len; ++i) {
-      if (dpscore_last_type != path[i].ctype) ++n;
-      dpscore_last_type = path[i].ctype;
-  }
-  *n_cigar = n;
-  cigar = fmap_malloc(*n_cigar * 4, "cigar");
-
-  cigar[0] = 1u << 4 | path[path_len-1].ctype;
-  dpscore_last_type = path[path_len-1].ctype;
-  for (i = path_len - 2, n = 0; i >= 0; --i) {
-      if (path[i].ctype == dpscore_last_type) cigar[n] += 1u << 4;
-      else {
-          cigar[++n] = 1u << 4 | path[i].ctype;
+  if(0 == rm_hp) {
+      dpscore_last_type = path->ctype;
+      for (i = n = 1; i < path_len; ++i) {
+          if (dpscore_last_type != path[i].ctype) ++n;
           dpscore_last_type = path[i].ctype;
+      }
+      *n_cigar = n;
+      cigar = fmap_malloc(*n_cigar * 4, "cigar");
+
+      cigar[0] = 1u << 4 | path[path_len-1].ctype;
+      dpscore_last_type = path[path_len-1].ctype;
+      for (i = path_len - 2, n = 0; i >= 0; --i) {
+          if (path[i].ctype == dpscore_last_type) cigar[n] += 1u << 4;
+          else {
+              cigar[++n] = 1u << 4 | path[i].ctype;
+              dpscore_last_type = path[i].ctype;
+          }
+      }
+  }
+  else {
+      // get the # of cigar operators
+      dpscore_last_type = path->ctype;
+      for (i = n = 1; i < path_len; ++i) {
+          // get the current type
+          dpscore_cur_type = fmap_fsw_path2cigar_get_type(path[i].ctype);
+          if (dpscore_last_type != dpscore_cur_type) ++n;
+          dpscore_last_type = dpscore_cur_type;
+      }
+      *n_cigar = n;
+      cigar = fmap_malloc(*n_cigar * 4, "cigar");
+          
+      // get the last type
+      dpscore_last_type = fmap_fsw_path2cigar_get_type(path[path_len-1].ctype);
+      cigar[0] = 1u << 4 | dpscore_last_type;
+      for (i = path_len - 2, n = 0; i >= 0; --i) {
+          // get the current type
+          dpscore_cur_type = fmap_fsw_path2cigar_get_type(path[i].ctype);
+          if (dpscore_cur_type == dpscore_last_type) cigar[n] += 1u << 4;
+          else {
+              cigar[++n] = 1u << 4 | dpscore_cur_type;
+              dpscore_last_type = dpscore_cur_type;
+          }
       }
   }
 
@@ -941,7 +984,7 @@ fmap_fsw_left_justify(char *ref, char *read, char *aln, int32_t len)
           start_del = start_ins = end_del = end_ins = -1;
       }
   }
-  
+
   // reverse
   for(i=0;i<(len>>1);i++) {
       c = ref[i]; ref[i] = ref[len-i-1]; ref[len-i-1] = c;
@@ -1015,46 +1058,48 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
   (*read)[path_len] = '\0';
 
   // return based on sequencing order
-  if(0 == strand) {
-      switch(j_type) {
-        case FMAP_FSW_NO_JUSTIFY:
-          break;
-        case FMAP_FSW_JUSTIFY_LEFT_REF:
-        case FMAP_FSW_JUSTIFY_LEFT_READ:
-          fmap_fsw_left_justify((*ref), (*read), (*aln), path_len);
-        default:
-          break;
+  if(FMAP_FSW_NO_JUSTIFY != j_type) {
+      if(0 == strand) {
+          switch(j_type) {
+            case FMAP_FSW_NO_JUSTIFY:
+              break;
+            case FMAP_FSW_JUSTIFY_LEFT_REF:
+            case FMAP_FSW_JUSTIFY_LEFT_READ:
+              fmap_fsw_left_justify((*ref), (*read), (*aln), path_len);
+            default:
+              break;
+          }
       }
-  }
-  else {
-      switch(j_type) {
-        case FMAP_FSW_NO_JUSTIFY:
-        case FMAP_FSW_JUSTIFY_LEFT_REF:
-          // do this before reversing
-          fmap_fsw_left_justify((*ref), (*read), (*aln), path_len);
-          break;
-        case FMAP_FSW_JUSTIFY_LEFT_READ:
-          // do this after reversing
-        default:
-          break;
-      }
+      else {
+          switch(j_type) {
+            case FMAP_FSW_JUSTIFY_LEFT_REF:
+              // do this before reversing
+              fmap_fsw_left_justify((*ref), (*read), (*aln), path_len);
+              break;
+            case FMAP_FSW_NO_JUSTIFY:
+            case FMAP_FSW_JUSTIFY_LEFT_READ:
+              // do this after reversing
+            default:
+              break;
+          }
 
-      for(i=0;i<(path_len>>1);i++) {
-          char tmp;
-          tmp = (*ref)[i]; (*ref)[i] = (*ref)[path_len-i-1]; (*ref)[path_len-i-1] = tmp;
-          tmp = (*read)[i]; (*read)[i] = (*read)[path_len-i-1]; (*read)[path_len-i-1] = tmp;
-          tmp = (*aln)[i]; (*aln)[i] = (*aln)[path_len-i-1]; (*aln)[path_len-i-1] = tmp;
-      }
+          for(i=0;i<(path_len>>1);i++) {
+              char tmp;
+              tmp = (*ref)[i]; (*ref)[i] = (*ref)[path_len-i-1]; (*ref)[path_len-i-1] = tmp;
+              tmp = (*read)[i]; (*read)[i] = (*read)[path_len-i-1]; (*read)[path_len-i-1] = tmp;
+              tmp = (*aln)[i]; (*aln)[i] = (*aln)[path_len-i-1]; (*aln)[path_len-i-1] = tmp;
+          }
 
-      switch(j_type) {
-        case FMAP_FSW_NO_JUSTIFY:
-        case FMAP_FSW_JUSTIFY_LEFT_REF:
-          break;
-        case FMAP_FSW_JUSTIFY_LEFT_READ:
-          fmap_fsw_left_justify((*ref), (*read), (*aln), path_len);
-          break;
-        default:
-          break;
+          switch(j_type) {
+            case FMAP_FSW_NO_JUSTIFY:
+            case FMAP_FSW_JUSTIFY_LEFT_REF:
+              break;
+            case FMAP_FSW_JUSTIFY_LEFT_READ:
+              fmap_fsw_left_justify((*ref), (*read), (*aln), path_len);
+              break;
+            default:
+              break;
+          }
       }
   }
 }

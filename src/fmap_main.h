@@ -16,6 +16,8 @@ fmap_map2_main(int argc, char *argv[]);
 extern int
 fmap_map3_main(int argc, char *argv[]);
 extern int 
+fmap_map_all_main(int argc, char *argv[]);
+extern int 
 fmap_refseq_fasta2pac_main(int argc, char *argv[]);
 extern int 
 fmap_bwt_pac2bwt_main(int argc, char *argv[]);

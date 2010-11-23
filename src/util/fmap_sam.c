@@ -50,7 +50,7 @@ fmap_sam_print_unmapped(fmap_file_t *fp, fmap_seq_t *seq)
 static inline fmap_string_t *
 fmap_sam_md(fmap_refseq_t *refseq, char *read_bases, // read bases are characters
             uint32_t seqid, uint32_t pos, // seqid and pos are 0-based
-            uint32_t *cigar, int32_t n_cigar)
+            uint32_t *cigar, int32_t n_cigar, int32_t *nm)
 {
   int32_t i, j;
   uint32_t ref_i, read_i;
@@ -58,7 +58,9 @@ fmap_sam_md(fmap_refseq_t *refseq, char *read_bases, // read bases are character
   uint8_t read_base, ref_base;
   fmap_string_t *md=NULL;
 
+
   md = fmap_string_init(32);
+  (*nm) = 0;
 
   read_i = 0;
   ref_i = refseq->annos[seqid].offset + pos;
@@ -82,6 +84,7 @@ fmap_sam_md(fmap_refseq_t *refseq, char *read_bases, // read bases are character
               else {
                   fmap_string_lsprintf(md, md->l, "%d%c", l, "ACGTN"[ref_base]);
                   l = 0;
+                  (*nm)++;
               }
               read_i++;
               ref_i++; 
@@ -90,6 +93,7 @@ fmap_sam_md(fmap_refseq_t *refseq, char *read_bases, // read bases are character
       }
       else if(BAM_CINS == op) {
           read_i += op_len;
+          (*nm) += op_len;
       }
       else if(BAM_CDEL == op) {
           fmap_string_lsprintf(md, md->l, "%d^", l);
@@ -100,6 +104,7 @@ fmap_sam_md(fmap_refseq_t *refseq, char *read_bases, // read bases are character
               ref_i++;
           }
           if(j < op_len) break;
+          (*nm) += op_len;
           l=0;
       }
       else if(BAM_CREF_SKIP == op) {
@@ -134,6 +139,7 @@ fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, fmap_refseq_t *refseq,
   fmap_string_t *name=NULL, *bases=NULL, *qualities=NULL;
   uint32_t *cigar_tmp = NULL, cigar_tmp_allocated = 0;
   fmap_string_t *md;
+  int32_t nm;
 
   name = fmap_seq_get_name(seq);
   bases = fmap_seq_get_bases(seq);
@@ -196,8 +202,8 @@ fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, fmap_refseq_t *refseq,
                     bases->s, qualities->s);
 
   // MD
-  md = fmap_sam_md(refseq, bases->s, seqid, pos, cigar_tmp, n_cigar);
-  fmap_file_fprintf(fp, "\tMD:Z:%s", md->s);
+  md = fmap_sam_md(refseq, bases->s, seqid, pos, cigar_tmp, n_cigar, &nm);
+  fmap_file_fprintf(fp, "\tMD:Z:%s\tNM:i:%d", md->s, nm);
   fmap_string_destroy(md);
 
   // optional tags
@@ -222,7 +228,7 @@ fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, fmap_refseq_t *refseq,
 // from bam_md.c in SAMtools
 // modified not fill in the NM tag, and not to start the reference a c->pos
 static void 
-bam_fillmd1_core(bam1_t *b, char *ref)
+fmap_sam_md1_core(bam1_t *b, char *ref)
 {
   uint8_t *seq = bam1_seq(b);
   uint32_t *cigar = bam1_cigar(b);
@@ -296,10 +302,21 @@ bam_fillmd1_core(bam1_t *b, char *ref)
 }
 
 // from bam_md.c in SAMtools
-static void 
-bam_fillmd1(bam1_t *b, char *ref)
+void 
+fmap_sam_md1(bam1_t *b, char *ref, int32_t len)
 {
-  bam_fillmd1_core(b, ref);
+  int32_t i, j;
+  char *ref_tmp = NULL;
+  ref_tmp = fmap_malloc(sizeof(char) * (1 + len), "ref_tmp");
+  for(i=j=0;i<len;i++) {
+      if('-' != ref[i] && 'H' != ref[i]) {
+          ref_tmp[j] = ref[i];
+          j++;
+      }
+  }
+  ref_tmp[j]='\0';
+  fmap_sam_md1_core(b, ref_tmp);
+  free(ref_tmp);
 }
 
 // soft-clipping is not supported
@@ -320,8 +337,7 @@ fmap_sam_get_type(char ref, char read)
 void
 fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
 {
-  int32_t i, j, n_cigar, last_type;
-  char *ref_tmp=NULL;
+  int32_t i, n_cigar, last_type;
   uint32_t *cigar;
   int32_t diff;
 
@@ -370,10 +386,11 @@ fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
 
   // create the cigar
   cigar = bam1_cigar(b);
-  for(i=0;i<n_cigar;i++) {
+  for(i=0;i<n_cigar;i++) { // clear
       cigar[0] = 0;
   }
-  cigar[0] = 1u << 4 | fmap_sam_get_type(ref[0], read[0]);
+  last_type = fmap_sam_get_type(ref[0], read[0]);
+  cigar[0] = 1u << 4 | last_type;
   for(i=1,n_cigar=0;i<len;i++) {
       int32_t cur_type = fmap_sam_get_type(ref[i], read[i]);
       if(cur_type == last_type) {
@@ -388,17 +405,5 @@ fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
       last_type = cur_type;
   }
   n_cigar++;
-
-  // update MD
-  ref_tmp = fmap_malloc(sizeof(char) * (1 + len), "ref_tmp");
-  for(i=j=0;i<len;i++) {
-      if('-' != ref[i]) {
-          ref_tmp[j] = ref[i];
-          j++;
-      }
-  }
-  ref_tmp[j]='\0';
-  bam_fillmd1(b, ref_tmp);
-  free(ref_tmp);
 }
 #endif

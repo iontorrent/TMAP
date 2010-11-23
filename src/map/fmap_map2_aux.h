@@ -118,6 +118,7 @@ fmap_map2_sam_destroy(fmap_map2_sam_t *sam);
   @param  bwt     pointer to the bwt structure
   @param  sa      pointer to the SA structure
   @param  pool    pointer to a global memory pool
+  @return         pointer to the alignment
   */
 fmap_map2_sam_t *
 fmap_map2_aux_core(fmap_map2_opt_t *_opt,

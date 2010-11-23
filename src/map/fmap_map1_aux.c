@@ -202,29 +202,30 @@ fmap_map1_aux_get_bam_state(int state)
 
 #define __add_to_cigar() do { \
     if(0 < op_len) { \
-        if(aln->n_cigar <= cigar_i) { \
-            aln->n_cigar++; \
-            aln->cigar = fmap_realloc(aln->cigar, sizeof(uint32_t)*aln->n_cigar, "aln->cigar"); \
+        if(hit->n_cigar <= cigar_i) { \
+            hit->n_cigar++; \
+            hit->cigar = fmap_realloc(hit->cigar, sizeof(uint32_t)*hit->n_cigar, "hit->cigar"); \
         } \
-        aln->cigar[cigar_i] = (op_len << 4 ) | fmap_map1_aux_get_bam_state(op); \
+        hit->cigar[cigar_i] = (op_len << 4 ) | fmap_map1_aux_get_bam_state(op); \
         cigar_i++; \
     } \
 } while(0)
 
-fmap_map1_aln_t **
+fmap_map1_aln_t *
 fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
                    fmap_bwt_match_width_t *width[2], fmap_bwt_match_width_t *seed_width[2], fmap_map1_opt_t *opt,
-                   fmap_map1_aux_stack_t *stack, int32_t *n_alns)
+                   fmap_map1_aux_stack_t *stack)
 {
   int32_t max_mm = opt->max_mm, max_gapo = opt->max_gapo, max_gape = opt->max_gape, seed_max_mm = opt->seed_max_mm;
   int32_t best_score, next_best_score;
   int32_t best_cnt = 0;
   int32_t j, num_n = 0;
   int32_t max_edit_score;
-  int32_t alns_num = 0; 
   fmap_bwt_match_occ_t match_sa_start;
-  fmap_map1_aln_t **alns=NULL;
   fmap_string_t *bases[2]={NULL,NULL};
+  fmap_map1_aln_t *alns;
+
+  alns = fmap_map1_aln_init();
 
   best_score = next_best_score = aln_score(max_mm+1, max_gapo+1, max_gape+1, opt);
 
@@ -314,7 +315,7 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
       if(1 == hit_found) { // alignment found
           int32_t score = aln_score(e->n_mm, e->n_gapo, e->n_gape, opt);
           int32_t do_add = 1;
-          if(alns_num == 0) {
+          if(alns->n == 0) {
               best_score = score;
               best_cnt = 0;
           }
@@ -335,9 +336,9 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
               }
           }
           if(0 < e->n_gapo) { // check if the same alignment has been found 
-              for(j=0;j<alns_num;j++) {
-                  if(alns[j]->k == match_sa_cur.k && alns[j]->l == match_sa_cur.l) {
-                      if(score < alns[j]->score) { // bug!
+              for(j=0;j<alns->n;j++) {
+                  if(alns->hits[j].k == match_sa_cur.k && alns->hits[j].l == match_sa_cur.l) {
+                      if(score < alns->hits[j].score) { // bug!
                           fmap_error("bug encountered", Exit, OutOfRange);
                       }
                       do_add = 0;
@@ -347,25 +348,24 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
           }
           if(do_add) { // append
               uint32_t op, op_len, cigar_i;
-              fmap_map1_aln_t *aln = NULL;
+              fmap_map1_hit_t *hit = NULL;
               fmap_map1_aux_stack_entry_t *cur = e;
 
-              alns_num++;
-              alns = fmap_realloc(alns, sizeof(fmap_map1_aln_t*)*alns_num, "alns");
-              alns[alns_num-1] = fmap_calloc(1, sizeof(fmap_map1_aln_t), "alns[alns_num-1]");
-              aln = alns[alns_num-1];
+              alns->n++;
+              alns->hits = fmap_realloc(alns->hits, sizeof(fmap_map1_hit_t)*alns->n, "alns->hits");
+              hit = &alns->hits[alns->n-1];
 
-              aln->score = cur->score;
-              aln->n_mm = cur->n_mm;
-              aln->n_gapo = cur->n_gapo;
-              aln->n_gape = cur->n_gape;
-              aln->strand = cur->strand;
-              aln->k = cur->match_sa.k;
-              aln->l = cur->match_sa.l;
+              hit->score = cur->score;
+              hit->n_mm = cur->n_mm;
+              hit->n_gapo = cur->n_gapo;
+              hit->n_gape = cur->n_gape;
+              hit->strand = cur->strand;
+              hit->k = cur->match_sa.k;
+              hit->l = cur->match_sa.l;
 
               // cigar
-              aln->n_cigar = 1 + cur->n_gapo;
-              aln->cigar = fmap_malloc(sizeof(uint32_t)*aln->n_cigar, "aln->cigar");
+              hit->n_cigar = 1 + cur->n_gapo;
+              hit->cigar = fmap_malloc(sizeof(uint32_t)*hit->n_cigar, "hit->cigar");
               cigar_i = 0;
 
               if(offset < len) { // we used 'fmap_bwt_match_exact_alt' 
@@ -390,16 +390,20 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
               }
               __add_to_cigar();
 
-              if(cigar_i < aln->n_cigar) { // reallocate to fit
-                  aln->n_cigar = cigar_i;
-                  aln->cigar = fmap_realloc(aln->cigar, sizeof(uint32_t)*aln->n_cigar, "aln->cigar");
+              if(cigar_i < hit->n_cigar) { // reallocate to fit
+                  hit->n_cigar = cigar_i;
+                  hit->cigar = fmap_realloc(hit->cigar, sizeof(uint32_t)*hit->n_cigar, "hit->cigar");
               }
 
               // reverse the cigar 
-              for(cigar_i=0;cigar_i<(aln->n_cigar >> 1);cigar_i++) {
-                  op = aln->cigar[aln->n_cigar-1-cigar_i];
-                  aln->cigar[aln->n_cigar-1-cigar_i] = aln->cigar[cigar_i];
-                  aln->cigar[cigar_i] = op;
+              for(cigar_i=0;cigar_i<(hit->n_cigar >> 1);cigar_i++) {
+                  op = hit->cigar[hit->n_cigar-1-cigar_i];
+                  hit->cigar[hit->n_cigar-1-cigar_i] = hit->cigar[cigar_i];
+                  hit->cigar[cigar_i] = op;
+              }
+
+              if(NULL == hit->cigar) {
+                  fmap_error(NULL, Exit, OutOfRange);
               }
 
               // TODO: use the shadow ?
@@ -490,12 +494,6 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
           }
       }
   }
-
-  if(0 < alns_num) { // add trailing null
-      alns = fmap_realloc(alns, sizeof(fmap_map1_aln_t*)*(1+alns_num), "alns");
-      alns[alns_num] = NULL;
-  }
-  (*n_alns) = alns_num;
 
   return alns;
 }

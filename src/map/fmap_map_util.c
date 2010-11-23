@@ -35,7 +35,7 @@ fmap_map_util_fsw_aln_destroy(fmap_map_util_fsw_aln_t *x)
 
 static inline void
 fmap_map_util_fsw(fmap_sff_t *sff, fmap_fsw_param_t *par, fmap_map_util_fsw_aln_t *aln, fmap_refseq_t *refseq,
-                  int32_t sw_offset, int32_t aln_global, int32_t score_thr)
+                  int32_t bw, int32_t aln_global, int32_t score_thr)
 {
   int32_t i, j, k, l;
   uint8_t *target = NULL;
@@ -115,7 +115,7 @@ fmap_map_util_fsw(fmap_sff_t *sff, fmap_fsw_param_t *par, fmap_map_util_fsw_aln_
       }
 
       // add to the band width
-      param.band_width += 2 * sw_offset;
+      param.band_width += 2 * bw;
 
       // make sure we have enough memory for the path
       while(path_mem <= target_len + fseq[h->strand]->num_flows) { // lengthen the path
@@ -137,7 +137,7 @@ fmap_map_util_fsw(fmap_sff_t *sff, fmap_fsw_param_t *par, fmap_map_util_fsw_aln_
       if(path_len < 0) { // update
           h->pos = (ref_start-1) + (path[path_len-1].j-1);
           free(h->cigar);
-          h->cigar = fmap_fsw_path2cigar(path, path_len, &h->n_cigar);
+          h->cigar = fmap_fsw_path2cigar(path, path_len, &h->n_cigar, 1);
 
           if(0 < path[path_len-1].i) { // skipped beginning flows
               // get the number of bases to clip
@@ -202,7 +202,7 @@ fmap_map_util_map2_fsw(fmap_sff_t *sff, fmap_map2_sam_t *sam, fmap_refseq_t *ref
   }
 
   // re-align
-  fmap_map_util_fsw(sff, &par, x, refseq, opt->sw_offset, opt->aln_global, opt->score_thr);
+  fmap_map_util_fsw(sff, &par, x, refseq, opt->bw, opt->aln_global, opt->score_thr);
 
   // copy x into sam
   for(i=0;i<sam->num_entries;i++) {
@@ -248,7 +248,7 @@ fmap_map_util_map3_fsw(fmap_sff_t *sff, fmap_map3_aln_t *aln, fmap_refseq_t *ref
   }
 
   // re-align
-  fmap_map_util_fsw(sff, &par, x, refseq, opt->sw_offset, opt->aln_global, opt->score_thr);
+  fmap_map_util_fsw(sff, &par, x, refseq, opt->bw, opt->aln_global, opt->score_thr);
 
   // copy x into aln
   for(i=0;i<aln->n;i++) {

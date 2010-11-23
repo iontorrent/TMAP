@@ -48,18 +48,27 @@ fmap_sam_print_unmapped(fmap_file_t *fp, fmap_seq_t *seq);
   */
 inline void
 fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, fmap_refseq_t *refseq,
-                    uint8_t strand, uint32_t seqid, uint32_t pos,
-                    uint8_t mapq, uint32_t *cigar, int32_t n_cigar,
-                    const char *format, ...);
+                      uint8_t strand, uint32_t seqid, uint32_t pos,
+                      uint8_t mapq, uint32_t *cigar, int32_t n_cigar,
+                      const char *format, ...);
 
 #ifdef HAVE_SAMTOOLS
+/*!
+  recreates an MD given the new reference/read alignment
+  @param  b     the SAM/BAM structure
+  @param  ref   the reference
+  @param  len   the length of the alignment
+  */
+void 
+fmap_sam_md1(bam1_t *b, char *ref, int32_t len);
+
 /*!
   left-justifies the cigar and MD given the new reference/read alignment
   @param  b     the SAM/BAM structure
   @param  ref   the reference
   @param  read  the read
   @param  len   the length of the alignment
- */
+  */
 void
 fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len);
 #endif

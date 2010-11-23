@@ -1,8 +1,9 @@
 #ifndef FMAP_INDEX_H_
 #define FMAP_INDEX_H_
 
-#define FMAP_INDEX_LARGE_GENOME 0x40000000 
-#define FMAP_INDEX_TOO_BIG_GENOME 0x100000000 
+#define FMAP_INDEX_LARGE_GENOME 0x1000000
+// (2^32) - 1
+#define FMAP_INDEX_TOO_BIG_GENOME 0xFFFFFFFF
 
 /*! 
   @details  Constructs the packed reference sequence, BWT string, and Suffix Array.
