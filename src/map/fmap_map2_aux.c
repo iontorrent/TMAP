@@ -444,7 +444,10 @@ fmap_map2_aux_fix_cigar(fmap_refseq_t *refseq, fmap_map2_hit_t *p, int32_t n_cig
   int32_t x, y, i;
   uint32_t coor, seqid, refl;
 
-  fmap_refseq_pac2real(refseq, p->k, p->len, &seqid, &coor);
+  if(0 == fmap_refseq_pac2real(refseq, p->k, p->len, &seqid, &coor)) {
+      return -1;
+  }
+
   refl = refseq->annos[seqid].len;
   x = coor; y = 0;
   // test if the alignment goes beyond the boundary
@@ -572,7 +575,8 @@ fmap_map1_aux_store_hits(fmap_refseq_t *refseq, fmap_map2_opt_t *opt,
 
       if(p->l == 0) {
           aln->n_cigar[i] = fmap_map2_aux_fix_cigar(refseq, p, aln->n_cigar[i], aln->cigar[i]);
-          if(fmap_refseq_pac2real(refseq, p->k, p->len, &seqid, &coor) <= 0) {
+          if(aln->n_cigar[i] < 0
+             || fmap_refseq_pac2real(refseq, p->k, p->len, &seqid, &coor) <= 0) {
               continue; // spanning two or more chromosomes
           }
       }
