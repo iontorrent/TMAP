@@ -76,7 +76,8 @@ fmap_sam2fs_bam_alloc_data(bam1_t *bam, int size)
 
 
 static bam1_t *
-fmap_sam2fs_copy_to_sam(bam1_t *bam_old, fmap_fsw_path_t *path, int32_t path_len, int32_t score)
+fmap_sam2fs_copy_to_sam(bam1_t *bam_old, fmap_fsw_path_t *path, int32_t path_len, int32_t score, 
+                        int32_t soft_clip_start, int32_t soft_clip_end)
 {
   bam1_t *bam_new = NULL;
   int32_t i, j;
@@ -133,6 +134,20 @@ fmap_sam2fs_copy_to_sam(bam1_t *bam_old, fmap_fsw_path_t *path, int32_t path_len
       }
   }
   n_cigar = j;
+  // add soft-clipping
+  if(0 < soft_clip_start) {
+      cigar = fmap_realloc(cigar, sizeof(uint32_t) * (1 + n_cigar), "cigar"); 
+      for(i=n_cigar-1;0<=i;i--) {
+          cigar[i+1] = cigar[i];
+      }
+      cigar[0] = (soft_clip_start << 4) | BAM_CSOFT_CLIP;
+      n_cigar++;
+  }
+  if(0 < soft_clip_end) {
+      cigar = fmap_realloc(cigar, sizeof(uint32_t) * (1 + n_cigar), "cigar"); 
+      cigar[n_cigar] = (soft_clip_end << 4) | BAM_CSOFT_CLIP;
+      n_cigar++;
+  }
   // allocate
   bam_new->core.n_cigar = n_cigar;
   bam_new->data_len += bam_new->core.n_cigar * sizeof(uint32_t);
@@ -252,18 +267,20 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
       soft_clip_end = (cigar[bam->core.n_cigar-1] >> 4);
   }
 
+  /*
   if(0 < soft_clip_start || 0 < soft_clip_end) {
       fmap_error("Soft clipping currently not supported", Exit, OutOfRange);
   }
+  */
 
   // get the read bases
   bam_seq = bam1_seq(bam);
   read_bases = fmap_calloc(1+bam->core.l_qseq, sizeof(char), "read_bases");
-  for(i=0;i<bam->core.l_qseq;i++) {
-      read_bases[i] = bam_nt16_rev_table[bam1_seqi(bam_seq, i)]; 
+  for(i=soft_clip_start;i<bam->core.l_qseq-soft_clip_end;i++) {
+      read_bases[i-soft_clip_start] = bam_nt16_rev_table[bam1_seqi(bam_seq, i)]; 
   }
   read_bases[i]='\0';
-  read_bases_len = bam->core.l_qseq; 
+  read_bases_len = bam->core.l_qseq - soft_clip_start - soft_clip_end; 
   read_bases_mem = read_bases_len + 1;
 
   // get the reference bases
@@ -292,7 +309,8 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
         case BAM_CSOFT_CLIP:
         case BAM_CINS:
           // skip soft clipped and inserted bases 
-          j += op_len;
+          // Note: these have already been removed from read_bases
+          //j += op_len;
           break;
         case BAM_CREF_SKIP:
         case BAM_CDEL:
@@ -431,7 +449,7 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
       fmap_file_fprintf(fmap_file_stdout, "\n");
       break;
     case FMAP_SAM2FS_OUTPUT_SAM:
-      bam = fmap_sam2fs_copy_to_sam(bam, path, path_len, score);
+      bam = fmap_sam2fs_copy_to_sam(bam, path, path_len, score, soft_clip_start, soft_clip_end);
 
       fmap_fsw_get_aln(path, path_len, flow_order_tmp, (uint8_t*)ref_bases, 
                        (BAM_FREVERSE & bam->core.flag) ? 1 : 0,

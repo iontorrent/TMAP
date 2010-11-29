@@ -340,14 +340,29 @@ fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
   int32_t i, n_cigar, last_type;
   uint32_t *cigar;
   int32_t diff;
+  int32_t soft_clip_start, soft_clip_end;
 
   if(b->data_len - b->l_aux != bam1_aux(b) - b->data) {
       fmap_error("b->data_len - b->l_aux != bam1_aux(b) - b->data", Exit, OutOfRange);
   }
 
+  // keep track of soft clipping
+  n_cigar = soft_clip_start = soft_clip_end = 0;
+  cigar = bam1_cigar(b);
+  if(BAM_CSOFT_CLIP & cigar[0]) {
+      soft_clip_start = 1;
+      n_cigar++;
+  }
+  if(1 < b->core.n_cigar && BAM_CSOFT_CLIP & cigar[b->core.n_cigar-1]) {
+      soft_clip_end = 1;
+      n_cigar++;
+  }
+  cigar = NULL;
+
   // get the # of cigar operators
   last_type = fmap_sam_get_type(ref[0], read[0]);
-  for(i=n_cigar=1;i<len;i++) {
+  n_cigar++;
+  for(i=1;i<len;i++) {
       int32_t cur_type = fmap_sam_get_type(ref[i], read[i]);
       if(cur_type != last_type) {
           n_cigar++;
@@ -386,11 +401,12 @@ fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
 
   // create the cigar
   cigar = bam1_cigar(b);
-  for(i=0;i<n_cigar;i++) {
-      cigar[0] = 0;
+  for(i=soft_clip_start;i<n_cigar-soft_clip_end;i++) {
+      cigar[i] = 0;
   }
-  cigar[0] = 1u << 4 | fmap_sam_get_type(ref[0], read[0]);
-  for(i=1,n_cigar=0;i<len;i++) {
+  n_cigar = soft_clip_start; // skip over soft clipping etc.
+  cigar[n_cigar] = 1u << 4 | fmap_sam_get_type(ref[0], read[0]);
+  for(i=1;i<len;i++) {
       int32_t cur_type = fmap_sam_get_type(ref[i], read[i]);
       if(cur_type == last_type) {
           // add to the cigar length
@@ -403,6 +419,5 @@ fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
       }
       last_type = cur_type;
   }
-  n_cigar++;
 }
 #endif
