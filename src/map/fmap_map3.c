@@ -58,6 +58,7 @@ fmap_map3_aln_filter(fmap_seq_t *seq, fmap_map3_aln_t *aln,
       cur_score = aln->hits[i].score;
       tot_seeds += aln->hits[i].n_seeds;
       if(best_score < cur_score) {
+          best_subo = best_score;
           best_score = cur_score;
           n_best = 1;
           n_seeds = aln->hits[i].n_seeds;

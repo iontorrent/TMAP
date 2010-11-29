@@ -101,6 +101,10 @@ fmap_map_all_aln_mapq(fmap_map_all_aln_t *aln, fmap_map_all_opt_t *opt)
   for(i=0;i<aln->n;i++) {
       cur_score = aln->hits[i].score;
       if(best_score < cur_score) {
+          // save sub-optimal
+          best_subo = best_score;
+          n_best_subo = n_best;
+          // update
           best_score = cur_score;
           n_best = 1;
       }
