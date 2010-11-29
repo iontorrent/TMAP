@@ -211,6 +211,8 @@ fmap_sam2fs_aux_flow_destroy(fmap_sam2fs_aux_flow_t *a)
   free(a);
 }
 
+// query - read
+// target - reference
 void
 fmap_sam2fs_aux_flow_align(fmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uint8_t *tseq, int32_t tseq_len, uint8_t *flow_order)
 {

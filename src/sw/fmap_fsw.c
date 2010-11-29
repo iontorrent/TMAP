@@ -1071,9 +1071,14 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
 
           for(i=0;i<(path_len>>1);i++) {
               char tmp;
-              tmp = (*ref)[i]; (*ref)[i] = (*ref)[path_len-i-1]; (*ref)[path_len-i-1] = tmp;
-              tmp = (*read)[i]; (*read)[i] = (*read)[path_len-i-1]; (*read)[path_len-i-1] = tmp;
-              tmp = (*aln)[i]; (*aln)[i] = (*aln)[path_len-i-1]; (*aln)[path_len-i-1] = tmp;
+              tmp = ('-' == (*ref)[i]) ? '-' : fmap_nt_char_to_rc_char[(int)(*ref)[i]]; 
+              (*ref)[i] = ('-' == (*ref)[path_len-i-1]) ? '-' : fmap_nt_char_to_rc_char[(int)(*ref)[path_len-i-1]];
+              (*ref)[path_len-i-1] = tmp;
+              tmp = ('-' == (*read)[i]) ? '-' : fmap_nt_char_to_rc_char[(int)(*read)[i]]; 
+              (*read)[i] = ('-' == (*read)[path_len-i-1]) ? '-' : fmap_nt_char_to_rc_char[(int)(*read)[path_len-i-1]];
+              tmp = (*aln)[i];
+              (*aln)[i] = (*aln)[path_len-i-1];
+              (*aln)[path_len-i-1] = tmp;
           }
 
           switch(j_type) {
