@@ -405,7 +405,8 @@ fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
       cigar[i] = 0;
   }
   n_cigar = soft_clip_start; // skip over soft clipping etc.
-  cigar[n_cigar] = 1u << 4 | fmap_sam_get_type(ref[0], read[0]);
+  last_type = fmap_sam_get_type(ref[0], read[0]);
+  cigar[n_cigar] = 1u << 4 | last_type;
   for(i=1;i<len;i++) {
       int32_t cur_type = fmap_sam_get_type(ref[i], read[i]);
       if(cur_type == last_type) {

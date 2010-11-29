@@ -240,10 +240,11 @@ fmap_fsw_fitting_core(uint8_t *seq, int32_t len,
   @param  path      the Smith-Waterman alignment path
   @param  path_len  the Smith-Waterman alignment path length
   @param  n_cigar   pointer to the returned number of cigar operations
+  @param  rm_hp     1 if we are to remove hp edits (merge into indels), 0 otherwise
   @return           the cigar array, NULL if the path is NULL or the path length is zero 
   */
 uint32_t *
-fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_cigar);
+fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_cigar, int32_t rm_hp);
 
 /*!
   Gets the pretty-print alignment

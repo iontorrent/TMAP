@@ -111,9 +111,8 @@ fmap_sam2fs_copy_to_sam(bam1_t *bam_old, fmap_fsw_path_t *path, int32_t path_len
   bam_new->core.isize = 0;
 
   // cigar
-  // TODO: soft-clipping...
   fmap_sam2fs_bam_alloc_data(bam_new, bam_new->data_len);
-  cigar = fmap_fsw_path2cigar(path, path_len, &n_cigar);
+  cigar = fmap_fsw_path2cigar(path, path_len, &n_cigar, 1);
   // remove HP edits
   for(i=j=0;i<n_cigar;i++) {
       switch(cigar[i] & 0xf) {
