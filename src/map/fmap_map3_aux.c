@@ -422,7 +422,7 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
               score_subo = INT32_MIN;
           }
 
-          if(0 < path_len) {
+          if(0 < path_len && opt->score_thr < score) {
               fmap_map3_hit_t *hit;
 
               aln->n++;
