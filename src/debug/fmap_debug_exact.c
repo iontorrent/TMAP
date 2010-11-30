@@ -78,7 +78,7 @@ fmap_debug_exact_core_worker(fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *
   }
 
   if(0 == mapped) {
-      fmap_debug_exact_print_sam_unmapped(seq);
+      fmap_debug_exact_print_sam_unmapped(orig_seq);
   }
   
   fmap_fq_destroy(seq);
