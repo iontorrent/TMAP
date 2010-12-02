@@ -139,7 +139,7 @@ fmap_map_all_aln_mapq(fmap_map_all_aln_t *aln, fmap_map_all_opt_t *opt)
           n_best_subo = 1;
           best_subo = 0;
       }
-      mapq = (int32_t)((n_best / n_best_subo) * (best_score - best_subo) * (250.0 / best_score + 0.03 / opt->score_match) + .499);
+      mapq = (int32_t)((n_best / (1.0 * n_best_subo)) * (best_score - best_subo) * (250.0 / best_score + 0.03 / opt->score_match) + .499);
       if(mapq > 250) mapq = 250;
       if(mapq <= 0) mapq = 1;
   }
