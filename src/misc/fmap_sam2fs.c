@@ -444,7 +444,8 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
                                  read_bases_len,
                                  (uint8_t*)(ref_bases + j),
                                  i - j + 1, 
-                                 flow_order_tmp);
+                                 flow_order_tmp,
+                                 (BAM_FREVERSE & bam->core.flag) ? 1 : 0);
       fmap_file_fprintf(fmap_file_stdout, "\n");
       break;
     case FMAP_SAM2FS_OUTPUT_SAM:

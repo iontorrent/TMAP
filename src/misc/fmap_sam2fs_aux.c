@@ -214,7 +214,7 @@ fmap_sam2fs_aux_flow_destroy(fmap_sam2fs_aux_flow_t *a)
 // query - read
 // target - reference
 void
-fmap_sam2fs_aux_flow_align(fmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uint8_t *tseq, int32_t tseq_len, uint8_t *flow_order)
+fmap_sam2fs_aux_flow_align(fmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uint8_t *tseq, int32_t tseq_len, uint8_t *flow_order, int8_t strand)
 {
   int32_t i, j, k;
   int32_t ctype;
@@ -227,6 +227,19 @@ fmap_sam2fs_aux_flow_align(fmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
   // init
   f_qseq = fmap_sam2fs_aux_flow_init();
   f_tseq = fmap_sam2fs_aux_flow_init();
+
+  if(1 == strand) { // reverse
+      for(i=0;i<(qseq_len>>1);i++) {
+          uint8_t tmp = qseq[i];
+          qseq[i] = qseq[qseq_len-i-1];
+          qseq[qseq_len-i-1] = tmp;
+      }
+      for(i=0;i<(tseq_len>>1);i++) {
+          uint8_t tmp = tseq[i];
+          tseq[i] = tseq[tseq_len-i-1];
+          tseq[tseq_len-i-1] = tmp;
+      }
+  }
 
   // convert bases to flow space
   // NOTE: this will pad empty flows at the beginning and the end of the
@@ -511,23 +524,36 @@ fmap_sam2fs_aux_flow_align(fmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
 
   // print
   // read
-  fmap_file_fprintf(fp, "\t"); 
   for(i=aln->len-1;0<=i;i--) {
       if(0 <= aln->qseq[i]) fmap_file_fprintf(fp, "%d", aln->qseq[i]);
       else fmap_file_fprintf(fp, "-");
       if(0 < i) fmap_file_fprintf(fp, ","); 
   }
   // match string
+  fmap_file_fprintf(fp, "\t"); 
   for(i=aln->len-1;0<=i;i--) {
       fmap_file_fprintf(fp, "%c", aln->aln[i]);
       if(0 < i) fmap_file_fprintf(fp, ","); 
   }
-  fmap_file_fprintf(fp, "\t"); 
   // ref
+  fmap_file_fprintf(fp, "\t"); 
   for(i=aln->len-1;0<=i;i--) {
       if(0 <= aln->tseq[i]) fmap_file_fprintf(fp, "%d", aln->tseq[i]);
       else fmap_file_fprintf(fp, "-");
       if(0 < i) fmap_file_fprintf(fp, ","); 
+  }
+  
+  if(1 == strand) { // reverse
+      for(i=0;i<(qseq_len>>1);i++) {
+          uint8_t tmp = qseq[i];
+          qseq[i] = qseq[qseq_len-i-1];
+          qseq[qseq_len-i-1] = tmp;
+      }
+      for(i=0;i<(tseq_len>>1);i++) {
+          uint8_t tmp = tseq[i];
+          tseq[i] = tseq[tseq_len-i-1];
+          tseq[tseq_len-i-1] = tmp;
+      }
   }
 
   // destroy
