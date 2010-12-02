@@ -510,19 +510,22 @@ fmap_sam2fs_aux_flow_align(fmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
   }
 
   // print
+  // read
+  fmap_file_fprintf(fp, "\t"); 
   for(i=aln->len-1;0<=i;i--) {
-      if(0 <= aln->tseq[i]) fmap_file_fprintf(fp, "%d", aln->tseq[i]);
+      if(0 <= aln->qseq[i]) fmap_file_fprintf(fp, "%d", aln->qseq[i]);
       else fmap_file_fprintf(fp, "-");
       if(0 < i) fmap_file_fprintf(fp, ","); 
   }
-  fmap_file_fprintf(fp, "\t"); 
+  // match string
   for(i=aln->len-1;0<=i;i--) {
       fmap_file_fprintf(fp, "%c", aln->aln[i]);
       if(0 < i) fmap_file_fprintf(fp, ","); 
   }
   fmap_file_fprintf(fp, "\t"); 
+  // ref
   for(i=aln->len-1;0<=i;i--) {
-      if(0 <= aln->qseq[i]) fmap_file_fprintf(fp, "%d", aln->qseq[i]);
+      if(0 <= aln->tseq[i]) fmap_file_fprintf(fp, "%d", aln->tseq[i]);
       else fmap_file_fprintf(fp, "-");
       if(0 < i) fmap_file_fprintf(fp, ","); 
   }
