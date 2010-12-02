@@ -1076,6 +1076,7 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
               (*ref)[path_len-i-1] = tmp;
               tmp = ('-' == (*read)[i]) ? '-' : fmap_nt_char_to_rc_char[(int)(*read)[i]]; 
               (*read)[i] = ('-' == (*read)[path_len-i-1]) ? '-' : fmap_nt_char_to_rc_char[(int)(*read)[path_len-i-1]];
+              (*read)[path_len-i-1] = tmp;
               tmp = (*aln)[i];
               (*aln)[i] = (*aln)[path_len-i-1];
               (*aln)[path_len-i-1] = tmp;
