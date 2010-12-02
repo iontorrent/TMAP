@@ -306,10 +306,10 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
           ref_bases_len += op_len;
           break;
         case BAM_CSOFT_CLIP:
-        case BAM_CINS:
-          // skip soft clipped and inserted bases 
           // Note: these have already been removed from read_bases
-          //j += op_len;
+          break;
+        case BAM_CINS:
+          j += op_len;
           break;
         case BAM_CREF_SKIP:
         case BAM_CDEL:
