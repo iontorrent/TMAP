@@ -119,7 +119,6 @@ fmap_map2_filter_sam(fmap_seq_t *seq, fmap_map2_sam_t *sam, int32_t aln_output_m
   }
 
   // adjust mapping quality for duplicate hits
-  fprintf(stderr, "n_best=%d\n", n_best);
   if(1 < n_best) {
       for(i=0;i<sam->num_entries;i++) {
           sam->entries[i].mapq = 0;
