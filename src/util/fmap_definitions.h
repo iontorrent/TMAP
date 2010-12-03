@@ -177,4 +177,20 @@ fmap_get_reads_file_format_from_fn_int(char *fn, int32_t *reads_format, int32_t 
 char *
 fmap_get_reads_file_format_string(int format);
 
+/*!
+  reverses a given string
+  @param  seq  the string to reverse
+  @param  lne  the length of the string
+  */
+inline void
+fmap_reverse(char *seq, int32_t len);
+
+/*!
+  reverse compliments a given string
+  @param  seq  the character DNA sequence
+  @param  len  the length of the DNA sequence
+  */
+inline void
+fmap_reverse_compliment(char *seq, int32_t len); 
+
 #endif

@@ -456,12 +456,9 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
                        &ref, &read, &aln, j_type);
 
       if((BAM_FREVERSE & bam->core.flag)) { // set it the forward strand of the reference
-          for(i=0;i<(path_len>>1);i++) {
-              char tmp;
-              tmp = ref[i]; ref[i] = ref[path_len-i-1]; ref[path_len-i-1] = tmp;
-              tmp = read[i]; read[i] = read[path_len-i-1]; read[path_len-i-1] = tmp;
-              tmp = aln[i]; aln[i] = aln[path_len-i-1]; aln[path_len-i-1] = tmp;
-          }
+          fmap_reverse_compliment(ref, path_len);
+          fmap_reverse_compliment(read, path_len);
+          fmap_reverse(aln, path_len);
       }
 
       // do not worry about read fitting since fmap_fsw_get_aln handles this
