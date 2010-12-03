@@ -38,7 +38,7 @@ fmap_map2_filter_sam(fmap_seq_t *seq, fmap_map2_sam_t *sam, int32_t aln_output_m
   int32_t i, j;
   int32_t n_best = 0;
   int32_t best_score, cur_score;
-
+  
   if(sam->num_entries <= 1) {
       return;
   }

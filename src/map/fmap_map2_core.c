@@ -9,6 +9,7 @@
 #include "../util/fmap_hash.h"
 #include "../index/fmap_bwt.h"
 #include "../index/fmap_bwtl.h"
+#include "fmap_map_util.h"
 #include "fmap_map2_mempool.h"
 #include "fmap_map2_aux.h"
 #include "fmap_map2_core.h"
@@ -393,8 +394,12 @@ fmap_map2_core_aln(const fmap_map2_opt_t *opt, const fmap_bwtl_t *target,
       } // ~for(tj)
       fmap_map2_mempool_push(stack->pool, v);
   } // while(top)
-  fmap_map2_aux_resolve_duphits(query_bwt, query_sa, b, opt->max_seed_intv, 0);
-  fmap_map2_aux_resolve_duphits(query_bwt, query_sa, b1, opt->max_seed_intv, 0);
+  fmap_map2_aux_resolve_duphits(query_bwt, query_sa, b, 
+                                (FMAP_MAP_UTIL_ALN_MODE_ALL == opt->aln_output_mode) ? INT_MAX : opt->max_seed_intv, 
+                                0);
+  fmap_map2_aux_resolve_duphits(query_bwt, query_sa, b1, 
+                                (FMAP_MAP_UTIL_ALN_MODE_ALL == opt->aln_output_mode) ? INT_MAX : opt->max_seed_intv, 
+                                0);
   // free
   free(heap);
   fmap_hash_destroy(64, rhash);

@@ -1134,7 +1134,7 @@ fmap_map_all_opt_destroy(fmap_map_all_opt_t *opt)
     (opt_map_other)->pen_gape = (opt_map_all)->pen_gape; \
     (opt_map_other)->reads_queue_size = (opt_map_all)->reads_queue_size; \
     (opt_map_other)->num_threads = (opt_map_all)->num_threads; \
-    (opt_map_other)->aln_output_mode = (opt_map_all)->aln_output_mode; \
+    (opt_map_other)->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_ALL; \
     (opt_map_other)->input_compr = (opt_map_all)->input_compr; \
     (opt_map_other)->output_compr = (opt_map_all)->output_compr; \
     (opt_map_other)->shm_key = (opt_map_all)->shm_key; \
@@ -1341,9 +1341,6 @@ fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
     } \
     if((opt_map_other)->num_threads != (opt_map_all)->num_threads) { \
         fmap_error("option -n was specified outside of common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->aln_output_mode != (opt_map_all)->aln_output_mode) { \
-        fmap_error("option -a was specified outside of common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->input_compr != (opt_map_all)->input_compr) { \
         fmap_error("option -j or -z was specified outside of common options", Exit, CommandLineArgument); \
