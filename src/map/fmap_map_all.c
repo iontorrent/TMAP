@@ -93,6 +93,8 @@ fmap_map_all_aln_mapq(fmap_map_all_aln_t *aln, fmap_map_all_opt_t *opt)
   int32_t n_best = 0, n_best_subo = 0;
   int32_t best_score, cur_score, best_subo;
   int32_t mapq;
+  int32_t stage = -1;
+  int32_t algo_id = FMAP_MAP_ALL_ALGO_NONE; 
 
   // estimate mapping quality TODO: this needs to be refined
   best_score = INT32_MIN;
@@ -107,6 +109,8 @@ fmap_map_all_aln_mapq(fmap_map_all_aln_t *aln, fmap_map_all_opt_t *opt)
           // update
           best_score = cur_score;
           n_best = 1;
+          stage = (algo_id == FMAP_MAP_ALL_ALGO_NONE) ? aln->hits[i].algo_stage : -1;
+          algo_id = (algo_id == FMAP_MAP_ALL_ALGO_NONE) ? aln->hits[i].algo_id : -1;
       }
       else if(cur_score == best_score) { // qual
           n_best++;
@@ -137,7 +141,23 @@ fmap_map_all_aln_mapq(fmap_map_all_aln_t *aln, fmap_map_all_opt_t *opt)
   else {
       if(0 == n_best_subo) {
           n_best_subo = 1;
-          best_subo = 0;
+          switch(algo_id) {
+            case FMAP_MAP_ALL_ALGO_MAP1:
+              // what is the best value for map1
+              if(0 < opt->opt_map1[stage]->seed_length) {
+                  best_subo = opt->score_match * (opt->opt_map1[stage]->seed_length - opt->opt_map1[stage]->seed_max_mm);
+              }
+              else {
+                  best_subo = 0;
+              }
+              break;
+            case FMAP_MAP_ALL_ALGO_MAP2:
+              best_subo = opt->opt_map2[stage]->score_thr; break;
+            case FMAP_MAP_ALL_ALGO_MAP3:
+              best_subo = opt->opt_map3[stage]->score_thr; break;
+            default:
+              best_subo = 0; break;
+          }
       }
       mapq = (int32_t)((n_best / (1.0 * n_best_subo)) * (best_score - best_subo) * (250.0 / best_score + 0.03 / opt->score_match) + .499);
       if(mapq > 250) mapq = 250;
