@@ -592,7 +592,10 @@ fmap_map1_aux_store_hits(fmap_refseq_t *refseq, fmap_map2_opt_t *opt,
           if(p->n_seeds < 2) c *= .2;
           qual = (int)(c * (p->G - subo) * (250.0 / p->G + 0.03 / opt->score_match) + .499);
           if(qual > 250) qual = 250;
-          if(p->flag & 1) qual = 0;
+          if(p->flag & 1) {
+              qual = 0;
+              p->G2 = p->G; // Note: the flag indicates a repetitive match, so we need to update the sub-optimal score
+          }
           sam->entries[j].mapq = qual;
 
           // copy cigar memory

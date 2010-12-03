@@ -98,7 +98,7 @@ fmap_map_all_aln_mapq(fmap_map_all_aln_t *aln, fmap_map_all_opt_t *opt)
 
   // estimate mapping quality TODO: this needs to be refined
   best_score = INT32_MIN;
-  best_subo = INT32_MIN;
+  best_subo = INT32_MIN+1;
   n_best = n_best_subo = 0;
   for(i=0;i<aln->n;i++) {
       cur_score = aln->hits[i].score;
@@ -123,19 +123,23 @@ fmap_map_all_aln_mapq(fmap_map_all_aln_t *aln, fmap_map_all_opt_t *opt)
           else if(best_subo == cur_score) {
               n_best_subo++;
           }
-          if(FMAP_MAP_ALL_ALGO_MAP2 == aln->hits[i].algo_id
-             || FMAP_MAP_ALL_ALGO_MAP3 == aln->hits[i].algo_id) {
-              cur_score = aln->hits[i].score_subo;
-              if(best_subo < cur_score) {
-                  best_subo = cur_score;
-              } 
-              else if(best_subo == cur_score) {
-                  n_best_subo++;
-              }
+      }
+      if(FMAP_MAP_ALL_ALGO_MAP2 == aln->hits[i].algo_id
+         || FMAP_MAP_ALL_ALGO_MAP3 == aln->hits[i].algo_id) {
+          cur_score = aln->hits[i].score_subo;
+          if(INT32_MIN == cur_score) {
+              // ignore
+          }
+          else if(best_subo < cur_score) {
+              best_subo = cur_score;
+              n_best_subo=1;
+          } 
+          else if(best_subo == cur_score) {
+              n_best_subo++;
           }
       }
   }
-  if(1 < n_best) {
+  if(1 < n_best || best_score <= best_subo) {
       mapq = 0;
   }
   else {
@@ -159,6 +163,12 @@ fmap_map_all_aln_mapq(fmap_map_all_aln_t *aln, fmap_map_all_opt_t *opt)
               best_subo = 0; break;
           }
       }
+      /*
+      fprintf(stderr, "n_best=%d n_best_subo=%d\n",
+              n_best, n_best_subo);
+      fprintf(stderr, "best_score=%d best_subo=%d\n",
+              best_score, best_subo);
+      */
       mapq = (int32_t)((n_best / (1.0 * n_best_subo)) * (best_score - best_subo) * (250.0 / best_score + 0.03 / opt->score_match) + .499);
       if(mapq > 250) mapq = 250;
       if(mapq <= 0) mapq = 1;
