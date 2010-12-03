@@ -39,8 +39,7 @@ fmap_map2_filter_sam(fmap_seq_t *seq, fmap_map2_sam_t *sam, int32_t aln_output_m
   int32_t n_best = 0;
   int32_t best_score, cur_score;
 
-  if(FMAP_MAP_UTIL_ALN_MODE_ALL == aln_output_mode 
-     || sam->num_entries <= 1) {
+  if(sam->num_entries <= 1) {
       return;
   }
 
@@ -55,6 +54,25 @@ fmap_map2_filter_sam(fmap_seq_t *seq, fmap_map2_sam_t *sam, int32_t aln_output_m
       else if(cur_score == best_score) {
           n_best++;
       }
+  }
+  
+  // adjust mapping quality for duplicate hits
+  if(1 < n_best) {
+      for(i=0;i<sam->num_entries;i++) {
+          sam->entries[i].mapq = 0;
+      }
+  }
+  else {
+      for(i=0;i<sam->num_entries;i++) {
+          if(best_score != cur_score) {
+              sam->entries[i].mapq = 0;
+          }
+      }
+  }
+
+  if(FMAP_MAP_UTIL_ALN_MODE_ALL == aln_output_mode) {
+      // nothing to do
+      return;
   }
 
   // copy to the front
@@ -98,6 +116,14 @@ fmap_map2_filter_sam(fmap_seq_t *seq, fmap_map2_sam_t *sam, int32_t aln_output_m
   }
   else {
       fmap_error("bug encountered", Exit, OutOfRange);
+  }
+
+  // adjust mapping quality for duplicate hits
+  fprintf(stderr, "n_best=%d\n", n_best);
+  if(1 < n_best) {
+      for(i=0;i<sam->num_entries;i++) {
+          sam->entries[i].mapq = 0;
+      }
   }
 }
 
