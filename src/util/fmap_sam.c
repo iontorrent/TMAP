@@ -235,7 +235,8 @@ fmap_sam_md1_core(bam1_t *b, char *ref)
   bam1_core_t *c = &b->core;
   int i, x, y, u = 0;
   kstring_t *str;
-  uint8_t *old_md;
+  uint8_t *old_md, *old_nm;
+  int32_t old_nm_i=-1, nm=0;
 
   str = (kstring_t*)calloc(1, sizeof(kstring_t));
   for (i = y = x = 0; i < c->n_cigar; ++i) {
@@ -251,6 +252,7 @@ fmap_sam_md1_core(bam1_t *b, char *ref)
                   ksprintf(str, "%d", u);
                   kputc(ref[x+j], str);
                   u = 0; 
+                  nm++;
               }
           }
           if (j < l) break;
@@ -265,8 +267,10 @@ fmap_sam_md1_core(bam1_t *b, char *ref)
           u = 0;
           if (j < l) break;
           x += l; 
+          nm += l;
       } else if (op == BAM_CINS || op == BAM_CSOFT_CLIP) {
           y += l;
+          if (op == BAM_CINS) nm += l;
       } else if (op == BAM_CREF_SKIP) {
           x += l;
       }
@@ -298,6 +302,17 @@ fmap_sam_md1_core(bam1_t *b, char *ref)
           bam_aux_append(b, "MD", 'Z', str->l + 1, (uint8_t*)str->s);
       }
   }
+
+  // update NM
+  old_nm = bam_aux_get(b, "NM");
+  if(NULL != old_nm) {
+      old_nm_i = bam_aux2i(old_nm);
+      if(old_nm_i != nm) {
+          bam_aux_del(b, old_nm);
+          bam_aux_append(b, "NM", 'i', 4, (uint8_t*)&nm);
+      }
+  }
+
   free(str->s); free(str);
 }
 
@@ -335,7 +350,7 @@ fmap_sam_get_type(char ref, char read)
 }
 
 void
-fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
+fmap_sam_update_cigar_and_md(bam1_t *b, char *ref, char *read, int32_t len)
 {
   int32_t i, n_cigar, last_type;
   uint32_t *cigar;
@@ -420,5 +435,8 @@ fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len)
       }
       last_type = cur_type;
   }
+
+  // Note: the md tag must be updated
+  fmap_sam_md1(b, ref, len);
 }
 #endif

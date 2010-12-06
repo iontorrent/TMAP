@@ -77,13 +77,29 @@ fmap_sam2fs_bam_alloc_data(bam1_t *bam, int size)
 
 static bam1_t *
 fmap_sam2fs_copy_to_sam(bam1_t *bam_old, fmap_fsw_path_t *path, int32_t path_len, int32_t score, 
-                        int32_t soft_clip_start, int32_t soft_clip_end)
+                        int32_t soft_clip_start, int32_t soft_clip_end, uint8_t path_strand)
 {
   bam1_t *bam_new = NULL;
   int32_t i, j;
   uint32_t *cigar;
   int32_t n_cigar;
   uint8_t *old_score;
+
+  if(1 == path_strand) {
+      fmap_fsw_path_t *tmp_path;
+
+      // reverse path
+      tmp_path = fmap_malloc(sizeof(fmap_fsw_path_t) * path_len, "tmp_path");
+      for(i=0;i<path_len;i++) {
+          tmp_path[i] = path[path_len-i-1];
+      }
+
+      bam_new = fmap_sam2fs_copy_to_sam(bam_old, tmp_path, path_len, score,
+                                        soft_clip_start, soft_clip_end, 0);
+
+      free(tmp_path);
+      return bam_new;
+  }
   
   bam_new = fmap_calloc(1, sizeof(bam1_t), "bam_new");
   bam_new->data_len = 0; //bam_new->m_data;
@@ -226,6 +242,7 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
   int32_t path_len;
   fmap_fsw_param_t param;
   int64_t score;
+  uint8_t strand;
 
   // set the alignment parameters
   param.gap_open = 13*100;
@@ -240,6 +257,8 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
   if(BAM_FUNMAP & bam->core.flag) {
       return bam;
   }
+      
+  strand = (BAM_FREVERSE & bam->core.flag) ? 1 : 0;
 
   // get the MD tag
   if(NULL == (md_data = bam_aux_get(bam, "MD"))) {
@@ -366,6 +385,13 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
       }
   }
   ref_bases[i]='\0';
+
+  // reverse compliment if necessary
+  if(1 == strand) {
+      fmap_reverse_compliment(ref_bases, ref_bases_len);
+      fmap_reverse_compliment(read_bases, read_bases_len);
+  }
+  
   //fprintf(stderr, "ref_bases_len=%d\nref_bases=%s\n", ref_bases_len, ref_bases);
   //fprintf(stderr, "read_bases_len=%d\nread_bases=%s\n", read_bases_len, read_bases);
 
@@ -380,6 +406,7 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
       flow_order_tmp[i] = fmap_nt_char_to_int[(int)flow_order[i]];
   }
 
+  // get the flow length
   flow_len = 0;
   for(i=j=0;i<read_bases_len;i++) {
       while(flow_order_tmp[j] != read_bases[i]) {
@@ -388,10 +415,10 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
       }
   }
   flow_len++; // the last flow
-
+  // alloc
   base_calls = fmap_calloc(flow_len, sizeof(uint8_t), "base_calls");
   flowgram = fmap_calloc(flow_len, sizeof(uint16_t), "base_calls");
-
+  // copy the # of flows
   for(i=j=0;i<flow_len;i++) {
       if(flow_order_tmp[i&3] == read_bases[j]) {
           k=j;
@@ -408,6 +435,7 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
       }
   }
 
+  // allocate the alignment path
   path = fmap_calloc(FMAP_FSW_MAX_PATH_LENGTH(ref_bases_len, flow_len, param.offset), sizeof(fmap_fsw_path_t), "path"); 
 
   // re-align 
@@ -433,10 +461,10 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
       if(ref_bases_len <= i) i = ref_bases_len;
       if(j < 0) j = 0;
 
-      fmap_file_fprintf(fmap_file_stdout, "%s\t%c\t", bam1_qname(bam), (bam->core.flag & BAM_FREVERSE) ? '-' : '+');
+      fmap_file_fprintf(fmap_file_stdout, "%s\t%c\t", bam1_qname(bam), (1==strand) ? '-' : '+');
       fmap_fsw_print_aln(fmap_file_stdout, score, path, path_len, flow_order_tmp, 
                          (uint8_t*)ref_bases,
-                         (BAM_FREVERSE & bam->core.flag) ? 1 : 0,
+                         strand,
                          j_type);
       fmap_file_fprintf(fmap_file_stdout, "\t");
       fmap_sam2fs_aux_flow_align(fmap_file_stdout, 
@@ -445,30 +473,24 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
                                  (uint8_t*)(ref_bases + j),
                                  i - j + 1, 
                                  flow_order_tmp,
-                                 (BAM_FREVERSE & bam->core.flag) ? 1 : 0);
+                                 strand);
       fmap_file_fprintf(fmap_file_stdout, "\n");
       break;
     case FMAP_SAM2FS_OUTPUT_SAM:
-      bam = fmap_sam2fs_copy_to_sam(bam, path, path_len, score, soft_clip_start, soft_clip_end);
+      bam = fmap_sam2fs_copy_to_sam(bam, path, path_len, score, soft_clip_start, soft_clip_end, strand);
 
       fmap_fsw_get_aln(path, path_len, flow_order_tmp, (uint8_t*)ref_bases, 
-                       (BAM_FREVERSE & bam->core.flag) ? 1 : 0,
+                       strand,
                        &ref, &read, &aln, j_type);
 
-      if((BAM_FREVERSE & bam->core.flag)) { // set it the forward strand of the reference
-          fmap_reverse_compliment(ref, path_len);
-          fmap_reverse_compliment(read, path_len);
-          fmap_reverse(aln, path_len);
-      }
 
       // do not worry about read fitting since fmap_fsw_get_aln handles this
       // above
-      if(FMAP_FSW_NO_JUSTIFY != j_type) {
-          fmap_sam_left_justify(bam, ref, read, path_len);
+      if(1 == strand) { // set it the forward strand of the reference
+          fmap_reverse_compliment(ref, path_len);
+          fmap_reverse_compliment(read, path_len);
       }
-
-      // update MD
-      fmap_sam_md1(bam, ref, path_len);
+      fmap_sam_update_cigar_and_md(bam, ref, read, path_len);
 
       free(ref); free(read); free(aln); 
       break;

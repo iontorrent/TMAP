@@ -981,6 +981,30 @@ fmap_fsw_left_justify(char *ref, char *read, char *aln, int32_t len)
   return justified;
 }
 
+static int 
+fmap_fsw_right_justify(char *ref, char *read, char *aln, int32_t len)
+{
+  int32_t i;
+  int32_t justified = 0;
+  // reverse
+  for(i=0;i<(len>>1);i++) {
+      char tmp;
+      tmp = ref[i]; ref[i] = ref[len-i-1]; ref[len-i-1] = tmp;
+      tmp = read[i]; read[i] = read[len-i-1]; read[len-i-1] = tmp;
+      tmp = aln[i]; aln[i] = aln[len-i-1]; aln[len-i-1] = tmp;
+  }
+  // left-justify
+  justified = fmap_fsw_left_justify(ref, read, aln, len);
+  // reverse
+  for(i=0;i<(len>>1);i++) {
+      char tmp;
+      tmp = ref[i]; ref[i] = ref[len-i-1]; ref[len-i-1] = tmp;
+      tmp = read[i]; read[i] = read[len-i-1]; read[len-i-1] = tmp;
+      tmp = aln[i]; aln[i] = aln[len-i-1]; aln[len-i-1] = tmp;
+  }
+  return justified;
+}
+
 void
 fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
                  uint8_t *flow, uint8_t *target, uint8_t strand,
@@ -1043,56 +1067,24 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
   }
   (*read)[path_len] = '\0';
 
-  // return based on sequencing order
-  if(FMAP_FSW_NO_JUSTIFY != j_type) {
-      if(0 == strand) {
-          switch(j_type) {
-            case FMAP_FSW_NO_JUSTIFY:
-              break;
-            case FMAP_FSW_JUSTIFY_LEFT_REF:
-            case FMAP_FSW_JUSTIFY_LEFT_READ:
-              fmap_fsw_left_justify((*ref), (*read), (*aln), path_len);
-            default:
-              break;
-          }
+  // the input is assumed to be in read-order
+  switch(j_type) {
+    case FMAP_FSW_NO_JUSTIFY:
+      // do nothing
+      break;
+    case FMAP_FSW_JUSTIFY_LEFT_REF:
+      if(0 == strand) { 
+          fmap_fsw_left_justify((*ref), (*read), (*aln), path_len);
       }
       else {
-          switch(j_type) {
-            case FMAP_FSW_JUSTIFY_LEFT_REF:
-              // do this before reversing
-              fmap_fsw_left_justify((*ref), (*read), (*aln), path_len);
-              break;
-            case FMAP_FSW_NO_JUSTIFY:
-            case FMAP_FSW_JUSTIFY_LEFT_READ:
-              // do this after reversing
-            default:
-              break;
-          }
-
-          for(i=0;i<(path_len>>1);i++) {
-              char tmp;
-              tmp = ('-' == (*ref)[i]) ? '-' : fmap_nt_char_to_rc_char[(int)(*ref)[i]]; 
-              (*ref)[i] = ('-' == (*ref)[path_len-i-1]) ? '-' : fmap_nt_char_to_rc_char[(int)(*ref)[path_len-i-1]];
-              (*ref)[path_len-i-1] = tmp;
-              tmp = ('-' == (*read)[i]) ? '-' : fmap_nt_char_to_rc_char[(int)(*read)[i]]; 
-              (*read)[i] = ('-' == (*read)[path_len-i-1]) ? '-' : fmap_nt_char_to_rc_char[(int)(*read)[path_len-i-1]];
-              (*read)[path_len-i-1] = tmp;
-              tmp = (*aln)[i];
-              (*aln)[i] = (*aln)[path_len-i-1];
-              (*aln)[path_len-i-1] = tmp;
-          }
-
-          switch(j_type) {
-            case FMAP_FSW_NO_JUSTIFY:
-            case FMAP_FSW_JUSTIFY_LEFT_REF:
-              break;
-            case FMAP_FSW_JUSTIFY_LEFT_READ:
-              fmap_fsw_left_justify((*ref), (*read), (*aln), path_len);
-              break;
-            default:
-              break;
-          }
+          fmap_fsw_right_justify((*ref), (*read), (*aln), path_len);
       }
+      break;
+    case FMAP_FSW_JUSTIFY_LEFT_READ:
+      fmap_fsw_left_justify((*ref), (*read), (*aln), path_len);
+      break;
+    default:
+      break;
   }
 }
 

@@ -63,14 +63,14 @@ void
 fmap_sam_md1(bam1_t *b, char *ref, int32_t len);
 
 /*!
-  left-justifies the cigar and MD given the new reference/read alignment
+  updates the cigar and MD given the new reference/read alignment
   @param  b     the SAM/BAM structure
   @param  ref   the reference
   @param  read  the read
   @param  len   the length of the alignment
   */
 void
-fmap_sam_left_justify(bam1_t *b, char *ref, char *read, int32_t len);
+fmap_sam_update_cigar_and_md(bam1_t *b, char *ref, char *read, int32_t len);
 #endif
 
 #endif
