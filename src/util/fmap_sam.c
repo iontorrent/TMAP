@@ -29,15 +29,15 @@ fmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
      || 0 != strncmp(rg, "@RG\tID:", 7)) {
       fmap_error("Malformed RG line", Exit, OutOfRange);
   }
-  i = 7;
+  i = 3;
 
   while(i<len) {
       if('\t' == rg[i]) {
           i++; // move past the tab
           if(len-2 <= i) {
-              fmap_error("Malformed RG line", Exit, OutOfRange);
+              fmap_error("Improper tag in the RG line", Exit, OutOfRange);
           }
-          if('I' == rg[i] && 'D' == rg[i+1]) {
+          else if('I' == rg[i] && 'D' == rg[i+1]) {
               // copy over the id
               for(j=i;j<len;j++) {
                   if('\t' == rg[j]) break;
@@ -45,6 +45,7 @@ fmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
               }
               if(j == i) fmap_error("Malformed RG line", Exit, OutOfRange);
               fmap_sam_rg_id[j-i]='\0'; // null terminator
+              fprintf(stderr, "RGID:%s\n", fmap_sam_rg_id);
           }
           else if('P' == rg[i] && 'G' == rg[i+1]) {
               fmap_error("PG tag not allowed in the RG line", Exit, OutOfRange);
@@ -88,14 +89,16 @@ fmap_sam_print_header(fmap_file_t *fp, fmap_refseq_t *refseq, fmap_seq_io_t *seq
   if(NULL != seqio && FMAP_SEQ_TYPE_SFF == seqio->type) {
       if(NULL != sam_rg) {
           fmap_sam_parse_rg(sam_rg, 0);
-          fmap_file_fprintf(fp, "%s\tFO:%s\tKS:%s\n",
+          fmap_file_fprintf(fp, "%s\tPG:%s\tFO:%s\tKS:%s\n",
                             sam_rg,
+                            PACKAGE_NAME, 
                             seqio->io.sffio->gheader->flow->s,
                             seqio->io.sffio->gheader->key->s);
       }
       else {
-          fmap_file_fprintf(fp, "@RG\tID:%s\tFO:%s\tKS:%s\n",
+          fmap_file_fprintf(fp, "@RG\tID:%s\tPG:%s\tFO:%s\tKS:%s\n",
                             fmap_sam_rg_id,
+                            PACKAGE_NAME, 
                             seqio->io.sffio->gheader->flow->s,
                             seqio->io.sffio->gheader->key->s);
       }
@@ -103,11 +106,12 @@ fmap_sam_print_header(fmap_file_t *fp, fmap_refseq_t *refseq, fmap_seq_io_t *seq
   else {
       if(NULL != sam_rg) {
           fmap_sam_parse_rg(sam_rg, 1);
-          fmap_file_fprintf(fp, "%s\n", sam_rg);
+          fmap_file_fprintf(fp, "%s\tPG:%s\n", sam_rg, PACKAGE_NAME);
       }
       else {
-          fmap_file_fprintf(fp, "@RG\tID:%s\n",
-                            fmap_sam_rg_id);
+          fmap_file_fprintf(fp, "@RG\tID:%s\tPG:%s\n",
+                            fmap_sam_rg_id,
+                            PACKAGE_NAME);
       }
   }
   fmap_file_fprintf(fp, "@PG\tID:%s\tVN:%s\tCL:",
