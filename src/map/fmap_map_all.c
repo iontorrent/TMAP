@@ -1171,6 +1171,8 @@ fmap_map_all_opt_parse_common(int argc, char *argv[], fmap_map_all_opt_t *opt)
           opt->fn_reads = fmap_strdup(optarg); 
           fmap_get_reads_file_format_from_fn_int(opt->fn_reads, &opt->reads_format, &opt->input_compr);
           break;
+        case 'F':
+          opt->reads_format = fmap_get_reads_file_format_int(optarg); break;
         case 'A':
           opt->score_match = atoi(optarg); break;
         case 'M':
@@ -1437,11 +1439,12 @@ fmap_map_all_main(int argc, char *argv[])
 
   // init opt
   opt = fmap_map_all_opt_init();
-
+      
   // get options
   if(1 != fmap_map_all_opt_parse(argc, argv, opt) // options parsed successfully
      || argc != optind  // all options should be used
      || 1 == argc) { // some options should be specified
+      fprintf(stderr, "argc=%d optind=%d\n", argc, optind);
       return fmap_map_all_usage(opt);
   }
   else { 
