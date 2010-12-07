@@ -126,6 +126,7 @@ fmap_sam_print_header(fmap_file_t *fp, fmap_refseq_t *refseq, fmap_seq_io_t *seq
 inline void
 fmap_sam_print_unmapped(fmap_file_t *fp, fmap_seq_t *seq)
 {
+  int32_t i;
   uint16_t flag = 0x0004;
   fmap_string_t *name=NULL, *bases=NULL, *qualities=NULL;
 
@@ -139,6 +140,16 @@ fmap_sam_print_unmapped(fmap_file_t *fp, fmap_seq_t *seq)
   fmap_file_fprintf(fp, "\tRG:Z:%s\tPG:Z:%s",
                     fmap_sam_rg_id,
                     PACKAGE_NAME);
+  if(FMAP_SEQ_TYPE_SFF == seq->type) {
+      fmap_file_fprintf(fp, "\tFI:H:");
+      for(i=0;i<seq->data.sff->gheader->flow_length;i++) {
+          fmap_file_fprintf(fp, "%X%X%X%X", 
+                            ((seq->data.sff->read->flowgram[i] >> 12) & 0xF),
+                            ((seq->data.sff->read->flowgram[i] >> 8) & 0xF),
+                            ((seq->data.sff->read->flowgram[i] >> 4) & 0xF),
+                            seq->data.sff->read->flowgram[i] & 0xF);
+      }
+  }
   fmap_file_fprintf(fp, "\n");
 }
 
@@ -305,6 +316,18 @@ fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, fmap_refseq_t *refseq,
   md = fmap_sam_md(refseq, bases->s, seqid, pos, cigar_tmp, n_cigar, &nm);
   fmap_file_fprintf(fp, "\tMD:Z:%s\tNM:i:%d", md->s, nm);
   fmap_string_destroy(md);
+  
+  // FI
+  if(FMAP_SEQ_TYPE_SFF == seq->type) {
+      fmap_file_fprintf(fp, "\tFI:H:");
+      for(i=0;i<seq->data.sff->gheader->flow_length;i++) {
+          fmap_file_fprintf(fp, "%X%X%X%X", 
+                            ((seq->data.sff->read->flowgram[i] >> 12) & 0xF),
+                            ((seq->data.sff->read->flowgram[i] >> 8) & 0xF),
+                            ((seq->data.sff->read->flowgram[i] >> 4) & 0xF),
+                            seq->data.sff->read->flowgram[i] & 0xF);
+      }
+  }
 
   // optional tags
   if(NULL != format) {
