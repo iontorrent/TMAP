@@ -11,17 +11,104 @@
 
 #include "fmap_alloc.h"
 #include "../io/fmap_file.h"
+#include "../io/fmap_seq_io.h"
 #include "../sw/fmap_sw.h"
 #include "fmap_sam.h"
 
+static char fmap_sam_rg_id[1024]="ID";
+
+static void
+fmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
+{
+  int32_t i, j, len;
+
+  len = strlen(rg);
+
+  // must have at least "@RG\tID:."
+  if(len < 8
+     || 0 != strncmp(rg, "@RG\tID:", 7)) {
+      fmap_error("Malformed RG line", Exit, OutOfRange);
+  }
+  i = 7;
+
+  while(i<len) {
+      if('\t' == rg[i]) {
+          i++; // move past the tab
+          if(len-2 <= i) {
+              fmap_error("Malformed RG line", Exit, OutOfRange);
+          }
+          if('I' == rg[i] && 'D' == rg[i+1]) {
+              // copy over the id
+              for(j=i;j<len;j++) {
+                  if('\t' == rg[j]) break;
+                  fmap_sam_rg_id[j-i] = rg[j];
+              }
+              if(j == i) fmap_error("Malformed RG line", Exit, OutOfRange);
+              fmap_sam_rg_id[j-i]='\0'; // null terminator
+          }
+          else if('P' == rg[i] && 'G' == rg[i+1]) {
+              fmap_error("PG tag not allowed in the RG line", Exit, OutOfRange);
+          }
+          else if(('C' == rg[i] && 'N' == rg[i+1])
+                  || ('D' == rg[i] && 'S' == rg[i+1])
+                  || ('D' == rg[i] && 'T' == rg[i+1])
+                  || ('L' == rg[i] && 'B' == rg[i+1])
+                  || ('P' == rg[i] && 'I' == rg[i+1])
+                  || ('L' == rg[i] && 'L' == rg[i+1])
+                  || ('P' == rg[i] && 'U' == rg[i+1])
+                  || ('S' == rg[i] && 'M' == rg[i+1])) {
+              // OK
+          }
+          else if(('F' == rg[i] && 'O' == rg[i+1])
+                  || ('K' == rg[i] && 'S' == rg[i+1])) {
+              if(0 == fs_data_ok) {
+                  fmap_error("The FO/KS tag should not be specified in the RG line", Exit, OutOfRange);
+              }
+          }
+          else {
+              fmap_error("Improper tag in the RG line", Exit, OutOfRange);
+          }
+      }
+      i++;
+  }
+}
+
 void
-fmap_sam_print_header(fmap_file_t *fp, fmap_refseq_t *refseq, int argc, char *argv[])
+fmap_sam_print_header(fmap_file_t *fp, fmap_refseq_t *refseq, fmap_seq_io_t *seqio, char *sam_rg, int argc, char *argv[])
 {
   int32_t i;
   // SAM header
+  fmap_file_fprintf(fp, "@HD\tVN:%s\tSO:unsorted\n",
+                    FMAP_SAM_VERSION);
   for(i=0;i<refseq->num_annos;i++) {
       fmap_file_fprintf(fp, "@SQ\tSN:%s\tLN:%d\n",
                         refseq->annos[i].name->s, (int)refseq->annos[i].len);
+  }
+  // RG
+  if(NULL != seqio && FMAP_SEQ_TYPE_SFF == seqio->type) {
+      if(NULL != sam_rg) {
+          fmap_sam_parse_rg(sam_rg, 0);
+          fmap_file_fprintf(fp, "%s\tFO:%s\tKS:%s\n",
+                            sam_rg,
+                            seqio->io.sffio->gheader->flow->s,
+                            seqio->io.sffio->gheader->key->s);
+      }
+      else {
+          fmap_file_fprintf(fp, "@RG\tID:%s\tFO:%s\tKS:%s\n",
+                            fmap_sam_rg_id,
+                            seqio->io.sffio->gheader->flow->s,
+                            seqio->io.sffio->gheader->key->s);
+      }
+  }
+  else {
+      if(NULL != sam_rg) {
+          fmap_sam_parse_rg(sam_rg, 1);
+          fmap_file_fprintf(fp, "%s\n", sam_rg);
+      }
+      else {
+          fmap_file_fprintf(fp, "@RG\tID:%s\n",
+                            fmap_sam_rg_id);
+      }
   }
   fmap_file_fprintf(fp, "@PG\tID:%s\tVN:%s\tCL:",
                     PACKAGE_NAME, PACKAGE_VERSION);
@@ -42,9 +129,13 @@ fmap_sam_print_unmapped(fmap_file_t *fp, fmap_seq_t *seq)
   bases = fmap_seq_get_bases(seq);
   qualities = fmap_seq_get_qualities(seq);
 
-  fmap_file_fprintf(fp, "%s\t%u\t%s\t%u\t%u\t*\t*\t0\t0\t%s\t%s\n",
+  fmap_file_fprintf(fp, "%s\t%u\t%s\t%u\t%u\t*\t*\t0\t0\t%s\t%s",
                     name->s, flag, "*",
                     0, 0, bases->s, qualities->s);
+  fmap_file_fprintf(fp, "\tRG:Z:%s\tPG:Z:%s",
+                    fmap_sam_rg_id,
+                    PACKAGE_NAME);
+  fmap_file_fprintf(fp, "\n");
 }
 
 static inline fmap_string_t *
@@ -200,6 +291,11 @@ fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, fmap_refseq_t *refseq,
   // bases and qualities
   fmap_file_fprintf(fp, "\t*\t0\t0\t%s\t%s",
                     bases->s, qualities->s);
+  
+  // RG and PG
+  fmap_file_fprintf(fp, "\tRG:Z:%s\tPG:Z:%s",
+                    fmap_sam_rg_id,
+                    PACKAGE_NAME);
 
   // MD
   md = fmap_sam_md(refseq, bases->s, seqid, pos, cigar_tmp, n_cigar, &nm);

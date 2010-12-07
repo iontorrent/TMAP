@@ -884,13 +884,6 @@ fmap_map_all_core(fmap_map_all_opt_t *opt)
           }
       }
   }
-
-  // Note: 'fmap_file_stdout' should not have been previously modified
-  fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "wb", opt->output_compr);
-
-  // SAM header
-  fmap_sam_print_header(fmap_file_stdout, refseq, opt->argc, opt->argv);
-
   // allocate the buffer
   if(-1 == opt->reads_queue_size) {
       reads_queue_size = 1;
@@ -925,6 +918,12 @@ fmap_map_all_core(fmap_map_all_opt_t *opt)
       fmap_error("unrecognized input format", Exit, CommandLineArgument);
       break;
   }
+
+  // Note: 'fmap_file_stdout' should not have been previously modified
+  fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "wb", opt->output_compr);
+
+  // SAM header
+  fmap_sam_print_header(fmap_file_stdout, refseq, seqio, opt->sam_rg, opt->argc, opt->argv);
 
   fmap_progress_print("processing reads");
   while(0 < (seq_buffer_length = fmap_seq_io_read_buffer(seqio, seq_buffer, reads_queue_size))) {
@@ -1050,6 +1049,7 @@ fmap_map_all_usage(fmap_map_all_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "                             1 - random best hit\n");
   fmap_file_fprintf(fmap_file_stderr, "                             2 - all best hits\n");
   fmap_file_fprintf(fmap_file_stderr, "                             3 - all alignments\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -R STRING   the RG line in the SAM header [%s]\n", opt->sam_rg);
   fmap_file_fprintf(fmap_file_stderr, "         -W INT      remove duplicate alignments from different algorithms within this bp window [%d]\n",
                     opt->dup_window);
   fmap_file_fprintf(fmap_file_stderr, "         -X          apply the output filter for each algorithm separately [%s]\n",
@@ -1095,6 +1095,7 @@ fmap_map_all_opt_init()
   opt->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_RAND_BEST;
   opt->dup_window = 128;
   opt->aln_output_mode_ind = 0;
+  opt->sam_rg = NULL;
   opt->input_compr = FMAP_FILE_NO_COMPRESSION;
   opt->output_compr = FMAP_FILE_NO_COMPRESSION;
   opt->shm_key = 0;
@@ -1118,11 +1119,13 @@ fmap_map_all_opt_destroy(fmap_map_all_opt_t *opt)
   // free common options
   free(opt->fn_fasta);
   free(opt->fn_reads);
+  free(opt->sam_rg);
 
   for(i=0;i<2;i++) {
       // since we shallow copied, do not free
       opt->opt_map1[i]->fn_fasta = opt->opt_map2[i]->fn_fasta = opt->opt_map3[i]->fn_fasta = NULL;
       opt->opt_map1[i]->fn_reads = opt->opt_map2[i]->fn_reads = opt->opt_map3[i]->fn_reads = NULL;
+      opt->opt_map1[i]->sam_rg = opt->opt_map2[i]->sam_rg = opt->opt_map3[i]->sam_rg = NULL;
 
       // destroy other opts
       fmap_map1_opt_destroy(opt->opt_map1[i]);
@@ -1134,7 +1137,7 @@ fmap_map_all_opt_destroy(fmap_map_all_opt_t *opt)
   free(opt);
 }
 
-// for map1
+// for map1/map2/map3
 #define __fmap_map_all_opts_copy1(opt_map_all, opt_map_other) do { \
     (opt_map_other)->fn_fasta = (opt_map_all)->fn_fasta; \
     (opt_map_other)->fn_reads = (opt_map_all)->fn_reads; \
@@ -1145,6 +1148,7 @@ fmap_map_all_opt_destroy(fmap_map_all_opt_t *opt)
     (opt_map_other)->reads_queue_size = (opt_map_all)->reads_queue_size; \
     (opt_map_other)->num_threads = (opt_map_all)->num_threads; \
     (opt_map_other)->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_ALL; \
+    (opt_map_other)->sam_rg = (opt_map_all)->sam_rg; \
     (opt_map_other)->input_compr = (opt_map_all)->input_compr; \
     (opt_map_other)->output_compr = (opt_map_all)->output_compr; \
     (opt_map_other)->shm_key = (opt_map_all)->shm_key; \
@@ -1163,7 +1167,7 @@ fmap_map_all_opt_parse_common(int argc, char *argv[], fmap_map_all_opt_t *opt)
 {
   int c;
 
-  while((c = getopt(argc, argv, "f:r:F:A:M:O:E:w:gq:n:a:W:XjzJZs:vh")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:A:M:O:E:w:gq:n:a:R:W:XjzJZs:vh")) >= 0) {
       switch(c) {
         case 'f':
           opt->fn_fasta = fmap_strdup(optarg); break;
@@ -1191,6 +1195,8 @@ fmap_map_all_opt_parse_common(int argc, char *argv[], fmap_map_all_opt_t *opt)
           opt->num_threads = atoi(optarg); break;
         case 'a':
           opt->aln_output_mode = atoi(optarg); break;
+        case 'R':
+          opt->sam_rg = fmap_strdup(optarg); break;
         case 'W':
           opt->dup_window = atoi(optarg); break;
         case 'X':
@@ -1347,37 +1353,40 @@ fmap_map_all_file_check_with_null(char *fn1, char *fn2)
 // for map1
 #define __fmap_map_all_opts_check_common1(opt_map_all, opt_map_other) do { \
     if(0 != fmap_map_all_file_check_with_null((opt_map_other)->fn_fasta, (opt_map_all)->fn_fasta)) { \
-        fmap_error("option -f was specified outside of common options", Exit, CommandLineArgument); \
+        fmap_error("option -f was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if(0 != fmap_map_all_file_check_with_null((opt_map_other)->fn_reads, (opt_map_all)->fn_reads)) { \
-        fmap_error("option -r was specified outside of common options", Exit, CommandLineArgument); \
+        fmap_error("option -r was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->reads_format != (opt_map_all)->reads_format) { \
-        fmap_error("option -F was specified outside of common options", Exit, CommandLineArgument); \
+        fmap_error("option -F was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->pen_mm != (opt_map_all)->pen_mm) { \
-        fmap_error("option -M was specified outside of common options", Exit, CommandLineArgument); \
+        fmap_error("option -M was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->pen_gapo != (opt_map_all)->pen_gapo) { \
-        fmap_error("option -O was specified outside of common options", Exit, CommandLineArgument); \
+        fmap_error("option -O was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->pen_gape != (opt_map_all)->pen_gape) { \
-        fmap_error("option -E was specified outside of common options", Exit, CommandLineArgument); \
+        fmap_error("option -E was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->reads_queue_size != (opt_map_all)->reads_queue_size) { \
-        fmap_error("option -q was specified outside of common options", Exit, CommandLineArgument); \
+        fmap_error("option -q was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->num_threads != (opt_map_all)->num_threads) { \
-        fmap_error("option -n was specified outside of common options", Exit, CommandLineArgument); \
+        fmap_error("option -n was specified outside of the common options", Exit, CommandLineArgument); \
+    } \
+    if(0 != fmap_map_all_file_check_with_null((opt_map_other)->sam_rg, (opt_map_all)->sam_rg)) { \
+        fmap_error("option -R was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->input_compr != (opt_map_all)->input_compr) { \
-        fmap_error("option -j or -z was specified outside of common options", Exit, CommandLineArgument); \
+        fmap_error("option -j or -z was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->output_compr != (opt_map_all)->output_compr) { \
-        fmap_error("option -J or -Z was specified outside of common options", Exit, CommandLineArgument); \
+        fmap_error("option -J or -Z was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->shm_key != (opt_map_all)->shm_key) { \
-        fmap_error("option -s was specified outside of common options", Exit, CommandLineArgument); \
+        fmap_error("option -s was specified outside of the common options", Exit, CommandLineArgument); \
     } \
 } while(0)
 
@@ -1385,13 +1394,13 @@ fmap_map_all_file_check_with_null(char *fn1, char *fn2)
 #define __fmap_map_all_opts_check_common2(opt_map_all, opt_map_other) do { \
     __fmap_map_all_opts_check_common1(opt_map_all, opt_map_other); \
     if((opt_map_other)->score_match != (opt_map_all)->score_match) { \
-        fmap_error("option -A was specified outside of common options", Exit, CommandLineArgument); \
+        fmap_error("option -A was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->bw != (opt_map_all)->bw) { \
-        fmap_error("option -w was specified outside of common options", Exit, CommandLineArgument); \
+        fmap_error("option -w was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->aln_global != (opt_map_all)->aln_global) { \
-        fmap_error("option -g was specified outside of common options", Exit, CommandLineArgument); \
+        fmap_error("option -g was specified outside of the common options", Exit, CommandLineArgument); \
     } \
 } while(0)
 

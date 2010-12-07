@@ -291,12 +291,6 @@ fmap_map3_core(fmap_map3_opt_t *opt)
       fmap_progress_print("setting the seed length to %d", opt->seed_length);
   }
 
-  // Note: 'fmap_file_stdout' should not have been previously modified
-  fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "wb", opt->output_compr);
-
-  // SAM header
-  fmap_sam_print_header(fmap_file_stdout, refseq, opt->argc, opt->argv);
-
   // allocate the buffer
   if(-1 == opt->reads_queue_size) {
       reads_queue_size = 1;
@@ -331,6 +325,12 @@ fmap_map3_core(fmap_map3_opt_t *opt)
       fmap_error("unrecognized input format", Exit, CommandLineArgument);
       break;
   }
+
+  // Note: 'fmap_file_stdout' should not have been previously modified
+  fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "wb", opt->output_compr);
+
+  // SAM header
+  fmap_sam_print_header(fmap_file_stdout, refseq, seqio, opt->sam_rg, opt->argc, opt->argv);
 
   fmap_progress_print("processing reads");
   while(0 < (seq_buffer_length = fmap_seq_io_read_buffer(seqio, seq_buffer, reads_queue_size))) {
@@ -464,6 +464,7 @@ fmap_map3_usage(fmap_map3_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "                             1 - random best hit\n");
   fmap_file_fprintf(fmap_file_stderr, "                             2 - all best hits\n");
   fmap_file_fprintf(fmap_file_stderr, "                             3 - all alignments\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -R STRING   the RG line in the SAM header [%s]\n", opt->sam_rg);
   fmap_file_fprintf(fmap_file_stderr, "         -j          the input is bz2 compressed (bzip2) [%s]\n",
                     (FMAP_FILE_BZ2_COMPRESSION == opt->input_compr) ? "true" : "false");
   fmap_file_fprintf(fmap_file_stderr, "         -z          the input is gz compressed (gzip) [%s]\n",
@@ -506,6 +507,7 @@ fmap_map3_opt_init()
   opt->reads_queue_size = 65536; // TODO: move this to a define block
   opt->num_threads = 1;
   opt->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_RAND_BEST;
+  opt->sam_rg = NULL;
   opt->input_compr = FMAP_FILE_NO_COMPRESSION;
   opt->output_compr = FMAP_FILE_NO_COMPRESSION;
   opt->shm_key = 0;
@@ -518,6 +520,7 @@ fmap_map3_opt_destroy(fmap_map3_opt_t *opt)
 {
   free(opt->fn_fasta);
   free(opt->fn_reads);
+  free(opt->sam_rg);
   free(opt);
 }
 
@@ -528,7 +531,7 @@ fmap_map3_opt_parse(int argc, char *argv[], fmap_map3_opt_t *opt)
 
   opt->argc = argc; opt->argv = argv;
 
-  while((c = getopt(argc, argv, "f:r:F:l:S:b:w:A:M:O:E:T:gH:q:n:a:jzJZs:vh")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:l:S:b:w:A:M:O:E:T:gH:q:n:a:R:jzJZs:vh")) >= 0) {
       switch(c) {
         case 'f':
           opt->fn_fasta = fmap_strdup(optarg); break;
@@ -566,6 +569,8 @@ fmap_map3_opt_parse(int argc, char *argv[], fmap_map3_opt_t *opt)
           opt->num_threads = atoi(optarg); break;
         case 'a':
           opt->aln_output_mode = atoi(optarg); break;
+        case 'R':
+          opt->sam_rg = fmap_strdup(optarg); break;
         case 'j':
           opt->input_compr = FMAP_FILE_BZ2_COMPRESSION; 
           fmap_get_reads_file_format_from_fn_int(opt->fn_reads, &opt->reads_format, &opt->input_compr);

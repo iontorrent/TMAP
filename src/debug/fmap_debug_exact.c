@@ -103,17 +103,17 @@ fmap_debug_exact_core(fmap_debug_exact_opt_t *opt)
   fmap_file_t *fp_reads=NULL;
   fmap_seq_io_t *seqio=NULL;
   fmap_seq_t *seq=NULL;
+  
+  fp_reads = fmap_file_fopen(opt->fn_reads, "rb", FMAP_FILE_NO_COMPRESSION);
+  seqio = fmap_seq_io_init(fp_reads, FMAP_SEQ_TYPE_FQ);
+  seq = fmap_seq_init(FMAP_SEQ_TYPE_FQ);
 
   bwt = fmap_bwt_read(opt->fn_fasta, 1);
   if(0 == opt->n_only) {
       refseq = fmap_refseq_read(opt->fn_fasta, 0);
       sa = fmap_sa_read(opt->fn_fasta, 1);
-      fmap_sam_print_header(fmap_file_stdout, refseq, opt->argc, opt->argv);
+      fmap_sam_print_header(fmap_file_stdout, refseq, seqio, NULL, opt->argc, opt->argv);
   }
-
-  fp_reads = fmap_file_fopen(opt->fn_reads, "rb", FMAP_FILE_NO_COMPRESSION);
-  seqio = fmap_seq_io_init(fp_reads, FMAP_SEQ_TYPE_FQ);
-  seq = fmap_seq_init(FMAP_SEQ_TYPE_FQ);
 
   while(0 <= fmap_seq_io_read(seqio, seq)) {
       fmap_debug_exact_core_worker(refseq, bwt, sa, seq, opt->n_only);

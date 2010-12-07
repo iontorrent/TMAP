@@ -20,6 +20,7 @@ typedef struct {
   fmap_sff_io_t *sffio;  /*!< the pointer to the sff io structure */
   } io;
 } fmap_seq_io_t;
+
 /*! 
   initializes input/output structure
   @param  fp    a pointer to a file structure from which to read
