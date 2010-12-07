@@ -447,6 +447,7 @@ fmap_map1_core(fmap_map1_opt_t *opt)
       // do alignment
 #ifdef HAVE_LIBPTHREAD
       int32_t num_threads = opt->num_threads;
+      fmap_map1_read_lock_low = 0; // ALWAYS set before running threads 
       if(seq_buffer_length < num_threads * FMAP_MAP1_THREAD_BLOCK_SIZE) {
           num_threads = 1 + (seq_buffer_length / FMAP_MAP1_THREAD_BLOCK_SIZE);
       }
@@ -463,7 +464,6 @@ fmap_map1_core(fmap_map1_opt_t *opt)
 
           threads = fmap_calloc(num_threads, sizeof(pthread_t), "threads");
           thread_data = fmap_calloc(num_threads, sizeof(fmap_map1_thread_data_t), "thread_data");
-          fmap_map1_read_lock_low = 0; // ALWAYS set before running threads 
 
           for(i=0;i<num_threads;i++) {
               thread_data[i].seq_buffer = seq_buffer;

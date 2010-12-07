@@ -934,6 +934,7 @@ fmap_map_all_core(fmap_map_all_opt_t *opt)
       if(seq_buffer_length < num_threads * FMAP_MAP_ALL_THREAD_BLOCK_SIZE) {
           num_threads = 1 + (seq_buffer_length / FMAP_MAP_ALL_THREAD_BLOCK_SIZE);
       }
+      fmap_map_all_read_lock_low = 0; // ALWAYS set before running threads 
       if(1 == num_threads) {
           fmap_map_all_core_worker(seq_buffer, alns, seq_buffer_length, refseq, bwt, sa, 0, opt);
       }
@@ -947,7 +948,6 @@ fmap_map_all_core(fmap_map_all_opt_t *opt)
 
           threads = fmap_calloc(num_threads, sizeof(pthread_t), "threads");
           thread_data = fmap_calloc(num_threads, sizeof(fmap_map_all_thread_data_t), "thread_data");
-          fmap_map_all_read_lock_low = 0; // ALWAYS set before running threads 
 
           for(i=0;i<num_threads;i++) {
               thread_data[i].seq_buffer = seq_buffer;
