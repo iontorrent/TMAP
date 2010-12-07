@@ -1328,12 +1328,28 @@ fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
   return 1;
 }
 
+static int32_t 
+fmap_map_all_file_check_with_null(char *fn1, char *fn2)
+{
+    if(NULL == fn1 && NULL == fn2) { 
+        return 0;
+    }
+    else if((NULL == fn1 && NULL != fn2) 
+       || (NULL != fn1 && NULL == fn2)) {
+        return 1;
+    }
+    else if(0 != strcmp(fn1, fn2)) {
+        return 1;
+    }
+    return 0;
+}
+
 // for map1
 #define __fmap_map_all_opts_check_common1(opt_map_all, opt_map_other) do { \
-    if(0 != strcmp((opt_map_other)->fn_fasta, (opt_map_all)->fn_fasta)) { \
+    if(0 != fmap_map_all_file_check_with_null((opt_map_other)->fn_fasta, (opt_map_all)->fn_fasta)) { \
         fmap_error("option -f was specified outside of common options", Exit, CommandLineArgument); \
     } \
-    if(0 != strcmp((opt_map_other)->fn_reads, (opt_map_all)->fn_reads)) { \
+    if(0 != fmap_map_all_file_check_with_null((opt_map_other)->fn_reads, (opt_map_all)->fn_reads)) { \
         fmap_error("option -r was specified outside of common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->reads_format != (opt_map_all)->reads_format) { \
