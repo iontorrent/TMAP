@@ -33,11 +33,10 @@ fmap_map3_get_seed_length(uint64_t ref_len)
 {
   int32_t k = 0;
   while(0 < ref_len) {
-      ref_len >>= 2; // divide by four
+      ref_len >>= 1; // divide by two
       k++;
   }
-  // add six just to be sure
-  return k+6;
+  return k;
 }
 
 static inline void
