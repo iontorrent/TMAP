@@ -49,6 +49,7 @@ typedef struct {
     int32_t output_compr;  /*!< the output compression type (-J and -Z) */
     key_t shm_key;  /*!< the shared memory key (-s) */
 } fmap_map1_opt_t;
+
 /*! 
   @details In the CIGAR array, each element is a 32-bit integer. The
   lower 4 bits gives a CIGAR operation and the higher 28 bits keep the

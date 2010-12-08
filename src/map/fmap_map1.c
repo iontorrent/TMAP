@@ -490,7 +490,9 @@ fmap_map1_core(fmap_map1_opt_t *opt)
       fmap_map1_core_worker(seq_buffer, seq_buffer_length, alns, bwt, 0, opt);
 #endif
 
-      fmap_progress_print("writing alignments");
+      if(-1 != opt->reads_queue_size) {
+          fmap_progress_print("writing alignments");
+      }
       for(i=0;i<seq_buffer_length;i++) {
           int32_t n_mapped = 0;
           fmap_map1_aln_t *a = alns[i];
@@ -515,6 +517,11 @@ fmap_map1_core(fmap_map1_opt_t *opt)
       }
 
       n_reads_processed += seq_buffer_length;
+      if(-1 != opt->reads_queue_size) {
+          fmap_progress_print2("processed %d reads", n_reads_processed);
+      }
+  }
+  if(-1 == opt->reads_queue_size) {
       fmap_progress_print2("processed %d reads", n_reads_processed);
   }
 
