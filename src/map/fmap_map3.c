@@ -36,8 +36,8 @@ fmap_map3_get_seed_length(uint64_t ref_len)
       ref_len >>= 2; // divide by four
       k++;
   }
-  // add two just to be sure
-  return k+2;
+  // add six just to be sure
+  return k+6;
 }
 
 static inline void
