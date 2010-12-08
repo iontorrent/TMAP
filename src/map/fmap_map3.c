@@ -258,6 +258,10 @@ fmap_map3_core(fmap_map3_opt_t *opt)
   fmap_map3_aln_t **alns = NULL;
   fmap_shm_t *shm = NULL;
   int32_t reads_queue_size;
+  
+  if(NULL == opt->fn_reads) {
+      fmap_progress_set_verbosity(0); 
+  }
 
   // adjust opt for opt->score_match
   opt->score_thr *= opt->score_match;
@@ -303,6 +307,7 @@ fmap_map3_core(fmap_map3_opt_t *opt)
 
   if(NULL == opt->fn_reads) {
       fp_reads = fmap_file_fdopen(fileno(stdin), "rb", opt->input_compr);
+      fmap_progress_set_verbosity(0); 
   }
   else {
       fp_reads = fmap_file_fopen(opt->fn_reads, "rb", opt->input_compr);

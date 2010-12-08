@@ -830,6 +830,10 @@ fmap_map_all_core(fmap_map_all_opt_t *opt)
   fmap_map_all_aln_t **alns = NULL;
   fmap_shm_t *shm = NULL;
   int32_t reads_queue_size;
+  
+  if(NULL == opt->fn_reads) {
+      fmap_progress_set_verbosity(0); 
+  }
 
   if(0 == opt->shm_key) {
       fmap_progress_print("reading in reference data");
@@ -896,6 +900,7 @@ fmap_map_all_core(fmap_map_all_opt_t *opt)
 
   if(NULL == opt->fn_reads) {
       fp_reads = fmap_file_fdopen(fileno(stdin), "rb", opt->input_compr);
+      fmap_progress_set_verbosity(0); 
   }
   else {
       fp_reads = fmap_file_fopen(opt->fn_reads, "rb", opt->input_compr);

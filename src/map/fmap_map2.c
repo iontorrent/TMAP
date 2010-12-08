@@ -234,6 +234,9 @@ fmap_map2_core(fmap_map2_opt_t *opt)
   fmap_map2_sam_t **sams = NULL;
   int32_t reads_queue_size;
 
+  if(NULL == opt->fn_reads) {
+      fmap_progress_set_verbosity(0); 
+  }
 
   scalar = opt->score_match / log(opt->yita);
   /*
@@ -291,6 +294,7 @@ fmap_map2_core(fmap_map2_opt_t *opt)
 
   if(NULL == opt->fn_reads) {
       fp_reads = fmap_file_fdopen(fileno(stdin), "rb", opt->input_compr);
+      fmap_progress_set_verbosity(0); 
   }
   else {
       fp_reads = fmap_file_fopen(opt->fn_reads, "rb", opt->input_compr);

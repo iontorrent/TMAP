@@ -373,6 +373,10 @@ fmap_map1_core(fmap_map1_opt_t *opt)
   fmap_shm_t *shm = NULL;
   int32_t reads_queue_size;
 
+  if(NULL == opt->fn_reads) {
+      fmap_progress_set_verbosity(0); 
+  }
+
   // For suffix search we need the reverse bwt/sa and forward refseq
   if(0 == opt->shm_key) {
       fmap_progress_print("reading in reference data");
