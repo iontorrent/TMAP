@@ -17,6 +17,7 @@
 #include "../index/fmap_sa.h"
 #include "../io/fmap_seq_io.h"
 #include "../server/fmap_shm.h"
+#include "fmap_map_util.h"
 #include "fmap_map1_aux.h"
 #include "fmap_map1.h"
 
@@ -635,7 +636,9 @@ fmap_map1_opt_init()
   opt->max_mm = -1; opt->max_mm_frac = 0.02; // TODO: move this to a define block 
   opt->max_gapo = -1; opt->max_gapo_frac = 0.01; // TODO: move this to a define block
   opt->max_gape = -1; opt->max_gape_frac = 0.025; // TODO: move this to a define block
-  opt->pen_mm = 3; opt->pen_gapo = 11; opt->pen_gape = 4; // TODO: move this to a define block
+  opt->pen_mm = FMAP_MAP_UTIL_PEN_MM; 
+  opt->pen_gapo = FMAP_MAP_UTIL_PEN_GAPO;
+  opt->pen_gape = FMAP_MAP_UTIL_PEN_GAPE;
   opt->max_cals_del = 10; // TODO: move this to a define block
   opt->indel_ends_bound = 5; // TODO: move this to a define block
   opt->max_best_cals = 32; // TODO: move this to a define block

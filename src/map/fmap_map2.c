@@ -501,8 +501,11 @@ fmap_map2_opt_init()
 
   opt->fn_fasta = opt->fn_reads = NULL;
   opt->reads_format = FMAP_READS_FORMAT_UNKNOWN;
-  opt->score_match = 1; opt->pen_mm = 3; opt->pen_gapo = 5; opt->pen_gape = 2;
-  opt->fscore = 7;
+  opt->score_match = FMAP_MAP_UTIL_SCORE_MATCH;
+  opt->pen_mm = FMAP_MAP_UTIL_PEN_MM; 
+  opt->pen_gapo = FMAP_MAP_UTIL_PEN_GAPO;
+  opt->pen_gape = FMAP_MAP_UTIL_PEN_GAPE;
+  opt->fscore = FMAP_MAP_UTIL_FSCORE;
   opt->yita = 5.5f; 
   //opt->mask_level = 0.50; 
   opt->length_coef = 5.5f;

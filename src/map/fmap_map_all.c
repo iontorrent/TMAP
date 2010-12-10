@@ -543,8 +543,8 @@ fmap_map_all_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map_all_hit_
       fmap_sam_print_mapped(fmap_file_stdout, seq, refseq,
                             hit->strand, hit->seqid, hit->pos,
                             hit->mapq, hit->cigar, hit->n_cigar,
-                            "\tAS:i:%d\tXS:i:%d\tXA:Z:%s-%d",
-                            hit->score, hit->n_seeds, 
+                            "\tAS:i:%d\tXS:i:%d\tXE:i:%d\tXA:Z:%s-%d",
+                            hit->score, hit->score_subo, hit->n_seeds, 
                             algos[hit->algo_id], hit->algo_stage);
       break;
     default:
@@ -1115,9 +1115,11 @@ fmap_map_all_opt_init()
   opt->argc = -1;
   opt->fn_fasta = opt->fn_reads = NULL;
   opt->reads_format = FMAP_READS_FORMAT_UNKNOWN;
-  opt->score_match = 1;
-  opt->pen_mm = 3; opt->pen_gapo = 5; opt->pen_gape = 2; 
-  opt->fscore = 7;
+  opt->score_match = FMAP_MAP_UTIL_SCORE_MATCH;
+  opt->pen_mm = FMAP_MAP_UTIL_PEN_MM; 
+  opt->pen_gapo = FMAP_MAP_UTIL_PEN_GAPO;
+  opt->pen_gape = FMAP_MAP_UTIL_PEN_GAPE;
+  opt->fscore = FMAP_MAP_UTIL_FSCORE;
   opt->bw = 10; 
   opt->aln_global = 0;
   opt->reads_queue_size = 65536; 

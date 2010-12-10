@@ -5,6 +5,11 @@
 #include "fmap_map3.h"
 
 #define FMAP_MAP_UTIL_FSW_OFFSET 2
+#define FMAP_MAP_UTIL_SCORE_MATCH 5
+#define FMAP_MAP_UTIL_PEN_MM 3
+#define FMAP_MAP_UTIL_PEN_GAPO 3
+#define FMAP_MAP_UTIL_PEN_GAPE 1
+#define FMAP_MAP_UTIL_FSCORE 7 
 
 /*!
   The various modes to modify the alignment score
