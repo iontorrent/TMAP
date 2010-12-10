@@ -373,7 +373,9 @@ This may cause the alignment score reported by using \TT{map1} within the \TT{ma
 
 See \autoref{sec:commonoptions} for common options that are in use in this command.
 
-\subsubsection{Usage}
+\subsection{Usage}
+
+\subsubsection{Overview}
 First, a set of global options is specified that will be used for the algorithms to be applied at both stages.
 Global options should not be given in the options for a specific algorithm.
 Next, the algorithms and their associated options will be specified for each stage.
@@ -388,6 +390,13 @@ In this case, the \TT{map1} algorithm will be applied with the options \TT{-l 12
 If no mapping is found for a read, the \TT{map2} algorithm with the options \TT{-b 5 -g -M 3} and the \TT{map3} algorithm with the options \TT{-g -M 3 -S 10} will be applied in the second stage.
 Notice how the global options \TT{-g -M 3} are applied to all the algorithms where applicable.
 It is possible to have a given algorithm run in both stages with different options.
+
+\subsubsection{\TT{-W INT}}
+Specifies to remove duplicate mappings from the different algorithms that occur within this bp window.
+
+\subsubsection{\TT{-I}}
+Specifies to apply the output filter separately for each algorithm.
+This is useful for comparing the mappings across all the algorithms.
 
 \chapter{File Formats}
 
