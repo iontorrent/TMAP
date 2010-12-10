@@ -1064,7 +1064,7 @@ fmap_map_all_usage(fmap_map_all_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "         -R STRING   the RG line in the SAM header [%s]\n", opt->sam_rg);
   fmap_file_fprintf(fmap_file_stderr, "         -W INT      remove duplicate alignments from different algorithms within this bp window [%d]\n",
                     opt->dup_window);
-  fmap_file_fprintf(fmap_file_stderr, "         -X          apply the output filter for each algorithm separately [%s]\n",
+  fmap_file_fprintf(fmap_file_stderr, "         -I          apply the output filter for each algorithm separately [%s]\n",
                     (1 == opt->aln_output_mode_ind) ? "true" : "false");
   fmap_file_fprintf(fmap_file_stderr, "         -j          the input is bz2 compressed (bzip2) [%s]\n",
                     (FMAP_FILE_BZ2_COMPRESSION == opt->input_compr) ? "true" : "false");
@@ -1181,7 +1181,7 @@ fmap_map_all_opt_parse_common(int argc, char *argv[], fmap_map_all_opt_t *opt)
 {
   int c;
 
-  while((c = getopt(argc, argv, "f:r:F:A:M:O:E:w:gq:n:a:R:W:XjzJZs:vh")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:A:M:O:E:w:gq:n:a:R:W:IjzJZs:vh")) >= 0) {
       switch(c) {
         case 'f':
           opt->fn_fasta = fmap_strdup(optarg); break;
@@ -1213,7 +1213,7 @@ fmap_map_all_opt_parse_common(int argc, char *argv[], fmap_map_all_opt_t *opt)
           opt->sam_rg = fmap_strdup(optarg); break;
         case 'W':
           opt->dup_window = atoi(optarg); break;
-        case 'X':
+        case 'I':
           opt->aln_output_mode_ind = 1; break;
         case 'j':
           opt->input_compr = FMAP_FILE_BZ2_COMPRESSION; 
@@ -1444,7 +1444,7 @@ fmap_map_all_opt_check(fmap_map_all_opt_t *opt)
   fmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
   fmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
   fmap_error_cmd_check_int(opt->dup_window, 0, INT32_MAX, "-W");
-  fmap_error_cmd_check_int(opt->aln_output_mode_ind, 0, 1, "-X");
+  fmap_error_cmd_check_int(opt->aln_output_mode_ind, 0, 1, "-I");
 
   if(0 == opt->algos[0]) {
       fmap_error("no algorithms given for stage 1", Exit, CommandLineArgument);
