@@ -29,7 +29,7 @@
 #ifdef HAVE_LIBPTHREAD
 static pthread_mutex_t fmap_map2_read_lock = PTHREAD_MUTEX_INITIALIZER;
 static int32_t fmap_map2_read_lock_low = 0;
-#define FMAP_MAP2_THREAD_BLOCK_SIZE 1024
+#define FMAP_MAP2_THREAD_BLOCK_SIZE 512
 #endif
 
 static void

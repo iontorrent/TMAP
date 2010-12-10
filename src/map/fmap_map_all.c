@@ -45,7 +45,7 @@ FMAP_SORT_INIT(fmap_map_all_hit_t, fmap_map_all_hit_t, __fmap_map_all_hit_sort_l
 #ifdef HAVE_LIBPTHREAD
      static pthread_mutex_t fmap_map_all_read_lock = PTHREAD_MUTEX_INITIALIZER;
      static int32_t fmap_map_all_read_lock_low = 0;
-#define FMAP_MAP_ALL_THREAD_BLOCK_SIZE 1024
+#define FMAP_MAP_ALL_THREAD_BLOCK_SIZE 512
 #endif
 
 

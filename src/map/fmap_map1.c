@@ -23,7 +23,7 @@
 #ifdef HAVE_LIBPTHREAD
 static pthread_mutex_t fmap_map1_read_lock = PTHREAD_MUTEX_INITIALIZER;
 static int32_t fmap_map1_read_lock_low = 0;
-#define FMAP_MAP1_THREAD_BLOCK_SIZE 1024
+#define FMAP_MAP1_THREAD_BLOCK_SIZE 512
 #endif
 
 static int32_t g_log_n[256];
