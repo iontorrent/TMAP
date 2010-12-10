@@ -95,48 +95,48 @@ fmap_map2_aux_resolve_duphits(const fmap_bwt_t *bwt, const fmap_sa_t *sa, fmap_m
 }
 
 /*
-static int32_t 
-fmap_map2_aux_resolve_query_overlaps(fmap_map2_aln_t *b, double mask_level, int32_t min_as)
-{
-  int32_t i, j, n;
-  if(b->n == 0) return 0;
-  fmap_sort_introsort(hitG, b->n, b->hits);
-  for(i = 1; i < b->n; ++i) {
-      fmap_map2_hit_t *p = b->hits + i;
-      int32_t all_compatible = 1;
-      if(p->G == min_as) break;
-      for(j = 0; j < i; ++j) {
-          fmap_map2_hit_t *q = b->hits + j;
-          int64_t tol = 0;
-          int32_t qol, compatible = 0;
-          double fol;
-          if(q->G == min_as) continue;
-          qol = (p->end < q->end? p->end : q->end) - (p->beg > q->beg? p->beg : q->beg);
-          if(qol < 0) qol = 0;
-          if(p->l == 0 && q->l == 0) {
-              tol = (int64_t)(p->k + p->len < q->k + q->len? p->k + p->len : q->k + q->len)
-                - (p->k > q->k? p->k : q->k);
-              if(tol < 0) tol = 0;
-          }
-          fol = (double)qol / (p->end - p->beg < q->end - q->beg? p->end - p->beg : q->end - q->beg);
-          if(fol < mask_level || (tol > 0 && qol < p->end - p->beg && qol < q->end - q->beg)) compatible = 1;
-          if(!compatible) {
-              if(q->G2 < p->G) q->G2 = p->G;
-              all_compatible = 0;
-          }
-      }
-      if(!all_compatible) p->G = min_as;
-  }
-  n = i;
-  for(i = j = 0; i < n; ++i) {
-      if(b->hits[i].G == min_as) continue;
-      if(i != j) b->hits[j++] = b->hits[i];
-      else ++j;
-  }
-  b->n = j;
-  return j;
-}
-*/
+   static int32_t 
+   fmap_map2_aux_resolve_query_overlaps(fmap_map2_aln_t *b, double mask_level, int32_t min_as)
+   {
+   int32_t i, j, n;
+   if(b->n == 0) return 0;
+   fmap_sort_introsort(hitG, b->n, b->hits);
+   for(i = 1; i < b->n; ++i) {
+   fmap_map2_hit_t *p = b->hits + i;
+   int32_t all_compatible = 1;
+   if(p->G == min_as) break;
+   for(j = 0; j < i; ++j) {
+   fmap_map2_hit_t *q = b->hits + j;
+   int64_t tol = 0;
+   int32_t qol, compatible = 0;
+   double fol;
+   if(q->G == min_as) continue;
+   qol = (p->end < q->end? p->end : q->end) - (p->beg > q->beg? p->beg : q->beg);
+   if(qol < 0) qol = 0;
+   if(p->l == 0 && q->l == 0) {
+   tol = (int64_t)(p->k + p->len < q->k + q->len? p->k + p->len : q->k + q->len)
+   - (p->k > q->k? p->k : q->k);
+   if(tol < 0) tol = 0;
+   }
+   fol = (double)qol / (p->end - p->beg < q->end - q->beg? p->end - p->beg : q->end - q->beg);
+   if(fol < mask_level || (tol > 0 && qol < p->end - p->beg && qol < q->end - q->beg)) compatible = 1;
+   if(!compatible) {
+   if(q->G2 < p->G) q->G2 = p->G;
+   all_compatible = 0;
+   }
+   }
+   if(!all_compatible) p->G = min_as;
+   }
+   n = i;
+   for(i = j = 0; i < n; ++i) {
+   if(b->hits[i].G == min_as) continue;
+   if(i != j) b->hits[j++] = b->hits[i];
+   else ++j;
+   }
+   b->n = j;
+   return j;
+   }
+   */
 
 void 
 fmap_map2_aln_destroy(fmap_map2_aln_t *a)
@@ -227,7 +227,7 @@ fmap_map2_aux_extend_left(fmap_map2_opt_t *opt, fmap_map2_aln_t *b,
             target[j++] = fmap_refseq_seq_i(refseq, k);
       }
       lt = j;
-          
+
       if(0 == opt->aln_global) {
           score = fmap_sw_extend_core(target, lt, query + query_length - p->beg, p->beg, &par, &path, 0, p->G, _mem);
       }
@@ -235,11 +235,16 @@ fmap_map2_aux_extend_left(fmap_map2_opt_t *opt, fmap_map2_aln_t *b,
           score = fmap_sw_extend_fitting_core(target, lt, query + query_length - p->beg, p->beg, &par, &path, 0, p->G, _mem);
       }
 
-      if(1 == opt->aln_global || score >= p->G) {
-          p->G = score;
-          p->len += path.i;
-          p->beg -= path.j;
-          p->k -= path.i;
+      if(opt->score_thr < score) {
+          if(1 == opt->aln_global || score >= p->G) {
+              p->G = score;
+              p->len += path.i;
+              p->beg -= path.j;
+              p->k -= path.i;
+          }
+      }
+      else if(1 == opt->aln_global) {
+          p->G = FMAP_MAP2_MINUS_INF; 
       }
   }
   fmap_map2_aux_reverse_query(query, query_length); // reverse back the query
@@ -284,10 +289,16 @@ fmap_map2_aux_extend_right(fmap_map2_opt_t *opt, fmap_map2_aln_t *b,
       else {
           score = fmap_sw_extend_fitting_core(target, lt, query + p->beg, query_length - p->beg, &par, &path, NULL, 1, _mem);
       }
-      if(1 == opt->aln_global || score >= p->G) {
-          p->G = score;
-          p->len = path.i;
-          p->end = path.j + p->beg;
+
+      if(opt->score_thr < score) {
+          if(1 == opt->aln_global || score >= p->G) {
+              p->G = score;
+              p->len = path.i;
+              p->end = path.j + p->beg;
+          }
+      }
+      else if(1 == opt->aln_global) {
+          p->G = FMAP_MAP2_MINUS_INF; 
       }
   }
   free(target);
@@ -322,9 +333,9 @@ fmap_map2_aux_gen_cigar(fmap_map2_opt_t *opt, uint8_t *queries[2],
       fmap_map2_hit_t *p = b->hits + i;
       uint8_t *query;
       uint32_t k;
-      int32_t score, path_len, beg, end;
+      int32_t path_len, beg, end;
       if(p->l) continue;
-  
+
       beg = (p->flag & 0x10)? query_length - p->end : p->beg;
       end = (p->flag & 0x10)? query_length - p->beg : p->end;
 
@@ -332,7 +343,7 @@ fmap_map2_aux_gen_cigar(fmap_map2_opt_t *opt, uint8_t *queries[2],
       for(k = p->k; k < p->k + p->len; ++k) { // in principle, no out-of-boundary here
           target[k - p->k] = fmap_refseq_seq_i(refseq, k);
       }
-      score = fmap_sw_global_core(target, p->len, query, end - beg, &par, path, &path_len);
+      p->G = fmap_sw_global_core(target, p->len, query, end - beg, &par, path, &path_len);
       b->cigar[i] = fmap_sw_path2cigar(path, path_len, &b->n_cigar[i]);
       if(0 < beg || end < query_length) { // add soft clipping
           b->cigar[i] = fmap_realloc(b->cigar[i], sizeof(uint32_t) * (b->n_cigar[i] + 2), "b->cigar");
@@ -697,7 +708,7 @@ fmap_map2_aux_core(fmap_map2_opt_t *_opt,
   // alignment
   b[0] = fmap_map2_aux_aln(&opt, refseq, bwt[0], sa[0], seq, 0, pool);
   for(k = 0; k < b[0]->n; ++k) {
-    if(b[0]->hits[k].n_seeds < opt.seeds_rev) break;
+      if(b[0]->hits[k].n_seeds < opt.seeds_rev) break;
   }
   if(k < b[0]->n) {
       b[1] = fmap_map2_aux_aln(&opt, refseq, bwt[1], sa[1], rseq, 1, pool);

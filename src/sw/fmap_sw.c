@@ -366,7 +366,7 @@ fmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
 
   if(len1 == 0 || len2 == 0) {
       *path_len = 0;
-      return 0;
+      return FMAP_SW_MINOR_INF;
   }
   /* calculate b1 and b2 */
   if(len1 > len2) {
@@ -555,7 +555,7 @@ fmap_sw_local_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, con
   N_MATRIX_ROW = ap->row;
   thres = _thres > 0? _thres : -_thres;
 
-  if(len1 == 0 || len2 == 0) return -1;
+  if(len1 == 0 || len2 == 0) return FMAP_SW_MINOR_INF;
 
   /* allocate memory */
   suba = fmap_malloc(sizeof(int32_t) * (len2 + 1), "suba");
@@ -781,7 +781,7 @@ fmap_sw_extend_aux(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, con
   score_matrix = ap->matrix;
   N_MATRIX_ROW = ap->row;
 
-  if(len1 == 0 || len2 == 0) return -1;
+  if(len1 == 0 || len2 == 0) return FMAP_SW_MINOR_INF;
 
   /* allocate memory */
   mem = _mem ? _mem : fmap_calloc((len1 + 2) * (N_MATRIX_ROW + 1), sizeof(uint32_t), "mem");
