@@ -1,6 +1,11 @@
 #ifndef FMAP_MAP_UTIL_H_
 #define FMAP_MAP_UTIL_H_
 
+#define FMAP_MAP_UTIL_SCORE_MATCH 5
+#define FMAP_MAP_UTIL_PEN_MM 3
+#define FMAP_MAP_UTIL_PEN_GAPO 3
+#define FMAP_MAP_UTIL_PEN_GAPE 1
+
 /*!
   The various modes to modify the alignment score
   */

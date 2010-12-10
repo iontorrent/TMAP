@@ -510,8 +510,10 @@ fmap_map3_opt_init()
   opt->max_seed_hits = 8; // move this to a define block
   opt->max_seed_band = 50; // move this to a define block
   opt->bw = 50; // move this to a define block
-  opt->score_match = 1;
-  opt->pen_mm = 3; opt->pen_gapo = 5; opt->pen_gape = 2; // TODO: move this to a define block
+  opt->score_match = FMAP_MAP_UTIL_SCORE_MATCH;
+  opt->pen_mm = FMAP_MAP_UTIL_PEN_MM; 
+  opt->pen_gapo = FMAP_MAP_UTIL_PEN_GAPO;
+  opt->pen_gape = FMAP_MAP_UTIL_PEN_GAPE;
   opt->score_thr = 20;
   opt->aln_global = 0;
   opt->hp_diff = 0;

@@ -1098,8 +1098,10 @@ fmap_map_all_opt_init()
   opt->argc = -1;
   opt->fn_fasta = opt->fn_reads = NULL;
   opt->reads_format = FMAP_READS_FORMAT_UNKNOWN;
-  opt->score_match = 1;
-  opt->pen_mm = 3; opt->pen_gapo = 5; opt->pen_gape = 2; 
+  opt->score_match = FMAP_MAP_UTIL_SCORE_MATCH;
+  opt->pen_mm = FMAP_MAP_UTIL_PEN_MM; 
+  opt->pen_gapo = FMAP_MAP_UTIL_PEN_GAPO;
+  opt->pen_gape = FMAP_MAP_UTIL_PEN_GAPE;
   opt->bw = 10; 
   opt->aln_global = 0;
   opt->reads_queue_size = 65536; 
