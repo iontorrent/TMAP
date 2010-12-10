@@ -163,7 +163,7 @@ fmap_map3_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map3_hit_t *hit
   fmap_sam_print_mapped(fmap_file_stdout, seq, refseq,
                         hit->strand, hit->seqid, hit->pos,
                         hit->mapq, hit->cigar, hit->n_cigar,
-                        "\tAS:i:%d\tXS:i:%d", 
+                        "\tAS:i:%d\tXE:i:%d", 
                         hit->score, hit->n_seeds);
 }
 

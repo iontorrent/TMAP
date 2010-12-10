@@ -543,8 +543,8 @@ fmap_map_all_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map_all_hit_
       fmap_sam_print_mapped(fmap_file_stdout, seq, refseq,
                             hit->strand, hit->seqid, hit->pos,
                             hit->mapq, hit->cigar, hit->n_cigar,
-                            "\tAS:i:%d\tXS:i:%d\tXA:Z:%s-%d",
-                            hit->score, hit->n_seeds, 
+                            "\tAS:i:%d\tXS:i:%d\tXE:i:%d\tXA:Z:%s-%d",
+                            hit->score, hit->score_subo, hit->n_seeds, 
                             algos[hit->algo_id], hit->algo_stage);
       break;
     default:
