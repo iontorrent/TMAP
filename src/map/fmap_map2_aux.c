@@ -22,6 +22,8 @@ FMAP_SORT_INIT(hit, fmap_map2_hit_t, __left_lt)
 #define __hitG_lt(a, b) ((a).G > (b).G)
 FMAP_SORT_INIT(hitG, fmap_map2_hit_t, __hitG_lt)
 
+#define FMAP_MAP2_AUX_IS 0
+
 int32_t
 fmap_map2_aux_resolve_duphits(const fmap_bwt_t *bwt, const fmap_sa_t *sa, fmap_map2_aln_t *b, int32_t IS, int32_t min_as)
 {
@@ -92,47 +94,49 @@ fmap_map2_aux_resolve_duphits(const fmap_bwt_t *bwt, const fmap_sa_t *sa, fmap_m
   return b->n;
 }
 
-static int32_t 
-fmap_map2_aux_resolve_query_overlaps(fmap_map2_aln_t *b, double mask_level, int32_t min_as)
-{
-  int32_t i, j, n;
-  if(b->n == 0) return 0;
-  fmap_sort_introsort(hitG, b->n, b->hits);
-  for(i = 1; i < b->n; ++i) {
-      fmap_map2_hit_t *p = b->hits + i;
-      int32_t all_compatible = 1;
-      if(p->G == min_as) break;
-      for(j = 0; j < i; ++j) {
-          fmap_map2_hit_t *q = b->hits + j;
-          int64_t tol = 0;
-          int32_t qol, compatible = 0;
-          double fol;
-          if(q->G == min_as) continue;
-          qol = (p->end < q->end? p->end : q->end) - (p->beg > q->beg? p->beg : q->beg);
-          if(qol < 0) qol = 0;
-          if(p->l == 0 && q->l == 0) {
-              tol = (int64_t)(p->k + p->len < q->k + q->len? p->k + p->len : q->k + q->len)
-                - (p->k > q->k? p->k : q->k);
-              if(tol < 0) tol = 0;
-          }
-          fol = (double)qol / (p->end - p->beg < q->end - q->beg? p->end - p->beg : q->end - q->beg);
-          if(fol < mask_level || (tol > 0 && qol < p->end - p->beg && qol < q->end - q->beg)) compatible = 1;
-          if(!compatible) {
-              if(q->G2 < p->G) q->G2 = p->G;
-              all_compatible = 0;
-          }
-      }
-      if(!all_compatible) p->G = min_as;
-  }
-  n = i;
-  for(i = j = 0; i < n; ++i) {
-      if(b->hits[i].G == min_as) continue;
-      if(i != j) b->hits[j++] = b->hits[i];
-      else ++j;
-  }
-  b->n = j;
-  return j;
-}
+/*
+   static int32_t 
+   fmap_map2_aux_resolve_query_overlaps(fmap_map2_aln_t *b, double mask_level, int32_t min_as)
+   {
+   int32_t i, j, n;
+   if(b->n == 0) return 0;
+   fmap_sort_introsort(hitG, b->n, b->hits);
+   for(i = 1; i < b->n; ++i) {
+   fmap_map2_hit_t *p = b->hits + i;
+   int32_t all_compatible = 1;
+   if(p->G == min_as) break;
+   for(j = 0; j < i; ++j) {
+   fmap_map2_hit_t *q = b->hits + j;
+   int64_t tol = 0;
+   int32_t qol, compatible = 0;
+   double fol;
+   if(q->G == min_as) continue;
+   qol = (p->end < q->end? p->end : q->end) - (p->beg > q->beg? p->beg : q->beg);
+   if(qol < 0) qol = 0;
+   if(p->l == 0 && q->l == 0) {
+   tol = (int64_t)(p->k + p->len < q->k + q->len? p->k + p->len : q->k + q->len)
+   - (p->k > q->k? p->k : q->k);
+   if(tol < 0) tol = 0;
+   }
+   fol = (double)qol / (p->end - p->beg < q->end - q->beg? p->end - p->beg : q->end - q->beg);
+   if(fol < mask_level || (tol > 0 && qol < p->end - p->beg && qol < q->end - q->beg)) compatible = 1;
+   if(!compatible) {
+   if(q->G2 < p->G) q->G2 = p->G;
+   all_compatible = 0;
+   }
+   }
+   if(!all_compatible) p->G = min_as;
+   }
+   n = i;
+   for(i = j = 0; i < n; ++i) {
+   if(b->hits[i].G == min_as) continue;
+   if(i != j) b->hits[j++] = b->hits[i];
+   else ++j;
+   }
+   b->n = j;
+   return j;
+   }
+   */
 
 void 
 fmap_map2_aln_destroy(fmap_map2_aln_t *a)
@@ -160,7 +164,7 @@ fmap_map2_aln_destroy(fmap_map2_aln_t *a)
     } \
     (par).gap_open = (opt)->pen_gapo; (par).gap_ext = (opt)->pen_gape; \
     (par).gap_end = (opt)->pen_gape; \
-    (par).row = 5; (par).band_width = opt->sw_offset; \
+    (par).row = 5; (par).band_width = opt->bw; \
 } while(0)
 
 // Note: this is the reverse, not the reverse compliment
@@ -223,7 +227,7 @@ fmap_map2_aux_extend_left(fmap_map2_opt_t *opt, fmap_map2_aln_t *b,
             target[j++] = fmap_refseq_seq_i(refseq, k);
       }
       lt = j;
-          
+
       if(0 == opt->aln_global) {
           score = fmap_sw_extend_core(target, lt, query + query_length - p->beg, p->beg, &par, &path, 0, p->G, _mem);
       }
@@ -231,11 +235,16 @@ fmap_map2_aux_extend_left(fmap_map2_opt_t *opt, fmap_map2_aln_t *b,
           score = fmap_sw_extend_fitting_core(target, lt, query + query_length - p->beg, p->beg, &par, &path, 0, p->G, _mem);
       }
 
-      if(1 == opt->aln_global || score >= p->G) {
-          p->G = score;
-          p->len += path.i;
-          p->beg -= path.j;
-          p->k -= path.i;
+      if(opt->score_thr < score) {
+          if(1 == opt->aln_global || score >= p->G) {
+              p->G = score;
+              p->len += path.i;
+              p->beg -= path.j;
+              p->k -= path.i;
+          }
+      }
+      else if(1 == opt->aln_global) {
+          p->G = FMAP_MAP2_MINUS_INF; 
       }
   }
   fmap_map2_aux_reverse_query(query, query_length); // reverse back the query
@@ -275,15 +284,21 @@ fmap_map2_aux_extend_right(fmap_map2_opt_t *opt, fmap_map2_aln_t *b,
       }
       lt = j;
       if(0 == opt->aln_global) {
-          score = fmap_sw_extend_core(target, lt, query + p->beg, query_length - p->beg, &par, &path, NULL, p->G, _mem);
+          score = fmap_sw_extend_core(target, lt, query + p->beg, query_length - p->beg, &par, &path, NULL, 1, _mem);
       }
       else {
-          score = fmap_sw_extend_fitting_core(target, lt, query + p->beg, query_length - p->beg, &par, &path, NULL, p->G, _mem);
+          score = fmap_sw_extend_fitting_core(target, lt, query + p->beg, query_length - p->beg, &par, &path, NULL, 1, _mem);
       }
-      if(1 == opt->aln_global || score >= p->G) {
-          p->G = score;
-          p->len = path.i;
-          p->end = path.j + p->beg;
+
+      if(opt->score_thr < score) {
+          if(1 == opt->aln_global || score >= p->G) {
+              p->G = score;
+              p->len = path.i;
+              p->end = path.j + p->beg;
+          }
+      }
+      else if(1 == opt->aln_global) {
+          p->G = FMAP_MAP2_MINUS_INF; 
       }
   }
   free(target);
@@ -318,9 +333,9 @@ fmap_map2_aux_gen_cigar(fmap_map2_opt_t *opt, uint8_t *queries[2],
       fmap_map2_hit_t *p = b->hits + i;
       uint8_t *query;
       uint32_t k;
-      int32_t score, path_len, beg, end;
+      int32_t path_len, beg, end;
       if(p->l) continue;
-  
+
       beg = (p->flag & 0x10)? query_length - p->end : p->beg;
       end = (p->flag & 0x10)? query_length - p->beg : p->end;
 
@@ -328,7 +343,7 @@ fmap_map2_aux_gen_cigar(fmap_map2_opt_t *opt, uint8_t *queries[2],
       for(k = p->k; k < p->k + p->len; ++k) { // in principle, no out-of-boundary here
           target[k - p->k] = fmap_refseq_seq_i(refseq, k);
       }
-      score = fmap_sw_global_core(target, p->len, query, end - beg, &par, path, &path_len);
+      p->G = fmap_sw_global_core(target, p->len, query, end - beg, &par, path, &path_len);
       b->cigar[i] = fmap_sw_path2cigar(path, path_len, &b->n_cigar[i]);
       if(0 < beg || end < query_length) { // add soft clipping
           b->cigar[i] = fmap_realloc(b->cigar[i], sizeof(uint32_t) * (b->n_cigar[i] + 2), "b->cigar");
@@ -395,13 +410,14 @@ fmap_map2_aux_aln(fmap_map2_opt_t *opt, fmap_refseq_t *refseq,
   for(k = 0; k < 2; ++k) {
       fmap_map2_aux_extend_left(opt, bb[k][1], (uint8_t*)seq[k]->s, seq[k]->l, refseq, is_rev, pool->aln_mem);
       fmap_map2_aux_merge_hits(bb[k], seq[k]->l, 0, 0);
-      fmap_map2_aux_resolve_duphits(NULL, NULL, bb[k][0], 0, (0 == opt->aln_global) ? 0 : FMAP_MAP2_MINUS_INF);
+      fmap_map2_aux_resolve_duphits(NULL, NULL, bb[k][0], FMAP_MAP2_AUX_IS, (0 == opt->aln_global) ? 0 : FMAP_MAP2_MINUS_INF);
       fmap_map2_aux_extend_right(opt, bb[k][0], (uint8_t*)seq[k]->s, seq[k]->l, refseq, is_rev, pool->aln_mem);
       b[k] = bb[k][0];
       free(bb[k]);		
   }
   fmap_map2_aux_merge_hits(b, seq[0]->l, 1, opt->aln_global);
-  fmap_map2_aux_resolve_query_overlaps(b[0], opt->mask_level, (0 == opt->aln_global) ? 0 : FMAP_MAP2_MINUS_INF);
+  // Note: this will give duplicate mappings
+  //fmap_map2_aux_resolve_query_overlaps(b[0], opt->mask_level, (0 == opt->aln_global) ? 0 : FMAP_MAP2_MINUS_INF);
 
   return b[0];
 }
@@ -439,7 +455,10 @@ fmap_map2_aux_fix_cigar(fmap_refseq_t *refseq, fmap_map2_hit_t *p, int32_t n_cig
   int32_t x, y, i;
   uint32_t coor, seqid, refl;
 
-  fmap_refseq_pac2real(refseq, p->k, p->len, &seqid, &coor);
+  if(0 == fmap_refseq_pac2real(refseq, p->k, p->len, &seqid, &coor)) {
+      return -1;
+  }
+
   refl = refseq->annos[seqid].len;
   x = coor; y = 0;
   // test if the alignment goes beyond the boundary
@@ -567,7 +586,8 @@ fmap_map1_aux_store_hits(fmap_refseq_t *refseq, fmap_map2_opt_t *opt,
 
       if(p->l == 0) {
           aln->n_cigar[i] = fmap_map2_aux_fix_cigar(refseq, p, aln->n_cigar[i], aln->cigar[i]);
-          if(fmap_refseq_pac2real(refseq, p->k, p->len, &seqid, &coor) <= 0) {
+          if(aln->n_cigar[i] < 0
+             || fmap_refseq_pac2real(refseq, p->k, p->len, &seqid, &coor) <= 0) {
               continue; // spanning two or more chromosomes
           }
       }
@@ -583,7 +603,10 @@ fmap_map1_aux_store_hits(fmap_refseq_t *refseq, fmap_map2_opt_t *opt,
           if(p->n_seeds < 2) c *= .2;
           qual = (int)(c * (p->G - subo) * (250.0 / p->G + 0.03 / opt->score_match) + .499);
           if(qual > 250) qual = 250;
-          if(p->flag & 1) qual = 0;
+          if(p->flag & 1) {
+              qual = 0;
+              p->G2 = p->G; // Note: the flag indicates a repetitive match, so we need to update the sub-optimal score
+          }
           sam->entries[j].mapq = qual;
 
           // copy cigar memory
@@ -648,13 +671,13 @@ fmap_map2_aux_core(fmap_map2_opt_t *_opt,
       pool->aln_mem = fmap_realloc(pool->aln_mem, sizeof(uint8_t) * (tmp + 2) * 24, "pool->aln_mem");
   }
 
-  // set opt->band_width
-  opt.sw_offset = _opt->sw_offset;
+  // set opt->bw
+  opt.bw = _opt->bw;
   k = (l * opt.score_match - 2 * opt.pen_gapo) / (2 * opt.pen_gape + opt.score_match);
   i = (l * opt.score_match - opt.score_match - opt.score_thr) / opt.pen_gape;
   if(k > i) k = i;
   if(k < 1) k = 1; // I do not know if k==0 causes troubles
-  opt.sw_offset= _opt->sw_offset < k ? _opt->sw_offset: k;
+  opt.bw= _opt->bw < k ? _opt->bw: k;
 
   // set seq[2] and rseq[2]
   seq[0] = fmap_string_init(l);
@@ -679,13 +702,13 @@ fmap_map2_aux_core(fmap_map2_opt_t *_opt,
       fmap_string_destroy(seq[1]);
       fmap_string_destroy(rseq[0]);
       fmap_string_destroy(rseq[1]);
-      return NULL;
+      return fmap_map2_sam_init(0);
   }
 
   // alignment
   b[0] = fmap_map2_aux_aln(&opt, refseq, bwt[0], sa[0], seq, 0, pool);
   for(k = 0; k < b[0]->n; ++k) {
-    if(b[0]->hits[k].n_seeds < opt.seeds_rev) break;
+      if(b[0]->hits[k].n_seeds < opt.seeds_rev) break;
   }
   if(k < b[0]->n) {
       b[1] = fmap_map2_aux_aln(&opt, refseq, bwt[1], sa[1], rseq, 1, pool);
@@ -698,8 +721,9 @@ fmap_map2_aux_core(fmap_map2_opt_t *_opt,
       }
       fmap_map2_aux_flag_fr(b);
       fmap_map2_aux_merge_hits(b, l, 0, opt.aln_global);
-      fmap_map2_aux_resolve_duphits(NULL, NULL, b[0], 0, (0 == opt.aln_global) ? 0 : FMAP_MAP2_MINUS_INF);
-      fmap_map2_aux_resolve_query_overlaps(b[0], opt.mask_level, (0 == opt.aln_global) ? 0 : FMAP_MAP2_MINUS_INF);
+      fmap_map2_aux_resolve_duphits(NULL, NULL, b[0], FMAP_MAP2_AUX_IS, (0 == opt.aln_global) ? 0 : FMAP_MAP2_MINUS_INF);
+      // Note: this will give duplicate mappings
+      //fmap_map2_aux_resolve_query_overlaps(b[0], opt.mask_level, (0 == opt.aln_global) ? 0 : FMAP_MAP2_MINUS_INF);
   } else b[1] = 0;
 
 

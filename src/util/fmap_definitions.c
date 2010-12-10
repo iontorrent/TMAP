@@ -31,7 +31,7 @@ uint8_t fmap_nt_char_to_int[256] = {
 uint8_t fmap_nt_char_to_rc_char[256] = {
     'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
     'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
-    'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
+    'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', '-', 'N', 'N',
     'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
     'N', 'T', 'N', 'G',  'N', 'N', 'N', 'C',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
     'N', 'N', 'N', 'N',  'A', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',
@@ -177,10 +177,10 @@ fmap_get_reads_file_format_from_fn_int(char *fn, int32_t *reads_format, int32_t 
       }
   }
   else if(FMAP_FILE_BZ2_COMPRESSION == (*compr_type)) {
-          compr_suffix_length = 4; // ".bz2"
+      compr_suffix_length = 4; // ".bz2"
   }
   else if(FMAP_FILE_GZ_COMPRESSION == (*compr_type)) {
-          compr_suffix_length = 3; // ".gz"
+      compr_suffix_length = 3; // ".gz"
   }
 
   // auto-recognize the reads format
@@ -197,7 +197,7 @@ fmap_get_reads_file_format_from_fn_int(char *fn, int32_t *reads_format, int32_t 
           (*reads_format) = FMAP_READS_FORMAT_SFF;
       }
   }
-  
+
   // check the suffix implied by the compression type
   switch((*compr_type)) {
     case FMAP_FILE_BZ2_COMPRESSION:
@@ -228,7 +228,7 @@ fmap_get_reads_file_format_from_fn_int(char *fn, int32_t *reads_format, int32_t 
       break;
     case FMAP_READS_FORMAT_FASTQ:
       if(NULL == fmap_check_suffix(fn, ".fq", compr_suffix_length) 
-              && NULL == fmap_check_suffix(fn, ".fastq", compr_suffix_length)) {
+         && NULL == fmap_check_suffix(fn, ".fastq", compr_suffix_length)) {
           fmap_error("the expected FASTA file extension is \".fq\" or \".fastq\"", Warn, OutOfRange);
       }
       break;
@@ -262,4 +262,29 @@ fmap_get_reads_file_format_string(int format)
       return strdup("unknown1");
   }
 
+}
+
+inline void
+fmap_reverse(char *seq, int32_t len) 
+{
+  int32_t i;
+  for(i=0;i<(len>>1);i++) {
+      char tmp = seq[len-i-1];
+      seq[len-i-1] = seq[i];
+      seq[i] = tmp;
+  }
+}
+
+inline void
+fmap_reverse_compliment(char *seq, int32_t len) 
+{
+  int32_t i;
+  for(i=0;i<(len>>1);i++) {
+      char tmp = seq[len-i-1];
+      seq[len-i-1] = fmap_nt_char_to_rc_char[(int)seq[i]];
+      seq[i] = fmap_nt_char_to_rc_char[(int)tmp];
+  }
+  if(1 == (len & 1)) { // mod 2
+      seq[i] = fmap_nt_char_to_rc_char[(int)seq[i]];
+  }
 }

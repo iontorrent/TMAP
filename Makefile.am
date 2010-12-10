@@ -45,13 +45,13 @@ fmap_SOURCES = \
 			   src/map/fmap_map2_mempool.h src/map/fmap_map2_mempool.c \
 			   src/map/fmap_map3.h src/map/fmap_map3.c \
 			   src/map/fmap_map3_aux.h src/map/fmap_map3_aux.c \
+			   src/map/fmap_map_all.h src/map/fmap_map_all.c \
 			   src/fmap_main.h src/fmap_main.c
 
 fmap_LDADD = 
 
-noinst_LIBRARIES = libfmap.a
-
-libfmap_a_SOURCES = ${GLOBAL_SOURCES} 
+#noinst_LIBRARIES = libfmap.a
+#libfmap_a_SOURCES = ${GLOBAL_SOURCES} 
 
 EXTRA_DIST = LICENSE \
 			 autogen.sh 
@@ -59,4 +59,4 @@ EXTRA_DIST = LICENSE \
 SUBDIRS = .
 
 docdir = ${datadir}/doc/${PACKAGE}
-dist_doc_DATA = LICENSE 
+dist_doc_DATA = LICENSE doc/fmap-book.pdf

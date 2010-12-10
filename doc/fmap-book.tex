@@ -1,0 +1,436 @@
+\documentclass[a4paper,12pt]{book}
+
+\usepackage{natbib}
+\usepackage{amsmath}
+\usepackage[pdftex]{graphicx}
+\usepackage{array}
+\usepackage{moreverb}
+\usepackage{color}
+\usepackage[plainpages=false,pdfpagelabels]{hyperref}
+\usepackage{url}
+% new color
+\definecolor{mylinkcolor}{rgb}{0,0,0.75}
+\definecolor{mycitecolor}{rgb}{0,0.5,0}
+\definecolor{myfilecolor}{rgb}{1,0,0}
+\definecolor{myurlcolor}{rgb}{0.25,0.5,0.25}
+\hypersetup{
+bookmarks=true,         % show bookmarks bar?
+pdftoolbar=true,        % show Acrobat’s toolbar?
+pdfmenubar=true,        % show Acrobat’s menu?
+pdffitwindow=true,       % page fit to window when opened
+colorlinks=true,        % false: boxed links; true: colored links
+linkcolor=mylinkcolor,  % color of internal links
+citecolor=mycitecolor,  % color of links to bibliography
+filecolor=myfilecolor,    % color of file links
+urlcolor=myurlcolor     % color of external links
+}
+
+\usepackage[all]{hypcap}
+\usepackage{courier}
+
+% Version number
+\newcommand{\Version}{0.0.1}
+
+% layout
+\setlength\topmargin{0in}
+\setlength\headheight{0in}
+\setlength\headsep{1in}
+\setlength\textheight{7.7in}
+\setlength\textwidth{6.5in}
+\setlength\oddsidemargin{0in}
+\setlength\evensidemargin{0in}
+\pagestyle{headings}
+
+% Set that there is no numbering for chapters, parts, sections, etc.
+\setcounter{secnumdepth}{2}
+% Set that there is a table of contents for all.
+\setcounter{tocdepth}{2}
+
+% MACROS
+\newcommand{\TT}[1]{{\tt #1}} % typewriter typeface
+\newcommand{\BF}[1]{{\bf #1}} % bold
+\newcommand{\IF}[1]{{\it #1}} % italic
+\newcommand{\QU}[1]{``#1''} % strict quotation marks
+\newenvironment{script}{\\\\\footnotesize\$\TT}{\normalsize\\\\}
+
+% DATE
+\author{Nils Homer}
+\date{}
+\title{FMAP: the flow sequence mapping program
+\thanks{Copyright \copyright 2010 Ion Torrent Systems, Inc. All Rights, made for FMAP version \Version}
+}
+\begin{document}
+\frontmatter
+
+% TITLE PAGE
+%\thispagestyle{empty} % Suppress page numberings on the first page
+\maketitle
+
+% TABLE OF CONTENTS
+\tableofcontents
+\addcontentsline{toc}{chapter}{Table of Contents}
+
+%\listoffigures
+%\addcontentsline{toc}{chapter}{List of Figures}
+%\listoftables
+%\addcontentsline{toc}{chapter}{List of Tables}
+
+\chapter{Preface}
+This document is meant to serve as a guide for the practical use of FMAP.
+It includes explanations of all command-line options for each command and binary in FMAP to give an idea of basic usage.
+Input and output file formats are also detailed.
+The default options of the various programs are designed intelligently to adapt to the various program uses, but in some cases the options may need to be customized.
+
+This document does not try to explain the underlyings algorithm or data-structures used in FMAP.
+Without proper understanding of the underlying algorithms, it is difficult to use this very flexible program knowledgeably to obtain your desired results.
+
+If you have anything that you would be useful to add to this guide, feel free to relay the addition to the FMAP developers.
+This includes but is not limited to bugs, typos, and explanations.
+Please see \url{http://www.iontorrent.com} for more details.
+
+Enjoy!
+
+%\section{Acknowledgements}
+\mainmatter
+
+\chapter{Basic Usage}
+
+\section{Program Organization}
+FMAP consists of a set of utilities, combined into one command line program called \TT{fmap}.  
+Each utility is specified by a unique name or command.
+Specifying FMAP without a command will give a list of commands, while specifying FMAP with a command but no options will give a list of options for that command.
+
+There are two steps in mapping with FMAP.
+The first step is to build an index of the reference genome onto which we map.
+This index needs only to be built once for each genome, performing much of the mapping work upfront.
+The second step is to map the reads to the reference genome using this index.
+
+FMAP is implemented as a command-line program.
+It accepts many command-line options to customize and tune the mapping algorithm.
+The key commands are organized into one binary program called \TT{fmap}.
+To access each command, we use \TT{fmap <name>}, where \TT{<name>} is the name of the command we wish to execute.
+
+\section{Common Mapping Options}
+\label{sec:commonoptions}
+Some common options exist across some or all of the mapping commands (\TT{map1}, \TT{map2}, \TT{map3} and \TT{mapall}). 
+These options will be discussed here to avoid duplication.
+
+The FMAP mapping commands can accept their input file from the standard input stream.
+The output of these commands also write to the standard output stream.
+This facilitates the use of these FMAP commands in a pipe-and-filter model.
+
+\subsection{Global Options}
+\subsubsection{\TT{-f FILE}}
+Specifies the file name of the reference genome in FASTA format.
+The maximum number of bases in the reference genome can be $4294967295$, due to the use of 32-bit values to represent each position in the reference.
+
+\subsubsection{\TT{-r FILE}}
+Specifies the file name of the reads to mapped.
+The input reads can be in FASTA, FASTQ, or SFF format.
+
+\subsubsection{\TT{-F STRING}}
+Specifies the file format of the reads file.
+Without this option, the format is auto-recognized by the file extension.
+The valid inputs are \TT{fa} or \TT{fasta} for FASTA, \TT {fq} or \TT{fastq} for FASTQ, or \TT{sff} for SFF.
+
+\subsubsection{\TT{-A INT}}
+Specifies the match score.
+This number must always be positive.
+
+\subsubsection{\TT{-M INT}}
+Specifies the mismatch penalty.
+This number must always be positive.
+
+\subsubsection{\TT{-O INT}}
+Specifies the gap open penalty.
+This number must always be positive.
+
+\subsubsection{\TT{-E INT}}
+Specifies the gap extension penalty.
+This number must always be positive.
+
+\subsubsection{\TT{-w INT}}
+Specifies the band width for local alignment.
+This number must always be positive.
+
+\subsubsection{-g}
+Specifies that the entire read should be mapped to the reference.
+Otherwise a sub-sequence of the read may be mapped.
+\subsubsection{\TT{-q INT}}
+Specifies the number of reads to cache or load into memory at one time.
+
+\subsubsection{\TT{-n INT}}
+Specifies the number of threads to run.
+
+\subsubsection{\TT{-a INT}}
+Specifies the output filter for the mappings.
+\begin{enumerate}
+	\setcounter{enumi}{-1} % start at zero
+	\item returns the mapping with the best score only if all other mappings had worse score, otherwise the read is unmapped.
+	\item returns the mapping with the best score.  
+		If more than one mapping has this score, a random mapping with this score is returned.
+	\item returns all the mappings with the best score.
+	\item returns all the mappings, regardless of score.
+\end{enumerate}
+Reads that have no mapping are returned as unmapped reads.
+
+\subsubsection{\TT{-j}, \TT{-z}}
+Specifies that the input is bzip2 (\TT{-j}) or gzip (\TT{-z}) compressed.
+This is auto-recognized if the input file name has the extension \TT{.bz2} for bzip2 and \TT{.gz} for gzip.
+
+\subsubsection{\TT{-J}, \TT{-Z}}
+Specifies that the output should be bzip2 (\TT{-J}) or gzip (\TT{-Z}) compressed.
+
+\subsubsection{\TT{-s INT}}
+Specifies the shared memory key if the reference index has been loaded into shared memory.
+
+\subsubsection{\TT{-v}}
+Specifies to print verbose progress messages, otherwise progress messages will be surpressed.
+
+\subsubsection{\TT{-h}}
+Specifies to print a help message, listing all available options.
+
+\section{fmap index}
+\label{sec:index}
+The \BF{index} command creates a compact version of the reference genome and associated index.
+The index is stored as a compressed suffix array using the FM-index and BWT transform (\cite{FM-index,BWT}).
+A hash into this index accelerates this lookups of DNA sequences in this index.
+In fact, a second additional index of the reference genome is created that indexes the reverse (but not complimented) reference genome.
+This second index further speeds up the search time.
+
+See \autoref{sec:commonoptions} for common options that are in use in this command.
+
+\subsection{Usage}
+
+\subsubsection{\TT{-o INT}}
+Specifies the occurence interval size $o$, storing only every $o$th occurrence interval.
+This must be one, or a multiple of $16$.
+
+\subsubsection{\TT{-w INT}}
+Specifies the k-mer size (the number of bases) to hash.
+The size of the hash give the k-mer size $k$ in bytes is:
+\[
+= 2 \sum_{n=1}^{k} 4^{n}
+= 2 \left(\frac{1 - 4^{k+1}}{1-4} - 1\right)
+\]
+using the Taylor series.
+
+\subsubsection{\TT{-i INT}}
+Specifies the suffix array interval size $i$, storing only every $i$th suffix array interval.
+This must be one, or a multiple of two.
+
+\subsubsection{\TT{-a STRING}}
+Specifies the BWT construction algorithm (\TT{bwtsw} or \TT{is}).
+The \TT{bwtsw} algorithm is for genomes larger than or equal to $10$Mb, and the \TT{is} algorithm is for genomes smaller than $10$Mb.
+This will be auto-recognized during index creation if this option is omitted.
+
+\section{fmap server}
+\label{sec:server}
+The \BF{server} command loads the reference genome index and data into shared memory.
+This lets other mapping instances avoid having to load the index upon each execution.
+This program will try to fail gracefully, detaching shared memory upon exiting.
+
+See \autoref{sec:commonoptions} for common options that are in use in this command.
+\subsection{Usage}
+
+\subsubsection{\TT{-c STRING}}
+Specifies the command for the server (\TT{start}, \TT{stop}, \TT{kill}).
+The \TT{start} command loads data into shared memory, and waits for a \TT{ctrl-c} or \TT{SIGINT} signal.
+The \TT{stop} command will signal a currently running server to stop and detach shared memory.
+The \TT{kill} command will forcible detach the shared memory segment and signal a currently running server to exit.
+The latter command is especially useful for killing zombied processes and detaching lost shared memory segments.
+
+\subsubsection{\TT{-k INT}}
+Specifies the shared memory key for this server.
+The shared memory segment will be identified by this key.
+
+\subsubsection{\TT{-a}}
+Specifies to load all reference genome data structures into memory.
+
+\subsubsection{\TT{-r}}
+Specifies to load the forward packed reference sequence.
+
+\subsubsection{\TT{-R}}
+Specifies to load the reverse packed reference sequence.
+
+\subsubsection{\TT{-b}}
+Specifies to load the forward BWT sequence.
+
+\subsubsection{\TT{-B}}
+Specifies to load the reverse BWT sequence.
+
+\subsubsection{\TT{-s}}
+Specifies to load the forward suffix array.
+
+\subsubsection{\TT{-S}}
+Specifies to load the reverse suffix array.
+
+\section{fmap map1}
+\label{sec:map1}
+The \BF{map1} is a command to quickly map short sequences to a reference genome by intelligently enumerating errors.
+This algorithm is not well suited for longer reads ($<150$bp) and based off of the BWA short-read algorithm (\cite{BWA-short}).
+
+See \autoref{sec:commonoptions} for common options that are in use in this command.
+
+\subsection{Usage}
+
+\subsubsection{-l INT}
+Specifies the k-mer length for seeding candidate alignment locations (CALs) using the first $k$ bases of the read.
+
+\subsubsection{-k INT}
+Specifies the number of mismatches allowed in the seed.
+
+\subsubsection{-m NUM}
+Specifies the maximum number of mismatches allowed in the mapping, or the fraction of mismatches with respect to the read length.
+
+\subsubsection{-o NUM}
+Specifies the maximum number of indels allowed in the mapping, or the fraction of indels with respect to the read length.
+The number of indels is equal to the number of gap opens.
+
+\subsubsection{-e NUM}
+Specifies the maximum number of indel extensions allowed in the mapping, or the fraction of indel extensionswith respect to the read length.
+The number of indel extensions is equal to the number of gap extensions.
+
+\subsubsection{-d INT}
+Specifies the maximum number of candidate alignment locations (CALs) to allow a deletion to be extended.
+
+\subsubsection{-i INT}
+Specifies to disallow indels within this number of bases from the ends of the read.
+
+\subsubsection{-b INT}
+Specifies to stop searching for mappings when this many best scoring mappings have been found.
+
+\subsubsection{-Q INT}
+Specifies the maximum number of alignment nodes in memory in the implicite prefix trie traversal before the search is stopped.
+
+\section{fmap map2}
+\label{sec:map2}
+The \BF{map2} is a command to quickly map long sequences to a reference genome.
+This algorithm is well suited for longer reads ($\geq 150$bp) and based off of the BWA long-read algorithm (\cite{BWA-long}).
+
+See \autoref{sec:commonoptions} for common options that are in use in this command.
+
+\subsection{Usage}
+
+\subsubsection{-c FLOAT}
+Specifies the coefficient to adjust the mapping score threshold based on the read length.
+Given a $l$-long read, the threshold for a mapping to be retained is $a*max\{T,c*log(l)\}$, where $a$ is the match score (\TT{-A}) and $T$ is the minimum score threshold (\TT{-T}).
+
+\subsubsection{-w INT}
+Specifies the band width in the banded local alignment.
+
+\subsubsection{-T INT}
+Specifies the number of multiples of the match score (\TT{-A}) for the minimum scoring threshold.
+
+\subsubsection{-S INT}
+Specifies the maximum seeding interval size for extending a mapping.
+
+\subsubsection{-b INT}
+Specifies the number of mappings to retain at during extension of the seed.
+
+\subsubsection{-N INT}
+Specifies the number seeds supporting the given mapping needed to skip the reverse alignment.
+
+\section{fmap map3}
+\label{sec:map3}
+The \BF{map3} is a command to map sequences to a reference genome.
+This algorithm is well suited for longer reads ($\geq 150$bp) and a simplification of the SSAHA long-read algorithm (\cite{SSAHA}).
+
+See \autoref{sec:commonoptions} for common options that are in use in this command.
+
+\subsection{Usage}
+
+\subsubsection{-l INT}
+Specifies the $k$-mer length to seed candidate alignment locations (CALs).
+With a value of $-1$ will set the seed length to $\left(ceiling(log_4(R)) + 2\right)$ where $R$ is the reference genome length.
+
+\subsubsection{-S INT}
+Specifies the maximum number of CALs allowed to be returned by a seed before it is ignored.
+
+\subsubsection{-b INT}
+Specifies the window in bases in which to group seeds.
+
+\subsubsection{-w INT}
+Specifies the band width in the banded local alignment.
+
+\subsubsection{-T INT}
+Specifies the number of multiples of the match score (\TT{-A}) for the minimum scoring threshold.
+
+\section{fmap mapall}
+\label{sec:mapall}
+The \BF{mapall} is a command to quickly map short sequences to a reference genome.
+This command combines available mapping algorithms for fast and sensitive alignment.
+The algorithms follows a two-stage approach, with a set of algorithms and associated settings for each stage.
+If there are no mappings for a read by applying the algorithms in the first stage, then the algorithms in the second stage are applied. 
+For example, a set of algorithms to quickly align near-perfect reads may be used in the first stage, while a set of sensitive algorithms may be used to map difficult reads in the second stage
+
+Note: for the \TT{map1} command used within \TT{mapall}, the alignment score is adjusted to agree with alignment scores from other algorithms.
+This may cause the alignment score reported by using \TT{map1} within the \TT{mapall} command to be different than using \TT{map1} by itself.
+
+See \autoref{sec:commonoptions} for common options that are in use in this command.
+
+\subsubsection{Usage}
+First, a set of global options is specified that will be used for the algorithms to be applied at both stages.
+Global options should not be given in the options for a specific algorithm.
+Next, the algorithms and their associated options will be specified for each stage.
+An algorithm to be applied in the first stage should be specified using its name in lowercase.
+The options specific to this algorithm should be specified directly thereafter.
+An algorithm to be applied in the second stage should be specified using its name in uppercase.
+The options specific to this algorithm should be specified directly thereafter.
+
+An example would be:\\
+\TT{fmap mapall -f ref.fasta -r reads.fastq -g -M 3 map1 -l 12 -k 24 MAP2 -b 5 MAP3 -S 10}.\\
+In this case, the \TT{map1} algorithm will be applied with the options \TT{-l 12 -k 24 -M 3} in the first stage.
+If no mapping is found for a read, the \TT{map2} algorithm with the options \TT{-b 5 -g -M 3} and the \TT{map3 -g -M 3} algorithm with the options \TT{-S 10} will be applied in the second stage.
+Notice how the global options \TT{-g -M 3} are applied to all the algorithms were applicable.
+It is possible to have a given algorithm run in both stages with different options.
+
+\chapter{File Formats}
+
+\section{SAM Alignment Format}
+FMAP is produces mappings in the SAM format (\cite{SAM-format}).
+Optional tags are used to store information about mappings useful for downstream processing.
+
+
+\subsection{Optional Tags}
+
+\subsubsection{AS}
+This stores the alignment score.
+
+\subsubsection{NM}
+This stores the edit distance from the reference sequence.
+
+\subsubsection{XM}
+This stores the number of mismatches in the mapping.
+
+\subsubsection{XO}
+This stores the number of indels (gap opens) in the mapping.
+
+\subsubsection{XG}
+This stores the number of indel extensions (gap extensions) in the mapping.
+
+\subsubsection{XS}
+This stores the alignment score of next-best sub-optimal mapping.
+
+\subsubsection{XF}
+This stores from where the mappings originated: one indicates from the forward search, two indicates from the reverse search, and three indicates from both the forward and reverse search.
+
+\subsubsection{XE}
+This stores the number of seeds supporting this mapping.
+
+\subsubsection{XI}
+This stores the size of the suffix interval for this mapping.
+
+\subsubsection{XA}
+This stores the algorithm that produced this mapping and from what stage.
+The format is the algorithm name, and then the zero-based stage, separated by a dash.
+
+\chapter{Appendix}
+
+% References
+\phantomsection
+\addcontentsline{toc}{chapter}{References}
+\bibliography{fmap-book}
+\bibliographystyle{natbib}
+
+\end{document}

@@ -19,7 +19,7 @@ typedef struct {
     int32_t seed_length; /*!< the kmer seed length (-l) */
     int32_t max_seed_hits; /*!< the maximum number of hits returned by a seed (-S) */
     int32_t max_seed_band; /*!< the band to group seeds (-b)*/
-    int32_t sw_offset; /*!< the extra bases to add before and after the target during Smith-Waterman (-w) */
+    int32_t bw; /*!< the extra bases to add before and after the target during Smith-Waterman (-w) */
     int32_t score_match;  /*!< the match score (-A) */
     int32_t pen_mm;  /*!< the mismatch penalty (-M) */
     int32_t pen_gapo;  /*!< the indel open penalty (-O) */
@@ -32,6 +32,7 @@ typedef struct {
     int32_t num_threads;  /*!< the number of threads (-n) */
     char *flow; /*!< the flow order (-k) */
     int32_t aln_output_mode;  /*!< specifies how to choose alignments (-a)  */
+    char *sam_rg;  /*!< specifies the RG line in the SAM header (-R) */
     int32_t input_compr;  /*!< the input compression type (-j and -z) */
     int32_t output_compr;  /*!< the output compression type (-J and -Z) */
     key_t shm_key;  /*!< the shared memory key (-s) */
@@ -39,7 +40,7 @@ typedef struct {
 
 /*!
   Structure for a final hit
- */ 
+  */ 
 typedef struct {
     uint16_t strand:1; /*!< the strand */
     uint32_t seqid;  /*!< the sequence index (0-based) */
@@ -53,8 +54,8 @@ typedef struct {
 } fmap_map3_hit_t;
 
 /*!
- Stucture for holding alignment hits
- */
+  Stucture for holding alignment hits
+  */
 typedef struct {
     int32_t n; /*!< the number of hits */
     fmap_map3_hit_t *hits; /*!< array of hits */
@@ -75,6 +76,53 @@ typedef struct {
     fmap_map3_opt_t *opt;  /*!< the options to this program */
 } fmap_map3_thread_data_t;
 #endif
+
+/*!
+  Returns the inferred seed length given the reference length
+  @param  ref_len  the reference length
+  @return          the estimated seed length
+  */
+int32_t
+fmap_map3_get_seed_length(uint64_t ref_len);
+
+/*!
+  Prints the usage of map3
+  @param  opt  the current options
+  @return      always 1
+  */
+int
+fmap_map3_usage(fmap_map3_opt_t *opt);
+
+/*!
+  Gets the initialized options
+  @return  pointer to the initialized options
+  */
+fmap_map3_opt_t *
+fmap_map3_opt_init();
+
+/*!
+  Destroys the memory associated with these options
+  @param  opt  pointer to the options
+  */
+void
+fmap_map3_opt_destroy(fmap_map3_opt_t *opt);
+
+/*!
+  Parses the command line options and stores them in the options structure
+  @param  argc  the number of arguments
+  @param  argv  the argument list
+  @param  opt   pointer to the options
+  @return       1 if successful, 0 otherwise
+  */
+int32_t
+fmap_map3_opt_parse(int argc, char *argv[], fmap_map3_opt_t *opt);
+
+/*!
+  Checks that all options are within range
+  @param  opt   pointer to the options
+  */
+void
+fmap_map3_opt_check(fmap_map3_opt_t *opt);
 
 /*! 
   main-like function for 'fmap map3'

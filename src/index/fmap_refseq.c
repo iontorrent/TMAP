@@ -493,7 +493,7 @@ inline uint32_t
 fmap_refseq_pac2real(const fmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos)
 {
   (*seqid) = fmap_refseq_get_seqid(refseq, pacpos, aln_length);
-  if((*seqid) < 0) return 0;
+  if((*seqid) == -1) return 0;
   (*pos) = fmap_refseq_get_pos(refseq, pacpos, (*seqid));
 
   return (*pos);

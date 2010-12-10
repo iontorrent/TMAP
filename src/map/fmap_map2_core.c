@@ -9,6 +9,7 @@
 #include "../util/fmap_hash.h"
 #include "../index/fmap_bwt.h"
 #include "../index/fmap_bwtl.h"
+#include "fmap_map_util.h"
 #include "fmap_map2_mempool.h"
 #include "fmap_map2_aux.h"
 #include "fmap_map2_core.h"
@@ -274,7 +275,7 @@ fmap_map2_core_aln(const fmap_map2_opt_t *opt, const fmap_bwtl_t *target,
       for(i = 0; i < v->n; ++i) { // test max depth and band width
           fmap_map2_cell_t *p = v->array + i;
           if(p->match_sa.l == 0) continue;
-          if(p->tlen - (int)p->qlen > opt->sw_offset || (int)p->qlen - p->tlen > opt->sw_offset) {
+          if(p->tlen - (int)p->qlen > opt->bw || (int)p->qlen - p->tlen > opt->bw) {
               p->match_sa.k = p->match_sa.l = 0;
               p->match_sa.hi = p->match_sa.offset = 0;
               if(p->ppos >= 0) v->array[p->ppos].cpos[p->pj] = -5;
@@ -393,8 +394,8 @@ fmap_map2_core_aln(const fmap_map2_opt_t *opt, const fmap_bwtl_t *target,
       } // ~for(tj)
       fmap_map2_mempool_push(stack->pool, v);
   } // while(top)
-  fmap_map2_aux_resolve_duphits(query_bwt, query_sa, b, opt->max_seed_intv, 0);
-  fmap_map2_aux_resolve_duphits(query_bwt, query_sa, b1, opt->max_seed_intv, 0);
+  fmap_map2_aux_resolve_duphits(query_bwt, query_sa, b, opt->max_seed_intv, 0); 
+  fmap_map2_aux_resolve_duphits(query_bwt, query_sa, b1, opt->max_seed_intv, 0); 
   // free
   free(heap);
   fmap_hash_destroy(64, rhash);

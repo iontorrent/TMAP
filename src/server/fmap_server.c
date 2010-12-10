@@ -197,6 +197,7 @@ usage()
   fmap_file_fprintf(fmap_file_stderr, "         -f FILE     the FASTA reference file name\n");
   fmap_file_fprintf(fmap_file_stderr, "         -c STRING   server command [start|stop|kill]\n");
   fmap_file_fprintf(fmap_file_stderr, "         -k INT      the server key\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -a          load all\n");
   fmap_file_fprintf(fmap_file_stderr, "         -r          load the forward packed reference\n");
   fmap_file_fprintf(fmap_file_stderr, "         -R          load the reverse packed reference\n");
   fmap_file_fprintf(fmap_file_stderr, "         -b          load the forward bwt\n");
@@ -226,8 +227,16 @@ fmap_server_main(int argc, char *argv[])
   key_t key=13;
   uint32_t listing = 0;
 
-  while((c = getopt(argc, argv, "f:c:k:rRbBsSvh")) >= 0) {
+  while((c = getopt(argc, argv, "f:c:k:arRbBsSvh")) >= 0) {
       switch(c) {
+        case 'a':
+          listing |= FMAP_SHM_LISTING_REFSEQ;
+          listing |= FMAP_SHM_LISTING_REV_REFSEQ;
+          listing |= FMAP_SHM_LISTING_BWT;
+          listing |= FMAP_SHM_LISTING_REV_BWT;
+          listing |= FMAP_SHM_LISTING_SA;
+          listing |= FMAP_SHM_LISTING_REV_SA;
+          break;
         case 'f':
           fn_fasta = fmap_strdup(optarg); break;
         case 'c':

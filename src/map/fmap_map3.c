@@ -25,19 +25,18 @@
 #ifdef HAVE_LIBPTHREAD
 static pthread_mutex_t fmap_map3_read_lock = PTHREAD_MUTEX_INITIALIZER;
 static int32_t fmap_map3_read_lock_low = 0;
-#define FMAP_MAP3_THREAD_BLOCK_SIZE 1024
+#define FMAP_MAP3_THREAD_BLOCK_SIZE 512
 #endif
 
-static int32_t
+int32_t
 fmap_map3_get_seed_length(uint64_t ref_len)
 {
   int32_t k = 0;
   while(0 < ref_len) {
-      ref_len >>= 2; // divide by four
+      ref_len >>= 1; // divide by two
       k++;
   }
-  // add two just to be sure
-  return k+2;
+  return k;
 }
 
 static inline void
@@ -58,11 +57,12 @@ fmap_map3_aln_filter(fmap_seq_t *seq, fmap_map3_aln_t *aln,
       cur_score = aln->hits[i].score;
       tot_seeds += aln->hits[i].n_seeds;
       if(best_score < cur_score) {
+          best_subo = best_score;
           best_score = cur_score;
           n_best = 1;
           n_seeds = aln->hits[i].n_seeds;
       }
-      else if(!(cur_score < best_score)) { // qual
+      else if(cur_score == best_score) { // qual
           n_best++;
       }
       else {
@@ -86,7 +86,13 @@ fmap_map3_aln_filter(fmap_seq_t *seq, fmap_map3_aln_t *aln,
       if(mapq > 250) mapq = 250;
   }
   for(i=0;i<aln->n;i++) {
-      aln->hits[i].mapq = mapq;
+      cur_score = aln->hits[i].score;
+      if(cur_score == best_score) { // qual
+          aln->hits[i].mapq = mapq;
+      }
+      else {
+          aln->hits[i].mapq = 0;
+      }
   }
 
   if(FMAP_MAP_UTIL_ALN_MODE_ALL == aln_output_mode
@@ -102,7 +108,7 @@ fmap_map3_aln_filter(fmap_seq_t *seq, fmap_map3_aln_t *aln,
           best_score = cur_score;
           n_best = 1;
       }
-      else if(!(cur_score < best_score)) { // equal
+      else if(cur_score == best_score) { // equal
           n_best++;
       }
   }
@@ -199,12 +205,16 @@ fmap_map3_core_worker(fmap_seq_t **seq_buffer, fmap_map3_aln_t **alns, int32_t s
       high = seq_buffer_length; // process all
 #endif
       while(low<high) {
-          fmap_seq_t *seq[2]={NULL, NULL};
-          fmap_string_t *bases[2]={NULL, NULL};
+          fmap_seq_t *seq[2]={NULL, NULL}, *orig_seq=NULL;
+          orig_seq = seq_buffer[low];
 
           // clone the sequence 
           seq[0] = fmap_seq_clone(seq_buffer[low]);
           seq[1] = fmap_seq_clone(seq_buffer[low]);
+          
+          // Adjust for SFF
+          fmap_seq_remove_key_sequence(seq[0]);
+          fmap_seq_remove_key_sequence(seq[1]);
 
           // reverse compliment
           fmap_seq_reverse_compliment(seq[1]);
@@ -212,14 +222,6 @@ fmap_map3_core_worker(fmap_seq_t **seq_buffer, fmap_map3_aln_t **alns, int32_t s
           // convert to integers
           fmap_seq_to_int(seq[0]);
           fmap_seq_to_int(seq[1]);
-
-          // remove key sequence - SFF only
-          fmap_seq_remove_key_sequence(seq[0]);
-          fmap_seq_remove_key_sequence(seq[1]);
-
-          // get bases
-          bases[0] = fmap_seq_get_bases(seq[0]);
-          bases[1] = fmap_seq_get_bases(seq[1]);
 
           // align
           alns[low] = fmap_map3_aux_core(seq, flow, refseq, bwt, sa, opt);
@@ -273,6 +275,10 @@ fmap_map3_core(fmap_map3_opt_t *opt)
   fmap_map3_aln_t **alns = NULL;
   fmap_shm_t *shm = NULL;
   int32_t reads_queue_size;
+  
+  if(NULL == opt->fn_reads) {
+      fmap_progress_set_verbosity(0); 
+  }
 
   // adjust opt for opt->score_match
   opt->score_thr *= opt->score_match;
@@ -306,12 +312,6 @@ fmap_map3_core(fmap_map3_opt_t *opt)
       fmap_progress_print("setting the seed length to %d", opt->seed_length);
   }
 
-  // Note: 'fmap_file_stdout' should not have been previously modified
-  fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "wb", opt->output_compr);
-
-  // SAM header
-  fmap_sam_print_header(fmap_file_stdout, refseq, opt->argc, opt->argv);
-
   // allocate the buffer
   if(-1 == opt->reads_queue_size) {
       reads_queue_size = 1;
@@ -324,6 +324,7 @@ fmap_map3_core(fmap_map3_opt_t *opt)
 
   if(NULL == opt->fn_reads) {
       fp_reads = fmap_file_fdopen(fileno(stdin), "rb", opt->input_compr);
+      fmap_progress_set_verbosity(0); 
   }
   else {
       fp_reads = fmap_file_fopen(opt->fn_reads, "rb", opt->input_compr);
@@ -347,12 +348,23 @@ fmap_map3_core(fmap_map3_opt_t *opt)
       break;
   }
 
+  // Note: 'fmap_file_stdout' should not have been previously modified
+  fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "wb", opt->output_compr);
+
+  // SAM header
+  fmap_sam_print_header(fmap_file_stdout, refseq, seqio, opt->sam_rg, opt->argc, opt->argv);
+
   fmap_progress_print("processing reads");
   while(0 < (seq_buffer_length = fmap_seq_io_read_buffer(seqio, seq_buffer, reads_queue_size))) {
 
       // do alignment
 #ifdef HAVE_LIBPTHREAD
-      if(1 == opt->num_threads) {
+      int32_t num_threads = opt->num_threads;
+      if(seq_buffer_length < num_threads * FMAP_MAP3_THREAD_BLOCK_SIZE) {
+          num_threads = 1 + (seq_buffer_length / FMAP_MAP3_THREAD_BLOCK_SIZE);
+      }
+      fmap_map3_read_lock_low = 0; // ALWAYS set before running threads 
+      if(1 == num_threads) {
           fmap_map3_core_worker(seq_buffer, alns, seq_buffer_length, refseq, bwt, sa, 0, opt);
       }
       else {
@@ -363,11 +375,10 @@ fmap_map3_core(fmap_map3_opt_t *opt)
           pthread_attr_init(&attr);
           pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
-          threads = fmap_calloc(opt->num_threads, sizeof(pthread_t), "threads");
-          thread_data = fmap_calloc(opt->num_threads, sizeof(fmap_map3_thread_data_t), "thread_data");
-          fmap_map3_read_lock_low = 0; // ALWAYS set before running threads 
+          threads = fmap_calloc(num_threads, sizeof(pthread_t), "threads");
+          thread_data = fmap_calloc(num_threads, sizeof(fmap_map3_thread_data_t), "thread_data");
 
-          for(i=0;i<opt->num_threads;i++) {
+          for(i=0;i<num_threads;i++) {
               thread_data[i].seq_buffer = seq_buffer;
               thread_data[i].seq_buffer_length = seq_buffer_length;
               thread_data[i].alns = alns;
@@ -380,7 +391,7 @@ fmap_map3_core(fmap_map3_opt_t *opt)
                   fmap_error("error creating threads", Exit, ThreadError);
               }
           }
-          for(i=0;i<opt->num_threads;i++) {
+          for(i=0;i<num_threads;i++) {
               if(0 != pthread_join(threads[i], NULL)) {
                   fmap_error("error joining threads", Exit, ThreadError);
               }
@@ -393,7 +404,9 @@ fmap_map3_core(fmap_map3_opt_t *opt)
       fmap_map3_core_worker(seq_buffer, alns, seq_buffer_length, refseq, bwt, sa, 0, opt);
 #endif
 
-      fmap_progress_print("writing alignments");
+      if(-1 != opt->reads_queue_size) {
+          fmap_progress_print("writing alignments");
+      }
       for(i=0;i<seq_buffer_length;i++) {
 
           if(0 < alns[i]->n) {
@@ -415,6 +428,11 @@ fmap_map3_core(fmap_map3_opt_t *opt)
       }
 
       n_reads_processed += seq_buffer_length;
+      if(-1 != opt->reads_queue_size) {
+          fmap_progress_print2("processed %d reads", n_reads_processed);
+      }
+  }
+  if(-1 == opt->reads_queue_size) {
       fmap_progress_print2("processed %d reads", n_reads_processed);
   }
 
@@ -437,8 +455,8 @@ fmap_map3_core(fmap_map3_opt_t *opt)
   }
 }
 
-static int 
-usage(fmap_map3_opt_t *opt)
+int 
+fmap_map3_usage(fmap_map3_opt_t *opt)
 {
   char *reads_format = fmap_get_reads_file_format_string(opt->reads_format);
   // Future options:
@@ -452,14 +470,16 @@ usage(fmap_map3_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "\n");
   fmap_file_fprintf(fmap_file_stderr, "Usage: %s map3 [options]", PACKAGE);
   fmap_file_fprintf(fmap_file_stderr, "\n");
-  fmap_file_fprintf(fmap_file_stderr, "Options (optional):\n");
+  fmap_file_fprintf(fmap_file_stderr, "Options (required):\n");
   fmap_file_fprintf(fmap_file_stderr, "         -f FILE     the FASTA reference file name [%s]\n", opt->fn_fasta);
   fmap_file_fprintf(fmap_file_stderr, "         -r FILE     the reads file name [%s]\n", (NULL == opt->fn_reads) ? "stdin" : opt->fn_reads);
+  fmap_file_fprintf(fmap_file_stderr, "\n");
+  fmap_file_fprintf(fmap_file_stderr, "Options (optional):\n");
   fmap_file_fprintf(fmap_file_stderr, "         -F STRING   the reads file format (fastq|fq|fasta|fa|sff) [%s]\n", reads_format);
   fmap_file_fprintf(fmap_file_stderr, "         -l INT      the k-mer length to seed CALs (-1 tunes to the genome size) [%d]\n", opt->seed_length);
   fmap_file_fprintf(fmap_file_stderr, "         -S INT      the maximum number of hits returned by a seed [%d]\n", opt->max_seed_hits);
-  fmap_file_fprintf(fmap_file_stderr, "         -b INT      the band width to group seeds [%d]\n", opt->max_seed_band);
-  fmap_file_fprintf(fmap_file_stderr, "         -w INT      the extra bases to add before and after the target during Smith-Waterman [%d]\n", opt->sw_offset);
+  fmap_file_fprintf(fmap_file_stderr, "         -b INT      the window of bases in which to group seeds [%d]\n", opt->max_seed_band);
+  fmap_file_fprintf(fmap_file_stderr, "         -w INT      the band width [%d]\n", opt->bw);
   fmap_file_fprintf(fmap_file_stderr, "         -A INT      the match score [%d]\n", opt->score_match); 
   fmap_file_fprintf(fmap_file_stderr, "         -M INT      the mismatch penalty [%d]\n", opt->pen_mm); 
   fmap_file_fprintf(fmap_file_stderr, "         -O INT      the indel start penalty [%d]\n", opt->pen_gapo); 
@@ -475,6 +495,7 @@ usage(fmap_map3_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "                             1 - random best hit\n");
   fmap_file_fprintf(fmap_file_stderr, "                             2 - all best hits\n");
   fmap_file_fprintf(fmap_file_stderr, "                             3 - all alignments\n");
+  fmap_file_fprintf(fmap_file_stderr, "         -R STRING   the RG line in the SAM header [%s]\n", opt->sam_rg);
   fmap_file_fprintf(fmap_file_stderr, "         -j          the input is bz2 compressed (bzip2) [%s]\n",
                     (FMAP_FILE_BZ2_COMPRESSION == opt->input_compr) ? "true" : "false");
   fmap_file_fprintf(fmap_file_stderr, "         -z          the input is gz compressed (gzip) [%s]\n",
@@ -493,7 +514,7 @@ usage(fmap_map3_opt_t *opt)
   return 1;
 }
 
-static fmap_map3_opt_t *
+fmap_map3_opt_t *
 fmap_map3_opt_init()
 {
   fmap_map3_opt_t *opt = NULL;
@@ -508,7 +529,7 @@ fmap_map3_opt_init()
   opt->seed_length = -1; // move this to a define block
   opt->max_seed_hits = 8; // move this to a define block
   opt->max_seed_band = 50; // move this to a define block
-  opt->sw_offset = 10; // move this to a define block
+  opt->bw = 50; // move this to a define block
   opt->score_match = 1;
   opt->pen_mm = 3; opt->pen_gapo = 5; opt->pen_gape = 2; // TODO: move this to a define block
   opt->fscore = 7;
@@ -519,6 +540,7 @@ fmap_map3_opt_init()
   opt->flow = fmap_strdup("TACG");
   opt->num_threads = 1;
   opt->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_RAND_BEST;
+  opt->sam_rg = NULL;
   opt->input_compr = FMAP_FILE_NO_COMPRESSION;
   opt->output_compr = FMAP_FILE_NO_COMPRESSION;
   opt->shm_key = 0;
@@ -526,26 +548,24 @@ fmap_map3_opt_init()
   return opt;
 }
 
-static void
+void
 fmap_map3_opt_destroy(fmap_map3_opt_t *opt)
 {
   free(opt->fn_fasta);
   free(opt->fn_reads);
   free(opt->flow);
+  free(opt->sam_rg);
   free(opt);
 }
 
-int 
-fmap_map3_main(int argc, char *argv[])
+int32_t
+fmap_map3_opt_parse(int argc, char *argv[], fmap_map3_opt_t *opt)
 {
-  int c, i;
-  fmap_map3_opt_t *opt = NULL;
+  int c;
 
-  srand48(0); // random seed
-  opt = fmap_map3_opt_init(argv, argc);
   opt->argc = argc; opt->argv = argv;
 
-  while((c = getopt(argc, argv, "f:r:F:l:S:b:w:A:M:O:E:X:T:gH:q:n:k:a:jzJZs:vh")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:l:S:b:w:A:M:O:E:X:T:gH:q:n:a:R:jzJZs:vh")) >= 0) {
       switch(c) {
         case 'f':
           opt->fn_fasta = fmap_strdup(optarg); break;
@@ -562,7 +582,7 @@ fmap_map3_main(int argc, char *argv[])
         case 'b':
           opt->max_seed_band = atoi(optarg); break;
         case 'w':
-          opt->sw_offset = atoi(optarg); break;
+          opt->bw = atoi(optarg); break;
         case 'A':
           opt->score_match = atoi(optarg); break;
         case 'M':
@@ -587,6 +607,8 @@ fmap_map3_main(int argc, char *argv[])
           opt->flow = fmap_strdup(optarg); break;
         case 'a':
           opt->aln_output_mode = atoi(optarg); break;
+        case 'R':
+          opt->sam_rg = fmap_strdup(optarg); break;
         case 'j':
           opt->input_compr = FMAP_FILE_BZ2_COMPRESSION; 
           fmap_get_reads_file_format_from_fn_int(opt->fn_reads, &opt->reads_format, &opt->input_compr);
@@ -605,64 +627,75 @@ fmap_map3_main(int argc, char *argv[])
           fmap_progress_set_verbosity(1); break;
         case 'h':
         default:
-          return usage(opt);
+          return 0;
       }
   }
+  return 1;
+}
 
-  if(argc != optind || 1 == argc) {
-      return usage(opt);
+void
+fmap_map3_opt_check(fmap_map3_opt_t *opt)
+{
+  if(NULL == opt->fn_fasta && 0 == opt->shm_key) {
+      fmap_error("option -f or option -s must be specified", Exit, CommandLineArgument);
   }
-  else { // check command line arguments
-      if(NULL == opt->fn_fasta && 0 == opt->shm_key) {
-          fmap_error("option -f or option -s must be specified", Exit, CommandLineArgument);
-      }
-      else if(NULL != opt->fn_fasta && 0 < opt->shm_key) {
-          fmap_error("option -f and option -s may not be specified together", Exit, CommandLineArgument);
-      }
-      if(NULL == opt->fn_reads && FMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
-          fmap_error("option -F or option -r must be specified", Exit, CommandLineArgument);
-      }
-      if(FMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
-          fmap_error("the reads format (-r) was unrecognized", Exit, CommandLineArgument);
-      }
-      if(-1 != opt->seed_length) fmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "-l");
-      fmap_error_cmd_check_int(opt->max_seed_hits, 1, INT32_MAX, "-S");
-      fmap_error_cmd_check_int(opt->max_seed_hits, 1, INT32_MAX, "-b");
-      fmap_error_cmd_check_int(opt->sw_offset, 1, INT32_MAX, "-w");
+  else if(NULL != opt->fn_fasta && 0 < opt->shm_key) {
+      fmap_error("option -f and option -s may not be specified together", Exit, CommandLineArgument);
+  }
+  if(NULL == opt->fn_reads && FMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
+      fmap_error("option -F or option -r must be specified", Exit, CommandLineArgument);
+  }
+  if(FMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
+      fmap_error("the reads format (-r) was unrecognized", Exit, CommandLineArgument);
+  }
+  if(-1 != opt->seed_length) fmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "-l");
+  fmap_error_cmd_check_int(opt->max_seed_hits, 1, INT32_MAX, "-S");
+  fmap_error_cmd_check_int(opt->max_seed_hits, 1, INT32_MAX, "-b");
+  fmap_error_cmd_check_int(opt->bw, 0, INT32_MAX, "-w");
 
-      fmap_error_cmd_check_int(opt->score_match, 0, INT32_MAX, "-A");
-      fmap_error_cmd_check_int(opt->pen_mm, 0, INT32_MAX, "-M");
-      fmap_error_cmd_check_int(opt->pen_gapo, 0, INT32_MAX, "-O");
-      fmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
-      fmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
-      fmap_error_cmd_check_int(opt->score_thr, 0, INT32_MAX, "-T");
-      if(-1 != opt->reads_queue_size) fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
-      fmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
+  fmap_error_cmd_check_int(opt->score_match, 0, INT32_MAX, "-A");
+  fmap_error_cmd_check_int(opt->pen_mm, 0, INT32_MAX, "-M");
+  fmap_error_cmd_check_int(opt->pen_gapo, 0, INT32_MAX, "-O");
+  fmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
+  fmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
+  fmap_error_cmd_check_int(opt->score_thr, 0, INT32_MAX, "-T");
+  if(-1 != opt->reads_queue_size) fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
+  fmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
+  fmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
+  fmap_error_cmd_check_int(opt->hp_diff, 0, INT32_MAX, "-H");
 
-      if(4 != strlen(opt->flow)) fmap_error("the flow must be four bases (-k)", Exit, CommandLineArgument);
-      int32_t ft[4] = {0,0,0,0};
-      for(i=0;i<4;i++) { // convert to int
-          opt->flow[i] = fmap_nt_char_to_int[(int)opt->flow[i]]; 
-          if(opt->flow[i] < 0 || 3 < opt->flow[i]) {
-              fmap_error("the flow bases were unrecognized (-k)", Exit, CommandLineArgument);
-          }
-          ft[(int)opt->flow[i]]++;
-      }
-      if(1 != ft[0] || 1 != ft[1] || 1 != ft[2] || 1 != ft[3]) {
-          fmap_error("ACGT must be present exactly once (-k)", Exit, CommandLineArgument);
-      }
+  if(FMAP_FILE_BZ2_COMPRESSION == opt->output_compr 
+     && -1 == opt->reads_queue_size) {
+      fmap_error("cannot buffer reads with bzip2 output (options \"-q 1 -J\")", Exit, OutOfRange);
+  }
+}
 
-      fmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
-      fmap_error_cmd_check_int(opt->aln_output_mode, 0, INT32_MAX, "-H");
+int 
+fmap_map3_main(int argc, char *argv[])
+{
+  fmap_map3_opt_t *opt = NULL;
 
-      if(FMAP_FILE_BZ2_COMPRESSION == opt->output_compr 
-         && -1 == opt->reads_queue_size) {
-          fmap_error("cannot buffer reads with bzip2 output (options \"-q 1 -J\")", Exit, OutOfRange);
-      }
+  // random seed
+  srand48(0); 
+
+  // init opt
+  opt = fmap_map3_opt_init();
+
+  // get options
+  if(1 != fmap_map3_opt_parse(argc, argv, opt) // options parsed successfully
+     || argc != optind  // all options should be used
+     || 1 == argc) { // some options should be specified
+      return fmap_map3_usage(opt);
+  }
+  else { 
+      // check command line arguments
+      fmap_map3_opt_check(opt);
   }
 
+  // run map3
   fmap_map3_core(opt);
 
+  // destroy opt
   fmap_map3_opt_destroy(opt);
 
   fmap_progress_print2("terminating successfully");

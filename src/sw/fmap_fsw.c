@@ -221,17 +221,17 @@ fmap_fsw_sub_core(uint8_t *seq, int32_t len,
 
   if(NULL != dpcell_curr && NULL != dpscore_curr) {
       /*
-     fprintf(stderr, "AFTER\n");
-     for(i=low_offset;i<=high_offset;i++) { // for each row in the sub-alignment
-        for(j=0;j<=len;j++) { // for each col
-     fprintf(stderr, "(%d,%d M[%d,%d,%d,%d] I[%d,%d,%d,%d] D[%d,%d,%d,%d])\n",
-     i, j,
-     sub_dpcell[i][j].match_bc, sub_dpcell[i][j].match_from & 0x3, sub_dpcell[i][j].match_from >> 2, (int)sub_dpscore[i][j].match_score,
-     sub_dpcell[i][j].ins_bc, sub_dpcell[i][j].ins_from & 0x3, sub_dpcell[i][j].ins_from >> 2, (int)sub_dpscore[i][j].ins_score,
-     sub_dpcell[i][j].del_bc, sub_dpcell[i][j].del_from & 0x3, sub_dpcell[i][j].del_from >> 2, (int)sub_dpscore[i][j].del_score);
-     }
-     }
-  */
+         fprintf(stderr, "AFTER\n");
+         for(i=low_offset;i<=high_offset;i++) { // for each row in the sub-alignment
+         for(j=0;j<=len;j++) { // for each col
+         fprintf(stderr, "(%d,%d M[%d,%d,%d,%d] I[%d,%d,%d,%d] D[%d,%d,%d,%d])\n",
+         i, j,
+         sub_dpcell[i][j].match_bc, sub_dpcell[i][j].match_from & 0x3, sub_dpcell[i][j].match_from >> 2, (int)sub_dpscore[i][j].match_score,
+         sub_dpcell[i][j].ins_bc, sub_dpcell[i][j].ins_from & 0x3, sub_dpcell[i][j].ins_from >> 2, (int)sub_dpscore[i][j].ins_score,
+         sub_dpcell[i][j].del_bc, sub_dpcell[i][j].del_from & 0x3, sub_dpcell[i][j].del_from >> 2, (int)sub_dpscore[i][j].del_score);
+         }
+         }
+         */
       // set the best cell to be [base_call][0,len]
       // NOTE: set this to the original base call to get consistency between
       // calling homopolymer over/under calls
@@ -493,7 +493,7 @@ fmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *fl
               p->i = i - 1; // same flow index
               k = p->j; // for base_call_diff < 0
 
-                 
+
               if(0 < base_call_diff // there are bases left that were inserted
                  && FMAP_FSW_FROM_M == sub_path[l].ctype) { // delete a "match"
                   // change the type to a deletion
@@ -509,7 +509,7 @@ fmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *fl
               p++;
               base_call_diff++;
           }
-      
+
           // move the row and column (as necessary)
           i--;
           j -= col_offset;
@@ -826,12 +826,28 @@ fmap_fsw_fitting_core(uint8_t *seq, int32_t len,
                              INT32_MIN, NULL);
 }
 
+static inline
+uint32_t fmap_fsw_path2cigar_get_type(uint32_t ctype)
+{
+  switch(ctype) {
+    case FMAP_FSW_FROM_HP_PLUS: // deletion
+      return FMAP_FSW_FROM_D;
+      break;
+    case FMAP_FSW_FROM_HP_MINUS: // insertion
+      return FMAP_FSW_FROM_I;
+      break;
+    default:
+      break;
+  }
+  return ctype;
+}
+
 uint32_t *
-fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_cigar)
+fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_cigar, int32_t rm_hp)
 {
   int32_t i, n;
   uint32_t *cigar;
-  uint8_t dpscore_last_type;
+  uint8_t dpscore_last_type, dpscore_cur_type;
 
   // Note: we could just use the function 'fmap_sw_path2cigar'
 
@@ -840,31 +856,173 @@ fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_ci
       return 0;
   }
 
-  dpscore_last_type = path->ctype;
-  for (i = n = 1; i < path_len; ++i) {
-      if (dpscore_last_type != path[i].ctype) ++n;
-      dpscore_last_type = path[i].ctype;
-  }
-  *n_cigar = n;
-  cigar = fmap_malloc(*n_cigar * 4, "cigar");
-
-  cigar[0] = 1u << 4 | path[path_len-1].ctype;
-  dpscore_last_type = path[path_len-1].ctype;
-  for (i = path_len - 2, n = 0; i >= 0; --i) {
-      if (path[i].ctype == dpscore_last_type) cigar[n] += 1u << 4;
-      else {
-          cigar[++n] = 1u << 4 | path[i].ctype;
+  if(0 == rm_hp) {
+      dpscore_last_type = path->ctype;
+      for (i = n = 1; i < path_len; ++i) {
+          if (dpscore_last_type != path[i].ctype) ++n;
           dpscore_last_type = path[i].ctype;
+      }
+      *n_cigar = n;
+      cigar = fmap_malloc(*n_cigar * 4, "cigar");
+
+      cigar[0] = 1u << 4 | path[path_len-1].ctype;
+      dpscore_last_type = path[path_len-1].ctype;
+      for (i = path_len - 2, n = 0; i >= 0; --i) {
+          if (path[i].ctype == dpscore_last_type) cigar[n] += 1u << 4;
+          else {
+              cigar[++n] = 1u << 4 | path[i].ctype;
+              dpscore_last_type = path[i].ctype;
+          }
+      }
+  }
+  else {
+      // get the # of cigar operators
+      dpscore_last_type = path->ctype;
+      for (i = n = 1; i < path_len; ++i) {
+          // get the current type
+          dpscore_cur_type = fmap_fsw_path2cigar_get_type(path[i].ctype);
+          if (dpscore_last_type != dpscore_cur_type) ++n;
+          dpscore_last_type = dpscore_cur_type;
+      }
+      *n_cigar = n;
+      cigar = fmap_malloc(*n_cigar * 4, "cigar");
+          
+      // get the last type
+      dpscore_last_type = fmap_fsw_path2cigar_get_type(path[path_len-1].ctype);
+      cigar[0] = 1u << 4 | dpscore_last_type;
+      for (i = path_len - 2, n = 0; i >= 0; --i) {
+          // get the current type
+          dpscore_cur_type = fmap_fsw_path2cigar_get_type(path[i].ctype);
+          if (dpscore_cur_type == dpscore_last_type) cigar[n] += 1u << 4;
+          else {
+              cigar[++n] = 1u << 4 | dpscore_cur_type;
+              dpscore_last_type = dpscore_cur_type;
+          }
       }
   }
 
   return cigar;
 }
 
+static int 
+fmap_fsw_left_justify(char *ref, char *read, char *aln, int32_t len)
+{
+  char c;
+  int32_t i, prev_del, prev_ins, start_ins, start_del, end_ins, end_del;
+  int32_t justified = 0;
+
+  prev_del = prev_ins = 0;
+  start_del = start_ins = end_del = end_ins = -1;
+
+  // reverse
+  for(i=0;i<(len>>1);i++) {
+      c = ref[i]; ref[i] = ref[len-i-1]; ref[len-i-1] = c;
+      c = read[i]; read[i] = read[len-i-1]; read[len-i-1] = c;
+      c = aln[i]; aln[i] = aln[len-i-1]; aln[len-i-1] = c;
+  }
+
+  for(i=0;i<len;) {
+      if('-' == read[i]) { // deletion
+          if(0 == prev_del) {
+              start_del = i;
+          }
+          prev_del = 1;
+          end_del = i;
+          prev_ins = 0;
+          start_ins = end_ins = -1;
+          i++;
+      }
+      else if('-' == ref[i]) { // insert
+          if(0 == prev_ins) {
+              start_ins = i;
+          }
+          prev_ins = 1;
+          end_ins = i;
+          prev_del = 0;
+          start_del = -1;
+          end_del = -1;
+          i++;
+      }
+      else {
+          if(1 == prev_del) { // previous was an deletion
+              start_del--;
+              while(0 <= start_del && // bases remaining to examine 
+                    read[start_del] != '-' && // hit another deletion 
+                    ref[start_del] != '-' && // hit an insertion 
+                    ref[start_del] == ref[end_del]) { // src ref base matches dest ref base 
+                  // swap end_del and start_del for the read and aln
+                  c = read[end_del]; read[end_del] = read[start_del]; read[start_del] = c;
+                  c = aln[end_del]; aln[end_del] = aln[start_del]; aln[start_del] = c;
+                  start_del--;
+                  end_del--;
+                  justified = 1;
+              }
+              end_del++; // we decremented when we exited the loop 
+              i = end_del;
+          }
+          else if(1 == prev_ins) { // previous was an insertion
+              start_ins--;
+              while(0 <= start_ins && // bases remaining to examine
+                    read[start_ins] != '-' && // hit another deletion 
+                    ref[start_ins] != '-' && // hit an insertion 
+                    read[start_ins] == read[end_ins]) { // src read base matches dest read base 
+                  // swap end_ins and start_ins for the ref and aln
+                  c = ref[end_ins]; ref[end_ins] = ref[start_ins]; ref[start_ins] = c;
+                  c = aln[end_ins]; aln[end_ins] = aln[start_ins]; aln[start_ins] = c;
+                  start_ins--;
+                  end_ins--;
+                  justified = 1;
+              }
+              end_ins++; // e decremented when we exited the loop 
+              i = end_ins;
+          }
+          else {
+              i++;
+          }
+          // reset
+          prev_del = prev_ins = 0;
+          start_del = start_ins = end_del = end_ins = -1;
+      }
+  }
+
+  // reverse
+  for(i=0;i<(len>>1);i++) {
+      c = ref[i]; ref[i] = ref[len-i-1]; ref[len-i-1] = c;
+      c = read[i]; read[i] = read[len-i-1]; read[len-i-1] = c;
+      c = aln[i]; aln[i] = aln[len-i-1]; aln[len-i-1] = c;
+  }
+
+  return justified;
+}
+
+static int 
+fmap_fsw_right_justify(char *ref, char *read, char *aln, int32_t len)
+{
+  int32_t i;
+  int32_t justified = 0;
+  // reverse
+  for(i=0;i<(len>>1);i++) {
+      char tmp;
+      tmp = ref[i]; ref[i] = ref[len-i-1]; ref[len-i-1] = tmp;
+      tmp = read[i]; read[i] = read[len-i-1]; read[len-i-1] = tmp;
+      tmp = aln[i]; aln[i] = aln[len-i-1]; aln[len-i-1] = tmp;
+  }
+  // left-justify
+  justified = fmap_fsw_left_justify(ref, read, aln, len);
+  // reverse
+  for(i=0;i<(len>>1);i++) {
+      char tmp;
+      tmp = ref[i]; ref[i] = ref[len-i-1]; ref[len-i-1] = tmp;
+      tmp = read[i]; read[i] = read[len-i-1]; read[len-i-1] = tmp;
+      tmp = aln[i]; aln[i] = aln[len-i-1]; aln[len-i-1] = tmp;
+  }
+  return justified;
+}
+
 void
 fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
                  uint8_t *flow, uint8_t *target, uint8_t strand,
-                 char **ref, char **read, char **aln)
+                 char **ref, char **read, char **aln, int32_t j_type)
 {
   int32_t i, j;
 
@@ -923,26 +1081,37 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
   }
   (*read)[path_len] = '\0';
 
-  if(1 == strand) {
-      for(i=0;i<(path_len>>1);i++) {
-          char tmp;
-          tmp = (*ref)[i]; (*ref)[i] = (*ref)[path_len-i-1]; (*ref)[path_len-i-1] = tmp;
-          tmp = (*read)[i]; (*read)[i] = (*read)[path_len-i-1]; (*read)[path_len-i-1] = tmp;
-          tmp = (*aln)[i]; (*aln)[i] = (*aln)[path_len-i-1]; (*aln)[path_len-i-1] = tmp;
+  // the input is assumed to be in read-order
+  switch(j_type) {
+    case FMAP_FSW_NO_JUSTIFY:
+      // do nothing
+      break;
+    case FMAP_FSW_JUSTIFY_LEFT_REF:
+      if(0 == strand) { 
+          fmap_fsw_left_justify((*ref), (*read), (*aln), path_len);
       }
+      else {
+          fmap_fsw_right_justify((*ref), (*read), (*aln), path_len);
+      }
+      break;
+    case FMAP_FSW_JUSTIFY_LEFT_READ:
+      fmap_fsw_left_justify((*ref), (*read), (*aln), path_len);
+      break;
+    default:
+      break;
   }
 }
 
 void 
 fmap_fsw_print_aln(fmap_file_t *fp, int64_t score, fmap_fsw_path_t *path, int32_t path_len,
-                        uint8_t *flow, uint8_t *target, uint8_t strand)
+                   uint8_t *flow, uint8_t *target, uint8_t strand, int32_t j_type)
 {
   char *ref=NULL, *read=NULL, *aln=NULL;
 
-  fmap_fsw_get_aln(path, path_len, flow, target, strand, &ref, &read, &aln);
-  
+  fmap_fsw_get_aln(path, path_len, flow, target, strand, &ref, &read, &aln, j_type);
+
   fmap_file_fprintf(fp, "%lld\t%s\t%s\t%s",
-          (long long int)score, ref, aln, read);
+                    (long long int)score, read, aln, ref);
 
   free(ref);
   free(read);
@@ -1094,6 +1263,7 @@ typedef struct {
     char *target;
     int32_t target_length;
     fmap_fsw_param_t param;
+    int32_t j_type;
 } fmap_fsw_main_opt_t;
 
 static fmap_fsw_main_opt_t *
@@ -1107,6 +1277,7 @@ fmap_fsw_main_opt_init()
   opt->flowgram = NULL;
   opt->target = NULL;
   opt->target_length = 0;
+  opt->j_type = FMAP_FSW_NO_JUSTIFY;
 
   // param
   opt->param.gap_open = 13*100;
@@ -1249,6 +1420,7 @@ usage(fmap_fsw_main_opt_t *opt)
                     opt->flow);
   fmap_file_fprintf(fmap_file_stderr, "         -F INT      flow penalty [%d]\n", opt->param.fscore);
   fmap_file_fprintf(fmap_file_stderr, "         -o INT      search for homopolymer errors +- offset [%d]\n", opt->param.offset);
+  fmap_file_fprintf(fmap_file_stderr, "         -l INT      indel justification type: 0 - none, 1 - 5' strand of the reference, 2 - 5' strand of the read [%d]\n", opt->j_type);
   fmap_file_fprintf(fmap_file_stderr, "         -v          print verbose progress information\n");
   fmap_file_fprintf(fmap_file_stderr, "         -h          print this message\n");
   fmap_file_fprintf(fmap_file_stderr, "\n");
@@ -1270,7 +1442,7 @@ int fmap_fsw_main(int argc, char *argv[])
 
   opt = fmap_fsw_main_opt_init();
 
-  while((c = getopt(argc, argv, "b:f:t:k:F:o:vh")) >= 0) {
+  while((c = getopt(argc, argv, "b:f:t:k:F:o:l:vh")) >= 0) {
       switch(c) {
         case 'b':
           opt->base_calls = fmap_strdup(optarg); break;
@@ -1285,6 +1457,8 @@ int fmap_fsw_main(int argc, char *argv[])
           opt->param.fscore = 100*atoi(optarg); break;
         case 'o':
           opt->param.offset = atoi(optarg); break;
+        case 'l':
+          opt->j_type = atoi(optarg); break;
         case 'v':
           fmap_progress_set_verbosity(1); break;
         case 'h':
@@ -1311,6 +1485,7 @@ int fmap_fsw_main(int argc, char *argv[])
       }
       fmap_error_cmd_check_int(opt->param.fscore, 0, INT32_MAX, "-F");
       fmap_error_cmd_check_int(opt->param.offset, 0, INT32_MAX, "-o");
+      fmap_error_cmd_check_int(opt->param.offset, FMAP_FSW_NO_JUSTIFY, FMAP_FSW_NO_JUSTIFY, "-l");
   }
 
   // get the flowgram
@@ -1337,12 +1512,12 @@ int fmap_fsw_main(int argc, char *argv[])
                                        flowseq,
                                        &opt->param,
                                        path, &path_len);
-  
+
   fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "wb", FMAP_FILE_NO_COMPRESSION);
 
   // print
   fmap_fsw_print_aln(fmap_file_stdout, score, path, path_len,
-                     flow, (uint8_t*)opt->target, 0);
+                     flow, (uint8_t*)opt->target, 0, opt->j_type);
   fmap_file_fprintf(fmap_file_stdout, "\n");
 
   fmap_file_fclose(fmap_file_stdout);

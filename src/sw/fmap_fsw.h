@@ -40,6 +40,12 @@ enum {
     FMAP_FSW_FROM_HP_MINUS = 5 /*!< from a match/mismatch cell, but a hp undercall error */
 };
 
+enum {
+    FMAP_FSW_NO_JUSTIFY = 0, /*!< do not perform indel justification */
+    FMAP_FSW_JUSTIFY_LEFT_REF = 1, /*!< justify 5' on the reference strand */
+    FMAP_FSW_JUSTIFY_LEFT_READ = 2  /*!< justify 5' on the read strand */
+};
+
 /*!
   The path for the current cell
   */
@@ -249,10 +255,11 @@ fmap_fsw_fitting_core(uint8_t *seq, int32_t len,
   @param  path      the Smith-Waterman alignment path
   @param  path_len  the Smith-Waterman alignment path length
   @param  n_cigar   pointer to the returned number of cigar operations
+  @param  rm_hp     1 if we are to remove hp edits (merge into indels), 0 otherwise
   @return           the cigar array, NULL if the path is NULL or the path length is zero 
   */
 uint32_t *
-fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_cigar);
+fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_cigar, int32_t rm_hp);
 
 /*!
   Gets the pretty-print alignment
@@ -264,11 +271,12 @@ fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_ci
   @param  ref       pointer to the returned reference string
   @param  read      pointer to the returned read string
   @param  aln       pointer to the returned alignment string
+  @param  j_type    the indel justification method 
   */
 void
 fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
                  uint8_t *flow, uint8_t *target, uint8_t strand,
-                 char **ref, char **read, char **aln);
+                 char **ref, char **read, char **aln, int32_t j_type);
 
 /*!
   Pretty-prints an alignment
@@ -279,10 +287,11 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
   @param  flow       for each of the four flows, the 2-bit DNA base flowed
   @param  target    the 2-bit DNA reference sequence 
   @param  strand    0 for the forward strand, 1 for the reverse
+  @param  j_type    the indel justification method 
   */
 void 
 fmap_fsw_print_aln(fmap_file_t *fp, int64_t score, fmap_fsw_path_t *path, int32_t path_len,
-                   uint8_t *flow, uint8_t *target, uint8_t strand);
+                   uint8_t *flow, uint8_t *target, uint8_t strand, int32_t j_type);
 
 /*!
   Create a structure for flow-space Smith Waterman from an SFF structure
