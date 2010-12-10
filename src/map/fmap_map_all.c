@@ -1081,7 +1081,7 @@ fmap_map_all_usage(fmap_map_all_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "         -R STRING   the RG line in the SAM header [%s]\n", opt->sam_rg);
   fmap_file_fprintf(fmap_file_stderr, "         -W INT      remove duplicate alignments from different algorithms within this bp window [%d]\n",
                     opt->dup_window);
-  fmap_file_fprintf(fmap_file_stderr, "         -X          apply the output filter for each algorithm separately [%s]\n",
+  fmap_file_fprintf(fmap_file_stderr, "         -I          apply the output filter for each algorithm separately [%s]\n",
                     (1 == opt->aln_output_mode_ind) ? "true" : "false");
   fmap_file_fprintf(fmap_file_stderr, "         -j          the input is bz2 compressed (bzip2) [%s]\n",
                     (FMAP_FILE_BZ2_COMPRESSION == opt->input_compr) ? "true" : "false");

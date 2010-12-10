@@ -73,7 +73,7 @@ typedef struct {
 
     // map all specific options
     int32_t dup_window; /*!< remove duplicate alignments from different algorithms within this bp window (-W) */
-    int32_t aln_output_mode_ind; /*!< apply the output filter for each algorithm separately */
+    int32_t aln_output_mode_ind; /*!< apply the output filter for each algorithm separately (-I) */
 
     // stage 1/2 mapping algorithm specific options
     fmap_map1_opt_t *opt_map1[2]; /*!< map 1 options */
