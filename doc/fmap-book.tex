@@ -385,8 +385,8 @@ The options specific to this algorithm should be specified directly thereafter.
 An example would be:\\
 \TT{fmap mapall -f ref.fasta -r reads.fastq -g -M 3 map1 -l 12 -k 24 MAP2 -b 5 MAP3 -S 10}.\\
 In this case, the \TT{map1} algorithm will be applied with the options \TT{-l 12 -k 24 -M 3} in the first stage.
-If no mapping is found for a read, the \TT{map2} algorithm with the options \TT{-b 5 -g -M 3} and the \TT{map3 -g -M 3} algorithm with the options \TT{-S 10} will be applied in the second stage.
-Notice how the global options \TT{-g -M 3} are applied to all the algorithms were applicable.
+If no mapping is found for a read, the \TT{map2} algorithm with the options \TT{-b 5 -g -M 3} and the \TT{map3} algorithm with the options \TT{-g -M 3 -S 10} will be applied in the second stage.
+Notice how the global options \TT{-g -M 3} are applied to all the algorithms where applicable.
 It is possible to have a given algorithm run in both stages with different options.
 
 \chapter{File Formats}
