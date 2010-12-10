@@ -292,6 +292,15 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
 
   // HERE
   uint8_t flow_order[4] = {3, 0, 1, 2};
+  
+  // check that the sequences are long enough
+  for(i=0;i<2;i++) { // forward/reverse-compliment
+      bases = fmap_seq_get_bases(seq[i]);
+      seq_len[i] = bases->l;
+      if(seq_len[i] - opt->seed_length < 0) {
+          return aln;
+      }
+  }
 
   // seeds
   for(i=0;i<2;i++) { // forward/reverse-compliment
