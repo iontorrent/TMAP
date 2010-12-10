@@ -153,7 +153,7 @@ This number must always be positive.
 Specifies the band width for local alignment.
 This number must always be positive.
 
-\subsubsection{-g}
+\subsubsection{\TT{-g}}
 Specifies that the entire read should be mapped to the reference.
 Otherwise a sub-sequence of the read may be mapped.
 \subsubsection{\TT{-q INT}}
@@ -173,6 +173,10 @@ Specifies the output filter for the mappings.
 	\item returns all the mappings, regardless of score.
 \end{enumerate}
 Reads that have no mapping are returned as unmapped reads.
+
+\subsubsection{\TT{-R STRING}}
+Specifies the RG (read group) line to use in the SAM file.
+The ``PG'', ``FO'', and ``KS'' tags should not be specified in this string; they will be added by fmap.
 
 \subsubsection{\TT{-j}, \TT{-z}}
 Specifies that the input is bzip2 (\TT{-j}) or gzip (\TT{-z}) compressed.
