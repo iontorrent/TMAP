@@ -176,11 +176,19 @@ fmap_map3_core_worker(fmap_seq_t **seq_buffer, fmap_map3_aln_t **alns, int32_t s
   uint8_t *flow[2] = {NULL, NULL};
 
   // set up the flow order
-  flow[0] = fmap_malloc(sizeof(uint8_t) * 4, "flow[0]");
-  flow[1] = fmap_malloc(sizeof(uint8_t) * 4, "flow[1]");
-  for(i=0;i<4;i++) {
-      flow[0][i] = opt->flow[i];
-      flow[1][i] = 3 - opt->flow[i];
+  if(0 < seq_buffer_length) {
+      flow[0] = fmap_malloc(sizeof(uint8_t) * 4, "flow[0]");
+      flow[1] = fmap_malloc(sizeof(uint8_t) * 4, "flow[1]");
+      for(i=0;i<4;i++) {
+          if(FMAP_SEQ_TYPE_SFF == seq_buffer[0]->type) {
+              flow[0][i] = fmap_nt_char_to_int[(int)seq_buffer[0]->data.sff->gheader->flow->s[i]];
+              flow[1][i] = 3 - fmap_nt_char_to_int[(int)seq_buffer[0]->data.sff->gheader->flow->s[i]];
+          }
+          else {
+              flow[0][i] = fmap_nt_char_to_int[(int)opt->flow[i]];
+              flow[1][i] = 3 - fmap_nt_char_to_int[(int)opt->flow[i]];
+          }
+      }
   }
 
   while(low < seq_buffer_length) {
@@ -212,6 +220,10 @@ fmap_map3_core_worker(fmap_seq_t **seq_buffer, fmap_map3_aln_t **alns, int32_t s
           seq[0] = fmap_seq_clone(seq_buffer[low]);
           seq[1] = fmap_seq_clone(seq_buffer[low]);
           
+          // Adjust for SFF
+          fmap_seq_remove_key_sequence(seq[0]);
+          fmap_seq_remove_key_sequence(seq[1]);
+
           // Adjust for SFF
           fmap_seq_remove_key_sequence(seq[0]);
           fmap_seq_remove_key_sequence(seq[1]);
@@ -488,7 +500,7 @@ fmap_map3_usage(fmap_map3_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "         -T INT      score threshold divided by the match score [%d]\n", opt->score_thr);
   fmap_file_fprintf(fmap_file_stderr, "         -g          align the full read (global alignment) [%s]\n", (0 == opt->aln_global) ? "false" : "true");
   fmap_file_fprintf(fmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
-  fmap_file_fprintf(fmap_file_stderr, "         -k STRING   the flow orde ([ACGT]{4}) [%s]\n", opt->flow);
+  fmap_file_fprintf(fmap_file_stderr, "         -k STRING   the flow order ([ACGT]{4}) [%s]\n", opt->flow);
   fmap_file_fprintf(fmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
   fmap_file_fprintf(fmap_file_stderr, "         -a INT      output filter [%d]\n", opt->aln_output_mode);
   fmap_file_fprintf(fmap_file_stderr, "                             0 - unique best hits\n");
@@ -562,7 +574,7 @@ int32_t
 fmap_map3_opt_parse(int argc, char *argv[], fmap_map3_opt_t *opt)
 {
   int c;
-
+  
   opt->argc = argc; opt->argv = argv;
 
   while((c = getopt(argc, argv, "f:r:F:l:S:b:w:A:M:O:E:X:T:gH:q:n:a:R:jzJZs:vh")) >= 0) {

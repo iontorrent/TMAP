@@ -569,7 +569,7 @@ fmap_map_all_core_worker(fmap_seq_t **seq_buffer, fmap_map_all_aln_t **alns, int
   fmap_map2_sam_t *aln_map2;
   // map3
   fmap_map3_aln_t *aln_map3;
-  uint8_t *flow[2][2];
+  uint8_t *flow_map3[2][2];
 
   // map1
   for(i=0;i<2;i++) {
@@ -591,11 +591,19 @@ fmap_map_all_core_worker(fmap_seq_t **seq_buffer, fmap_map_all_aln_t **alns, int
       // map3
       if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP3) {
           // set up the flow order
-          flow[i][0] = fmap_malloc(sizeof(uint8_t) * 4, "flow[i][0]");
-          flow[i][1] = fmap_malloc(sizeof(uint8_t) * 4, "flow[i][1]");
-          for(j=0;j<4;j++) {
-              flow[i][0][j] = opt->opt_map3[i]->flow[j];
-              flow[i][1][j] = 3 - opt->opt_map3[i]->flow[j];
+          if(0 < seq_buffer_length) {
+              flow_map3[i][0] = fmap_malloc(sizeof(uint8_t) * 4, "flow[i][0]");
+              flow_map3[i][1] = fmap_malloc(sizeof(uint8_t) * 4, "flow[i][1]");
+              for(j=0;j<4;j++) {
+                  if(FMAP_SEQ_TYPE_SFF == seq_buffer[0]->type) {
+                      flow_map3[i][0][j] = fmap_nt_char_to_int[(int)seq_buffer[0]->data.sff->gheader->flow->s[j]];
+                      flow_map3[i][1][j] = 3 - fmap_nt_char_to_int[(int)seq_buffer[0]->data.sff->gheader->flow->s[j]];
+                  }
+                  else {
+                      flow_map3[i][0][j] = fmap_nt_char_to_int[(int)opt->opt_map3[i]->flow[j]];
+                      flow_map3[i][1][j] = 3 - fmap_nt_char_to_int[(int)opt->opt_map3[i]->flow[j]];
+                  }
+              }
           }
       }
   }
@@ -740,7 +748,7 @@ fmap_map_all_core_worker(fmap_seq_t **seq_buffer, fmap_map_all_aln_t **alns, int
               }
               // fmap_map3_aux_core
               if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP3) {
-                  aln_map3 = fmap_map3_aux_core(seq, flow[i], refseq, bwt[1], sa[1], opt->opt_map3[i]);
+                  aln_map3 = fmap_map3_aux_core(seq, flow_map3[i], refseq, bwt[1], sa[1], opt->opt_map3[i]);
               }
               else {
                   // empty
@@ -806,7 +814,8 @@ fmap_map_all_core_worker(fmap_seq_t **seq_buffer, fmap_map_all_aln_t **alns, int
       }
       // map3
       if(opt->algos[i] & FMAP_MAP_ALL_ALGO_MAP3) {
-          // - none
+          free(flow_map3[i][0]);
+          free(flow_map3[i][1]);
       }
   }
 }
@@ -1059,6 +1068,7 @@ fmap_map_all_usage(fmap_map_all_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "         -M INT      the mismatch penalty [%d]\n", opt->pen_mm); 
   fmap_file_fprintf(fmap_file_stderr, "         -O INT      the indel start penalty [%d]\n", opt->pen_gapo); 
   fmap_file_fprintf(fmap_file_stderr, "         -E INT      the indel extend penalty [%d]\n", opt->pen_gape); 
+  fmap_file_fprintf(fmap_file_stderr, "         -X INT      the flow score penalty [%d]\n", opt->fscore);
   fmap_file_fprintf(fmap_file_stderr, "         -w INT      the extra bases to add before and after the target during Smith-Waterman [%d]\n", opt->bw);
   fmap_file_fprintf(fmap_file_stderr, "         -g          align the full read (global alignment) [%s]\n", (0 == opt->aln_global) ? "false" : "true");
   fmap_file_fprintf(fmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
@@ -1107,6 +1117,7 @@ fmap_map_all_opt_init()
   opt->reads_format = FMAP_READS_FORMAT_UNKNOWN;
   opt->score_match = 1;
   opt->pen_mm = 3; opt->pen_gapo = 5; opt->pen_gape = 2; 
+  opt->fscore = 7;
   opt->bw = 10; 
   opt->aln_global = 0;
   opt->reads_queue_size = 65536; 
@@ -1177,6 +1188,7 @@ fmap_map_all_opt_destroy(fmap_map_all_opt_t *opt)
 #define __fmap_map_all_opts_copy2(opt_map_all, opt_map_other) do { \
     __fmap_map_all_opts_copy1(opt_map_all, opt_map_other); \
     (opt_map_other)->score_match = (opt_map_all)->score_match; \
+    (opt_map_other)->fscore = (opt_map_all)->fscore; \
     (opt_map_other)->bw = (opt_map_all)->bw; \
     (opt_map_other)->aln_global = (opt_map_all)->aln_global; \
 } while(0)
@@ -1186,7 +1198,7 @@ fmap_map_all_opt_parse_common(int argc, char *argv[], fmap_map_all_opt_t *opt)
 {
   int c;
 
-  while((c = getopt(argc, argv, "f:r:F:A:M:O:E:w:gq:n:a:R:W:XjzJZs:vh")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:A:M:O:E:X:w:gq:n:a:R:W:IjzJZs:vh")) >= 0) {
       switch(c) {
         case 'f':
           opt->fn_fasta = fmap_strdup(optarg); break;
@@ -1204,6 +1216,8 @@ fmap_map_all_opt_parse_common(int argc, char *argv[], fmap_map_all_opt_t *opt)
           opt->pen_gapo = atoi(optarg); break;
         case 'E':
           opt->pen_gape = atoi(optarg); break;
+        case 'X':
+          opt->fscore = atoi(optarg); break;
         case 'w':
           opt->bw = atoi(optarg); break;
         case 'g':
@@ -1218,7 +1232,7 @@ fmap_map_all_opt_parse_common(int argc, char *argv[], fmap_map_all_opt_t *opt)
           opt->sam_rg = fmap_strdup(optarg); break;
         case 'W':
           opt->dup_window = atoi(optarg); break;
-        case 'X':
+        case 'I':
           opt->aln_output_mode_ind = 1; break;
         case 'j':
           opt->input_compr = FMAP_FILE_BZ2_COMPRESSION; 
@@ -1409,11 +1423,14 @@ fmap_map_all_file_check_with_null(char *fn1, char *fn2)
     } \
 } while(0)
 
-// for map2
+// for map2/map3
 #define __fmap_map_all_opts_check_common2(opt_map_all, opt_map_other) do { \
     __fmap_map_all_opts_check_common1(opt_map_all, opt_map_other); \
     if((opt_map_other)->score_match != (opt_map_all)->score_match) { \
         fmap_error("option -A was specified outside of the common options", Exit, CommandLineArgument); \
+    } \
+    if((opt_map_other)->fscore != (opt_map_all)->fscore) { \
+        fmap_error("option -X was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->bw != (opt_map_all)->bw) { \
         fmap_error("option -w was specified outside of the common options", Exit, CommandLineArgument); \
@@ -1444,12 +1461,13 @@ fmap_map_all_opt_check(fmap_map_all_opt_t *opt)
   fmap_error_cmd_check_int(opt->pen_mm, 0, INT32_MAX, "-M");
   fmap_error_cmd_check_int(opt->pen_gapo, 0, INT32_MAX, "-O");
   fmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
+  fmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
   fmap_error_cmd_check_int(opt->bw, 1, INT32_MAX, "-w");
   if(-1 != opt->reads_queue_size) fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
   fmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
   fmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
   fmap_error_cmd_check_int(opt->dup_window, 0, INT32_MAX, "-W");
-  fmap_error_cmd_check_int(opt->aln_output_mode_ind, 0, 1, "-X");
+  fmap_error_cmd_check_int(opt->aln_output_mode_ind, 0, 1, "-I");
 
   if(0 == opt->algos[0]) {
       fmap_error("no algorithms given for stage 1", Exit, CommandLineArgument);
