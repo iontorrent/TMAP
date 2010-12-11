@@ -716,7 +716,7 @@ fmap_sw_local_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, con
   score_r -= qr;
 
 #ifdef DEBUG
-  /* this seems not a bug */
+  /* this seems not to be a bug */
   if(score_f != score_r)
     fprintf(stderr, "[fmap_sw_local_core] unknown flaw occurs: score_f(%d) != score_r(%d)\n", score_f, score_r);
 #endif
@@ -734,10 +734,14 @@ fmap_sw_local_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, con
           if(score_g == score_r || score_f == score_g) break;
           if(i > j) break;
       }
+#ifdef DEBUG
+      // this seems not to be a bug
       if(score_r > score_g && score_f > score_g) {
           fprintf(stderr, "[fmap_sw_local_core] Potential bug: (%d,%d) > %d\n", score_f, score_r, score_g);
           score_f = score_r = -1;
       } else score_f = score_g;
+#endif
+      score_f = score_g;
 
       /* convert coordinate */
       for(p = path + *path_len - 1; p >= path; --p) {
