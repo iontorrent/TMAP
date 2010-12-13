@@ -2,10 +2,10 @@
 #include <stdio.h>
 #include <config.h>
 #include <ctype.h>
-
 #ifdef HAVE_LIBPTHREAD
 #include <pthread.h>
 #endif
+#include <unistd.h>
 
 #ifdef HAVE_SAMTOOLS
 #include <sam.h>

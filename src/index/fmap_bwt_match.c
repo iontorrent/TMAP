@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <unistd.h>
 #include "fmap_bwt.h"
 #include "fmap_bwt_match.h"
 

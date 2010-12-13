@@ -27,6 +27,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <time.h>
+#include <unistd.h>
 #include "../util/fmap_error.h"
 #include "../util/fmap_alloc.h"
 #include "../util/fmap_progress.h"

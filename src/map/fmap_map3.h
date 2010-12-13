@@ -2,6 +2,7 @@
 #define FMAP_MAP3_H_
 
 #include <config.h>
+#include <sys/types.h>
 
 /*! 
   SSAHA2-like Mapping Algorithm

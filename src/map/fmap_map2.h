@@ -2,7 +2,7 @@
 #define FMAP_MAP2_H_
 
 #include <stdlib.h>
-#include <sys/ipc.h>
+#include <sys/types.h>
 
 /*! 
   The BWA-like (long-read) Mapping Algorithm

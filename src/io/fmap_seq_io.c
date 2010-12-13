@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include "../util/fmap_error.h"
 #include "../util/fmap_alloc.h"

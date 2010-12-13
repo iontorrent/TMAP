@@ -2,6 +2,7 @@
 #define FMAP_MAP1_H_
 
 #include <config.h>
+#include <sys/types.h>
 
 /*! 
   BWA-like (short-read) Mapping Algorithm
