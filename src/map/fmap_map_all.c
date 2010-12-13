@@ -4,6 +4,7 @@
 #include <config.h>
 #ifdef HAVE_LIBPTHREAD
 #include <pthread.h>
+#include <unistd.h>
 #endif
 #include "../util/fmap_error.h"
 #include "../util/fmap_alloc.h"

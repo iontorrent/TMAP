@@ -677,7 +677,7 @@ fmap_map2_aux_core(fmap_map2_opt_t *_opt,
   i = (l * opt.score_match - opt.score_match - opt.score_thr) / opt.pen_gape;
   if(k > i) k = i;
   if(k < 1) k = 1; // I do not know if k==0 causes troubles
-  opt.bw= _opt->bw < k ? _opt->bw: k;
+  opt.bw = _opt->bw < k ? _opt->bw: k;
 
   // set seq[2] and rseq[2]
   seq[0] = fmap_string_init(l);

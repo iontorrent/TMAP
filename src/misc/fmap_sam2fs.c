@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <config.h>
 #include <ctype.h>
+#include <unistd.h>
 
 #ifdef HAVE_LIBPTHREAD
 #include <pthread.h>

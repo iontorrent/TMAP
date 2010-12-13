@@ -2,6 +2,7 @@
 #define FMAP_MAP3_H_
 
 #include <config.h>
+#include <sys/types.h>
 
 /*! 
   SSAHA2-like Mapping Algorithm
@@ -17,6 +18,7 @@ typedef struct {
     char *fn_reads;  /*!< the reads file name (-r) */
     int32_t reads_format;  /*!< the reads file format (-F)  */
     int32_t seed_length; /*!< the kmer seed length (-l) */
+    int32_t seed_length_set; /*!< 1 if the user has set seed length (-l) */
     int32_t max_seed_hits; /*!< the maximum number of hits returned by a seed (-S) */
     int32_t max_seed_band; /*!< the band to group seeds (-b)*/
     int32_t bw; /*!< the extra bases to add before and after the target during Smith-Waterman (-w) */

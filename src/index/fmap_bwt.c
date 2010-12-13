@@ -28,6 +28,7 @@
 #include <string.h>
 #include <assert.h>
 #include <stdint.h>
+#include <unistd.h>
 
 #include "../util/fmap_error.h"
 #include "../util/fmap_alloc.h"

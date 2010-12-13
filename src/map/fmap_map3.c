@@ -4,6 +4,7 @@
 #include <config.h>
 #ifdef HAVE_LIBPTHREAD
 #include <pthread.h>
+#include <unistd.h>
 #endif
 #include "../util/fmap_error.h"
 #include "../util/fmap_alloc.h"
@@ -33,7 +34,7 @@ fmap_map3_get_seed_length(uint64_t ref_len)
 {
   int32_t k = 0;
   while(0 < ref_len) {
-      ref_len >>= 1; // divide by two
+      ref_len >>= 2; // divide by two
       k++;
   }
   return k;
@@ -539,6 +540,7 @@ fmap_map3_opt_init()
   opt->fn_fasta = opt->fn_reads = NULL;
   opt->reads_format = FMAP_READS_FORMAT_UNKNOWN;
   opt->seed_length = -1; // move this to a define block
+  opt->seed_length_set = 0;
   opt->max_seed_hits = 8; // move this to a define block
   opt->max_seed_band = 50; // move this to a define block
   opt->bw = 50; // move this to a define block
@@ -590,7 +592,7 @@ fmap_map3_opt_parse(int argc, char *argv[], fmap_map3_opt_t *opt)
         case 'F':
           opt->reads_format = fmap_get_reads_file_format_int(optarg); break;
         case 'l':
-          opt->seed_length = atoi(optarg); break;
+          opt->seed_length = atoi(optarg); opt->seed_length_set = 1; break;
         case 'S':
           opt->max_seed_hits = atoi(optarg); break;
         case 'b':
