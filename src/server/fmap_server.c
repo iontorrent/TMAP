@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "../util/fmap_error.h"
 #include "../util/fmap_alloc.h"

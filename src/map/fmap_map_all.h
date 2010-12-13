@@ -1,6 +1,7 @@
 #ifndef FMAP_MAP_ALL_H_
 #define FMAP_MAP_ALL_H_
 
+#include <sys/types.h>
 #include "fmap_map1.h"
 #include "fmap_map2.h"
 #include "fmap_map3.h"
