@@ -1,6 +1,7 @@
 #ifndef FMAP_MAP_UTIL_H_
 #define FMAP_MAP_UTIL_H_
 
+#include "fmap_map1.h"
 #include "fmap_map2_aux.h"
 #include "fmap_map3.h"
 
@@ -36,9 +37,15 @@ typedef struct {
     fmap_map_util_hit_t *hits; /*!< array of hits */
 } fmap_map_util_fsw_aln_t;
 
+// TODO: document
+void
+fmap_map_util_map1_adjust_score(fmap_map1_aln_t *aln, int32_t score_match, int32_t pen_mm, int32_t pen_gapo, int32_t pen_gape);
+
+// TODO: document
 inline void
 fmap_map_util_map2_fsw(fmap_sff_t *sff, fmap_map2_sam_t *sam, fmap_refseq_t *refseq, fmap_map2_opt_t *opt);
 
+// TODO: document
 inline void
 fmap_map_util_map3_fsw(fmap_sff_t *sff, fmap_map3_aln_t *aln, fmap_refseq_t *refseq, fmap_map3_opt_t *opt);
 

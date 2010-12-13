@@ -18,6 +18,7 @@
 #include "../index/fmap_sa.h"
 #include "../io/fmap_seq_io.h"
 #include "../server/fmap_shm.h"
+#include "../sw/fmap_sw.h"
 #include "fmap_map_util.h"
 #include "fmap_map1_aux.h"
 #include "fmap_map1.h"
@@ -215,10 +216,10 @@ fmap_map1_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt, fma
 
       // get the number of non-inserted bases 
       for(j=0;j<h->n_cigar;j++) {
-          switch((h->cigar[j] & 0xf)) {
+          switch(FMAP_SW_CIGAR_OP(h->cigar[j])) {
             case BAM_CMATCH:
             case BAM_CDEL:
-              aln_ref_l += (h->cigar[j] >> 4); break;
+              aln_ref_l += FMAP_SW_CIGAR_LENGTH(h->cigar[j]); break;
             default:
               break;
           }

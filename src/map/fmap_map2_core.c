@@ -7,6 +7,7 @@
 #include "../util/fmap_sort.h"
 #include "../util/fmap_vec.h"
 #include "../util/fmap_hash.h"
+#include "../seq/fmap_seq.h"
 #include "../index/fmap_bwt.h"
 #include "../index/fmap_bwtl.h"
 #include "fmap_map_util.h"

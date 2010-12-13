@@ -467,13 +467,13 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
                   for(j=hit->n_cigar-1;0<=j;j--) { // shift up
                       hit->cigar[j+1] = hit->cigar[j];
                   }
-                  hit->cigar[0] = ((path[path_len-1].j-1) << 4) | 4; 
+                  FMAP_SW_CIGAR_STORE(hit->cigar[0], BAM_CSOFT_CLIP, path[path_len-1].j-1);
                   hit->n_cigar++;
               }
               if(path[0].j < seq_len[i]) { // 
                   // soft clip the end of the read
                   hit->cigar = fmap_realloc(hit->cigar, sizeof(uint32_t)*(1+hit->n_cigar), "hit->cigar");
-                  hit->cigar[hit->n_cigar] = ((seq_len[i] - path[0].j) << 4) | 4; 
+                  FMAP_SW_CIGAR_STORE(hit->cigar[hit->n_cigar], BAM_CSOFT_CLIP, seq_len[i] - path[0].j);
                   hit->n_cigar++;
               }
           }

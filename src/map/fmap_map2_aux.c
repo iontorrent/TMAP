@@ -349,11 +349,11 @@ fmap_map2_aux_gen_cigar(fmap_map2_opt_t *opt, uint8_t *queries[2],
           b->cigar[i] = fmap_realloc(b->cigar[i], sizeof(uint32_t) * (b->n_cigar[i] + 2), "b->cigar");
           if(0 < beg) { // soft clipping at the front
               memmove(b->cigar[i] + 1, b->cigar[i], b->n_cigar[i] * 4);
-              b->cigar[i][0] = beg<<4 | 4;
+              FMAP_SW_CIGAR_STORE(b->cigar[i][0], BAM_CSOFT_CLIP, beg);
               ++b->n_cigar[i];
           } 
           if(end < query_length) { // soft clipping at the end
-              b->cigar[i][b->n_cigar[i]] = (query_length - end)<<4 | 4;
+              FMAP_SW_CIGAR_STORE(b->cigar[i][b->n_cigar[i]], BAM_CSOFT_CLIP, (query_length-end));
               ++b->n_cigar[i];
           }
       }
@@ -463,7 +463,8 @@ fmap_map2_aux_fix_cigar(fmap_refseq_t *refseq, fmap_map2_hit_t *p, int32_t n_cig
   x = coor; y = 0;
   // test if the alignment goes beyond the boundary
   for(i = 0; i < n_cigar; ++i) {
-      int32_t op = cigar[i]&0xf, ln = cigar[i]>>4;
+      int32_t op = FMAP_SW_CIGAR_OP(cigar[i]);
+      int32_t ln = FMAP_SW_CIGAR_LENGTH(cigar[i]);
       if(op == 1 || op == 4 || op == 5) y += ln;
       else if(op == 2) x += ln;
       else x += ln, y += ln;
@@ -476,29 +477,30 @@ fmap_map2_aux_fix_cigar(fmap_refseq_t *refseq, fmap_map2_hit_t *p, int32_t n_cig
       cn = fmap_calloc(n_cigar + 3, sizeof(uint32_t), "cn");
       x = coor; y = 0;
       for(i = j = 0; i < n_cigar; ++i) {
-          int32_t op = cigar[i]&0xf, ln = cigar[i]>>4;
-          if(op == 4 || op == 5 || op == 1) { // ins or clipping
+          int32_t op = FMAP_SW_CIGAR_OP(cigar[i]);
+          int32_t ln = FMAP_SW_CIGAR_LENGTH(cigar[i]);
+          if(BAM_CINS == op || BAM_CSOFT_CLIP == op || BAM_CHARD_CLIP == op) { // ins or clipping
               y += ln;
               cn[j++] = cigar[i];
-          } else if(op == 2) { // del
+          } else if(BAM_CDEL == op) { // del
               if(x + ln >= refl && nc == 0) {
-                  cn[j++] = (uint32_t)(lq - y)<<4 | 4;
+                  FMAP_SW_CIGAR_STORE(cn[j++], BAM_CSOFT_CLIP, (uint32_t)(lq-y));
                   nc = j;
-                  cn[j++] = (uint32_t)y<<4 | 4;
+                  FMAP_SW_CIGAR_STORE(cn[j++], BAM_CSOFT_CLIP, (uint32_t)y);
                   kk = p->k + (x + ln - refl);
                   nlen[0] = x - coor;
                   nlen[1] = p->len - nlen[0] - ln;
               } else cn[j++] = cigar[i];
               x += ln;
-          } else if(op == 0) { // match
+          } else if(op == BAM_CMATCH) { // match
               if(x + ln >= refl && nc == 0) {
                   // FIXME: not consider a special case where a split right between M and I
-                  cn[j++] = (uint32_t)(refl - x)<<4 | 0; // write M
-                  cn[j++] = (uint32_t)(lq - y - (refl - x))<<4 | 4; // write S
+                  FMAP_SW_CIGAR_STORE(cn[j++], BAM_CMATCH, (uint32_t)(refl-x)); // write M
+                  FMAP_SW_CIGAR_STORE(cn[j++], BAM_CSOFT_CLIP, (uint32_t)(lq-y-(refl-x))); // write S
                   nc = j;
                   mq[0] += refl - x;
-                  cn[j++] = (uint32_t)(y + (refl - x))<<4 | 4;
-                  if(x + ln - refl) cn[j++] = (uint32_t)(x + ln - refl)<<4 | 0;
+                  FMAP_SW_CIGAR_STORE(cn[j++], BAM_CSOFT_CLIP, (uint32_t)(y+(refl-x))); // write S
+                  if(x + ln - refl) FMAP_SW_CIGAR_STORE(cn[j++], BAM_CMATCH, (uint32_t)(x+ln-refl)); // write M
                   mq[1] += x + ln - refl;
                   kk = refseq->annos[seqid].offset + refl;
                   nlen[0] = refl - coor;

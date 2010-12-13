@@ -5,6 +5,7 @@
 #include "../index/fmap_refseq.h"
 #include "../index/fmap_bwt.h"
 #include "../index/fmap_sa.h"
+#include "../sw/fmap_sw.h"
 #include "../sw/fmap_fsw.h"
 #include "fmap_map2_aux.h"
 #include "fmap_map3.h"
@@ -64,8 +65,8 @@ fmap_map_util_fsw(fmap_sff_t *sff, fmap_fsw_param_t *par, fmap_map_util_fsw_aln_
       for(j=0;j<h->n_cigar;j++) {
           int32_t op, op_len;
 
-          op = h->cigar[j] & 0xf;
-          op_len = h->cigar[j] >> 4;
+          op = FMAP_SW_CIGAR_OP(h->cigar[j]);
+          op_len = FMAP_SW_CIGAR_LENGTH(h->cigar[j]);
 
           switch(op) {
             case BAM_CMATCH:
@@ -149,7 +150,7 @@ fmap_map_util_fsw(fmap_sff_t *sff, fmap_fsw_param_t *par, fmap_map_util_fsw_aln_
                   for(l=h->n_cigar-1;0<=l;l--) {
                       h->cigar[l+1] = h->cigar[l];
                   }
-                  h->cigar[0] = (k << 4) | 4;
+                  FMAP_SW_CIGAR_STORE(h->cigar[0], BAM_CSOFT_CLIP, k);
                   h->n_cigar++;
               }
           }
@@ -173,6 +174,80 @@ fmap_map_util_fsw(fmap_sff_t *sff, fmap_fsw_param_t *par, fmap_map_util_fsw_aln_
   free(target);
   free(path);
 }
+
+void
+fmap_map_util_map1_adjust_score(fmap_map1_aln_t *aln, int32_t score_match, int32_t pen_mm, int32_t pen_gapo, int32_t pen_gape)
+{
+  int32_t i, j, n_match;
+  for(i=0;i<aln->n;i++) {
+      fmap_map1_hit_t *h = &aln->hits[i];
+      n_match = 0 - h->n_mm;
+      for(j=0;j<h->n_cigar;j++) {
+          switch(FMAP_SW_CIGAR_OP(h->cigar[j])) {
+            case BAM_CMATCH:
+              n_match += FMAP_SW_CIGAR_LENGTH(h->cigar[j]);
+              break;
+            default:
+              break;
+          }
+      }
+
+      // update the score
+      h->score = n_match * score_match;
+      h->score = h->n_mm * pen_mm;
+      h->score = h->n_gapo * pen_mm;
+      h->score = h->n_gape * pen_mm;
+  }
+}
+
+/*
+inline void
+fmap_map_util_map1_fsw(fmap_sff_t *sff, fmap_map1_aln_t *aln, fmap_refseq_t *refseq, fmap_map1_opt_t *opt)
+{
+  int32_t i;
+  fmap_map_util_fsw_aln_t *x;
+  fmap_fsw_param_t par;
+  int32_t matrix[25];
+
+  x = fmap_map_util_fsw_aln_init(sam->num_entries);
+
+  // generate the alignment parameters
+  par.matrix = matrix;
+  par.band_width = 0;
+  par.offset = FMAP_MAP_UTIL_FSW_OFFSET; // this sets the hp difference
+  __fmap_fsw_gen_ap(par, opt);
+
+  // copy aln into x
+  // TODO
+  for(i=0;i<aln->n;i++) {
+      x->hits[i].strand = aln->hits[i].strand;
+      x->hits[i].seqid = aln->hits[i].seqid;
+      x->hits[i].pos = aln->hits[i].pos;
+      x->hits[i].score = aln->hits[i].AS;
+      x->hits[i].score_subo = aln->hits[i].XS;
+      x->hits[i].n_cigar = aln->hits[i].n_cigar;
+      x->hits[i].cigar = aln->hits[i].cigar;
+  }
+
+  // re-align
+  fmap_map_util_fsw(sff, &par, x, refseq, opt->bw, opt->aln_global, opt->score_thr);
+
+  // copy x into aln
+  for(i=0;i<aln->n;i++) {
+      aln->hits[i].strand = x->hits[i].strand;
+      aln->hits[i].seqid = x->hits[i].seqid;
+      aln->hits[i].pos = x->hits[i].pos;
+      aln->hits[i].AS = x->hits[i].score;
+      aln->hits[i].XS = x->hits[i].score_subo;
+      aln->hits[i].n_cigar = x->hits[i].n_cigar;
+      aln->hits[i].cigar = x->hits[i].cigar;
+      x->hits[i].cigar = NULL; // do not destroy this later
+  }
+
+  // destroy
+  fmap_map_util_fsw_aln_destroy(x);
+}
+*/
 
 inline void
 fmap_map_util_map2_fsw(fmap_sff_t *sff, fmap_map2_sam_t *sam, fmap_refseq_t *refseq, fmap_map2_opt_t *opt)

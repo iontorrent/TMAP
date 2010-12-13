@@ -1087,12 +1087,12 @@ fmap_sw_path2cigar(const fmap_sw_path_t *path, int32_t path_len, int32_t *n_ciga
   *n_cigar = n;
   cigar = fmap_malloc(*n_cigar * 4, "cigar");
 
-  cigar[0] = 1u << 4 | path[path_len-1].ctype;
+  FMAP_SW_CIGAR_STORE(cigar[0], path[path_len-1].ctype, 1u);
   last_type = path[path_len-1].ctype;
   for(i = path_len - 2, n = 0; i >= 0; --i) {
-      if(path[i].ctype == last_type) cigar[n] += 1u << 4;
+      if(path[i].ctype == last_type) FMAP_SW_CIGAR_ADD_LENGTH(cigar[n], 1u);
       else {
-          cigar[++n] = 1u << 4 | path[i].ctype;
+          FMAP_SW_CIGAR_STORE(cigar[++n], path[i].ctype, 1u);
           last_type = path[i].ctype;
       }
   }

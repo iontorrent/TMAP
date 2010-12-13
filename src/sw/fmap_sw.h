@@ -26,6 +26,11 @@
 #ifndef FMAP_SW_H_
 #define FMAP_SW_H_
 
+#define FMAP_SW_CIGAR_OP(_cigar) (((_cigar) & 0xf))
+#define FMAP_SW_CIGAR_LENGTH(_cigar) (((_cigar) >> 4))
+#define FMAP_SW_CIGAR_STORE(_cigar, _op, _len) ((_cigar) = ((_len) << 4) | ((_op) & 0xf))
+#define FMAP_SW_CIGAR_ADD_LENGTH(_cigar, _add) ((_cigar) += ((_add) << 4))
+
 #include <stdint.h>
 
 /*! 

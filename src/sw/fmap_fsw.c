@@ -865,12 +865,12 @@ fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_ci
       *n_cigar = n;
       cigar = fmap_malloc(*n_cigar * 4, "cigar");
 
-      cigar[0] = 1u << 4 | path[path_len-1].ctype;
+      FMAP_SW_CIGAR_STORE(cigar[0], path[path_len-1].ctype, 1u);
       dpscore_last_type = path[path_len-1].ctype;
       for (i = path_len - 2, n = 0; i >= 0; --i) {
-          if (path[i].ctype == dpscore_last_type) cigar[n] += 1u << 4;
+          if (path[i].ctype == dpscore_last_type) FMAP_SW_CIGAR_ADD_LENGTH(cigar[n], 1u);
           else {
-              cigar[++n] = 1u << 4 | path[i].ctype;
+              FMAP_SW_CIGAR_STORE(cigar[++n], path[i].ctype, 1u);
               dpscore_last_type = path[i].ctype;
           }
       }
@@ -890,12 +890,13 @@ fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_ci
       // get the last type
       dpscore_last_type = fmap_fsw_path2cigar_get_type(path[path_len-1].ctype);
       cigar[0] = 1u << 4 | dpscore_last_type;
+      FMAP_SW_CIGAR_STORE(cigar[0], dpscore_last_type, 1u);
       for (i = path_len - 2, n = 0; i >= 0; --i) {
           // get the current type
           dpscore_cur_type = fmap_fsw_path2cigar_get_type(path[i].ctype);
-          if (dpscore_cur_type == dpscore_last_type) cigar[n] += 1u << 4;
+          if (dpscore_cur_type == dpscore_last_type) FMAP_SW_CIGAR_ADD_LENGTH(cigar[n], 1u);
           else {
-              cigar[++n] = 1u << 4 | dpscore_cur_type;
+              FMAP_SW_CIGAR_STORE(cigar[++n], dpscore_cur_type, 1u);
               dpscore_last_type = dpscore_cur_type;
           }
       }

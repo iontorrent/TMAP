@@ -55,8 +55,9 @@
 #define FMAP_REV_SA_COMPRESSION FMAP_FILE_NO_COMPRESSION
 
 /*
-   CIGAR operations.
+   CIGAR operations, from samtools.
    */
+#ifndef BAM_BAM_H
 #define BAM_CMATCH      0
 #define BAM_CINS        1
 #define BAM_CDEL        2
@@ -64,6 +65,7 @@
 #define BAM_CSOFT_CLIP  4
 #define BAM_CHARD_CLIP  5
 #define BAM_CPAD        6
+#endif
 
 /*! 
   for each type of file, the integer id associated with this file

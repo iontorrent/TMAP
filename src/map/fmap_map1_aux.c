@@ -9,6 +9,7 @@
 #include "../index/fmap_bwt.h"
 #include "../index/fmap_bwt_match.h"
 #include "../index/fmap_sa.h"
+#include "../sw/fmap_sw.h"
 #include "fmap_map1.h"
 #include "fmap_map1_aux.h"
 
@@ -206,7 +207,7 @@ fmap_map1_aux_get_bam_state(int state)
             hit->n_cigar++; \
             hit->cigar = fmap_realloc(hit->cigar, sizeof(uint32_t)*hit->n_cigar, "hit->cigar"); \
         } \
-        hit->cigar[cigar_i] = (op_len << 4 ) | fmap_map1_aux_get_bam_state(op); \
+        FMAP_SW_CIGAR_STORE(hit->cigar[cigar_i], fmap_map1_aux_get_bam_state(op), op_len); \
         cigar_i++; \
     } \
 } while(0)

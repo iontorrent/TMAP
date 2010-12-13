@@ -714,27 +714,7 @@ fmap_map_all_core_worker(fmap_seq_t **seq_buffer, fmap_map_all_aln_t **alns, int
                                                 (0 < opt_local_map1[i].seed_length) ? seed_width_map1[i] : NULL, 
                                                 &opt_local_map1[i], stack_map1);
                   // adjust map1 scoring, since it does not consider opt->score_match
-                  for(j=0;j<aln_map1->n;j++) {
-                      fmap_map1_hit_t *h = &aln_map1->hits[j];
-                      int32_t k, num_match;
-
-                      num_match = 0 - h->n_mm; // # of mismatches
-                      for(k=0;k<h->n_cigar;k++) {
-                          switch(h->cigar[k] & 0xf) {
-                            case BAM_CMATCH:
-                              num_match += h->cigar[k] >> 4;
-                              break;
-                            default:
-                              break;
-                          }
-                      }
-
-                      // update the score
-                      h->score = num_match * opt->score_match;
-                      h->score -= h->n_mm * opt->pen_mm;
-                      h->score -= h->n_gapo * opt->pen_gapo;
-                      h->score -= h->n_gape * opt->pen_gape;
-                  }
+                  fmap_map_util_map1_adjust_score(aln_map1, opt->score_match, opt->pen_mm, opt->pen_gapo, opt->pen_gape);
               }
               else {
                   // empty
