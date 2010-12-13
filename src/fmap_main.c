@@ -11,6 +11,19 @@
 fmap_file_t *fmap_file_stdout = NULL; // do not initialize as this may used for output
 fmap_file_t *fmap_file_stderr = NULL;
 
+static int version()
+{
+  fprintf(stderr, "\n");
+  fprintf(stderr, "%s:   flow mapper\n", PACKAGE);
+#ifdef GIT_REV
+  fprintf(stderr, "Version: %s git:%s\n", PACKAGE_VERSION, GIT_REV);
+#else
+  fprintf(stderr, "Version: %s\n", PACKAGE_VERSION);
+#endif
+  fprintf(stderr, "Contact: %s\n\n", PACKAGE_BUGREPORT);
+  return 0;
+}
+
 static int usage()
 {
   fprintf(stderr, "\n");
@@ -77,6 +90,7 @@ int main(int argc, char *argv[])
 #endif
       else if (0 == strcmp("exact", argv[1])) ret = fmap_debug_exact(argc-1, argv+1);
       else if (0 == strcmp("fsw", argv[1])) ret = fmap_fsw_main(argc-1, argv+1);
+      else if (0 == strcmp("--version", argv[1])) ret = version();
       else {
           fmap_error1(PACKAGE, "Unknown command", Exit, CommandLineArgument);
       }
