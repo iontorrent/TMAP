@@ -42,10 +42,9 @@ fmap_map3_get_seed_length(uint64_t ref_len)
 }
 
 static inline void
-fmap_map3_aln_filter(fmap_seq_t *seq, fmap_map3_aln_t *aln, 
-                     int32_t score_thr, int32_t score_match, int32_t aln_output_mode)
+fmap_map3_mapq(fmap_map_sams_t *sams, int32_t score_thr, int32_t score_match, int32_t aln_output_mode)
 {
-  int32_t i, j;
+  int32_t i;
   int32_t n_best = 0;
   int32_t best_score, cur_score, best_subo;
   int32_t n_seeds = 0, tot_seeds = 0;
@@ -55,14 +54,14 @@ fmap_map3_aln_filter(fmap_seq_t *seq, fmap_map3_aln_t *aln,
   best_score = INT32_MIN;
   best_subo = INT32_MIN;
   n_best = 0;
-  for(i=0;i<aln->n;i++) {
-      cur_score = aln->hits[i].score;
-      tot_seeds += aln->hits[i].n_seeds;
+  for(i=0;i<sams->n;i++) {
+      cur_score = sams->sams[i].score;
+      tot_seeds += sams->sams[i].aux.map3_aux->n_seeds;
       if(best_score < cur_score) {
           best_subo = best_score;
           best_score = cur_score;
           n_best = 1;
-          n_seeds = aln->hits[i].n_seeds;
+          n_seeds = sams->sams[i].aux.map3_aux->n_seeds;
       }
       else if(cur_score == best_score) { // qual
           n_best++;
@@ -71,7 +70,7 @@ fmap_map3_aln_filter(fmap_seq_t *seq, fmap_map3_aln_t *aln,
           if(best_subo < cur_score) {
               best_subo = cur_score;
           }
-          cur_score = aln->hits[i].score_subo;
+          cur_score = sams->sams[i].score_subo;
           if(best_subo < cur_score) {
               best_subo = cur_score;
           } 
@@ -87,90 +86,19 @@ fmap_map3_aln_filter(fmap_seq_t *seq, fmap_map3_aln_t *aln,
       mapq = (int32_t)(c * (best_score - best_subo) * (250.0 / best_score + 0.03 / score_match) + .499);
       if(mapq > 250) mapq = 250;
   }
-  for(i=0;i<aln->n;i++) {
-      cur_score = aln->hits[i].score;
+  for(i=0;i<sams->n;i++) {
+      cur_score = sams->sams[i].score;
       if(cur_score == best_score) { // qual
-          aln->hits[i].mapq = mapq;
+          sams->sams[i].mapq = mapq;
       }
       else {
-          aln->hits[i].mapq = 0;
+          sams->sams[i].mapq = 0;
       }
   }
-
-  if(FMAP_MAP_UTIL_ALN_MODE_ALL == aln_output_mode
-     || aln->n <= 1) {
-      return;
-  }
-
-  best_score = INT32_MIN;
-  n_best = 0;
-  for(i=0;i<aln->n;i++) {
-      cur_score = aln->hits[i].score;
-      if(best_score < cur_score) {
-          best_score = cur_score;
-          n_best = 1;
-      }
-      else if(cur_score == best_score) { // equal
-          n_best++;
-      }
-  }
-
-  // copy to the front
-  if(n_best < aln->n) {
-      for(i=j=0;i<aln->n;i++) {
-          cur_score = aln->hits[i].score;
-          if(cur_score < best_score) { // not the best
-              free(aln->hits[i].cigar);
-              aln->hits[i].cigar = NULL;
-              aln->hits[i].n_cigar = 0;
-          }
-          else {
-              if(j < i) { // copy if we are not on the same index
-                  aln->hits[j] = aln->hits[i];
-                  aln->hits[i].cigar = NULL;
-              }
-              j++;
-          }
-      }
-      // reallocate
-      fmap_map3_aln_realloc(aln, n_best);
-  }
-
-  if(FMAP_MAP_UTIL_ALN_MODE_UNIQ_BEST == aln_output_mode) {
-      if(1 < n_best) { // there can only be one
-          fmap_map3_aln_realloc(aln, 0);
-      }
-  }
-  else if(FMAP_MAP_UTIL_ALN_MODE_RAND_BEST == aln_output_mode) { // get a random
-      i = (int32_t)(drand48() * aln->n);
-      if(0 != i) {
-          free(aln->hits[0].cigar);
-          aln->hits[0] = aln->hits[i];
-          aln->hits[i].cigar = NULL;
-      }
-      // reallocate
-      fmap_map3_aln_realloc(aln, 1);
-  }
-  else if(FMAP_MAP_UTIL_ALN_MODE_ALL_BEST == aln_output_mode) {
-      // do nothing
-  }
-  else {
-      fmap_error("bug encountered", Exit, OutOfRange);
-  }
-}
-
-static inline void
-fmap_map3_print_sam(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map3_hit_t *hit)
-{
-  fmap_sam_print_mapped(fmap_file_stdout, seq, refseq,
-                        hit->strand, hit->seqid, hit->pos,
-                        hit->mapq, hit->cigar, hit->n_cigar,
-                        "\tAS:i:%d\tXE:i:%d", 
-                        hit->score, hit->n_seeds);
 }
 
 static void
-fmap_map3_core_worker(fmap_seq_t **seq_buffer, fmap_map3_aln_t **alns, int32_t seq_buffer_length, 
+fmap_map3_core_worker(fmap_seq_t **seq_buffer, fmap_map_sams_t **sams, int32_t seq_buffer_length, 
                       fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *sa,
                       int32_t tid, fmap_map3_opt_t *opt)
 {
@@ -238,15 +166,21 @@ fmap_map3_core_worker(fmap_seq_t **seq_buffer, fmap_map3_aln_t **alns, int32_t s
           fmap_seq_to_int(seq[1]);
 
           // align
-          alns[low] = fmap_map3_aux_core(seq, flow, refseq, bwt, sa, opt);
+          sams[low] = fmap_map3_aux_core(seq, flow, refseq, bwt, sa, opt);
+
+          // mapping quality
+          fmap_map3_mapq(sams[low], opt->score_thr, opt->score_match, opt->aln_output_mode);
 
           // filter the alignments
-          fmap_map3_aln_filter(seq_buffer[low], alns[low],
-                               opt->score_thr, opt->score_match, opt->aln_output_mode);
+          fmap_map_sams_filter(sams[low], opt->aln_output_mode);
 
           // re-align the alignments in flow-space
           if(FMAP_SEQ_TYPE_SFF == seq_buffer[low]->type) {
-              fmap_map_util_map3_fsw(seq_buffer[low]->data.sff, alns[low], refseq, opt);
+              fmap_map_util_fsw(seq_buffer[low]->data.sff, 
+                                sams[low], refseq, 
+                                opt->bw, opt->aln_global, opt->score_thr,
+                                opt->score_match, opt->pen_mm, opt->pen_gapo,
+                                opt->pen_gape, opt->fscore);
           }
 
           // destroy
@@ -268,7 +202,7 @@ fmap_map3_core_thread_worker(void *arg)
 {
   fmap_map3_thread_data_t *thread_data = (fmap_map3_thread_data_t*)arg;
 
-  fmap_map3_core_worker(thread_data->seq_buffer, thread_data->alns, thread_data->seq_buffer_length, 
+  fmap_map3_core_worker(thread_data->seq_buffer, thread_data->sams, thread_data->seq_buffer_length, 
                         thread_data->refseq, thread_data->bwt, thread_data->sa, 
                         thread_data->tid, thread_data->opt);
 
@@ -278,7 +212,7 @@ fmap_map3_core_thread_worker(void *arg)
 static void 
 fmap_map3_core(fmap_map3_opt_t *opt)
 {
-  uint32_t i, j, n_reads_processed=0;
+  uint32_t i, n_reads_processed=0;
   int32_t seq_buffer_length;
   fmap_refseq_t *refseq=NULL;
   fmap_bwt_t *bwt=NULL;
@@ -286,7 +220,7 @@ fmap_map3_core(fmap_map3_opt_t *opt)
   fmap_file_t *fp_reads=NULL;
   fmap_seq_io_t *seqio = NULL;
   fmap_seq_t **seq_buffer = NULL;
-  fmap_map3_aln_t **alns = NULL;
+  fmap_map_sams_t **sams= NULL;
   fmap_shm_t *shm = NULL;
   int32_t reads_queue_size;
   
@@ -334,7 +268,7 @@ fmap_map3_core(fmap_map3_opt_t *opt)
       reads_queue_size = opt->reads_queue_size;
   }
   seq_buffer = fmap_malloc(sizeof(fmap_seq_t*)*reads_queue_size, "seq_buffer");
-  alns = fmap_malloc(sizeof(fmap_map3_aln_t*)*reads_queue_size, "alns");
+  sams = fmap_malloc(sizeof(fmap_map_sams_t*)*reads_queue_size, "sams");
 
   if(NULL == opt->fn_reads) {
       fp_reads = fmap_file_fdopen(fileno(stdin), "rb", opt->input_compr);
@@ -379,7 +313,7 @@ fmap_map3_core(fmap_map3_opt_t *opt)
       }
       fmap_map3_read_lock_low = 0; // ALWAYS set before running threads 
       if(1 == num_threads) {
-          fmap_map3_core_worker(seq_buffer, alns, seq_buffer_length, refseq, bwt, sa, 0, opt);
+          fmap_map3_core_worker(seq_buffer, sams, seq_buffer_length, refseq, bwt, sa, 0, opt);
       }
       else {
           pthread_attr_t attr;
@@ -395,7 +329,7 @@ fmap_map3_core(fmap_map3_opt_t *opt)
           for(i=0;i<num_threads;i++) {
               thread_data[i].seq_buffer = seq_buffer;
               thread_data[i].seq_buffer_length = seq_buffer_length;
-              thread_data[i].alns = alns;
+              thread_data[i].sams = sams;
               thread_data[i].refseq = refseq;
               thread_data[i].bwt = bwt;
               thread_data[i].sa = sa;;
@@ -415,26 +349,19 @@ fmap_map3_core(fmap_map3_opt_t *opt)
           free(thread_data);
       }
 #else 
-      fmap_map3_core_worker(seq_buffer, alns, seq_buffer_length, refseq, bwt, sa, 0, opt);
+      fmap_map3_core_worker(seq_buffer, sams, seq_buffer_length, refseq, bwt, sa, 0, opt);
 #endif
 
       if(-1 != opt->reads_queue_size) {
           fmap_progress_print("writing alignments");
       }
       for(i=0;i<seq_buffer_length;i++) {
-
-          if(0 < alns[i]->n) {
-              for(j=0;j<alns[i]->n;j++) {
-                  fmap_map3_print_sam(seq_buffer[i], refseq, &alns[i]->hits[j]);
-              }
-          }
-          else {
-              fmap_sam_print_unmapped(fmap_file_stdout, seq_buffer[i]);
-          }
+          // print
+          fmap_map_sams_print(seq_buffer[i], refseq, sams[i]);
 
           // free alignments
-          fmap_map3_aln_destroy(alns[i]);
-          alns[i] = NULL;
+          fmap_map_sams_destroy(sams[i]);
+          sams[i] = NULL;
       }
 
       if(-1 == opt->reads_queue_size) {
@@ -459,7 +386,7 @@ fmap_map3_core(fmap_map3_opt_t *opt)
       fmap_seq_destroy(seq_buffer[i]);
   }
   free(seq_buffer);
-  free(alns);
+  free(sams);
   fmap_refseq_destroy(refseq);
   fmap_bwt_destroy(bwt);
   fmap_sa_destroy(sa);

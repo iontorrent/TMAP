@@ -51,15 +51,17 @@ fmap_map1_aux_stack_destroy(fmap_map1_aux_stack_t *stack);
 
 /*! 
   @param  seq         the base sequences (forward/reverse-complimented)
+  @param  bwt         the reference sequence structure 
   @param  bwt         the BWT structure (reversed)
+  @param  bwt         the SA structure (reversed)
   @param  width       the bounds within the read (forward/reverse)
   @param  seed_width  the bounds within the seed (forward/reverse)
   @param  opt         the program parameters structure
   @param  stack       the stack structure
   @return             pointer to the alignments
   */
-fmap_map1_aln_t *
-fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
+fmap_map_sams_t *
+fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *sa,
                    fmap_bwt_match_width_t *width[2], fmap_bwt_match_width_t *seed_width[2], fmap_map1_opt_t *opt,
                    fmap_map1_aux_stack_t *stack);
 

@@ -40,19 +40,21 @@ typedef struct {
     key_t shm_key;  /*!< the shared memory key (-s) */
 } fmap_map2_opt_t;
 
+#ifdef HAVE_LIBPTHREAD
 /*! 
   data to be passed to a thread
   */
 typedef struct {
     fmap_seq_t **seq_buffer;  /*!< the buffer of sequences */
     int32_t seq_buffer_length;  /*!< the buffer length */
-    struct __fmap_map2_sam_t **sams;  /*!< the sam alignments for each sequence */
+    fmap_map_sams_t **sams;  /*!< the sam alignments for each sequence */
     fmap_refseq_t *refseq;  /*!< pointer to the reference sequence (forward) */
     fmap_bwt_t *bwt[2];  /*!< pointer to the BWT indices (forward/reverse) */
     fmap_sa_t *sa[2];  /*!< pointer to the SA (forward/reverse) */
     int32_t tid;  /*!< the zero-based thread id */
     fmap_map2_opt_t *opt;  /*!< the options to this program */
 } fmap_map2_thread_data_t;
+#endif
 
 /*!
   Prints the usage of map2

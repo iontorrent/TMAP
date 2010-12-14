@@ -10,6 +10,8 @@
 #include "../index/fmap_bwt_match.h"
 #include "../index/fmap_sa.h"
 #include "../sw/fmap_sw.h"
+#include "../sw/fmap_fsw.h"
+#include "fmap_map_util.h"
 #include "fmap_map1.h"
 #include "fmap_map1_aux.h"
 
@@ -203,17 +205,87 @@ fmap_map1_aux_get_bam_state(int state)
 
 #define __add_to_cigar() do { \
     if(0 < op_len) { \
-        if(hit->n_cigar <= cigar_i) { \
-            hit->n_cigar++; \
-            hit->cigar = fmap_realloc(hit->cigar, sizeof(uint32_t)*hit->n_cigar, "hit->cigar"); \
+        if(sam->n_cigar <= cigar_i) { \
+            sam->n_cigar++; \
+            sam->cigar = fmap_realloc(sam->cigar, sizeof(uint32_t)*sam->n_cigar, "sam->cigar"); \
         } \
-        FMAP_SW_CIGAR_STORE(hit->cigar[cigar_i], fmap_map1_aux_get_bam_state(op), op_len); \
+        FMAP_SW_CIGAR_STORE(sam->cigar[cigar_i], fmap_map1_aux_get_bam_state(op), op_len); \
         cigar_i++; \
     } \
 } while(0)
 
-fmap_map1_aln_t *
-fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
+static fmap_map_sams_t *
+fmap_map1_sam_to_real(fmap_map_sams_t *sams, int32_t seq_len,
+                       fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *sa) 
+{
+  fmap_map_sams_t *sams_tmp = NULL;
+  uint32_t i, j, k, l, n;
+
+  // max # of entries
+  for(i=n=0;i<sams->n;i++) {
+      n += sams->sams[i].pos - sams->sams[i].seqid + 1; // l - k + 1
+  }
+
+  // alloc
+  sams_tmp = fmap_map_sams_init();
+  fmap_map_sams_realloc(sams_tmp, n);
+
+  // copy over
+  for(i=j=0;i<sams->n;i++) {
+      fmap_map_sam_t *sam;
+      int32_t aln_ref_l = 0;
+
+      sam = &sams->sams[i];
+          
+      // get the number of non-inserted bases 
+      for(l=0;l<sam->n_cigar;l++) {
+          switch(FMAP_SW_CIGAR_OP(sam->cigar[l])) {
+            case BAM_CMATCH:
+            case BAM_CDEL:
+              aln_ref_l += FMAP_SW_CIGAR_LENGTH(sam->cigar[l]); break;
+            default:
+              break;
+          }
+      }
+
+      // go through SA interval
+      for(k=sams->sams[i].seqid;k<=sams->sams[i].pos;k++) { // k -> l
+          uint32_t pos = 0, seqid = 0, pacpos = 0;
+
+          // SA position to packed refseq position
+          pacpos = bwt->seq_len - fmap_sa_pac_pos(sa, bwt, k) - aln_ref_l + 1;
+
+          if(0 < fmap_refseq_pac2real(refseq, pacpos, seq_len, &seqid, &pos)) {
+              // copy over
+              sams_tmp->sams[j] = sams->sams[i];
+              sams_tmp->sams[j].seqid = seqid;
+              sams_tmp->sams[j].pos = pos-1;
+              // cigar
+              sams_tmp->sams[j].cigar = fmap_malloc(sizeof(uint32_t)*sams_tmp->sams[j].n_cigar, "sams_tmp->sams[j].cigar");
+              for(l=0;l<sams_tmp->sams[j].n_cigar;l++) {
+                  sams_tmp->sams[j].cigar[l] = sams->sams[i].cigar[l];
+              }
+              // aux
+              fmap_map_sam_malloc_aux(&sams_tmp->sams[j], FMAP_MAP_ALGO_MAP1);
+              sams_tmp->sams[j].aux.map1_aux->n_mm = sams->sams[i].aux.map1_aux->n_mm;
+              sams_tmp->sams[j].aux.map1_aux->n_gapo = sams->sams[i].aux.map1_aux->n_gapo;
+              sams_tmp->sams[j].aux.map1_aux->n_gape = sams->sams[i].aux.map1_aux->n_gape;
+              j++;
+          }
+      }
+  }
+
+  // destroy
+  fmap_map_sams_destroy(sams);
+
+  // realloc
+  fmap_map_sams_realloc(sams_tmp, j);
+
+  return sams_tmp;
+}
+
+fmap_map_sams_t *
+fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *sa,
                    fmap_bwt_match_width_t *width[2], fmap_bwt_match_width_t *seed_width[2], fmap_map1_opt_t *opt,
                    fmap_map1_aux_stack_t *stack)
 {
@@ -224,9 +296,9 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
   int32_t max_edit_score;
   fmap_bwt_match_occ_t match_sa_start;
   fmap_string_t *bases[2]={NULL,NULL};
-  fmap_map1_aln_t *alns;
+  fmap_map_sams_t *sams = NULL;
 
-  alns = fmap_map1_aln_init();
+  sams = fmap_map_sams_init();
 
   best_score = next_best_score = aln_score(max_mm+1, max_gapo+1, max_gape+1, opt);
 
@@ -264,7 +336,7 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
       int32_t n_mm, n_gapo, n_gape;
       int32_t n_seed_mm=0, offset;
       const uint8_t *str=NULL;
-      int32_t hit_found;
+      int32_t sam_found;
       fmap_bwt_match_width_t *width_cur;
       const fmap_bwt_match_width_t *seed_width_cur = NULL;
       fmap_bwt_match_occ_t match_sa_cur, match_sa_next[4];
@@ -297,26 +369,26 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
           continue;
       } 
 
-      // check whether a hit is found
-      hit_found = 0;
+      // check whether a sam is found
+      sam_found = 0;
       if(len == offset) {
-          hit_found = 1;
+          sam_found = 1;
       }
       else if(0 == n_mm // no mismatches from any state
               && (e->state == STATE_M && 0 == n_gapo) // in STATE_M but no more gap opens
               && (e->state != STATE_M && 0 == n_gape)) { // in STATE_I/STATE_D but no more extensions
-          if(0 < fmap_bwt_match_exact_alt(bwt, offset, str, &match_sa_cur)) { // the alignment must match exactly to hit
-              hit_found = 1;
+          if(0 < fmap_bwt_match_exact_alt(bwt, offset, str, &match_sa_cur)) { // the alignment must match exactly to sam
+              sam_found = 1;
           }
           else {
-              continue; // no hit, skip
+              continue; // no sam, skip
           }
       }
 
-      if(1 == hit_found) { // alignment found
+      if(1 == sam_found) { // alignment found
           int32_t score = aln_score(e->n_mm, e->n_gapo, e->n_gape, opt);
           int32_t do_add = 1;
-          if(alns->n == 0) {
+          if(sams->n == 0) {
               best_score = score;
               best_cnt = 0;
           }
@@ -337,9 +409,9 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
               }
           }
           if(0 < e->n_gapo) { // check if the same alignment has been found 
-              for(j=0;j<alns->n;j++) {
-                  if(alns->hits[j].k == match_sa_cur.k && alns->hits[j].l == match_sa_cur.l) {
-                      if(score < alns->hits[j].score) { // bug!
+              for(j=0;j<sams->n;j++) {
+                  if(sams->sams[j].seqid == match_sa_cur.k && sams->sams[j].pos == match_sa_cur.l) {
+                      if(score < sams->sams[j].score) { // bug!
                           fmap_error("bug encountered", Exit, OutOfRange);
                       }
                       do_add = 0;
@@ -349,24 +421,28 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
           }
           if(do_add) { // append
               uint32_t op, op_len, cigar_i;
-              fmap_map1_hit_t *hit = NULL;
+              fmap_map_sam_t *sam = NULL;
               fmap_map1_aux_stack_entry_t *cur = e;
+          
+              fmap_map_sams_realloc(sams, sams->n+1);
+              sam = &sams->sams[sams->n-1];
 
-              alns->n++;
-              alns->hits = fmap_realloc(alns->hits, sizeof(fmap_map1_hit_t)*alns->n, "alns->hits");
-              hit = &alns->hits[alns->n-1];
-
-              hit->score = cur->score;
-              hit->n_mm = cur->n_mm;
-              hit->n_gapo = cur->n_gapo;
-              hit->n_gape = cur->n_gape;
-              hit->strand = cur->strand;
-              hit->k = cur->match_sa.k;
-              hit->l = cur->match_sa.l;
+              sam->algo_id = FMAP_MAP_ALGO_MAP1;
+              sam->algo_stage = 0;
+              sam->score = cur->score;
+              sam->strand = cur->strand;
+              sam->seqid = cur->match_sa.k;
+              sam->pos = cur->match_sa.l;
+              
+              // aux data
+              fmap_map_sam_malloc_aux(sam, FMAP_MAP_ALGO_MAP1);
+              sam->aux.map1_aux->n_mm = cur->n_mm;
+              sam->aux.map1_aux->n_gapo = cur->n_gapo;
+              sam->aux.map1_aux->n_gape = cur->n_gape;
 
               // cigar
-              hit->n_cigar = 1 + cur->n_gapo;
-              hit->cigar = fmap_malloc(sizeof(uint32_t)*hit->n_cigar, "hit->cigar");
+              sam->n_cigar = 1 + cur->n_gapo;
+              sam->cigar = fmap_malloc(sizeof(uint32_t)*sam->n_cigar, "sam->cigar");
               cigar_i = 0;
 
               if(offset < len) { // we used 'fmap_bwt_match_exact_alt' 
@@ -391,22 +467,22 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
               }
               __add_to_cigar();
 
-              if(cigar_i < hit->n_cigar) { // reallocate to fit
-                  hit->n_cigar = cigar_i;
-                  hit->cigar = fmap_realloc(hit->cigar, sizeof(uint32_t)*hit->n_cigar, "hit->cigar");
+              if(cigar_i < sam->n_cigar) { // reallocate to fit
+                  sam->n_cigar = cigar_i;
+                  sam->cigar = fmap_realloc(sam->cigar, sizeof(uint32_t)*sam->n_cigar, "sam->cigar");
               }
 
               // reverse the cigar 
-              for(cigar_i=0;cigar_i<(hit->n_cigar >> 1);cigar_i++) {
-                  op = hit->cigar[hit->n_cigar-1-cigar_i];
-                  hit->cigar[hit->n_cigar-1-cigar_i] = hit->cigar[cigar_i];
-                  hit->cigar[cigar_i] = op;
+              for(cigar_i=0;cigar_i<(sam->n_cigar >> 1);cigar_i++) {
+                  op = sam->cigar[sam->n_cigar-1-cigar_i];
+                  sam->cigar[sam->n_cigar-1-cigar_i] = sam->cigar[cigar_i];
+                  sam->cigar[cigar_i] = op;
               }
 
-              if(NULL == hit->cigar) {
+              if(NULL == sam->cigar) {
                   fmap_error(NULL, Exit, OutOfRange);
               }
-
+              
               // TODO: use the shadow ?
               //fmap_map1_aux_stack_shadow(l - k + 1, len, bwt->seq_len, e->last_diff_offset, width_cur);
           }
@@ -496,5 +572,6 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_bwt_t *bwt,
       }
   }
 
-  return alns;
+
+  return fmap_map1_sam_to_real(sams, bases[0]->l, refseq, bwt, sa);
 }

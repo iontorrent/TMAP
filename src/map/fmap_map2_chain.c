@@ -1,6 +1,13 @@
 #include <stdio.h>
+#include "../index/fmap_refseq.h"
+#include "../index/fmap_bwt.h"
+#include "../index/fmap_sa.h"
 #include "../util/fmap_alloc.h"
 #include "../util/fmap_sort.h"
+#include "../seq/fmap_seq.h"
+#include "fmap_map_util.h"
+#include "fmap_map2.h"
+#include "fmap_map2_aux.h"
 #include "fmap_map2_chain.h"
 
 #define _fmap_map2_chain_lt(a, b) ((a).qbeg < (b).qbeg)

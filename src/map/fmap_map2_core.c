@@ -8,10 +8,12 @@
 #include "../util/fmap_vec.h"
 #include "../util/fmap_hash.h"
 #include "../seq/fmap_seq.h"
+#include "../index/fmap_refseq.h"
 #include "../index/fmap_bwt.h"
 #include "../index/fmap_bwtl.h"
+#include "../index/fmap_sa.h"
 #include "fmap_map_util.h"
-#include "fmap_map2_mempool.h"
+#include "fmap_map2.h"
 #include "fmap_map2_aux.h"
 #include "fmap_map2_core.h"
 

@@ -13,20 +13,22 @@
 
 #define FMAP_FSW_MAX_PATH_LENGTH(ref_len, flow_len, offset) ((1 + (ref_len * (flow_len + 1) * (offset + 1))))
 
-#define __fmap_fsw_gen_ap(par, opt) do { \
+#define __fmap_fsw_gen_ap1(par, score_match, pen_mm, pen_gapo, pen_gape, fscore) do { \
     int32_t i; \
     for(i=0;i<25;i++) { \
-        (par).matrix[i] = -100 * (opt)->pen_mm; \
+        (par).matrix[i] = -100 * pen_mm; \
     } \
     for(i=0;i<4;i++) { \
-        (par).matrix[i*5+i] = 100 * (opt)->score_match; \
+        (par).matrix[i*5+i] = 100 * score_match; \
     } \
-    (par).gap_open = 100 * (opt)->pen_gapo; \
-    (par).gap_ext = 100 *(opt)->pen_gape; \
-    (par).gap_end = 100 * (opt)->pen_gape; \
-    (par).fscore = 100 * (opt)->fscore; \
+    (par).gap_open = 100 * pen_gapo; \
+    (par).gap_ext = 100 *pen_gape; \
+    (par).gap_end = 100 * pen_gape; \
+    (par).fscore = 100 * fscore; \
     (par).row = 5; \
 } while(0)
+
+#define __fmap_fsw_gen_ap(par, opt) (__fmap_fsw_gen_ap1(par, (opt)->score_match, (opt)->pen_mm, (opt)->pen_gapo, (opt)->pen_gape), (opt)->fscore)
 
 /*!
  *   From which cell; helps recovert the best scoring path.

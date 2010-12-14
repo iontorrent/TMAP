@@ -16,6 +16,15 @@
 #include "fmap_sam.h"
 
 static char fmap_sam_rg_id[1024]="ID";
+static char *algos[6] = {
+    "dummy",
+    "map1", // 0x1 
+    "map2", // 0x2 
+    "dummy",
+    "map3", // 0x4
+    "dummy"
+};
+
 
 static void
 fmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
@@ -238,6 +247,7 @@ inline void
 fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, fmap_refseq_t *refseq,
                       uint8_t strand, uint32_t seqid, uint32_t pos, 
                       uint8_t mapq, uint32_t *cigar, int32_t n_cigar,
+                      int32_t score, int32_t algo_id, int32_t algo_stage,
                       const char *format, ...)
 {
   va_list ap;
@@ -312,10 +322,18 @@ fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, fmap_refseq_t *refseq,
                     fmap_sam_rg_id,
                     PACKAGE_NAME);
 
-  // MD
+  // MD and NM
   md = fmap_sam_md(refseq, bases->s, seqid, pos, cigar_tmp, n_cigar, &nm);
   fmap_file_fprintf(fp, "\tMD:Z:%s\tNM:i:%d", md->s, nm);
   fmap_string_destroy(md);
+
+  // AS
+  fmap_file_fprintf(fp, "\tAS:i:%d", score);
+
+  // XA
+  if(0 < algo_stage) {
+      fmap_file_fprintf(fp, "\tXA:Z:%s-%d", algos[algo_id], algo_stage);
+  }
   
   // FI
   if(FMAP_SEQ_TYPE_SFF == seq->type) {

@@ -1,8 +1,6 @@
 #ifndef FMAP_MAP2_CHAIN_H_
 #define FMAP_MAP2_CHAIN_H_
 
-#include "fmap_map2_aux.h"
-
 /*! 
   Chaining Functions for the BWA-like (long-read) Algorithm
   */

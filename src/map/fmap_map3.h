@@ -55,21 +55,13 @@ typedef struct {
     uint32_t *cigar; /*!< the cigar operator array */
 } fmap_map3_hit_t;
 
-/*!
-  Stucture for holding alignment hits
-  */
-typedef struct {
-    int32_t n; /*!< the number of hits */
-    fmap_map3_hit_t *hits; /*!< array of hits */
-} fmap_map3_aln_t;
-
 #ifdef HAVE_LIBPTHREAD
 /*! 
   data to be passed to a thread
   */
 typedef struct {
     fmap_seq_t **seq_buffer;  /*!< the buffer of sequences */
-    fmap_map3_aln_t **alns;  /*!< the alignments to output */
+    fmap_map_sams_t **sams;  /*!< the alignments to output */
     int32_t seq_buffer_length;  /*!< the buffer length */
     fmap_refseq_t *refseq; /*< pointer to the packed referene sequence (forward) */
     fmap_bwt_t *bwt;  /*!< pointer to the BWT indices (reverse) */

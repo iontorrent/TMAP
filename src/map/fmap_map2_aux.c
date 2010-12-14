@@ -9,11 +9,17 @@
 #endif
 #include "../util/fmap_alloc.h"
 #include "../util/fmap_sort.h"
+#include "../seq/fmap_seq.h"
 #include "../index/fmap_refseq.h"
 #include "../index/fmap_bwtl.h"
+#include "../index/fmap_bwt.h"
+#include "../index/fmap_sa.h"
 #include "../sw/fmap_sw.h"
-#include "fmap_map2_chain.h"
+#include "../sw/fmap_fsw.h"
+#include "fmap_map_util.h"
+#include "fmap_map2.h"
 #include "fmap_map2_core.h"
+#include "fmap_map2_chain.h"
 #include "fmap_map2_aux.h"
 
 #define __left_lt(a, b) ((a).end > (b).end)
@@ -526,65 +532,23 @@ fmap_map2_aux_fix_cigar(fmap_refseq_t *refseq, fmap_map2_hit_t *p, int32_t n_cig
   return n_cigar;
 }
 
-fmap_map2_sam_t *
-fmap_map2_sam_init(int32_t n)
-{
-  fmap_map2_sam_t *sam = NULL;
-
-  sam = fmap_calloc(1, sizeof(fmap_map2_sam_t), "sam");
-  if(0 < n) sam->entries = fmap_calloc(n, sizeof(fmap_map2_sam_entry_t), "sams->entries");
-  else sam->entries = NULL;
-  sam->num_entries = n;
-
-  return sam;
-}
-
-fmap_map2_sam_t *
-fmap_map2_sam_realloc(fmap_map2_sam_t *sam, int32_t n)
-{
-  int32_t i;
-
-  if(n == sam->num_entries) return sam;
-  for(i=n;i<sam->num_entries;i++) { // free if shrinking
-      free(sam->entries[i].cigar);
-  }
-  sam->entries = fmap_realloc(sam->entries, n*sizeof(fmap_map2_sam_entry_t), "sam->entries");
-  for(i=sam->num_entries;i<n;i++) { // initialize if expanding
-      sam->entries[i].cigar = NULL;
-      sam->entries[i].n_cigar = 0;
-  }
-  sam->num_entries = n;
-
-  return sam;
-}
-
-void
-fmap_map2_sam_destroy(fmap_map2_sam_t *sam)
-{
-  int32_t i;
-  if(NULL == sam) return;
-  for(i=0;i<sam->num_entries;i++) {
-      free(sam->entries[i].cigar);
-  }
-  free(sam->entries);
-  free(sam);
-}
-
-static fmap_map2_sam_t *
+static fmap_map_sams_t *
 fmap_map1_aux_store_hits(fmap_refseq_t *refseq, fmap_map2_opt_t *opt, 
                          fmap_map2_aln_t *aln)
 {
   int32_t i, j;
-  fmap_map2_sam_t *sam = NULL;
+  fmap_map_sams_t *sams = NULL;
 
   if(NULL == aln) return NULL;
 
-  sam = fmap_map2_sam_init(aln->n);
+  sams = fmap_map_sams_init();
+  fmap_map_sams_realloc(sams, aln->n);
 
   for(i=j=0;i<aln->n;i++) {
       fmap_map2_hit_t *p = aln->hits + i;
       uint32_t seqid = 0, coor = 0;
       int32_t qual;
+      fmap_map_sam_t *sam = &sams->sams[j];
 
       if(p->l == 0) {
           aln->n_cigar[i] = fmap_map2_aux_fix_cigar(refseq, p, aln->n_cigar[i], aln->cigar[i]);
@@ -594,9 +558,9 @@ fmap_map1_aux_store_hits(fmap_refseq_t *refseq, fmap_map2_opt_t *opt,
           }
       }
 
-      sam->entries[j].strand = (p->flag & 0x10) ? 1 : 0; // strand
-      sam->entries[j].seqid = seqid;
-      sam->entries[j].pos = coor;
+      sam->strand = (p->flag & 0x10) ? 1 : 0; // strand
+      sam->seqid = seqid;
+      sam->pos = coor;
       if(p->l == 0) {
           // estimate mapping quality
           double c = 1.0;	
@@ -609,39 +573,43 @@ fmap_map1_aux_store_hits(fmap_refseq_t *refseq, fmap_map2_opt_t *opt,
               qual = 0;
               p->G2 = p->G; // Note: the flag indicates a repetitive match, so we need to update the sub-optimal score
           }
-          sam->entries[j].mapq = qual;
+          sam->mapq = qual;
 
           // copy cigar memory
-          sam->entries[j].n_cigar = aln->n_cigar[i];
-          sam->entries[j].cigar = aln->cigar[i];
+          sam->n_cigar = aln->n_cigar[i];
+          sam->cigar = aln->cigar[i];
           aln->n_cigar[i] = 0;
           aln->cigar[i] = NULL;
       } 
       else {
-          sam->entries[j].mapq = 0;
-          sam->entries[j].n_cigar = 0;
-          sam->entries[j].cigar = NULL;
+          sam->mapq = 0;
+          sam->n_cigar = 0;
+          sam->cigar = NULL;
       }
-      sam->entries[j].AS = p->G;
-      sam->entries[j].XS = p->G2;
-      sam->entries[j].XF = p->flag>>16;
-      sam->entries[j].XE = p->n_seeds;
+      sam->algo_id = FMAP_MAP_ALGO_MAP2;
+      sam->algo_stage = 0;
+      sam->score = p->G;
+      sam->score_subo = p->G2;
+      // auxiliary data
+      fmap_map_sam_malloc_aux(sam, FMAP_MAP_ALGO_MAP2);
+      sam->aux.map2_aux->XE = p->n_seeds;
+      sam->aux.map2_aux->XF = p->flag >> 16;
       if(p->l) {
-          sam->entries[j].XI = p->l - p->k + 1;
+          sam->aux.map2_aux->XI = p->l - p->k + 1;
       }
       else {
-          sam->entries[j].XI = 0;
+          sam->aux.map2_aux->XI = 0;
       }
       j++;
   }
   if(j != aln->n) {
-      sam = fmap_map2_sam_realloc(sam, j);
+      fmap_map_sams_realloc(sams, j);
   }
 
-  return sam;
+  return sams;
 }
 
-fmap_map2_sam_t *
+fmap_map_sams_t *
 fmap_map2_aux_core(fmap_map2_opt_t *_opt,
                    fmap_seq_t *query,
                    fmap_refseq_t *refseq,
@@ -652,7 +620,7 @@ fmap_map2_aux_core(fmap_map2_opt_t *_opt,
   fmap_map2_opt_t opt;
   fmap_string_t *seq[2]={NULL, NULL};
   fmap_string_t *rseq[2]={NULL, NULL};
-  fmap_map2_sam_t *sam = NULL;
+  fmap_map_sams_t *sams = NULL;
   fmap_map2_aln_t *b[2]={NULL,NULL};
   fmap_string_t *bases = NULL;
   uint8_t *_seq[2];
@@ -704,7 +672,7 @@ fmap_map2_aux_core(fmap_map2_opt_t *_opt,
       fmap_string_destroy(seq[1]);
       fmap_string_destroy(rseq[0]);
       fmap_string_destroy(rseq[1]);
-      return fmap_map2_sam_init(0);
+      return fmap_map_sams_init(0);
   }
 
   // alignment
@@ -733,7 +701,7 @@ fmap_map2_aux_core(fmap_map2_opt_t *_opt,
   _seq[0] = (uint8_t*)seq[0]->s;
   _seq[1] = (uint8_t*)seq[1]->s;
   fmap_map2_aux_gen_cigar(&opt, _seq, l, refseq, b[0]);
-  sam = fmap_map1_aux_store_hits(refseq, &opt, b[0]);
+  sams = fmap_map1_aux_store_hits(refseq, &opt, b[0]);
   // free
   fmap_string_destroy(seq[0]);
   fmap_string_destroy(seq[1]);
@@ -741,5 +709,5 @@ fmap_map2_aux_core(fmap_map2_opt_t *_opt,
   fmap_string_destroy(rseq[1]);
   fmap_map2_aln_destroy(b[0]);
 
-  return sam;
+  return sams;
 }

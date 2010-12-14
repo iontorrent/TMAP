@@ -42,32 +42,6 @@ typedef struct {
 } fmap_map2_aln_t;
 
 /*! 
-  */
-typedef struct {
-    uint8_t strand:1;  /*!< the strand */
-    uint32_t seqid;  /*!< the zero-based reference contig index */
-    uint32_t pos;  /*!< the zero-based reference position */
-    uint8_t mapq;  /*!< the mapping quality */
-    int32_t n_cigar;  /*!< the number of cigar operaters */
-    uint32_t *cigar;  /*!< the cigar operators */
-    int32_t AS;  /*!< the alignment score */
-    int32_t XS;  /*!< the sub-optimal alignment score */
-    uint16_t XF:2;  /*!< support for the forward/reverse alignment (1-forward 2-reverse 3-both) */
-    uint16_t XE:14;  /*!< the number of supporting seeds */
-    int32_t XI;  /*!< the suffix interval size */
-} fmap_map2_sam_entry_t;
-
-/*! 
-  stores sam entries to be printed
-  @field  num_entries  the number of entries
-  @field  entries      the array of entries
-  */
-typedef struct __fmap_map2_sam_t {
-    int32_t num_entries;
-    fmap_map2_sam_entry_t *entries;
-} fmap_map2_sam_t;
-
-/*! 
   destroys an alignment
   @param  a  pointer to the alignment
   */
@@ -87,30 +61,6 @@ fmap_map2_aux_resolve_duphits(const fmap_bwt_t *bwt, const fmap_sa_t *sa, fmap_m
                               int32_t IS, int32_t min_as);
 
 /*! 
-  initializes a container for sam entries
-  @param  n  the number of entries to initialize
-  @return    a pointer to the initialized memory
-  */
-fmap_map2_sam_t *
-fmap_map2_sam_init(int32_t n);
-
-/*! 
-  resizes a container for sam entries
-  @param  sam  pointer to the sam entries structure
-  @param  n    the new number of entries 
-  @return      a pointer to the re-initialized memory
-  */
-fmap_map2_sam_t *
-fmap_map2_sam_realloc(fmap_map2_sam_t *sam, int32_t n);
-
-/*! 
-  destroys a container for sam entries
-  @param  sam  pointer to the sam entries structure
-  */
-void
-fmap_map2_sam_destroy(fmap_map2_sam_t *sam);
-
-/*! 
   performs the  BWA-like (long-read) algorithm 
   @param  _opt    pointer to the program parameters
   @param  query   pointer to the query sequence 
@@ -120,7 +70,7 @@ fmap_map2_sam_destroy(fmap_map2_sam_t *sam);
   @param  pool    pointer to a global memory pool
   @return         pointer to the alignment
   */
-fmap_map2_sam_t *
+fmap_map_sams_t *
 fmap_map2_aux_core(fmap_map2_opt_t *_opt,
                    fmap_seq_t *query,
                    fmap_refseq_t *refseq,

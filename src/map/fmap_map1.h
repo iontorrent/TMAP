@@ -8,6 +8,8 @@
   BWA-like (short-read) Mapping Algorithm
   */
 
+#define FMAP_MAP1_FSW_BW 50
+
 /*! 
   @details  determines how to output multiple alignments
   */
@@ -38,6 +40,7 @@ typedef struct {
     int32_t pen_mm;  /*!< the mismatch penalty (-M) */
     int32_t pen_gapo;  /*!< the indel open penalty (-O) */
     int32_t pen_gape;  /*!< the indel extension penalty (-E) */
+    int32_t fscore;  /*!< the flow score penalty (-X) */
     int32_t max_cals_del;  /*!< the maximum number of CALs to extend a deletion (-d) */
     int32_t indel_ends_bound;  /*!< indels are not allowed within INT number of bps from the end of the read (-i) */
     int32_t max_best_cals;  /*!< stop searching when INT optimal CALs have been found (-b) */
@@ -51,32 +54,6 @@ typedef struct {
     key_t shm_key;  /*!< the shared memory key (-s) */
 } fmap_map1_opt_t;
 
-/*! 
-  @details In the CIGAR array, each element is a 32-bit integer. The
-  lower 4 bits gives a CIGAR operation and the higher 28 bits keep the
-  length of a CIGAR.
-  */
-typedef struct {
-    uint32_t score;  /*!< the current alignment score */
-    uint16_t n_mm;  /*!< the current number of mismatches  */
-    uint16_t n_gapo;  /*!< the current number of gap opens */
-    uint16_t n_gape;  /*!< the current number of gap extensions */
-    uint8_t mapq;  /*!< the mapping quality */
-    uint8_t strand;  /*!< the strand of the alignment */
-    uint32_t k;  /*!< the lower range of the SA interval */
-    uint32_t l;  /*!< the upper range of the SA interval */
-    uint32_t n_cigar;  /*!< the length of the cigar array */
-    uint32_t *cigar;  /*!< the cigar array */
-} fmap_map1_hit_t;
-
-/*!
-  Stucture for holding alignment hits
-  */
-typedef struct {
-    int32_t n; /*!< the number of hits */
-    fmap_map1_hit_t *hits; /*!< array of hits */
-} fmap_map1_aln_t;
-
 #ifdef HAVE_LIBPTHREAD
 /*! 
   data to be passed to a thread
@@ -84,24 +61,14 @@ typedef struct {
 typedef struct {
     fmap_seq_t **seq_buffer;  /*!< the buffer of sequences */
     int32_t seq_buffer_length;  /*!< the buffer length */
-    fmap_map1_aln_t **alns;  /*!< alignments for each sequence */
+    fmap_map_sams_t **sams;  /*!< alignments for each sequence */
+    fmap_refseq_t *refseq; /*!< pointer to the reference sequence */
     fmap_bwt_t *bwt[2];  /*!< pointer to the BWT indices (forward/reverse) */
+    fmap_sa_t *sa; /*!< pointer to the SA (reverse) */
     int32_t tid;  /*!< the zero-based thread id */
     fmap_map1_opt_t *opt;  /*!< the options to this program */
 } fmap_map1_thread_data_t;
 #endif
-
-/*!
-  @return  a pointer to the initialized memory
- */
-inline fmap_map1_aln_t *
-fmap_map1_aln_init();
-    
-/*!
-  @param  aln  a pointer tothe initialized memory
- */
-void
-fmap_map1_aln_destroy(fmap_map1_aln_t *aln);
 
 /*!
   Prints the usage of map1

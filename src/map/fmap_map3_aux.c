@@ -7,6 +7,7 @@
 #include "../index/fmap_sa.h"
 #include "../index/fmap_bwt_match.h"
 #include "../sw/fmap_sw.h"
+#include "fmap_map_util.h"
 #include "fmap_map3.h"
 #include "fmap_map3_aux.h"
 
@@ -30,43 +31,6 @@ FMAP_SORT_INIT(fmap_map3_aux_hit_t, fmap_map3_aux_hit_t, __fmap_map3_hit_sort_lt
     (par).gap_end = (opt)->pen_gape; \
     (par).row = 5; \
 } while(0)
-
-fmap_map3_aln_t *
-fmap_map3_aln_init()
-{
-  return fmap_calloc(1, sizeof(fmap_map3_aln_t), "aln");
-}
-
-void
-fmap_map3_aln_realloc(fmap_map3_aln_t *aln, int32_t n)
-{
-  int32_t i;
-
-  for(i=n;i<aln->n;i++) {
-      free(aln->hits[i].cigar);
-  }
-  aln->hits = fmap_realloc(aln->hits, sizeof(fmap_map3_hit_t)*n, "aln->hits");
-  for(i=aln->n;i<n;i++) { // overly paranoid?
-      aln->hits[i].strand = 0;
-      aln->hits[i].seqid = aln->hits[i].pos = 0;
-      aln->hits[i].score = 0;
-      aln->hits[i].n_seeds = 0;
-      aln->hits[i].n_cigar = 0;
-      aln->hits[i].cigar = NULL;
-  }
-  aln->n = n;
-}
-
-void
-fmap_map3_aln_destroy(fmap_map3_aln_t *aln)
-{
-  int32_t i;
-  for(i=0;i<aln->n;i++) {
-      free(aln->hits[i].cigar);
-  }
-  free(aln->hits);
-  free(aln);
-}
 
 static inline void 
 fmap_map3_aux_seed_add(fmap_map3_aux_seed_t **seeds,
@@ -254,7 +218,7 @@ fmap_map3_aux_core_seed(uint8_t *query,
 }
 
 // TODO: memory pools?
-fmap_map3_aln_t *
+fmap_map_sams_t *
 fmap_map3_aux_core(fmap_seq_t *seq[2], 
                    uint8_t *flow[2],
                    fmap_refseq_t *refseq,
@@ -283,13 +247,14 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
   fmap_map3_aux_hit_t *hits[2];
   int32_t m_hits[2], n_hits[2];
 
-  fmap_map3_aln_t *aln = NULL;
+  fmap_map_sams_t *sams = NULL;
 
   // scoring matrix
   par.matrix = matrix;
   __map3_gen_ap(par, opt);
 
-  aln = fmap_map3_aln_init();
+  // init
+  sams = fmap_map_sams_init();
 
   // band width
   bw = (opt->bw + 1) / 2;
@@ -309,7 +274,7 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
       bases = fmap_seq_get_bases(seq[i]);
       seq_len[i] = bases->l;
       if(seq_len[i] - seed_length < 0) {
-          return aln;
+          return sams;
       }
   }
 
@@ -445,37 +410,41 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
           }
 
           if(0 < path_len && opt->score_thr < score) {
-              fmap_map3_hit_t *hit;
+              fmap_map_sam_t *s = NULL;
 
-              aln->n++;
-              aln->hits = fmap_realloc(aln->hits, aln->n*sizeof(fmap_map3_hit_t), "aln->hits");
+              // realloc
+              fmap_map_sams_realloc(sams, sams->n+1);
+              s = &sams->sams[sams->n-1];
 
               // save the hit
-              hit = &aln->hits[aln->n-1]; // for easy of writing code
-              hit->strand = i;
-              hit->seqid = hits[i][start].seqid; 
-              hit->pos = (ref_start-1) + (path[path_len-1].i-1); // zero-based 
-              hit->score = score;
-              hit->score_subo = score_subo;
-              hit->n_seeds = ((1 << 15) < end - start + 1) ? (1 << 15) : (end - start + 1);
-              hit->cigar = fmap_sw_path2cigar(path, path_len, &hit->n_cigar);
+              s->algo_id = FMAP_MAP_ALGO_MAP3;
+              s->algo_stage = 0;
+              s->strand = i;
+              s->seqid = hits[i][start].seqid; 
+              s->pos = (ref_start-1) + (path[path_len-1].i-1); // zero-based 
+              s->score = score;
+              s->score_subo = score_subo;
+              s->cigar = fmap_sw_path2cigar(path, path_len, &s->n_cigar);
 
               // add soft clipping after local alignment
               if(1 < path[path_len-1].j) {
                   // soft clip the front of the read
-                  hit->cigar = fmap_realloc(hit->cigar, sizeof(uint32_t)*(1+hit->n_cigar), "hit->cigar");
-                  for(j=hit->n_cigar-1;0<=j;j--) { // shift up
-                      hit->cigar[j+1] = hit->cigar[j];
+                  s->cigar = fmap_realloc(s->cigar, sizeof(uint32_t)*(1+s->n_cigar), "s->cigar");
+                  for(j=s->n_cigar-1;0<=j;j--) { // shift up
+                      s->cigar[j+1] = s->cigar[j];
                   }
-                  FMAP_SW_CIGAR_STORE(hit->cigar[0], BAM_CSOFT_CLIP, path[path_len-1].j-1);
-                  hit->n_cigar++;
+                  FMAP_SW_CIGAR_STORE(s->cigar[0], BAM_CSOFT_CLIP, path[path_len-1].j-1);
+                  s->n_cigar++;
               }
               if(path[0].j < seq_len[i]) { // 
                   // soft clip the end of the read
-                  hit->cigar = fmap_realloc(hit->cigar, sizeof(uint32_t)*(1+hit->n_cigar), "hit->cigar");
-                  FMAP_SW_CIGAR_STORE(hit->cigar[hit->n_cigar], BAM_CSOFT_CLIP, seq_len[i] - path[0].j);
-                  hit->n_cigar++;
+                  s->cigar = fmap_realloc(s->cigar, sizeof(uint32_t)*(1+s->n_cigar), "s->cigar");
+                  FMAP_SW_CIGAR_STORE(s->cigar[s->n_cigar], BAM_CSOFT_CLIP, seq_len[i] - path[0].j);
+                  s->n_cigar++;
               }
+              // map3 aux data
+              fmap_map_sam_malloc_aux(s, FMAP_MAP_ALGO_MAP3);
+              s->aux.map3_aux->n_seeds = ((1 << 15) < end - start + 1) ? (1 << 15) : (end - start + 1);
           }
 
           // update start/end
@@ -493,5 +462,5 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
   // free
   free(path);
 
-  return aln;
+  return sams;
 }
