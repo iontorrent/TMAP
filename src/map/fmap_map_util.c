@@ -88,6 +88,26 @@ fmap_map_sams_destroy(fmap_map_sams_t *s)
   free(s);
 }
 
+void
+fmap_map_sam_copy_and_nullify(fmap_map_sam_t *dest, fmap_map_sam_t *src)
+{
+  (*dest) = (*src);
+  src->cigar = NULL;
+  switch(src->algo_id) {
+    case FMAP_MAP_ALGO_MAP1:
+      src->aux.map1_aux = NULL;
+      break;
+    case FMAP_MAP_ALGO_MAP2:
+      src->aux.map2_aux = NULL;
+      break;
+    case FMAP_MAP_ALGO_MAP3:
+      src->aux.map3_aux = NULL;
+      break;
+    default:
+      break;
+  }
+}
+
 static void
 fmap_map_sam_print(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map_sam_t *sam, int32_t sam_sff_tags)
 {
@@ -150,26 +170,6 @@ fmap_map_sams_print(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map_sams_t *sam
   }
   else {
       fmap_map_sam_print(seq, refseq, NULL, sam_sff_tags);
-  }
-}
-
-void
-fmap_map_sam_copy_and_nullify(fmap_map_sam_t *dest, fmap_map_sam_t *src)
-{
-  (*dest) = (*src);
-  src->cigar = NULL;
-  switch(src->algo_id) {
-    case FMAP_MAP_ALGO_MAP1:
-      src->aux.map1_aux = NULL;
-      break;
-    case FMAP_MAP_ALGO_MAP2:
-      src->aux.map2_aux = NULL;
-      break;
-    case FMAP_MAP_ALGO_MAP3:
-      src->aux.map3_aux = NULL;
-      break;
-    default:
-      break;
   }
 }
 

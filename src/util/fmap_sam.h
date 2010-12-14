@@ -54,7 +54,7 @@ fmap_sam_print_unmapped(fmap_file_t *fp, fmap_seq_t *seq, int32_t sam_sff_tags);
   @param  n_cigar     the number of cigar operations
   @param  score       the alignment score
   @param  algo_id     the algorithm id
-  @param  algo-stage  the algorithm stage (1 or 2) 
+  @param  algo_stage  the algorithm stage (1 or 2) 
   @param  format      optional tag format (printf-style)
   @param  ...         arguments for the format
   @details            the format should not include the MD tag, which will be outputted automatically

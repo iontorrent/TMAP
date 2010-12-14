@@ -51,9 +51,9 @@ fmap_map1_aux_stack_destroy(fmap_map1_aux_stack_t *stack);
 
 /*! 
   @param  seq         the base sequences (forward/reverse-complimented)
-  @param  bwt         the reference sequence structure 
+  @param  refseq      the reference sequence structure 
   @param  bwt         the BWT structure (reversed)
-  @param  bwt         the SA structure (reversed)
+  @param  sa          the SA structure (reversed)
   @param  width       the bounds within the read (forward/reverse)
   @param  seed_width  the bounds within the seed (forward/reverse)
   @param  opt         the program parameters structure

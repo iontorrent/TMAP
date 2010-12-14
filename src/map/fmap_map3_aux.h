@@ -31,8 +31,8 @@ typedef struct {
   @param  bwt     the BWT structure (reverse)
   @param  sa      the SA structure (reverse)
   @param  opt     the program options
-  @details        the sequences should be in 2-bit format
-  @reutrn         the alignments
+  @return         the alignments
+  the sequences should be in 2-bit format
   */
 fmap_map_sams_t *
 fmap_map3_aux_core(fmap_seq_t *seq[2],

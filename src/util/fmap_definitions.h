@@ -90,12 +90,12 @@ enum {
     FMAP_READS_FORMAT_SFF      = 2 /*!< the reads are in SFF format */
 };
 
-/*! @var  nt_char_to_int
+/*! nt_char_to_int
   @details  converts a DNA base in ASCII format to its 2-bit format [0-4]. 
   */
 extern uint8_t fmap_nt_char_to_int[256];
 
-/*! @var  nt_char_to_rc_char
+/*! nt_char_to_rc_char
   @details  converts a DNA base in ASCII format to reverse compliment in ASCII format.
   */
 extern uint8_t fmap_nt_char_to_rc_char[256];
@@ -182,7 +182,7 @@ fmap_get_reads_file_format_string(int format);
 /*!
   reverses a given string
   @param  seq  the string to reverse
-  @param  lne  the length of the string
+  @param  len  the length of the string
   */
 inline void
 fmap_reverse(char *seq, int32_t len);

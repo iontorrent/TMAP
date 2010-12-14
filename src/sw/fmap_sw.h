@@ -208,7 +208,6 @@ fmap_sw_extend_core(uint8_t *seq1, int32_t len1,
 
 /*!
   Extens an alignment with the local Smith-Waterman and aligns the entire seq2.
-  @details            actually, it performs it with banding.
   @param  seq1        the first DNA sequence (in 2-bit format)
   @param  len1        the length of the first sequence
   @param  seq2        the second DNA sequence (in 2-bit format)
@@ -217,9 +216,9 @@ fmap_sw_extend_core(uint8_t *seq1, int32_t len1,
   @param  path        the Smith-Waterman alignment path
   @param  path_len    the Smith-Waterman alignment path length
   @param  prev_score  the initial alignment score
-  @param  seq2_fit     fit seq2 inside seq1
   @param  _mem        allocated memory with size of (len1+2)*(ap->row+1)*4
   @return             the alignment score, 0 if none was found
+  @details            actually, it performs it with banding.
   */
 int32_t 
 fmap_sw_extend_fitting_core(uint8_t *seq1, int32_t len1, 
