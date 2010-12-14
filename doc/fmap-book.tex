@@ -149,6 +149,10 @@ This number must always be positive.
 Specifies the gap extension penalty.
 This number must always be positive.
 
+\subsubsection{\TT{-X INT}}
+Specifies the flow score penalty.
+This number must always be positive.
+
 \subsubsection{\TT{-w INT}}
 Specifies the band width for local alignment.
 This number must always be positive.
@@ -177,6 +181,9 @@ Reads that have no mapping are returned as unmapped reads.
 \subsubsection{\TT{-R STRING}}
 Specifies the RG (read group) line to use in the SAM file.
 The ``PG'', ``FO'', and ``KS'' tags should not be specified in this string; they will be added by fmap.
+
+\subsubsection{\TT{-Y}}
+Specifies that SFF specific tags should be added to the output SAM file.
 
 \subsubsection{\TT{-j}, \TT{-z}}
 Specifies that the input is bzip2 (\TT{-j}) or gzip (\TT{-z}) compressed.
@@ -227,47 +234,6 @@ This must be one, or a multiple of two.
 Specifies the BWT construction algorithm (\TT{bwtsw} or \TT{is}).
 The \TT{bwtsw} algorithm is for genomes larger than or equal to $10$Mb, and the \TT{is} algorithm is for genomes smaller than $10$Mb.
 This will be auto-recognized during index creation if this option is omitted.
-
-\section{fmap server}
-\label{sec:server}
-The \BF{server} command loads the reference genome index and data into shared memory.
-This lets other mapping instances avoid having to load the index upon each execution.
-This program will try to fail gracefully, detaching shared memory upon exiting.
-
-See \autoref{sec:commonoptions} for common options that are in use in this command.
-\subsection{Usage}
-
-\subsubsection{\TT{-c STRING}}
-Specifies the command for the server (\TT{start}, \TT{stop}, \TT{kill}).
-The \TT{start} command loads data into shared memory, and waits for a \TT{ctrl-c} or \TT{SIGINT} signal.
-The \TT{stop} command will signal a currently running server to stop and detach shared memory.
-The \TT{kill} command will forcible detach the shared memory segment and signal a currently running server to exit.
-The latter command is especially useful for killing zombied processes and detaching lost shared memory segments.
-
-\subsubsection{\TT{-k INT}}
-Specifies the shared memory key for this server.
-The shared memory segment will be identified by this key.
-
-\subsubsection{\TT{-a}}
-Specifies to load all reference genome data structures into memory.
-
-\subsubsection{\TT{-r}}
-Specifies to load the forward packed reference sequence.
-
-\subsubsection{\TT{-R}}
-Specifies to load the reverse packed reference sequence.
-
-\subsubsection{\TT{-b}}
-Specifies to load the forward BWT sequence.
-
-\subsubsection{\TT{-B}}
-Specifies to load the reverse BWT sequence.
-
-\subsubsection{\TT{-s}}
-Specifies to load the forward suffix array.
-
-\subsubsection{\TT{-S}}
-Specifies to load the reverse suffix array.
 
 \section{fmap map1}
 \label{sec:map1}
@@ -360,6 +326,9 @@ Specifies the band width in the banded local alignment.
 \subsubsection{-T INT}
 Specifies the number of multiples of the match score (\TT{-A}) for the minimum scoring threshold.
 
+\subsubsection{-H INT}
+Specifies the number of bases to enumerate for a single homopolymer within the seed.
+
 \section{fmap mapall}
 \label{sec:mapall}
 The \BF{mapall} is a command to quickly map short sequences to a reference genome.
@@ -398,14 +367,70 @@ Specifies to remove duplicate mappings from the different algorithms that occur 
 Specifies to apply the output filter separately for each algorithm.
 This is useful for comparing the mappings across all the algorithms.
 
+\section{fmap server}
+\label{sec:server}
+The \BF{server} command loads the reference genome index and data into shared memory.
+This lets other mapping instances avoid having to load the index upon each execution.
+This program will try to fail gracefully, detaching shared memory upon exiting.
+
+See \autoref{sec:commonoptions} for common options that are in use in this command.
+\subsection{Usage}
+
+\subsubsection{\TT{-c STRING}}
+Specifies the command for the server (\TT{start}, \TT{stop}, \TT{kill}).
+The \TT{start} command loads data into shared memory, and waits for a \TT{ctrl-c} or \TT{SIGINT} signal.
+The \TT{stop} command will signal a currently running server to stop and detach shared memory.
+The \TT{kill} command will forcible detach the shared memory segment and signal a currently running server to exit.
+The latter command is especially useful for killing zombied processes and detaching lost shared memory segments.
+
+\subsubsection{\TT{-k INT}}
+Specifies the shared memory key for this server.
+The shared memory segment will be identified by this key.
+
+\subsubsection{\TT{-a}}
+Specifies to load all reference genome data structures into memory.
+
+\subsubsection{\TT{-r}}
+Specifies to load the forward packed reference sequence.
+
+\subsubsection{\TT{-R}}
+Specifies to load the reverse packed reference sequence.
+
+\subsubsection{\TT{-b}}
+Specifies to load the forward BWT sequence.
+
+\subsubsection{\TT{-B}}
+Specifies to load the reverse BWT sequence.
+
+\subsubsection{\TT{-s}}
+Specifies to load the forward suffix array.
+
+\subsubsection{\TT{-S}}
+Specifies to load the reverse suffix array.
+
 \chapter{File Formats}
 
 \section{SAM Alignment Format}
 FMAP is produces mappings in the SAM format (\cite{SAM-format}).
 Optional tags are used to store information about mappings useful for downstream processing.
 
+\subsection{SAM Header Fields}
 
-\subsection{Optional Tags}
+The HD, RG, SQ, and PG SAM header fields will be outputted.
+Specific details can be found below.
+
+\subsubsection{RG}
+The RG field can be populated using the \TT{-R} option.
+By default the \TT{ID} and \TT{PG} tags are included.
+When specifying an RG line, do not include any of the following tags, as they will be populated by fmap:
+ID, PG, FO, and KS.
+The FO and KS tags indicate the flow order and the key sequence, and is outputted if an SFF is inputted and the \TT{-Y} option is used. 
+
+\subsubsection{PG}
+The PG field will include the ID, VN, and CL tags.
+The ID tag should always be \TT{fmap}.
+
+\subsection{SAM Record Optional Tags}
 
 \subsubsection{AS}
 This stores the alignment score.
@@ -437,6 +462,10 @@ This stores the size of the suffix interval for this mapping.
 \subsubsection{XA}
 This stores the algorithm that produced this mapping and from what stage.
 The format is the algorithm name, and then the zero-based stage, separated by a dash.
+
+\subsubsection{FI}
+This stores the flow signals when an SFF is inputted and the \TT{-Y} option is used.
+The flowgram values are stored as a string of hexidecimal values, with each four hexidecimal values corresponding to one flow signal.
 
 \chapter{Appendix}
 
