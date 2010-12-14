@@ -32,9 +32,10 @@ typedef struct {
     int32_t hp_diff; /*!< single homopolymer error difference for enumeration (-H) */
     int32_t reads_queue_size;  /*!< the reads queue size (-q) */
     int32_t num_threads;  /*!< the number of threads (-n) */
-    char *flow; /*!< the flow order (-k) */
+    char *flow; /*!< the flow order (-x) */
     int32_t aln_output_mode;  /*!< specifies how to choose alignments (-a)  */
     char *sam_rg;  /*!< specifies the RG line in the SAM header (-R) */
+    int32_t sam_sff_tags;  /*!< specifies to output SFF specific SAM tags (-Y) */
     int32_t input_compr;  /*!< the input compression type (-j and -z) */
     int32_t output_compr;  /*!< the output compression type (-J and -Z) */
     key_t shm_key;  /*!< the shared memory key (-s) */

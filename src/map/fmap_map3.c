@@ -300,7 +300,7 @@ fmap_map3_core(fmap_map3_opt_t *opt)
   fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "wb", opt->output_compr);
 
   // SAM header
-  fmap_sam_print_header(fmap_file_stdout, refseq, seqio, opt->sam_rg, opt->argc, opt->argv);
+  fmap_sam_print_header(fmap_file_stdout, refseq, seqio, opt->sam_rg, opt->sam_sff_tags, opt->argc, opt->argv);
 
   fmap_progress_print("processing reads");
   while(0 < (seq_buffer_length = fmap_seq_io_read_buffer(seqio, seq_buffer, reads_queue_size))) {
@@ -357,7 +357,7 @@ fmap_map3_core(fmap_map3_opt_t *opt)
       }
       for(i=0;i<seq_buffer_length;i++) {
           // print
-          fmap_map_sams_print(seq_buffer[i], refseq, sams[i]);
+          fmap_map_sams_print(seq_buffer[i], refseq, sams[i], opt->sam_sff_tags);
 
           // free alignments
           fmap_map_sams_destroy(sams[i]);
@@ -427,9 +427,11 @@ fmap_map3_usage(fmap_map3_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "         -E INT      the indel extend penalty [%d]\n", opt->pen_gape); 
   fmap_file_fprintf(fmap_file_stderr, "         -X INT      the flow score penalty [%d]\n", opt->fscore); 
   fmap_file_fprintf(fmap_file_stderr, "         -T INT      score threshold divided by the match score [%d]\n", opt->score_thr);
+  fmap_file_fprintf(fmap_file_stderr, "         -H INT      single homopolymer error difference for enumeration [%d]\n", opt->hp_diff);
+  fmap_file_fprintf(fmap_file_stderr, "         -x STRING   the flow order ([ACGT]{4}) [%s]\n", 
+                    (NULL == opt->flow) ? "not using" : opt->flow);
   fmap_file_fprintf(fmap_file_stderr, "         -g          align the full read (global alignment) [%s]\n", (0 == opt->aln_global) ? "false" : "true");
   fmap_file_fprintf(fmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
-  fmap_file_fprintf(fmap_file_stderr, "         -k STRING   the flow order ([ACGT]{4}) [%s]\n", opt->flow);
   fmap_file_fprintf(fmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
   fmap_file_fprintf(fmap_file_stderr, "         -a INT      output filter [%d]\n", opt->aln_output_mode);
   fmap_file_fprintf(fmap_file_stderr, "                             0 - unique best hits\n");
@@ -437,6 +439,8 @@ fmap_map3_usage(fmap_map3_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "                             2 - all best hits\n");
   fmap_file_fprintf(fmap_file_stderr, "                             3 - all alignments\n");
   fmap_file_fprintf(fmap_file_stderr, "         -R STRING   the RG line in the SAM header [%s]\n", opt->sam_rg);
+  fmap_file_fprintf(fmap_file_stderr, "         -Y          include SFF specific SAM tags [%s]\n",
+                    (1 == opt->sam_sff_tags) ? "true" : "false");
   fmap_file_fprintf(fmap_file_stderr, "         -j          the input is bz2 compressed (bzip2) [%s]\n",
                     (FMAP_FILE_BZ2_COMPRESSION == opt->input_compr) ? "true" : "false");
   fmap_file_fprintf(fmap_file_stderr, "         -z          the input is gz compressed (gzip) [%s]\n",
@@ -480,11 +484,12 @@ fmap_map3_opt_init()
   opt->score_thr = 20;
   opt->aln_global = 0;
   opt->hp_diff = 0;
+  opt->flow = NULL;
   opt->reads_queue_size = 65536; // TODO: move this to a define block
-  opt->flow = fmap_strdup("TACG");
   opt->num_threads = 1;
   opt->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_RAND_BEST;
   opt->sam_rg = NULL;
+  opt->sam_sff_tags = 0;
   opt->input_compr = FMAP_FILE_NO_COMPRESSION;
   opt->output_compr = FMAP_FILE_NO_COMPRESSION;
   opt->shm_key = 0;
@@ -509,7 +514,7 @@ fmap_map3_opt_parse(int argc, char *argv[], fmap_map3_opt_t *opt)
   
   opt->argc = argc; opt->argv = argv;
 
-  while((c = getopt(argc, argv, "f:r:F:l:S:b:w:A:M:O:E:X:T:gH:q:n:a:R:jzJZs:vh")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:l:S:b:w:A:M:O:E:X:T:H:x:gq:n:a:R:Y:jzJZs:vh")) >= 0) {
       switch(c) {
         case 'f':
           opt->fn_fasta = fmap_strdup(optarg); break;
@@ -539,20 +544,22 @@ fmap_map3_opt_parse(int argc, char *argv[], fmap_map3_opt_t *opt)
           opt->fscore = atoi(optarg); break;
         case 'T':
           opt->score_thr = atoi(optarg); break;
+        case 'H':
+          opt->hp_diff = atoi(optarg); break;
+        case 'x':
+          opt->flow = fmap_strdup(optarg); break;
         case 'g':
           opt->aln_global = 1; break;
         case 'q': 
           opt->reads_queue_size = atoi(optarg); break;
-        case 'H':
-          opt->hp_diff = atoi(optarg); break;
         case 'n':
           opt->num_threads = atoi(optarg); break;
-        case 'k':
-          opt->flow = fmap_strdup(optarg); break;
         case 'a':
           opt->aln_output_mode = atoi(optarg); break;
         case 'R':
           opt->sam_rg = fmap_strdup(optarg); break;
+        case 'Y':
+          opt->sam_sff_tags = 1; break;
         case 'j':
           opt->input_compr = FMAP_FILE_BZ2_COMPRESSION; 
           fmap_get_reads_file_format_from_fn_int(opt->fn_reads, &opt->reads_format, &opt->input_compr);
@@ -603,10 +610,11 @@ fmap_map3_opt_check(fmap_map3_opt_t *opt)
   fmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
   fmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
   fmap_error_cmd_check_int(opt->score_thr, 0, INT32_MAX, "-T");
+  fmap_error_cmd_check_int(opt->hp_diff, 0, INT32_MAX, "-H");
+  fmap_error_cmd_check_int(strlen(opt->flow), 4, 4, "-x");
   if(-1 != opt->reads_queue_size) fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
   fmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
   fmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
-  fmap_error_cmd_check_int(opt->hp_diff, 0, INT32_MAX, "-H");
 
   if(FMAP_FILE_BZ2_COMPRESSION == opt->output_compr 
      && -1 == opt->reads_queue_size) {

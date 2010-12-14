@@ -89,15 +89,15 @@ fmap_map_sams_destroy(fmap_map_sams_t *s)
 }
 
 static void
-fmap_map_sam_print(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map_sam_t *sam)
+fmap_map_sam_print(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map_sam_t *sam, int32_t sam_sff_tags)
 {
   if(NULL == sam) { // unmapped
-      fmap_sam_print_unmapped(fmap_file_stdout, seq);
+      fmap_sam_print_unmapped(fmap_file_stdout, seq, sam_sff_tags);
   }
   else {
       switch(sam->algo_id) {
         case FMAP_MAP_ALGO_MAP1:
-          fmap_sam_print_mapped(fmap_file_stdout, seq, refseq, 
+          fmap_sam_print_mapped(fmap_file_stdout, seq, sam_sff_tags, refseq, 
                                 sam->strand, sam->seqid, sam->pos,
                                 sam->mapq, sam->cigar, sam->n_cigar,
                                 sam->score, sam->algo_id, sam->algo_stage, 
@@ -108,7 +108,7 @@ fmap_map_sam_print(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map_sam_t *sam)
           break;
         case FMAP_MAP_ALGO_MAP2:
           if(0 < sam->aux.map2_aux->XI) {
-              fmap_sam_print_mapped(fmap_file_stdout, seq, refseq, 
+              fmap_sam_print_mapped(fmap_file_stdout, seq, sam_sff_tags, refseq, 
                                     sam->strand, sam->seqid, sam->pos,
                                     sam->mapq, sam->cigar, sam->n_cigar,
                                     sam->score, sam->algo_id, sam->algo_stage, 
@@ -118,7 +118,7 @@ fmap_map_sam_print(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map_sam_t *sam)
                                     sam->aux.map2_aux->XI);
           }
           else {
-              fmap_sam_print_mapped(fmap_file_stdout, seq, refseq, 
+              fmap_sam_print_mapped(fmap_file_stdout, seq, sam_sff_tags, refseq, 
                                     sam->strand, sam->seqid, sam->pos,
                                     sam->mapq, sam->cigar, sam->n_cigar,
                                     sam->score, sam->algo_id, sam->algo_stage, 
@@ -128,7 +128,7 @@ fmap_map_sam_print(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map_sam_t *sam)
           }
           break;
         case FMAP_MAP_ALGO_MAP3:
-          fmap_sam_print_mapped(fmap_file_stdout, seq, refseq, 
+          fmap_sam_print_mapped(fmap_file_stdout, seq, sam_sff_tags, refseq, 
                                 sam->strand, sam->seqid, sam->pos,
                                 sam->mapq, sam->cigar, sam->n_cigar,
                                 sam->score, sam->algo_id, sam->algo_stage, 
@@ -140,16 +140,16 @@ fmap_map_sam_print(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map_sam_t *sam)
 }
 
 void 
-fmap_map_sams_print(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map_sams_t *sams) 
+fmap_map_sams_print(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map_sams_t *sams, int32_t sam_sff_tags) 
 {
   int32_t i;
   if(0 < sams->n) {
       for(i=0;i<sams->n;i++) {
-          fmap_map_sam_print(seq, refseq, &sams->sams[i]);
+          fmap_map_sam_print(seq, refseq, &sams->sams[i], sam_sff_tags);
       }
   }
   else {
-      fmap_map_sam_print(seq, refseq, NULL);
+      fmap_map_sam_print(seq, refseq, NULL, sam_sff_tags);
   }
 }
 

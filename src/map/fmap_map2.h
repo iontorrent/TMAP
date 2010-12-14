@@ -30,11 +30,13 @@ typedef struct {
     int32_t max_seed_intv;  /*!< the maximum seed interval (-S) */
     int32_t z_best;  /*!< the number of top scoring hits to keep (-b) */
     int32_t seeds_rev;  /*!< the maximum number of seeds for which reverse alignment is triggered (-N) */
+    char *flow; /*!< the flow order (-x) */
     int32_t aln_global; /*!< align the full read (-g) */
     int32_t reads_queue_size;  /*!< the reads queue size (-q) */
     int32_t num_threads;  /*!< the number of threads (-n) */
     int32_t aln_output_mode;  /*!< specifies how to choose alignments (-a)  */
     char *sam_rg;  /*!< specifies the RG line in the SAM header (-R) */
+    int32_t sam_sff_tags;  /*!< specifies to output SFF specific SAM tags (-Y) */
     int32_t input_compr;  /*!< the input compression type (-j and -z) */
     int32_t output_compr;  /*!< the output compression type (-J and -Z) */
     key_t shm_key;  /*!< the shared memory key (-s) */

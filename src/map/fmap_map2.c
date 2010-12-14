@@ -217,7 +217,7 @@ fmap_map2_core(fmap_map2_opt_t *opt)
   fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "wb", opt->output_compr);
 
   // SAM header
-  fmap_sam_print_header(fmap_file_stdout, refseq, seqio, opt->sam_rg, opt->argc, opt->argv);
+  fmap_sam_print_header(fmap_file_stdout, refseq, seqio, opt->sam_rg, opt->sam_sff_tags, opt->argc, opt->argv);
 
   fmap_progress_print("processing reads");
   while(0 < (seq_buffer_length = fmap_seq_io_read_buffer(seqio, seq_buffer, reads_queue_size))) {
@@ -278,7 +278,7 @@ fmap_map2_core(fmap_map2_opt_t *opt)
 
       for(i=0;i<seq_buffer_length;i++) {
           // write
-          fmap_map_sams_print(seq_buffer[i], refseq, sams[i]);
+          fmap_map_sams_print(seq_buffer[i], refseq, sams[i], opt->sam_sff_tags);
 
           // free alignments
           fmap_map_sams_destroy(sams[i]);
@@ -345,6 +345,8 @@ fmap_map2_usage(fmap_map2_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "         -S INT      maximum seeding interval size [%d]\n", opt->max_seed_intv);
   fmap_file_fprintf(fmap_file_stderr, "         -b INT      Z-best [%d]\n", opt->z_best);
   fmap_file_fprintf(fmap_file_stderr, "         -N INT      # seeds to trigger reverse alignment [%d]\n", opt->seeds_rev);
+  fmap_file_fprintf(fmap_file_stderr, "         -x STRING   the flow order ([ACGT]{4}) [%s]\n", 
+                    (NULL == opt->flow) ? "not using" : opt->flow);
   fmap_file_fprintf(fmap_file_stderr, "         -g          align the full read (global alignment) [%s]\n", (0 == opt->aln_global) ? "false" : "true");
   fmap_file_fprintf(fmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
   fmap_file_fprintf(fmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
@@ -354,6 +356,8 @@ fmap_map2_usage(fmap_map2_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "                             2 - all best hits\n");
   fmap_file_fprintf(fmap_file_stderr, "                             3 - all alignments\n");
   fmap_file_fprintf(fmap_file_stderr, "         -R STRING   the RG line in the SAM header [%s]\n", opt->sam_rg);
+  fmap_file_fprintf(fmap_file_stderr, "         -Y          include SFF specific SAM tags [%s]\n",
+                    (1 == opt->sam_sff_tags) ? "true" : "false");
   fmap_file_fprintf(fmap_file_stderr, "         -j          the input is bz2 compressed (bzip2) [%s]\n",
                     (FMAP_FILE_BZ2_COMPRESSION == opt->input_compr) ? "true" : "false");
   fmap_file_fprintf(fmap_file_stderr, "         -z          the input is gz compressed (gzip) [%s]\n",
@@ -392,11 +396,13 @@ fmap_map2_opt_init()
   opt->length_coef = 5.5f;
   opt->bw = 50; opt->score_thr = 30;
   opt->max_seed_intv = 3; opt->z_best = 5; opt->seeds_rev = 5;
+  opt->flow = NULL;
   opt->aln_global = 0;
   opt->reads_queue_size = 65536;
   opt->num_threads = 1;
   opt->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_RAND_BEST; 
   opt->sam_rg = NULL;
+  opt->sam_sff_tags = 0;
   opt->input_compr = FMAP_FILE_NO_COMPRESSION;
   opt->output_compr = FMAP_FILE_NO_COMPRESSION;
   opt->shm_key = 0;
@@ -420,7 +426,7 @@ fmap_map2_opt_parse(int argc, char *argv[], fmap_map2_opt_t *opt)
 
   opt->argc = argc; opt->argv = argv;
 
-  while((c = getopt(argc, argv, "f:r:F:A:M:O:E:X:c:w:T:S:b:N:gq:n:a:R:jzJZs:vh")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:A:M:O:E:X:c:w:T:S:b:N:x:gq:n:a:R:Y:jzJZs:vh")) >= 0) {
       switch (c) {
         case 'f':
           opt->fn_fasta = fmap_strdup(optarg); break;
@@ -460,6 +466,8 @@ fmap_map2_opt_parse(int argc, char *argv[], fmap_map2_opt_t *opt)
           opt->z_best= atoi(optarg); break;
         case 'N':
           opt->seeds_rev = atoi(optarg); break;
+        case 'x':
+          opt->flow = fmap_strdup(optarg); break;
         case 'g':
           opt->aln_global = 1; break;
         case 'q':
@@ -470,6 +478,8 @@ fmap_map2_opt_parse(int argc, char *argv[], fmap_map2_opt_t *opt)
           opt->aln_output_mode = atoi(optarg); break;
         case 'R':
           opt->sam_rg = fmap_strdup(optarg); break;
+        case 'Y':
+          opt->sam_sff_tags = 1; break;
         case 'j':
           opt->input_compr = FMAP_FILE_BZ2_COMPRESSION;
           fmap_get_reads_file_format_from_fn_int(opt->fn_reads, &opt->reads_format, &opt->input_compr);
@@ -523,6 +533,7 @@ fmap_map2_opt_check(fmap_map2_opt_t *opt)
   fmap_error_cmd_check_int(opt->max_seed_intv, 0, INT32_MAX, "-S");
   fmap_error_cmd_check_int(opt->z_best, 1, INT32_MAX, "-Z");
   fmap_error_cmd_check_int(opt->seeds_rev, 0, INT32_MAX, "-N");
+  fmap_error_cmd_check_int(strlen(opt->flow), 4, 4, "-x");
   if(-1 != opt->reads_queue_size) fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
   fmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
 

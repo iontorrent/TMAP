@@ -84,7 +84,7 @@ fmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
 }
 
 void
-fmap_sam_print_header(fmap_file_t *fp, fmap_refseq_t *refseq, fmap_seq_io_t *seqio, char *sam_rg, int argc, char *argv[])
+fmap_sam_print_header(fmap_file_t *fp, fmap_refseq_t *refseq, fmap_seq_io_t *seqio, char *sam_rg, int32_t sam_sff_tags, int argc, char *argv[])
 {
   int32_t i;
   // SAM header
@@ -95,7 +95,7 @@ fmap_sam_print_header(fmap_file_t *fp, fmap_refseq_t *refseq, fmap_seq_io_t *seq
                         refseq->annos[i].name->s, (int)refseq->annos[i].len);
   }
   // RG
-  if(NULL != seqio && FMAP_SEQ_TYPE_SFF == seqio->type) {
+  if(NULL != seqio && FMAP_SEQ_TYPE_SFF == seqio->type && 1 == sam_sff_tags) {
       if(NULL != sam_rg) {
           fmap_sam_parse_rg(sam_rg, 0);
           fmap_file_fprintf(fp, "%s\tPG:%s\tFO:%s\tKS:%s\n",
@@ -133,7 +133,7 @@ fmap_sam_print_header(fmap_file_t *fp, fmap_refseq_t *refseq, fmap_seq_io_t *seq
 }
 
 inline void
-fmap_sam_print_unmapped(fmap_file_t *fp, fmap_seq_t *seq)
+fmap_sam_print_unmapped(fmap_file_t *fp, fmap_seq_t *seq, int32_t sam_sff_tags)
 {
   int32_t i;
   uint16_t flag = 0x0004;
@@ -149,7 +149,7 @@ fmap_sam_print_unmapped(fmap_file_t *fp, fmap_seq_t *seq)
   fmap_file_fprintf(fp, "\tRG:Z:%s\tPG:Z:%s",
                     fmap_sam_rg_id,
                     PACKAGE_NAME);
-  if(FMAP_SEQ_TYPE_SFF == seq->type) {
+  if(FMAP_SEQ_TYPE_SFF == seq->type && 1 == sam_sff_tags) {
       fmap_file_fprintf(fp, "\tFI:H:");
       for(i=0;i<seq->data.sff->gheader->flow_length;i++) {
           fmap_file_fprintf(fp, "%X%X%X%X", 
@@ -244,7 +244,7 @@ fmap_sam_md(fmap_refseq_t *refseq, char *read_bases, // read bases are character
 }
 
 inline void
-fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, fmap_refseq_t *refseq,
+fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, int32_t sam_sff_tags, fmap_refseq_t *refseq,
                       uint8_t strand, uint32_t seqid, uint32_t pos, 
                       uint8_t mapq, uint32_t *cigar, int32_t n_cigar,
                       int32_t score, int32_t algo_id, int32_t algo_stage,
@@ -336,7 +336,7 @@ fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, fmap_refseq_t *refseq,
   }
   
   // FI
-  if(FMAP_SEQ_TYPE_SFF == seq->type) {
+  if(FMAP_SEQ_TYPE_SFF == seq->type && 1 == sam_sff_tags) {
       fmap_file_fprintf(fp, "\tFI:H:");
       for(i=0;i<seq->data.sff->gheader->flow_length;i++) {
           fmap_file_fprintf(fp, "%X%X%X%X", 

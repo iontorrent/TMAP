@@ -14,6 +14,8 @@
 #define FMAP_MAP_UTIL_PEN_GAPE 1
 #define FMAP_MAP_UTIL_FSCORE 7 
 
+#define FMAP_MAP_UTIL_FLOW_ORDER "TACG"
+
 enum {
     FMAP_MAP_ALGO_NONE = 0x0,  /*!< dummy algorithm */
     FMAP_MAP_ALGO_MAP1 = 0x1,  /*!< the map1 algorithm */
@@ -92,7 +94,7 @@ void
 fmap_map_sam_copy_and_nullify(fmap_map_sam_t *dest, fmap_map_sam_t *src);
 
 void
-fmap_map_sams_print(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map_sams_t *sams);
+fmap_map_sams_print(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map_sams_t *sams, int32_t sam_sff_tags);
 
 void
 fmap_map_sams_filter(fmap_map_sams_t *sams, int32_t aln_output_mode);

@@ -82,7 +82,7 @@ fmap_debug_exact_core_worker(fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *
 
   if(0 == n_only) {
       if(0 == mapped) {
-          fmap_sam_print_unmapped(fmap_file_stdout, orig_seq);
+          fmap_sam_print_unmapped(fmap_file_stdout, orig_seq, 0);
       }
   }
   else {
@@ -113,7 +113,7 @@ fmap_debug_exact_core(fmap_debug_exact_opt_t *opt)
   if(0 == opt->n_only) {
       refseq = fmap_refseq_read(opt->fn_fasta, 0);
       sa = fmap_sa_read(opt->fn_fasta, 1);
-      fmap_sam_print_header(fmap_file_stdout, refseq, seqio, NULL, opt->argc, opt->argv);
+      fmap_sam_print_header(fmap_file_stdout, refseq, seqio, NULL, 0, opt->argc, opt->argv);
   }
 
   while(0 <= fmap_seq_io_read(seqio, seq)) {

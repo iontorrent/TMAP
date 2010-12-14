@@ -630,7 +630,7 @@ fmap_map_all_core(fmap_map_all_opt_t *opt)
   fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "wb", opt->output_compr);
 
   // SAM header
-  fmap_sam_print_header(fmap_file_stdout, refseq, seqio, opt->sam_rg, opt->argc, opt->argv);
+  fmap_sam_print_header(fmap_file_stdout, refseq, seqio, opt->sam_rg, opt->sam_sff_tags, opt->argc, opt->argv);
 
   fmap_progress_print("processing reads");
   while(0 < (seq_buffer_length = fmap_seq_io_read_buffer(seqio, seq_buffer, reads_queue_size))) {
@@ -688,7 +688,8 @@ fmap_map_all_core(fmap_map_all_opt_t *opt)
           fmap_progress_print("writing alignments");
       }
       for(i=0;i<seq_buffer_length;i++) {
-          fmap_map_sams_print(seq_buffer[i], refseq, sams[i]);
+          // write
+          fmap_map_sams_print(seq_buffer[i], refseq, sams[i], opt->sam_sff_tags);
 
           // free alignments
           fmap_map_sams_destroy(sams[i]);
@@ -749,6 +750,8 @@ fmap_map_all_usage(fmap_map_all_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "         -E INT      the indel extend penalty [%d]\n", opt->pen_gape); 
   fmap_file_fprintf(fmap_file_stderr, "         -X INT      the flow score penalty [%d]\n", opt->fscore);
   fmap_file_fprintf(fmap_file_stderr, "         -w INT      the extra bases to add before and after the target during Smith-Waterman [%d]\n", opt->bw);
+  fmap_file_fprintf(fmap_file_stderr, "         -x STRING   the flow order ([ACGT]{4}) [%s]\n",
+                    (NULL == opt->flow) ? "not using" : opt->flow);
   fmap_file_fprintf(fmap_file_stderr, "         -g          align the full read (global alignment) [%s]\n", (0 == opt->aln_global) ? "false" : "true");
   fmap_file_fprintf(fmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
   fmap_file_fprintf(fmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
@@ -758,6 +761,8 @@ fmap_map_all_usage(fmap_map_all_opt_t *opt)
   fmap_file_fprintf(fmap_file_stderr, "                             2 - all best hits\n");
   fmap_file_fprintf(fmap_file_stderr, "                             3 - all alignments\n");
   fmap_file_fprintf(fmap_file_stderr, "         -R STRING   the RG line in the SAM header [%s]\n", opt->sam_rg);
+  fmap_file_fprintf(fmap_file_stderr, "         -Y          include SFF specific SAM tags [%s]\n",
+                    (1 == opt->sam_sff_tags) ? "true" : "false");
   fmap_file_fprintf(fmap_file_stderr, "         -W INT      remove duplicate alignments from different algorithms within this bp window [%d]\n",
                     opt->dup_window);
   fmap_file_fprintf(fmap_file_stderr, "         -I          apply the output filter for each algorithm separately [%s]\n",
@@ -800,6 +805,7 @@ fmap_map_all_opt_init()
   opt->pen_gape = FMAP_MAP_UTIL_PEN_GAPE;
   opt->fscore = FMAP_MAP_UTIL_FSCORE;
   opt->bw = 10; 
+  opt->flow = NULL;
   opt->aln_global = 0;
   opt->reads_queue_size = 65536; 
   opt->num_threads = 1;
@@ -807,6 +813,7 @@ fmap_map_all_opt_init()
   opt->dup_window = 128;
   opt->aln_output_mode_ind = 0;
   opt->sam_rg = NULL;
+  opt->sam_sff_tags = 0;
   opt->input_compr = FMAP_FILE_NO_COMPRESSION;
   opt->output_compr = FMAP_FILE_NO_COMPRESSION;
   opt->shm_key = 0;
@@ -836,6 +843,7 @@ fmap_map_all_opt_destroy(fmap_map_all_opt_t *opt)
       // since we shallow copied, do not free
       opt->opt_map1[i]->fn_fasta = opt->opt_map2[i]->fn_fasta = opt->opt_map3[i]->fn_fasta = NULL;
       opt->opt_map1[i]->fn_reads = opt->opt_map2[i]->fn_reads = opt->opt_map3[i]->fn_reads = NULL;
+      opt->opt_map1[i]->flow = opt->opt_map2[i]->flow = opt->opt_map3[i]->flow = NULL;
       opt->opt_map1[i]->sam_rg = opt->opt_map2[i]->sam_rg = opt->opt_map3[i]->sam_rg = NULL;
 
       // destroy other opts
@@ -856,10 +864,12 @@ fmap_map_all_opt_destroy(fmap_map_all_opt_t *opt)
     (opt_map_other)->pen_mm = (opt_map_all)->pen_mm; \
     (opt_map_other)->pen_gapo = (opt_map_all)->pen_gapo; \
     (opt_map_other)->pen_gape = (opt_map_all)->pen_gape; \
+    (opt_map_other)->flow = fmap_strdup((opt_map_all)->flow); \
     (opt_map_other)->reads_queue_size = (opt_map_all)->reads_queue_size; \
     (opt_map_other)->num_threads = (opt_map_all)->num_threads; \
     (opt_map_other)->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_ALL; \
     (opt_map_other)->sam_rg = (opt_map_all)->sam_rg; \
+    (opt_map_other)->sam_sff_tags = (opt_map_all)->sam_sff_tags; \
     (opt_map_other)->input_compr = (opt_map_all)->input_compr; \
     (opt_map_other)->output_compr = (opt_map_all)->output_compr; \
     (opt_map_other)->shm_key = (opt_map_all)->shm_key; \
@@ -879,7 +889,7 @@ fmap_map_all_opt_parse_common(int argc, char *argv[], fmap_map_all_opt_t *opt)
 {
   int c;
 
-  while((c = getopt(argc, argv, "f:r:F:A:M:O:E:X:w:gq:n:a:R:W:IjzJZs:vh")) >= 0) {
+  while((c = getopt(argc, argv, "f:r:F:A:M:O:E:X:w:x:gq:n:a:R:Y:W:IjzJZs:vh")) >= 0) {
       switch(c) {
         case 'f':
           opt->fn_fasta = fmap_strdup(optarg); break;
@@ -901,6 +911,8 @@ fmap_map_all_opt_parse_common(int argc, char *argv[], fmap_map_all_opt_t *opt)
           opt->fscore = atoi(optarg); break;
         case 'w':
           opt->bw = atoi(optarg); break;
+        case 'x':
+          opt->flow = fmap_strdup(optarg); break;
         case 'g':
           opt->aln_global = 1; break;
         case 'q': 
@@ -911,6 +923,8 @@ fmap_map_all_opt_parse_common(int argc, char *argv[], fmap_map_all_opt_t *opt)
           opt->aln_output_mode = atoi(optarg); break;
         case 'R':
           opt->sam_rg = fmap_strdup(optarg); break;
+        case 'Y':
+          opt->sam_sff_tags = 1; break;
         case 'W':
           opt->dup_window = atoi(optarg); break;
         case 'I':
@@ -1084,6 +1098,9 @@ fmap_map_all_file_check_with_null(char *fn1, char *fn2)
     if((opt_map_other)->pen_gape != (opt_map_all)->pen_gape) { \
         fmap_error("option -E was specified outside of the common options", Exit, CommandLineArgument); \
     } \
+    if(0 != fmap_map_all_file_check_with_null((opt_map_other)->flow, (opt_map_all)->flow)) { \
+        fmap_error("option -x was specified outside of the common options", Exit, CommandLineArgument); \
+    } \
     if((opt_map_other)->reads_queue_size != (opt_map_all)->reads_queue_size) { \
         fmap_error("option -q was specified outside of the common options", Exit, CommandLineArgument); \
     } \
@@ -1092,6 +1109,9 @@ fmap_map_all_file_check_with_null(char *fn1, char *fn2)
     } \
     if(0 != fmap_map_all_file_check_with_null((opt_map_other)->sam_rg, (opt_map_all)->sam_rg)) { \
         fmap_error("option -R was specified outside of the common options", Exit, CommandLineArgument); \
+    } \
+    if((opt_map_other)->sam_sff_tags != (opt_map_all)->sam_sff_tags) { \
+        fmap_error("option -Y was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->input_compr != (opt_map_all)->input_compr) { \
         fmap_error("option -j or -z was specified outside of the common options", Exit, CommandLineArgument); \
@@ -1144,6 +1164,7 @@ fmap_map_all_opt_check(fmap_map_all_opt_t *opt)
   fmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
   fmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
   fmap_error_cmd_check_int(opt->bw, 1, INT32_MAX, "-w");
+  fmap_error_cmd_check_int(strlen(opt->flow), 4, 4, "-x");
   if(-1 != opt->reads_queue_size) fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
   fmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
   fmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
@@ -1187,7 +1208,6 @@ fmap_map_all_main(int argc, char *argv[])
   if(1 != fmap_map_all_opt_parse(argc, argv, opt) // options parsed successfully
      || argc != optind  // all options should be used
      || 1 == argc) { // some options should be specified
-      fprintf(stderr, "argc=%d optind=%d\n", argc, optind);
       return fmap_map_all_usage(opt);
   }
   else { 

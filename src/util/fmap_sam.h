@@ -17,31 +17,34 @@
 
 /*! 
   prints out a SAM header
-  @param  fp      the output file pointer
-  @param  refseq  pointer to the reference sequence (forward)
-  @param  seqio   the input reading data structure, NULL otherwise
-  @param  sam_rg  the SAM RG line, NULL otherwise
-  @param  argc    the number of input command line arguments
-  @param  argv    the input command line arguments
-  @details        the following header tags will be ouptted: \@SQ:SN:LN and \@PG:ID:VN:CL.
+  @param  fp            the output file pointer
+  @param  refseq        pointer to the reference sequence (forward)
+  @param  seqio         the input reading data structure, NULL otherwise
+  @param  sam_rg        the SAM RG line, NULL otherwise
+  @param  sam_sff_tags  1 if SFF specific SAM tags are to be outputted, 0 otherwise
+  @param  argc          the number of input command line arguments
+  @param  argv          the input command line arguments
+  @details              the following header tags will be ouptted: \@SQ:SN:LN and \@PG:ID:VN:CL.
   */
 void
 fmap_sam_print_header(fmap_file_t *fp, fmap_refseq_t *refseq, 
-                      fmap_seq_io_t *seqio, char *sam_rg, 
+                      fmap_seq_io_t *seqio, char *sam_rg, int32_t sam_sff_tags, 
                       int argc, char *argv[]);
 
 /*! 
   prints out a SAM record signifying the sequence is unmapped 
-  @param  fp   the file pointer to which to print
-  @param  seq  the sequence that is unmapped
+  @param  fp            the file pointer to which to print
+  @param  seq           the sequence that is unmapped
+  @param  sam_sff_tags  1 if SFF specific SAM tags are to be outputted, 0 otherwise
   */
 inline void
-fmap_sam_print_unmapped(fmap_file_t *fp, fmap_seq_t *seq);
+fmap_sam_print_unmapped(fmap_file_t *fp, fmap_seq_t *seq, int32_t sam_sff_tags);
 
 /*! 
   prints out a mapped SAM record 
   @param  fp          the file pointer to which to print
   @param  seq         the sequence that is mapped
+  @param  sam_sff_tags  1 if SFF specific SAM tags are to be outputted, 0 otherwise
   @param  refseq      pointer to the reference sequence (forward)
   @param  strand      the strand of the mapping
   @param  seqid       the sequence index (0-based)
@@ -57,7 +60,7 @@ fmap_sam_print_unmapped(fmap_file_t *fp, fmap_seq_t *seq);
   @details            the format should not include the MD tag, which will be outputted automatically
   */
 inline void
-fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, fmap_refseq_t *refseq,
+fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, int32_t sam_sff_tags, fmap_refseq_t *refseq,
                       uint8_t strand, uint32_t seqid, uint32_t pos,
                       uint8_t mapq, uint32_t *cigar, int32_t n_cigar,
                       int32_t score, int32_t algo_id, int32_t algo_stage,
