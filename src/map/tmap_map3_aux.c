@@ -1,3 +1,4 @@
+/* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
 #include <stdlib.h>
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_sort.h"

@@ -1,3 +1,4 @@
+/* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
 /* The MIT License
 
    Copyright (c) 2003-2006, 2008, 2009, by Heng Li <lh3lh3@gmail.com>

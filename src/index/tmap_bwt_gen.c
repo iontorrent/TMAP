@@ -1,3 +1,4 @@
+/* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
 /*
 
    BWTConstruct.c		BWT-Index Construction

@@ -1,3 +1,4 @@
+/* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
 #ifndef TMAP_SHM_H_
 #define TMAP_SHM_H_
 

@@ -1,3 +1,4 @@
+/* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
