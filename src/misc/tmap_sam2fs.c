@@ -558,7 +558,7 @@ static int
 usage(tmap_sam2fs_opt_t *opt)
 {
   tmap_file_fprintf(tmap_file_stderr, "\n");
-  tmap_file_fprintf(tmap_file_stderr, "Usage: %s sam2fs <in.sam/in.bam> [options]", PACKAGE);
+  tmap_file_fprintf(tmap_file_stderr, "Usage: %s sam2fs [options] <in.sam/in.bam>", PACKAGE);
   tmap_file_fprintf(tmap_file_stderr, "\n");
   tmap_file_fprintf(tmap_file_stderr, "Options (optional):\n");
   tmap_file_fprintf(tmap_file_stderr, "         -f          the flow order [%s]\n", opt->flow_order);
