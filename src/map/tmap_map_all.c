@@ -597,8 +597,9 @@ tmap_map_all_core(tmap_map_opt_t *opt)
           opt->opt_map3[i]->score_thr *= opt->score_match;
           if(-1 == opt->opt_map3[i]->seed_length) {
               opt->opt_map3[i]->seed_length = tmap_map3_get_seed_length(refseq->len);
-              tmap_progress_print("setting the seed length to %d for map3",
-                                  opt->opt_map3[i]->seed_length);
+              tmap_progress_print("setting the seed length to %d for map3 stage %d",
+                                  opt->opt_map3[i]->seed_length,
+                                  i+1);
           }
       }
   }
