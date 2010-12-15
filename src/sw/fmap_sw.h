@@ -18,18 +18,18 @@
    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
    NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
    BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-   ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FMAP_SW_FROM, OUT OF OR IN
+   ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING TMAP_SW_FROM, OUT OF OR IN
    CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
    SOFTWARE.
    */
 
-#ifndef FMAP_SW_H_
-#define FMAP_SW_H_
+#ifndef TMAP_SW_H_
+#define TMAP_SW_H_
 
-#define FMAP_SW_CIGAR_OP(_cigar) (((_cigar) & 0xf))
-#define FMAP_SW_CIGAR_LENGTH(_cigar) (((_cigar) >> 4))
-#define FMAP_SW_CIGAR_STORE(_cigar, _op, _len) ((_cigar) = ((_len) << 4) | ((_op) & 0xf))
-#define FMAP_SW_CIGAR_ADD_LENGTH(_cigar, _add) ((_cigar) += ((_add) << 4))
+#define TMAP_SW_CIGAR_OP(_cigar) (((_cigar) & 0xf))
+#define TMAP_SW_CIGAR_LENGTH(_cigar) (((_cigar) >> 4))
+#define TMAP_SW_CIGAR_STORE(_cigar, _op, _len) ((_cigar) = ((_len) << 4) | ((_op) & 0xf))
+#define TMAP_SW_CIGAR_ADD_LENGTH(_cigar, _add) ((_cigar) += ((_add) << 4))
 
 #include <stdint.h>
 
@@ -41,30 +41,30 @@
   From which cell; helps recovert the best scoring path.
   */
 enum {
-    FMAP_SW_FROM_M = 0, /*!< from a mismatch cell*/
-    FMAP_SW_FROM_I = 1, /*!< from an insertion cell */
-    FMAP_SW_FROM_D = 2, /*!< from a deletion cell */
-    FMAP_SW_FROM_S = 3  /*!< from a start cell */
+    TMAP_SW_FROM_M = 0, /*!< from a mismatch cell*/
+    TMAP_SW_FROM_I = 1, /*!< from an insertion cell */
+    TMAP_SW_FROM_D = 2, /*!< from a deletion cell */
+    TMAP_SW_FROM_S = 3  /*!< from a start cell */
 };
 
 /*!
   The type of Smith-Waterman to perform.
   */
 enum {
-    FMAP_SW_TYPE_LOCAL          = 0, /*!< local alignment */
-    FMAP_SW_TYPE_GLOBAL         = 1, /*!< global alignment */
-    FMAP_SW_TYPE_EXTEND         = 2, /*!< extend an alignment */
-    FMAP_SW_TYPE_EXTEND_FITTING = 3, /*!< extend an alignment but align the entire the read */
-    FMAP_SW_TYPE_FITTING        = 4  /*!< align the entire read */
+    TMAP_SW_TYPE_LOCAL          = 0, /*!< local alignment */
+    TMAP_SW_TYPE_GLOBAL         = 1, /*!< global alignment */
+    TMAP_SW_TYPE_EXTEND         = 2, /*!< extend an alignment */
+    TMAP_SW_TYPE_EXTEND_FITTING = 3, /*!< extend an alignment but align the entire the read */
+    TMAP_SW_TYPE_FITTING        = 4  /*!< align the entire read */
 };
 
 /*! This is the smallest integer for Smith-Waterman alignment. It might be CPU-dependent in very RARE cases. */
-#define FMAP_SW_MINOR_INF INT32_MIN/2
-//#define FMAP_SW_MINOR_INF -1073741823
+#define TMAP_SW_MINOR_INF INT32_MIN/2
+//#define TMAP_SW_MINOR_INF -1073741823
 
-#define FMAP_SW_SET_INF(s) (s).match_score = (s).ins_score = (s).del_score = FMAP_SW_MINOR_INF
+#define TMAP_SW_SET_INF(s) (s).match_score = (s).ins_score = (s).del_score = TMAP_SW_MINOR_INF
 
-#define FMAP_SW_SET_FROM(s, from) (s).match_from = (s).ins_from = (s).del_from = from 
+#define TMAP_SW_SET_FROM(s, from) (s).match_from = (s).ins_from = (s).del_from = from 
 
 /*!
   Stores from which cell the current cell was extended
@@ -74,7 +74,7 @@ typedef struct
     uint8_t match_from:3; /*!< from cell for match */
     uint8_t ins_from:2; /*!< from cell for insertion */
     uint8_t del_from:2; /*!< from cell for deletion */
-} fmap_sw_dpcell_t;
+} tmap_sw_dpcell_t;
 
 /*!
   Stores the score for the current cell
@@ -84,7 +84,7 @@ typedef struct
     int32_t match_score; /*!< match score */
     int32_t ins_score; /*!< insertion score */
     int32_t del_score; /*! <deletion score */
-} fmap_sw_dpscore_t;
+} tmap_sw_dpscore_t;
 
 /*!
   Parameters for the Smith-Waterman alignment.
@@ -100,7 +100,7 @@ typedef struct
   int32_t *matrix; /*!< substitution matrix (see details)*/
   int32_t row; /*!< the alphabet size */  
   int32_t band_width; /*!< for Smith-Waterman banding */
-} fmap_sw_param_t;
+} tmap_sw_param_t;
 
 /*!
   The best-scoring alignment path.
@@ -110,14 +110,14 @@ typedef struct
   int32_t i; /*!< the seq1 index (1-based) */
   int32_t j; /*!< the seq2 index (1-based) */
   uint8_t ctype; /*!< the edit operator applied */
-} fmap_sw_path_t;
+} tmap_sw_path_t;
 
 /*!
   Stores a Smith Waterman alignment.
   */
 typedef struct
 {
-  fmap_sw_path_t *path; /*!< Smith-Waterman alignment path */
+  tmap_sw_path_t *path; /*!< Smith-Waterman alignment path */
   int32_t path_len; /*!< The path length */
   int32_t start1; /*!< the start of the first sequence (1-based) */
   int32_t end1; /*!< the end of the first sequence (1-based) */
@@ -130,21 +130,21 @@ typedef struct
   char *outm; /*!< match/indel alignment string */
   int32_t n_cigar; /*!< the number of cigar operators */
   uint32_t *cigar32; /*!< the cigar operators */
-} fmap_sw_aln_t;
+} tmap_sw_aln_t;
 
 /*!
   Initialize an alignment
   @return  a pointer to the initialized memory
   */
-fmap_sw_aln_t *
-fmap_sw_aln_init();
+tmap_sw_aln_t *
+tmap_sw_aln_init();
 
 /*!
   Destroy an alignment
   @param  aa  pointer to the alignment
   */
 void
-fmap_sw_aln_destroy(fmap_sw_aln_t *aa);
+tmap_sw_aln_destroy(tmap_sw_aln_t *aa);
 
 /*!
   Performs the global Smith-Waterman alignment.
@@ -159,10 +159,10 @@ fmap_sw_aln_destroy(fmap_sw_aln_t *aa);
   @return           the alignment score, 0 if none was found
   */
 int32_t 
-fmap_sw_global_core(uint8_t *seq1, int32_t len1, 
+tmap_sw_global_core(uint8_t *seq1, int32_t len1, 
                     uint8_t *seq2, int32_t len2, 
-                    const fmap_sw_param_t *ap,
-                    fmap_sw_path_t *path, int32_t *path_len);
+                    const tmap_sw_param_t *ap,
+                    tmap_sw_path_t *path, int32_t *path_len);
 
 /*!
   Performs the local Smith-Waterman alignment.
@@ -179,10 +179,10 @@ fmap_sw_global_core(uint8_t *seq1, int32_t len1,
   @return           the alignment score, 0 if none was found
   */
 int32_t 
-fmap_sw_local_core(uint8_t *seq1, int32_t len1, 
+tmap_sw_local_core(uint8_t *seq1, int32_t len1, 
                    uint8_t *seq2, int32_t len2, 
-                   const fmap_sw_param_t *ap,
-                   fmap_sw_path_t *path, int32_t *path_len, 
+                   const tmap_sw_param_t *ap,
+                   tmap_sw_path_t *path, int32_t *path_len, 
                    int32_t _thres, int32_t *_subo);
 
 /*!
@@ -200,10 +200,10 @@ fmap_sw_local_core(uint8_t *seq1, int32_t len1,
   @return             the alignment score, 0 if none was found
   */
 int32_t 
-fmap_sw_extend_core(uint8_t *seq1, int32_t len1, 
+tmap_sw_extend_core(uint8_t *seq1, int32_t len1, 
                     uint8_t *seq2, int32_t len2, 
-                    const fmap_sw_param_t *ap,
-                    fmap_sw_path_t *path, int32_t *path_len, 
+                    const tmap_sw_param_t *ap,
+                    tmap_sw_path_t *path, int32_t *path_len, 
                     int32_t prev_score, uint8_t *_mem);
 
 /*!
@@ -221,10 +221,10 @@ fmap_sw_extend_core(uint8_t *seq1, int32_t len1,
   @details            actually, it performs it with banding.
   */
 int32_t 
-fmap_sw_extend_fitting_core(uint8_t *seq1, int32_t len1, 
+tmap_sw_extend_fitting_core(uint8_t *seq1, int32_t len1, 
                     uint8_t *seq2, int32_t len2, 
-                    const fmap_sw_param_t *ap,
-                    fmap_sw_path_t *path, int32_t *path_len, 
+                    const tmap_sw_param_t *ap,
+                    tmap_sw_path_t *path, int32_t *path_len, 
                     int32_t prev_score, uint8_t *_mem);
 
 /*!
@@ -239,8 +239,8 @@ fmap_sw_extend_fitting_core(uint8_t *seq1, int32_t len1,
   @return           the alignment score, 0 if none was found
   */
 int32_t
-fmap_sw_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const fmap_sw_param_t *ap,
-                                fmap_sw_path_t *path, int32_t *path_len);
+tmap_sw_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
+                                tmap_sw_path_t *path, int32_t *path_len);
 
 /*!
   Creates a cigar array from an alignment path
@@ -250,7 +250,7 @@ fmap_sw_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, c
   @return           the cigar array, NULL if the path is NULL or the path length is zero 
   */
 uint32_t *
-fmap_sw_path2cigar(const fmap_sw_path_t *path, int32_t path_len, int32_t *n_cigar);
+tmap_sw_path2cigar(const tmap_sw_path_t *path, int32_t path_len, int32_t *n_cigar);
 
 
 /********************
@@ -260,57 +260,57 @@ fmap_sw_path2cigar(const fmap_sw_path_t *path, int32_t path_len, int32_t *n_ciga
 /*!
   alignment parameters for short read alignment [ACGTN]
   */
-extern fmap_sw_param_t fmap_sw_param_short; /* = { 13,  2,  2, fmap_sw_sm_short, 5, 50 }; */
+extern tmap_sw_param_t tmap_sw_param_short; /* = { 13,  2,  2, tmap_sw_sm_short, 5, 50 }; */
 /*!
   alignment parameters for blast read alignment [ACGTN]
   */
-extern fmap_sw_param_t fmap_sw_param_blast; /* = {  5,  2,  2, fmap_sw_sm_blast, 5, 50 }; */
+extern tmap_sw_param_t tmap_sw_param_blast; /* = {  5,  2,  2, tmap_sw_sm_blast, 5, 50 }; */
 /*!
   alignment parameters for ... 
   */
-extern fmap_sw_param_t fmap_sw_param_nt2nt; /* = {  8,  2,  2, fmap_sw_sm_nt, 16, 75 }; */
+extern tmap_sw_param_t tmap_sw_param_nt2nt; /* = {  8,  2,  2, tmap_sw_sm_nt, 16, 75 }; */
 /*!
   alignment parameters for ...
   */
-extern fmap_sw_param_t fmap_sw_param_rd2rd; /* = {  1, 19, 19, fmap_sw_sm_read, 16, 75 }; */
+extern tmap_sw_param_t tmap_sw_param_rd2rd; /* = {  1, 19, 19, tmap_sw_sm_read, 16, 75 }; */
 /*!
   alignment parameters for ...
   */
-extern fmap_sw_param_t fmap_sw_param_aa2aa; /* = { 10,  2,  2, fmap_sw_sm_blosum62, 22, 50 }; */
+extern tmap_sw_param_t tmap_sw_param_aa2aa; /* = { 10,  2,  2, tmap_sw_sm_blosum62, 22, 50 }; */
 
 /*!
   substitution matrix for short read alignment 
   */
-extern int32_t fmap_sw_sm_short[];
+extern int32_t tmap_sw_sm_short[];
 
 /*!
   substitution matrix for blast
   */
-extern int32_t fmap_sw_sm_blast[];
+extern int32_t tmap_sw_sm_blast[];
 
 /*!
   substitution matrix for ...
   */
-extern int32_t fmap_sw_sm_nt[];
+extern int32_t tmap_sw_sm_nt[];
 
 /*!
   substitution matrix for ...
   */
-extern int32_t fmap_sw_sm_read[];
+extern int32_t tmap_sw_sm_read[];
 
 /*!
   substitution matrix for BLOSUM62
   */
-extern int32_t fmap_sw_sm_blosum62[];
+extern int32_t tmap_sw_sm_blosum62[];
 
 /*!
   substitution matrix for BLOSUM45
   */
-extern int32_t fmap_sw_sm_blosum45[];
+extern int32_t tmap_sw_sm_blosum45[];
 
 /*!
   substitution matrix for human to mouse
   */
-extern int32_t           fmap_sw_sm_hs[];
+extern int32_t           tmap_sw_sm_hs[];
 
 #endif

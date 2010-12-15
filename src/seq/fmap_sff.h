@@ -1,15 +1,15 @@
-#ifndef FMAP_SFF_H_
-#define FMAP_SFF_H_
+#ifndef TMAP_SFF_H_
+#define TMAP_SFF_H_
 
-#define FMAP_SFF_MAGIC 0x2E736666
-#define FMAP_SFF_VERSION 1
+#define TMAP_SFF_MAGIC 0x2E736666
+#define TMAP_SFF_VERSION 1
 
 // uncomment this to allow for some SFF debuggin
-//#define FMAP_SFF_DEBUG 1
+//#define TMAP_SFF_DEBUG 1
 
 #include <stdint.h>
-#include "../util/fmap_string.h"
-#include "../io/fmap_file.h"
+#include "../util/tmap_string.h"
+#include "../io/tmap_file.h"
 
 /*! 
   A Library for SFF data
@@ -27,9 +27,9 @@ typedef struct {
     uint16_t key_length;  /*!< the length of the key sequence used with these reads */
     uint16_t flow_length;  /*!< the number of nucleotide flows used in this experiment */
     uint8_t flowgram_format;  /*!< the manner in which signal values are encoded (value is 1) */
-    fmap_string_t *flow;  /*!< the string specifying the ith nucleotide flowed  */
-    fmap_string_t *key;  /*!< the string specifying the ith nucleotide of the sequence key */
-} fmap_sff_header_t;
+    tmap_string_t *flow;  /*!< the string specifying the ith nucleotide flowed  */
+    tmap_string_t *key;  /*!< the string specifying the ith nucleotide of the sequence key */
+} tmap_sff_header_t;
 
 /*! 
   */
@@ -41,52 +41,52 @@ typedef struct {
     uint16_t clip_qual_right;  /*!< the 1-based coordinate of the first base after the (quality) right clipped region (zero if no clipping has been applied) */
     uint16_t clip_adapter_left;  /*!< the 1-based coordinate of the first base after the (adapter) left clipped region (zero if no clipping has been applied) */
     uint16_t clip_adapter_right;  /*!< the 1-based coordinate of the first base after the (adapter) right clipped region (zero if no clipping has been applied) */
-    fmap_string_t *name;  /*!< the read name  */
-} fmap_sff_read_header_t;
+    tmap_string_t *name;  /*!< the read name  */
+} tmap_sff_read_header_t;
 
 /*! 
   */
 typedef struct {
     uint16_t *flowgram;  /*!< the flowgram  */
     uint8_t *flow_index;  /*!< the 1-based flow index for each base called */
-    fmap_string_t *bases;  /*!< the called bases */
-    fmap_string_t *quality;  /*!< the quality score for each base call */
-} fmap_sff_read_t;
+    tmap_string_t *bases;  /*!< the called bases */
+    tmap_string_t *quality;  /*!< the quality score for each base call */
+} tmap_sff_read_t;
 
 /*! 
   */
 typedef struct {
-    fmap_sff_header_t *gheader;  /*!< pointer to the global header */
-    fmap_sff_read_header_t *rheader;  /*!< pointer to the read header */
-    fmap_sff_read_t *read;  /*!< pointer to the read */
+    tmap_sff_header_t *gheader;  /*!< pointer to the global header */
+    tmap_sff_read_header_t *rheader;  /*!< pointer to the read header */
+    tmap_sff_read_t *read;  /*!< pointer to the read */
     int32_t is_int;  /*!< 1 if the bases are integer values, 0 otherwise */
-} fmap_sff_t;
+} tmap_sff_t;
 
 /*! 
   @param  fp  the file pointer from which to read
   @return     a pointer to the sff header read in
   */
-fmap_sff_header_t *
-fmap_sff_header_read(fmap_file_t *fp);
+tmap_sff_header_t *
+tmap_sff_header_read(tmap_file_t *fp);
 
 /*! 
   @param  h  a pointer to the sff header to destroy
   */
 void
-fmap_sff_header_destroy(fmap_sff_header_t *h);
+tmap_sff_header_destroy(tmap_sff_header_t *h);
 
 /*! 
   @param  fp  the file pointer from which to read
   @return     a pointer to the sff read header read in
   */
-fmap_sff_read_header_t *
-fmap_sff_read_header_read(fmap_file_t *fp);
+tmap_sff_read_header_t *
+tmap_sff_read_header_read(tmap_file_t *fp);
 
 /*! 
   @param  rh  a pointer to the sff read header to destroy
   */
 void
-fmap_sff_read_header_destroy(fmap_sff_read_header_t *rh);
+tmap_sff_read_header_destroy(tmap_sff_read_header_t *rh);
 
 /*! 
   @param  fp  the file pointer from which to read
@@ -94,66 +94,66 @@ fmap_sff_read_header_destroy(fmap_sff_read_header_t *rh);
   @param  rh  the sff read header
   @return     a pointer to the sff read to read in
   */
-fmap_sff_read_t *
-fmap_sff_read_read(fmap_file_t *fp, fmap_sff_header_t *gh, fmap_sff_read_header_t *rh);
+tmap_sff_read_t *
+tmap_sff_read_read(tmap_file_t *fp, tmap_sff_header_t *gh, tmap_sff_read_header_t *rh);
 
 /*! 
   @param  r  a pointer to the sff read to destroy
   */
 void
-fmap_sff_read_destroy(fmap_sff_read_t *r);
+tmap_sff_read_destroy(tmap_sff_read_t *r);
 
 /*! 
   @return a pointer to the empty sff 
   */
-fmap_sff_t *
-fmap_sff_init();
+tmap_sff_t *
+tmap_sff_init();
 
 /*! 
   @param  sff  a pointer to the sff to destroy
   */
 void
-fmap_sff_destroy(fmap_sff_t *sff);
+tmap_sff_destroy(tmap_sff_t *sff);
 
 /*! 
   @param  sff  a pointer to the sff to clone
   @return a pointer to the cloned sff
 */
-fmap_sff_t *
-fmap_sff_clone(fmap_sff_t *sff);
+tmap_sff_t *
+tmap_sff_clone(tmap_sff_t *sff);
 
 /*! 
   @param  sff  a pointer to the sff 
 */
 void
-fmap_sff_reverse_compliment(fmap_sff_t *sff);
+tmap_sff_reverse_compliment(tmap_sff_t *sff);
 
 /*! 
   @param  sff  a pointer to the sff 
 */
 void
-fmap_sff_to_int(fmap_sff_t *sff);
+tmap_sff_to_int(tmap_sff_t *sff);
 
 /*! 
   @param  sff  a pointer to the sff 
 */
 void
-fmap_sff_to_char(fmap_sff_t *sff);
+tmap_sff_to_char(tmap_sff_t *sff);
 /*!
   gets the read's bases
   @param  sff  a pointer to a sequence structure
   @details     this will include the key sequence qualities
  */
-inline fmap_string_t *
-fmap_sff_get_bases(fmap_sff_t *sff);
+inline tmap_string_t *
+tmap_sff_get_bases(tmap_sff_t *sff);
 
 /*!
   gets the read's qualities
   @param  sff  a pointer to a sequence structure
   @details     this will include the key sequence qualities
  */
-inline fmap_string_t *
-fmap_sff_get_qualities(fmap_sff_t *sff);
+inline tmap_string_t *
+tmap_sff_get_qualities(tmap_sff_t *sff);
 
 /*! 
   removes the key sequence from the read and quality fields
@@ -162,6 +162,6 @@ fmap_sff_get_qualities(fmap_sff_t *sff);
   structure, and then only the read and quality (not the read header etc.)
   */
 inline void
-fmap_sff_remove_key_sequence(fmap_sff_t *sff);
+tmap_sff_remove_key_sequence(tmap_sff_t *sff);
 
 #endif

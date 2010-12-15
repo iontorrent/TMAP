@@ -1,5 +1,5 @@
-#ifndef FMAP_BWT_MATCH_H_
-#define FMAP_BWT_MATCH_H_
+#ifndef TMAP_BWT_MATCH_H_
+#define TMAP_BWT_MATCH_H_
 
 /*! 
   API for BWT Index Lookups
@@ -15,10 +15,10 @@ typedef struct {
     uint32_t hi;  /*!< the hash index of the SA interval if the offset is less than or equal to the hash width */
     uint32_t k;  /*!< the lower occurrence of the SA interval */
     uint32_t l;  /*!< the upper occurrence of the SA interval */
-} fmap_bwt_match_occ_t;
+} tmap_bwt_match_occ_t;
 
 /*! 
-  analagous function to fmap_bwt_occ but using a hash
+  analagous function to tmap_bwt_occ but using a hash
   @param  bwt      pointer to the bwt structure 
   @param  prev     pointer to the previous match structure
   @param  c        base in two-bit integer format
@@ -26,10 +26,10 @@ typedef struct {
   @details         this will not set the upper occurrence of the SA interval
   */
 inline void
-fmap_bwt_match_occ(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, uint8_t c, fmap_bwt_match_occ_t *next);
+tmap_bwt_match_occ(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8_t c, tmap_bwt_match_occ_t *next);
 
 /*! 
-  analagous function to fmap_bwt_2occ but using a hash
+  analagous function to tmap_bwt_2occ but using a hash
   @param  bwt      pointer to the bwt structure 
   @param  prev     pointer to the previous match structure
   @param  c        base in two-bit integer format
@@ -37,25 +37,25 @@ fmap_bwt_match_occ(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, uint8_t c,
   @details         this will not set the upper occurrences of the SA interval
   */
 inline void
-fmap_bwt_match_2occ(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, uint8_t c, fmap_bwt_match_occ_t *next);
+tmap_bwt_match_2occ(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8_t c, tmap_bwt_match_occ_t *next);
 
 /*! 
-  analagous function to fmap_bwt_occ4 but using a hash
+  analagous function to tmap_bwt_occ4 but using a hash
   @param  bwt      pointer to the bwt structure 
   @param  prev     pointer to the previous match structure
   @param  next     pointer to the next match structure
   */
 inline void
-fmap_bwt_match_occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt_match_occ_t next[4]);
+tmap_bwt_match_occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, tmap_bwt_match_occ_t next[4]);
 
 /*! 
-  analagous function to fmap_bwt_2occ4 but using a hash
+  analagous function to tmap_bwt_2occ4 but using a hash
   @param  bwt      pointer to the bwt structure 
   @param  prev     pointer to the previous match structure
   @param  next     pointer to the next match structure
   */
 inline void
-fmap_bwt_match_2occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt_match_occ_t next[4]);
+tmap_bwt_match_2occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, tmap_bwt_match_occ_t next[4]);
 
 /*! 
   stores the lower bound of the number of mismatches in the string from [i,len-1].
@@ -63,7 +63,7 @@ fmap_bwt_match_2occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt
 typedef struct {
     uint32_t w;  /*!< the maximum number of occurrences */
     int32_t bid;  /*!< the minimum number of mismatches */
-} fmap_bwt_match_width_t;
+} tmap_bwt_match_width_t;
 
 /*! 
   calculates a lower bound on the number of mismatches in the string for each interval [i,len-1]
@@ -73,7 +73,7 @@ typedef struct {
   @param  width  array of widths, one for each interval [i,len-1], for 0 <= i < len
 */
 void
-fmap_bwt_match_cal_width(const fmap_bwt_t *bwt, int len, const char *str, fmap_bwt_match_width_t *width);
+tmap_bwt_match_cal_width(const tmap_bwt_t *bwt, int len, const char *str, tmap_bwt_match_width_t *width);
 /*! 
   computes the SA interval for the given sequence (if any), using forward search
   @param  bwt       pointer to the bwt structure 
@@ -83,7 +83,7 @@ fmap_bwt_match_cal_width(const fmap_bwt_t *bwt, int len, const char *str, fmap_b
   @return           the size of the SA interval, 0 if none found
   */
 uint32_t
-fmap_bwt_match_exact(const fmap_bwt_t *bwt, int len, const uint8_t *str, fmap_bwt_match_occ_t *match_sa);
+tmap_bwt_match_exact(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa);
 
 /*! 
   computes the SA interval for the given sequence (if any), using forward search
@@ -95,6 +95,6 @@ fmap_bwt_match_exact(const fmap_bwt_t *bwt, int len, const uint8_t *str, fmap_bw
   @details          the search will be started at SA interval [k0,l0], with the results returned as [k0,l0]
   */
 uint32_t
-fmap_bwt_match_exact_alt(const fmap_bwt_t *bwt, int len, const uint8_t *str, fmap_bwt_match_occ_t *match_sa);
+tmap_bwt_match_exact_alt(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa);
 
 #endif

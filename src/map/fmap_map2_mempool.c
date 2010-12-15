@@ -1,93 +1,93 @@
 #include <stdlib.h>
-#include "../util/fmap_error.h"
-#include "../util/fmap_alloc.h"
-#include "../util/fmap_vec.h"
-#include "../seq/fmap_seq.h"
-#include "../index/fmap_refseq.h"
-#include "../index/fmap_bwt.h"
-#include "../index/fmap_bwtl.h"
-#include "../index/fmap_sa.h"
-#include "fmap_map_util.h"
-#include "fmap_map2.h"
-#include "fmap_map2_aux.h"
-#include "fmap_map2_core.h"
-#include "fmap_map2_mempool.h"
+#include "../util/tmap_error.h"
+#include "../util/tmap_alloc.h"
+#include "../util/tmap_vec.h"
+#include "../seq/tmap_seq.h"
+#include "../index/tmap_refseq.h"
+#include "../index/tmap_bwt.h"
+#include "../index/tmap_bwtl.h"
+#include "../index/tmap_sa.h"
+#include "tmap_map_util.h"
+#include "tmap_map2.h"
+#include "tmap_map2_aux.h"
+#include "tmap_map2_core.h"
+#include "tmap_map2_mempool.h"
 
 void 
-fmap_map2_stack_destroy(fmap_map2_stack_t *stack) 
+tmap_map2_stack_destroy(tmap_map2_stack_t *stack) 
 { 
-  fmap_map2_mempool_destroy(stack->pool);
-  fmap_vec_destroy(stack->stack0); 
-  fmap_vec_destroy(stack->pending); 
+  tmap_map2_mempool_destroy(stack->pool);
+  tmap_vec_destroy(stack->stack0); 
+  tmap_vec_destroy(stack->pending); 
   free(stack); 
 }
 
 inline void 
-fmap_map2_stack_push0(fmap_map2_stack_t *s, fmap_map2_entry_p e) 
+tmap_map2_stack_push0(tmap_map2_stack_t *s, tmap_map2_entry_p e) 
 { 
-  fmap_vec_push(fmap_map2_entry_p, s->stack0, e); 
+  tmap_vec_push(tmap_map2_entry_p, s->stack0, e); 
 }
 
-inline fmap_map2_entry_p 
-fmap_map2_stack_pop(fmap_map2_stack_t *s)
+inline tmap_map2_entry_p 
+tmap_map2_stack_pop(tmap_map2_stack_t *s)
 {
-  if(fmap_vec_size(s->stack0) == 0 && s->n_pending != 0) {
-      fmap_error(NULL, Exit, OutOfRange);
+  if(tmap_vec_size(s->stack0) == 0 && s->n_pending != 0) {
+      tmap_error(NULL, Exit, OutOfRange);
   }
-  return fmap_vec_pop(s->stack0);
+  return tmap_vec_pop(s->stack0);
 }
 
-inline fmap_map2_entry_p
-fmap_map2_mempool_pop(fmap_map2_mempool_t *mp)
+inline tmap_map2_entry_p
+tmap_map2_mempool_pop(tmap_map2_mempool_t *mp)
 {
   mp->cnt++;
-  if(fmap_vec_size(mp->pool) == 0) {
-      return (fmap_map2_entry_t*)fmap_calloc(1, sizeof(fmap_map2_entry_t), "entry");
+  if(tmap_vec_size(mp->pool) == 0) {
+      return (tmap_map2_entry_t*)tmap_calloc(1, sizeof(tmap_map2_entry_t), "entry");
   }
   else {
-      return fmap_vec_pop(mp->pool);
+      return tmap_vec_pop(mp->pool);
   }
 }
 
 void 
-fmap_map2_mempool_push(fmap_map2_mempool_t *mp, fmap_map2_entry_t *e)
+tmap_map2_mempool_push(tmap_map2_mempool_t *mp, tmap_map2_entry_t *e)
 {
   mp->cnt--;
   e->n = 0;
-  fmap_vec_push(fmap_map2_entry_p, mp->pool, e);
+  tmap_vec_push(tmap_map2_entry_p, mp->pool, e);
 }
 
 void 
-fmap_map2_mempool_destroy(fmap_map2_mempool_t *mp)
+tmap_map2_mempool_destroy(tmap_map2_mempool_t *mp)
 {
   int32_t i;
 
-  if(0 != mp->cnt) fmap_error("memory leak detected", Exit, OutOfRange);
+  if(0 != mp->cnt) tmap_error("memory leak detected", Exit, OutOfRange);
 
-  for(i=0;i<fmap_vec_size(mp->pool);i++) {
-      free(fmap_vec_A(mp->pool, i)->array);
-      free(fmap_vec_A(mp->pool, i));
+  for(i=0;i<tmap_vec_size(mp->pool);i++) {
+      free(tmap_vec_A(mp->pool, i)->array);
+      free(tmap_vec_A(mp->pool, i));
   }
-  fmap_vec_destroy(mp->pool);
+  tmap_vec_destroy(mp->pool);
   free(mp);
 }
 
-fmap_map2_global_mempool_t *
-fmap_map2_global_mempool_init()
+tmap_map2_global_mempool_t *
+tmap_map2_global_mempool_init()
 {
-  fmap_map2_global_mempool_t *pool= NULL;
+  tmap_map2_global_mempool_t *pool= NULL;
 
-  pool = fmap_calloc(1, sizeof(fmap_map2_global_mempool_t), "pool");
-  pool->stack = fmap_calloc(1, sizeof(fmap_map2_stack_t), "stack");
-  pool->stack->pool = fmap_calloc(1, sizeof(fmap_map2_mempool_t), "stack->pool");
+  pool = tmap_calloc(1, sizeof(tmap_map2_global_mempool_t), "pool");
+  pool->stack = tmap_calloc(1, sizeof(tmap_map2_stack_t), "stack");
+  pool->stack->pool = tmap_calloc(1, sizeof(tmap_map2_mempool_t), "stack->pool");
 
   return pool;
 }
 
 void
-fmap_map2_global_mempool_destroy(fmap_map2_global_mempool_t *global)
+tmap_map2_global_mempool_destroy(tmap_map2_global_mempool_t *global)
 {
-  fmap_map2_stack_destroy((fmap_map2_stack_t*)global->stack);
+  tmap_map2_stack_destroy((tmap_map2_stack_t*)global->stack);
   free(global->aln_mem);
   free(global);
 }

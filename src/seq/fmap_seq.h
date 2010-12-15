@@ -1,8 +1,8 @@
-#ifndef FMAP_SEQ_H_
-#define FMAP_SEQ_H_
+#ifndef TMAP_SEQ_H_
+#define TMAP_SEQ_H_
 
-#include "fmap_fq.h"
-#include "fmap_sff.h"
+#include "tmap_fq.h"
+#include "tmap_sff.h"
 
 /*! 
   An Abstract Library for DNA Sequence Data
@@ -12,9 +12,9 @@
   @details  the type of DNA sequence data
   */
 enum {
-    FMAP_SEQ_TYPE_NOTYPE = -1, /*!< unknown type */
-    FMAP_SEQ_TYPE_FQ = 0, /*!< FASTA/FASTQ input/output */
-    FMAP_SEQ_TYPE_SFF = 1 /*!< SFF input/output */
+    TMAP_SEQ_TYPE_NOTYPE = -1, /*!< unknown type */
+    TMAP_SEQ_TYPE_FQ = 0, /*!< FASTA/FASTQ input/output */
+    TMAP_SEQ_TYPE_SFF = 1 /*!< SFF input/output */
 };
 
 /*! 
@@ -22,63 +22,63 @@ enum {
 typedef struct {
     int8_t type;  /*!< the type associated with this structure */
     union {
-        fmap_fq_t *fq;  /*!< the pointer to the fastq structure */
-        fmap_sff_t *sff;  /*!< the pointer to the sff structure */
+        tmap_fq_t *fq;  /*!< the pointer to the fastq structure */
+        tmap_sff_t *sff;  /*!< the pointer to the sff structure */
     } data;
-} fmap_seq_t;
+} tmap_seq_t;
 
 /*! 
   @param  type  the type associated with this structure
   @return       pointer to the initialized memory 
   */
-fmap_seq_t *
-fmap_seq_init(int8_t type);
+tmap_seq_t *
+tmap_seq_init(int8_t type);
 
 /*! 
   @param  seq  pointer to the structure
   */
 void
-fmap_seq_destroy(fmap_seq_t *seq);
+tmap_seq_destroy(tmap_seq_t *seq);
 
 /*! 
   @param  seq  pointer to the structure to clone
   @return      pointer to the initialized memory 
   */
-fmap_seq_t *
-fmap_seq_clone(fmap_seq_t *seq);
+tmap_seq_t *
+tmap_seq_clone(tmap_seq_t *seq);
 
 /*! 
   @param  seq  pointer to the structure to clone
   */
 void
-fmap_seq_reverse_compliment(fmap_seq_t *seq);
+tmap_seq_reverse_compliment(tmap_seq_t *seq);
 
 /*! 
   @param  seq  pointer to the structure to clone
   */
 void
-fmap_seq_to_int(fmap_seq_t *seq);
+tmap_seq_to_int(tmap_seq_t *seq);
 
 /*! 
   @param  seq  pointer to the structure to clone
   @return      a pointer to the name string
   */
-fmap_string_t *
-fmap_seq_get_name(fmap_seq_t *seq);
+tmap_string_t *
+tmap_seq_get_name(tmap_seq_t *seq);
 
 /*! 
   @param  seq  pointer to the structure to clone
   @return      a pointer to the base sequence string
   */
-inline fmap_string_t *
-fmap_seq_get_bases(fmap_seq_t *seq);
+inline tmap_string_t *
+tmap_seq_get_bases(tmap_seq_t *seq);
 
 /*! 
   @param  seq  pointer to the structure to clone
   @return      a pointer to the quality string
   */
-inline fmap_string_t *
-fmap_seq_get_qualities(fmap_seq_t *seq);
+inline tmap_string_t *
+tmap_seq_get_qualities(tmap_seq_t *seq);
 
 /*! 
   @param  seq  pointer to the structure to convert
@@ -86,13 +86,13 @@ fmap_seq_get_qualities(fmap_seq_t *seq);
   structure, and then only the read and quality (not the read header etc.)
   */
 void
-fmap_seq_remove_key_sequence(fmap_seq_t *seq);
+tmap_seq_remove_key_sequence(tmap_seq_t *seq);
 
 /*! 
   @param  seq  pointer to the structure to convert
   @return      a pointer to the fq structure
   */
-fmap_seq_t *
-fmap_seq_sff2fq(fmap_seq_t *seq);
+tmap_seq_t *
+tmap_seq_sff2fq(tmap_seq_t *seq);
 
 #endif

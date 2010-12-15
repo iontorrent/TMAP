@@ -1,5 +1,5 @@
-#ifndef FMAP_MAP3_H_
-#define FMAP_MAP3_H_
+#ifndef TMAP_MAP3_H_
+#define TMAP_MAP3_H_
 
 #include <config.h>
 #include <sys/types.h>
@@ -22,22 +22,22 @@ typedef struct {
     uint16_t n_seeds:15; /*!< the number seeds in this hit */
     int32_t n_cigar; /*!< the number of cigar operators */
     uint32_t *cigar; /*!< the cigar operator array */
-} fmap_map3_hit_t;
+} tmap_map3_hit_t;
 
 #ifdef HAVE_LIBPTHREAD
 /*! 
   data to be passed to a thread
   */
 typedef struct {
-    fmap_seq_t **seq_buffer;  /*!< the buffer of sequences */
-    fmap_map_sams_t **sams;  /*!< the alignments to output */
+    tmap_seq_t **seq_buffer;  /*!< the buffer of sequences */
+    tmap_map_sams_t **sams;  /*!< the alignments to output */
     int32_t seq_buffer_length;  /*!< the buffer length */
-    fmap_refseq_t *refseq; /*< pointer to the packed referene sequence (forward) */
-    fmap_bwt_t *bwt;  /*!< pointer to the BWT indices (reverse) */
-    fmap_sa_t *sa;  /*< pointer to the SA (reverse) */
+    tmap_refseq_t *refseq; /*< pointer to the packed referene sequence (forward) */
+    tmap_bwt_t *bwt;  /*!< pointer to the BWT indices (reverse) */
+    tmap_sa_t *sa;  /*< pointer to the SA (reverse) */
     int32_t tid;  /*!< the zero-based thread id */
-    fmap_map_opt_t *opt;  /*!< the options to this program */
-} fmap_map3_thread_data_t;
+    tmap_map_opt_t *opt;  /*!< the options to this program */
+} tmap_map3_thread_data_t;
 #endif
 
 /*!
@@ -46,14 +46,14 @@ typedef struct {
   @return          the estimated seed length
   */
 int32_t
-fmap_map3_get_seed_length(uint64_t ref_len);
+tmap_map3_get_seed_length(uint64_t ref_len);
 
 /*! 
-  main-like function for 'fmap map3'
+  main-like function for 'tmap map3'
   @param  argc  the number of arguments
   @param  argv  the argument list
   @return       0 if executed successful
   */
 int 
-fmap_map3_main(int argc, char *argv[]);
+tmap_map3_main(int argc, char *argv[]);
 #endif

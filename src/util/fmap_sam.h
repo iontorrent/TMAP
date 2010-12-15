@@ -1,19 +1,19 @@
-#ifndef FMAP_SAM_H_
-#define FMAP_SAM_H_
+#ifndef TMAP_SAM_H_
+#define TMAP_SAM_H_
 
 #include <config.h>
 #ifdef HAVE_SAMTOOLS
 #include <bam.h>
 #endif
-#include "../seq/fmap_seq.h"
-#include "../index/fmap_refseq.h"
-#include "../io/fmap_file.h"
-#include "../io/fmap_seq_io.h"
+#include "../seq/tmap_seq.h"
+#include "../index/tmap_refseq.h"
+#include "../io/tmap_file.h"
+#include "../io/tmap_seq_io.h"
 
 /*! 
 */
                     
-#define FMAP_SAM_VERSION "1.3"
+#define TMAP_SAM_VERSION "1.3"
 
 /*! 
   prints out a SAM header
@@ -27,8 +27,8 @@
   @details              the following header tags will be ouptted: \@SQ:SN:LN and \@PG:ID:VN:CL.
   */
 void
-fmap_sam_print_header(fmap_file_t *fp, fmap_refseq_t *refseq, 
-                      fmap_seq_io_t *seqio, char *sam_rg, int32_t sam_sff_tags, 
+tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, 
+                      tmap_seq_io_t *seqio, char *sam_rg, int32_t sam_sff_tags, 
                       int argc, char *argv[]);
 
 /*! 
@@ -38,7 +38,7 @@ fmap_sam_print_header(fmap_file_t *fp, fmap_refseq_t *refseq,
   @param  sam_sff_tags  1 if SFF specific SAM tags are to be outputted, 0 otherwise
   */
 inline void
-fmap_sam_print_unmapped(fmap_file_t *fp, fmap_seq_t *seq, int32_t sam_sff_tags);
+tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags);
 
 /*! 
   prints out a mapped SAM record 
@@ -60,7 +60,7 @@ fmap_sam_print_unmapped(fmap_file_t *fp, fmap_seq_t *seq, int32_t sam_sff_tags);
   @details            the format should not include the MD tag, which will be outputted automatically
   */
 inline void
-fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, int32_t sam_sff_tags, fmap_refseq_t *refseq,
+tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tmap_refseq_t *refseq,
                       uint8_t strand, uint32_t seqid, uint32_t pos,
                       uint8_t mapq, uint32_t *cigar, int32_t n_cigar,
                       int32_t score, int32_t algo_id, int32_t algo_stage,
@@ -74,7 +74,7 @@ fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, int32_t sam_sff_tags, fm
   @param  len   the length of the alignment
   */
 void 
-fmap_sam_md1(bam1_t *b, char *ref, int32_t len);
+tmap_sam_md1(bam1_t *b, char *ref, int32_t len);
 
 /*!
   updates the cigar and MD given the new reference/read alignment
@@ -84,7 +84,7 @@ fmap_sam_md1(bam1_t *b, char *ref, int32_t len);
   @param  len   the length of the alignment
   */
 void
-fmap_sam_update_cigar_and_md(bam1_t *b, char *ref, char *read, int32_t len);
+tmap_sam_update_cigar_and_md(bam1_t *b, char *ref, char *read, int32_t len);
 #endif
 
 #endif

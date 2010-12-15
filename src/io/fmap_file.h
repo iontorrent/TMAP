@@ -1,5 +1,5 @@
-#ifndef FMAP_FILE_H_
-#define FMAP_FILE_H_
+#ifndef TMAP_FILE_H_
+#define TMAP_FILE_H_
 
 #include <stdio.h>
 #include <zlib.h>
@@ -17,17 +17,17 @@
   @details  the various supported file compression types
   */
 enum {
-    FMAP_FILE_NO_COMPRESSION=0,  /*!< no compression */
-    FMAP_FILE_BZ2_COMPRESSION,  /*!< bzip2 compression */
-    FMAP_FILE_GZ_COMPRESSION  /*!< gzip compression */
+    TMAP_FILE_NO_COMPRESSION=0,  /*!< no compression */
+    TMAP_FILE_BZ2_COMPRESSION,  /*!< bzip2 compression */
+    TMAP_FILE_GZ_COMPRESSION  /*!< gzip compression */
 };
 
 /*! 
   @details  the type of bzip2 stream (read/write)
   */
 enum {
-    FMAP_FILE_BZ2_READ=0,  /*!< a reading bzip2 stream  */
-    FMAP_FILE_BZ2_WRITE  /*!< a writing bzip2 stream */
+    TMAP_FILE_BZ2_READ=0,  /*!< a reading bzip2 stream  */
+    TMAP_FILE_BZ2_WRITE  /*!< a writing bzip2 stream */
 };
 
 /*! 
@@ -46,10 +46,10 @@ typedef struct {
 #endif
 #ifndef DISABLE_BZ2
 #endif
-} fmap_file_t;
+} tmap_file_t;
 
-extern fmap_file_t *fmap_file_stdout; // to use, initialize this in your main
-extern fmap_file_t *fmap_file_stderr; // to use, initialize this in your main
+extern tmap_file_t *tmap_file_stdout; // to use, initialize this in your main
+extern tmap_file_t *tmap_file_stderr; // to use, initialize this in your main
 
 /*! 
   emulates fopen from stdio.h
@@ -58,8 +58,8 @@ extern fmap_file_t *fmap_file_stderr; // to use, initialize this in your main
   @param  compression  compression type
   @return              a pointer to the initialized file structure
   */
-fmap_file_t *
-fmap_file_fopen(const char* path, const char *mode, int32_t compression);
+tmap_file_t *
+tmap_file_fopen(const char* path, const char *mode, int32_t compression);
 
 /*! 
   emulates fdopen from stdio.h
@@ -68,8 +68,8 @@ fmap_file_fopen(const char* path, const char *mode, int32_t compression);
   @param  compression  compression type
   @return              a pointer to the initialized file structure
   */
-fmap_file_t *
-fmap_file_fdopen(int filedes, const char *mode, int32_t compression);
+tmap_file_t *
+tmap_file_fdopen(int filedes, const char *mode, int32_t compression);
 
 /*! 
   closes the file associated with the file pointer
@@ -77,7 +77,7 @@ fmap_file_fdopen(int filedes, const char *mode, int32_t compression);
   @return     a pointer to the initialized file structure
   */
 void 
-fmap_file_fclose(fmap_file_t *fp); 
+tmap_file_fclose(tmap_file_t *fp); 
 
 /*! 
   emulates fread from stdio.h
@@ -88,7 +88,7 @@ fmap_file_fclose(fmap_file_t *fp);
   @return        the number of elements read (should equal count)
   */
 size_t 
-fmap_file_fread(void *ptr, size_t size, size_t count, fmap_file_t *fp);
+tmap_file_fread(void *ptr, size_t size, size_t count, tmap_file_t *fp);
 
 /*! 
   emulates gzread from zlib.h
@@ -98,7 +98,7 @@ fmap_file_fread(void *ptr, size_t size, size_t count, fmap_file_t *fp);
   @return      the number of elements read (should equal count)
   */
 int 
-fmap_file_fread2(fmap_file_t *fp, void *ptr, unsigned int len);
+tmap_file_fread2(tmap_file_t *fp, void *ptr, unsigned int len);
 
 /*! 
   emulates fgetc from stdio.h
@@ -106,7 +106,7 @@ fmap_file_fread2(fmap_file_t *fp, void *ptr, unsigned int len);
   @return     the character read is returned as an int value 
   */
 int 
-fmap_file_fgetc(fmap_file_t *fp);
+tmap_file_fgetc(tmap_file_t *fp);
 
 /*! 
   emulates fwrite from stdio.h
@@ -117,7 +117,7 @@ fmap_file_fgetc(fmap_file_t *fp);
   @return        the number of elements written (should equal count)
   */
 size_t 
-fmap_file_fwrite(void *ptr, size_t size, size_t count, fmap_file_t *fp); 
+tmap_file_fwrite(void *ptr, size_t size, size_t count, tmap_file_t *fp); 
 
 /*! 
   emulates vfprintf from stdio.h
@@ -127,7 +127,7 @@ fmap_file_fwrite(void *ptr, size_t size, size_t count, fmap_file_t *fp);
   @return         the number of characters written
   */
 int32_t
-fmap_file_vfprintf(fmap_file_t *fp, const char *format, va_list ap);
+tmap_file_vfprintf(tmap_file_t *fp, const char *format, va_list ap);
 
 /*! 
   emulates fprintf from stdio.h
@@ -137,7 +137,7 @@ fmap_file_vfprintf(fmap_file_t *fp, const char *format, va_list ap);
   @return         the number of characters written
   */
 int32_t
-fmap_file_fprintf(fmap_file_t *fp, const char *format, ...);
+tmap_file_fprintf(tmap_file_t *fp, const char *format, ...);
 
 /*!
   emulates fflush from stdio.h
@@ -146,6 +146,6 @@ fmap_file_fprintf(fmap_file_t *fp, const char *format, ...);
   @details         this will have no effect if the file is writing bzip2 data. 
   */
 int32_t
-fmap_file_fflush(fmap_file_t *fp, int32_t gz_flush);
+tmap_file_fflush(tmap_file_t *fp, int32_t gz_flush);
 
 #endif

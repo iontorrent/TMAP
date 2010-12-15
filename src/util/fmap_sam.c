@@ -9,17 +9,17 @@
 #include <bam.h>
 #endif
 
-#include "fmap_alloc.h"
-#include "fmap_definitions.h"
-#include "../io/fmap_file.h"
-#include "../io/fmap_seq_io.h"
-#include "../sw/fmap_sw.h"
-#include "fmap_sam.h"
+#include "tmap_alloc.h"
+#include "tmap_definitions.h"
+#include "../io/tmap_file.h"
+#include "../io/tmap_seq_io.h"
+#include "../sw/tmap_sw.h"
+#include "tmap_sam.h"
 
-static char fmap_sam_rg_id[1024]="ID";
+static char tmap_sam_rg_id[1024]="ID";
 
 static void
-fmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
+tmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
 {
   int32_t i, j, len;
 
@@ -28,7 +28,7 @@ fmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
   // must have at least "@RG\tID:."
   if(len < 8
      || 0 != strncmp(rg, "@RG\tID:", 7)) {
-      fmap_error("Malformed RG line", Exit, OutOfRange);
+      tmap_error("Malformed RG line", Exit, OutOfRange);
   }
   i = 3;
 
@@ -36,20 +36,20 @@ fmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
       if('\t' == rg[i]) {
           i++; // move past the tab
           if(len-2 <= i) {
-              fmap_error("Improper tag in the RG line", Exit, OutOfRange);
+              tmap_error("Improper tag in the RG line", Exit, OutOfRange);
           }
           else if('I' == rg[i] && 'D' == rg[i+1]) {
               // copy over the id
               for(j=i;j<len;j++) {
                   if('\t' == rg[j]) break;
-                  fmap_sam_rg_id[j-i] = rg[j];
+                  tmap_sam_rg_id[j-i] = rg[j];
               }
-              if(j == i) fmap_error("Malformed RG line", Exit, OutOfRange);
-              fmap_sam_rg_id[j-i]='\0'; // null terminator
-              fprintf(stderr, "RGID:%s\n", fmap_sam_rg_id);
+              if(j == i) tmap_error("Malformed RG line", Exit, OutOfRange);
+              tmap_sam_rg_id[j-i]='\0'; // null terminator
+              fprintf(stderr, "RGID:%s\n", tmap_sam_rg_id);
           }
           else if('P' == rg[i] && 'G' == rg[i+1]) {
-              fmap_error("PG tag not allowed in the RG line", Exit, OutOfRange);
+              tmap_error("PG tag not allowed in the RG line", Exit, OutOfRange);
           }
           else if(('C' == rg[i] && 'N' == rg[i+1])
                   || ('D' == rg[i] && 'S' == rg[i+1])
@@ -64,11 +64,11 @@ fmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
           else if(('F' == rg[i] && 'O' == rg[i+1])
                   || ('K' == rg[i] && 'S' == rg[i+1])) {
               if(0 == fs_data_ok) {
-                  fmap_error("The FO/KS tag should not be specified in the RG line", Exit, OutOfRange);
+                  tmap_error("The FO/KS tag should not be specified in the RG line", Exit, OutOfRange);
               }
           }
           else {
-              fmap_error("Improper tag in the RG line", Exit, OutOfRange);
+              tmap_error("Improper tag in the RG line", Exit, OutOfRange);
           }
       }
       i++;
@@ -76,29 +76,29 @@ fmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
 }
 
 void
-fmap_sam_print_header(fmap_file_t *fp, fmap_refseq_t *refseq, fmap_seq_io_t *seqio, char *sam_rg, int32_t sam_sff_tags, int argc, char *argv[])
+tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, tmap_seq_io_t *seqio, char *sam_rg, int32_t sam_sff_tags, int argc, char *argv[])
 {
   int32_t i;
   // SAM header
-  fmap_file_fprintf(fp, "@HD\tVN:%s\tSO:unsorted\n",
-                    FMAP_SAM_VERSION);
+  tmap_file_fprintf(fp, "@HD\tVN:%s\tSO:unsorted\n",
+                    TMAP_SAM_VERSION);
   for(i=0;i<refseq->num_annos;i++) {
-      fmap_file_fprintf(fp, "@SQ\tSN:%s\tLN:%d\n",
+      tmap_file_fprintf(fp, "@SQ\tSN:%s\tLN:%d\n",
                         refseq->annos[i].name->s, (int)refseq->annos[i].len);
   }
   // RG
-  if(NULL != seqio && FMAP_SEQ_TYPE_SFF == seqio->type && 1 == sam_sff_tags) {
+  if(NULL != seqio && TMAP_SEQ_TYPE_SFF == seqio->type && 1 == sam_sff_tags) {
       if(NULL != sam_rg) {
-          fmap_sam_parse_rg(sam_rg, 0);
-          fmap_file_fprintf(fp, "%s\tPG:%s\tFO:%s\tKS:%s\n",
+          tmap_sam_parse_rg(sam_rg, 0);
+          tmap_file_fprintf(fp, "%s\tPG:%s\tFO:%s\tKS:%s\n",
                             sam_rg,
                             PACKAGE_NAME, 
                             seqio->io.sffio->gheader->flow->s,
                             seqio->io.sffio->gheader->key->s);
       }
       else {
-          fmap_file_fprintf(fp, "@RG\tID:%s\tPG:%s\tFO:%s\tKS:%s\n",
-                            fmap_sam_rg_id,
+          tmap_file_fprintf(fp, "@RG\tID:%s\tPG:%s\tFO:%s\tKS:%s\n",
+                            tmap_sam_rg_id,
                             PACKAGE_NAME, 
                             seqio->io.sffio->gheader->flow->s,
                             seqio->io.sffio->gheader->key->s);
@@ -106,56 +106,56 @@ fmap_sam_print_header(fmap_file_t *fp, fmap_refseq_t *refseq, fmap_seq_io_t *seq
   }
   else {
       if(NULL != sam_rg) {
-          fmap_sam_parse_rg(sam_rg, 1);
-          fmap_file_fprintf(fp, "%s\tPG:%s\n", sam_rg, PACKAGE_NAME);
+          tmap_sam_parse_rg(sam_rg, 1);
+          tmap_file_fprintf(fp, "%s\tPG:%s\n", sam_rg, PACKAGE_NAME);
       }
       else {
-          fmap_file_fprintf(fp, "@RG\tID:%s\tPG:%s\n",
-                            fmap_sam_rg_id,
+          tmap_file_fprintf(fp, "@RG\tID:%s\tPG:%s\n",
+                            tmap_sam_rg_id,
                             PACKAGE_NAME);
       }
   }
-  fmap_file_fprintf(fp, "@PG\tID:%s\tVN:%s\tCL:",
+  tmap_file_fprintf(fp, "@PG\tID:%s\tVN:%s\tCL:",
                     PACKAGE_NAME, PACKAGE_VERSION);
   for(i=0;i<argc;i++) {
-      if(0 < i) fmap_file_fprintf(fp, " ");
-      fmap_file_fprintf(fp, "%s", argv[i]);
+      if(0 < i) tmap_file_fprintf(fp, " ");
+      tmap_file_fprintf(fp, "%s", argv[i]);
   }
-  fmap_file_fprintf(fp, "\n");
+  tmap_file_fprintf(fp, "\n");
 }
 
 inline void
-fmap_sam_print_unmapped(fmap_file_t *fp, fmap_seq_t *seq, int32_t sam_sff_tags)
+tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags)
 {
   int32_t i;
   uint16_t flag = 0x0004;
-  fmap_string_t *name=NULL, *bases=NULL, *qualities=NULL;
+  tmap_string_t *name=NULL, *bases=NULL, *qualities=NULL;
 
-  name = fmap_seq_get_name(seq);
-  bases = fmap_seq_get_bases(seq);
-  qualities = fmap_seq_get_qualities(seq);
+  name = tmap_seq_get_name(seq);
+  bases = tmap_seq_get_bases(seq);
+  qualities = tmap_seq_get_qualities(seq);
 
-  fmap_file_fprintf(fp, "%s\t%u\t%s\t%u\t%u\t*\t*\t0\t0\t%s\t%s",
+  tmap_file_fprintf(fp, "%s\t%u\t%s\t%u\t%u\t*\t*\t0\t0\t%s\t%s",
                     name->s, flag, "*",
                     0, 0, bases->s, qualities->s);
-  fmap_file_fprintf(fp, "\tRG:Z:%s\tPG:Z:%s",
-                    fmap_sam_rg_id,
+  tmap_file_fprintf(fp, "\tRG:Z:%s\tPG:Z:%s",
+                    tmap_sam_rg_id,
                     PACKAGE_NAME);
-  if(FMAP_SEQ_TYPE_SFF == seq->type && 1 == sam_sff_tags) {
-      fmap_file_fprintf(fp, "\tFI:H:");
+  if(TMAP_SEQ_TYPE_SFF == seq->type && 1 == sam_sff_tags) {
+      tmap_file_fprintf(fp, "\tFI:H:");
       for(i=0;i<seq->data.sff->gheader->flow_length;i++) {
-          fmap_file_fprintf(fp, "%X%X%X%X", 
+          tmap_file_fprintf(fp, "%X%X%X%X", 
                             ((seq->data.sff->read->flowgram[i] >> 12) & 0xF),
                             ((seq->data.sff->read->flowgram[i] >> 8) & 0xF),
                             ((seq->data.sff->read->flowgram[i] >> 4) & 0xF),
                             seq->data.sff->read->flowgram[i] & 0xF);
       }
   }
-  fmap_file_fprintf(fp, "\n");
+  tmap_file_fprintf(fp, "\n");
 }
 
-static inline fmap_string_t *
-fmap_sam_md(fmap_refseq_t *refseq, char *read_bases, // read bases are characters
+static inline tmap_string_t *
+tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are characters
             uint32_t seqid, uint32_t pos, // seqid and pos are 0-based
             uint32_t *cigar, int32_t n_cigar, int32_t *nm)
 {
@@ -163,10 +163,10 @@ fmap_sam_md(fmap_refseq_t *refseq, char *read_bases, // read bases are character
   uint32_t ref_i, read_i;
   int32_t l = 0; // the length of the last md op
   uint8_t read_base, ref_base;
-  fmap_string_t *md=NULL;
+  tmap_string_t *md=NULL;
 
 
-  md = fmap_string_init(32);
+  md = tmap_string_init(32);
   (*nm) = 0;
 
   read_i = 0;
@@ -182,14 +182,14 @@ fmap_sam_md(fmap_refseq_t *refseq, char *read_bases, // read bases are character
           for(j=0;j<op_len;j++) {
               if(refseq->len <= ref_i) break; // out of boundary
 
-              read_base = fmap_nt_char_to_int[(int)read_bases[read_i]]; 
-              ref_base = fmap_refseq_seq_i(refseq, ref_i);
+              read_base = tmap_nt_char_to_int[(int)read_bases[read_i]]; 
+              ref_base = tmap_refseq_seq_i(refseq, ref_i);
 
               if(read_base == ref_base) { // a match
                   l++;
               }
               else {
-                  fmap_string_lsprintf(md, md->l, "%d%c", l, "ACGTN"[ref_base]);
+                  tmap_string_lsprintf(md, md->l, "%d%c", l, "ACGTN"[ref_base]);
                   l = 0;
                   (*nm)++;
               }
@@ -203,11 +203,11 @@ fmap_sam_md(fmap_refseq_t *refseq, char *read_bases, // read bases are character
           (*nm) += op_len;
       }
       else if(BAM_CDEL == op) {
-          fmap_string_lsprintf(md, md->l, "%d^", l);
+          tmap_string_lsprintf(md, md->l, "%d^", l);
           for(j=0;j<op_len;j++) {
               if(refseq->len <= ref_i) break; // out of boundary
-              ref_base = fmap_refseq_seq_i(refseq, ref_i);
-              fmap_string_lsprintf(md, md->l, "%c", "ACGTN"[ref_base]);
+              ref_base = tmap_refseq_seq_i(refseq, ref_i);
+              tmap_string_lsprintf(md, md->l, "%c", "ACGTN"[ref_base]);
               ref_i++;
           }
           if(j < op_len) break;
@@ -227,16 +227,16 @@ fmap_sam_md(fmap_refseq_t *refseq, char *read_bases, // read bases are character
           // ignore
       }
       else {
-          fmap_error("could not understand the cigar operator", Exit, OutOfRange);
+          tmap_error("could not understand the cigar operator", Exit, OutOfRange);
       }
   }
-  fmap_string_lsprintf(md, md->l, "%d", l);
+  tmap_string_lsprintf(md, md->l, "%d", l);
 
   return md;
 }
 
 inline void
-fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, int32_t sam_sff_tags, fmap_refseq_t *refseq,
+tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tmap_refseq_t *refseq,
                       uint8_t strand, uint32_t seqid, uint32_t pos, 
                       uint8_t mapq, uint32_t *cigar, int32_t n_cigar,
                       int32_t score, int32_t algo_id, int32_t algo_stage,
@@ -244,28 +244,28 @@ fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, int32_t sam_sff_tags, fm
 {
   va_list ap;
   int32_t i, sff_soft_clip = 0;
-  fmap_string_t *name=NULL, *bases=NULL, *qualities=NULL;
+  tmap_string_t *name=NULL, *bases=NULL, *qualities=NULL;
   uint32_t *cigar_tmp = NULL, cigar_tmp_allocated = 0;
-  fmap_string_t *md;
+  tmap_string_t *md;
   int32_t nm;
 
-  name = fmap_seq_get_name(seq);
-  bases = fmap_seq_get_bases(seq);
-  qualities = fmap_seq_get_qualities(seq);
+  name = tmap_seq_get_name(seq);
+  bases = tmap_seq_get_bases(seq);
+  qualities = tmap_seq_get_qualities(seq);
 
   if(1 == strand) { // reverse for the output
-      fmap_string_reverse_compliment(bases, 0);
-      fmap_string_reverse(qualities);
+      tmap_string_reverse_compliment(bases, 0);
+      tmap_string_reverse(qualities);
   }
 
-  fmap_file_fprintf(fp, "%s\t%u\t%s\t%u\t%u\t",
+  tmap_file_fprintf(fp, "%s\t%u\t%s\t%u\t%u\t",
                     name->s, (1 == strand) ? 0x10 : 0, refseq->annos[seqid].name->s,
                     pos + 1,
                     mapq);
 
   // add the soft clipping of from an SFF
   cigar_tmp = cigar;
-  if(FMAP_SEQ_TYPE_SFF == seq->type) {
+  if(TMAP_SEQ_TYPE_SFF == seq->type) {
       sff_soft_clip = seq->data.sff->gheader->key_length; // soft clip the key sequence
       if(0 < sff_soft_clip && 0 < n_cigar) {
           if(0 == strand) {  // forward strand sff soft clip
@@ -274,7 +274,7 @@ fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, int32_t sam_sff_tags, fm
               }
               else { // add a new soft clip to the front
                   cigar_tmp_allocated = 1;
-                  cigar_tmp = fmap_calloc(n_cigar+1, sizeof(uint32_t), "cigar_tmp");
+                  cigar_tmp = tmap_calloc(n_cigar+1, sizeof(uint32_t), "cigar_tmp");
                   cigar_tmp[0] = (sff_soft_clip << 4) | 4; 
                   for(i=0;i<n_cigar;i++) {
                       cigar_tmp[i+1] = cigar[i];
@@ -288,7 +288,7 @@ fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, int32_t sam_sff_tags, fm
               }
               else { // add a new soft clip to the end
                   cigar_tmp_allocated = 1;
-                  cigar_tmp = fmap_calloc(n_cigar+1, sizeof(uint32_t), "cigar_tmp");
+                  cigar_tmp = tmap_calloc(n_cigar+1, sizeof(uint32_t), "cigar_tmp");
                   cigar_tmp[n_cigar] = (sff_soft_clip << 4) | 4; 
                   for(i=0;i<n_cigar;i++) {
                       cigar_tmp[i] = cigar[i];
@@ -301,37 +301,37 @@ fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, int32_t sam_sff_tags, fm
 
   // print out the cigar
   for(i=0;i<n_cigar;i++) {
-      fmap_file_fprintf(fp, "%d%c",
+      tmap_file_fprintf(fp, "%d%c",
                         cigar_tmp[i]>>4, "MIDNSHP"[cigar_tmp[i]&0xf]);
   }
 
   // bases and qualities
-  fmap_file_fprintf(fp, "\t*\t0\t0\t%s\t%s",
+  tmap_file_fprintf(fp, "\t*\t0\t0\t%s\t%s",
                     bases->s, qualities->s);
   
   // RG and PG
-  fmap_file_fprintf(fp, "\tRG:Z:%s\tPG:Z:%s",
-                    fmap_sam_rg_id,
+  tmap_file_fprintf(fp, "\tRG:Z:%s\tPG:Z:%s",
+                    tmap_sam_rg_id,
                     PACKAGE_NAME);
 
   // MD and NM
-  md = fmap_sam_md(refseq, bases->s, seqid, pos, cigar_tmp, n_cigar, &nm);
-  fmap_file_fprintf(fp, "\tMD:Z:%s\tNM:i:%d", md->s, nm);
-  fmap_string_destroy(md);
+  md = tmap_sam_md(refseq, bases->s, seqid, pos, cigar_tmp, n_cigar, &nm);
+  tmap_file_fprintf(fp, "\tMD:Z:%s\tNM:i:%d", md->s, nm);
+  tmap_string_destroy(md);
 
   // AS
-  fmap_file_fprintf(fp, "\tAS:i:%d", score);
+  tmap_file_fprintf(fp, "\tAS:i:%d", score);
 
   // XA
   if(0 < algo_stage) {
-      fmap_file_fprintf(fp, "\tXA:Z:%s-%d", fmap_algo_id_to_name(algo_id), algo_stage);
+      tmap_file_fprintf(fp, "\tXA:Z:%s-%d", tmap_algo_id_to_name(algo_id), algo_stage);
   }
   
   // FI
-  if(FMAP_SEQ_TYPE_SFF == seq->type && 1 == sam_sff_tags) {
-      fmap_file_fprintf(fp, "\tFI:H:");
+  if(TMAP_SEQ_TYPE_SFF == seq->type && 1 == sam_sff_tags) {
+      tmap_file_fprintf(fp, "\tFI:H:");
       for(i=0;i<seq->data.sff->gheader->flow_length;i++) {
-          fmap_file_fprintf(fp, "%X%X%X%X", 
+          tmap_file_fprintf(fp, "%X%X%X%X", 
                             ((seq->data.sff->read->flowgram[i] >> 12) & 0xF),
                             ((seq->data.sff->read->flowgram[i] >> 8) & 0xF),
                             ((seq->data.sff->read->flowgram[i] >> 4) & 0xF),
@@ -342,14 +342,14 @@ fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, int32_t sam_sff_tags, fm
   // optional tags
   if(NULL != format) {
       va_start(ap, format);
-      fmap_file_vfprintf(fp, format, ap);
+      tmap_file_vfprintf(fp, format, ap);
       va_end(ap);
   }
   // new line
-  fmap_file_fprintf(fp, "\n");
+  tmap_file_fprintf(fp, "\n");
   if(1 == strand) { // reverse back
-      fmap_string_reverse_compliment(bases, 0);
-      fmap_string_reverse(qualities);
+      tmap_string_reverse_compliment(bases, 0);
+      tmap_string_reverse(qualities);
   }
 
   if(1 == cigar_tmp_allocated) {
@@ -361,7 +361,7 @@ fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, int32_t sam_sff_tags, fm
 // from bam_md.c in SAMtools
 // modified not fill in the NM tag, and not to start the reference a c->pos
 static void 
-fmap_sam_md1_core(bam1_t *b, char *ref)
+tmap_sam_md1_core(bam1_t *b, char *ref)
 {
   uint8_t *seq = bam1_seq(b);
   uint32_t *cigar = bam1_cigar(b);
@@ -451,11 +451,11 @@ fmap_sam_md1_core(bam1_t *b, char *ref)
 
 // from bam_md.c in SAMtools
 void 
-fmap_sam_md1(bam1_t *b, char *ref, int32_t len)
+tmap_sam_md1(bam1_t *b, char *ref, int32_t len)
 {
   int32_t i, j;
   char *ref_tmp = NULL;
-  ref_tmp = fmap_malloc(sizeof(char) * (1 + len), "ref_tmp");
+  ref_tmp = tmap_malloc(sizeof(char) * (1 + len), "ref_tmp");
   for(i=j=0;i<len;i++) {
       if('-' != ref[i] && 'H' != ref[i]) {
           ref_tmp[j] = ref[i];
@@ -463,27 +463,27 @@ fmap_sam_md1(bam1_t *b, char *ref, int32_t len)
       }
   }
   ref_tmp[j]='\0';
-  fmap_sam_md1_core(b, ref_tmp);
+  tmap_sam_md1_core(b, ref_tmp);
   free(ref_tmp);
 }
 
 // soft-clipping is not supported
 static inline int
-fmap_sam_get_type(char ref, char read)
+tmap_sam_get_type(char ref, char read)
 {
   if('-' == ref) { // insertion
-      return FMAP_SW_FROM_I;
+      return TMAP_SW_FROM_I;
   }
   else if('-' == read) { // deletion
-      return FMAP_SW_FROM_D;
+      return TMAP_SW_FROM_D;
   }
   else { // match/mismatch
-      return FMAP_SW_FROM_M;
+      return TMAP_SW_FROM_M;
   }
 }
 
 void
-fmap_sam_update_cigar_and_md(bam1_t *b, char *ref, char *read, int32_t len)
+tmap_sam_update_cigar_and_md(bam1_t *b, char *ref, char *read, int32_t len)
 {
   int32_t i, n_cigar, last_type;
   uint32_t *cigar;
@@ -491,7 +491,7 @@ fmap_sam_update_cigar_and_md(bam1_t *b, char *ref, char *read, int32_t len)
   int32_t soft_clip_start, soft_clip_end;
 
   if(b->data_len - b->l_aux != bam1_aux(b) - b->data) {
-      fmap_error("b->data_len - b->l_aux != bam1_aux(b) - b->data", Exit, OutOfRange);
+      tmap_error("b->data_len - b->l_aux != bam1_aux(b) - b->data", Exit, OutOfRange);
   }
 
   // keep track of soft clipping
@@ -508,10 +508,10 @@ fmap_sam_update_cigar_and_md(bam1_t *b, char *ref, char *read, int32_t len)
   cigar = NULL;
 
   // get the # of cigar operators
-  last_type = fmap_sam_get_type(ref[0], read[0]);
+  last_type = tmap_sam_get_type(ref[0], read[0]);
   n_cigar++;
   for(i=1;i<len;i++) {
-      int32_t cur_type = fmap_sam_get_type(ref[i], read[i]);
+      int32_t cur_type = tmap_sam_get_type(ref[i], read[i]);
       if(cur_type != last_type) {
           n_cigar++;
       }
@@ -533,8 +533,8 @@ fmap_sam_update_cigar_and_md(bam1_t *b, char *ref, char *read, int32_t len)
       // realloc
       if(b->m_data <= (b->data_len + diff)) {
           b->m_data = b->data_len + diff + 1;
-          fmap_roundup32(b->m_data);
-          b->data = fmap_realloc(b->data, sizeof(uint8_t) * b->m_data, "b->data");
+          tmap_roundup32(b->m_data);
+          b->data = tmap_realloc(b->data, sizeof(uint8_t) * b->m_data, "b->data");
       }
       // shift up
       for(i=b->data_len-1;b->core.l_qname<=i;i--) {
@@ -544,7 +544,7 @@ fmap_sam_update_cigar_and_md(bam1_t *b, char *ref, char *read, int32_t len)
       b->core.n_cigar = n_cigar;
   }
   if(b->data_len - b->l_aux != bam1_aux(b) - b->data) {
-      fmap_error("b->data_len - b->l_aux != bam1_aux(b) - b->data", Exit, OutOfRange);
+      tmap_error("b->data_len - b->l_aux != bam1_aux(b) - b->data", Exit, OutOfRange);
   }
 
   // create the cigar
@@ -553,10 +553,10 @@ fmap_sam_update_cigar_and_md(bam1_t *b, char *ref, char *read, int32_t len)
       cigar[i] = 0;
   }
   n_cigar = soft_clip_start; // skip over soft clipping etc.
-  last_type = fmap_sam_get_type(ref[0], read[0]);
+  last_type = tmap_sam_get_type(ref[0], read[0]);
   cigar[n_cigar] = 1u << 4 | last_type;
   for(i=1;i<len;i++) {
-      int32_t cur_type = fmap_sam_get_type(ref[i], read[i]);
+      int32_t cur_type = tmap_sam_get_type(ref[i], read[i]);
       if(cur_type == last_type) {
           // add to the cigar length
           cigar[n_cigar] += 1u << 4; 
@@ -570,6 +570,6 @@ fmap_sam_update_cigar_and_md(bam1_t *b, char *ref, char *read, int32_t len)
   }
 
   // Note: the md tag must be updated
-  fmap_sam_md1(b, ref, len);
+  tmap_sam_md1(b, ref, len);
 }
 #endif

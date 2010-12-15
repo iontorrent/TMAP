@@ -6,109 +6,109 @@
 #include <stdint.h>
 #include <unistd.h>
 
-#include "../util/fmap_error.h"
-#include "../util/fmap_alloc.h"
-#include "../util/fmap_definitions.h"
-#include "../util/fmap_progress.h"
-#include "fmap_shm.h"
+#include "../util/tmap_error.h"
+#include "../util/tmap_alloc.h"
+#include "../util/tmap_definitions.h"
+#include "../util/tmap_progress.h"
+#include "tmap_shm.h"
 
 static int32_t
-fmap_shmget(key_t key, size_t size, int32_t shmflg, int32_t create)
+tmap_shmget(key_t key, size_t size, int32_t shmflg, int32_t create)
 {
   int32_t shmid, i;
 
   if(0 == create) {
       // try a number of times before failing
-      for(i=0,shmid=-1;shmid<0 && i<FMAP_SHMGET_RETRIES-1;i++) {
+      for(i=0,shmid=-1;shmid<0 && i<TMAP_SHMGET_RETRIES-1;i++) {
           if(0 <= (shmid = shmget(key, size, shmflg))) {
               return shmid;
           }
-          fmap_progress_print("could not get shared memory, %d more %s", 
-                              FMAP_SHMGET_RETRIES-i-1,
-                              (1 != FMAP_SHMGET_RETRIES-i-1) ? "retries" : "retry");
-          fmap_progress_print("retrying in %d seconds", FMAP_SHMGET_SLEEP);
+          tmap_progress_print("could not get shared memory, %d more %s", 
+                              TMAP_SHMGET_RETRIES-i-1,
+                              (1 != TMAP_SHMGET_RETRIES-i-1) ? "retries" : "retry");
+          tmap_progress_print("retrying in %d seconds", TMAP_SHMGET_SLEEP);
           // sleep and retry
-          sleep(FMAP_SHMGET_SLEEP);
+          sleep(TMAP_SHMGET_SLEEP);
       }
   }
   if((shmid = shmget(key, size, shmflg)) < 0) {
-      fmap_error(NULL, Exit, SharedMemoryGet);
+      tmap_error(NULL, Exit, SharedMemoryGet);
   }
 
   return shmid;
 }
 
 static void *
-fmap_shmat(int32_t shmid, const void *shmaddr, int32_t shmflg)
+tmap_shmat(int32_t shmid, const void *shmaddr, int32_t shmflg)
 {
   void *shm = NULL;
 
   if((shm = shmat(shmid, shmaddr, shmflg)) == (char*)-1) {
-      fmap_error(NULL, Exit, SharedMemoryAttach);
+      tmap_error(NULL, Exit, SharedMemoryAttach);
   }
 
   return shm;
 }
 
 static int32_t
-fmap_shmctl(int32_t shmid, int32_t cmd, struct shmid_ds *buf)
+tmap_shmctl(int32_t shmid, int32_t cmd, struct shmid_ds *buf)
 {
   if(shmctl(shmid, cmd, buf) < 0) {
-      fmap_error(NULL, Exit, SharedMemoryControl);
+      tmap_error(NULL, Exit, SharedMemoryControl);
   }
 
   return 0;
 }
 
 static int32_t
-fmap_shmdt(const void *shmaddr)
+tmap_shmdt(const void *shmaddr)
 {
   if(shmdt(shmaddr) < 0) {
-      fmap_error(NULL, Exit, SharedMemoryDetach);
+      tmap_error(NULL, Exit, SharedMemoryDetach);
   }
   return 0;
 }
 
 static inline void
-fmap_shm_set_state(fmap_shm_t *shm, uint32_t state)
+tmap_shm_set_state(tmap_shm_t *shm, uint32_t state)
 {
   ((volatile uint32_t*)shm->ptr)[0] = state;
 }
 
 inline uint32_t 
-fmap_shm_get_state(fmap_shm_t *shm)
+tmap_shm_get_state(tmap_shm_t *shm)
 {
   return ((volatile uint32_t*)shm->ptr)[0];
 }
 
 inline void
-fmap_shm_set_not_ready(fmap_shm_t *shm)
+tmap_shm_set_not_ready(tmap_shm_t *shm)
 {
-  fmap_shm_set_state(shm, FMAP_SHM_NOT_READY);
+  tmap_shm_set_state(shm, TMAP_SHM_NOT_READY);
 }
 
 inline void
-fmap_shm_set_ready(fmap_shm_t *shm)
+tmap_shm_set_ready(tmap_shm_t *shm)
 {
-  fmap_shm_set_state(shm, FMAP_SHM_READY);
+  tmap_shm_set_state(shm, TMAP_SHM_READY);
 }
 
 inline void
-fmap_shm_set_dead(fmap_shm_t *shm)
+tmap_shm_set_dead(tmap_shm_t *shm)
 {
-  fmap_shm_set_state(shm, FMAP_SHM_DEAD);
+  tmap_shm_set_state(shm, TMAP_SHM_DEAD);
 }
 
 static inline uint32_t 
-fmap_shm_get_listing(fmap_shm_t *shm)
+tmap_shm_get_listing(tmap_shm_t *shm)
 {
   return ((volatile uint32_t*)shm->ptr)[1];
 }
 
 inline uint32_t
-fmap_shm_listing_exists(fmap_shm_t *shm, uint32_t listing)
+tmap_shm_listing_exists(tmap_shm_t *shm, uint32_t listing)
 {
-  if(listing == (listing & fmap_shm_get_listing(shm))) {
+  if(listing == (listing & tmap_shm_get_listing(shm))) {
       return 1;
   }
   else {
@@ -117,44 +117,44 @@ fmap_shm_listing_exists(fmap_shm_t *shm, uint32_t listing)
 }
 
 inline void
-fmap_shm_add_listing(fmap_shm_t *shm, uint32_t listing, size_t size)
+tmap_shm_add_listing(tmap_shm_t *shm, uint32_t listing, size_t size)
 {
   ((volatile uint32_t*)shm->ptr)[1] |= listing;
-  ((size_t*)(((volatile uint32_t*)shm->ptr) + 2))[fmap_log2(listing)] = size;
+  ((size_t*)(((volatile uint32_t*)shm->ptr) + 2))[tmap_log2(listing)] = size;
 }
 
 inline size_t
-fmap_shm_get_listing_bytes(fmap_shm_t *shm, uint32_t listing)
+tmap_shm_get_listing_bytes(tmap_shm_t *shm, uint32_t listing)
 {
   int32_t i;
   size_t s = 0;
 
-  if(0 == fmap_shm_listing_exists(shm, listing)) return SIZE_MAX;
+  if(0 == tmap_shm_listing_exists(shm, listing)) return SIZE_MAX;
 
   for(i=1;i<listing;i<<=1) {
-      if(1 == fmap_shm_listing_exists(shm, i)) {
-          s += ((size_t*)(((volatile uint32_t*)shm->ptr) + 2))[fmap_log2(i)];
+      if(1 == tmap_shm_listing_exists(shm, i)) {
+          s += ((size_t*)(((volatile uint32_t*)shm->ptr) + 2))[tmap_log2(i)];
       }
   }
   return s;
 }
 
 inline uint8_t *
-fmap_shm_get_buffer(fmap_shm_t *shm, uint32_t listing)
+tmap_shm_get_buffer(tmap_shm_t *shm, uint32_t listing)
 {
-  size_t s = fmap_shm_get_listing_bytes(shm, listing);
+  size_t s = tmap_shm_get_listing_bytes(shm, listing);
   if(SIZE_MAX == s) return NULL;
   return (uint8_t*)(((volatile uint8_t*)(shm->buf)) + s);
 }
 
-fmap_shm_t *
-fmap_shm_init(key_t key, size_t size, int32_t create)
+tmap_shm_t *
+tmap_shm_init(key_t key, size_t size, int32_t create)
 {
-  fmap_shm_t *shm = NULL;
+  tmap_shm_t *shm = NULL;
   int32_t i, shmflg = 0;
   struct shmid_ds buf;
 
-  shm = fmap_calloc(1, sizeof(fmap_shm_t), "shm");
+  shm = tmap_calloc(1, sizeof(tmap_shm_t), "shm");
   shm->key = key;
   shm->size = size;
 
@@ -171,38 +171,38 @@ fmap_shm_init(key_t key, size_t size, int32_t create)
   }
 
   // get the shared memory id
-  shm->shmid = fmap_shmget(shm->key, shm->size, shmflg, create);
+  shm->shmid = tmap_shmget(shm->key, shm->size, shmflg, create);
 
   // attach the shared memory
-  shm->ptr = fmap_shmat(shm->shmid, NULL, 0);
+  shm->ptr = tmap_shmat(shm->shmid, NULL, 0);
   shm->buf = ((char*)shm->ptr);
   shm->buf += sizeof(uint32_t); // synchronization 
   shm->buf += sizeof(uint32_t) + 32*sizeof(size_t); // listings
 
-  fmap_shmctl(shm->shmid, IPC_STAT, &buf);
+  tmap_shmctl(shm->shmid, IPC_STAT, &buf);
   if(1 == create) {
       // check that the current process created the shared memory
-      if(buf.shm_cpid != getpid() || FMAP_SHM_READY == fmap_shm_get_state(shm)) {
-          fmap_error("shared memory was not created by the current process", Exit, OutOfRange);
+      if(buf.shm_cpid != getpid() || TMAP_SHM_READY == tmap_shm_get_state(shm)) {
+          tmap_error("shared memory was not created by the current process", Exit, OutOfRange);
       }
-      fmap_shm_set_not_ready(shm);
+      tmap_shm_set_not_ready(shm);
       if(buf.shm_segsz != shm->size) {
-          fmap_error("shared memory size does not match the expected size", Exit, OutOfRange);
+          tmap_error("shared memory size does not match the expected size", Exit, OutOfRange);
       }
   }
   else {
       // try a number of times before failing
-      for(i=0;i<FMAP_SHMGET_RETRIES;i++) {
-          if(FMAP_SHM_READY == fmap_shm_get_state(shm)) {
+      for(i=0;i<TMAP_SHMGET_RETRIES;i++) {
+          if(TMAP_SHM_READY == tmap_shm_get_state(shm)) {
               break;
           }
-          fmap_progress_print("shared memory not ready, %d more retries", FMAP_SHMGET_RETRIES-i-1);
-          fmap_progress_print("retrying in %d seconds", FMAP_SHMGET_SLEEP);
+          tmap_progress_print("shared memory not ready, %d more retries", TMAP_SHMGET_RETRIES-i-1);
+          tmap_progress_print("retrying in %d seconds", TMAP_SHMGET_SLEEP);
           // sleep and retry
-          sleep(FMAP_SHMGET_SLEEP);
+          sleep(TMAP_SHMGET_SLEEP);
       }
-      if(FMAP_SHMGET_RETRIES == i) {
-          fmap_error("shared memory did not become available", Exit, SharedMemoryGet);
+      if(TMAP_SHMGET_RETRIES == i) {
+          tmap_error("shared memory did not become available", Exit, SharedMemoryGet);
       }
       
       // set the size
@@ -213,16 +213,16 @@ fmap_shm_init(key_t key, size_t size, int32_t create)
 }
 
 void
-fmap_shm_destroy(fmap_shm_t *shm, int32_t force)
+tmap_shm_destroy(tmap_shm_t *shm, int32_t force)
 {
   struct shmid_ds buf;
 
   // detach the shared memory
-  fmap_shmdt(shm->ptr);
+  tmap_shmdt(shm->ptr);
 
-  fmap_shmctl(shm->shmid, IPC_STAT, &buf);
+  tmap_shmctl(shm->shmid, IPC_STAT, &buf);
   if(1 == force || 1 == shm->creator) { // delete the shared memory
-      fmap_shmctl(shm->shmid, IPC_RMID, NULL);
+      tmap_shmctl(shm->shmid, IPC_RMID, NULL);
   }
   free(shm);
 }

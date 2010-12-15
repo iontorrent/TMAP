@@ -3,47 +3,47 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "../util/fmap_error.h"
-#include "../util/fmap_alloc.h"
-#include "../util/fmap_progress.h"
-#include "../util/fmap_definitions.h"
-#include "../io/fmap_file.h"
-#include "fmap_bwt.h"
-#include "fmap_bwt_gen.h"
-#include "fmap_sa.h"
+#include "../util/tmap_error.h"
+#include "../util/tmap_alloc.h"
+#include "../util/tmap_progress.h"
+#include "../util/tmap_definitions.h"
+#include "../io/tmap_file.h"
+#include "tmap_bwt.h"
+#include "tmap_bwt_gen.h"
+#include "tmap_sa.h"
 
-fmap_sa_t *
-fmap_sa_read(const char *fn_fasta, uint32_t is_rev)
+tmap_sa_t *
+tmap_sa_read(const char *fn_fasta, uint32_t is_rev)
 {
   char *fn_sa = NULL;
-  fmap_file_t *fp_sa = NULL;
-  fmap_sa_t *sa = NULL;
+  tmap_file_t *fp_sa = NULL;
+  tmap_sa_t *sa = NULL;
 
-  fn_sa = fmap_get_file_name(fn_fasta, (0 == is_rev) ? FMAP_SA_FILE : FMAP_REV_SA_FILE);
-  fp_sa = fmap_file_fopen(fn_sa, "rb", (0 == is_rev) ? FMAP_SA_COMPRESSION : FMAP_REV_SA_COMPRESSION);
+  fn_sa = tmap_get_file_name(fn_fasta, (0 == is_rev) ? TMAP_SA_FILE : TMAP_REV_SA_FILE);
+  fp_sa = tmap_file_fopen(fn_sa, "rb", (0 == is_rev) ? TMAP_SA_COMPRESSION : TMAP_REV_SA_COMPRESSION);
 
-  sa = fmap_calloc(1, sizeof(fmap_sa_t), "sa");
+  sa = tmap_calloc(1, sizeof(tmap_sa_t), "sa");
 
-  if(1 != fmap_file_fread(&sa->primary, sizeof(uint32_t), 1, fp_sa)
-     || 1 != fmap_file_fread(&sa->sa_intv, sizeof(uint32_t), 1, fp_sa)
-     || 1 != fmap_file_fread(&sa->seq_len, sizeof(uint32_t), 1, fp_sa)
-     || 1 != fmap_file_fread(&sa->is_rev, sizeof(uint32_t), 1, fp_sa)) {
-      fmap_error(NULL, Exit, ReadFileError);
+  if(1 != tmap_file_fread(&sa->primary, sizeof(uint32_t), 1, fp_sa)
+     || 1 != tmap_file_fread(&sa->sa_intv, sizeof(uint32_t), 1, fp_sa)
+     || 1 != tmap_file_fread(&sa->seq_len, sizeof(uint32_t), 1, fp_sa)
+     || 1 != tmap_file_fread(&sa->is_rev, sizeof(uint32_t), 1, fp_sa)) {
+      tmap_error(NULL, Exit, ReadFileError);
   }
 
   if(is_rev != sa->is_rev) {
-      fmap_error("is_rev != sa->is_rev", Exit, OutOfRange);
+      tmap_error("is_rev != sa->is_rev", Exit, OutOfRange);
   }
 
   sa->n_sa = (sa->seq_len + sa->sa_intv) / sa->sa_intv;
-  sa->sa = fmap_calloc(sa->n_sa, sizeof(uint32_t), "sa->sa");
+  sa->sa = tmap_calloc(sa->n_sa, sizeof(uint32_t), "sa->sa");
   sa->sa[0] = -1;
 
-  if(sa->n_sa-1 != fmap_file_fread(sa->sa + 1, sizeof(uint32_t), sa->n_sa - 1, fp_sa)) {
-      fmap_error(NULL, Exit, ReadFileError);
+  if(sa->n_sa-1 != tmap_file_fread(sa->sa + 1, sizeof(uint32_t), sa->n_sa - 1, fp_sa)) {
+      tmap_error(NULL, Exit, ReadFileError);
   }
 
-  fmap_file_fclose(fp_sa);
+  tmap_file_fclose(fp_sa);
   free(fn_sa);
 
   sa->is_shm = 0;
@@ -52,32 +52,32 @@ fmap_sa_read(const char *fn_fasta, uint32_t is_rev)
 }
 
 void 
-fmap_sa_write(const char *fn_fasta, fmap_sa_t *sa, uint32_t is_rev)
+tmap_sa_write(const char *fn_fasta, tmap_sa_t *sa, uint32_t is_rev)
 {
   char *fn_sa = NULL;
-  fmap_file_t *fp_sa = NULL;
+  tmap_file_t *fp_sa = NULL;
   
   if(is_rev != sa->is_rev) {
-      fmap_error("is_rev != sa->is_rev", Exit, OutOfRange);
+      tmap_error("is_rev != sa->is_rev", Exit, OutOfRange);
   }
 
-  fn_sa = fmap_get_file_name(fn_fasta, (0 == is_rev) ? FMAP_SA_FILE : FMAP_REV_SA_FILE);
-  fp_sa = fmap_file_fopen(fn_sa, "wb", (0 == is_rev) ? FMAP_SA_COMPRESSION : FMAP_REV_SA_COMPRESSION);
+  fn_sa = tmap_get_file_name(fn_fasta, (0 == is_rev) ? TMAP_SA_FILE : TMAP_REV_SA_FILE);
+  fp_sa = tmap_file_fopen(fn_sa, "wb", (0 == is_rev) ? TMAP_SA_COMPRESSION : TMAP_REV_SA_COMPRESSION);
 
-  if(1 != fmap_file_fwrite(&sa->primary, sizeof(uint32_t), 1, fp_sa)
-     || 1 != fmap_file_fwrite(&sa->sa_intv, sizeof(uint32_t), 1, fp_sa) 
-     || 1 != fmap_file_fwrite(&sa->seq_len, sizeof(uint32_t), 1, fp_sa)
-     || 1 != fmap_file_fwrite(&sa->is_rev, sizeof(uint32_t), 1, fp_sa)
-     || sa->n_sa-1 != fmap_file_fwrite(sa->sa+1, sizeof(uint32_t), sa->n_sa-1, fp_sa)) {
-      fmap_error(NULL, Exit, WriteFileError);
+  if(1 != tmap_file_fwrite(&sa->primary, sizeof(uint32_t), 1, fp_sa)
+     || 1 != tmap_file_fwrite(&sa->sa_intv, sizeof(uint32_t), 1, fp_sa) 
+     || 1 != tmap_file_fwrite(&sa->seq_len, sizeof(uint32_t), 1, fp_sa)
+     || 1 != tmap_file_fwrite(&sa->is_rev, sizeof(uint32_t), 1, fp_sa)
+     || sa->n_sa-1 != tmap_file_fwrite(sa->sa+1, sizeof(uint32_t), sa->n_sa-1, fp_sa)) {
+      tmap_error(NULL, Exit, WriteFileError);
   }
 
-  fmap_file_fclose(fp_sa);
+  tmap_file_fclose(fp_sa);
   free(fn_sa);
 }
 
 size_t
-fmap_sa_shm_num_bytes(fmap_sa_t *sa)
+tmap_sa_shm_num_bytes(tmap_sa_t *sa)
 {
   // returns the number of bytes to allocate for shared memory
   size_t n = 0;
@@ -93,27 +93,27 @@ fmap_sa_shm_num_bytes(fmap_sa_t *sa)
 }
 
 size_t
-fmap_sa_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev)
+tmap_sa_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev)
 {
   size_t n = 0;
   char *fn_sa = NULL;
-  fmap_file_t *fp_sa = NULL;
-  fmap_sa_t *sa = NULL;
+  tmap_file_t *fp_sa = NULL;
+  tmap_sa_t *sa = NULL;
 
-  fn_sa = fmap_get_file_name(fn_fasta, (0 == is_rev) ? FMAP_SA_FILE : FMAP_REV_SA_FILE);
-  fp_sa = fmap_file_fopen(fn_sa, "rb", (0 == is_rev) ? FMAP_SA_COMPRESSION : FMAP_REV_SA_COMPRESSION);
+  fn_sa = tmap_get_file_name(fn_fasta, (0 == is_rev) ? TMAP_SA_FILE : TMAP_REV_SA_FILE);
+  fp_sa = tmap_file_fopen(fn_sa, "rb", (0 == is_rev) ? TMAP_SA_COMPRESSION : TMAP_REV_SA_COMPRESSION);
 
-  sa = fmap_calloc(1, sizeof(fmap_sa_t), "sa");
+  sa = tmap_calloc(1, sizeof(tmap_sa_t), "sa");
 
-  if(1 != fmap_file_fread(&sa->primary, sizeof(uint32_t), 1, fp_sa)
-     || 1 != fmap_file_fread(&sa->sa_intv, sizeof(uint32_t), 1, fp_sa)
-     || 1 != fmap_file_fread(&sa->seq_len, sizeof(uint32_t), 1, fp_sa)
-     || 1 != fmap_file_fread(&sa->is_rev, sizeof(uint32_t), 1, fp_sa)) {
-      fmap_error(NULL, Exit, ReadFileError);
+  if(1 != tmap_file_fread(&sa->primary, sizeof(uint32_t), 1, fp_sa)
+     || 1 != tmap_file_fread(&sa->sa_intv, sizeof(uint32_t), 1, fp_sa)
+     || 1 != tmap_file_fread(&sa->seq_len, sizeof(uint32_t), 1, fp_sa)
+     || 1 != tmap_file_fread(&sa->is_rev, sizeof(uint32_t), 1, fp_sa)) {
+      tmap_error(NULL, Exit, ReadFileError);
   }
 
   if(is_rev != sa->is_rev) {
-      fmap_error("is_rev != sa->is_rev", Exit, OutOfRange);
+      tmap_error("is_rev != sa->is_rev", Exit, OutOfRange);
   }
 
   sa->n_sa = (sa->seq_len + sa->sa_intv) / sa->sa_intv;
@@ -121,21 +121,21 @@ fmap_sa_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev)
   // No need to read in sa->sa
   sa->sa = NULL;
 
-  fmap_file_fclose(fp_sa);
+  tmap_file_fclose(fp_sa);
   free(fn_sa);
 
   sa->is_shm = 0;
 
   // get the number of bytes
-  n = fmap_sa_shm_num_bytes(sa);
+  n = tmap_sa_shm_num_bytes(sa);
 
-  fmap_sa_destroy(sa);
+  tmap_sa_destroy(sa);
 
   return n;
 }
 
 uint8_t *
-fmap_sa_shm_pack(fmap_sa_t *sa, uint8_t *buf)
+tmap_sa_shm_pack(tmap_sa_t *sa, uint8_t *buf)
 {
   // fixed length data
   memcpy(buf, &sa->primary, sizeof(uint32_t)); buf += sizeof(uint32_t);
@@ -149,14 +149,14 @@ fmap_sa_shm_pack(fmap_sa_t *sa, uint8_t *buf)
   return buf;
 }
 
-fmap_sa_t *
-fmap_sa_shm_unpack(uint8_t *buf)
+tmap_sa_t *
+tmap_sa_shm_unpack(uint8_t *buf)
 {
-  fmap_sa_t *sa = NULL;
+  tmap_sa_t *sa = NULL;
 
   if(NULL == buf) return NULL;
 
-  sa = fmap_calloc(1, sizeof(fmap_sa_t), "sa");
+  sa = tmap_calloc(1, sizeof(tmap_sa_t), "sa");
 
   // fixed length data
   memcpy(&sa->primary, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
@@ -174,7 +174,7 @@ fmap_sa_shm_unpack(uint8_t *buf)
 }
 
 void 
-fmap_sa_destroy(fmap_sa_t *sa)
+tmap_sa_destroy(tmap_sa_t *sa)
 {
   if(1 == sa->is_shm) {
   free(sa);
@@ -186,12 +186,12 @@ fmap_sa_destroy(fmap_sa_t *sa)
 }
 
 uint32_t 
-fmap_sa_pac_pos(const fmap_sa_t *sa, const fmap_bwt_t *bwt, uint32_t k)
+tmap_sa_pac_pos(const tmap_sa_t *sa, const tmap_bwt_t *bwt, uint32_t k)
 {
   uint32_t s = 0;
   while (k % sa->sa_intv != 0) {
       ++s;
-      k = fmap_bwt_invPsi(bwt, k);
+      k = tmap_bwt_invPsi(bwt, k);
   }
   /* without setting bwt->sa[0] = -1, the following line should be
      changed to (s + bwt->sa[k/bwt->sa_intv]) % (bwt->seq_len + 1)
@@ -200,24 +200,24 @@ fmap_sa_pac_pos(const fmap_sa_t *sa, const fmap_bwt_t *bwt, uint32_t k)
 }
 
 void
-fmap_sa_bwt2sa(const char *fn_fasta, uint32_t intv)
+tmap_sa_bwt2sa(const char *fn_fasta, uint32_t intv)
 {
   int64_t isa, s, i; // S(isa) = sa
-  fmap_bwt_t *bwt = NULL;
-  fmap_sa_t *sa = NULL;
+  tmap_bwt_t *bwt = NULL;
+  tmap_sa_t *sa = NULL;
   uint32_t is_rev;
 
   for(is_rev=0;is_rev<=1;is_rev++) {
       if(is_rev == 0) {
-          fmap_progress_print("constructing the SA from the BWT string");
+          tmap_progress_print("constructing the SA from the BWT string");
       }
       else {
-          fmap_progress_print("constructing the reverse SA from the reverse BWT string");
+          tmap_progress_print("constructing the reverse SA from the reverse BWT string");
       }
 
-      bwt = fmap_bwt_read(fn_fasta, is_rev);
+      bwt = tmap_bwt_read(fn_fasta, is_rev);
 
-      sa = fmap_calloc(1, sizeof(fmap_sa_t), "sa");
+      sa = tmap_calloc(1, sizeof(tmap_sa_t), "sa");
 
       sa->primary = bwt->primary;
       sa->sa_intv = intv;
@@ -226,28 +226,28 @@ fmap_sa_bwt2sa(const char *fn_fasta, uint32_t intv)
       sa->n_sa = (bwt->seq_len + intv) / intv;
 
       // calculate SA value
-      sa->sa = fmap_calloc(sa->n_sa, sizeof(uint32_t), "sa->sa");
+      sa->sa = tmap_calloc(sa->n_sa, sizeof(uint32_t), "sa->sa");
       isa = 0; s = bwt->seq_len;
       for(i = 0; i < bwt->seq_len; ++i) {
           if(isa % intv == 0) sa->sa[isa/intv] = s;
           --s;
-          isa = fmap_bwt_invPsi(bwt, isa);
+          isa = tmap_bwt_invPsi(bwt, isa);
       }
       if(isa % intv == 0) sa->sa[isa/intv] = s;
       sa->sa[0] = (uint32_t)-1; // before this line, bwt->sa[0] = bwt->seq_len
 
-      fmap_sa_write(fn_fasta, sa, is_rev);
+      tmap_sa_write(fn_fasta, sa, is_rev);
 
-      fmap_bwt_destroy(bwt);
-      fmap_sa_destroy(sa);
+      tmap_bwt_destroy(bwt);
+      tmap_sa_destroy(sa);
       sa=NULL;
       bwt=NULL;
 
       if(is_rev == 0) {
-          fmap_progress_print2("constructed the SA from the BWT string");
+          tmap_progress_print2("constructed the SA from the BWT string");
       }
       else {
-          fmap_progress_print2("constructed the reverse SA from the reverse BWT string");
+          tmap_progress_print2("constructed the reverse SA from the reverse BWT string");
       }
   }
 }
@@ -836,7 +836,7 @@ induceSA(const unsigned char *T, int32_t *SA, int32_t *C, int32_t *B, int32_t n,
  * space (excluding T and SA) of at most 2n+O(1) for a constant alphabet
  */
 static int32_t 
-fmap_sa_sais_main(const unsigned char *T, int32_t *SA, int32_t fs, int32_t n, int32_t k, int32_t cs)
+tmap_sa_sais_main(const unsigned char *T, int32_t *SA, int32_t fs, int32_t n, int32_t k, int32_t cs)
 {
   int32_t *C, *B, *RA;
   int32_t  i, j, c, m, p, q, plen, qlen, name;
@@ -848,7 +848,7 @@ fmap_sa_sais_main(const unsigned char *T, int32_t *SA, int32_t fs, int32_t n, in
   if (k <= fs) {
       C = SA + n;
       B = (k <= (fs - k)) ? C + k : C;
-  } else if ((C = B = fmap_malloc(k * sizeof(int32_t), "C = B =")) == NULL) return -2;
+  } else if ((C = B = tmap_malloc(k * sizeof(int32_t), "C = B =")) == NULL) return -2;
   getCounts(T, C, n, k, cs);
   getBuckets(C, B, k, 1);	/* find ends of buckets */
   for (i = 0; i < n; ++i) SA[i] = 0;
@@ -895,7 +895,7 @@ fmap_sa_sais_main(const unsigned char *T, int32_t *SA, int32_t fs, int32_t n, in
       for (i = n - 1, j = m - 1; m <= i; --i) {
           if (SA[i] != 0) RA[j--] = SA[i] - 1;
       }
-      if (fmap_sa_sais_main((unsigned char *) RA, SA, fs + n - m * 2, m, name, sizeof(int)) != 0) return -2;
+      if (tmap_sa_sais_main((unsigned char *) RA, SA, fs + n - m * 2, m, name, sizeof(int)) != 0) return -2;
       for (i = n - 2, j = m - 1, c = 0, c1 = chr(n - 1); 0 <= i; --i, c1 = c0) {
           if ((c0 = chr(i)) < (c1 + c)) c = 1;
           else if (c != 0) RA[j--] = i + 1, c = 0; /* get p1 */
@@ -906,7 +906,7 @@ fmap_sa_sais_main(const unsigned char *T, int32_t *SA, int32_t fs, int32_t n, in
   if (k <= fs) {
       C = SA + n;
       B = (k <= (fs - k)) ? C + k : C;
-  } else if ((C = B = (int32_t *) fmap_malloc(k * sizeof(int32_t), "C = B =")) == NULL) return -2;
+  } else if ((C = B = (int32_t *) tmap_malloc(k * sizeof(int32_t), "C = B =")) == NULL) return -2;
   /* put all left-most S characters into their buckets */
   getCounts(T, C, n, k, cs);
   getBuckets(C, B, k, 1);	/* find ends of buckets */
@@ -921,7 +921,7 @@ fmap_sa_sais_main(const unsigned char *T, int32_t *SA, int32_t fs, int32_t n, in
 }
 
 uint32_t 
-fmap_sa_gen_short(const uint8_t *T, int32_t *SA, uint32_t n)
+tmap_sa_gen_short(const uint8_t *T, int32_t *SA, uint32_t n)
 {
   if ((T == NULL) || (SA == NULL) || (n < 0)) return -1;
   SA[0] = n;
@@ -929,31 +929,31 @@ fmap_sa_gen_short(const uint8_t *T, int32_t *SA, uint32_t n)
       if (n == 1) SA[1] = 0;
       return 0;
   }
-  return fmap_sa_sais_main(T, SA+1, 0, n, 256, 1);
+  return tmap_sa_sais_main(T, SA+1, 0, n, 256, 1);
 }
 
 int
-fmap_sa_bwt2sa_main(int argc, char *argv[])
+tmap_sa_bwt2sa_main(int argc, char *argv[])
 {
-  int c, intv = FMAP_SA_INTERVAL, help=0;
+  int c, intv = TMAP_SA_INTERVAL, help=0;
 
   while((c = getopt(argc, argv, "i:vh")) >= 0) {
       switch(c) {
         case 'i': intv = atoi(optarg); break;
-        case 'v': fmap_progress_set_verbosity(1); break;
+        case 'v': tmap_progress_set_verbosity(1); break;
         case 'h': help = 1; break;
         default: return 1;
       }
   }
   if(1 != argc - optind || 1 == help) {
-      fmap_file_fprintf(fmap_file_stderr, "Usage: %s %s [-i INT -vh] <in.fasta>\n", PACKAGE, argv[0]);
+      tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [-i INT -vh] <in.fasta>\n", PACKAGE, argv[0]);
       return 1;
   }
   if(0 < intv && 0 != (intv % 2)) {
-      fmap_error("option -i out of range", Exit, CommandLineArgument);
+      tmap_error("option -i out of range", Exit, CommandLineArgument);
   }
 
-  fmap_sa_bwt2sa(argv[optind], intv);
+  tmap_sa_bwt2sa(argv[optind], intv);
 
   return 0;
 }

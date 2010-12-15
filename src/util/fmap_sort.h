@@ -23,12 +23,12 @@
    SOFTWARE.
    */
 
-#ifndef FMAP_SORT_H_
-#define FMAP_SORT_H_
+#ifndef TMAP_SORT_H_
+#define TMAP_SORT_H_
 
 #include <stdlib.h>
 #include <string.h>
-#include "fmap_alloc.h"
+#include "tmap_alloc.h"
 
 /*! 
   Generic Sort Library
@@ -44,28 +44,28 @@ typedef struct {
     void *left;
     void *right;
     int depth;
-} fmap_sort_isort_stack_t;
+} tmap_sort_isort_stack_t;
 
 /*! 
   @param  type_t  the type of values [type]
   @param  a       the first variable
   @param  b       the second variable
 */
-#define FMAP_SORT_SWAP(type_t, a, b) { register type_t t=(a); (a)=(b); (b)=t; }
+#define TMAP_SORT_SWAP(type_t, a, b) { register type_t t=(a); (a)=(b); (b)=t; }
 /*! 
   initializes sort functions with the given name, type, and comparison function 
   @param  name       the name of sort functions [symbol]
   @param  type_t     the type of values [type]
   @param  __sort_lt  the comparison function
   */
-#define FMAP_SORT_INIT(name, type_t, __sort_lt) \
-  void fmap_sort_mergesort_##name(size_t n, type_t array[], type_t temp[]) \
+#define TMAP_SORT_INIT(name, type_t, __sort_lt) \
+  void tmap_sort_mergesort_##name(size_t n, type_t array[], type_t temp[]) \
 { \
   type_t *a2[2], *a, *b; \
   int curr, shift; \
   \
   a2[0] = array; \
-  a2[1] = temp? temp : (type_t*)fmap_malloc(sizeof(type_t) * n, "a2[1]"); \
+  a2[1] = temp? temp : (type_t*)tmap_malloc(sizeof(type_t) * n, "a2[1]"); \
   for (curr = 0, shift = 0; (1ul<<shift) < n; ++shift) { \
       a = a2[curr]; b = a2[1-curr]; \
       if (shift == 0) { \
@@ -107,7 +107,7 @@ typedef struct {
   } \
   if (temp == 0) free(a2[1]); \
 } \
-void fmap_sort_heapadjust_##name(size_t i, size_t n, type_t l[]) \
+void tmap_sort_heapadjust_##name(size_t i, size_t n, type_t l[]) \
 { \
   size_t k = i; \
   type_t tmp = l[i]; \
@@ -118,21 +118,21 @@ void fmap_sort_heapadjust_##name(size_t i, size_t n, type_t l[]) \
   } \
   l[i] = tmp; \
 } \
-void fmap_sort_heapmake_##name(size_t lsize, type_t l[]) \
+void tmap_sort_heapmake_##name(size_t lsize, type_t l[]) \
 { \
   size_t i; \
   for (i = (lsize >> 1) - 1; i != (size_t)(-1); --i) \
-  fmap_sort_heapadjust_##name(i, lsize, l); \
+  tmap_sort_heapadjust_##name(i, lsize, l); \
 } \
-void fmap_sort_heapsort_##name(size_t lsize, type_t l[]) \
+void tmap_sort_heapsort_##name(size_t lsize, type_t l[]) \
 { \
   size_t i; \
   for (i = lsize - 1; i > 0; --i) { \
       type_t tmp; \
-      tmp = *l; *l = l[i]; l[i] = tmp; fmap_sort_heapadjust_##name(0, i, l); \
+      tmp = *l; *l = l[i]; l[i] = tmp; tmap_sort_heapadjust_##name(0, i, l); \
   } \
 } \
-inline void __fmap_sort_insertsort_##name(type_t *s, type_t *t) \
+inline void __tmap_sort_insertsort_##name(type_t *s, type_t *t) \
 { \
   type_t *i, *j, swap_tmp; \
   for (i = s + 1; i < t; ++i) \
@@ -140,7 +140,7 @@ inline void __fmap_sort_insertsort_##name(type_t *s, type_t *t) \
       swap_tmp = *j; *j = *(j-1); *(j-1) = swap_tmp; \
   } \
 } \
-void fmap_sort_combsort_##name(size_t n, type_t a[]) \
+void tmap_sort_combsort_##name(size_t n, type_t a[]) \
 { \
   const double shrink_factor = 1.2473309501039786540366528676643; \
   int do_swap; \
@@ -160,12 +160,12 @@ void fmap_sort_combsort_##name(size_t n, type_t a[]) \
           } \
       } \
   } while (do_swap || gap > 2); \
-  if (gap != 1) __fmap_sort_insertsort_##name(a, a + n); \
+  if (gap != 1) __tmap_sort_insertsort_##name(a, a + n); \
 } \
-void fmap_sort_introsort_##name(size_t n, type_t a[]) \
+void tmap_sort_introsort_##name(size_t n, type_t a[]) \
 { \
   int d; \
-  fmap_sort_isort_stack_t *top, *stack; \
+  tmap_sort_isort_stack_t *top, *stack; \
   type_t rp, swap_tmp; \
   type_t *s, *t, *i, *j, *k; \
   \
@@ -175,12 +175,12 @@ void fmap_sort_introsort_##name(size_t n, type_t a[]) \
       return; \
   } \
   for (d = 2; 1ul<<d < n; ++d); \
-  stack = (fmap_sort_isort_stack_t*)fmap_malloc(sizeof(fmap_sort_isort_stack_t) * ((sizeof(size_t)*d)+2), "stack"); \
+  stack = (tmap_sort_isort_stack_t*)tmap_malloc(sizeof(tmap_sort_isort_stack_t) * ((sizeof(size_t)*d)+2), "stack"); \
   top = stack; s = a; t = a + (n-1); d <<= 1; \
   while (1) { \
       if (s < t) { \
           if (--d == 0) { \
-              fmap_sort_combsort_##name(t - s + 1, s); \
+              tmap_sort_combsort_##name(t - s + 1, s); \
               t = s; \
               continue; \
           } \
@@ -207,7 +207,7 @@ void fmap_sort_introsort_##name(size_t n, type_t a[]) \
       } else { \
           if (top == stack) { \
               free(stack); \
-              __fmap_sort_insertsort_##name(a, a+n); \
+              __tmap_sort_insertsort_##name(a, a+n); \
               return; \
           } else { --top; s = (type_t*)top->left; t = (type_t*)top->right; d = top->depth; } \
       } \
@@ -215,29 +215,29 @@ void fmap_sort_introsort_##name(size_t n, type_t a[]) \
 } \
 /* This function is adapted from: http://ndevilla.free.fr/median/ */ \
 /* 0 <= kk < n */ \
-type_t fmap_sort_small_##name(size_t n, type_t arr[], size_t kk) \
+type_t tmap_sort_small_##name(size_t n, type_t arr[], size_t kk) \
 { \
   type_t *low, *high, *k, *ll, *hh, *mid; \
   low = arr; high = arr + n - 1; k = arr + kk; \
   for (;;) { \
       if (high <= low) return *k; \
       if (high == low + 1) { \
-          if (__sort_lt(*high, *low)) FMAP_SORT_SWAP(type_t, *low, *high); \
+          if (__sort_lt(*high, *low)) TMAP_SORT_SWAP(type_t, *low, *high); \
           return *k; \
       } \
       mid = low + (high - low) / 2; \
-      if (__sort_lt(*high, *mid)) FMAP_SORT_SWAP(type_t, *mid, *high); \
-      if (__sort_lt(*high, *low)) FMAP_SORT_SWAP(type_t, *low, *high); \
-      if (__sort_lt(*low, *mid)) FMAP_SORT_SWAP(type_t, *mid, *low); \
-      FMAP_SORT_SWAP(type_t, *mid, *(low+1)); \
+      if (__sort_lt(*high, *mid)) TMAP_SORT_SWAP(type_t, *mid, *high); \
+      if (__sort_lt(*high, *low)) TMAP_SORT_SWAP(type_t, *low, *high); \
+      if (__sort_lt(*low, *mid)) TMAP_SORT_SWAP(type_t, *mid, *low); \
+      TMAP_SORT_SWAP(type_t, *mid, *(low+1)); \
       ll = low + 1; hh = high; \
       for (;;) { \
           do ++ll; while (__sort_lt(*ll, *low)); \
           do --hh; while (__sort_lt(*low, *hh)); \
           if (hh < ll) break; \
-          FMAP_SORT_SWAP(type_t, *ll, *hh); \
+          TMAP_SORT_SWAP(type_t, *ll, *hh); \
       } \
-      FMAP_SORT_SWAP(type_t, *low, *hh); \
+      TMAP_SORT_SWAP(type_t, *low, *hh); \
       if (hh <= k) low = ll; \
       if (hh >= k) high = hh - 1; \
   } \
@@ -250,30 +250,30 @@ type_t fmap_sort_small_##name(size_t n, type_t arr[], size_t kk) \
   @param  a     the array of elements to be sorted
   @param  t     a temporary array of elements of length n, or NULL
   */
-#define fmap_sort_mergesort(name, n, a, t) fmap_sort_mergesort_##name(n, a, t)
+#define tmap_sort_mergesort(name, n, a, t) tmap_sort_mergesort_##name(n, a, t)
 /*! 
   performs introsort on the given array
   @param  name  the name of the sort functions [symbol] 
   @param  n     the size of the array
   @param  a     the array of elements to be sorted
   */
-#define fmap_sort_introsort(name, n, a) fmap_sort_introsort_##name(n, a)
+#define tmap_sort_introsort(name, n, a) tmap_sort_introsort_##name(n, a)
 /*! 
   performs combsort on the given array
   @param  name  the name of the sort functions [symbol] 
   @param  n     the size of the array
   @param  a     the array of elements to be sorted
   */
-#define fmap_sort_combsort(name, n, a) fmap_sort_combsort_##name(n, a)
+#define tmap_sort_combsort(name, n, a) tmap_sort_combsort_##name(n, a)
 /*! 
   performs heapsort on the given array
   @param  name  the name of the sort functions [symbol] 
   @param  n     the size of the array
   @param  a     the array of elements to be sorted
   */
-#define fmap_sort_heapsort(name, n, a) fmap_sort_heapsort_##name(n, a)
-#define fmap_sort_heapmake(name, n, a) fmap_sort_heapmake_##name(n, a)
-#define fmap_sort_heapadjust(name, i, n, a) fmap_sort_heapadjust_##name(i, n, a)
+#define tmap_sort_heapsort(name, n, a) tmap_sort_heapsort_##name(n, a)
+#define tmap_sort_heapmake(name, n, a) tmap_sort_heapmake_##name(n, a)
+#define tmap_sort_heapadjust(name, i, n, a) tmap_sort_heapadjust_##name(i, n, a)
 /*! 
   performs small sorton the given array
   @param  name  the name of the sort functions [symbol] 
@@ -282,7 +282,7 @@ type_t fmap_sort_small_##name(size_t n, type_t arr[], size_t kk) \
   @param  k     a midpoint to start this algorithm
   @details      adapted from http://ndevilla.free.fr/median/
   */
-#define fmap_sort_small(name, n, a, k) fmap_sort_small_##name(n, a, k)
+#define tmap_sort_small(name, n, a, k) tmap_sort_small_##name(n, a, k)
 
 /*! 
   a generic value-based less-than comparison function
@@ -290,7 +290,7 @@ type_t fmap_sort_small_##name(size_t n, type_t arr[], size_t kk) \
   @param  b  the second value to compare
   @return    1 if true, 0 otherwise
   */
-#define fmap_sort_lt_generic(a, b) ((a) < (b))
+#define tmap_sort_lt_generic(a, b) ((a) < (b))
 /*! 
   a generic string-based comparison function
   @param  a  the first string to compare
@@ -298,7 +298,7 @@ type_t fmap_sort_small_##name(size_t n, type_t arr[], size_t kk) \
   @return    1 if true, 0 otherwise
   @details   this uses strcmp
   */
-#define fmap_sort_lt_str(a, b) (strcmp((a), (b)) < 0)
+#define tmap_sort_lt_str(a, b) (strcmp((a), (b)) < 0)
 
 typedef const char *ksstr_t;
 
@@ -307,12 +307,12 @@ typedef const char *ksstr_t;
   @param  type_t  the type of values [type]
   @details        this will define functions named by the type and using the generic value-based comparison function.
   */
-#define FMAP_SORT_INIT_GENERIC(type_t) FMAP_SORT_INIT(type_t, type_t, fmap_sort_lt_generic)
+#define TMAP_SORT_INIT_GENERIC(type_t) TMAP_SORT_INIT(type_t, type_t, tmap_sort_lt_generic)
 
 /*! 
   initializes string comparison sort functions 
   @details  this will define functions with the name "str" and using the generic string-based comparison function.
   */
-#define FMAP_SORT_INIT_STR FMAP_SORT_INIT(str, ksstr_t, fmap_sort_lt_str)
+#define TMAP_SORT_INIT_STR TMAP_SORT_INIT(str, ksstr_t, tmap_sort_lt_str)
 
 #endif

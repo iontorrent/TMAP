@@ -5,22 +5,22 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "../util/fmap_alloc.h"
-#include "../util/fmap_progress.h"
-#include "../util/fmap_definitions.h"
-#include "../seq/fmap_sff.h"
-#include "../io/fmap_file.h"
-#include "fmap_sw.h"
-#include "fmap_fsw.h"
+#include "../util/tmap_alloc.h"
+#include "../util/tmap_progress.h"
+#include "../util/tmap_definitions.h"
+#include "../seq/tmap_sff.h"
+#include "../io/tmap_file.h"
+#include "tmap_sw.h"
+#include "tmap_fsw.h"
 
 /* TODO/IDEAS
    - do we need a transition probability added for going from one flow to the next?  For example, if we have a few flows that are empty, there is a certain probability of observing this... or this considered in your flow probabilities.  Basically, longer base alignments should be better, but using more flows is good/bad?
    - TODO: optimize memory usage by pre-allocating the cells/scores
    */
 
-#define FMAP_FSW_ADD_FSCORE(s, f) (s).match_score -= f, (s).ins_score -= f, (s).del_score -= f
+#define TMAP_FSW_ADD_FSCORE(s, f) (s).match_score -= f, (s).ins_score -= f, (s).del_score -= f
 
-int32_t fmap_fsw_sm_short[] = {
+int32_t tmap_fsw_sm_short[] = {
     11*100, -19*100, -19*100, -19*100, -13*100,
     -19*100, 11*100, -19*100, -19*100, -13*100,
     -19*100, -19*100, 11*100, -19*100, -13*100,
@@ -29,32 +29,32 @@ int32_t fmap_fsw_sm_short[] = {
 };
 
 static inline void
-fmap_fsw_set_match(fmap_fsw_dpcell_t **dpcell, fmap_fsw_dpscore_t **dpscore, 
+tmap_fsw_set_match(tmap_fsw_dpcell_t **dpcell, tmap_fsw_dpscore_t **dpscore, 
                    int32_t i, int32_t j, 
                    int64_t score, int32_t sub_path) 
 { 
   if(dpscore[i-1][j-1].match_score >= dpscore[i-1][j-1].ins_score) {
       if(dpscore[i-1][j-1].match_score >= dpscore[i-1][j-1].del_score) {
-          if(1 == sub_path) dpcell[i][j].match_from = FMAP_FSW_FROM_M | 4; 
+          if(1 == sub_path) dpcell[i][j].match_from = TMAP_FSW_FROM_M | 4; 
           else dpcell[i][j].match_from = 4 + dpcell[i-1][j-1].match_from;
           dpcell[i][j].match_bc = 1 + dpcell[i-1][j-1].match_bc;
           dpscore[i][j].match_score = dpscore[i-1][j-1].match_score + score;
       } 
       else { 
-          if(1 == sub_path) dpcell[i][j].match_from = FMAP_FSW_FROM_D | 4;
+          if(1 == sub_path) dpcell[i][j].match_from = TMAP_FSW_FROM_D | 4;
           else dpcell[i][j].match_from = 4 + dpcell[i-1][j-1].del_from; 
           dpcell[i][j].match_bc = 1 + dpcell[i-1][j-1].del_bc;
           dpscore[i][j].match_score = dpscore[i-1][j-1].del_score + score;
       }
   } else {
       if(dpscore[i-1][j-1].ins_score >= dpscore[i-1][j-1].del_score) {
-          if(1 == sub_path) dpcell[i][j].match_from = FMAP_FSW_FROM_I | 4;
+          if(1 == sub_path) dpcell[i][j].match_from = TMAP_FSW_FROM_I | 4;
           else dpcell[i][j].match_from = 4 + dpcell[i-1][j-1].ins_from; 
           dpcell[i][j].match_bc = 1 + dpcell[i-1][j-1].ins_bc;
           dpscore[i][j].match_score = dpscore[i-1][j-1].ins_score + score;
       } 
       else {
-          if(1 == sub_path) dpcell[i][j].match_from = FMAP_FSW_FROM_D | 4;
+          if(1 == sub_path) dpcell[i][j].match_from = TMAP_FSW_FROM_D | 4;
           else dpcell[i][j].match_from = 4 + dpcell[i-1][j-1].del_from; 
           dpcell[i][j].match_bc = 1 + dpcell[i-1][j-1].del_bc;
           dpscore[i][j].match_score = dpscore[i-1][j-1].del_score + score;
@@ -63,17 +63,17 @@ fmap_fsw_set_match(fmap_fsw_dpcell_t **dpcell, fmap_fsw_dpscore_t **dpscore,
 }
 
 static inline void 
-fmap_fsw_set_ins(fmap_fsw_dpcell_t **dpcell, fmap_fsw_dpscore_t **dpscore, 
+tmap_fsw_set_ins(tmap_fsw_dpcell_t **dpcell, tmap_fsw_dpscore_t **dpscore, 
                  int32_t i, int32_t j, 
                  int32_t gap_open, int32_t gap_ext, int32_t sub_path) 
 {
   if(dpscore[i-1][j].match_score - gap_open > dpscore[i-1][j].ins_score) {
-      if(1 == sub_path) dpcell[i][j].ins_from = FMAP_FSW_FROM_M;
+      if(1 == sub_path) dpcell[i][j].ins_from = TMAP_FSW_FROM_M;
       else dpcell[i][j].ins_from = dpcell[i-1][j].match_from;
       dpcell[i][j].ins_bc = 1 + dpcell[i-1][j].match_bc;
       dpscore[i][j].ins_score = dpscore[i-1][j].match_score - gap_open - gap_ext;
   } else {
-      if(1 == sub_path) dpcell[i][j].ins_from = FMAP_FSW_FROM_I;
+      if(1 == sub_path) dpcell[i][j].ins_from = TMAP_FSW_FROM_I;
       else dpcell[i][j].ins_from = dpcell[i-1][j].ins_from;
       dpcell[i][j].ins_bc = 1 + dpcell[i-1][j].ins_bc;
       dpscore[i][j].ins_score = dpscore[i-1][j].ins_score - gap_ext;
@@ -81,30 +81,30 @@ fmap_fsw_set_ins(fmap_fsw_dpcell_t **dpcell, fmap_fsw_dpscore_t **dpscore,
 }
 
 static inline void 
-fmap_fsw_set_end_ins(fmap_fsw_dpcell_t **dpcell, fmap_fsw_dpscore_t **dpscore, 
+tmap_fsw_set_end_ins(tmap_fsw_dpcell_t **dpcell, tmap_fsw_dpscore_t **dpscore, 
                      int32_t i, int32_t j, 
                      int32_t gap_open, int32_t gap_ext, int32_t gap_end, int32_t sub_path) 
 {
   if(gap_end >= 0) {
-      fmap_fsw_set_ins(dpcell, dpscore, i, j, gap_open, gap_end, sub_path);
+      tmap_fsw_set_ins(dpcell, dpscore, i, j, gap_open, gap_end, sub_path);
   }
   else {
-      fmap_fsw_set_ins(dpcell, dpscore, i, j, gap_open, gap_ext, sub_path);
+      tmap_fsw_set_ins(dpcell, dpscore, i, j, gap_open, gap_ext, sub_path);
   }
 }
 
 static inline void 
-fmap_fsw_set_del(fmap_fsw_dpcell_t **dpcell, fmap_fsw_dpscore_t **dpscore, 
+tmap_fsw_set_del(tmap_fsw_dpcell_t **dpcell, tmap_fsw_dpscore_t **dpscore, 
                  int32_t i, int32_t j, 
                  int32_t gap_open, int32_t gap_ext, int32_t sub_path) 
 {
   if(dpscore[i][j-1].match_score - gap_open > dpscore[i][j-1].del_score) {
-      if(1 == sub_path) dpcell[i][j].del_from = FMAP_FSW_FROM_M | 4;
+      if(1 == sub_path) dpcell[i][j].del_from = TMAP_FSW_FROM_M | 4;
       else dpcell[i][j].del_from = 4 + dpcell[i][j-1].match_from;
       dpcell[i][j].del_bc = dpcell[i][j-1].match_bc;
       dpscore[i][j].del_score = dpscore[i][j-1].match_score - gap_open - gap_ext;
   } else {
-      if(1 == sub_path) dpcell[i][j].del_from = FMAP_FSW_FROM_D | 4;
+      if(1 == sub_path) dpcell[i][j].del_from = TMAP_FSW_FROM_D | 4;
       else dpcell[i][j].del_from = 4 + dpcell[i][j-1].del_from;
       dpcell[i][j].del_bc = dpcell[i][j-1].del_bc;
       dpscore[i][j].del_score = dpscore[i][j-1].del_score - gap_ext;
@@ -112,29 +112,29 @@ fmap_fsw_set_del(fmap_fsw_dpcell_t **dpcell, fmap_fsw_dpscore_t **dpscore,
 }
 
 static inline void 
-fmap_fsw_set_end_del(fmap_fsw_dpcell_t **dpcell, fmap_fsw_dpscore_t **dpscore, 
+tmap_fsw_set_end_del(tmap_fsw_dpcell_t **dpcell, tmap_fsw_dpscore_t **dpscore, 
                      int32_t i, int32_t j, 
                      int32_t gap_open, int32_t gap_ext, int32_t gap_end, int32_t sub_path) 
 {
   if(gap_end >= 0) {
-      fmap_fsw_set_del(dpcell, dpscore, i, j, gap_open, gap_end, sub_path);
+      tmap_fsw_set_del(dpcell, dpscore, i, j, gap_open, gap_end, sub_path);
   }
   else {
-      fmap_fsw_set_del(dpcell, dpscore, i, j, gap_open, gap_ext, sub_path);
+      tmap_fsw_set_del(dpcell, dpscore, i, j, gap_open, gap_ext, sub_path);
   }
 }
 
 inline void
-fmap_fsw_sub_core(uint8_t *seq, int32_t len,
+tmap_fsw_sub_core(uint8_t *seq, int32_t len,
                   uint8_t flow_base, uint8_t base_call, uint16_t flow_signal,
-                  const fmap_fsw_param_t *ap,
-                  fmap_fsw_dpcell_t **sub_dpcell,
-                  fmap_fsw_dpscore_t **sub_dpscore, 
-                  fmap_fsw_dpcell_t *dpcell_last,
-                  fmap_fsw_dpscore_t *dpscore_last,
-                  fmap_fsw_dpcell_t *dpcell_curr,
-                  fmap_fsw_dpscore_t *dpscore_curr,
-                  fmap_fsw_path_t *path, int32_t *path_len, int32_t best_ctype,
+                  const tmap_fsw_param_t *ap,
+                  tmap_fsw_dpcell_t **sub_dpcell,
+                  tmap_fsw_dpscore_t **sub_dpscore, 
+                  tmap_fsw_dpcell_t *dpcell_last,
+                  tmap_fsw_dpscore_t *dpscore_last,
+                  tmap_fsw_dpcell_t *dpcell_curr,
+                  tmap_fsw_dpscore_t *dpscore_curr,
+                  tmap_fsw_path_t *path, int32_t *path_len, int32_t best_ctype,
                   uint8_t key_bases,
                   int32_t type)
 {
@@ -168,26 +168,26 @@ fmap_fsw_sub_core(uint8_t *seq, int32_t len,
   // copy previous row
   for(j=0;j<=len;j++) {
       sub_dpscore[0][j] = dpscore_last[j];
-      FMAP_FSW_INIT_CELL(sub_dpcell[0][j]); // empty
-      sub_dpcell[0][j].match_from = FMAP_FSW_FROM_M;
-      sub_dpcell[0][j].ins_from = FMAP_FSW_FROM_I;
-      sub_dpcell[0][j].del_from = FMAP_FSW_FROM_D;
+      TMAP_FSW_INIT_CELL(sub_dpcell[0][j]); // empty
+      sub_dpcell[0][j].match_from = TMAP_FSW_FROM_M;
+      sub_dpcell[0][j].ins_from = TMAP_FSW_FROM_I;
+      sub_dpcell[0][j].del_from = TMAP_FSW_FROM_D;
       sub_dpcell[0][j].match_bc = sub_dpcell[0][j].ins_bc = sub_dpcell[0][j].del_bc = 0;
   }
 
   // fill in sub_dpcell and sub_dpscore
   for(i=1;i<=high_offset;i++) { // for each row in the sub-alignment
       // initialize the first column
-      FMAP_FSW_SET_SCORE_INF(sub_dpscore[i][0]); 
-      FMAP_FSW_INIT_CELL(sub_dpcell[i][0]);
-      fmap_fsw_set_end_ins(sub_dpcell, sub_dpscore, i, 0, gap_open, gap_ext, gap_end, sub_path);
+      TMAP_FSW_SET_SCORE_INF(sub_dpscore[i][0]); 
+      TMAP_FSW_INIT_CELL(sub_dpcell[i][0]);
+      tmap_fsw_set_end_ins(sub_dpcell, sub_dpscore, i, 0, gap_open, gap_ext, gap_end, sub_path);
       // fill in the rest of the columns
       for(j=1;j<=len;j++) { // for each col
           // HERE
           //if(1 == i) fprintf(stderr, "j=%d flow_base=%d seq[j-1]=%d mat[seq[j-1]]=%d\n", j, flow_base, seq[j-1], mat[seq[j-1]]); 
-          fmap_fsw_set_match(sub_dpcell, sub_dpscore, i, j, mat[seq[j-1]], sub_path);
-          fmap_fsw_set_ins(sub_dpcell, sub_dpscore, i, j, gap_open, gap_ext, sub_path);
-          fmap_fsw_set_del(sub_dpcell, sub_dpscore, i, j, gap_open, gap_ext, sub_path);
+          tmap_fsw_set_match(sub_dpcell, sub_dpscore, i, j, mat[seq[j-1]], sub_path);
+          tmap_fsw_set_ins(sub_dpcell, sub_dpscore, i, j, gap_open, gap_ext, sub_path);
+          tmap_fsw_set_del(sub_dpcell, sub_dpscore, i, j, gap_open, gap_ext, sub_path);
       }
   }
 
@@ -214,7 +214,7 @@ fmap_fsw_sub_core(uint8_t *seq, int32_t len,
       //if(base_call < i) flow_score += mat[flow_base] * (i - base_call);
       //fprintf(stderr, "flow_score=%d i=%d\n", flow_score, i);
       for(j=0;j<=len;j++) { // for each col
-          FMAP_FSW_ADD_FSCORE(sub_dpscore[i][j], flow_score);
+          TMAP_FSW_ADD_FSCORE(sub_dpscore[i][j], flow_score);
       }
   }
 
@@ -238,19 +238,19 @@ fmap_fsw_sub_core(uint8_t *seq, int32_t len,
       for(j=0;j<=len;j++) { // for each col
           dpcell_curr[j] = sub_dpcell[base_call][j];
           dpscore_curr[j] = sub_dpscore[base_call][j];
-          if(FMAP_SW_TYPE_LOCAL == type) { // local alignment
+          if(TMAP_SW_TYPE_LOCAL == type) { // local alignment
               if(dpscore_curr[j].match_score < 0) {
-                  dpcell_curr[j].match_from = FMAP_FSW_FROM_S;
+                  dpcell_curr[j].match_from = TMAP_FSW_FROM_S;
                   dpcell_curr[j].match_bc = 0;
                   dpscore_curr[j].match_score = 0;
               }
               if(dpscore_curr[j].ins_score < 0) {
-                  dpcell_curr[j].ins_from = FMAP_FSW_FROM_S;
+                  dpcell_curr[j].ins_from = TMAP_FSW_FROM_S;
                   dpcell_curr[j].ins_bc = 0;
                   dpscore_curr[j].ins_score = 0;
               }
               if(dpscore_curr[j].del_score < 0) {
-                  dpcell_curr[j].del_from = FMAP_FSW_FROM_S;
+                  dpcell_curr[j].del_from = TMAP_FSW_FROM_S;
                   dpcell_curr[j].del_bc = 0;
                   dpscore_curr[j].del_score = 0;
               }
@@ -294,29 +294,29 @@ fmap_fsw_sub_core(uint8_t *seq, int32_t len,
 
   if(NULL != path) {
       int32_t ctype, ctype_next = 0;
-      fmap_fsw_path_t *p;
+      tmap_fsw_path_t *p;
 
       p = path;
       i = high_offset; j = len; 
       ctype = best_ctype;
 
       //fprintf(stderr, "  START sub_core i=%d j=%d ctype=%d\n", i, j, ctype);
-      while(FMAP_FSW_FROM_S != ctype && 0 < i) {
+      while(TMAP_FSW_FROM_S != ctype && 0 < i) {
           //fprintf(stderr, "  sub_core i=%d j=%d ctype=%d\n", i, j, ctype);
-          if(i < 0 || j < 0) fmap_error("bug encountered", Exit, OutOfRange);
+          if(i < 0 || j < 0) tmap_error("bug encountered", Exit, OutOfRange);
 
           switch(ctype) { 
-            case FMAP_FSW_FROM_M: 
+            case TMAP_FSW_FROM_M: 
               ctype_next = sub_dpcell[i][j].match_from & 0x3;
               break;
-            case FMAP_FSW_FROM_I: 
+            case TMAP_FSW_FROM_I: 
               ctype_next = sub_dpcell[i][j].ins_from & 0x3;
               break;
-            case FMAP_FSW_FROM_D: 
+            case TMAP_FSW_FROM_D: 
               ctype_next = sub_dpcell[i][j].del_from & 0x3;
               break;
             default:
-              fmap_error(NULL, Exit, OutOfRange);
+              tmap_error(NULL, Exit, OutOfRange);
           }
           p->ctype = ctype;
           p->i = i-1;
@@ -325,14 +325,14 @@ fmap_fsw_sub_core(uint8_t *seq, int32_t len,
 
           // move the row and column (as necessary)
           switch(ctype) {
-            case FMAP_FSW_FROM_M: 
+            case TMAP_FSW_FROM_M: 
               --i; --j; break;
-            case FMAP_FSW_FROM_I: 
+            case TMAP_FSW_FROM_I: 
               --i; break;
-            case FMAP_FSW_FROM_D: 
+            case TMAP_FSW_FROM_D: 
               --j; break;
             default:
-              fmap_error(NULL, Exit, OutOfRange);
+              tmap_error(NULL, Exit, OutOfRange);
           }
 
           // move to the next cell type
@@ -348,21 +348,21 @@ fmap_fsw_sub_core(uint8_t *seq, int32_t len,
 }
 
 static void
-fmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram,
+tmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram,
                   int32_t key_index, int32_t key_bases,
-                  fmap_fsw_dpcell_t **dpcell, fmap_fsw_dpscore_t **dpscore,
-                  fmap_fsw_dpcell_t **sub_dpcell,
-                  fmap_fsw_dpscore_t **sub_dpscore, 
-                  const fmap_fsw_param_t *ap,
+                  tmap_fsw_dpcell_t **dpcell, tmap_fsw_dpscore_t **dpscore,
+                  tmap_fsw_dpcell_t **sub_dpcell,
+                  tmap_fsw_dpscore_t **sub_dpscore, 
+                  const tmap_fsw_param_t *ap,
                   int32_t best_i, int32_t best_j, uint8_t best_ctype, int32_t type,
-                  fmap_fsw_path_t *path, int32_t *path_len)
+                  tmap_fsw_path_t *path, int32_t *path_len)
 {
   register int32_t i, j;
   int32_t k, l;
   int32_t base_call = 0, col_offset = 0, base_call_diff = 0;
   uint8_t ctype, ctype_next = 0;
-  fmap_fsw_path_t *p;
-  fmap_fsw_path_t *sub_path = NULL;
+  tmap_fsw_path_t *p;
+  tmap_fsw_path_t *sub_path = NULL;
   int32_t sub_path_len = 0, sub_path_mem = 0;
 
   /*
@@ -388,39 +388,39 @@ fmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *fl
      best_i, best_j, ctype);
      */
 
-  while(FMAP_FSW_FROM_S != ctype && (0 < i || 0 < j)) {
+  while(TMAP_FSW_FROM_S != ctype && (0 < i || 0 < j)) {
       base_call = 0;
       col_offset = 0;
       base_call_diff = 0;
 
       // local
       if(i <= 0
-         && (FMAP_SW_TYPE_LOCAL == type || FMAP_SW_TYPE_FITTING == type)) {
+         && (TMAP_SW_TYPE_LOCAL == type || TMAP_SW_TYPE_FITTING == type)) {
           break;
       }
 
       //fprintf(stderr, "CORE i=%d j=%d ctype=%d\n", i, j, ctype);
       switch(ctype) { 
-        case FMAP_FSW_FROM_M: 
-          if(i < 0 || j < 0) fmap_error("bug encountered", Exit, OutOfRange);
+        case TMAP_FSW_FROM_M: 
+          if(i < 0 || j < 0) tmap_error("bug encountered", Exit, OutOfRange);
           base_call = dpcell[i][j].match_bc;
           col_offset = dpcell[i][j].match_from >> 2;
           ctype_next = dpcell[i][j].match_from & 0x3;
           break;
-        case FMAP_FSW_FROM_I: 
-          if(i < 0 || j < 0) fmap_error("bug encountered", Exit, OutOfRange);
+        case TMAP_FSW_FROM_I: 
+          if(i < 0 || j < 0) tmap_error("bug encountered", Exit, OutOfRange);
           base_call = dpcell[i][j].ins_bc;
           col_offset = dpcell[i][j].ins_from >> 2;
           ctype_next = dpcell[i][j].ins_from & 0x3;
           break;
-        case FMAP_FSW_FROM_D: 
-          if(i < 0 || j < 0) fmap_error("bug encountered", Exit, OutOfRange);
+        case TMAP_FSW_FROM_D: 
+          if(i < 0 || j < 0) tmap_error("bug encountered", Exit, OutOfRange);
           base_call = dpcell[i][j].del_bc;
           col_offset = dpcell[i][j].del_from >> 2;
           ctype_next = dpcell[i][j].del_from & 0x3;
           break;
         default:
-          fmap_error(NULL, Exit, OutOfRange);
+          tmap_error(NULL, Exit, OutOfRange);
       }
 
       /*
@@ -435,7 +435,7 @@ fmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *fl
           for(k=0;k<base_call;k++) {
               p->i = i-1;
               p->j = j-1;
-              p->ctype = FMAP_FSW_FROM_I;
+              p->ctype = TMAP_FSW_FROM_I;
               p++;
           }
           i--;
@@ -444,7 +444,7 @@ fmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *fl
           // starts with a deletion?
           p->i = i-1;
           p->j = j-1;
-          p->ctype = FMAP_FSW_FROM_D;
+          p->ctype = TMAP_FSW_FROM_D;
           p++;
           j--;
       }
@@ -453,7 +453,7 @@ fmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *fl
               for(k=0;k<base_calls[i-1];k++) {
                   p->j = j - 1;
                   p->i = i - 1;
-                  p->ctype = FMAP_FSW_FROM_HP_MINUS;
+                  p->ctype = TMAP_FSW_FROM_HP_MINUS;
                   p++;
               }
           }
@@ -463,16 +463,16 @@ fmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *fl
       else {
           while(sub_path_mem < j + ap->offset + 1) { // more memory please
               sub_path_mem = (0 == sub_path_mem) ? 4 : (sub_path_mem << 1);
-              sub_path = fmap_realloc(sub_path, sizeof(fmap_fsw_path_t) * sub_path_mem, "sub_path"); 
+              sub_path = tmap_realloc(sub_path, sizeof(tmap_fsw_path_t) * sub_path_mem, "sub_path"); 
           } 
 
-          fmap_fsw_param_t ap_tmp;
+          tmap_fsw_param_t ap_tmp;
           ap_tmp = (*ap);
           ap_tmp.offset = 0; // no offset, since we will use the previous base call
 
           // solve the sub-problem and get the path
-          if(j - col_offset < 0) fmap_error("bug encountered", Exit, OutOfRange);
-          fmap_fsw_sub_core(seq, j,
+          if(j - col_offset < 0) tmap_error("bug encountered", Exit, OutOfRange);
+          tmap_fsw_sub_core(seq, j,
                             flow[(i-1) & 3], base_call, flowgram[i-1], // Note: %4 is the same as &3
                             &ap_tmp,
                             sub_dpcell, sub_dpscore,
@@ -495,16 +495,16 @@ fmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *fl
 
 
               if(0 < base_call_diff // there are bases left that were inserted
-                 && FMAP_FSW_FROM_M == sub_path[l].ctype) { // delete a "match"
+                 && TMAP_FSW_FROM_M == sub_path[l].ctype) { // delete a "match"
                   // change the type to a deletion
-                  p->ctype = FMAP_FSW_FROM_HP_PLUS;
+                  p->ctype = TMAP_FSW_FROM_HP_PLUS;
                   base_call_diff--;
               }
 
               p++;
           }
           while(base_call_diff < 0) { // there are bases left that were deleted
-              p->ctype = FMAP_FSW_FROM_HP_MINUS; // add an insertion
+              p->ctype = TMAP_FSW_FROM_HP_MINUS; // add an insertion
               p->i = i - 1;
               p++;
               base_call_diff++;
@@ -529,10 +529,10 @@ fmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *fl
 Notes: key_index is zero-base and should be -1, 0, or (num_flows-1)
 */
 static int64_t
-fmap_fsw_stdaln_aux(uint8_t *seq, int32_t len, 
-                    fmap_fsw_flowseq_t *flowseq,
-                    const fmap_fsw_param_t *ap,
-                    fmap_fsw_path_t *path, int32_t *path_len, 
+tmap_fsw_stdaln_aux(uint8_t *seq, int32_t len, 
+                    tmap_fsw_flowseq_t *flowseq,
+                    const tmap_fsw_param_t *ap,
+                    tmap_fsw_path_t *path, int32_t *path_len, 
                     int32_t type, int32_t prev_score,
                     int32_t _thres, int32_t *_subo)
 {
@@ -540,12 +540,12 @@ fmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
   int32_t max_bc = 0, bw;
 
   // main cells 
-  fmap_fsw_dpcell_t **dpcell;
-  fmap_fsw_dpscore_t **dpscore;
+  tmap_fsw_dpcell_t **dpcell;
+  tmap_fsw_dpscore_t **dpscore;
 
   // for homopolymer re-calling 
-  fmap_fsw_dpcell_t **sub_dpcell;
-  fmap_fsw_dpscore_t **sub_dpscore;
+  tmap_fsw_dpcell_t **sub_dpcell;
+  tmap_fsw_dpscore_t **sub_dpscore;
 
   int32_t gap_open, gap_ext, gap_end;
   int32_t *score_matrix, N_MATRIX_ROW;
@@ -553,7 +553,7 @@ fmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
 
   int32_t best_i=-1, best_j=-1;
   uint8_t best_ctype=0;
-  int64_t best_score = FMAP_SW_MINOR_INF;
+  int64_t best_score = TMAP_SW_MINOR_INF;
 
   if(0 == flowseq->num_flows || 0 == len) {
       (*path_len) = 0;
@@ -578,47 +578,47 @@ fmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
   //fprintf(stderr, "max_bc=%d offset=%d len=%d\n", max_bc, offset, len);
 
   // allocate memory for the sub-cells
-  sub_dpcell = fmap_malloc(sizeof(fmap_fsw_dpcell_t*) * (max_bc + offset + 1), "sub_dpcell");
-  sub_dpscore = fmap_malloc(sizeof(fmap_fsw_dpscore_t*) * (max_bc + offset + 1), "sub_dpscore");
+  sub_dpcell = tmap_malloc(sizeof(tmap_fsw_dpcell_t*) * (max_bc + offset + 1), "sub_dpcell");
+  sub_dpscore = tmap_malloc(sizeof(tmap_fsw_dpscore_t*) * (max_bc + offset + 1), "sub_dpscore");
   for(i=0;i<=max_bc+offset;i++) {
-      sub_dpcell[i] = fmap_malloc(sizeof(fmap_fsw_dpcell_t) * (len + 1), "sub_dpcell");
-      sub_dpscore[i] = fmap_malloc(sizeof(fmap_fsw_dpscore_t) * (len + 1), "sub_dpscore");
+      sub_dpcell[i] = tmap_malloc(sizeof(tmap_fsw_dpcell_t) * (len + 1), "sub_dpcell");
+      sub_dpscore[i] = tmap_malloc(sizeof(tmap_fsw_dpscore_t) * (len + 1), "sub_dpscore");
   }
 
   // allocate memory for the main cells
-  dpcell = fmap_malloc(sizeof(fmap_fsw_dpcell_t*) * (flowseq->num_flows + 1), "dpcell");
-  dpscore = fmap_malloc(sizeof(fmap_fsw_dpscore_t*) * (flowseq->num_flows + 1), "dpscore");
+  dpcell = tmap_malloc(sizeof(tmap_fsw_dpcell_t*) * (flowseq->num_flows + 1), "dpcell");
+  dpscore = tmap_malloc(sizeof(tmap_fsw_dpscore_t*) * (flowseq->num_flows + 1), "dpscore");
   for(i=0;i<=flowseq->num_flows;i++) {
-      dpcell[i] = fmap_malloc(sizeof(fmap_fsw_dpcell_t) * (len + 1), "dpcell");
-      dpscore[i] = fmap_malloc(sizeof(fmap_fsw_dpscore_t) * (len + 1), "dpscore");
+      dpcell[i] = tmap_malloc(sizeof(tmap_fsw_dpcell_t) * (len + 1), "dpcell");
+      dpscore[i] = tmap_malloc(sizeof(tmap_fsw_dpscore_t) * (len + 1), "dpscore");
   }
 
   // set first row
-  FMAP_FSW_SET_SCORE_INF(dpscore[0][0]); 
-  FMAP_FSW_INIT_CELL(dpcell[0][0]);
-  if(FMAP_SW_TYPE_EXTEND == type
-     || FMAP_SW_TYPE_EXTEND_FITTING == type) {
+  TMAP_FSW_SET_SCORE_INF(dpscore[0][0]); 
+  TMAP_FSW_INIT_CELL(dpcell[0][0]);
+  if(TMAP_SW_TYPE_EXTEND == type
+     || TMAP_SW_TYPE_EXTEND_FITTING == type) {
       dpscore[0][0].match_score = prev_score;
   }
   else {
       dpscore[0][0].match_score = 0;
   }
   for(j=1;j<=len;j++) { // for each col
-      FMAP_FSW_SET_SCORE_INF(dpscore[0][j]);
-      FMAP_FSW_INIT_CELL(dpcell[0][j]);
+      TMAP_FSW_SET_SCORE_INF(dpscore[0][j]);
+      TMAP_FSW_INIT_CELL(dpcell[0][j]);
       switch(type) {
-        case FMAP_SW_TYPE_LOCAL:
-        case FMAP_SW_TYPE_FITTING:
+        case TMAP_SW_TYPE_LOCAL:
+        case TMAP_SW_TYPE_FITTING:
           // the alignment can start anywhere with seq 
           dpscore[0][j].match_score = 0; 
           break;
-        case FMAP_SW_TYPE_GLOBAL:
-        case FMAP_SW_TYPE_EXTEND:
-        case FMAP_SW_TYPE_EXTEND_FITTING:
-          fmap_fsw_set_end_del(dpcell, dpscore, 0, j, gap_open, gap_ext, gap_end, 0);
+        case TMAP_SW_TYPE_GLOBAL:
+        case TMAP_SW_TYPE_EXTEND:
+        case TMAP_SW_TYPE_EXTEND_FITTING:
+          tmap_fsw_set_end_del(dpcell, dpscore, 0, j, gap_open, gap_ext, gap_end, 0);
           break;
         default:
-          fmap_error("alignment type not understood", Exit, OutOfRange);
+          tmap_error("alignment type not understood", Exit, OutOfRange);
       }
   }
 
@@ -626,7 +626,7 @@ fmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
   for(i=1;i<=flowseq->num_flows;i++) { // for each row
       // fill in the columns
       //fprintf(stderr, "i=%d num_flows=%d\n", i, flowseq->num_flows);
-      fmap_fsw_sub_core(seq, len,
+      tmap_fsw_sub_core(seq, len,
                         flowseq->flow[(i-1) & 3], 
                         flowseq->base_calls[i-1], 
                         flowseq->flowgram[i-1], // Note: %4 is the same as &3
@@ -640,61 +640,61 @@ fmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
 
       // Update best
       switch(type) {
-        case FMAP_SW_TYPE_LOCAL:
-        case FMAP_SW_TYPE_EXTEND:
+        case TMAP_SW_TYPE_LOCAL:
+        case TMAP_SW_TYPE_EXTEND:
           for(j=1;j<=len;j++) {
               if(best_score < dpscore[i][j].match_score) {
                   best_score = dpscore[i][j].match_score;
-                  best_ctype = FMAP_FSW_FROM_M;
+                  best_ctype = TMAP_FSW_FROM_M;
                   best_i = i; best_j = j;
               }
               if(best_score < dpscore[i][j].ins_score) {
                   best_score = dpscore[i][j].ins_score;
-                  best_ctype = FMAP_FSW_FROM_I;
+                  best_ctype = TMAP_FSW_FROM_I;
                   best_i = i; best_j = j;
               }
               if(best_score < dpscore[i][j].del_score) {
                   best_score = dpscore[i][j].del_score;
-                  best_ctype = FMAP_FSW_FROM_D;
+                  best_ctype = TMAP_FSW_FROM_D;
                   best_i = i; best_j = j;
               }
           }
           break;
-        case FMAP_SW_TYPE_GLOBAL:
+        case TMAP_SW_TYPE_GLOBAL:
           if(i == flowseq->num_flows) {
               if(best_score < dpscore[i][len].match_score) {
                   best_score = dpscore[i][len].match_score;
-                  best_ctype = FMAP_FSW_FROM_M;
+                  best_ctype = TMAP_FSW_FROM_M;
                   best_i = i; best_j = len;
               }
               if(best_score < dpscore[i][len].ins_score) {
                   best_score = dpscore[i][len].ins_score;
-                  best_ctype = FMAP_FSW_FROM_I;
+                  best_ctype = TMAP_FSW_FROM_I;
                   best_i = i; best_j = len;
               }
               if(best_score < dpscore[i][len].del_score) {
                   best_score = dpscore[i][len].del_score;
-                  best_ctype = FMAP_FSW_FROM_D;
+                  best_ctype = TMAP_FSW_FROM_D;
                   best_i = i; best_j = len;
               }
           }
           break;
-        case FMAP_SW_TYPE_EXTEND_FITTING:
+        case TMAP_SW_TYPE_EXTEND_FITTING:
           if(flowseq->num_flows == i) {
               for(j=1;j<=len;j++) {
                   if(best_score < dpscore[i][j].match_score) {
                       best_score = dpscore[i][j].match_score;
-                      best_ctype = FMAP_FSW_FROM_M;
+                      best_ctype = TMAP_FSW_FROM_M;
                       best_i = i; best_j = j;
                   }
                   if(best_score < dpscore[i][j].ins_score) {
                       best_score = dpscore[i][j].ins_score;
-                      best_ctype = FMAP_FSW_FROM_I;
+                      best_ctype = TMAP_FSW_FROM_I;
                       best_i = i; best_j = j;
                   }
                   if(best_score < dpscore[i][j].del_score) {
                       best_score = dpscore[i][j].del_score;
-                      best_ctype = FMAP_FSW_FROM_D;
+                      best_ctype = TMAP_FSW_FROM_D;
                       best_i = i; best_j = j;
                   }
               }
@@ -719,7 +719,7 @@ fmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
   }
   else {
       // recover the path
-      fmap_fsw_get_path(seq, flowseq->flow, flowseq->base_calls, flowseq->flowgram,
+      tmap_fsw_get_path(seq, flowseq->flow, flowseq->base_calls, flowseq->flowgram,
                         flowseq->key_index, flowseq->key_bases,
                         dpcell, dpscore, 
                         sub_dpcell, sub_dpscore, 
@@ -747,13 +747,13 @@ fmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
   return best_score;
 }
 
-fmap_fsw_flowseq_t *
-fmap_fsw_flowseq_init(uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram,
+tmap_fsw_flowseq_t *
+tmap_fsw_flowseq_init(uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram,
                                           int32_t num_flows, int32_t key_index, int32_t key_bases)
 {
-  fmap_fsw_flowseq_t *flowseq;
+  tmap_fsw_flowseq_t *flowseq;
 
-  flowseq = fmap_calloc(1, sizeof(fmap_fsw_flowseq_t), "flowseq");
+  flowseq = tmap_calloc(1, sizeof(tmap_fsw_flowseq_t), "flowseq");
 
   flowseq->flow = flow;
   flowseq->base_calls = base_calls;
@@ -766,75 +766,75 @@ fmap_fsw_flowseq_init(uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram,
 }
 
 void
-fmap_fsw_flowseq_destroy(fmap_fsw_flowseq_t *flowseq)
+tmap_fsw_flowseq_destroy(tmap_fsw_flowseq_t *flowseq)
 {
   free(flowseq);
 }
 
 int64_t
-fmap_fsw_global_core(uint8_t *seq, int32_t len, 
-                     fmap_fsw_flowseq_t *flowseq,
-                     const fmap_fsw_param_t *ap,
-                     fmap_fsw_path_t *path, int32_t *path_len)
+tmap_fsw_global_core(uint8_t *seq, int32_t len, 
+                     tmap_fsw_flowseq_t *flowseq,
+                     const tmap_fsw_param_t *ap,
+                     tmap_fsw_path_t *path, int32_t *path_len)
 {
-  return fmap_fsw_stdaln_aux(seq, len, flowseq,
-                             ap, path, path_len, FMAP_SW_TYPE_GLOBAL, 0,
+  return tmap_fsw_stdaln_aux(seq, len, flowseq,
+                             ap, path, path_len, TMAP_SW_TYPE_GLOBAL, 0,
                              INT32_MIN, NULL);
 }
 
 int64_t
-fmap_fsw_local_core(uint8_t *seq, int32_t len, 
-                    fmap_fsw_flowseq_t *flowseq,
-                    const fmap_fsw_param_t *ap,
-                    fmap_fsw_path_t *path, int32_t *path_len, int32_t _thres, int32_t *_subo)
+tmap_fsw_local_core(uint8_t *seq, int32_t len, 
+                    tmap_fsw_flowseq_t *flowseq,
+                    const tmap_fsw_param_t *ap,
+                    tmap_fsw_path_t *path, int32_t *path_len, int32_t _thres, int32_t *_subo)
 {
-  return fmap_fsw_stdaln_aux(seq, len, flowseq,
-                             ap, path, path_len, FMAP_SW_TYPE_GLOBAL, 0,
+  return tmap_fsw_stdaln_aux(seq, len, flowseq,
+                             ap, path, path_len, TMAP_SW_TYPE_GLOBAL, 0,
                              _thres, _subo);
 }
 
 int64_t
-fmap_fsw_extend_core(uint8_t *seq, int32_t len, 
-                     fmap_fsw_flowseq_t *flowseq,
-                     const fmap_fsw_param_t *ap,
-                     fmap_fsw_path_t *path, int32_t *path_len, int32_t prev_score)
+tmap_fsw_extend_core(uint8_t *seq, int32_t len, 
+                     tmap_fsw_flowseq_t *flowseq,
+                     const tmap_fsw_param_t *ap,
+                     tmap_fsw_path_t *path, int32_t *path_len, int32_t prev_score)
 {
-  return fmap_fsw_stdaln_aux(seq, len, flowseq,
-                             ap, path, path_len, FMAP_SW_TYPE_EXTEND, prev_score,
+  return tmap_fsw_stdaln_aux(seq, len, flowseq,
+                             ap, path, path_len, TMAP_SW_TYPE_EXTEND, prev_score,
                              0, NULL);
 }
 
 int64_t
-fmap_fsw_extend_fitting_core(uint8_t *seq, int32_t len, 
-                             fmap_fsw_flowseq_t *flowseq,
-                             const fmap_fsw_param_t *ap,
-                             fmap_fsw_path_t *path, int32_t *path_len, int32_t prev_score)
+tmap_fsw_extend_fitting_core(uint8_t *seq, int32_t len, 
+                             tmap_fsw_flowseq_t *flowseq,
+                             const tmap_fsw_param_t *ap,
+                             tmap_fsw_path_t *path, int32_t *path_len, int32_t prev_score)
 {
-  return fmap_fsw_stdaln_aux(seq, len, flowseq,
-                             ap, path, path_len, FMAP_SW_TYPE_EXTEND_FITTING, prev_score,
+  return tmap_fsw_stdaln_aux(seq, len, flowseq,
+                             ap, path, path_len, TMAP_SW_TYPE_EXTEND_FITTING, prev_score,
                              INT32_MIN, NULL);
 }
 
 int64_t
-fmap_fsw_fitting_core(uint8_t *seq, int32_t len, 
-                      fmap_fsw_flowseq_t *flowseq,
-                      const fmap_fsw_param_t *ap,
-                      fmap_fsw_path_t *path, int32_t *path_len)
+tmap_fsw_fitting_core(uint8_t *seq, int32_t len, 
+                      tmap_fsw_flowseq_t *flowseq,
+                      const tmap_fsw_param_t *ap,
+                      tmap_fsw_path_t *path, int32_t *path_len)
 {
-  return fmap_fsw_stdaln_aux(seq, len, flowseq,
-                             ap, path, path_len, FMAP_SW_TYPE_FITTING, 0,
+  return tmap_fsw_stdaln_aux(seq, len, flowseq,
+                             ap, path, path_len, TMAP_SW_TYPE_FITTING, 0,
                              INT32_MIN, NULL);
 }
 
 static inline
-uint32_t fmap_fsw_path2cigar_get_type(uint32_t ctype)
+uint32_t tmap_fsw_path2cigar_get_type(uint32_t ctype)
 {
   switch(ctype) {
-    case FMAP_FSW_FROM_HP_PLUS: // deletion
-      return FMAP_FSW_FROM_D;
+    case TMAP_FSW_FROM_HP_PLUS: // deletion
+      return TMAP_FSW_FROM_D;
       break;
-    case FMAP_FSW_FROM_HP_MINUS: // insertion
-      return FMAP_FSW_FROM_I;
+    case TMAP_FSW_FROM_HP_MINUS: // insertion
+      return TMAP_FSW_FROM_I;
       break;
     default:
       break;
@@ -843,13 +843,13 @@ uint32_t fmap_fsw_path2cigar_get_type(uint32_t ctype)
 }
 
 uint32_t *
-fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_cigar, int32_t rm_hp)
+tmap_fsw_path2cigar(const tmap_fsw_path_t *path, int32_t path_len, int32_t *n_cigar, int32_t rm_hp)
 {
   int32_t i, n;
   uint32_t *cigar;
   uint8_t dpscore_last_type, dpscore_cur_type;
 
-  // Note: we could just use the function 'fmap_sw_path2cigar'
+  // Note: we could just use the function 'tmap_sw_path2cigar'
 
   if (path_len == 0 || path == 0) {
       *n_cigar = 0;
@@ -863,14 +863,14 @@ fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_ci
           dpscore_last_type = path[i].ctype;
       }
       *n_cigar = n;
-      cigar = fmap_malloc(*n_cigar * 4, "cigar");
+      cigar = tmap_malloc(*n_cigar * 4, "cigar");
 
-      FMAP_SW_CIGAR_STORE(cigar[0], path[path_len-1].ctype, 1u);
+      TMAP_SW_CIGAR_STORE(cigar[0], path[path_len-1].ctype, 1u);
       dpscore_last_type = path[path_len-1].ctype;
       for (i = path_len - 2, n = 0; i >= 0; --i) {
-          if (path[i].ctype == dpscore_last_type) FMAP_SW_CIGAR_ADD_LENGTH(cigar[n], 1u);
+          if (path[i].ctype == dpscore_last_type) TMAP_SW_CIGAR_ADD_LENGTH(cigar[n], 1u);
           else {
-              FMAP_SW_CIGAR_STORE(cigar[++n], path[i].ctype, 1u);
+              TMAP_SW_CIGAR_STORE(cigar[++n], path[i].ctype, 1u);
               dpscore_last_type = path[i].ctype;
           }
       }
@@ -880,23 +880,23 @@ fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_ci
       dpscore_last_type = path->ctype;
       for (i = n = 1; i < path_len; ++i) {
           // get the current type
-          dpscore_cur_type = fmap_fsw_path2cigar_get_type(path[i].ctype);
+          dpscore_cur_type = tmap_fsw_path2cigar_get_type(path[i].ctype);
           if (dpscore_last_type != dpscore_cur_type) ++n;
           dpscore_last_type = dpscore_cur_type;
       }
       *n_cigar = n;
-      cigar = fmap_malloc(*n_cigar * 4, "cigar");
+      cigar = tmap_malloc(*n_cigar * 4, "cigar");
           
       // get the last type
-      dpscore_last_type = fmap_fsw_path2cigar_get_type(path[path_len-1].ctype);
+      dpscore_last_type = tmap_fsw_path2cigar_get_type(path[path_len-1].ctype);
       cigar[0] = 1u << 4 | dpscore_last_type;
-      FMAP_SW_CIGAR_STORE(cigar[0], dpscore_last_type, 1u);
+      TMAP_SW_CIGAR_STORE(cigar[0], dpscore_last_type, 1u);
       for (i = path_len - 2, n = 0; i >= 0; --i) {
           // get the current type
-          dpscore_cur_type = fmap_fsw_path2cigar_get_type(path[i].ctype);
-          if (dpscore_cur_type == dpscore_last_type) FMAP_SW_CIGAR_ADD_LENGTH(cigar[n], 1u);
+          dpscore_cur_type = tmap_fsw_path2cigar_get_type(path[i].ctype);
+          if (dpscore_cur_type == dpscore_last_type) TMAP_SW_CIGAR_ADD_LENGTH(cigar[n], 1u);
           else {
-              FMAP_SW_CIGAR_STORE(cigar[++n], dpscore_cur_type, 1u);
+              TMAP_SW_CIGAR_STORE(cigar[++n], dpscore_cur_type, 1u);
               dpscore_last_type = dpscore_cur_type;
           }
       }
@@ -906,7 +906,7 @@ fmap_fsw_path2cigar(const fmap_fsw_path_t *path, int32_t path_len, int32_t *n_ci
 }
 
 static int 
-fmap_fsw_left_justify(char *ref, char *read, char *aln, int32_t len)
+tmap_fsw_left_justify(char *ref, char *read, char *aln, int32_t len)
 {
   char c;
   int32_t i, prev_del, prev_ins, start_ins, start_del, end_ins, end_del;
@@ -997,7 +997,7 @@ fmap_fsw_left_justify(char *ref, char *read, char *aln, int32_t len)
 }
 
 static int 
-fmap_fsw_right_justify(char *ref, char *read, char *aln, int32_t len)
+tmap_fsw_right_justify(char *ref, char *read, char *aln, int32_t len)
 {
   int32_t i;
   int32_t justified = 0;
@@ -1009,7 +1009,7 @@ fmap_fsw_right_justify(char *ref, char *read, char *aln, int32_t len)
       tmp = aln[i]; aln[i] = aln[len-i-1]; aln[len-i-1] = tmp;
   }
   // left-justify
-  justified = fmap_fsw_left_justify(ref, read, aln, len);
+  justified = tmap_fsw_left_justify(ref, read, aln, len);
   // reverse
   for(i=0;i<(len>>1);i++) {
       char tmp;
@@ -1021,21 +1021,21 @@ fmap_fsw_right_justify(char *ref, char *read, char *aln, int32_t len)
 }
 
 void
-fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
+tmap_fsw_get_aln(tmap_fsw_path_t *path, int32_t path_len,
                  uint8_t *flow, uint8_t *target, uint8_t strand,
                  char **ref, char **read, char **aln, int32_t j_type)
 {
   int32_t i, j;
 
-  (*ref) = fmap_malloc(sizeof(char) * (1 + path_len), "(*ref)");
-  (*read) = fmap_malloc(sizeof(char) * (1 + path_len), "(*read)");
-  (*aln) = fmap_malloc(sizeof(char) * (1 + path_len), "(*aln)");
+  (*ref) = tmap_malloc(sizeof(char) * (1 + path_len), "(*ref)");
+  (*read) = tmap_malloc(sizeof(char) * (1 + path_len), "(*read)");
+  (*aln) = tmap_malloc(sizeof(char) * (1 + path_len), "(*aln)");
 
   // ref
   for(i=path_len-1,j=0;0<=i;i--,j++) {
-      if(FMAP_FSW_FROM_M == path[i].ctype 
-         || FMAP_FSW_FROM_D == path[i].ctype
-         || FMAP_FSW_FROM_HP_PLUS == path[i].ctype) {
+      if(TMAP_FSW_FROM_M == path[i].ctype 
+         || TMAP_FSW_FROM_D == path[i].ctype
+         || TMAP_FSW_FROM_HP_PLUS == path[i].ctype) {
           (*ref)[j] = "ACGTN"[target[path[i].j]];
       }
       else {
@@ -1047,7 +1047,7 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
   // alignment string
   for(i=path_len-1,j=0;0<=i;i--,j++) {
       switch(path[i].ctype) {
-        case FMAP_FSW_FROM_M:
+        case TMAP_FSW_FROM_M:
           if(flow[path[i].i & 3] == target[path[i].j]) {
               (*aln)[j] = '|';
           }
@@ -1055,13 +1055,13 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
               (*aln)[j] = ' ';
           }
           break;
-        case FMAP_FSW_FROM_I:
+        case TMAP_FSW_FROM_I:
           (*aln)[j] = '+'; break;
-        case FMAP_FSW_FROM_D:
+        case TMAP_FSW_FROM_D:
           (*aln)[j] = '-'; break;
-        case FMAP_FSW_FROM_HP_PLUS: // overcall
+        case TMAP_FSW_FROM_HP_PLUS: // overcall
           (*aln)[j] = 'h'; break;
-        case FMAP_FSW_FROM_HP_MINUS: // undercall
+        case TMAP_FSW_FROM_HP_MINUS: // undercall
           (*aln)[j] = 'H'; break;
         default:
           (*aln)[j] = ' '; break;
@@ -1071,9 +1071,9 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
 
   // read
   for(i=path_len-1,j=0;0<=i;i--,j++) {
-      if(FMAP_FSW_FROM_M == path[i].ctype 
-         || FMAP_FSW_FROM_I == path[i].ctype
-         || FMAP_FSW_FROM_HP_MINUS == path[i].ctype) {
+      if(TMAP_FSW_FROM_M == path[i].ctype 
+         || TMAP_FSW_FROM_I == path[i].ctype
+         || TMAP_FSW_FROM_HP_MINUS == path[i].ctype) {
           (*read)[j] = "ACGTN"[flow[path[i].i & 3]];
       }
       else {
@@ -1084,19 +1084,19 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
 
   // the input is assumed to be in read-order
   switch(j_type) {
-    case FMAP_FSW_NO_JUSTIFY:
+    case TMAP_FSW_NO_JUSTIFY:
       // do nothing
       break;
-    case FMAP_FSW_JUSTIFY_LEFT_REF:
+    case TMAP_FSW_JUSTIFY_LEFT_REF:
       if(0 == strand) { 
-          fmap_fsw_left_justify((*ref), (*read), (*aln), path_len);
+          tmap_fsw_left_justify((*ref), (*read), (*aln), path_len);
       }
       else {
-          fmap_fsw_right_justify((*ref), (*read), (*aln), path_len);
+          tmap_fsw_right_justify((*ref), (*read), (*aln), path_len);
       }
       break;
-    case FMAP_FSW_JUSTIFY_LEFT_READ:
-      fmap_fsw_left_justify((*ref), (*read), (*aln), path_len);
+    case TMAP_FSW_JUSTIFY_LEFT_READ:
+      tmap_fsw_left_justify((*ref), (*read), (*aln), path_len);
       break;
     default:
       break;
@@ -1104,14 +1104,14 @@ fmap_fsw_get_aln(fmap_fsw_path_t *path, int32_t path_len,
 }
 
 void 
-fmap_fsw_print_aln(fmap_file_t *fp, int64_t score, fmap_fsw_path_t *path, int32_t path_len,
+tmap_fsw_print_aln(tmap_file_t *fp, int64_t score, tmap_fsw_path_t *path, int32_t path_len,
                    uint8_t *flow, uint8_t *target, uint8_t strand, int32_t j_type)
 {
   char *ref=NULL, *read=NULL, *aln=NULL;
 
-  fmap_fsw_get_aln(path, path_len, flow, target, strand, &ref, &read, &aln, j_type);
+  tmap_fsw_get_aln(path, path_len, flow, target, strand, &ref, &read, &aln, j_type);
 
-  fmap_file_fprintf(fp, "%lld\t%s\t%s\t%s",
+  tmap_file_fprintf(fp, "%lld\t%s\t%s\t%s",
                     (long long int)score, read, aln, ref);
 
   free(ref);
@@ -1119,8 +1119,8 @@ fmap_fsw_print_aln(fmap_file_t *fp, int64_t score, fmap_fsw_path_t *path, int32_
   free(aln);
 }
 
-fmap_fsw_flowseq_t *
-fmap_fsw_sff_to_flowseq(fmap_sff_t *sff)
+tmap_fsw_flowseq_t *
+tmap_fsw_sff_to_flowseq(tmap_sff_t *sff)
 {
   int32_t was_int;
   int32_t i, j, l;
@@ -1131,7 +1131,7 @@ fmap_fsw_sff_to_flowseq(fmap_sff_t *sff)
   // convert bases to integers
   was_int = sff->is_int;
   if(0 == sff->is_int) {
-      fmap_sff_to_int(sff);
+      tmap_sff_to_int(sff);
   }
 
   // key_index/key_bases
@@ -1140,7 +1140,7 @@ fmap_fsw_sff_to_flowseq(fmap_sff_t *sff)
   if(sff->gheader->key_length+1 <= sff->read->bases->l) {
       // get the number bases in the key that contribute to the first read flow
       for(i=sff->gheader->key_length-1;0<=i;i--) {
-          uint8_t c = fmap_nt_char_to_int[(int)sff->gheader->key->s[i]];
+          uint8_t c = tmap_nt_char_to_int[(int)sff->gheader->key->s[i]];
           if(c == sff->read->bases->s[0]) {
               key_bases++;
           }
@@ -1165,20 +1165,20 @@ fmap_fsw_sff_to_flowseq(fmap_sff_t *sff)
   num_flows = sff->gheader->flow_length - l;
 
   // get the flowgram
-  flowgram = fmap_malloc(num_flows * sizeof(uint16_t), "flowgram");
+  flowgram = tmap_malloc(num_flows * sizeof(uint16_t), "flowgram");
   for(i=0;i<num_flows;i++) {
       flowgram[i] = sff->read->flowgram[i+l];
   }
 
   // get the flow
-  flow = fmap_malloc(sizeof(uint8_t) * 4, "flow");
+  flow = tmap_malloc(sizeof(uint8_t) * 4, "flow");
   for(i=0;i<4;i++) {
       // offset it by the start flow
-      flow[i] = fmap_nt_char_to_int[(int)sff->gheader->flow->s[(i + l) & 3]];
+      flow[i] = tmap_nt_char_to_int[(int)sff->gheader->flow->s[(i + l) & 3]];
   }
 
   // get the number of bases called per flow
-  base_calls = fmap_calloc(num_flows, sizeof(uint8_t), "base_calls");
+  base_calls = tmap_calloc(num_flows, sizeof(uint8_t), "base_calls");
   // i = 0-based index into sff->read->bases->s
   i = sff->gheader->key_length;
   // j = 0-based index into base_calls 
@@ -1200,7 +1200,7 @@ fmap_fsw_sff_to_flowseq(fmap_sff_t *sff)
               fputc("ACGTN"[(int)sff->read->bases->s[k]], stderr);
           }
           fputc('\n', stderr);
-          fmap_error("num_flows <= j", Exit, OutOfRange);
+          tmap_error("num_flows <= j", Exit, OutOfRange);
       }
       // get the number of bases called in this flow 
       while(i < sff->read->bases->l
@@ -1209,7 +1209,7 @@ fmap_fsw_sff_to_flowseq(fmap_sff_t *sff)
           i++;
       }
       if(0 == base_calls[j]) {
-          fmap_error("bug encountered", Exit, OutOfRange);
+          tmap_error("bug encountered", Exit, OutOfRange);
       }
       j++; // next flow
   }
@@ -1218,18 +1218,18 @@ fmap_fsw_sff_to_flowseq(fmap_sff_t *sff)
       j++;
   }
   if(j != num_flows) {
-      fmap_error("j != num_flows", Exit, OutOfRange);
+      tmap_error("j != num_flows", Exit, OutOfRange);
   }
 
   if(0 == was_int) {
-      fmap_sff_to_char(sff);
+      tmap_sff_to_char(sff);
   }
 
-  return fmap_fsw_flowseq_init(flow, base_calls, flowgram, num_flows, key_index, key_bases);
+  return tmap_fsw_flowseq_init(flow, base_calls, flowgram, num_flows, key_index, key_bases);
 }
 
 void
-fmap_fsw_flowseq_reverse_compliment(fmap_fsw_flowseq_t *flowseq)
+tmap_fsw_flowseq_reverse_compliment(tmap_fsw_flowseq_t *flowseq)
 {
   int32_t i;
 
@@ -1268,28 +1268,28 @@ typedef struct {
     int32_t num_flows;
     char *target;
     int32_t target_length;
-    fmap_fsw_param_t param;
+    tmap_fsw_param_t param;
     int32_t j_type;
-} fmap_fsw_main_opt_t;
+} tmap_fsw_main_opt_t;
 
-static fmap_fsw_main_opt_t *
-fmap_fsw_main_opt_init()
+static tmap_fsw_main_opt_t *
+tmap_fsw_main_opt_init()
 {
-  fmap_fsw_main_opt_t *opt = NULL;
-  opt = fmap_calloc(1, sizeof(fmap_fsw_main_opt_t), "opt");
+  tmap_fsw_main_opt_t *opt = NULL;
+  opt = tmap_calloc(1, sizeof(tmap_fsw_main_opt_t), "opt");
 
-  opt->flow = fmap_strdup("TAGC");
+  opt->flow = tmap_strdup("TAGC");
   opt->base_calls = NULL;
   opt->flowgram = NULL;
   opt->target = NULL;
   opt->target_length = 0;
-  opt->j_type = FMAP_FSW_NO_JUSTIFY;
+  opt->j_type = TMAP_FSW_NO_JUSTIFY;
 
   // param
   opt->param.gap_open = 13*100;
   opt->param.gap_ext = 2*100;
   opt->param.gap_end = 2*100;
-  opt->param.matrix = fmap_fsw_sm_short; // 11*100 - match, -19*100 - mismatch
+  opt->param.matrix = tmap_fsw_sm_short; // 11*100 - match, -19*100 - mismatch
   opt->param.fscore = 26*100; // set this to score_match + gap_open + gap_ext
   opt->param.offset = 0;
   opt->param.row = 5;
@@ -1299,7 +1299,7 @@ fmap_fsw_main_opt_init()
 }
 
 static void
-fmap_fsw_main_opt_destroy(fmap_fsw_main_opt_t *opt)
+tmap_fsw_main_opt_destroy(tmap_fsw_main_opt_t *opt)
 {
   free(opt->flow);
   free(opt->base_calls);
@@ -1309,7 +1309,7 @@ fmap_fsw_main_opt_destroy(fmap_fsw_main_opt_t *opt)
 }
 
 static uint16_t*
-fmap_fsw_main_get_flowgram(char *flowgram, int32_t *num_flows)
+tmap_fsw_main_get_flowgram(char *flowgram, int32_t *num_flows)
 {
   int32_t i, j, m;
   uint16_t *f = NULL;
@@ -1323,21 +1323,21 @@ fmap_fsw_main_get_flowgram(char *flowgram, int32_t *num_flows)
   // 3      |  read in comma
 
   m = 4;
-  f = fmap_calloc(m, sizeof(uint16_t), "f");
+  f = tmap_calloc(m, sizeof(uint16_t), "f");
 
   i=j=0;
   while('\0' != flowgram[i]) {
       //fprintf(stderr, "state=%d flowgram[%d]=\"%s\" j=%d\n", state, i, flowgram+i, j);
       if('.' == flowgram[i]) {
           if(1 != state) {
-              fmap_error("unexpected decimal point", Exit, OutOfRange);
+              tmap_error("unexpected decimal point", Exit, OutOfRange);
           }
           i++; // skip over the decimal
           state = 2;
       }
       else if(',' == flowgram[i]) {
           if(1 != state && 3 != state) {
-              fmap_error("unexpected comma", Exit, OutOfRange);
+              tmap_error("unexpected comma", Exit, OutOfRange);
           }
           i++; // skip over the comma
           j++; // next flowgram
@@ -1345,11 +1345,11 @@ fmap_fsw_main_get_flowgram(char *flowgram, int32_t *num_flows)
       }
       else if(0 != isgraph(flowgram[i])) {
           if(0 != state && 2 != state) {
-              fmap_error("unexpected digits", Exit, OutOfRange);
+              tmap_error("unexpected digits", Exit, OutOfRange);
           }
           if(m <= j) { // more memory
               m <<= 1;
-              f = fmap_realloc(f, m*sizeof(uint16_t), "f");
+              f = tmap_realloc(f, m*sizeof(uint16_t), "f");
           }
           if(0 == state) {
               v = atoi(flowgram + i);
@@ -1369,32 +1369,32 @@ fmap_fsw_main_get_flowgram(char *flowgram, int32_t *num_flows)
           state++;
       }
       else {
-          fmap_error("could not parse the flowgram", Exit, OutOfRange);
+          tmap_error("could not parse the flowgram", Exit, OutOfRange);
       }
   }
   j++;
   if(1 != state && 3 != state) {
-      fmap_error("ended with a comma or a decimal point", Exit, OutOfRange);
+      tmap_error("ended with a comma or a decimal point", Exit, OutOfRange);
   } 
 
   (*num_flows) = j;
-  f = fmap_realloc(f, (*num_flows)*sizeof(uint16_t), "f");
+  f = tmap_realloc(f, (*num_flows)*sizeof(uint16_t), "f");
   return f;
 }
 
 uint8_t *
-fmap_fsw_main_get_base_calls(char *optarg, int32_t num_flows, char *flow)
+tmap_fsw_main_get_base_calls(char *optarg, int32_t num_flows, char *flow)
 {
   int32_t i, j, k;
   uint8_t *base_calls = NULL;
 
-  base_calls = fmap_calloc(num_flows, sizeof(uint8_t), "base_calls");
+  base_calls = tmap_calloc(num_flows, sizeof(uint8_t), "base_calls");
 
   for(i=j=0;i<strlen(optarg);i++) {
       k=0;
       while(toupper(flow[j & 3]) != toupper(optarg[i])) {
           j++; k++;
-          if(3 < k) fmap_error("could not understand the base", Exit, OutOfRange);
+          if(3 < k) tmap_error("could not understand the base", Exit, OutOfRange);
       }
       base_calls[j]++;
   }
@@ -1408,57 +1408,57 @@ fmap_fsw_main_get_base_calls(char *optarg, int32_t num_flows, char *flow)
 }
 
 static int32_t
-usage(fmap_fsw_main_opt_t *opt)
+usage(tmap_fsw_main_opt_t *opt)
 {
-  fmap_file_fprintf(fmap_file_stderr, "\n");
-  fmap_file_fprintf(fmap_file_stderr, "Usage: %s fsw [options]", PACKAGE);
-  fmap_file_fprintf(fmap_file_stderr, "\n");
-  fmap_file_fprintf(fmap_file_stderr, "Options (required):\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -b STRING   base calls ([ACGT]+) [%s]\n",
+  tmap_file_fprintf(tmap_file_stderr, "\n");
+  tmap_file_fprintf(tmap_file_stderr, "Usage: %s fsw [options]", PACKAGE);
+  tmap_file_fprintf(tmap_file_stderr, "\n");
+  tmap_file_fprintf(tmap_file_stderr, "Options (required):\n");
+  tmap_file_fprintf(tmap_file_stderr, "         -b STRING   base calls ([ACGT]+) [%s]\n",
                     opt->base_calls);
-  fmap_file_fprintf(fmap_file_stderr, "         -f STRING   flowgram float values (comma separated) [%s]\n",
+  tmap_file_fprintf(tmap_file_stderr, "         -f STRING   flowgram float values (comma separated) [%s]\n",
                     opt->flowgram);
-  fmap_file_fprintf(fmap_file_stderr, "         -t STRING   target sequence ([ACGT]+) [%s]\n",
+  tmap_file_fprintf(tmap_file_stderr, "         -t STRING   target sequence ([ACGT]+) [%s]\n",
                     opt->target);
-  fmap_file_fprintf(fmap_file_stderr, "\n");
-  fmap_file_fprintf(fmap_file_stderr, "Options (optional):\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -k STRING   the flow order ([ACGT]{4}) [%s]\n",
+  tmap_file_fprintf(tmap_file_stderr, "\n");
+  tmap_file_fprintf(tmap_file_stderr, "Options (optional):\n");
+  tmap_file_fprintf(tmap_file_stderr, "         -k STRING   the flow order ([ACGT]{4}) [%s]\n",
                     opt->flow);
-  fmap_file_fprintf(fmap_file_stderr, "         -F INT      flow penalty [%d]\n", opt->param.fscore);
-  fmap_file_fprintf(fmap_file_stderr, "         -o INT      search for homopolymer errors +- offset [%d]\n", opt->param.offset);
-  fmap_file_fprintf(fmap_file_stderr, "         -l INT      indel justification type: 0 - none, 1 - 5' strand of the reference, 2 - 5' strand of the read [%d]\n", opt->j_type);
-  fmap_file_fprintf(fmap_file_stderr, "         -v          print verbose progress information\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -h          print this message\n");
-  fmap_file_fprintf(fmap_file_stderr, "\n");
+  tmap_file_fprintf(tmap_file_stderr, "         -F INT      flow penalty [%d]\n", opt->param.fscore);
+  tmap_file_fprintf(tmap_file_stderr, "         -o INT      search for homopolymer errors +- offset [%d]\n", opt->param.offset);
+  tmap_file_fprintf(tmap_file_stderr, "         -l INT      indel justification type: 0 - none, 1 - 5' strand of the reference, 2 - 5' strand of the read [%d]\n", opt->j_type);
+  tmap_file_fprintf(tmap_file_stderr, "         -v          print verbose progress information\n");
+  tmap_file_fprintf(tmap_file_stderr, "         -h          print this message\n");
+  tmap_file_fprintf(tmap_file_stderr, "\n");
 
   return 1;
 }
 
-int fmap_fsw_main(int argc, char *argv[])
+int tmap_fsw_main(int argc, char *argv[])
 {
   int32_t i, c;
-  fmap_fsw_path_t *path=NULL;
+  tmap_fsw_path_t *path=NULL;
   int32_t path_len = 0;
-  fmap_fsw_main_opt_t *opt;
+  tmap_fsw_main_opt_t *opt;
   int32_t num_flows = 0;
   uint16_t *flowgram = NULL;
   uint8_t *base_calls = NULL;
   uint8_t flow[5];
-  fmap_fsw_flowseq_t *flowseq = NULL;
+  tmap_fsw_flowseq_t *flowseq = NULL;
 
-  opt = fmap_fsw_main_opt_init();
+  opt = tmap_fsw_main_opt_init();
 
   while((c = getopt(argc, argv, "b:f:t:k:F:o:l:vh")) >= 0) {
       switch(c) {
         case 'b':
-          opt->base_calls = fmap_strdup(optarg); break;
+          opt->base_calls = tmap_strdup(optarg); break;
         case 'f':
-          opt->flowgram = fmap_strdup(optarg); break;
+          opt->flowgram = tmap_strdup(optarg); break;
         case 't':
-          opt->target = fmap_strdup(optarg); opt->target_length = strlen(opt->target); break;
+          opt->target = tmap_strdup(optarg); opt->target_length = strlen(opt->target); break;
         case 'k':
           free(opt->flow);
-          opt->flow = fmap_strdup(optarg); break;
+          opt->flow = tmap_strdup(optarg); break;
         case 'F':
           opt->param.fscore = 100*atoi(optarg); break;
         case 'o':
@@ -1466,7 +1466,7 @@ int fmap_fsw_main(int argc, char *argv[])
         case 'l':
           opt->j_type = atoi(optarg); break;
         case 'v':
-          fmap_progress_set_verbosity(1); break;
+          tmap_progress_set_verbosity(1); break;
         case 'h':
         default:
           return usage(opt);
@@ -1478,62 +1478,62 @@ int fmap_fsw_main(int argc, char *argv[])
   }
   else { // check the command line options
       if(NULL == opt->base_calls) {
-          fmap_error("option -b must be specified", Exit, CommandLineArgument);
+          tmap_error("option -b must be specified", Exit, CommandLineArgument);
       }
       if(NULL == opt->flowgram) {
-          fmap_error("option -f must be specified", Exit, CommandLineArgument);
+          tmap_error("option -f must be specified", Exit, CommandLineArgument);
       }
       if(NULL == opt->target) {
-          fmap_error("option -t must be specified", Exit, CommandLineArgument);
+          tmap_error("option -t must be specified", Exit, CommandLineArgument);
       }
       if(NULL == opt->flow) {
-          fmap_error("option -k must be specified", Exit, CommandLineArgument);
+          tmap_error("option -k must be specified", Exit, CommandLineArgument);
       }
-      fmap_error_cmd_check_int(opt->param.fscore, 0, INT32_MAX, "-F");
-      fmap_error_cmd_check_int(opt->param.offset, 0, INT32_MAX, "-o");
-      fmap_error_cmd_check_int(opt->param.offset, FMAP_FSW_NO_JUSTIFY, FMAP_FSW_NO_JUSTIFY, "-l");
+      tmap_error_cmd_check_int(opt->param.fscore, 0, INT32_MAX, "-F");
+      tmap_error_cmd_check_int(opt->param.offset, 0, INT32_MAX, "-o");
+      tmap_error_cmd_check_int(opt->param.offset, TMAP_FSW_NO_JUSTIFY, TMAP_FSW_NO_JUSTIFY, "-l");
   }
 
   // get the flowgram
-  flowgram = fmap_fsw_main_get_flowgram(opt->flowgram, &num_flows); 
+  flowgram = tmap_fsw_main_get_flowgram(opt->flowgram, &num_flows); 
 
   // get the flow base calls
-  base_calls = fmap_fsw_main_get_base_calls(opt->base_calls, num_flows, opt->flow);
+  base_calls = tmap_fsw_main_get_base_calls(opt->base_calls, num_flows, opt->flow);
 
   // convert the target to 2-bit format 
   for(i=0;i<opt->target_length;i++) {
-      opt->target[i] = fmap_nt_char_to_int[(int)opt->target[i]];
+      opt->target[i] = tmap_nt_char_to_int[(int)opt->target[i]];
   }
 
   for(i=0;i<4;i++) {
-      flow[i] = fmap_nt_char_to_int[(int)opt->flow[i]];
+      flow[i] = tmap_nt_char_to_int[(int)opt->flow[i]];
   }
 
-  path = fmap_malloc(sizeof(fmap_fsw_path_t)*FMAP_FSW_MAX_PATH_LENGTH(opt->target_length, num_flows, opt->param.offset), "path");
+  path = tmap_malloc(sizeof(tmap_fsw_path_t)*TMAP_FSW_MAX_PATH_LENGTH(opt->target_length, num_flows, opt->param.offset), "path");
 
-  flowseq = fmap_fsw_flowseq_init(flow, base_calls, flowgram, num_flows, -1, -1);
+  flowseq = tmap_fsw_flowseq_init(flow, base_calls, flowgram, num_flows, -1, -1);
 
   // align
-  int64_t score = fmap_fsw_global_core((uint8_t*)opt->target, opt->target_length,
+  int64_t score = tmap_fsw_global_core((uint8_t*)opt->target, opt->target_length,
                                        flowseq,
                                        &opt->param,
                                        path, &path_len);
 
-  fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "wb", FMAP_FILE_NO_COMPRESSION);
+  tmap_file_stdout = tmap_file_fdopen(fileno(stdout), "wb", TMAP_FILE_NO_COMPRESSION);
 
   // print
-  fmap_fsw_print_aln(fmap_file_stdout, score, path, path_len,
+  tmap_fsw_print_aln(tmap_file_stdout, score, path, path_len,
                      flow, (uint8_t*)opt->target, 0, opt->j_type);
-  fmap_file_fprintf(fmap_file_stdout, "\n");
+  tmap_file_fprintf(tmap_file_stdout, "\n");
 
-  fmap_file_fclose(fmap_file_stdout);
+  tmap_file_fclose(tmap_file_stdout);
 
   // destroy memory
-  fmap_fsw_main_opt_destroy(opt);
+  tmap_fsw_main_opt_destroy(opt);
   free(flowgram);
   free(base_calls);
   free(path);
-  fmap_fsw_flowseq_destroy(flowseq);
+  tmap_fsw_flowseq_destroy(flowseq);
 
   return 0;
 }

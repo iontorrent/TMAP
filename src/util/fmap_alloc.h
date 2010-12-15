@@ -1,7 +1,7 @@
-#ifndef FMAP_ALLOC_H_
-#define FMAP_ALLOC_H_
+#ifndef TMAP_ALLOC_H_
+#define TMAP_ALLOC_H_
 
-#include "fmap_error.h"
+#include "tmap_error.h"
 
 /*! 
   Memory Allocation Routines. 
@@ -13,8 +13,8 @@
   @param  _variable_name  the variable name to be assigned this memory in the calling function
   @return                 upon success, a pointer to the memory block allocated by the function; a null pointer otherwise.
   */
-#define fmap_malloc(_size, _variable_name) \
-  fmap_malloc1(_size, __func__, _variable_name)
+#define tmap_malloc(_size, _variable_name) \
+  tmap_malloc1(_size, __func__, _variable_name)
 
 /*! 
   wrapper function for realloc
@@ -24,8 +24,8 @@
   @return 		  upon success, a pointer to the memory block allocated by the function; a null pointer otherwise.
   @details		  the ptr must be a memory block previously allocated with malloc, calloc, or realloc to be reallocated; if the ptr is NULL, a new block of memory will be allocated. 
   */
-#define fmap_realloc(_ptr, _size, _variable_name) \
-  fmap_realloc1(_ptr, _size, __func__, _variable_name)
+#define tmap_realloc(_ptr, _size, _variable_name) \
+  tmap_realloc1(_ptr, _size, __func__, _variable_name)
 
 /*! 
   wrapper function for calloc
@@ -34,16 +34,16 @@
   @param  _variable_name  the variable name to be assigned this memory in the calling function
   @return                 upon success, a pointer to the memory block allocated by the function; a null pointer otherwise.
   */
-#define fmap_calloc(_num, _size, _variable_name) \
-  fmap_calloc1(_num, _size, __func__, _variable_name)
+#define tmap_calloc(_num, _size, _variable_name) \
+  tmap_calloc1(_num, _size, __func__, _variable_name)
 
 /*! 
   wrapper for 'strdup' that checks memory allocation
   @param  _str            string to be copied
   @return                 a pointer to the copied string
   */
-#define fmap_strdup(_str) \
-  fmap_strdup1(_str, __func__)
+#define tmap_strdup(_str) \
+  tmap_strdup1(_str, __func__)
 
 /*! 
   wrapper function for malloc
@@ -53,7 +53,7 @@
   @return                upon success, a pointer to the memory block allocated by the function; a null pointer otherwise.
   */
 inline void *
-fmap_malloc1(size_t size, const char *function_name, const char *variable_name);
+tmap_malloc1(size_t size, const char *function_name, const char *variable_name);
 
 /*! 
   wrapper function for realloc
@@ -65,7 +65,7 @@ fmap_malloc1(size_t size, const char *function_name, const char *variable_name);
   @details		 the ptr must be a memory block previously allocated with malloc, calloc, or realloc to be reallocated; if the ptr is NULL, a new block of memory will be allocated. 
   */
 inline void *
-fmap_realloc1(void *ptr, size_t size, const char *function_name, const char *variable_name);
+tmap_realloc1(void *ptr, size_t size, const char *function_name, const char *variable_name);
 
 /*! 
   wrapper function for calloc
@@ -76,7 +76,7 @@ fmap_realloc1(void *ptr, size_t size, const char *function_name, const char *var
   @return                upon success, a pointer to the memory block allocated by the function; a null pointer otherwise.
   */
 inline void *
-fmap_calloc1(size_t num, size_t size, const char *function_name, const char *variable_name);
+tmap_calloc1(size_t num, size_t size, const char *function_name, const char *variable_name);
 
 /*! 
   wrapper for 'strdup' that checks memory allocation
@@ -85,6 +85,6 @@ fmap_calloc1(size_t num, size_t size, const char *function_name, const char *var
   @return                a pointer to the copied string
   */
 inline char *
-fmap_strdup1(const char *str, const char *function_name);
+tmap_strdup1(const char *str, const char *function_name);
 
 #endif

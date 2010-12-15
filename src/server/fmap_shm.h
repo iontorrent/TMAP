@@ -1,5 +1,5 @@
-#ifndef FMAP_SHM_H_
-#define FMAP_SHM_H_
+#ifndef TMAP_SHM_H_
+#define TMAP_SHM_H_
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -8,11 +8,11 @@
 #include <sys/shm.h>
 #include <stdint.h>
 
-#define FMAP_SHM_NOT_READY ~0xffaa6161
-#define FMAP_SHM_READY 0xffaa6161
-#define FMAP_SHM_DEAD  0xaabbccdd
-#define FMAP_SHMGET_SLEEP 10
-#define FMAP_SHMGET_RETRIES 10
+#define TMAP_SHM_NOT_READY ~0xffaa6161
+#define TMAP_SHM_READY 0xffaa6161
+#define TMAP_SHM_DEAD  0xaabbccdd
+#define TMAP_SHMGET_SLEEP 10
+#define TMAP_SHMGET_RETRIES 10
 
 /*! 
   Shared Memory Library
@@ -23,12 +23,12 @@
   They list if a given data structure is loaded into memory.
   */
 enum {
-    FMAP_SHM_LISTING_REFSEQ     = 0x1, /*!< the forward packed reference sequence  */
-    FMAP_SHM_LISTING_REV_REFSEQ = 0x2, /*!< the forward packed reference sequence  */
-    FMAP_SHM_LISTING_BWT        = 0x4, /*!< the forward BWT string */
-    FMAP_SHM_LISTING_REV_BWT    = 0x8, /*!< the reverse BWT string */
-    FMAP_SHM_LISTING_SA         = 0x10, /*!< the forward SA string */
-    FMAP_SHM_LISTING_REV_SA     = 0x20 /*!< the reverse SA string */
+    TMAP_SHM_LISTING_REFSEQ     = 0x1, /*!< the forward packed reference sequence  */
+    TMAP_SHM_LISTING_REV_REFSEQ = 0x2, /*!< the forward packed reference sequence  */
+    TMAP_SHM_LISTING_BWT        = 0x4, /*!< the forward BWT string */
+    TMAP_SHM_LISTING_REV_BWT    = 0x8, /*!< the reverse BWT string */
+    TMAP_SHM_LISTING_SA         = 0x10, /*!< the forward SA string */
+    TMAP_SHM_LISTING_REV_SA     = 0x20 /*!< the reverse SA string */
 };
 
 /*! 
@@ -41,14 +41,14 @@ typedef struct {
     void *ptr;  /*!< pointer to the first byte of the shared memory */
     void *buf;  /*!< pointer to the first byte of the data stored in the shared memory */
     int32_t creator; /*!< 1 if this structure created the shared memory, 0 otherwise */
-} fmap_shm_t;
+} tmap_shm_t;
 
 /*! 
   @param  shm  pointer to the shared memory structure
   @return      the state of the shared memory
   */
 inline uint32_t
-fmap_shm_get_state(fmap_shm_t *shm);
+tmap_shm_get_state(tmap_shm_t *shm);
 
 /*! 
   @param  shm      pointer to the shared memory structure
@@ -56,7 +56,7 @@ fmap_shm_get_state(fmap_shm_t *shm);
   @return          1 if the listing exists, 0 otherwise
   */
 inline uint32_t
-fmap_shm_listing_exists(fmap_shm_t *shm, uint32_t listing);
+tmap_shm_listing_exists(tmap_shm_t *shm, uint32_t listing);
 
 /*! 
   @param  shm      pointer to the shared memory structure
@@ -64,7 +64,7 @@ fmap_shm_listing_exists(fmap_shm_t *shm, uint32_t listing);
   @param  size     size of the listing in bytes
   */
 inline void
-fmap_shm_add_listing(fmap_shm_t *shm, uint32_t listing, size_t size);
+tmap_shm_add_listing(tmap_shm_t *shm, uint32_t listing, size_t size);
 
 /*! 
   @param  shm      pointer to the shared memory structure
@@ -72,7 +72,7 @@ fmap_shm_add_listing(fmap_shm_t *shm, uint32_t listing, size_t size);
   @return          the number of bytes from the start of the buffer, or SIZE_MAX if the listing does not exist
   */
 inline size_t
-fmap_shm_get_listing_bytes(fmap_shm_t *shm, uint32_t listing);
+tmap_shm_get_listing_bytes(tmap_shm_t *shm, uint32_t listing);
 
 /*! 
   @param  shm      pointer to the shared memory structure
@@ -80,24 +80,24 @@ fmap_shm_get_listing_bytes(fmap_shm_t *shm, uint32_t listing);
   @return          pointer to the beginning of the packed listing
   */
 inline uint8_t *
-fmap_shm_get_buffer(fmap_shm_t *shm, uint32_t listing);
+tmap_shm_get_buffer(tmap_shm_t *shm, uint32_t listing);
 
 /*! 
   @param  shm  pointer to the shared memory structure
   */
 inline void
-fmap_shm_set_not_ready(fmap_shm_t *shm);
+tmap_shm_set_not_ready(tmap_shm_t *shm);
 /*! 
   @param  shm  pointer to the shared memory structure
   */
 inline void
-fmap_shm_set_ready(fmap_shm_t *shm);
+tmap_shm_set_ready(tmap_shm_t *shm);
 
 /*! 
   @param  shm  pointer to the shared memory structure
   */
 inline void
-fmap_shm_set_dead(fmap_shm_t *shm);
+tmap_shm_set_dead(tmap_shm_t *shm);
 
 /*! 
   @param  key         the key of the shared memory 
@@ -105,14 +105,14 @@ fmap_shm_set_dead(fmap_shm_t *shm);
   @param  create      1 if the process is to create the shared memory, 0 otherwise
   @return             a pointer to the initialized shared memory
   */
-fmap_shm_t *
-fmap_shm_init(key_t key, size_t size, int32_t create);
+tmap_shm_t *
+tmap_shm_init(key_t key, size_t size, int32_t create);
 
 /*! 
   @param  shm    pointer to the shared memory structure
   @param  force  forces the shared memory to be destroyed
   */
 void
-fmap_shm_destroy(fmap_shm_t *shm, int32_t force);
+tmap_shm_destroy(tmap_shm_t *shm, int32_t force);
 
 #endif

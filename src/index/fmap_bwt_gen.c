@@ -28,22 +28,22 @@
 #include <stdint.h>
 #include <time.h>
 #include <unistd.h>
-#include "../util/fmap_error.h"
-#include "../util/fmap_alloc.h"
-#include "../util/fmap_progress.h"
-#include "../util/fmap_definitions.h"
-#include "../io/fmap_file.h"
-#include "fmap_refseq.h"
-#include "fmap_bwt.h"
-#include "fmap_sa.h"
-#include "fmap_bwt_gen.h"
+#include "../util/tmap_error.h"
+#include "../util/tmap_alloc.h"
+#include "../util/tmap_progress.h"
+#include "../util/tmap_definitions.h"
+#include "../io/tmap_file.h"
+#include "tmap_refseq.h"
+#include "tmap_bwt.h"
+#include "tmap_sa.h"
+#include "tmap_bwt_gen.h"
 
 static uint32_t 
 TextLengthFromBytePacked(uint32_t bytePackedLength, uint32_t bitPerChar,
                          uint32_t lastByteLength)
 {
   if (bytePackedLength > ALL_ONE_MASK / (BITS_IN_BYTE / bitPerChar)) {
-      fmap_error("TextLengthFromBytePacked(): text length > 2^32", Exit, OutOfRange);
+      tmap_error("TextLengthFromBytePacked(): text length > 2^32", Exit, OutOfRange);
   }
   return (bytePackedLength - 1) * (BITS_IN_BYTE / bitPerChar) + lastByteLength;
 }
@@ -106,7 +106,7 @@ BWTResidentSizeInWord(const uint32_t numChar) {
 }
 
 static void 
-BWTIncSetBuildSizeAndTextAddr(fmap_bwt_gen_inc_t *bwtInc)
+BWTIncSetBuildSizeAndTextAddr(tmap_bwt_gen_inc_t *bwtInc)
 {
   uint32_t maxBuildSize;
 
@@ -127,7 +127,7 @@ BWTIncSetBuildSizeAndTextAddr(fmap_bwt_gen_inc_t *bwtInc)
                       - bwtInc->numberOfIterationDone * OCC_INTERVAL / BIT_PER_CHAR) 
         / 3;
       if (maxBuildSize < CHAR_PER_WORD) {
-          fmap_error("BWTIncSetBuildSizeAndTextAddr(): Not enough space allocated to continue construction", Exit, OutOfRange);
+          tmap_error("BWTIncSetBuildSizeAndTextAddr(): Not enough space allocated to continue construction", Exit, OutOfRange);
       }
       if (bwtInc->incMaxBuildSize > 0) {
           bwtInc->buildSize = min(bwtInc->incMaxBuildSize, maxBuildSize);
@@ -140,7 +140,7 @@ BWTIncSetBuildSizeAndTextAddr(fmap_bwt_gen_inc_t *bwtInc)
   }
 
   if (bwtInc->buildSize < CHAR_PER_WORD) {
-      fmap_error("BWTIncSetBuildSizeAndTextAddr(): Not enough space allocated to continue construction", Exit, OutOfRange);
+      tmap_error("BWTIncSetBuildSizeAndTextAddr(): Not enough space allocated to continue construction", Exit, OutOfRange);
   }
 
   bwtInc->buildSize = bwtInc->buildSize / CHAR_PER_WORD * CHAR_PER_WORD;
@@ -275,30 +275,30 @@ ConvertBytePackedToWordPacked(const  uint8_t *input, uint32_t *output, const uin
   output[wordProcessed] = c;
 }
 
-fmap_bwt_gen_t *
+tmap_bwt_gen_t *
 BWTCreate(const uint32_t textLength, uint32_t *decodeTable)
 {
-  fmap_bwt_gen_t *bwt;
+  tmap_bwt_gen_t *bwt;
 
-  bwt = fmap_calloc(1, sizeof(fmap_bwt_gen_t), "bwt");
+  bwt = tmap_calloc(1, sizeof(tmap_bwt_gen_t), "bwt");
 
   bwt->textLength = 0;
   bwt->inverseSa = 0;
 
-  bwt->cumulativeFreq = fmap_calloc((ALPHABET_SIZE + 1), sizeof(uint32_t), "bwt->cumulativeFreq");
+  bwt->cumulativeFreq = tmap_calloc((ALPHABET_SIZE + 1), sizeof(uint32_t), "bwt->cumulativeFreq");
   initializeVAL(bwt->cumulativeFreq, ALPHABET_SIZE + 1, 0);
 
   bwt->bwtSizeInWord = 0;
 
   // Generate decode tables
   if (decodeTable == NULL) {
-      bwt->decodeTable = fmap_calloc(DNA_OCC_CNT_TABLE_SIZE_IN_WORD, sizeof(uint32_t), "bwt->decodeTable");
+      bwt->decodeTable = tmap_calloc(DNA_OCC_CNT_TABLE_SIZE_IN_WORD, sizeof(uint32_t), "bwt->decodeTable");
       GenerateDNAOccCountTable(bwt->decodeTable);
   } else {
       bwt->decodeTable = decodeTable;
   }
 
-  bwt->occValueMajor = fmap_calloc(BWTOccValueMajorSizeInWord(textLength), sizeof(uint32_t), "bwt->occValueMajor");
+  bwt->occValueMajor = tmap_calloc(BWTOccValueMajorSizeInWord(textLength), sizeof(uint32_t), "bwt->occValueMajor");
 
   bwt->occSizeInWord = 0;
   bwt->occValue = NULL;
@@ -308,28 +308,28 @@ BWTCreate(const uint32_t textLength, uint32_t *decodeTable)
   return bwt;
 }
 
-fmap_bwt_gen_inc_t *
+tmap_bwt_gen_inc_t *
 BWTIncCreate(const uint32_t textLength, const float targetNBit,
              const uint32_t initialMaxBuildSize, const uint32_t incMaxBuildSize)
 {
-  fmap_bwt_gen_inc_t *bwtInc;
+  tmap_bwt_gen_inc_t *bwtInc;
   uint32_t i;
 
   if (targetNBit == 0) {
-      fmap_error("BWTIncCreate() : targetNBit = 0", Exit, OutOfRange);
+      tmap_error("BWTIncCreate() : targetNBit = 0", Exit, OutOfRange);
   }
 
-  bwtInc = fmap_calloc(1, sizeof(fmap_bwt_gen_inc_t), "bwtInc");
+  bwtInc = tmap_calloc(1, sizeof(tmap_bwt_gen_inc_t), "bwtInc");
   bwtInc->numberOfIterationDone = 0;
   bwtInc->bwt = BWTCreate(textLength, NULL);
   bwtInc->initialMaxBuildSize = initialMaxBuildSize;
   bwtInc->incMaxBuildSize = incMaxBuildSize;
   bwtInc->targetNBit = targetNBit;
-  bwtInc->cumulativeCountInCurrentBuild = fmap_calloc((ALPHABET_SIZE + 1), sizeof(uint32_t), "bwtInc->cumumlativeCountInCurrentBuild");
+  bwtInc->cumulativeCountInCurrentBuild = tmap_calloc((ALPHABET_SIZE + 1), sizeof(uint32_t), "bwtInc->cumumlativeCountInCurrentBuild");
   initializeVAL(bwtInc->cumulativeCountInCurrentBuild, ALPHABET_SIZE + 1, 0);
 
   // Build frequently accessed data
-  bwtInc->packedShift = fmap_calloc(CHAR_PER_WORD, sizeof(uint32_t), "bwtInc->packedShift");
+  bwtInc->packedShift = tmap_calloc(CHAR_PER_WORD, sizeof(uint32_t), "bwtInc->packedShift");
   for (i=0; i<CHAR_PER_WORD; i++) {
       bwtInc->packedShift[i] = BITS_IN_WORD - (i+1) * BIT_PER_CHAR;
   }
@@ -337,9 +337,9 @@ BWTIncCreate(const uint32_t textLength, const float targetNBit,
   bwtInc->targetTextLength = textLength;
   bwtInc->availableWord = (uint32_t)((textLength + OCC_INTERVAL - 1) / OCC_INTERVAL * OCC_INTERVAL / BITS_IN_WORD * bwtInc->targetNBit);
   if (bwtInc->availableWord < BWTResidentSizeInWord(textLength) + BWTOccValueMinorSizeInWord(textLength)) {
-      fmap_error("BWTIncCreate() : targetNBit is too low", Exit, OutOfRange);
+      tmap_error("BWTIncCreate() : targetNBit is too low", Exit, OutOfRange);
   }
-  bwtInc->workingMemory = fmap_calloc(bwtInc->availableWord, BYTES_IN_WORD, "bwtInc->workingMemory");
+  bwtInc->workingMemory = tmap_calloc(bwtInc->availableWord, BYTES_IN_WORD, "bwtInc->workingMemory");
 
   return bwtInc;
 
@@ -435,7 +435,7 @@ ForwardDNAAllOccCountNoLimit(const uint32_t*  dna, const uint32_t index,
           } else if (sum == 0x00000000) {
               occCount[3] += 256;
           } else {
-              fmap_error("ForwardDNAAllOccCountNoLimit(): DNA occ sum exception", Exit, OutOfRange);
+              tmap_error("ForwardDNAAllOccCountNoLimit(): DNA occ sum exception", Exit, OutOfRange);
           }
       }
 
@@ -494,7 +494,7 @@ BWTIncBuildPackedBwt(const uint32_t *relativeRank, uint32_t* __restrict bwt, con
 }
 
 static inline uint32_t 
-BWTOccValueExplicit(const fmap_bwt_gen_t *bwt, const uint32_t occIndexExplicit,
+BWTOccValueExplicit(const tmap_bwt_gen_t *bwt, const uint32_t occIndexExplicit,
                     const uint32_t character)
 {
   uint32_t occIndexMajor;
@@ -579,7 +579,7 @@ BackwardDNAOccCount(const uint32_t*  dna, const uint32_t index, const uint32_t c
 }
 
 uint32_t 
-BWTOccValue(const fmap_bwt_gen_t *bwt, uint32_t index, const uint32_t character) {
+BWTOccValue(const tmap_bwt_gen_t *bwt, uint32_t index, const uint32_t character) {
 
     uint32_t occValue;
     uint32_t occExplicitIndex, occIndex;
@@ -607,7 +607,7 @@ BWTOccValue(const fmap_bwt_gen_t *bwt, uint32_t index, const uint32_t character)
 }
 
 static uint32_t 
-BWTIncGetAbsoluteRank(fmap_bwt_gen_t *bwt, uint32_t* __restrict absoluteRank, uint32_t* __restrict seq,
+BWTIncGetAbsoluteRank(tmap_bwt_gen_t *bwt, uint32_t* __restrict absoluteRank, uint32_t* __restrict seq,
                       const uint32_t *packedText, const uint32_t numChar,
                       const uint32_t* cumulativeCount, const uint32_t firstCharInLastIteration)
 {
@@ -1033,7 +1033,7 @@ BWTIncMergeBwt(const uint32_t *sortedRank, const uint32_t* oldBwt, const uint32_
 }
 
 void 
-BWTClearTrailingBwtCode(fmap_bwt_gen_t *bwt)
+BWTClearTrailingBwtCode(tmap_bwt_gen_t *bwt)
 {
   uint32_t bwtResidentSizeInWord;
   uint32_t wordIndex, offset;
@@ -1272,7 +1272,7 @@ BWTGenerateOccValueFromBwt(const uint32_t*  bwt, uint32_t* __restrict occValue,
 }
 
 static void 
-BWTIncConstruct(fmap_bwt_gen_inc_t *bwtInc, const uint32_t numChar)
+BWTIncConstruct(tmap_bwt_gen_inc_t *bwtInc, const uint32_t numChar)
 {
   uint32_t i;
   uint32_t mergedBwtSizeInWord, mergedOccSizeInWord;
@@ -1283,7 +1283,7 @@ BWTIncConstruct(fmap_bwt_gen_inc_t *bwtInc, const uint32_t numChar)
 
 #ifdef DEBUG
   if (numChar > bwtInc->buildSize) {
-      fmap_error("BWTIncConstruct(): numChar > buildSize", Exit, OutOfRange);
+      tmap_error("BWTIncConstruct(): numChar > buildSize", Exit, OutOfRange);
   }
 #endif
 
@@ -1360,7 +1360,7 @@ BWTIncConstruct(fmap_bwt_gen_inc_t *bwtInc, const uint32_t numChar)
       BWTIncBuildRelativeRank(sortedRank, seq, relativeRank, numChar, bwtInc->bwt->inverseSa0, bwtInc->cumulativeCountInCurrentBuild);
 #ifdef DEBUG
       if (relativeRank[numChar] != oldInverseSa0RelativeRank) {
-          fmap_error("BWTIncConstruct(): relativeRank[numChar] != oldInverseSa0RelativeRank", Exit, OutOfRange);
+          tmap_error("BWTIncConstruct(): relativeRank[numChar] != oldInverseSa0RelativeRank", Exit, OutOfRange);
       }
 #endif
 
@@ -1389,7 +1389,7 @@ BWTIncConstruct(fmap_bwt_gen_inc_t *bwtInc, const uint32_t numChar)
   bwtInc->bwt->bwtSizeInWord = mergedBwtSizeInWord;
   bwtInc->bwt->occSizeInWord = mergedOccSizeInWord;
   if (mergedBwt < bwtInc->workingMemory + mergedOccSizeInWord) {
-      fmap_error("BWTIncConstruct() : Not enough memory allocated", Exit, OutOfRange);
+      tmap_error("BWTIncConstruct() : Not enough memory allocated", Exit, OutOfRange);
   }
 
   bwtInc->bwt->occValue = mergedBwt - mergedOccSizeInWord;
@@ -1413,7 +1413,7 @@ BWTIncConstruct(fmap_bwt_gen_inc_t *bwtInc, const uint32_t numChar)
 
 }
 
-fmap_bwt_gen_inc_t *
+tmap_bwt_gen_inc_t *
 BWTIncConstructFromPacked(const char *inputFileName, const float targetNBit,
                           const uint32_t initialMaxBuildSize, const uint32_t incMaxBuildSize)
 {
@@ -1425,21 +1425,21 @@ BWTIncConstructFromPacked(const char *inputFileName, const float targetNBit,
   uint32_t processedTextLength;
   char lastByteLength;
 
-  fmap_bwt_gen_inc_t *bwtInc;
+  tmap_bwt_gen_inc_t *bwtInc;
 
   packedFile = (FILE*)fopen(inputFileName, "rb");
 
   if (packedFile == NULL) {
-      fmap_error("BWTIncConstructFromPacked() : Cannot open inputFileName", Exit, OutOfRange);
+      tmap_error("BWTIncConstructFromPacked() : Cannot open inputFileName", Exit, OutOfRange);
   }
 
   fseek(packedFile, -1, SEEK_END);
   packedFileLen = ftell(packedFile);
   if ((int)packedFileLen < 0) {
-      fmap_error("BWTIncConstructFromPacked: Cannot determine file length", Exit, OutOfRange);
+      tmap_error("BWTIncConstructFromPacked: Cannot determine file length", Exit, OutOfRange);
   }
   if(1 != fread(&lastByteLength, sizeof( char), 1, packedFile)) {
-      fmap_error(NULL, Exit, ReadFileError);
+      tmap_error(NULL, Exit, ReadFileError);
   }
   totalTextLength = TextLengthFromBytePacked(packedFileLen, BIT_PER_CHAR, lastByteLength);
 
@@ -1457,7 +1457,7 @@ BWTIncConstructFromPacked(const char *inputFileName, const float targetNBit,
   fseek(packedFile, -2, SEEK_CUR);
   fseek(packedFile, -((int)textSizeInByte), SEEK_CUR);
   if(textSizeInByte + 1 != fread(bwtInc->textBuffer, sizeof( char), textSizeInByte + 1, packedFile)) {
-      fmap_error(NULL, Exit, ReadFileError);
+      tmap_error(NULL, Exit, ReadFileError);
   }
   fseek(packedFile, -((int)textSizeInByte + 1), SEEK_CUR);
 
@@ -1474,21 +1474,21 @@ BWTIncConstructFromPacked(const char *inputFileName, const float targetNBit,
       textSizeInByte = textToLoad / CHAR_PER_BYTE;
       fseek(packedFile, -((int)textSizeInByte), SEEK_CUR);
       if(textSizeInByte != fread(bwtInc->textBuffer, sizeof( char), textSizeInByte, packedFile)) {
-          fmap_error(NULL, Exit, ReadFileError);
+          tmap_error(NULL, Exit, ReadFileError);
       }
       fseek(packedFile, -((int)textSizeInByte), SEEK_CUR);
       ConvertBytePackedToWordPacked(bwtInc->textBuffer, bwtInc->packedText, ALPHABET_SIZE, textToLoad);
       BWTIncConstruct(bwtInc, textToLoad);
       processedTextLength += textToLoad;
       if (bwtInc->numberOfIterationDone % 10 == 0) {
-          fmap_progress_print2("%u iterations done with %u bases processed", bwtInc->numberOfIterationDone, processedTextLength);
+          tmap_progress_print2("%u iterations done with %u bases processed", bwtInc->numberOfIterationDone, processedTextLength);
       }
   }
   return bwtInc;
 }
 
 void 
-BWTFree(fmap_bwt_gen_t *bwt)
+BWTFree(tmap_bwt_gen_t *bwt)
 {
   if (bwt == 0) return;
   free(bwt->cumulativeFreq);
@@ -1501,7 +1501,7 @@ BWTFree(fmap_bwt_gen_t *bwt)
 }
 
 void 
-BWTIncFree(fmap_bwt_gen_inc_t *bwtInc)
+BWTIncFree(tmap_bwt_gen_inc_t *bwtInc)
 {
   if (bwtInc == 0) return;
   BWTFree(bwtInc->bwt);
@@ -1519,14 +1519,14 @@ BWTFileSizeInWord(const uint32_t numChar)
 }
 
 void 
-BWTSaveBwtCodeAndOcc(fmap_bwt_t *bwt_out, const fmap_bwt_gen_t *bwt, const char *fn_fasta, int32_t occ_interval, uint32_t is_rev) 
+BWTSaveBwtCodeAndOcc(tmap_bwt_t *bwt_out, const tmap_bwt_gen_t *bwt, const char *fn_fasta, int32_t occ_interval, uint32_t is_rev) 
 {
   uint32_t i;
-  fmap_bwt_t *bwt_tmp=NULL;
+  tmap_bwt_t *bwt_tmp=NULL;
 
   // Move over to bwt data structure
   if(bwt_out->bwt_size != BWTFileSizeInWord(bwt->textLength)) {
-      fmap_error(NULL, Exit, OutOfRange);
+      tmap_error(NULL, Exit, OutOfRange);
   }
   bwt_out->primary = bwt->inverseSa0;
   for(i=0;i<1+ALPHABET_SIZE;i++) {
@@ -1538,53 +1538,53 @@ BWTSaveBwtCodeAndOcc(fmap_bwt_t *bwt_out, const fmap_bwt_gen_t *bwt, const char 
   // write
   bwt_out->is_rev = is_rev;
   bwt_out->hash_width = 0; // none yet
-  fmap_bwt_write(fn_fasta, bwt_out, is_rev);
+  tmap_bwt_write(fn_fasta, bwt_out, is_rev);
 
   // nullify
   bwt_out->bwt = NULL;
 
   // update occurrence interval
   if(0 < occ_interval && bwt_out->occ_interval != occ_interval) {
-      bwt_tmp = fmap_bwt_read(fn_fasta, is_rev);
-      fmap_bwt_update_occ_interval(bwt_tmp, occ_interval);
-      fmap_bwt_write(fn_fasta, bwt_tmp, is_rev);
-      fmap_bwt_destroy(bwt_tmp);
+      bwt_tmp = tmap_bwt_read(fn_fasta, is_rev);
+      tmap_bwt_update_occ_interval(bwt_tmp, occ_interval);
+      tmap_bwt_write(fn_fasta, bwt_tmp, is_rev);
+      tmap_bwt_destroy(bwt_tmp);
   }
 }
 
 void 
-fmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, uint32_t hash_width)
+tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, uint32_t hash_width)
 {
   // TODO: streamline occ_interval and hash creation
-  fmap_bwt_gen_inc_t *bwtInc=NULL;
-  fmap_bwt_t *bwt=NULL;
+  tmap_bwt_gen_inc_t *bwtInc=NULL;
+  tmap_bwt_t *bwt=NULL;
   uint8_t *buf=NULL;
   uint32_t i, is_rev;
   char *fn_pac=NULL;
-  fmap_refseq_t *refseq=NULL;
+  tmap_refseq_t *refseq=NULL;
 
   for(is_rev=0;is_rev<=1;is_rev++) { // forward/reverse
 
       if(0 == is_rev) {
-          fmap_progress_print("constructing the BWT string from the packed FASTA");
+          tmap_progress_print("constructing the BWT string from the packed FASTA");
       }
       else {
-          fmap_progress_print("constructing the reverse BWT string from the reversed packed FASTA");
+          tmap_progress_print("constructing the reverse BWT string from the reversed packed FASTA");
       }
 
       // read in packed FASTA
-      refseq = fmap_refseq_read(fn_fasta, is_rev);
+      refseq = tmap_refseq_read(fn_fasta, is_rev);
 
       // initialization
-      bwt = fmap_calloc(1, sizeof(fmap_bwt_t), "bwt");
+      bwt = tmap_calloc(1, sizeof(tmap_bwt_t), "bwt");
       bwt->seq_len = refseq->len;
       bwt->bwt_size = (bwt->seq_len + 15) >> 4;
-      bwt->version_id = FMAP_VERSION_ID;
+      bwt->version_id = TMAP_VERSION_ID;
 
       if(1 == is_large) {
-          fn_pac = fmap_get_file_name(fn_fasta, (0 == is_rev) ? FMAP_PAC_FILE : FMAP_REV_PAC_FILE);
-          if(FMAP_PAC_COMPRESSION != FMAP_FILE_NO_COMPRESSION) { // the below uses fseek
-              fmap_error("PAC compression not supported", Exit, OutOfRange);
+          fn_pac = tmap_get_file_name(fn_fasta, (0 == is_rev) ? TMAP_PAC_FILE : TMAP_REV_PAC_FILE);
+          if(TMAP_PAC_COMPRESSION != TMAP_FILE_NO_COMPRESSION) { // the below uses fseek
+              tmap_error("PAC compression not supported", Exit, OutOfRange);
           }
           bwtInc = BWTIncConstructFromPacked(fn_pac, 2.5, 10000000, 10000000);
           BWTSaveBwtCodeAndOcc(bwt, bwtInc->bwt, fn_fasta, occ_interval, is_rev);
@@ -1598,9 +1598,9 @@ fmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, 
           for(i=0;i<ALPHABET_SIZE+1;i++) {
               bwt->L2[i]=0;
           }
-          buf = fmap_calloc(bwt->seq_len + 1, sizeof(uint8_t), "buf");
+          buf = tmap_calloc(bwt->seq_len + 1, sizeof(uint8_t), "buf");
           for(i=0;i<bwt->seq_len;i++) {
-              buf[i] = fmap_refseq_seq_i(refseq, i);
+              buf[i] = tmap_refseq_seq_i(refseq, i);
               ++bwt->L2[1+buf[i]];
           }
           for(i=2;i<ALPHABET_SIZE+1;i++) {
@@ -1608,8 +1608,8 @@ fmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, 
           }
 
           // Burrows-Wheeler Transform
-          bwt->primary = fmap_bwt_gen_short(buf, bwt->seq_len);
-          bwt->bwt = fmap_calloc(bwt->bwt_size, sizeof(uint32_t), "bwt->bwt");
+          bwt->primary = tmap_bwt_gen_short(buf, bwt->seq_len);
+          bwt->bwt = tmap_calloc(bwt->bwt_size, sizeof(uint32_t), "bwt->bwt");
           for(i=0;i<bwt->seq_len;i++) {
               bwt->bwt[i>>4] |= buf[i] << ((15 - (i&15)) << 1);
           }
@@ -1618,27 +1618,27 @@ fmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, 
 
           // update occurrence interval
           if(0 < occ_interval && bwt->occ_interval != occ_interval) {
-              fmap_bwt_update_occ_interval(bwt, occ_interval);
+              tmap_bwt_update_occ_interval(bwt, occ_interval);
           }
 
           bwt->is_rev = is_rev;
           bwt->hash_width = 0; // none yet
-          fmap_bwt_write(fn_fasta, bwt, is_rev);
+          tmap_bwt_write(fn_fasta, bwt, is_rev);
       }
-      fmap_bwt_destroy(bwt);
-      fmap_refseq_destroy(refseq);
+      tmap_bwt_destroy(bwt);
+      tmap_refseq_destroy(refseq);
 
       if(0 == is_rev) {
-          fmap_progress_print2("constructed the BWT string from the packed FASTA");
+          tmap_progress_print2("constructed the BWT string from the packed FASTA");
       }
       else {
-          fmap_progress_print2("constructed the reverse BWT string from the reversed packed FASTA");
+          tmap_progress_print2("constructed the reverse BWT string from the reversed packed FASTA");
       }
       
-      bwt = fmap_bwt_read(fn_fasta, is_rev);
-      fmap_bwt_gen_hash(bwt, hash_width);
-      fmap_bwt_write(fn_fasta, bwt, is_rev);
-      fmap_bwt_destroy(bwt);
+      bwt = tmap_bwt_read(fn_fasta, is_rev);
+      tmap_bwt_gen_hash(bwt, hash_width);
+      tmap_bwt_write(fn_fasta, bwt, is_rev);
+      tmap_bwt_destroy(bwt);
   }
 }
 
@@ -1675,12 +1675,12 @@ fmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, 
  * @return The primary index if no error occurred, -1 or -2 otherwise.
  */
 uint32_t 
-fmap_bwt_gen_short(uint8_t *T, uint32_t n)
+tmap_bwt_gen_short(uint8_t *T, uint32_t n)
 {
   int32_t *SA=NULL;
   uint32_t i, primary = 0;
-  SA = fmap_calloc(n+1, sizeof(int32_t), "SA");
-  fmap_sa_gen_short(T, SA, n);
+  SA = tmap_calloc(n+1, sizeof(int32_t), "SA");
+  tmap_sa_gen_short(T, SA, n);
 
   for (i = 0; i <= n; ++i) {
       if (SA[i] == 0) primary = i;

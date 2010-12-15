@@ -1,15 +1,15 @@
-#ifndef FMAP_MAP2_AUX_H_
-#define FMAP_MAP2_AUX_H_
+#ifndef TMAP_MAP2_AUX_H_
+#define TMAP_MAP2_AUX_H_
 
-#include "../util/fmap_string.h"
-#include "../seq/fmap_seq.h"
-#include "../index/fmap_refseq.h"
-#include "../index/fmap_bwt.h"
-#include "../index/fmap_sa.h"
-#include "fmap_map2_mempool.h"
-#include "fmap_map2.h"
+#include "../util/tmap_string.h"
+#include "../seq/tmap_seq.h"
+#include "../index/tmap_refseq.h"
+#include "../index/tmap_bwt.h"
+#include "../index/tmap_sa.h"
+#include "tmap_map2_mempool.h"
+#include "tmap_map2.h"
 
-#define FMAP_MAP2_MASK_LEVEL 0.90f
+#define TMAP_MAP2_MASK_LEVEL 0.90f
 
 /*! 
   Auxiliary Functions for BWT-like (long-read) Algorithm
@@ -28,7 +28,7 @@ typedef struct {
     int32_t G2;  /*!< the sub-optimal alignment score */
     int32_t beg;  /*!< the beginning of the alignment (0-based) */
     int32_t end;  /*!< the end of the alignment (0-based) */
-} fmap_map2_hit_t;
+} tmap_map2_hit_t;
 
 /*! 
   stores alignment hits
@@ -36,17 +36,17 @@ typedef struct {
 typedef struct {
     int32_t n;  /*!< the number of hits */
     int32_t max;  /*!< the maximum memory for the number of hits */
-    fmap_map2_hit_t *hits;  /*!< the hits */
+    tmap_map2_hit_t *hits;  /*!< the hits */
     int32_t *n_cigar;  /*!< the number of cigar operations per hit */
     uint32_t **cigar;  /*!< the cigar operations per hit */
-} fmap_map2_aln_t;
+} tmap_map2_aln_t;
 
 /*! 
   destroys an alignment
   @param  a  pointer to the alignment
   */
 void
-fmap_map2_aln_destroy(fmap_map2_aln_t *a);
+tmap_map2_aln_destroy(tmap_map2_aln_t *a);
 
 /*! 
   resolves duplicate hits
@@ -57,7 +57,7 @@ fmap_map2_aln_destroy(fmap_map2_aln_t *a);
   @param  min_as  the minimum alignment score to accept a hit
   */ 
 int32_t
-fmap_map2_aux_resolve_duphits(const fmap_bwt_t *bwt, const fmap_sa_t *sa, fmap_map2_aln_t *b, 
+tmap_map2_aux_resolve_duphits(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_map2_aln_t *b, 
                               int32_t IS, int32_t min_as);
 
 /*! 
@@ -70,12 +70,12 @@ fmap_map2_aux_resolve_duphits(const fmap_bwt_t *bwt, const fmap_sa_t *sa, fmap_m
   @param  pool    pointer to a global memory pool
   @return         pointer to the alignment
   */
-fmap_map_sams_t *
-fmap_map2_aux_core(fmap_map_opt_t *_opt,
-                   fmap_seq_t *query,
-                   fmap_refseq_t *refseq,
-                   fmap_bwt_t *bwt[2],
-                   fmap_sa_t *sa[2],
-                   fmap_map2_global_mempool_t *pool);
+tmap_map_sams_t *
+tmap_map2_aux_core(tmap_map_opt_t *_opt,
+                   tmap_seq_t *query,
+                   tmap_refseq_t *refseq,
+                   tmap_bwt_t *bwt[2],
+                   tmap_sa_t *sa[2],
+                   tmap_map2_global_mempool_t *pool);
 
 #endif

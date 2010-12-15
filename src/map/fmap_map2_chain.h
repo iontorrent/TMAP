@@ -1,5 +1,5 @@
-#ifndef FMAP_MAP2_CHAIN_H_
-#define FMAP_MAP2_CHAIN_H_
+#ifndef TMAP_MAP2_CHAIN_H_
+#define TMAP_MAP2_CHAIN_H_
 
 /*! 
   Chaining Functions for the BWA-like (long-read) Algorithm
@@ -16,7 +16,7 @@ typedef struct {
     uint32_t flag:1;  /*!< the origin of the chain (forward/reverse bwt) */
     uint32_t idx:31;  /*!< 0-based index within the originating hits */
     int chain;  /*!< the chain index; also used as a counter */
-} fmap_map2_chain_t;
+} tmap_map2_chain_t;
 
 /*! 
   filters multiple seeds within a given band
@@ -25,6 +25,6 @@ typedef struct {
   @param  b    pointer to the alignment
   */
 void 
-fmap_map2_chain_filter(const fmap_map_opt_t *opt, int len, fmap_map2_aln_t *b[2]);
+tmap_map2_chain_filter(const tmap_map_opt_t *opt, int len, tmap_map2_aln_t *b[2]);
 
 #endif

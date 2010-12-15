@@ -2,30 +2,30 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "../util/fmap_error.h"
-#include "../util/fmap_alloc.h"
-#include "../util/fmap_progress.h"
-#include "fmap_seq_io.h"
-#include "fmap_sff_io.h"
-#include "fmap_seq_io.h"
+#include "../util/tmap_error.h"
+#include "../util/tmap_alloc.h"
+#include "../util/tmap_progress.h"
+#include "tmap_seq_io.h"
+#include "tmap_sff_io.h"
+#include "tmap_seq_io.h"
 
-inline fmap_seq_io_t *
-fmap_seq_io_init(fmap_file_t *fp, int8_t type)
+inline tmap_seq_io_t *
+tmap_seq_io_init(tmap_file_t *fp, int8_t type)
 {
-  fmap_seq_io_t *io = NULL;
+  tmap_seq_io_t *io = NULL;
 
-  io = fmap_calloc(1, sizeof(fmap_seq_io_t), "io");
+  io = tmap_calloc(1, sizeof(tmap_seq_io_t), "io");
   io->type = type;
 
   switch(io->type) {
-    case FMAP_SEQ_TYPE_FQ:
-      io->io.fqio = fmap_fq_io_init(fp);
+    case TMAP_SEQ_TYPE_FQ:
+      io->io.fqio = tmap_fq_io_init(fp);
       break;
-    case FMAP_SEQ_TYPE_SFF:
-      io->io.sffio = fmap_sff_io_init(fp);
+    case TMAP_SEQ_TYPE_SFF:
+      io->io.sffio = tmap_sff_io_init(fp);
       break;
     default:
-      fmap_error("type is unrecognized", Exit, OutOfRange);
+      tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
   }
 
@@ -33,17 +33,17 @@ fmap_seq_io_init(fmap_file_t *fp, int8_t type)
 }
 
 inline void
-fmap_seq_io_destroy(fmap_seq_io_t *io)
+tmap_seq_io_destroy(tmap_seq_io_t *io)
 {
   switch(io->type) {
-    case FMAP_SEQ_TYPE_FQ:
-      fmap_fq_io_destroy(io->io.fqio);
+    case TMAP_SEQ_TYPE_FQ:
+      tmap_fq_io_destroy(io->io.fqio);
       break;
-    case FMAP_SEQ_TYPE_SFF:
-      fmap_sff_io_destroy(io->io.sffio);
+    case TMAP_SEQ_TYPE_SFF:
+      tmap_sff_io_destroy(io->io.sffio);
       break;
     default:
-      fmap_error("type is unrecognized", Exit, OutOfRange);
+      tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
   }
 
@@ -51,22 +51,22 @@ fmap_seq_io_destroy(fmap_seq_io_t *io)
 }
 
 inline int
-fmap_seq_io_read(fmap_seq_io_t *io, fmap_seq_t *seq)
+tmap_seq_io_read(tmap_seq_io_t *io, tmap_seq_t *seq)
 {
   if(io->type != seq->type) {
-      fmap_error("type mismatch", Exit, OutOfRange);
+      tmap_error("type mismatch", Exit, OutOfRange);
   }
   switch(io->type) {
-    case FMAP_SEQ_TYPE_FQ:
+    case TMAP_SEQ_TYPE_FQ:
       seq->type = io->type;
-      return fmap_fq_io_read(io->io.fqio, seq->data.fq);
+      return tmap_fq_io_read(io->io.fqio, seq->data.fq);
       break;
-    case FMAP_SEQ_TYPE_SFF:
+    case TMAP_SEQ_TYPE_SFF:
       seq->type = io->type;
-      return fmap_sff_io_read(io->io.sffio, seq->data.sff);
+      return tmap_sff_io_read(io->io.sffio, seq->data.sff);
       break;
     default:
-      fmap_error("type is unrecognized", Exit, OutOfRange);
+      tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
   }
 
@@ -74,7 +74,7 @@ fmap_seq_io_read(fmap_seq_io_t *io, fmap_seq_t *seq)
 }
 
 int
-fmap_seq_io_read_buffer(fmap_seq_io_t *io, fmap_seq_t **seq_buffer, int32_t buffer_length)
+tmap_seq_io_read_buffer(tmap_seq_io_t *io, tmap_seq_t **seq_buffer, int32_t buffer_length)
 {
   int32_t n = 0;
 
@@ -82,13 +82,13 @@ fmap_seq_io_read_buffer(fmap_seq_io_t *io, fmap_seq_t **seq_buffer, int32_t buff
 
   while(n < buffer_length) {
       if(NULL == seq_buffer[n]) {
-          seq_buffer[n] = fmap_seq_init(io->type);
+          seq_buffer[n] = tmap_seq_init(io->type);
       }
       else if(io->type != seq_buffer[n]->type) { // check if we need to change the type
-          fmap_seq_destroy(seq_buffer[n]);
-          seq_buffer[n] = fmap_seq_init(io->type);
+          tmap_seq_destroy(seq_buffer[n]);
+          seq_buffer[n] = tmap_seq_init(io->type);
       }
-      if(fmap_seq_io_read(io, seq_buffer[n]) < 0) {
+      if(tmap_seq_io_read(io, seq_buffer[n]) < 0) {
           break;
       }
       n++;
@@ -98,69 +98,69 @@ fmap_seq_io_read_buffer(fmap_seq_io_t *io, fmap_seq_t **seq_buffer, int32_t buff
 }
 
 static int
-fmap_seq_io_print(fmap_file_t *fp, fmap_seq_t *seq)
+tmap_seq_io_print(tmap_file_t *fp, tmap_seq_t *seq)
 {
   switch(seq->type) {
-    case FMAP_SEQ_TYPE_FQ:
-      return fmap_file_fprintf(fp, "@%s\n%s\n+%s\n%s\n",
+    case TMAP_SEQ_TYPE_FQ:
+      return tmap_file_fprintf(fp, "@%s\n%s\n+%s\n%s\n",
                         seq->data.fq->name->s,
                         seq->data.fq->seq->s,
                         (0 < seq->data.fq->comment->l) ? seq->data.fq->comment->s : "",
                         seq->data.fq->qual->s);
       break;
-    case FMAP_SEQ_TYPE_SFF:
-      fmap_error("SFF writing is unsupported", Exit, OutOfRange);
+    case TMAP_SEQ_TYPE_SFF:
+      tmap_error("SFF writing is unsupported", Exit, OutOfRange);
       break;
     default:
-      fmap_error("type is unrecognized", Exit, OutOfRange);
+      tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
   }
   return 0;
 }
 
 int
-fmap_seq_io_sff2fq_main(int argc, char *argv[])
+tmap_seq_io_sff2fq_main(int argc, char *argv[])
 {
   int c, help = 0;
-  fmap_file_t *fmap_file_in = NULL;
-  fmap_seq_io_t *io_in = NULL, *io_out = NULL;
-  fmap_seq_t *seq_in = NULL, *seq_out = NULL;
+  tmap_file_t *tmap_file_in = NULL;
+  tmap_seq_io_t *io_in = NULL, *io_out = NULL;
+  tmap_seq_t *seq_in = NULL, *seq_out = NULL;
 
   while((c = getopt(argc, argv, "vh")) >= 0) {
       switch(c) {
-        case 'v': fmap_progress_set_verbosity(1); break;
+        case 'v': tmap_progress_set_verbosity(1); break;
         case 'h': help = 1; break;
         default: return 1;
       }
   }
   if(1 != argc - optind || 1 == help) {
-      fmap_file_fprintf(fmap_file_stderr, "Usage: %s %s [-v -h] <in.sff>\n", PACKAGE, argv[0]);
+      tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [-v -h] <in.sff>\n", PACKAGE, argv[0]);
       return 1;
   }
 
   // input
-  fmap_file_in = fmap_file_fopen(argv[optind], "rb", FMAP_FILE_NO_COMPRESSION);
-  io_in = fmap_seq_io_init(fmap_file_in, FMAP_SEQ_TYPE_SFF);
-  seq_in = fmap_seq_init(FMAP_SEQ_TYPE_SFF);
+  tmap_file_in = tmap_file_fopen(argv[optind], "rb", TMAP_FILE_NO_COMPRESSION);
+  io_in = tmap_seq_io_init(tmap_file_in, TMAP_SEQ_TYPE_SFF);
+  seq_in = tmap_seq_init(TMAP_SEQ_TYPE_SFF);
 
   // output
-  fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "wb", FMAP_FILE_NO_COMPRESSION);
-  io_out = fmap_seq_io_init(fmap_file_stdout, FMAP_SEQ_TYPE_FQ);
+  tmap_file_stdout = tmap_file_fdopen(fileno(stdout), "wb", TMAP_FILE_NO_COMPRESSION);
+  io_out = tmap_seq_io_init(tmap_file_stdout, TMAP_SEQ_TYPE_FQ);
 
-  while(0 < fmap_seq_io_read(io_in, seq_in)) {
-      seq_out = fmap_seq_sff2fq(seq_in);
-      fmap_seq_io_print(fmap_file_stdout, seq_out);
-      fmap_seq_destroy(seq_out);
+  while(0 < tmap_seq_io_read(io_in, seq_in)) {
+      seq_out = tmap_seq_sff2fq(seq_in);
+      tmap_seq_io_print(tmap_file_stdout, seq_out);
+      tmap_seq_destroy(seq_out);
   }
-  fmap_seq_destroy(seq_in);
+  tmap_seq_destroy(seq_in);
 
   // input
-  fmap_seq_io_destroy(io_in);
-  fmap_file_fclose(fmap_file_in);
+  tmap_seq_io_destroy(io_in);
+  tmap_file_fclose(tmap_file_in);
   
   // output
-  fmap_seq_io_destroy(io_out);
-  fmap_file_fclose(fmap_file_stdout);
+  tmap_seq_io_destroy(io_out);
+  tmap_file_fclose(tmap_file_stdout);
 
   return 0;
 }

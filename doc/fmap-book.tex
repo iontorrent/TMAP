@@ -56,8 +56,8 @@ urlcolor=myurlcolor     % color of external links
 % DATE
 \author{Nils Homer}
 \date{}
-\title{FMAP: the flow sequence mapping program
-\thanks{Copyright \copyright 2010 Ion Torrent Systems, Inc. All Rights, made for FMAP version \Version}
+\title{TMAP: the flow sequence mapping program
+\thanks{Copyright \copyright 2010 Ion Torrent Systems, Inc. All Rights, made for TMAP version \Version}
 }
 \begin{document}
 \frontmatter
@@ -76,15 +76,15 @@ urlcolor=myurlcolor     % color of external links
 %\addcontentsline{toc}{chapter}{List of Tables}
 
 \chapter{Preface}
-This document is meant to serve as a guide for the practical use of FMAP.
-It includes explanations of all command-line options for each command and binary in FMAP to give an idea of basic usage.
+This document is meant to serve as a guide for the practical use of TMAP.
+It includes explanations of all command-line options for each command and binary in TMAP to give an idea of basic usage.
 Input and output file formats are also detailed.
 The default options of the various programs are designed intelligently to adapt to the various program uses, but in some cases the options may need to be customized.
 
-This document does not try to explain the underlyings algorithm or data-structures used in FMAP.
+This document does not try to explain the underlyings algorithm or data-structures used in TMAP.
 Without proper understanding of the underlying algorithms, it is difficult to use this very flexible program knowledgeably to obtain your desired results.
 
-If you have anything that you would be useful to add to this guide, feel free to relay the addition to the FMAP developers.
+If you have anything that you would be useful to add to this guide, feel free to relay the addition to the TMAP developers.
 This includes but is not limited to bugs, typos, and explanations.
 Please see \url{http://www.iontorrent.com} for more details.
 
@@ -96,28 +96,28 @@ Enjoy!
 \chapter{Basic Usage}
 
 \section{Program Organization}
-FMAP consists of a set of utilities, combined into one command line program called \TT{fmap}.  
+TMAP consists of a set of utilities, combined into one command line program called \TT{tmap}.  
 Each utility is specified by a unique name or command.
-Specifying FMAP without a command will give a list of commands, while specifying FMAP with a command but no options will give a list of options for that command.
+Specifying TMAP without a command will give a list of commands, while specifying FMAP with a command but no options will give a list of options for that command.
 
-There are two steps in mapping with FMAP.
+There are two steps in mapping with TMAP.
 The first step is to build an index of the reference genome onto which we map.
 This index needs only to be built once for each genome, performing much of the mapping work upfront.
 The second step is to map the reads to the reference genome using this index.
 
-FMAP is implemented as a command-line program.
+TMAP is implemented as a command-line program.
 It accepts many command-line options to customize and tune the mapping algorithm.
-The key commands are organized into one binary program called \TT{fmap}.
-To access each command, we use \TT{fmap <name>}, where \TT{<name>} is the name of the command we wish to execute.
+The key commands are organized into one binary program called \TT{tmap}.
+To access each command, we use \TT{tmap <name>}, where \TT{<name>} is the name of the command we wish to execute.
 
 \section{Common Mapping Options}
 \label{sec:commonoptions}
 Some common options exist across some or all of the mapping commands (\TT{map1}, \TT{map2}, \TT{map3} and \TT{mapall}). 
 These options will be discussed here to avoid duplication.
 
-The FMAP mapping commands can accept their input file from the standard input stream.
+The TMAP mapping commands can accept their input file from the standard input stream.
 The output of these commands also write to the standard output stream.
-This facilitates the use of these FMAP commands in a pipe-and-filter model.
+This facilitates the use of these TMAP commands in a pipe-and-filter model.
 
 \subsection{Global Options}
 \subsubsection{\TT{-f FILE}}
@@ -180,7 +180,7 @@ Reads that have no mapping are returned as unmapped reads.
 
 \subsubsection{\TT{-R STRING}}
 Specifies the RG (read group) line to use in the SAM file.
-The ``PG'', ``FO'', and ``KS'' tags should not be specified in this string; they will be added by fmap.
+The ``PG'', ``FO'', and ``KS'' tags should not be specified in this string; they will be added by tmap.
 
 \subsubsection{\TT{-Y}}
 Specifies that SFF specific tags should be added to the output SAM file.
@@ -201,7 +201,7 @@ Specifies to print verbose progress messages, otherwise progress messages will b
 \subsubsection{\TT{-h}}
 Specifies to print a help message, listing all available options.
 
-\section{fmap index}
+\section{tmap index}
 \label{sec:index}
 The \BF{index} command creates a compact version of the reference genome and associated index.
 The index is stored as a compressed suffix array using the FM-index and BWT transform (\cite{FM-index,BWT}).
@@ -235,7 +235,7 @@ Specifies the BWT construction algorithm (\TT{bwtsw} or \TT{is}).
 The \TT{bwtsw} algorithm is for genomes larger than or equal to $10$Mb, and the \TT{is} algorithm is for genomes smaller than $10$Mb.
 This will be auto-recognized during index creation if this option is omitted.
 
-\section{fmap map1}
+\section{tmap map1}
 \label{sec:map1}
 The \BF{map1} is a command to quickly map short sequences to a reference genome by intelligently enumerating errors.
 This algorithm is not well suited for longer reads ($<150$bp) and based off of the BWA short-read algorithm (\cite{BWA-short}).
@@ -273,7 +273,7 @@ Specifies to stop searching for mappings when this many best scoring mappings ha
 \subsubsection{-Q INT}
 Specifies the maximum number of alignment nodes in memory in the implicite prefix trie traversal before the search is stopped.
 
-\section{fmap map2}
+\section{tmap map2}
 \label{sec:map2}
 The \BF{map2} is a command to quickly map long sequences to a reference genome.
 This algorithm is well suited for longer reads ($\geq 150$bp) and based off of the BWA long-read algorithm (\cite{BWA-long}).
@@ -301,7 +301,7 @@ Specifies the number of mappings to retain at during extension of the seed.
 \subsubsection{-N INT}
 Specifies the number seeds supporting the given mapping needed to skip the reverse alignment.
 
-\section{fmap map3}
+\section{tmap map3}
 \label{sec:map3}
 The \BF{map3} is a command to map sequences to a reference genome.
 This algorithm is well suited for longer reads ($\geq 150$bp) and a simplification of the SSAHA long-read algorithm (\cite{SSAHA}).
@@ -329,7 +329,7 @@ Specifies the number of multiples of the match score (\TT{-A}) for the minimum s
 \subsubsection{-H INT}
 Specifies the number of bases to enumerate for a single homopolymer within the seed.
 
-\section{fmap mapall}
+\section{tmap mapall}
 \label{sec:mapall}
 The \BF{mapall} is a command to quickly map short sequences to a reference genome.
 This command combines available mapping algorithms for fast and sensitive alignment.
@@ -354,7 +354,7 @@ An algorithm to be applied in the second stage should be specified using its nam
 The options specific to this algorithm should be specified directly thereafter.
 
 An example would be:\\
-\TT{fmap mapall -f ref.fasta -r reads.fastq -g -M 3 map1 -l 12 -k 24 MAP2 -b 5 MAP3 -S 10}.\\
+\TT{tmap mapall -f ref.fasta -r reads.fastq -g -M 3 map1 -l 12 -k 24 MAP2 -b 5 MAP3 -S 10}.\\
 In this case, the \TT{map1} algorithm will be applied with the options \TT{-l 12 -k 24 -M 3} in the first stage.
 If no mapping is found for a read, the \TT{map2} algorithm with the options \TT{-b 5 -g -M 3} and the \TT{map3} algorithm with the options \TT{-g -M 3 -S 10} will be applied in the second stage.
 Notice how the global options \TT{-g -M 3} are applied to all the algorithms where applicable.
@@ -367,7 +367,7 @@ Specifies to remove duplicate mappings from the different algorithms that occur 
 Specifies to apply the output filter separately for each algorithm.
 This is useful for comparing the mappings across all the algorithms.
 
-\section{fmap server}
+\section{tmap server}
 \label{sec:server}
 The \BF{server} command loads the reference genome index and data into shared memory.
 This lets other mapping instances avoid having to load the index upon each execution.
@@ -411,7 +411,7 @@ Specifies to load the reverse suffix array.
 \chapter{File Formats}
 
 \section{SAM Alignment Format}
-FMAP is produces mappings in the SAM format (\cite{SAM-format}).
+TMAP is produces mappings in the SAM format (\cite{SAM-format}).
 Optional tags are used to store information about mappings useful for downstream processing.
 
 \subsection{SAM Header Fields}
@@ -422,13 +422,13 @@ Specific details can be found below.
 \subsubsection{RG}
 The RG field can be populated using the \TT{-R} option.
 By default the \TT{ID} and \TT{PG} tags are included.
-When specifying an RG line, do not include any of the following tags, as they will be populated by fmap:
+When specifying an RG line, do not include any of the following tags, as they will be populated by tmap:
 ID, PG, FO, and KS.
 The FO and KS tags indicate the flow order and the key sequence, and is outputted if an SFF is inputted and the \TT{-Y} option is used. 
 
 \subsubsection{PG}
 The PG field will include the ID, VN, and CL tags.
-The ID tag should always be \TT{fmap}.
+The ID tag should always be \TT{tmap}.
 
 \subsection{SAM Record Optional Tags}
 
@@ -472,7 +472,7 @@ The flowgram values are stored as a string of hexidecimal values, with each four
 % References
 \phantomsection
 \addcontentsline{toc}{chapter}{References}
-\bibliography{fmap-book}
+\bibliography{tmap-book}
 \bibliographystyle{natbib}
 
 \end{document}

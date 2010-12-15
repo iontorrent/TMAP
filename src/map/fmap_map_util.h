@@ -1,39 +1,39 @@
-#ifndef FMAP_MAP_UTIL_H_
-#define FMAP_MAP_UTIL_H_
+#ifndef TMAP_MAP_UTIL_H_
+#define TMAP_MAP_UTIL_H_
 
 #include <sys/types.h>
 
-#define FMAP_MAP_UTIL_FSW_OFFSET 2
-#define FMAP_MAP_UTIL_SCORE_MATCH 5
-#define FMAP_MAP_UTIL_PEN_MM 3
-#define FMAP_MAP_UTIL_PEN_GAPO 3
-#define FMAP_MAP_UTIL_PEN_GAPE 1
-#define FMAP_MAP_UTIL_FSCORE 7 
+#define TMAP_MAP_UTIL_FSW_OFFSET 2
+#define TMAP_MAP_UTIL_SCORE_MATCH 5
+#define TMAP_MAP_UTIL_PEN_MM 3
+#define TMAP_MAP_UTIL_PEN_GAPO 3
+#define TMAP_MAP_UTIL_PEN_GAPE 1
+#define TMAP_MAP_UTIL_FSCORE 7 
 
-#define FMAP_MAP_UTIL_FLOW_ORDER "TACG"
+#define TMAP_MAP_UTIL_FLOW_ORDER "TACG"
 
 /*!
   The various algorithm types (flags)
   */
 enum {
-    FMAP_MAP_ALGO_NONE = 0x0,  /*!< dummy algorithm */
-    FMAP_MAP_ALGO_MAP1 = 0x1,  /*!< the map1 algorithm */
-    FMAP_MAP_ALGO_MAP2 = 0x2,  /*!< the map2 algorithm */
-    FMAP_MAP_ALGO_MAP3 = 0x4,  /*!< the map3 algorithm */
-    FMAP_MAP_ALGO_MAPALL = 0x8000 /*!< the mapall algorithm */
+    TMAP_MAP_ALGO_NONE = 0x0,  /*!< dummy algorithm */
+    TMAP_MAP_ALGO_MAP1 = 0x1,  /*!< the map1 algorithm */
+    TMAP_MAP_ALGO_MAP2 = 0x2,  /*!< the map2 algorithm */
+    TMAP_MAP_ALGO_MAP3 = 0x4,  /*!< the map3 algorithm */
+    TMAP_MAP_ALGO_MAPALL = 0x8000 /*!< the mapall algorithm */
 };
 
 /*!
   The various modes to modify the alignment score
   */
 enum {
-    FMAP_MAP_UTIL_ALN_MODE_UNIQ_BEST      = 0,  /*!< output an alignment only if its score is better than all other alignments */
-    FMAP_MAP_UTIL_ALN_MODE_RAND_BEST      = 1,  /*!< output a random best scoring alignment */
-    FMAP_MAP_UTIL_ALN_MODE_ALL_BEST       = 2,  /*!< output all the alignments with the best score */
-    FMAP_MAP_UTIL_ALN_MODE_ALL            = 3   /*!< Output all alignments */
+    TMAP_MAP_UTIL_ALN_MODE_UNIQ_BEST      = 0,  /*!< output an alignment only if its score is better than all other alignments */
+    TMAP_MAP_UTIL_ALN_MODE_RAND_BEST      = 1,  /*!< output a random best scoring alignment */
+    TMAP_MAP_UTIL_ALN_MODE_ALL_BEST       = 2,  /*!< output all the alignments with the best score */
+    TMAP_MAP_UTIL_ALN_MODE_ALL            = 3   /*!< Output all alignments */
 };
 
-typedef struct __fmap_map_opt_t {
+typedef struct __tmap_map_opt_t {
     int32_t algo_id;
 
     // global options
@@ -97,25 +97,25 @@ typedef struct __fmap_map_opt_t {
     int32_t dup_window; /*!< remove duplicate alignments from different algorithms within this bp window (-W) */
     int32_t aln_output_mode_ind; /*!< apply the output filter for each algorithm separately (-I) */
     // stage 1/2 mapping algorithm specific options
-    struct __fmap_map_opt_t *opt_map1[2]; /*!< map 1 options */
-    struct __fmap_map_opt_t *opt_map2[2]; /*!< map 2 options */
-    struct __fmap_map_opt_t *opt_map3[2]; /*!< map 3 options */
+    struct __tmap_map_opt_t *opt_map1[2]; /*!< map 1 options */
+    struct __tmap_map_opt_t *opt_map2[2]; /*!< map 2 options */
+    struct __tmap_map_opt_t *opt_map3[2]; /*!< map 3 options */
 
-} fmap_map_opt_t;
+} tmap_map_opt_t;
 
 /*!
   Gets the initialized options
   @return  pointer to the initialized options
   */
-fmap_map_opt_t *
-fmap_map_opt_init();
+tmap_map_opt_t *
+tmap_map_opt_init();
 
 /*!
   Destroys the memory associated with these options
   @param  opt  pointer to the options
   */
 void
-fmap_map_opt_destroy(fmap_map_opt_t *opt);
+tmap_map_opt_destroy(tmap_map_opt_t *opt);
 
 /*!
   Prints the usage of the map algorithms
@@ -123,7 +123,7 @@ fmap_map_opt_destroy(fmap_map_opt_t *opt);
   @return      always 1
   */
 int
-fmap_map_opt_usage(fmap_map_opt_t *opt);
+tmap_map_opt_usage(tmap_map_opt_t *opt);
 
 /*!
   Parses the command line options and stores them in the options structure
@@ -133,20 +133,20 @@ fmap_map_opt_usage(fmap_map_opt_t *opt);
   @return       1 if successful, 0 otherwise
   */
 int32_t
-fmap_map_opt_parse(int argc, char *argv[], fmap_map_opt_t *opt);
+tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt);
 
 /*!
   Checks that all options are within range
   @param  opt   pointer to the options
   */
 void
-fmap_map_opt_check(fmap_map_opt_t *opt);
+tmap_map_opt_check(tmap_map_opt_t *opt);
 
 /*!
   @param  opt   pointer to the options
   */
 void
-fmap_map_opt_print(fmap_map_opt_t *opt);
+tmap_map_opt_print(tmap_map_opt_t *opt);
 
 
 /*! 
@@ -156,7 +156,7 @@ typedef struct {
     uint16_t n_mm;  /*!< the current number of mismatches  */
     uint16_t n_gapo;  /*!< the current number of gap opens */
     uint16_t n_gape;  /*!< the current number of gap extensions */
-} fmap_map_map1_aux_t;
+} tmap_map_map1_aux_t;
 
 /*! 
   Auxiliary data for map2
@@ -165,14 +165,14 @@ typedef struct {
     uint16_t XF:2;  /*!< support for the forward/reverse alignment (1-forward 2-reverse 3-both) */
     uint16_t XE:14;  /*!< the number of supporting seeds */
     int32_t XI;  /*!< the suffix interval size */
-} fmap_map_map2_aux_t;
+} tmap_map_map2_aux_t;
 
 /*! 
   Auxiliary data for map3
   */
 typedef struct {
     uint16_t n_seeds:15; /*!< the number seeds in this hit */
-} fmap_map_map3_aux_t;
+} tmap_map_map3_aux_t;
 
 /*!
   General data structure for holding a mapping; for easy outputting to the SAM format
@@ -189,19 +189,19 @@ typedef struct {
     int32_t n_cigar; /*!< the number of cigar operators */
     uint32_t *cigar; /*!< the cigar operator array */
     union {
-        fmap_map_map1_aux_t *map1_aux; /*!< auxiliary data for map1 */
-        fmap_map_map2_aux_t *map2_aux; /*!< auxiliary data for map2 */
-        fmap_map_map3_aux_t *map3_aux; /*!< auxiliary data for map3 */
+        tmap_map_map1_aux_t *map1_aux; /*!< auxiliary data for map1 */
+        tmap_map_map2_aux_t *map2_aux; /*!< auxiliary data for map2 */
+        tmap_map_map3_aux_t *map3_aux; /*!< auxiliary data for map3 */
     } aux;
-} fmap_map_sam_t;
+} tmap_map_sam_t;
 
 /*!
   Stores multiple mappings for a given read
   */
 typedef struct {
     int32_t n; /*!< the number of hits */
-    fmap_map_sam_t *sams; /*!< array of hits */
-} fmap_map_sams_t;
+    tmap_map_sam_t *sams; /*!< array of hits */
+} tmap_map_sams_t;
 
 /*!
   allocates memory for the auxiliary data specific to the algorithm specified by algo_id
@@ -209,28 +209,28 @@ typedef struct {
   @param  algo_id  the algorithm identifier
   */
 void
-fmap_map_sam_malloc_aux(fmap_map_sam_t *s, int32_t algo_id);
+tmap_map_sam_malloc_aux(tmap_map_sam_t *s, int32_t algo_id);
 
 /*!
   destroys auxiliary data for the given mapping structure
   @param  s  the mapping structure
   */
 inline void
-fmap_map_sam_destroy_aux(fmap_map_sam_t *s);
+tmap_map_sam_destroy_aux(tmap_map_sam_t *s);
 
 /*!
   destroys the given mapping structure, including auxiliary data
   @param  s  the mapping structure
   */ 
 void
-fmap_map_sam_destroy(fmap_map_sam_t *s);
+tmap_map_sam_destroy(tmap_map_sam_t *s);
 
 /*!
   allocate memory for an empty mapping structure, with no auxiliary data
   @return  a pointer to the initialized memory
   */
-fmap_map_sams_t *
-fmap_map_sams_init();
+tmap_map_sams_t *
+tmap_map_sams_init();
 
 /*!
   reallocate memory for mapping structures; does not allocate auxiliary data
@@ -238,14 +238,14 @@ fmap_map_sams_init();
   @param  n  the new number of mappings
   */
 void
-fmap_map_sams_realloc(fmap_map_sams_t *s, int32_t n);
+tmap_map_sams_realloc(tmap_map_sams_t *s, int32_t n);
 
 /*!
   destroys memory associated with these mappings
   @param  s  the mapping structure
   */
 void
-fmap_map_sams_destroy(fmap_map_sams_t *s);
+tmap_map_sams_destroy(tmap_map_sams_t *s);
 
 /*!
   copies the source into the destination, nullifying the source
@@ -253,7 +253,7 @@ fmap_map_sams_destroy(fmap_map_sams_t *s);
   @param  src   the source mapping structure
   */
 void
-fmap_map_sam_copy_and_nullify(fmap_map_sam_t *dest, fmap_map_sam_t *src);
+tmap_map_sam_copy_and_nullify(tmap_map_sam_t *dest, tmap_map_sam_t *src);
 
 /*!
   prints the SAM records
@@ -263,7 +263,7 @@ fmap_map_sam_copy_and_nullify(fmap_map_sam_t *dest, fmap_map_sam_t *src);
   @param  sam_sff_tags  1 if SFF specific SAM tags are to be outputted, 0 otherwise
   */
 void
-fmap_map_sams_print(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map_sams_t *sams, int32_t sam_sff_tags);
+tmap_map_sams_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sams_t *sams, int32_t sam_sff_tags);
 
 /*!
   filters mappings based on the output mode
@@ -271,7 +271,7 @@ fmap_map_sams_print(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_map_sams_t *sam
   @param  aln_output_mode  the output mode
   */
 void
-fmap_map_sams_filter(fmap_map_sams_t *sams, int32_t aln_output_mode);
+tmap_map_sams_filter(tmap_map_sams_t *sams, int32_t aln_output_mode);
 
 /*!
   filters mappings based on the output mode
@@ -281,7 +281,7 @@ fmap_map_sams_filter(fmap_map_sams_t *sams, int32_t aln_output_mode);
   only filters mappings based on the algorithm id (none process all)
   */
 void
-fmap_map_sams_filter1(fmap_map_sams_t *sams, int32_t aln_output_mode, int32_t algo_id);
+tmap_map_sams_filter1(tmap_map_sams_t *sams, int32_t aln_output_mode, int32_t algo_id);
 
 /*!
   adjusts the alignment score of map1 mappings to accout for the match score
@@ -292,7 +292,7 @@ fmap_map_sams_filter1(fmap_map_sams_t *sams, int32_t aln_output_mode, int32_t al
   @param  pen_gape     the gap extension penalty
   */
 void
-fmap_map_util_map1_adjust_score(fmap_map_sams_t *sams, int32_t score_match, int32_t pen_mm, int32_t pen_gapo, int32_t pen_gape);
+tmap_map_util_map1_adjust_score(tmap_map_sams_t *sams, int32_t score_match, int32_t pen_mm, int32_t pen_gapo, int32_t pen_gape);
 
 /*!
   re-aligns mappings in flow space
@@ -309,8 +309,8 @@ fmap_map_util_map1_adjust_score(fmap_map_sams_t *sams, int32_t score_match, int3
   @param  fscore       the flow penalty
   */
 void
-fmap_map_util_fsw(fmap_sff_t *sff, 
-                  fmap_map_sams_t *sams, fmap_refseq_t *refseq,
+tmap_map_util_fsw(tmap_sff_t *sff, 
+                  tmap_map_sams_t *sams, tmap_refseq_t *refseq,
                   int32_t bw, int32_t aln_global, int32_t score_thr,
                   int32_t score_match, int32_t pen_mm, int32_t pen_gapo, 
                   int32_t pen_gape, int32_t fscore);

@@ -1,19 +1,19 @@
 #include <stdlib.h>
 
-#include "../util/fmap_error.h"
-#include "../util/fmap_alloc.h"
-#include "../util/fmap_fibheap.h"
-#include "../util/fmap_definitions.h"
-#include "../seq/fmap_seq.h"
-#include "../index/fmap_refseq.h"
-#include "../index/fmap_bwt.h"
-#include "../index/fmap_bwt_match.h"
-#include "../index/fmap_sa.h"
-#include "../sw/fmap_sw.h"
-#include "../sw/fmap_fsw.h"
-#include "fmap_map_util.h"
-#include "fmap_map1.h"
-#include "fmap_map1_aux.h"
+#include "../util/tmap_error.h"
+#include "../util/tmap_alloc.h"
+#include "../util/tmap_fibheap.h"
+#include "../util/tmap_definitions.h"
+#include "../seq/tmap_seq.h"
+#include "../index/tmap_refseq.h"
+#include "../index/tmap_bwt.h"
+#include "../index/tmap_bwt_match.h"
+#include "../index/tmap_sa.h"
+#include "../sw/tmap_sw.h"
+#include "../sw/tmap_fsw.h"
+#include "tmap_map_util.h"
+#include "tmap_map1.h"
+#include "tmap_map1_aux.h"
 
 #define STATE_M 0
 #define STATE_I 1
@@ -23,10 +23,10 @@
 #define aln_score(m,o,e,p) ((m)*(p)->pen_mm + (o)*(p)->pen_gapo + (e)*(p)->pen_gape)
 
 static int 
-fmap_map1_aux_stack_cmp(void *a, void *b)
+tmap_map1_aux_stack_cmp(void *a, void *b)
 {
-  fmap_map1_aux_stack_entry_t *x = (fmap_map1_aux_stack_entry_t*)a;
-  fmap_map1_aux_stack_entry_t *y = (fmap_map1_aux_stack_entry_t*)b;
+  tmap_map1_aux_stack_entry_t *x = (tmap_map1_aux_stack_entry_t*)a;
+  tmap_map1_aux_stack_entry_t *y = (tmap_map1_aux_stack_entry_t*)b;
 
   /* sort by score, then offset */
   if(x->score < y->score 
@@ -41,28 +41,28 @@ fmap_map1_aux_stack_cmp(void *a, void *b)
   }
 }
 
-fmap_map1_aux_stack_t *
-fmap_map1_aux_stack_init()
+tmap_map1_aux_stack_t *
+tmap_map1_aux_stack_init()
 {
   int32_t i;
-  fmap_map1_aux_stack_t *stack = NULL;
-  stack = fmap_calloc(1, sizeof(fmap_map1_aux_stack_t), "stack");
+  tmap_map1_aux_stack_t *stack = NULL;
+  stack = tmap_calloc(1, sizeof(tmap_map1_aux_stack_t), "stack");
   stack->entry_pool_length = 1024; // TODO: move to a define block
-  stack->entry_pool = fmap_malloc(stack->entry_pool_length*sizeof(fmap_map1_aux_stack_entry_t*), "stack->entry_pool");
+  stack->entry_pool = tmap_malloc(stack->entry_pool_length*sizeof(tmap_map1_aux_stack_entry_t*), "stack->entry_pool");
   for(i=0;i<stack->entry_pool_length;i++) {
-      stack->entry_pool[i] = fmap_malloc(sizeof(fmap_map1_aux_stack_entry_t), "stack->entry_pool[i]");
+      stack->entry_pool[i] = tmap_malloc(sizeof(tmap_map1_aux_stack_entry_t), "stack->entry_pool[i]");
   }
-  stack->heap = fmap_fibheap_makeheap(fmap_map1_aux_stack_cmp);
-  //stack->heap = fmap_fibheap_makekeyheap();
+  stack->heap = tmap_fibheap_makeheap(tmap_map1_aux_stack_cmp);
+  //stack->heap = tmap_fibheap_makekeyheap();
 
   return stack;
 }
 
 void
-fmap_map1_aux_stack_destroy(fmap_map1_aux_stack_t *stack)
+tmap_map1_aux_stack_destroy(tmap_map1_aux_stack_t *stack)
 {
   int32_t i;
-  fmap_fibheap_deleteheap(stack->heap);
+  tmap_fibheap_deleteheap(stack->heap);
   for(i=0;i<stack->entry_pool_length;i++) {
       free(stack->entry_pool[i]);
   }
@@ -71,37 +71,37 @@ fmap_map1_aux_stack_destroy(fmap_map1_aux_stack_t *stack)
 }
 
 static void
-fmap_map1_aux_stack_reset(fmap_map1_aux_stack_t *stack)
+tmap_map1_aux_stack_reset(tmap_map1_aux_stack_t *stack)
 {
   // reset heap
-  fmap_fibheap_deleteheap(stack->heap);
-  stack->heap = fmap_fibheap_makeheap(fmap_map1_aux_stack_cmp);
-  //stack->heap = fmap_fibheap_makekeyheap();
+  tmap_fibheap_deleteheap(stack->heap);
+  stack->heap = tmap_fibheap_makeheap(tmap_map1_aux_stack_cmp);
+  //stack->heap = tmap_fibheap_makekeyheap();
   // move to the beginning of the memory pool
   stack->entry_pool_i = 0;
   stack->best_score = INT32_MAX;
 }
 
 static inline void
-fmap_map1_aux_stack_push(fmap_map1_aux_stack_t *stack, int32_t strand, 
+tmap_map1_aux_stack_push(tmap_map1_aux_stack_t *stack, int32_t strand, 
                          int32_t offset,
-                         fmap_bwt_match_occ_t *match_sa_prev,
+                         tmap_bwt_match_occ_t *match_sa_prev,
                          int32_t n_mm, int32_t n_gapo, int32_t n_gape,
                          int32_t state, int32_t is_diff, 
-                         fmap_map1_aux_stack_entry_t *prev_entry,
-                         const fmap_map_opt_t *opt)
+                         tmap_map1_aux_stack_entry_t *prev_entry,
+                         const tmap_map_opt_t *opt)
 {
-  fmap_map1_aux_stack_entry_t *entry = NULL;
+  tmap_map1_aux_stack_entry_t *entry = NULL;
 
   // check to see if we need more memory
   if(stack->entry_pool_length <= stack->entry_pool_i) { 
       int32_t i = stack->entry_pool_length;
       stack->entry_pool_length <<= 2;
-      stack->entry_pool = fmap_realloc(stack->entry_pool, 
-                                       sizeof(fmap_map1_aux_stack_entry_t*)*stack->entry_pool_length, 
+      stack->entry_pool = tmap_realloc(stack->entry_pool, 
+                                       sizeof(tmap_map1_aux_stack_entry_t*)*stack->entry_pool_length, 
                                        "stack->entry_pool");
       while(i<stack->entry_pool_length) {
-          stack->entry_pool[i] = fmap_malloc(sizeof(fmap_map1_aux_stack_entry_t), "stack->entry_pool[i]");
+          stack->entry_pool[i] = tmap_malloc(sizeof(tmap_map1_aux_stack_entry_t), "stack->entry_pool[i]");
           i++;
       }
   }
@@ -127,19 +127,19 @@ fmap_map1_aux_stack_push(fmap_map1_aux_stack_t *stack, int32_t strand,
 
   if(stack->best_score > entry->score) stack->best_score = entry->score;
 
-  fmap_fibheap_insert(stack->heap, entry);
-  //fmap_fibheap_insertkey(stack->heap, entry->score, entry);
+  tmap_fibheap_insert(stack->heap, entry);
+  //tmap_fibheap_insertkey(stack->heap, entry->score, entry);
 
   stack->entry_pool_i++;
 }
 
-static inline fmap_map1_aux_stack_entry_t *
-fmap_map1_aux_stack_pop(fmap_map1_aux_stack_t *stack)
+static inline tmap_map1_aux_stack_entry_t *
+tmap_map1_aux_stack_pop(tmap_map1_aux_stack_t *stack)
 {
-  fmap_map1_aux_stack_entry_t *best, *next_best;
+  tmap_map1_aux_stack_entry_t *best, *next_best;
 
-  best = fmap_fibheap_extractmin(stack->heap);
-  next_best = fmap_fibheap_min(stack->heap);
+  best = tmap_fibheap_extractmin(stack->heap);
+  next_best = tmap_fibheap_min(stack->heap);
   if(NULL != next_best) {
       stack->best_score  = next_best->score;
   }
@@ -151,8 +151,8 @@ fmap_map1_aux_stack_pop(fmap_map1_aux_stack_t *stack)
 }
 
 static inline void 
-fmap_map1_aux_stack_shadow(int32_t x, int32_t len, uint32_t max, 
-                           int32_t last_diff_offset, fmap_bwt_match_width_t *w)
+tmap_map1_aux_stack_shadow(int32_t x, int32_t len, uint32_t max, 
+                           int32_t last_diff_offset, tmap_bwt_match_width_t *w)
 {
   int32_t i, j;
   for(i=j=len-1;last_diff_offset<i;i--) {
@@ -165,15 +165,15 @@ fmap_map1_aux_stack_shadow(int32_t x, int32_t len, uint32_t max,
           w[i].w = max - j;
       }
       else {
-          fmap_error("else happened", Exit, OutOfRange);
+          tmap_error("else happened", Exit, OutOfRange);
       }
   }
 }
 
 static inline int32_t
-fmap_map1_aux_stack_size(fmap_map1_aux_stack_t *stack)
+tmap_map1_aux_stack_size(tmap_map1_aux_stack_t *stack)
 {
-  return stack->heap->fmap_fibheap_n;
+  return stack->heap->tmap_fibheap_n;
 }
 
 static inline int32_t int_log2(uint32_t v)
@@ -188,7 +188,7 @@ static inline int32_t int_log2(uint32_t v)
 }
 
 static inline int
-fmap_map1_aux_get_bam_state(int state)
+tmap_map1_aux_get_bam_state(int state)
 {
   switch(state) {
     case STATE_M:
@@ -207,18 +207,18 @@ fmap_map1_aux_get_bam_state(int state)
     if(0 < op_len) { \
         if(sam->n_cigar <= cigar_i) { \
             sam->n_cigar++; \
-            sam->cigar = fmap_realloc(sam->cigar, sizeof(uint32_t)*sam->n_cigar, "sam->cigar"); \
+            sam->cigar = tmap_realloc(sam->cigar, sizeof(uint32_t)*sam->n_cigar, "sam->cigar"); \
         } \
-        FMAP_SW_CIGAR_STORE(sam->cigar[cigar_i], fmap_map1_aux_get_bam_state(op), op_len); \
+        TMAP_SW_CIGAR_STORE(sam->cigar[cigar_i], tmap_map1_aux_get_bam_state(op), op_len); \
         cigar_i++; \
     } \
 } while(0)
 
-static fmap_map_sams_t *
-fmap_map1_sam_to_real(fmap_map_sams_t *sams, int32_t seq_len,
-                       fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *sa) 
+static tmap_map_sams_t *
+tmap_map1_sam_to_real(tmap_map_sams_t *sams, int32_t seq_len,
+                       tmap_refseq_t *refseq, tmap_bwt_t *bwt, tmap_sa_t *sa) 
 {
-  fmap_map_sams_t *sams_tmp = NULL;
+  tmap_map_sams_t *sams_tmp = NULL;
   uint32_t i, j, k, l, n;
 
   // max # of entries
@@ -227,22 +227,22 @@ fmap_map1_sam_to_real(fmap_map_sams_t *sams, int32_t seq_len,
   }
 
   // alloc
-  sams_tmp = fmap_map_sams_init();
-  fmap_map_sams_realloc(sams_tmp, n);
+  sams_tmp = tmap_map_sams_init();
+  tmap_map_sams_realloc(sams_tmp, n);
 
   // copy over
   for(i=j=0;i<sams->n;i++) {
-      fmap_map_sam_t *sam;
+      tmap_map_sam_t *sam;
       int32_t aln_ref_l = 0;
 
       sam = &sams->sams[i];
           
       // get the number of non-inserted bases 
       for(l=0;l<sam->n_cigar;l++) {
-          switch(FMAP_SW_CIGAR_OP(sam->cigar[l])) {
+          switch(TMAP_SW_CIGAR_OP(sam->cigar[l])) {
             case BAM_CMATCH:
             case BAM_CDEL:
-              aln_ref_l += FMAP_SW_CIGAR_LENGTH(sam->cigar[l]); break;
+              aln_ref_l += TMAP_SW_CIGAR_LENGTH(sam->cigar[l]); break;
             default:
               break;
           }
@@ -253,20 +253,20 @@ fmap_map1_sam_to_real(fmap_map_sams_t *sams, int32_t seq_len,
           uint32_t pos = 0, seqid = 0, pacpos = 0;
 
           // SA position to packed refseq position
-          pacpos = bwt->seq_len - fmap_sa_pac_pos(sa, bwt, k) - aln_ref_l + 1;
+          pacpos = bwt->seq_len - tmap_sa_pac_pos(sa, bwt, k) - aln_ref_l + 1;
 
-          if(0 < fmap_refseq_pac2real(refseq, pacpos, seq_len, &seqid, &pos)) {
+          if(0 < tmap_refseq_pac2real(refseq, pacpos, seq_len, &seqid, &pos)) {
               // copy over
               sams_tmp->sams[j] = sams->sams[i];
               sams_tmp->sams[j].seqid = seqid;
               sams_tmp->sams[j].pos = pos-1;
               // cigar
-              sams_tmp->sams[j].cigar = fmap_malloc(sizeof(uint32_t)*sams_tmp->sams[j].n_cigar, "sams_tmp->sams[j].cigar");
+              sams_tmp->sams[j].cigar = tmap_malloc(sizeof(uint32_t)*sams_tmp->sams[j].n_cigar, "sams_tmp->sams[j].cigar");
               for(l=0;l<sams_tmp->sams[j].n_cigar;l++) {
                   sams_tmp->sams[j].cigar[l] = sams->sams[i].cigar[l];
               }
               // aux
-              fmap_map_sam_malloc_aux(&sams_tmp->sams[j], FMAP_MAP_ALGO_MAP1);
+              tmap_map_sam_malloc_aux(&sams_tmp->sams[j], TMAP_MAP_ALGO_MAP1);
               sams_tmp->sams[j].aux.map1_aux->n_mm = sams->sams[i].aux.map1_aux->n_mm;
               sams_tmp->sams[j].aux.map1_aux->n_gapo = sams->sams[i].aux.map1_aux->n_gapo;
               sams_tmp->sams[j].aux.map1_aux->n_gape = sams->sams[i].aux.map1_aux->n_gape;
@@ -276,40 +276,40 @@ fmap_map1_sam_to_real(fmap_map_sams_t *sams, int32_t seq_len,
   }
 
   // destroy
-  fmap_map_sams_destroy(sams);
+  tmap_map_sams_destroy(sams);
 
   // realloc
-  fmap_map_sams_realloc(sams_tmp, j);
+  tmap_map_sams_realloc(sams_tmp, j);
 
   return sams_tmp;
 }
 
-fmap_map_sams_t *
-fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *sa,
-                   fmap_bwt_match_width_t *width[2], fmap_bwt_match_width_t *seed_width[2], fmap_map_opt_t *opt,
-                   fmap_map1_aux_stack_t *stack)
+tmap_map_sams_t *
+tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt, tmap_sa_t *sa,
+                   tmap_bwt_match_width_t *width[2], tmap_bwt_match_width_t *seed_width[2], tmap_map_opt_t *opt,
+                   tmap_map1_aux_stack_t *stack)
 {
   int32_t max_mm = opt->max_mm, max_gapo = opt->max_gapo, max_gape = opt->max_gape, seed_max_mm = opt->seed_max_mm;
   int32_t best_score, next_best_score;
   int32_t best_cnt = 0;
   int32_t j, num_n = 0;
   int32_t max_edit_score;
-  fmap_bwt_match_occ_t match_sa_start;
-  fmap_string_t *bases[2]={NULL,NULL};
-  fmap_map_sams_t *sams = NULL;
+  tmap_bwt_match_occ_t match_sa_start;
+  tmap_string_t *bases[2]={NULL,NULL};
+  tmap_map_sams_t *sams = NULL;
 
-  sams = fmap_map_sams_init();
+  sams = tmap_map_sams_init();
 
   best_score = next_best_score = aln_score(max_mm+1, max_gapo+1, max_gape+1, opt);
 
-  if(0 == bwt->is_rev) fmap_error("0 == bwt->is_rev", Exit, OutOfRange);
+  if(0 == bwt->is_rev) tmap_error("0 == bwt->is_rev", Exit, OutOfRange);
 
   max_edit_score = opt->pen_mm;
   if(max_edit_score < opt->pen_gapo) max_edit_score = opt->pen_gapo;
   if(max_edit_score < opt->pen_gape) max_edit_score = opt->pen_gape;
 
-  bases[0] = fmap_seq_get_bases(seq[0]);
-  bases[1] = fmap_seq_get_bases(seq[1]);
+  bases[0] = tmap_seq_get_bases(seq[0]);
+  bases[1] = tmap_seq_get_bases(seq[1]);
 
   // check whether there are too many N
   for(j=num_n=0;j<bases[0]->l;j++) {
@@ -326,22 +326,22 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_refseq_t *refseq, fmap_bwt_t *bwt, f
   match_sa_start.k = 0;
   match_sa_start.l = bwt->seq_len;
 
-  fmap_map1_aux_stack_reset(stack); // reset stack
-  fmap_map1_aux_stack_push(stack, 0, 0, &match_sa_start, 0, 0, 0, STATE_M, 0, NULL, opt);
-  fmap_map1_aux_stack_push(stack, 1, 0, &match_sa_start, 0, 0, 0, STATE_M, 0, NULL, opt);
+  tmap_map1_aux_stack_reset(stack); // reset stack
+  tmap_map1_aux_stack_push(stack, 0, 0, &match_sa_start, 0, 0, 0, STATE_M, 0, NULL, opt);
+  tmap_map1_aux_stack_push(stack, 1, 0, &match_sa_start, 0, 0, 0, STATE_M, 0, NULL, opt);
 
-  while(0 < fmap_map1_aux_stack_size(stack) && fmap_map1_aux_stack_size(stack) < opt->max_entries) {
-      fmap_map1_aux_stack_entry_t *e = NULL;
+  while(0 < tmap_map1_aux_stack_size(stack) && tmap_map1_aux_stack_size(stack) < opt->max_entries) {
+      tmap_map1_aux_stack_entry_t *e = NULL;
       int32_t strand, len=-1; 
       int32_t n_mm, n_gapo, n_gape;
       int32_t n_seed_mm=0, offset;
       const uint8_t *str=NULL;
       int32_t sam_found;
-      fmap_bwt_match_width_t *width_cur;
-      const fmap_bwt_match_width_t *seed_width_cur = NULL;
-      fmap_bwt_match_occ_t match_sa_cur, match_sa_next[4];
+      tmap_bwt_match_width_t *width_cur;
+      const tmap_bwt_match_width_t *seed_width_cur = NULL;
+      tmap_bwt_match_occ_t match_sa_cur, match_sa_next[4];
 
-      e = fmap_map1_aux_stack_pop(stack); // get the best entry
+      e = tmap_map1_aux_stack_pop(stack); // get the best entry
       if(best_score + max_edit_score < e->score) break; // no need to continue
 
       strand = e->strand; // strand;
@@ -377,7 +377,7 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_refseq_t *refseq, fmap_bwt_t *bwt, f
       else if(0 == n_mm // no mismatches from any state
               && (e->state == STATE_M && 0 == n_gapo) // in STATE_M but no more gap opens
               && (e->state != STATE_M && 0 == n_gape)) { // in STATE_I/STATE_D but no more extensions
-          if(0 < fmap_bwt_match_exact_alt(bwt, offset, str, &match_sa_cur)) { // the alignment must match exactly to sam
+          if(0 < tmap_bwt_match_exact_alt(bwt, offset, str, &match_sa_cur)) { // the alignment must match exactly to sam
               sam_found = 1;
           }
           else {
@@ -412,7 +412,7 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_refseq_t *refseq, fmap_bwt_t *bwt, f
               for(j=0;j<sams->n;j++) {
                   if(sams->sams[j].seqid == match_sa_cur.k && sams->sams[j].pos == match_sa_cur.l) {
                       if(score < sams->sams[j].score) { // bug!
-                          fmap_error("bug encountered", Exit, OutOfRange);
+                          tmap_error("bug encountered", Exit, OutOfRange);
                       }
                       do_add = 0;
                       break;
@@ -421,13 +421,13 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_refseq_t *refseq, fmap_bwt_t *bwt, f
           }
           if(do_add) { // append
               uint32_t op, op_len, cigar_i;
-              fmap_map_sam_t *sam = NULL;
-              fmap_map1_aux_stack_entry_t *cur = e;
+              tmap_map_sam_t *sam = NULL;
+              tmap_map1_aux_stack_entry_t *cur = e;
           
-              fmap_map_sams_realloc(sams, sams->n+1);
+              tmap_map_sams_realloc(sams, sams->n+1);
               sam = &sams->sams[sams->n-1];
 
-              sam->algo_id = FMAP_MAP_ALGO_MAP1;
+              sam->algo_id = TMAP_MAP_ALGO_MAP1;
               sam->algo_stage = 0;
               sam->score = cur->score;
               sam->strand = cur->strand;
@@ -435,17 +435,17 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_refseq_t *refseq, fmap_bwt_t *bwt, f
               sam->pos = cur->match_sa.l;
               
               // aux data
-              fmap_map_sam_malloc_aux(sam, FMAP_MAP_ALGO_MAP1);
+              tmap_map_sam_malloc_aux(sam, TMAP_MAP_ALGO_MAP1);
               sam->aux.map1_aux->n_mm = cur->n_mm;
               sam->aux.map1_aux->n_gapo = cur->n_gapo;
               sam->aux.map1_aux->n_gape = cur->n_gape;
 
               // cigar
               sam->n_cigar = 1 + cur->n_gapo;
-              sam->cigar = fmap_malloc(sizeof(uint32_t)*sam->n_cigar, "sam->cigar");
+              sam->cigar = tmap_malloc(sizeof(uint32_t)*sam->n_cigar, "sam->cigar");
               cigar_i = 0;
 
-              if(offset < len) { // we used 'fmap_bwt_match_exact_alt' 
+              if(offset < len) { // we used 'tmap_bwt_match_exact_alt' 
                   op = STATE_M;
                   op_len = len - offset;
               }
@@ -469,7 +469,7 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_refseq_t *refseq, fmap_bwt_t *bwt, f
 
               if(cigar_i < sam->n_cigar) { // reallocate to fit
                   sam->n_cigar = cigar_i;
-                  sam->cigar = fmap_realloc(sam->cigar, sizeof(uint32_t)*sam->n_cigar, "sam->cigar");
+                  sam->cigar = tmap_realloc(sam->cigar, sizeof(uint32_t)*sam->n_cigar, "sam->cigar");
               }
 
               // reverse the cigar 
@@ -480,11 +480,11 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_refseq_t *refseq, fmap_bwt_t *bwt, f
               }
 
               if(NULL == sam->cigar) {
-                  fmap_error(NULL, Exit, OutOfRange);
+                  tmap_error(NULL, Exit, OutOfRange);
               }
               
               // TODO: use the shadow ?
-              //fmap_map1_aux_stack_shadow(l - k + 1, len, bwt->seq_len, e->last_diff_offset, width_cur);
+              //tmap_map1_aux_stack_shadow(l - k + 1, len, bwt->seq_len, e->last_diff_offset, width_cur);
           }
       }
       else {
@@ -513,7 +513,7 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_refseq_t *refseq, fmap_bwt_t *bwt, f
           }
 
           // retrieve the next SA interval
-          fmap_bwt_match_2occ4(bwt, &e->match_sa, match_sa_next); 
+          tmap_bwt_match_2occ4(bwt, &e->match_sa, match_sa_next); 
 
           // insertions/deletions
           if(opt->indel_ends_bound <= offset && offset < len - opt->indel_ends_bound) { // do not add gaps round the ends
@@ -521,14 +521,14 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_refseq_t *refseq, fmap_bwt_t *bwt, f
                   if(0 < n_gapo) { // gap open is allowed
                       // insertion
                       // remember to use 'offset+1' and 'match_sa_cur' to skip over a read base
-                      fmap_map1_aux_stack_push(stack, strand, offset+1, &match_sa_cur, e->n_mm, e->n_gapo + 1, e->n_gape, STATE_I, 1, e, opt);
+                      tmap_map1_aux_stack_push(stack, strand, offset+1, &match_sa_cur, e->n_mm, e->n_gapo + 1, e->n_gape, STATE_I, 1, e, opt);
 
                       // deletion
                       for(j = 0; j != 4; ++j) {
                           if(match_sa_next[j].k <= match_sa_next[j].l) {
                               //   remember that a gap deletion does not consume a
                               //   read base, so use 'offset'
-                              fmap_map1_aux_stack_push(stack, strand, offset, &match_sa_next[j], e->n_mm, e->n_gapo + 1, e->n_gape, STATE_D, 1, e, opt);
+                              tmap_map1_aux_stack_push(stack, strand, offset, &match_sa_next[j], e->n_mm, e->n_gapo + 1, e->n_gape, STATE_D, 1, e, opt);
                           }
                       }
                   }
@@ -536,7 +536,7 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_refseq_t *refseq, fmap_bwt_t *bwt, f
               else if(STATE_I == e->state) { // extension of an insertion
                   if(0 < n_gape) { // gap extension is allowed
                       // remember to use 'offset+1' and 'match_sa_cur' to skip over a read base
-                      fmap_map1_aux_stack_push(stack, strand, offset+1, &match_sa_cur, e->n_mm, e->n_gapo, e->n_gape + 1, STATE_I, 1, e, opt);
+                      tmap_map1_aux_stack_push(stack, strand, offset+1, &match_sa_cur, e->n_mm, e->n_gapo, e->n_gape + 1, STATE_I, 1, e, opt);
                   }
               }
               else if(STATE_D == e->state) { // extension of a deletion
@@ -546,7 +546,7 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_refseq_t *refseq, fmap_bwt_t *bwt, f
                           if(match_sa_next[j].k <= match_sa_next[j].l) {
                               //   remember that a gap deletion does not consume a
                               //   read base, so use 'match_sa_next[j].offset-1'
-                              fmap_map1_aux_stack_push(stack, strand, offset, &match_sa_next[j], e->n_mm, e->n_gapo, e->n_gape + 1, STATE_D, 1, e, opt);
+                              tmap_map1_aux_stack_push(stack, strand, offset, &match_sa_next[j], e->n_mm, e->n_gapo, e->n_gape + 1, STATE_D, 1, e, opt);
                           }
                       }
                   }
@@ -559,19 +559,19 @@ fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_refseq_t *refseq, fmap_bwt_t *bwt, f
                   int32_t c = (str[offset] + j) & 3;
                   int32_t is_mm = (0 < j || 3 < str[offset]);
                   if(match_sa_next[c].k <= match_sa_next[c].l) {
-                      fmap_map1_aux_stack_push(stack, strand, offset+1, &match_sa_next[c], e->n_mm + is_mm, e->n_gapo, e->n_gape, STATE_M, is_mm, e, opt);
+                      tmap_map1_aux_stack_push(stack, strand, offset+1, &match_sa_next[c], e->n_mm + is_mm, e->n_gapo, e->n_gape, STATE_M, is_mm, e, opt);
                   }
               }
           } 
           else if(str[offset] < 4) { // try exact match only
               int32_t c = str[offset] & 3;
               if(match_sa_next[c].k <= match_sa_next[c].l) {
-                  fmap_map1_aux_stack_push(stack, strand, offset+1, &match_sa_next[c], e->n_mm, e->n_gapo, e->n_gape, STATE_M, 0, e, opt);
+                  tmap_map1_aux_stack_push(stack, strand, offset+1, &match_sa_next[c], e->n_mm, e->n_gapo, e->n_gape, STATE_M, 0, e, opt);
               }
           }
       }
   }
 
 
-  return fmap_map1_sam_to_real(sams, bases[0]->l, refseq, bwt, sa);
+  return tmap_map1_sam_to_real(sams, bases[0]->l, refseq, bwt, sa);
 }

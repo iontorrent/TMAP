@@ -13,45 +13,45 @@
 #include <bam.h>
 #endif
 
-#include "../util/fmap_error.h"
-#include "../util/fmap_alloc.h"
-#include "../util/fmap_progress.h"
-#include "../util/fmap_definitions.h"
-#include "../util/fmap_sam.h"
-#include "../io/fmap_file.h"
-#include "../sw/fmap_fsw.h"
-#include "fmap_sam2fs_aux.h"
-#include "fmap_sam2fs.h"
+#include "../util/tmap_error.h"
+#include "../util/tmap_alloc.h"
+#include "../util/tmap_progress.h"
+#include "../util/tmap_definitions.h"
+#include "../util/tmap_sam.h"
+#include "../io/tmap_file.h"
+#include "../sw/tmap_fsw.h"
+#include "tmap_sam2fs_aux.h"
+#include "tmap_sam2fs.h"
 
 #ifdef HAVE_SAMTOOLS
 
 #ifdef HAVE_LIBPTHREAD
-static pthread_mutex_t fmap_sam2fs_read_lock = PTHREAD_MUTEX_INITIALIZER;
-static int32_t fmap_sam2fs_read_lock_low = 0;
-#define FMAP_SAM2FS_THREAD_BLOCK_SIZE 1024
+static pthread_mutex_t tmap_sam2fs_read_lock = PTHREAD_MUTEX_INITIALIZER;
+static int32_t tmap_sam2fs_read_lock_low = 0;
+#define TMAP_SAM2FS_THREAD_BLOCK_SIZE 1024
 #endif
 
 // from bam.h
 extern char *bam_nt16_rev_table;
 
-// from fmap_fsw.c
-extern int32_t fmap_fsw_sm_short[];
+// from tmap_fsw.c
+extern int32_t tmap_fsw_sm_short[];
 
-#define FMAP_SAM2FS_FLOW_MATCH '|'
-#define FMAP_SAM2FS_FLOW_INS '+'
-#define FMAP_SAM2FS_FLOW_DEL '-'
-#define FMAP_SAM2FS_FLOW_SNP 'S'
-#define FMAP_SAM2FS_FLOW_PAD ' '
+#define TMAP_SAM2FS_FLOW_MATCH '|'
+#define TMAP_SAM2FS_FLOW_INS '+'
+#define TMAP_SAM2FS_FLOW_DEL '-'
+#define TMAP_SAM2FS_FLOW_SNP 'S'
+#define TMAP_SAM2FS_FLOW_PAD ' '
 
 typedef struct {
     bam1_t **bams;
     int32_t buffer_length;
     int32_t tid;
-    fmap_sam2fs_opt_t *opt;
-} fmap_sam2fs_thread_data_t;
+    tmap_sam2fs_opt_t *opt;
+} tmap_sam2fs_thread_data_t;
 
 static inline int32_t
-fmap_sam2fs_is_DNA(char c)
+tmap_sam2fs_is_DNA(char c)
 {
   if('a' == c || 'A' == c
      || 'c' == c || 'C' == c
@@ -66,18 +66,18 @@ fmap_sam2fs_is_DNA(char c)
 }
 
 static inline void 
-fmap_sam2fs_bam_alloc_data(bam1_t *bam, int size)
+tmap_sam2fs_bam_alloc_data(bam1_t *bam, int size)
 {
   if(bam->m_data < size) {
       bam->m_data = size;
-      fmap_roundup32(bam->m_data); // from bam.h
+      tmap_roundup32(bam->m_data); // from bam.h
       bam->data = (uint8_t*)realloc(bam->data, bam->m_data);
   }
 }
 
 
 static bam1_t *
-fmap_sam2fs_copy_to_sam(bam1_t *bam_old, fmap_fsw_path_t *path, int32_t path_len, int32_t score, 
+tmap_sam2fs_copy_to_sam(bam1_t *bam_old, tmap_fsw_path_t *path, int32_t path_len, int32_t score, 
                         int32_t soft_clip_start, int32_t soft_clip_end, uint8_t path_strand)
 {
   bam1_t *bam_new = NULL;
@@ -87,28 +87,28 @@ fmap_sam2fs_copy_to_sam(bam1_t *bam_old, fmap_fsw_path_t *path, int32_t path_len
   uint8_t *old_score;
 
   if(1 == path_strand) {
-      fmap_fsw_path_t *tmp_path;
+      tmap_fsw_path_t *tmp_path;
 
       // reverse path
-      tmp_path = fmap_malloc(sizeof(fmap_fsw_path_t) * path_len, "tmp_path");
+      tmp_path = tmap_malloc(sizeof(tmap_fsw_path_t) * path_len, "tmp_path");
       for(i=0;i<path_len;i++) {
           tmp_path[i] = path[path_len-i-1];
       }
 
-      bam_new = fmap_sam2fs_copy_to_sam(bam_old, tmp_path, path_len, score,
+      bam_new = tmap_sam2fs_copy_to_sam(bam_old, tmp_path, path_len, score,
                                         soft_clip_start, soft_clip_end, 0);
 
       free(tmp_path);
       return bam_new;
   }
 
-  bam_new = fmap_calloc(1, sizeof(bam1_t), "bam_new");
+  bam_new = tmap_calloc(1, sizeof(bam1_t), "bam_new");
   bam_new->data_len = 0; //bam_new->m_data;
 
   // query name
   bam_new->core.l_qname = bam_old->core.l_qname;
   bam_new->data_len += bam_new->core.l_qname;
-  fmap_sam2fs_bam_alloc_data(bam_new, bam_new->data_len);
+  tmap_sam2fs_bam_alloc_data(bam_new, bam_new->data_len);
   memcpy(bam1_qname(bam_new), bam1_qname(bam_old), bam_old->core.l_qname);
 
   // flag
@@ -128,16 +128,16 @@ fmap_sam2fs_copy_to_sam(bam1_t *bam_old, fmap_fsw_path_t *path, int32_t path_len
   bam_new->core.isize = 0;
 
   // cigar
-  fmap_sam2fs_bam_alloc_data(bam_new, bam_new->data_len);
-  cigar = fmap_fsw_path2cigar(path, path_len, &n_cigar, 1);
+  tmap_sam2fs_bam_alloc_data(bam_new, bam_new->data_len);
+  cigar = tmap_fsw_path2cigar(path, path_len, &n_cigar, 1);
   // remove HP edits
   for(i=j=0;i<n_cigar;i++) {
       switch(cigar[i] & 0xf) {
-        case FMAP_FSW_FROM_HP_PLUS: // deletion
-          cigar[i] = ((cigar[i] >> 4) << 4) | FMAP_FSW_FROM_D;
+        case TMAP_FSW_FROM_HP_PLUS: // deletion
+          cigar[i] = ((cigar[i] >> 4) << 4) | TMAP_FSW_FROM_D;
           break;
-        case FMAP_FSW_FROM_HP_MINUS: // insertion
-          cigar[i] = ((cigar[i] >> 4) << 4) | FMAP_FSW_FROM_I;
+        case TMAP_FSW_FROM_HP_MINUS: // insertion
+          cigar[i] = ((cigar[i] >> 4) << 4) | TMAP_FSW_FROM_I;
           break;
         default:
           break;
@@ -152,7 +152,7 @@ fmap_sam2fs_copy_to_sam(bam1_t *bam_old, fmap_fsw_path_t *path, int32_t path_len
   n_cigar = j;
   // add soft-clipping
   if(0 < soft_clip_start) {
-      cigar = fmap_realloc(cigar, sizeof(uint32_t) * (1 + n_cigar), "cigar"); 
+      cigar = tmap_realloc(cigar, sizeof(uint32_t) * (1 + n_cigar), "cigar"); 
       for(i=n_cigar-1;0<=i;i--) {
           cigar[i+1] = cigar[i];
       }
@@ -160,14 +160,14 @@ fmap_sam2fs_copy_to_sam(bam1_t *bam_old, fmap_fsw_path_t *path, int32_t path_len
       n_cigar++;
   }
   if(0 < soft_clip_end) {
-      cigar = fmap_realloc(cigar, sizeof(uint32_t) * (1 + n_cigar), "cigar"); 
+      cigar = tmap_realloc(cigar, sizeof(uint32_t) * (1 + n_cigar), "cigar"); 
       cigar[n_cigar] = (soft_clip_end << 4) | BAM_CSOFT_CLIP;
       n_cigar++;
   }
   // allocate
   bam_new->core.n_cigar = n_cigar;
   bam_new->data_len += bam_new->core.n_cigar * sizeof(uint32_t);
-  fmap_sam2fs_bam_alloc_data(bam_new, bam_new->data_len);
+  tmap_sam2fs_bam_alloc_data(bam_new, bam_new->data_len);
   // copy over
   for(i=0;i<bam_new->core.n_cigar;i++) {
       bam1_cigar(bam_new)[i] = cigar[i];
@@ -177,21 +177,21 @@ fmap_sam2fs_copy_to_sam(bam1_t *bam_old, fmap_fsw_path_t *path, int32_t path_len
   // seq
   bam_new->core.l_qseq = bam_old->core.l_qseq;
   bam_new->data_len += (bam_new->core.l_qseq + 1)/2;
-  fmap_sam2fs_bam_alloc_data(bam_new, bam_new->data_len);
+  tmap_sam2fs_bam_alloc_data(bam_new, bam_new->data_len);
   for(i=0;i<(bam_new->core.l_qseq+1)/2;i++) {
       bam1_seq(bam_new)[i] = bam1_seq(bam_old)[i];
   }
 
   // qualities
   bam_new->data_len += bam_new->core.l_qseq;
-  fmap_sam2fs_bam_alloc_data(bam_new, bam_new->data_len);
+  tmap_sam2fs_bam_alloc_data(bam_new, bam_new->data_len);
   for(i=0;i<bam_new->core.l_qseq;i++) {
       bam1_qual(bam_new)[i] = bam1_qual(bam_old)[i];
   }
 
   // copy over auxiliary data
   bam_new->data_len += bam_old->l_aux;
-  fmap_sam2fs_bam_alloc_data(bam_new, bam_new->data_len);
+  tmap_sam2fs_bam_alloc_data(bam_new, bam_new->data_len);
   for(i=0;i<bam_old->l_aux;i++) {
       bam1_aux(bam_new)[i] = bam1_aux(bam_old)[i];
   }
@@ -214,7 +214,7 @@ fmap_sam2fs_copy_to_sam(bam1_t *bam_old, fmap_fsw_path_t *path, int32_t path_len
 }
 
 bam1_t *
-fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_offset, 
+tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_offset, 
                 int32_t aln_global, int32_t output_type, int32_t j_type)
 {
   int32_t i, j, k, l;
@@ -239,18 +239,18 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
   int32_t flow_len;
   uint8_t *base_calls = NULL;
   uint16_t *flowgram = NULL;
-  fmap_fsw_path_t *path = NULL;
+  tmap_fsw_path_t *path = NULL;
   int32_t path_len;
-  fmap_fsw_param_t param;
+  tmap_fsw_param_t param;
   int64_t score;
-  fmap_fsw_flowseq_t *flowseq = NULL;
+  tmap_fsw_flowseq_t *flowseq = NULL;
   uint8_t strand;
 
   // set the alignment parameters
   param.gap_open = 13*100;
   param.gap_ext = 2*100;
   param.gap_end = 2*100;
-  param.matrix = fmap_fsw_sm_short;
+  param.matrix = tmap_fsw_sm_short;
   param.fscore = 100*flow_score;
   param.offset = flow_offset;
   param.row = 5;
@@ -264,7 +264,7 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
 
   // get the MD tag
   if(NULL == (md_data = bam_aux_get(bam, "MD"))) {
-      fmap_error("MD tag is missing", Exit, OutOfRange);
+      tmap_error("MD tag is missing", Exit, OutOfRange);
   }
   md = bam_aux2Z(md_data);
 
@@ -276,7 +276,7 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
       aln_len += (cigar[i] >> 4);
   }
   if(0 == aln_len) {
-      fmap_error("zero alignment length", Exit, OutOfRange);
+      tmap_error("zero alignment length", Exit, OutOfRange);
   }
 
   // get soft clipping at the start/end of the sequence
@@ -289,13 +289,13 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
 
   /*
      if(0 < soft_clip_start || 0 < soft_clip_end) {
-     fmap_error("Soft clipping currently not supported", Exit, OutOfRange);
+     tmap_error("Soft clipping currently not supported", Exit, OutOfRange);
      }
      */
 
   // get the read bases
   bam_seq = bam1_seq(bam);
-  read_bases = fmap_calloc(1+bam->core.l_qseq, sizeof(char), "read_bases");
+  read_bases = tmap_calloc(1+bam->core.l_qseq, sizeof(char), "read_bases");
   for(i=soft_clip_start;i<bam->core.l_qseq-soft_clip_end;i++) {
       read_bases[i-soft_clip_start] = bam_nt16_rev_table[bam1_seqi(bam_seq, i)]; 
   }
@@ -304,7 +304,7 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
   read_bases_mem = read_bases_len + 1;
 
   // get the reference bases
-  ref_bases = fmap_calloc(ref_bases_mem, sizeof(char), "read_bases");
+  ref_bases = tmap_calloc(ref_bases_mem, sizeof(char), "read_bases");
 
   // pre-process using the cigar array
   for(i=j=k=0;i<bam->core.n_cigar;i++) {
@@ -317,7 +317,7 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
           // copy over these bases
           while(ref_bases_mem <= ref_bases_len + op_len + 1) {
               ref_bases_mem <<= 1;
-              ref_bases = fmap_realloc(ref_bases, sizeof(char)*ref_bases_mem, "ref_bases");
+              ref_bases = tmap_realloc(ref_bases, sizeof(char)*ref_bases_mem, "ref_bases");
           }
           for(l=0;l<op_len;l++) {
               ref_bases[k+l] = read_bases[j+l];
@@ -339,7 +339,7 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
           // ignore
           break;
         default:
-          fmap_error("unknown cigar operator", Exit, OutOfRange);
+          tmap_error("unknown cigar operator", Exit, OutOfRange);
           break;
       }
   }
@@ -357,13 +357,13 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
           // how many bases are deleted?
           md_i++; // skip over '^'
           l=0;
-          while(md_i+l < strlen(md) && 1 == fmap_sam2fs_is_DNA(md[md_i+l])) {
+          while(md_i+l < strlen(md) && 1 == tmap_sam2fs_is_DNA(md[md_i+l])) {
               l++;
           }
           // reallocate
           while(ref_bases_mem <= ref_bases_len + l + 1) { // more memory please
               ref_bases_mem <<= 1;
-              ref_bases = fmap_realloc(ref_bases, sizeof(char)*ref_bases_mem, "ref_bases");
+              ref_bases = tmap_realloc(ref_bases, sizeof(char)*ref_bases_mem, "ref_bases");
           }
           // shift up
           for(j=ref_bases_len-1;i<=j;j--) {
@@ -377,21 +377,21 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
           i += l;
           ref_bases_len += l;
       }
-      else if(1 == fmap_sam2fs_is_DNA(md[md_i])) { // SNP
+      else if(1 == tmap_sam2fs_is_DNA(md[md_i])) { // SNP
           ref_bases[i] = md[md_i];
           i++;
           md_i++;
       }
       else {
-          fmap_error("could not parse the MD tag", Exit, OutOfRange);
+          tmap_error("could not parse the MD tag", Exit, OutOfRange);
       }
   }
   ref_bases[i]='\0';
 
   // reverse compliment if necessary
   if(1 == strand) {
-      fmap_reverse_compliment(ref_bases, ref_bases_len);
-      fmap_reverse_compliment(read_bases, read_bases_len);
+      tmap_reverse_compliment(ref_bases, ref_bases_len);
+      tmap_reverse_compliment(read_bases, read_bases_len);
   }
 
   //fprintf(stderr, "ref_bases_len=%d\nref_bases=%s\n", ref_bases_len, ref_bases);
@@ -399,13 +399,13 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
 
   // DNA to integer
   for(i=0;i<read_bases_len;i++) {
-      read_bases[i] = fmap_nt_char_to_int[(int)read_bases[i]];
+      read_bases[i] = tmap_nt_char_to_int[(int)read_bases[i]];
   }
   for(i=0;i<ref_bases_len;i++) {
-      ref_bases[i] = fmap_nt_char_to_int[(int)ref_bases[i]];
+      ref_bases[i] = tmap_nt_char_to_int[(int)ref_bases[i]];
   }
   for(i=0;i<4;i++) {
-      flow_order_tmp[i] = fmap_nt_char_to_int[(int)flow_order[i]];
+      flow_order_tmp[i] = tmap_nt_char_to_int[(int)flow_order[i]];
   }
 
   // get the flow length
@@ -418,8 +418,8 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
   }
   flow_len++; // the last flow
   // alloc
-  base_calls = fmap_calloc(flow_len, sizeof(uint8_t), "base_calls");
-  flowgram = fmap_calloc(flow_len, sizeof(uint16_t), "base_calls");
+  base_calls = tmap_calloc(flow_len, sizeof(uint8_t), "base_calls");
+  flowgram = tmap_calloc(flow_len, sizeof(uint16_t), "base_calls");
   // copy the # of flows
   for(i=j=0;i<flow_len;i++) {
       if(flow_order_tmp[i&3] == read_bases[j]) {
@@ -438,25 +438,25 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
   }
 
   // allocate the alignment path
-  path = fmap_calloc(FMAP_FSW_MAX_PATH_LENGTH(ref_bases_len, flow_len, param.offset), sizeof(fmap_fsw_path_t), "path"); 
+  path = tmap_calloc(TMAP_FSW_MAX_PATH_LENGTH(ref_bases_len, flow_len, param.offset), sizeof(tmap_fsw_path_t), "path"); 
 
   // re-align 
-  flowseq = fmap_fsw_flowseq_init(flow_order_tmp, base_calls, flowgram, flow_len, -1, 0);
+  flowseq = tmap_fsw_flowseq_init(flow_order_tmp, base_calls, flowgram, flow_len, -1, 0);
   if(1 == aln_global) {
-      score = fmap_fsw_global_core((uint8_t*)ref_bases, ref_bases_len,
+      score = tmap_fsw_global_core((uint8_t*)ref_bases, ref_bases_len,
                                    flowseq,
                                    &param, path, &path_len);
 
   }
   else {
-      score = fmap_fsw_fitting_core((uint8_t*)ref_bases, ref_bases_len,
+      score = tmap_fsw_fitting_core((uint8_t*)ref_bases, ref_bases_len,
                                     flowseq,
                                     &param, path, &path_len);
   }
-  fmap_fsw_flowseq_destroy(flowseq);
+  tmap_fsw_flowseq_destroy(flowseq);
 
   switch(output_type) {
-    case FMAP_SAM2FS_OUTPUT_ALN:
+    case TMAP_SAM2FS_OUTPUT_ALN:
       // bound, since we could start with an insertion (read starts with bases,
       // reference starts with gaps)
       i = path[0].j;
@@ -464,36 +464,36 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
       if(ref_bases_len <= i) i = ref_bases_len;
       if(j < 0) j = 0;
 
-      fmap_file_fprintf(fmap_file_stdout, "%s\t%c\t", bam1_qname(bam), (1==strand) ? '-' : '+');
-      fmap_fsw_print_aln(fmap_file_stdout, score, path, path_len, flow_order_tmp, 
+      tmap_file_fprintf(tmap_file_stdout, "%s\t%c\t", bam1_qname(bam), (1==strand) ? '-' : '+');
+      tmap_fsw_print_aln(tmap_file_stdout, score, path, path_len, flow_order_tmp, 
                          (uint8_t*)ref_bases,
                          strand,
                          j_type);
-      fmap_file_fprintf(fmap_file_stdout, "\t");
-      fmap_sam2fs_aux_flow_align(fmap_file_stdout, 
+      tmap_file_fprintf(tmap_file_stdout, "\t");
+      tmap_sam2fs_aux_flow_align(tmap_file_stdout, 
                                  (uint8_t*)read_bases, 
                                  read_bases_len,
                                  (uint8_t*)(ref_bases + j),
                                  i - j + 1, 
                                  flow_order_tmp,
                                  strand);
-      fmap_file_fprintf(fmap_file_stdout, "\n");
+      tmap_file_fprintf(tmap_file_stdout, "\n");
       break;
-    case FMAP_SAM2FS_OUTPUT_SAM:
-      bam = fmap_sam2fs_copy_to_sam(bam, path, path_len, score, soft_clip_start, soft_clip_end, strand);
+    case TMAP_SAM2FS_OUTPUT_SAM:
+      bam = tmap_sam2fs_copy_to_sam(bam, path, path_len, score, soft_clip_start, soft_clip_end, strand);
 
-      fmap_fsw_get_aln(path, path_len, flow_order_tmp, (uint8_t*)ref_bases, 
+      tmap_fsw_get_aln(path, path_len, flow_order_tmp, (uint8_t*)ref_bases, 
                        strand,
                        &ref, &read, &aln, j_type);
 
 
-      // do not worry about read fitting since fmap_fsw_get_aln handles this
+      // do not worry about read fitting since tmap_fsw_get_aln handles this
       // above
       if(1 == strand) { // set it the forward strand of the reference
-          fmap_reverse_compliment(ref, path_len);
-          fmap_reverse_compliment(read, path_len);
+          tmap_reverse_compliment(ref, path_len);
+          tmap_reverse_compliment(read, path_len);
       }
-      fmap_sam_update_cigar_and_md(bam, ref, read, path_len);
+      tmap_sam_update_cigar_and_md(bam, ref, read, path_len);
 
       free(ref); free(read); free(aln); 
       break;
@@ -510,24 +510,24 @@ fmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
 }
 
 static void
-fmap_sam2fs_aux_worker(bam1_t **bams, int32_t buffer_length, fmap_sam2fs_opt_t *opt)
+tmap_sam2fs_aux_worker(bam1_t **bams, int32_t buffer_length, tmap_sam2fs_opt_t *opt)
 {
   int32_t low = 0, high;
 
   while(low < buffer_length) {
 #ifdef HAVE_LIBPTHREAD
       if(1 < opt->num_threads) {
-          pthread_mutex_lock(&fmap_sam2fs_read_lock);
+          pthread_mutex_lock(&tmap_sam2fs_read_lock);
 
           // update bounds
-          low = fmap_sam2fs_read_lock_low;
-          fmap_sam2fs_read_lock_low += FMAP_SAM2FS_THREAD_BLOCK_SIZE;
-          high = low + FMAP_SAM2FS_THREAD_BLOCK_SIZE;
+          low = tmap_sam2fs_read_lock_low;
+          tmap_sam2fs_read_lock_low += TMAP_SAM2FS_THREAD_BLOCK_SIZE;
+          high = low + TMAP_SAM2FS_THREAD_BLOCK_SIZE;
           if(buffer_length < high) {
               high = buffer_length;
           }
 
-          pthread_mutex_unlock(&fmap_sam2fs_read_lock);
+          pthread_mutex_unlock(&tmap_sam2fs_read_lock);
       }
       else {
           high = buffer_length; // process all
@@ -536,7 +536,7 @@ fmap_sam2fs_aux_worker(bam1_t **bams, int32_t buffer_length, fmap_sam2fs_opt_t *
       high = buffer_length; // process all
 #endif
       while(low < high) {
-          bams[low] = fmap_sam2fs_aux(bams[low], opt->flow_order, opt->flow_score, opt->flow_offset, 
+          bams[low] = tmap_sam2fs_aux(bams[low], opt->flow_order, opt->flow_score, opt->flow_offset, 
                                       opt->aln_global, opt->output_type, opt->j_type);
           low++;
       }
@@ -544,41 +544,41 @@ fmap_sam2fs_aux_worker(bam1_t **bams, int32_t buffer_length, fmap_sam2fs_opt_t *
 }
 
 static void *
-fmap_sam2fs_aux_thread_worker(void *arg)
+tmap_sam2fs_aux_thread_worker(void *arg)
 {
-  fmap_sam2fs_thread_data_t *thread_data = (fmap_sam2fs_thread_data_t*)arg;
-  fmap_sam2fs_aux_worker(thread_data->bams, thread_data->buffer_length, thread_data->opt);
+  tmap_sam2fs_thread_data_t *thread_data = (tmap_sam2fs_thread_data_t*)arg;
+  tmap_sam2fs_aux_worker(thread_data->bams, thread_data->buffer_length, thread_data->opt);
 
   return arg;
 }
 
 
 static int
-usage(fmap_sam2fs_opt_t *opt)
+usage(tmap_sam2fs_opt_t *opt)
 {
-  fmap_file_fprintf(fmap_file_stderr, "\n");
-  fmap_file_fprintf(fmap_file_stderr, "Usage: %s sam2fs <in.sam/in.bam> [options]", PACKAGE);
-  fmap_file_fprintf(fmap_file_stderr, "\n");
-  fmap_file_fprintf(fmap_file_stderr, "Options (optional):\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -f          the flow order [%s]\n", opt->flow_order);
-  fmap_file_fprintf(fmap_file_stderr, "         -F INT      the flow penalty [%d]\n", opt->flow_score);
-  fmap_file_fprintf(fmap_file_stderr, "         -o INT      search for homopolymer errors +- offset during re-alignment [%d]\n",
+  tmap_file_fprintf(tmap_file_stderr, "\n");
+  tmap_file_fprintf(tmap_file_stderr, "Usage: %s sam2fs <in.sam/in.bam> [options]", PACKAGE);
+  tmap_file_fprintf(tmap_file_stderr, "\n");
+  tmap_file_fprintf(tmap_file_stderr, "Options (optional):\n");
+  tmap_file_fprintf(tmap_file_stderr, "         -f          the flow order [%s]\n", opt->flow_order);
+  tmap_file_fprintf(tmap_file_stderr, "         -F INT      the flow penalty [%d]\n", opt->flow_score);
+  tmap_file_fprintf(tmap_file_stderr, "         -o INT      search for homopolymer errors +- offset during re-alignment [%d]\n",
                     opt->flow_offset);
-  fmap_file_fprintf(fmap_file_stderr, "         -S          the input is a SAM file\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -g          run global alignment (otherwise read fitting) [%d]\n", opt->aln_global);
-  fmap_file_fprintf(fmap_file_stderr, "         -O          the output type: 0-alignment 1-SAM 2-BAM [%d]\n", opt->output_type);
-  fmap_file_fprintf(fmap_file_stderr, "         -l INT      indel justification type: 0 - none, 1 - 5' strand of the reference, 2 - 5' strand of the read [%d]\n", opt->j_type);
-  fmap_file_fprintf(fmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
-  fmap_file_fprintf(fmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
-  fmap_file_fprintf(fmap_file_stderr, "         -v          print verbose progress information\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -h          print this message\n");
-  fmap_file_fprintf(fmap_file_stderr, "\n");
+  tmap_file_fprintf(tmap_file_stderr, "         -S          the input is a SAM file\n");
+  tmap_file_fprintf(tmap_file_stderr, "         -g          run global alignment (otherwise read fitting) [%d]\n", opt->aln_global);
+  tmap_file_fprintf(tmap_file_stderr, "         -O          the output type: 0-alignment 1-SAM 2-BAM [%d]\n", opt->output_type);
+  tmap_file_fprintf(tmap_file_stderr, "         -l INT      indel justification type: 0 - none, 1 - 5' strand of the reference, 2 - 5' strand of the read [%d]\n", opt->j_type);
+  tmap_file_fprintf(tmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
+  tmap_file_fprintf(tmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
+  tmap_file_fprintf(tmap_file_stderr, "         -v          print verbose progress information\n");
+  tmap_file_fprintf(tmap_file_stderr, "         -h          print this message\n");
+  tmap_file_fprintf(tmap_file_stderr, "\n");
 
   return 1;
 }
 
 static void
-fmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, fmap_sam2fs_opt_t *opt)
+tmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, tmap_sam2fs_opt_t *opt)
 {
   int32_t i;
   samfile_t *fp_in = NULL;
@@ -589,22 +589,22 @@ fmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, fmap_sam2fs_opt_
   int32_t buffer_length, n_reads_processed = 0;
 
   fp_in = samopen(fn_in, sam_open_flags, 0);
-  if(NULL == fp_in) fmap_error(fn_in, Exit, OpenFileError);
+  if(NULL == fp_in) tmap_error(fn_in, Exit, OpenFileError);
 
   switch(opt->output_type) {
-    case FMAP_SAM2FS_OUTPUT_ALN:
-      fmap_file_stdout = fmap_file_fdopen(fileno(stdout), "wb", FMAP_FILE_NO_COMPRESSION);
+    case TMAP_SAM2FS_OUTPUT_ALN:
+      tmap_file_stdout = tmap_file_fdopen(fileno(stdout), "wb", TMAP_FILE_NO_COMPRESSION);
       break;
-    case FMAP_SAM2FS_OUTPUT_SAM:
+    case TMAP_SAM2FS_OUTPUT_SAM:
       fp_out = samopen("-", "wh", fp_in->header);
       break;
-    case FMAP_SAM2FS_OUTPUT_BAM:
+    case TMAP_SAM2FS_OUTPUT_BAM:
       fp_out = samopen("-", "wb", fp_in->header);
       break;
   }
 
-  if(FMAP_SAM2FS_OUTPUT_SAM == opt->output_type
-     || FMAP_SAM2FS_OUTPUT_BAM == opt->output_type) {
+  if(TMAP_SAM2FS_OUTPUT_SAM == opt->output_type
+     || TMAP_SAM2FS_OUTPUT_BAM == opt->output_type) {
       // allocate the buffer
       if(-1 == opt->reads_queue_size) {
           reads_queue_size = 1;
@@ -612,9 +612,9 @@ fmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, fmap_sam2fs_opt_
       else {
           reads_queue_size = opt->reads_queue_size;
       }
-      bams = fmap_malloc(sizeof(bam1_t*)*reads_queue_size, "bams");
+      bams = tmap_malloc(sizeof(bam1_t*)*reads_queue_size, "bams");
 
-      fmap_progress_print("processing reads");
+      tmap_progress_print("processing reads");
       do {
           // init
           for(i=0;i<reads_queue_size;i++) {
@@ -632,36 +632,36 @@ fmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, fmap_sam2fs_opt_
           // process
 #ifdef HAVE_LIBPTHREAD
           int32_t num_threads = opt->num_threads;
-          if(buffer_length < num_threads * FMAP_SAM2FS_THREAD_BLOCK_SIZE) {
-              num_threads = 1 + (buffer_length / FMAP_SAM2FS_THREAD_BLOCK_SIZE);
+          if(buffer_length < num_threads * TMAP_SAM2FS_THREAD_BLOCK_SIZE) {
+              num_threads = 1 + (buffer_length / TMAP_SAM2FS_THREAD_BLOCK_SIZE);
           }
           if(1 == num_threads) {
-              fmap_sam2fs_aux_worker(bams, buffer_length, opt);
+              tmap_sam2fs_aux_worker(bams, buffer_length, opt);
           }
           else {
               pthread_attr_t attr;
               pthread_t *threads = NULL;
-              fmap_sam2fs_thread_data_t *thread_data=NULL;
+              tmap_sam2fs_thread_data_t *thread_data=NULL;
 
               pthread_attr_init(&attr);
               pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
-              threads = fmap_calloc(num_threads, sizeof(pthread_t), "threads");
-              thread_data = fmap_calloc(num_threads, sizeof(fmap_sam2fs_thread_data_t), "thread_data");
-              fmap_sam2fs_read_lock_low = 0; // ALWAYS set before running threads 
+              threads = tmap_calloc(num_threads, sizeof(pthread_t), "threads");
+              thread_data = tmap_calloc(num_threads, sizeof(tmap_sam2fs_thread_data_t), "thread_data");
+              tmap_sam2fs_read_lock_low = 0; // ALWAYS set before running threads 
 
               for(i=0;i<num_threads;i++) {
                   thread_data[i].bams = bams;
                   thread_data[i].buffer_length = buffer_length;
                   thread_data[i].tid = i;
                   thread_data[i].opt = opt;
-                  if(0 != pthread_create(&threads[i], &attr, fmap_sam2fs_aux_thread_worker, &thread_data[i])) {
-                      fmap_error("error creating threads", Exit, ThreadError);
+                  if(0 != pthread_create(&threads[i], &attr, tmap_sam2fs_aux_thread_worker, &thread_data[i])) {
+                      tmap_error("error creating threads", Exit, ThreadError);
                   }
               }
               for(i=0;i<num_threads;i++) {
                   if(0 != pthread_join(threads[i], NULL)) {
-                      fmap_error("error joining threads", Exit, ThreadError);
+                      tmap_error("error joining threads", Exit, ThreadError);
                   }
               }
 
@@ -670,14 +670,14 @@ fmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, fmap_sam2fs_opt_
 
           }
 #else
-          fmap_sam2fs_aux_worker(bams, buffer_length, opt);
+          tmap_sam2fs_aux_worker(bams, buffer_length, opt);
 #endif
 
           // write to SAM/BAM if necessary
-          fmap_progress_print("writing alignments");
+          tmap_progress_print("writing alignments");
           for(i=0;i<buffer_length;i++) {
               if(samwrite(fp_out, bams[i]) < 0) {
-                  fmap_error(NULL, Exit, WriteFileError);
+                  tmap_error(NULL, Exit, WriteFileError);
               }
           }
 
@@ -688,7 +688,7 @@ fmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, fmap_sam2fs_opt_
           }
 
           n_reads_processed += buffer_length;
-          fmap_progress_print2("processed %d reads", n_reads_processed);
+          tmap_progress_print2("processed %d reads", n_reads_processed);
       } while(0 < buffer_length);
 
       // free
@@ -699,13 +699,13 @@ fmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, fmap_sam2fs_opt_
       b = bam_init1();
       while(0 < samread(fp_in, b)) { 
           // process 
-          b = fmap_sam2fs_aux(b, opt->flow_order, opt->flow_score, opt->flow_offset, 
+          b = tmap_sam2fs_aux(b, opt->flow_order, opt->flow_score, opt->flow_offset, 
                               opt->aln_global, opt->output_type, opt->j_type);
           // write to SAM/BAM if necessary
-          if(FMAP_SAM2FS_OUTPUT_SAM == opt->output_type
-             || FMAP_SAM2FS_OUTPUT_BAM == opt->output_type) {
+          if(TMAP_SAM2FS_OUTPUT_SAM == opt->output_type
+             || TMAP_SAM2FS_OUTPUT_BAM == opt->output_type) {
               if(samwrite(fp_out, b) < 0) {
-                  fmap_error(NULL, Exit, WriteFileError);
+                  tmap_error(NULL, Exit, WriteFileError);
               }
           }
           // destroy the bam
@@ -719,29 +719,29 @@ fmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, fmap_sam2fs_opt_
   // close
   samclose(fp_in); 
   switch(opt->output_type) {
-    case FMAP_SAM2FS_OUTPUT_ALN:
-      fmap_file_fclose(fmap_file_stdout);
+    case TMAP_SAM2FS_OUTPUT_ALN:
+      tmap_file_fclose(tmap_file_stdout);
       break;
-    case FMAP_SAM2FS_OUTPUT_SAM:
-    case FMAP_SAM2FS_OUTPUT_BAM:
+    case TMAP_SAM2FS_OUTPUT_SAM:
+    case TMAP_SAM2FS_OUTPUT_BAM:
       samclose(fp_out);
       break;
   }
 }
 
-fmap_sam2fs_opt_t *
-fmap_sam2fs_opt_init()
+tmap_sam2fs_opt_t *
+tmap_sam2fs_opt_init()
 {
-  fmap_sam2fs_opt_t *opt=NULL;
+  tmap_sam2fs_opt_t *opt=NULL;
 
-  opt = fmap_calloc(1, sizeof(fmap_sam2fs_opt_t), "opt");
+  opt = tmap_calloc(1, sizeof(tmap_sam2fs_opt_t), "opt");
 
-  opt->flow_order = fmap_strdup("TACG");
+  opt->flow_order = tmap_strdup("TACG");
   opt->flow_score = 26; 
   opt->flow_offset = 1;
   opt->aln_global = 0;
-  opt->output_type = FMAP_SAM2FS_OUTPUT_ALN;
-  opt->j_type = FMAP_FSW_NO_JUSTIFY;
+  opt->output_type = TMAP_SAM2FS_OUTPUT_ALN;
+  opt->j_type = TMAP_FSW_NO_JUSTIFY;
   opt->reads_queue_size = 65536; 
   opt->num_threads = 1;
 
@@ -750,20 +750,20 @@ fmap_sam2fs_opt_init()
 }
 
 void
-fmap_sam2fs_opt_destroy(fmap_sam2fs_opt_t *opt)
+tmap_sam2fs_opt_destroy(tmap_sam2fs_opt_t *opt)
 {
   free(opt->flow_order);
   free(opt);
 }
 
 int
-fmap_sam2fs_main(int argc, char *argv[])
+tmap_sam2fs_main(int argc, char *argv[])
 {
   int c;
-  fmap_sam2fs_opt_t *opt;
+  tmap_sam2fs_opt_t *opt;
   char sam_open_flags[16] = "rb";
 
-  opt = fmap_sam2fs_opt_init();
+  opt = tmap_sam2fs_opt_init();
 
   while((c = getopt(argc, argv, "f:F:o:SgO:l:q:n:vh")) >= 0) {
       switch(c) {
@@ -786,7 +786,7 @@ fmap_sam2fs_main(int argc, char *argv[])
         case 'n':
           opt->num_threads = atoi(optarg); break;
         case 'v':
-          fmap_progress_set_verbosity(1); break;
+          tmap_progress_set_verbosity(1); break;
         case 'h':
         default:
           return usage(opt);
@@ -797,19 +797,19 @@ fmap_sam2fs_main(int argc, char *argv[])
       return usage(opt);
   }
   else { // check command line options
-      fmap_error_cmd_check_int(opt->flow_score, 0, INT32_MAX, "-F");
-      fmap_error_cmd_check_int(opt->flow_offset, 0, INT32_MAX, "-o");
-      fmap_error_cmd_check_int((int)strlen(opt->flow_order), 4, 4, "-f");
-      fmap_error_cmd_check_int(opt->output_type, 0, 2, "-z");
-      if(-1 != opt->reads_queue_size) fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
-      fmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
+      tmap_error_cmd_check_int(opt->flow_score, 0, INT32_MAX, "-F");
+      tmap_error_cmd_check_int(opt->flow_offset, 0, INT32_MAX, "-o");
+      tmap_error_cmd_check_int((int)strlen(opt->flow_order), 4, 4, "-f");
+      tmap_error_cmd_check_int(opt->output_type, 0, 2, "-z");
+      if(-1 != opt->reads_queue_size) tmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
+      tmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
   }
 
-  fmap_sam2fs_core(argv[optind], sam_open_flags, opt);
+  tmap_sam2fs_core(argv[optind], sam_open_flags, opt);
 
-  fmap_sam2fs_opt_destroy(opt);
+  tmap_sam2fs_opt_destroy(opt);
 
-  fmap_progress_print2("terminating successfully");
+  tmap_progress_print2("terminating successfully");
 
   return 0;
 }  

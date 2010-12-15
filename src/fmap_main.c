@@ -3,13 +3,13 @@
 #include <config.h>
 #include <stdint.h>
 
-#include "util/fmap_error.h"
-#include "util/fmap_progress.h"
-#include "io/fmap_file.h"
-#include "fmap_main.h"
+#include "util/tmap_error.h"
+#include "util/tmap_progress.h"
+#include "io/tmap_file.h"
+#include "tmap_main.h"
 
-fmap_file_t *fmap_file_stdout = NULL; // do not initialize as this may used for output
-fmap_file_t *fmap_file_stderr = NULL;
+tmap_file_t *tmap_file_stdout = NULL; // do not initialize as this may used for output
+tmap_file_t *tmap_file_stderr = NULL;
 
 static int version()
 {
@@ -71,32 +71,32 @@ int main(int argc, char *argv[])
   }
   else {
 
-      fmap_file_stderr = fmap_file_fdopen(fileno(stderr), "w", FMAP_FILE_NO_COMPRESSION); // set stderr
-      fmap_progress_set_command(argv[1]); // set output progress
-      fmap_progress_set_start_time(clock()); // set start time
+      tmap_file_stderr = tmap_file_fdopen(fileno(stderr), "w", TMAP_FILE_NO_COMPRESSION); // set stderr
+      tmap_progress_set_command(argv[1]); // set output progress
+      tmap_progress_set_start_time(clock()); // set start time
 
-      if (0 == strcmp("index", argv[1])) ret = fmap_index(argc-1, argv+1);
-      else if (0 == strcmp("server", argv[1])) ret = fmap_server_main(argc-1, argv+1);
-      else if (0 == strcmp("map1", argv[1])) ret = fmap_map1_main(argc-1, argv+1);
-      else if (0 == strcmp("map2", argv[1])) ret = fmap_map2_main(argc-1, argv+1);
-      else if (0 == strcmp("map3", argv[1])) ret = fmap_map3_main(argc-1, argv+1);
-      else if (0 == strcmp("mapall", argv[1])) ret = fmap_map_all_main(argc-1, argv+1);
-      else if (0 == strcmp("fasta2pac", argv[1])) ret = fmap_refseq_fasta2pac_main(argc-1, argv+1);
-      else if (0 == strcmp("pac2bwt", argv[1])) ret = fmap_bwt_pac2bwt_main(argc-1, argv+1);
-      else if (0 == strcmp("bwt2sa", argv[1])) ret = fmap_sa_bwt2sa_main(argc-1, argv+1);
-      else if (0 == strcmp("sff2fq", argv[1])) ret = fmap_seq_io_sff2fq_main(argc-1, argv+1);
+      if (0 == strcmp("index", argv[1])) ret = tmap_index(argc-1, argv+1);
+      else if (0 == strcmp("server", argv[1])) ret = tmap_server_main(argc-1, argv+1);
+      else if (0 == strcmp("map1", argv[1])) ret = tmap_map1_main(argc-1, argv+1);
+      else if (0 == strcmp("map2", argv[1])) ret = tmap_map2_main(argc-1, argv+1);
+      else if (0 == strcmp("map3", argv[1])) ret = tmap_map3_main(argc-1, argv+1);
+      else if (0 == strcmp("mapall", argv[1])) ret = tmap_map_all_main(argc-1, argv+1);
+      else if (0 == strcmp("fasta2pac", argv[1])) ret = tmap_refseq_fasta2pac_main(argc-1, argv+1);
+      else if (0 == strcmp("pac2bwt", argv[1])) ret = tmap_bwt_pac2bwt_main(argc-1, argv+1);
+      else if (0 == strcmp("bwt2sa", argv[1])) ret = tmap_sa_bwt2sa_main(argc-1, argv+1);
+      else if (0 == strcmp("sff2fq", argv[1])) ret = tmap_seq_io_sff2fq_main(argc-1, argv+1);
 #ifdef HAVE_SAMTOOLS
-      else if (0 == strcmp("sam2fs", argv[1])) ret = fmap_sam2fs_main(argc-1, argv+1);
+      else if (0 == strcmp("sam2fs", argv[1])) ret = tmap_sam2fs_main(argc-1, argv+1);
 #endif
-      else if (0 == strcmp("exact", argv[1])) ret = fmap_debug_exact(argc-1, argv+1);
-      else if (0 == strcmp("fsw", argv[1])) ret = fmap_fsw_main(argc-1, argv+1);
+      else if (0 == strcmp("exact", argv[1])) ret = tmap_debug_exact(argc-1, argv+1);
+      else if (0 == strcmp("fsw", argv[1])) ret = tmap_fsw_main(argc-1, argv+1);
       else if (0 == strcmp("--version", argv[1]) || 0 == strcmp("-v", argv[1])) ret = version();
       else if (0 == strcmp("--help", argv[1]) || 0 == strcmp("-h", argv[1])) ret = usage();
       else {
-          fmap_error1(PACKAGE, "Unknown command", Exit, CommandLineArgument);
+          tmap_error1(PACKAGE, "Unknown command", Exit, CommandLineArgument);
       }
 
-      fmap_file_fclose(fmap_file_stderr);
+      tmap_file_fclose(tmap_file_stderr);
   }
 
   return ret;

@@ -1,14 +1,14 @@
-#ifndef FMAP_MAP2_CORE_H_
-#define FMAP_MAP2_CORE_H_
+#ifndef TMAP_MAP2_CORE_H_
+#define TMAP_MAP2_CORE_H_
 
-#include "../index/fmap_bwtl.h"
-#include "../index/fmap_bwt.h"
-#include "../index/fmap_sa.h"
-#include "fmap_map2_mempool.h"
-#include "fmap_map2_aux.h"
-#include "fmap_map2.h"
+#include "../index/tmap_bwtl.h"
+#include "../index/tmap_bwt.h"
+#include "../index/tmap_sa.h"
+#include "tmap_map2_mempool.h"
+#include "tmap_map2_aux.h"
+#include "tmap_map2.h"
 
-#define FMAP_MAP2_MINUS_INF -0x3fffffff
+#define TMAP_MAP2_MINUS_INF -0x3fffffff
 
 /*! 
   */
@@ -22,9 +22,9 @@
   @param  pool        a global memory pool
   @return             a set of alignments
   */
-fmap_map2_aln_t **
-fmap_map2_core_aln(const fmap_map_opt_t *opt, const fmap_bwtl_t *target, 
-               const fmap_bwt_t *query_bwt, const fmap_sa_t *query_sa,
-               fmap_map2_global_mempool_t *pool);
+tmap_map2_aln_t **
+tmap_map2_core_aln(const tmap_map_opt_t *opt, const tmap_bwtl_t *target, 
+               const tmap_bwt_t *query_bwt, const tmap_sa_t *query_sa,
+               tmap_map2_global_mempool_t *pool);
 
 #endif

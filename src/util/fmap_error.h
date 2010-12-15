@@ -1,5 +1,5 @@
-#ifndef FMAP_ERROR_H_
-#define FMAP_ERROR_H_
+#ifndef TMAP_ERROR_H_
+#define TMAP_ERROR_H_
 
 #define BREAK_LINE "************************************************************\n"
 
@@ -52,7 +52,7 @@ enum {
   @details        throws a command line argument error if the value is not within the bounds
   */
 void
-fmap_error_cmd_check_int(int32_t val, int32_t lower, int32_t upper, char *option);
+tmap_error_cmd_check_int(int32_t val, int32_t lower, int32_t upper, char *option);
 
 /*! 
   process an error based on the given action
@@ -60,8 +60,8 @@ fmap_error_cmd_check_int(int32_t val, int32_t lower, int32_t upper, char *option
   @param  action_type    the action to be taken
   @param  error_type     the error type 
   */
-#define fmap_error(variable_name, action_type, error_type) \
-  (fmap_error_full(__FILE__, __LINE__, __func__, variable_name, action_type, error_type))
+#define tmap_error(variable_name, action_type, error_type) \
+  (tmap_error_full(__FILE__, __LINE__, __func__, variable_name, action_type, error_type))
 
 /*! 
   process an error based on the given action
@@ -70,8 +70,8 @@ fmap_error_cmd_check_int(int32_t val, int32_t lower, int32_t upper, char *option
   @param  action_type    the action to be taken
   @param  error_type     the error type 
   */
-#define fmap_error1(function_name, variable_name, action_type, error_type) \
-  (fmap_error_full(__FILE__, __LINE__, function_name, variable_name, action_type, error_type))
+#define tmap_error1(function_name, variable_name, action_type, error_type) \
+  (tmap_error_full(__FILE__, __LINE__, function_name, variable_name, action_type, error_type))
 
 /*! 
   process an error based on the given action
@@ -83,6 +83,6 @@ fmap_error_cmd_check_int(int32_t val, int32_t lower, int32_t upper, char *option
   @param  error_type     the error type 
   */
 void 
-fmap_error_full(const char *file, const unsigned int line, const char *function_name, const char *variable_name, int action_type, int error_type);
+tmap_error_full(const char *file, const unsigned int line, const char *function_name, const char *variable_name, int action_type, int error_type);
 
 #endif

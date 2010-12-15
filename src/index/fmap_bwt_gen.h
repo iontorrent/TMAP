@@ -22,8 +22,8 @@
 
 */
 
-#ifndef FMAP_BWT_GEN_H
-#define FMAP_BWT_GEN_H
+#ifndef TMAP_BWT_GEN_H
+#define TMAP_BWT_GEN_H
 
 /*! 
   BWT Generation Library
@@ -75,13 +75,13 @@ typedef struct {
     uint32_t *decodeTable;  /*!<  For decoding BWT by table lookup */
     uint32_t bwtSizeInWord;  /*!<  Temporary variable to hold the memory allocated */
     uint32_t occSizeInWord;  /*!<  Temporary variable to hold the memory allocated */
-} fmap_bwt_gen_t;
+} tmap_bwt_gen_t;
 
 /*!
  Structure used to generate large BWT strings; for each iteration
  */
 typedef struct {
-    fmap_bwt_gen_t *bwt;
+    tmap_bwt_gen_t *bwt;
     uint32_t numberOfIterationDone;
     uint32_t *cumulativeCountInCurrentBuild;
     uint32_t availableWord;
@@ -95,7 +95,7 @@ typedef struct {
     uint32_t *packedText;
     uint8_t *textBuffer;
     uint32_t *packedShift;
-} fmap_bwt_gen_inc_t;
+} tmap_bwt_gen_inc_t;
 /* END -- large BWT construction code */
 
 /*! 
@@ -106,7 +106,7 @@ typedef struct {
   @param  hash_width    the desired k-mer hash width
   */
 void 
-fmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, uint32_t hash_width);
+tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, uint32_t hash_width);
 
 /*! 
   @param  T  the input string
@@ -114,6 +114,6 @@ fmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, 
   @return    the primary index if no error occurred, -1 or -2 otherwise
   */
 uint32_t 
-fmap_bwt_gen_short(uint8_t *T, uint32_t n);
+tmap_bwt_gen_short(uint8_t *T, uint32_t n);
 
 #endif

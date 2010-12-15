@@ -1,5 +1,5 @@
-#ifndef FMAP_DEFINITIONS_H_
-#define FMAP_DEFINITIONS_H_
+#ifndef TMAP_DEFINITIONS_H_
+#define TMAP_DEFINITIONS_H_
 
 #include <stdint.h>
 
@@ -7,52 +7,52 @@
   Generic Functions
   */
 
-/*! d FMAP_VERSION_ID
-  the magic id for fmap
+/*! d TMAP_VERSION_ID
+  the magic id for tmap
   */
-#define FMAP_VERSION_ID ('f' + 'm' + 'a' + 'p')
+#define TMAP_VERSION_ID ('f' + 'm' + 'a' + 'p')
 
 /* 
  * File extensions
  */
-/*! d FMAP_ANNO_FILE_EXTENSION
+/*! d TMAP_ANNO_FILE_EXTENSION
   the file extension for the reference sequence annotations
   */
-#define FMAP_ANNO_FILE_EXTENSION ".fmap.anno"
-/*! d FMAP_PAC_FILE_EXTENSION
+#define TMAP_ANNO_FILE_EXTENSION ".tmap.anno"
+/*! d TMAP_PAC_FILE_EXTENSION
   the file extension for the packed forward reference sequence
   */
-#define FMAP_PAC_FILE_EXTENSION ".fmap.pac"
-/*! d FMAP_REV_PAC_FILE_EXTENSION
+#define TMAP_PAC_FILE_EXTENSION ".tmap.pac"
+/*! d TMAP_REV_PAC_FILE_EXTENSION
   the file extension for the packed reverse reference sequence
   */
-#define FMAP_REV_PAC_FILE_EXTENSION ".fmap.rpac"
-/*! d FMAP_BWT_FILE_EXTENSION
+#define TMAP_REV_PAC_FILE_EXTENSION ".tmap.rpac"
+/*! d TMAP_BWT_FILE_EXTENSION
   the file extension for the forward BWT structure
   */
-#define FMAP_BWT_FILE_EXTENSION ".fmap.bwt"
-/*! d FMAP_REV_BWT_FILE_EXTENSION
+#define TMAP_BWT_FILE_EXTENSION ".tmap.bwt"
+/*! d TMAP_REV_BWT_FILE_EXTENSION
   the file extension for the reverse BWT structure
   */
-#define FMAP_REV_BWT_FILE_EXTENSION ".fmap.rbwt"
-/*! d FMAP_SA_FILE_EXTENSION
+#define TMAP_REV_BWT_FILE_EXTENSION ".tmap.rbwt"
+/*! d TMAP_SA_FILE_EXTENSION
   the file extension for the forward SA structure
   */
-#define FMAP_SA_FILE_EXTENSION ".fmap.sa"
-/*! d FMAP_REV_SA_FILE_EXTENSION
+#define TMAP_SA_FILE_EXTENSION ".tmap.sa"
+/*! d TMAP_REV_SA_FILE_EXTENSION
   the file extension for the reverse SA structure
   */
-#define FMAP_REV_SA_FILE_EXTENSION ".fmap.rsa"
+#define TMAP_REV_SA_FILE_EXTENSION ".tmap.rsa"
 
 // The default compression types for each file
 // Note: the implementation relies on no compression
-#define FMAP_ANNO_COMPRESSION FMAP_FILE_NO_COMPRESSION 
-#define FMAP_PAC_COMPRESSION FMAP_FILE_NO_COMPRESSION 
-#define FMAP_REV_PAC_COMPRESSION FMAP_FILE_NO_COMPRESSION 
-#define FMAP_BWT_COMPRESSION FMAP_FILE_NO_COMPRESSION 
-#define FMAP_REV_BWT_COMPRESSION FMAP_FILE_NO_COMPRESSION 
-#define FMAP_SA_COMPRESSION FMAP_FILE_NO_COMPRESSION
-#define FMAP_REV_SA_COMPRESSION FMAP_FILE_NO_COMPRESSION
+#define TMAP_ANNO_COMPRESSION TMAP_FILE_NO_COMPRESSION 
+#define TMAP_PAC_COMPRESSION TMAP_FILE_NO_COMPRESSION 
+#define TMAP_REV_PAC_COMPRESSION TMAP_FILE_NO_COMPRESSION 
+#define TMAP_BWT_COMPRESSION TMAP_FILE_NO_COMPRESSION 
+#define TMAP_REV_BWT_COMPRESSION TMAP_FILE_NO_COMPRESSION 
+#define TMAP_SA_COMPRESSION TMAP_FILE_NO_COMPRESSION
+#define TMAP_REV_SA_COMPRESSION TMAP_FILE_NO_COMPRESSION
 
 /*
    CIGAR operations, from samtools.
@@ -69,25 +69,25 @@
 
 /*! 
   for each type of file, the integer id associated with this file
-  @details  can be used with 'fmap_get_file_name' 
+  @details  can be used with 'tmap_get_file_name' 
   */
 enum {
-    FMAP_ANNO_FILE     = 0, /*!< the reference sequence annotation file */
-    FMAP_PAC_FILE      = 1, /*!< the packed forward reference sequence file */
-    FMAP_REV_PAC_FILE  = 2, /*!< the packed reverse reference sequence file */
-    FMAP_BWT_FILE      = 3, /*!< the packed forward BWT file */
-    FMAP_REV_BWT_FILE  = 4, /*!< the packed reverse BWT file */
-    FMAP_SA_FILE       = 5, /*!< the packed forward SA file */
-    FMAP_REV_SA_FILE   = 6 /*!< the packed reverse SA file */
+    TMAP_ANNO_FILE     = 0, /*!< the reference sequence annotation file */
+    TMAP_PAC_FILE      = 1, /*!< the packed forward reference sequence file */
+    TMAP_REV_PAC_FILE  = 2, /*!< the packed reverse reference sequence file */
+    TMAP_BWT_FILE      = 3, /*!< the packed forward BWT file */
+    TMAP_REV_BWT_FILE  = 4, /*!< the packed reverse BWT file */
+    TMAP_SA_FILE       = 5, /*!< the packed forward SA file */
+    TMAP_REV_SA_FILE   = 6 /*!< the packed reverse SA file */
 };
 
 /*! 
   */
 enum {
-    FMAP_READS_FORMAT_UNKNOWN  = -1, /*!< the reads format is unrecognized */
-    FMAP_READS_FORMAT_FASTA    = 0, /*!< the reads are in FASTA format */
-    FMAP_READS_FORMAT_FASTQ    = 1, /*!< the reads are in FASTQ format */
-    FMAP_READS_FORMAT_SFF      = 2 /*!< the reads are in SFF format */
+    TMAP_READS_FORMAT_UNKNOWN  = -1, /*!< the reads format is unrecognized */
+    TMAP_READS_FORMAT_FASTA    = 0, /*!< the reads are in FASTA format */
+    TMAP_READS_FORMAT_FASTQ    = 1, /*!< the reads are in FASTQ format */
+    TMAP_READS_FORMAT_SFF      = 2 /*!< the reads are in SFF format */
 };
 
 /*! 
@@ -95,17 +95,17 @@ enum {
   @return          algorithm name
  */
 char *
-fmap_algo_id_to_name(uint16_t algo_id);
+tmap_algo_id_to_name(uint16_t algo_id);
 
 /*! nt_char_to_int
   @details  converts a DNA base in ASCII format to its 2-bit format [0-4]. 
   */
-extern uint8_t fmap_nt_char_to_int[256];
+extern uint8_t tmap_nt_char_to_int[256];
 
 /*! nt_char_to_rc_char
   @details  converts a DNA base in ASCII format to reverse compliment in ASCII format.
   */
-extern uint8_t fmap_nt_char_to_rc_char[256];
+extern uint8_t tmap_nt_char_to_rc_char[256];
 
 /*! 
   @param  c  the quality value in ASCII format
@@ -137,13 +137,13 @@ extern uint8_t fmap_nt_char_to_rc_char[256];
 #define ntohll(x) ((((uint64_t)ntohl(x)) << 32) + ntohl(x >> 32))
 #endif
 
-#ifndef fmap_roundup32
+#ifndef tmap_roundup32
 /*! 
   rounds up to the nearest power of two integer
   @param  x  the integer to round up
   @return    the smallest integer greater than x that is a power of two 
   */
-#define fmap_roundup32(x) (--(x), (x)|=(x)>>1, (x)|=(x)>>2, (x)|=(x)>>4, (x)|=(x)>>8, (x)|=(x)>>16, ++(x))
+#define tmap_roundup32(x) (--(x), (x)|=(x)>>1, (x)|=(x)>>2, (x)|=(x)>>4, (x)|=(x)>>8, (x)|=(x)>>16, ++(x))
 #endif
 
 /*! 
@@ -151,7 +151,7 @@ extern uint8_t fmap_nt_char_to_rc_char[256];
   @return    log of the value, base two
   */
 inline uint32_t 
-fmap_log2(uint32_t v);
+tmap_log2(uint32_t v);
 
 /*! 
   gets the name of a specific file based on the reference sequence
@@ -160,14 +160,14 @@ fmap_log2(uint32_t v);
   @return         a pointer to the file name string
   */
 inline char *
-fmap_get_file_name(const char *prefix, int32_t type);
+tmap_get_file_name(const char *prefix, int32_t type);
 
 /*! 
   @param  optarg  the string of the file format
   @return         the format type
   */
 int 
-fmap_get_reads_file_format_int(char *optarg);
+tmap_get_reads_file_format_int(char *optarg);
 
 /*! 
   checks the extension of the file to recognize its format     
@@ -177,14 +177,14 @@ fmap_get_reads_file_format_int(char *optarg);
   @details              if the reads_format is unknown, it will be populated; similarly for compr_type.
   */
 void
-fmap_get_reads_file_format_from_fn_int(char *fn, int32_t *reads_format, int32_t *compr_type);
+tmap_get_reads_file_format_from_fn_int(char *fn, int32_t *reads_format, int32_t *compr_type);
 
 /*! 
   @param  format  the interger file format specifier
   @return         the format type (string)
   */
 char *
-fmap_get_reads_file_format_string(int format);
+tmap_get_reads_file_format_string(int format);
 
 /*!
   reverses a given string
@@ -192,7 +192,7 @@ fmap_get_reads_file_format_string(int format);
   @param  len  the length of the string
   */
 inline void
-fmap_reverse(char *seq, int32_t len);
+tmap_reverse(char *seq, int32_t len);
 
 /*!
   reverse compliments a given string
@@ -200,6 +200,6 @@ fmap_reverse(char *seq, int32_t len);
   @param  len  the length of the DNA sequence
   */
 inline void
-fmap_reverse_compliment(char *seq, int32_t len); 
+tmap_reverse_compliment(char *seq, int32_t len); 
 
 #endif

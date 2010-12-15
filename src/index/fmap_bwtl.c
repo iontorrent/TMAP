@@ -3,31 +3,31 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "../util/fmap_alloc.h"
-#include "fmap_sa.h"
-#include "fmap_bwtl.h"
+#include "../util/tmap_alloc.h"
+#include "tmap_sa.h"
+#include "tmap_bwtl.h"
 
-fmap_bwtl_t *
-fmap_bwtl_seq2bwtl(int32_t len, const uint8_t *seq)
+tmap_bwtl_t *
+tmap_bwtl_seq2bwtl(int32_t len, const uint8_t *seq)
 {
-  fmap_bwtl_t *bwtl = NULL;
+  tmap_bwtl_t *bwtl = NULL;
   int32_t i;
 
-  bwtl = fmap_calloc(1, sizeof(fmap_bwtl_t), "bwtl");
+  bwtl = tmap_calloc(1, sizeof(tmap_bwtl_t), "bwtl");
   bwtl->seq_len = len;
 
   // calculate bwtl->bwt
   uint8_t *s;
-  bwtl->sa = fmap_calloc(len + 1, sizeof(uint32_t), "bwtl->sa");
-  fmap_sa_gen_short(seq, (int32_t*)bwtl->sa, len);
-  s = fmap_calloc(len + 1, sizeof(uint8_t), "s");
+  bwtl->sa = tmap_calloc(len + 1, sizeof(uint32_t), "bwtl->sa");
+  tmap_sa_gen_short(seq, (int32_t*)bwtl->sa, len);
+  s = tmap_calloc(len + 1, sizeof(uint8_t), "s");
   for(i = 0; i <= len; ++i) {
       if(bwtl->sa[i] == 0) bwtl->primary = i;
       else s[i] = seq[bwtl->sa[i] - 1];
   }
   for(i = bwtl->primary; i < len; ++i) s[i] = s[i + 1];
   bwtl->bwt_size = (len + 15) / 16;
-  bwtl->bwt = fmap_calloc(bwtl->bwt_size, sizeof(uint32_t), "bwtl->bwt");
+  bwtl->bwt = tmap_calloc(bwtl->bwt_size, sizeof(uint32_t), "bwtl->bwt");
   for(i = 0; i < len; ++i)
     bwtl->bwt[i>>4] |= s[i] << ((15 - (i&15)) << 1);
   free(s);
@@ -35,12 +35,12 @@ fmap_bwtl_seq2bwtl(int32_t len, const uint8_t *seq)
   // calculate bwtl->occ
   uint32_t c[4];
   bwtl->n_occ = (len + 15) / 16 * 4;
-  bwtl->occ = fmap_calloc(bwtl->n_occ, sizeof(uint32_t), "bwtl->occ");
+  bwtl->occ = tmap_calloc(bwtl->n_occ, sizeof(uint32_t), "bwtl->occ");
   memset(c, 0, 16);
   for(i = 0; i < len; ++i) {
       if(i % 16 == 0)
         memcpy(bwtl->occ + (i/16) * 4, c, 16);
-      ++c[fmap_bwtl_B0(bwtl, i)];
+      ++c[tmap_bwtl_B0(bwtl, i)];
   }
   memcpy(bwtl->L2+1, c, 16);
   for(i = 2; i < 5; ++i) bwtl->L2[i] += bwtl->L2[i-1];
@@ -56,7 +56,7 @@ fmap_bwtl_seq2bwtl(int32_t len, const uint8_t *seq)
 }
 
 inline uint32_t 
-fmap_bwtl_occ(const fmap_bwtl_t *bwtl, uint32_t k, uint8_t c)
+tmap_bwtl_occ(const tmap_bwtl_t *bwtl, uint32_t k, uint8_t c)
 {
   uint32_t n, b;
   if(k == bwtl->seq_len) return bwtl->L2[c+1] - bwtl->L2[c];
@@ -71,7 +71,7 @@ fmap_bwtl_occ(const fmap_bwtl_t *bwtl, uint32_t k, uint8_t c)
 }
 
 inline void 
-fmap_bwtl_occ4(const fmap_bwtl_t *bwtl, uint32_t k, uint32_t cnt[4])
+tmap_bwtl_occ4(const tmap_bwtl_t *bwtl, uint32_t k, uint32_t cnt[4])
 {
   uint32_t x, b;
   if(k == (uint32_t)(-1)) {
@@ -88,14 +88,14 @@ fmap_bwtl_occ4(const fmap_bwtl_t *bwtl, uint32_t k, uint32_t cnt[4])
 }
 
 inline void 
-fmap_bwtl_2occ4(const fmap_bwtl_t *bwtl, uint32_t k, uint32_t l, uint32_t cntk[4], uint32_t cntl[4])
+tmap_bwtl_2occ4(const tmap_bwtl_t *bwtl, uint32_t k, uint32_t l, uint32_t cntk[4], uint32_t cntl[4])
 {
-  fmap_bwtl_occ4(bwtl, k, cntk);
-  fmap_bwtl_occ4(bwtl, l, cntl);
+  tmap_bwtl_occ4(bwtl, k, cntk);
+  tmap_bwtl_occ4(bwtl, l, cntl);
 }
 
 void 
-fmap_bwtl_destroy(fmap_bwtl_t *bwtl)
+tmap_bwtl_destroy(tmap_bwtl_t *bwtl)
 {
   if(NULL != bwtl) {
       free(bwtl->occ); free(bwtl->bwt); free(bwtl->sa);

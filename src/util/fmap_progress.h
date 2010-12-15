@@ -1,5 +1,5 @@
-#ifndef FMAP_PROGRESS_H_
-#define FMAP_PROGRESS_H_
+#ifndef TMAP_PROGRESS_H_
+#define TMAP_PROGRESS_H_
 
 #include <time.h>
 
@@ -11,26 +11,26 @@
   @param  command  the command string
   */
 void
-fmap_progress_set_command(const char *command);
+tmap_progress_set_command(const char *command);
 
 /*! 
   @param  start_time  the start time of the clock
   */
 void
-fmap_progress_set_start_time(clock_t start_time);
+tmap_progress_set_start_time(clock_t start_time);
 
 /*! 
   @param  verbosity  the verbosity level
   */
 void
-fmap_progress_set_verbosity(int32_t verbosity);
+tmap_progress_set_verbosity(int32_t verbosity);
 
 /*! 
   @param  format      the format for the message
   @param  ...         the arguments to fill in the format
   */
 void
-fmap_progress_print(const char *format, ...);
+tmap_progress_print(const char *format, ...);
 
 /*! 
   @param  format      the format for the message
@@ -38,13 +38,13 @@ fmap_progress_print(const char *format, ...);
   @param  ...         the arguments to fill in the format
   */
 void
-fmap_progress_print1(const char *format, clock_t start_time, ...);
+tmap_progress_print1(const char *format, clock_t start_time, ...);
 
 /*! 
   @param  format   the format for the message
   @param  ...      the arguments to fill in the format
   */
 void
-fmap_progress_print2(const char *format, ...);
+tmap_progress_print2(const char *format, ...);
 
 #endif

@@ -31,8 +31,8 @@
 
 #include <stdlib.h>
 #include <limits.h>
-#include "fmap_alloc.h"
-#include "fmap_fibheap.h"
+#include "tmap_alloc.h"
+#include "tmap_fibheap.h"
 
 #define swap(type, a, b)		\
   do {			\
@@ -44,7 +44,7 @@
 
 #define INT_BITS        (sizeof(int) * 8)
 
-#define fmap_fibheap_element_destroy(x) free((x))
+#define tmap_fibheap_element_destroy(x) free((x))
 
 static inline int
 ceillog2(unsigned int a)
@@ -75,577 +75,577 @@ ceillog2(unsigned int a)
  * Private Heap Functions
  */
 static void
-fmap_fibheap_deleteel(fmap_fibheap_t *h, fmap_fibheap_element_t *x);
+tmap_fibheap_deleteel(tmap_fibheap_t *h, tmap_fibheap_element_t *x);
 static void
-fmap_fibheap_initheap(fmap_fibheap_t *new);
+tmap_fibheap_initheap(tmap_fibheap_t *new);
 static void
-fmap_fibheap_destroyheap(fmap_fibheap_t *h);
+tmap_fibheap_destroyheap(tmap_fibheap_t *h);
 
 /*
  * begin of private element fuctions
  */
-static fmap_fibheap_element_t *
-fmap_fibheap_extractminel(fmap_fibheap_t *h);
+static tmap_fibheap_element_t *
+tmap_fibheap_extractminel(tmap_fibheap_t *h);
 static void
-fmap_fibheap_insertrootlist(fmap_fibheap_t *h, fmap_fibheap_element_t *x);
+tmap_fibheap_insertrootlist(tmap_fibheap_t *h, tmap_fibheap_element_t *x);
 static void
-fmap_fibheap_removerootlist(fmap_fibheap_t *h, fmap_fibheap_element_t *x);
+tmap_fibheap_removerootlist(tmap_fibheap_t *h, tmap_fibheap_element_t *x);
 static void
-fmap_fibheap_consolidate(fmap_fibheap_t *h);
+tmap_fibheap_consolidate(tmap_fibheap_t *h);
 static void
-fmap_fibheap_heaplink(fmap_fibheap_t *h, fmap_fibheap_element_t *y, fmap_fibheap_element_t *x);
+tmap_fibheap_heaplink(tmap_fibheap_t *h, tmap_fibheap_element_t *y, tmap_fibheap_element_t *x);
 static void
-fmap_fibheap_cut(fmap_fibheap_t *h, fmap_fibheap_element_t *x, fmap_fibheap_element_t *y);
+tmap_fibheap_cut(tmap_fibheap_t *h, tmap_fibheap_element_t *x, tmap_fibheap_element_t *y);
 static void
-fmap_fibheap_cascading_cut(fmap_fibheap_t *h, fmap_fibheap_element_t *y);
+tmap_fibheap_cascading_cut(tmap_fibheap_t *h, tmap_fibheap_element_t *y);
 
 /*
- * begining of handling elements of fmap_fibheap_t
+ * begining of handling elements of tmap_fibheap_t
  */
-static fmap_fibheap_element_t *
-fmap_fibheap_element_newelem();
+static tmap_fibheap_element_t *
+tmap_fibheap_element_newelem();
 static void
-fmap_fibheap_element_initelem(fmap_fibheap_element_t *e);
+tmap_fibheap_element_initelem(tmap_fibheap_element_t *e);
 static void
-fmap_fibheap_element_insertafter(fmap_fibheap_element_t *a, fmap_fibheap_element_t *b);
+tmap_fibheap_element_insertafter(tmap_fibheap_element_t *a, tmap_fibheap_element_t *b);
 static inline void
-fmap_fibheap_element_insertbefore(fmap_fibheap_element_t *a, fmap_fibheap_element_t *b);
-static fmap_fibheap_element_t *
-fmap_fibheap_element_remove(fmap_fibheap_element_t *x);
+tmap_fibheap_element_insertbefore(tmap_fibheap_element_t *a, tmap_fibheap_element_t *b);
+static tmap_fibheap_element_t *
+tmap_fibheap_element_remove(tmap_fibheap_element_t *x);
 static void
-fmap_fibheap_checkcons(fmap_fibheap_t *h);
+tmap_fibheap_checkcons(tmap_fibheap_t *h);
 static int
-fmap_fibheap_compare(fmap_fibheap_t *h, fmap_fibheap_element_t *a, fmap_fibheap_element_t *b);
+tmap_fibheap_compare(tmap_fibheap_t *h, tmap_fibheap_element_t *a, tmap_fibheap_element_t *b);
 static int
-fmap_fibheap_comparedata(fmap_fibheap_t *h, int key, void *data, fmap_fibheap_element_t *b);
+tmap_fibheap_comparedata(tmap_fibheap_t *h, int key, void *data, tmap_fibheap_element_t *b);
 static void
-fmap_fibheap_insertel(fmap_fibheap_t *h, fmap_fibheap_element_t *x);
+tmap_fibheap_insertel(tmap_fibheap_t *h, tmap_fibheap_element_t *x);
 
 /*
  * Private Heap Functions
  */
 static void
-fmap_fibheap_deleteel(fmap_fibheap_t *h, fmap_fibheap_element_t *x)
+tmap_fibheap_deleteel(tmap_fibheap_t *h, tmap_fibheap_element_t *x)
 {
   void *data;
   int key;
 
-  data = x->fmap_fibheap_element_data;
-  key = x->fmap_fibheap_element_key;
+  data = x->tmap_fibheap_element_data;
+  key = x->tmap_fibheap_element_key;
 
-  if(0 == h->fmap_fibheap_keys)
-    fmap_fibheap_replacedata(h, x, h->fmap_fibheap_neginf);
+  if(0 == h->tmap_fibheap_keys)
+    tmap_fibheap_replacedata(h, x, h->tmap_fibheap_neginf);
   else
-    fmap_fibheap_replacekey(h, x, INT_MIN);
-  if(fmap_fibheap_extractminel(h) != x) {
+    tmap_fibheap_replacekey(h, x, INT_MIN);
+  if(tmap_fibheap_extractminel(h) != x) {
       /*
-       * XXX - This should never happen as fmap_fibheap_replace should set it
+       * XXX - This should never happen as tmap_fibheap_replace should set it
        * to min.
        */
       abort();
   }
 
-  x->fmap_fibheap_element_data = data;
-  x->fmap_fibheap_element_key = key;
+  x->tmap_fibheap_element_data = data;
+  x->tmap_fibheap_element_key = key;
 }
 
 static void
-fmap_fibheap_initheap(fmap_fibheap_t *new)
+tmap_fibheap_initheap(tmap_fibheap_t *new)
 {
-  new->fmap_fibheap_cmp_fnct = NULL;
-  new->fmap_fibheap_neginf = NULL;
-  new->fmap_fibheap_n = 0;
-  new->fmap_fibheap_Dl = -1;
-  new->fmap_fibheap_cons = NULL;
-  new->fmap_fibheap_min = NULL;
-  new->fmap_fibheap_root = NULL;
-  new->fmap_fibheap_keys = 0;
+  new->tmap_fibheap_cmp_fnct = NULL;
+  new->tmap_fibheap_neginf = NULL;
+  new->tmap_fibheap_n = 0;
+  new->tmap_fibheap_Dl = -1;
+  new->tmap_fibheap_cons = NULL;
+  new->tmap_fibheap_min = NULL;
+  new->tmap_fibheap_root = NULL;
+  new->tmap_fibheap_keys = 0;
 }
 
 static void
-fmap_fibheap_destroyheap(fmap_fibheap_t *h)
+tmap_fibheap_destroyheap(tmap_fibheap_t *h)
 {
-  h->fmap_fibheap_cmp_fnct = NULL;
-  h->fmap_fibheap_neginf = NULL;
-  if(h->fmap_fibheap_cons != NULL)
-    free(h->fmap_fibheap_cons);
-  h->fmap_fibheap_cons = NULL;
+  h->tmap_fibheap_cmp_fnct = NULL;
+  h->tmap_fibheap_neginf = NULL;
+  if(h->tmap_fibheap_cons != NULL)
+    free(h->tmap_fibheap_cons);
+  h->tmap_fibheap_cons = NULL;
   free(h);
 }
 
 /*
  * begin of private element fuctions
  */
-static fmap_fibheap_element_t *
-fmap_fibheap_extractminel(fmap_fibheap_t *h)
+static tmap_fibheap_element_t *
+tmap_fibheap_extractminel(tmap_fibheap_t *h)
 {
-  fmap_fibheap_element_t *ret;
-  fmap_fibheap_element_t *x, *y, *orig;
+  tmap_fibheap_element_t *ret;
+  tmap_fibheap_element_t *x, *y, *orig;
 
-  ret = h->fmap_fibheap_min;
+  ret = h->tmap_fibheap_min;
 
   orig = NULL;
   /* put all the children on the root list */
-  /* for true consistancy, we should use fmap_fibheap_element_remove */
-  for(x = ret->fmap_fibheap_element_child; x != orig && x != NULL;) {
+  /* for true consistancy, we should use tmap_fibheap_element_remove */
+  for(x = ret->tmap_fibheap_element_child; x != orig && x != NULL;) {
       if(orig == NULL)
         orig = x;
-      y = x->fmap_fibheap_element_right;
-      x->fmap_fibheap_element_p = NULL;
-      fmap_fibheap_insertrootlist(h, x);
+      y = x->tmap_fibheap_element_right;
+      x->tmap_fibheap_element_p = NULL;
+      tmap_fibheap_insertrootlist(h, x);
       x = y;
   }
   /* remove minimum from root list */
-  fmap_fibheap_removerootlist(h, ret);
-  h->fmap_fibheap_n--;
+  tmap_fibheap_removerootlist(h, ret);
+  h->tmap_fibheap_n--;
 
   /* if we aren't empty, consolidate the heap */
-  if(h->fmap_fibheap_n == 0)
-    h->fmap_fibheap_min = NULL;
+  if(h->tmap_fibheap_n == 0)
+    h->tmap_fibheap_min = NULL;
   else {
-      h->fmap_fibheap_min = ret->fmap_fibheap_element_right;
-      fmap_fibheap_consolidate(h);
+      h->tmap_fibheap_min = ret->tmap_fibheap_element_right;
+      tmap_fibheap_consolidate(h);
   }
 
   return ret;
 }
 
 static void
-fmap_fibheap_insertrootlist(fmap_fibheap_t *h, fmap_fibheap_element_t *x)
+tmap_fibheap_insertrootlist(tmap_fibheap_t *h, tmap_fibheap_element_t *x)
 {
-  if(h->fmap_fibheap_root == NULL) {
-      h->fmap_fibheap_root = x;
-      x->fmap_fibheap_element_left = x;
-      x->fmap_fibheap_element_right = x;
+  if(h->tmap_fibheap_root == NULL) {
+      h->tmap_fibheap_root = x;
+      x->tmap_fibheap_element_left = x;
+      x->tmap_fibheap_element_right = x;
       return;
   }
 
-  fmap_fibheap_element_insertafter(h->fmap_fibheap_root, x);
+  tmap_fibheap_element_insertafter(h->tmap_fibheap_root, x);
 }
 
 static void
-fmap_fibheap_removerootlist(fmap_fibheap_t *h, fmap_fibheap_element_t *x)
+tmap_fibheap_removerootlist(tmap_fibheap_t *h, tmap_fibheap_element_t *x)
 {
-  if(x->fmap_fibheap_element_left == x)
-    h->fmap_fibheap_root = NULL;
+  if(x->tmap_fibheap_element_left == x)
+    h->tmap_fibheap_root = NULL;
   else
-    h->fmap_fibheap_root = fmap_fibheap_element_remove(x);
+    h->tmap_fibheap_root = tmap_fibheap_element_remove(x);
 }
 
 static void
-fmap_fibheap_consolidate(fmap_fibheap_t *h)
+tmap_fibheap_consolidate(tmap_fibheap_t *h)
 {
-  fmap_fibheap_element_t **a;
-  fmap_fibheap_element_t *w;
-  fmap_fibheap_element_t *y;
-  fmap_fibheap_element_t *x;
+  tmap_fibheap_element_t **a;
+  tmap_fibheap_element_t *w;
+  tmap_fibheap_element_t *y;
+  tmap_fibheap_element_t *x;
   int i;
   int d;
   int D;
 
-  fmap_fibheap_checkcons(h);
+  tmap_fibheap_checkcons(h);
 
-  /* assign a the value of h->fmap_fibheap_cons so I don't have to rewrite code */
-  D = h->fmap_fibheap_Dl + 1;
-  a = h->fmap_fibheap_cons;
+  /* assign a the value of h->tmap_fibheap_cons so I don't have to rewrite code */
+  D = h->tmap_fibheap_Dl + 1;
+  a = h->tmap_fibheap_cons;
 
   for (i = 0; i < D; i++)
     a[i] = NULL;
 
-  while ((w = h->fmap_fibheap_root) != NULL) {
+  while ((w = h->tmap_fibheap_root) != NULL) {
       x = w;
-      fmap_fibheap_removerootlist(h, w);
-      d = x->fmap_fibheap_element_degree;
+      tmap_fibheap_removerootlist(h, w);
+      d = x->tmap_fibheap_element_degree;
       /* XXX - assert that d < D */
       while(a[d] != NULL) {
           y = a[d];
-          if(fmap_fibheap_compare(h, x, y) > 0)
-            swap(fmap_fibheap_element_t *, x, y);
-          fmap_fibheap_heaplink(h, y, x);
+          if(tmap_fibheap_compare(h, x, y) > 0)
+            swap(tmap_fibheap_element_t *, x, y);
+          tmap_fibheap_heaplink(h, y, x);
           a[d] = NULL;
           d++;
       }
       a[d] = x;
   }
-  h->fmap_fibheap_min = NULL;
+  h->tmap_fibheap_min = NULL;
   for (i = 0; i < D; i++)
     if(a[i] != NULL) {
-        fmap_fibheap_insertrootlist(h, a[i]);
-        if(h->fmap_fibheap_min == NULL || fmap_fibheap_compare(h, a[i],
-                                            h->fmap_fibheap_min) < 0)
-          h->fmap_fibheap_min = a[i];
+        tmap_fibheap_insertrootlist(h, a[i]);
+        if(h->tmap_fibheap_min == NULL || tmap_fibheap_compare(h, a[i],
+                                            h->tmap_fibheap_min) < 0)
+          h->tmap_fibheap_min = a[i];
     }
 }
 
 static void
-fmap_fibheap_heaplink(fmap_fibheap_t *h, fmap_fibheap_element_t *y, fmap_fibheap_element_t *x)
+tmap_fibheap_heaplink(tmap_fibheap_t *h, tmap_fibheap_element_t *y, tmap_fibheap_element_t *x)
 {
   /* make y a child of x */
-  if(x->fmap_fibheap_element_child == NULL)
-    x->fmap_fibheap_element_child = y;
+  if(x->tmap_fibheap_element_child == NULL)
+    x->tmap_fibheap_element_child = y;
   else
-    fmap_fibheap_element_insertbefore(x->fmap_fibheap_element_child, y);
-  y->fmap_fibheap_element_p = x;
-  x->fmap_fibheap_element_degree++;
-  y->fmap_fibheap_element_mark = 0;
+    tmap_fibheap_element_insertbefore(x->tmap_fibheap_element_child, y);
+  y->tmap_fibheap_element_p = x;
+  x->tmap_fibheap_element_degree++;
+  y->tmap_fibheap_element_mark = 0;
 }
 
 static void
-fmap_fibheap_cut(fmap_fibheap_t *h, fmap_fibheap_element_t *x, fmap_fibheap_element_t *y)
+tmap_fibheap_cut(tmap_fibheap_t *h, tmap_fibheap_element_t *x, tmap_fibheap_element_t *y)
 {
-  fmap_fibheap_element_remove(x);
-  y->fmap_fibheap_element_degree--;
-  fmap_fibheap_insertrootlist(h, x);
-  x->fmap_fibheap_element_p = NULL;
-  x->fmap_fibheap_element_mark = 0;
+  tmap_fibheap_element_remove(x);
+  y->tmap_fibheap_element_degree--;
+  tmap_fibheap_insertrootlist(h, x);
+  x->tmap_fibheap_element_p = NULL;
+  x->tmap_fibheap_element_mark = 0;
 }
 
 static void
-fmap_fibheap_cascading_cut(fmap_fibheap_t *h, fmap_fibheap_element_t *y)
+tmap_fibheap_cascading_cut(tmap_fibheap_t *h, tmap_fibheap_element_t *y)
 {
-  fmap_fibheap_element_t *z;
+  tmap_fibheap_element_t *z;
 
-  while ((z = y->fmap_fibheap_element_p) != NULL) {
-      if(y->fmap_fibheap_element_mark == 0) {
-          y->fmap_fibheap_element_mark = 1;
+  while ((z = y->tmap_fibheap_element_p) != NULL) {
+      if(y->tmap_fibheap_element_mark == 0) {
+          y->tmap_fibheap_element_mark = 1;
           return;
       } else {
-          fmap_fibheap_cut(h, y, z);
+          tmap_fibheap_cut(h, y, z);
           y = z;
       }
   }
 }
 
 /*
- * begining of handling elements of fmap_fibheap_t
+ * begining of handling elements of tmap_fibheap_t
  */
-static fmap_fibheap_element_t *
-fmap_fibheap_element_newelem()
+static tmap_fibheap_element_t *
+tmap_fibheap_element_newelem()
 {
-  fmap_fibheap_element_t *e;
+  tmap_fibheap_element_t *e;
 
-  e = fmap_malloc(sizeof(fmap_fibheap_element_t), "e");
-  fmap_fibheap_element_initelem(e);
+  e = tmap_malloc(sizeof(tmap_fibheap_element_t), "e");
+  tmap_fibheap_element_initelem(e);
 
   return e;
 }
 
 static void
-fmap_fibheap_element_initelem(fmap_fibheap_element_t *e)
+tmap_fibheap_element_initelem(tmap_fibheap_element_t *e)
 {
-  e->fmap_fibheap_element_degree = 0;
-  e->fmap_fibheap_element_mark = 0;
-  e->fmap_fibheap_element_p = NULL;
-  e->fmap_fibheap_element_child = NULL;
-  e->fmap_fibheap_element_left = e;
-  e->fmap_fibheap_element_right = e;
-  e->fmap_fibheap_element_data = NULL;
+  e->tmap_fibheap_element_degree = 0;
+  e->tmap_fibheap_element_mark = 0;
+  e->tmap_fibheap_element_p = NULL;
+  e->tmap_fibheap_element_child = NULL;
+  e->tmap_fibheap_element_left = e;
+  e->tmap_fibheap_element_right = e;
+  e->tmap_fibheap_element_data = NULL;
 }
 
 static void
-fmap_fibheap_element_insertafter(fmap_fibheap_element_t *a, fmap_fibheap_element_t *b)
+tmap_fibheap_element_insertafter(tmap_fibheap_element_t *a, tmap_fibheap_element_t *b)
 {
-  if(a == a->fmap_fibheap_element_right) {
-      a->fmap_fibheap_element_right = b;
-      a->fmap_fibheap_element_left = b;
-      b->fmap_fibheap_element_right = a;
-      b->fmap_fibheap_element_left = a;
+  if(a == a->tmap_fibheap_element_right) {
+      a->tmap_fibheap_element_right = b;
+      a->tmap_fibheap_element_left = b;
+      b->tmap_fibheap_element_right = a;
+      b->tmap_fibheap_element_left = a;
   } else {
-      b->fmap_fibheap_element_right = a->fmap_fibheap_element_right;
-      a->fmap_fibheap_element_right->fmap_fibheap_element_left = b;
-      a->fmap_fibheap_element_right = b;
-      b->fmap_fibheap_element_left = a;
+      b->tmap_fibheap_element_right = a->tmap_fibheap_element_right;
+      a->tmap_fibheap_element_right->tmap_fibheap_element_left = b;
+      a->tmap_fibheap_element_right = b;
+      b->tmap_fibheap_element_left = a;
   }
 }
 
 static inline void
-fmap_fibheap_element_insertbefore(fmap_fibheap_element_t *a, fmap_fibheap_element_t *b)
+tmap_fibheap_element_insertbefore(tmap_fibheap_element_t *a, tmap_fibheap_element_t *b)
 {
-  fmap_fibheap_element_insertafter(a->fmap_fibheap_element_left, b);
+  tmap_fibheap_element_insertafter(a->tmap_fibheap_element_left, b);
 }
 
-static fmap_fibheap_element_t *
-fmap_fibheap_element_remove(fmap_fibheap_element_t *x)
+static tmap_fibheap_element_t *
+tmap_fibheap_element_remove(tmap_fibheap_element_t *x)
 {
-  fmap_fibheap_element_t *ret;
+  tmap_fibheap_element_t *ret;
 
-  if(x == x->fmap_fibheap_element_left)
+  if(x == x->tmap_fibheap_element_left)
     ret = NULL;
   else
-    ret = x->fmap_fibheap_element_left;
+    ret = x->tmap_fibheap_element_left;
 
   /* fix the parent pointer */
-  if(x->fmap_fibheap_element_p != NULL && x->fmap_fibheap_element_p->fmap_fibheap_element_child == x)
-    x->fmap_fibheap_element_p->fmap_fibheap_element_child = ret;
+  if(x->tmap_fibheap_element_p != NULL && x->tmap_fibheap_element_p->tmap_fibheap_element_child == x)
+    x->tmap_fibheap_element_p->tmap_fibheap_element_child = ret;
 
-  x->fmap_fibheap_element_right->fmap_fibheap_element_left = x->fmap_fibheap_element_left;
-  x->fmap_fibheap_element_left->fmap_fibheap_element_right = x->fmap_fibheap_element_right;
+  x->tmap_fibheap_element_right->tmap_fibheap_element_left = x->tmap_fibheap_element_left;
+  x->tmap_fibheap_element_left->tmap_fibheap_element_right = x->tmap_fibheap_element_right;
 
   /* clear out hanging pointers */
-  x->fmap_fibheap_element_p = NULL;
-  x->fmap_fibheap_element_left = x;
-  x->fmap_fibheap_element_right = x;
+  x->tmap_fibheap_element_p = NULL;
+  x->tmap_fibheap_element_left = x;
+  x->tmap_fibheap_element_right = x;
 
   return ret;
 }
 
 static void
-fmap_fibheap_checkcons(fmap_fibheap_t *h)
+tmap_fibheap_checkcons(tmap_fibheap_t *h)
 {
   int oDl;
 
   /* make sure we have enough memory allocated to "reorganize" */
-  if(h->fmap_fibheap_Dl == -1 || h->fmap_fibheap_n > (1 << h->fmap_fibheap_Dl)) {
-      oDl = h->fmap_fibheap_Dl;
-      if((h->fmap_fibheap_Dl = ceillog2(h->fmap_fibheap_n) + 1) < 8)
-        h->fmap_fibheap_Dl = 8;
-      if(oDl != h->fmap_fibheap_Dl)
-        h->fmap_fibheap_cons = fmap_realloc(h->fmap_fibheap_cons, sizeof(fmap_fibheap_element_t) * (h->fmap_fibheap_Dl + 1), "h->fmap_fibheap_cons");
-      if(h->fmap_fibheap_cons == NULL)
+  if(h->tmap_fibheap_Dl == -1 || h->tmap_fibheap_n > (1 << h->tmap_fibheap_Dl)) {
+      oDl = h->tmap_fibheap_Dl;
+      if((h->tmap_fibheap_Dl = ceillog2(h->tmap_fibheap_n) + 1) < 8)
+        h->tmap_fibheap_Dl = 8;
+      if(oDl != h->tmap_fibheap_Dl)
+        h->tmap_fibheap_cons = tmap_realloc(h->tmap_fibheap_cons, sizeof(tmap_fibheap_element_t) * (h->tmap_fibheap_Dl + 1), "h->tmap_fibheap_cons");
+      if(h->tmap_fibheap_cons == NULL)
         abort();
   }
 }
 
 static int
-fmap_fibheap_compare(fmap_fibheap_t *h, fmap_fibheap_element_t *a, fmap_fibheap_element_t *b)
+tmap_fibheap_compare(tmap_fibheap_t *h, tmap_fibheap_element_t *a, tmap_fibheap_element_t *b)
 {
-  if(1 == h->fmap_fibheap_keys) {
-      if(a->fmap_fibheap_element_key < b->fmap_fibheap_element_key)
+  if(1 == h->tmap_fibheap_keys) {
+      if(a->tmap_fibheap_element_key < b->tmap_fibheap_element_key)
         return -1;
-      if(a->fmap_fibheap_element_key == b->fmap_fibheap_element_key)
+      if(a->tmap_fibheap_element_key == b->tmap_fibheap_element_key)
         return 0;
       return 1;
   } else {
-    return h->fmap_fibheap_cmp_fnct(a->fmap_fibheap_element_data, b->fmap_fibheap_element_data);
+    return h->tmap_fibheap_cmp_fnct(a->tmap_fibheap_element_data, b->tmap_fibheap_element_data);
   }
 }
 
 static int
-fmap_fibheap_comparedata(fmap_fibheap_t *h, int key, void *data, fmap_fibheap_element_t *b)
+tmap_fibheap_comparedata(tmap_fibheap_t *h, int key, void *data, tmap_fibheap_element_t *b)
 {
-  fmap_fibheap_element_t a;
+  tmap_fibheap_element_t a;
 
-  a.fmap_fibheap_element_key = key;
-  a.fmap_fibheap_element_data = data;
+  a.tmap_fibheap_element_key = key;
+  a.tmap_fibheap_element_data = data;
 
-  return fmap_fibheap_compare(h, &a, b);
+  return tmap_fibheap_compare(h, &a, b);
 }
 
 static void
-fmap_fibheap_insertel(fmap_fibheap_t *h, fmap_fibheap_element_t *x)
+tmap_fibheap_insertel(tmap_fibheap_t *h, tmap_fibheap_element_t *x)
 {
-  fmap_fibheap_insertrootlist(h, x);
+  tmap_fibheap_insertrootlist(h, x);
 
-  if(h->fmap_fibheap_min == NULL 
-     || (1 == h->fmap_fibheap_keys 
-         && x->fmap_fibheap_element_key < h->fmap_fibheap_min->fmap_fibheap_element_key) 
-     || (0 == h->fmap_fibheap_keys 
-         && h->fmap_fibheap_cmp_fnct(x->fmap_fibheap_element_data, 
-                                     h->fmap_fibheap_min->fmap_fibheap_element_data) < 0)) {
-    h->fmap_fibheap_min = x;
+  if(h->tmap_fibheap_min == NULL 
+     || (1 == h->tmap_fibheap_keys 
+         && x->tmap_fibheap_element_key < h->tmap_fibheap_min->tmap_fibheap_element_key) 
+     || (0 == h->tmap_fibheap_keys 
+         && h->tmap_fibheap_cmp_fnct(x->tmap_fibheap_element_data, 
+                                     h->tmap_fibheap_min->tmap_fibheap_element_data) < 0)) {
+    h->tmap_fibheap_min = x;
   }
 
-  h->fmap_fibheap_n++;
+  h->tmap_fibheap_n++;
 
 }
 
 /*
  * Public Heap Functions
  */
-fmap_fibheap_t *
-fmap_fibheap_makekeyheap()
+tmap_fibheap_t *
+tmap_fibheap_makekeyheap()
 {
-  fmap_fibheap_t *n;
+  tmap_fibheap_t *n;
 
-  n = fmap_malloc(sizeof(fmap_fibheap_t), "n");
+  n = tmap_malloc(sizeof(tmap_fibheap_t), "n");
 
-  fmap_fibheap_initheap(n);
-  n->fmap_fibheap_keys = 1;
+  tmap_fibheap_initheap(n);
+  n->tmap_fibheap_keys = 1;
 
   return n;
 }
 
-fmap_fibheap_t *
-fmap_fibheap_makeheap(fmap_fibheap_voidcmp fnct)
+tmap_fibheap_t *
+tmap_fibheap_makeheap(tmap_fibheap_voidcmp fnct)
 {
-  fmap_fibheap_t *n;
+  tmap_fibheap_t *n;
 
-  n = fmap_malloc(sizeof(fmap_fibheap_t), "n");
+  n = tmap_malloc(sizeof(tmap_fibheap_t), "n");
 
-  fmap_fibheap_initheap(n);
-  fmap_fibheap_setcmp(n, fnct);
-  n->fmap_fibheap_keys = 0;
+  tmap_fibheap_initheap(n);
+  tmap_fibheap_setcmp(n, fnct);
+  n->tmap_fibheap_keys = 0;
 
   return n;
 }
 
-fmap_fibheap_voidcmp
-fmap_fibheap_setcmp(fmap_fibheap_t *h, fmap_fibheap_voidcmp fnct)
+tmap_fibheap_voidcmp
+tmap_fibheap_setcmp(tmap_fibheap_t *h, tmap_fibheap_voidcmp fnct)
 {
-  fmap_fibheap_voidcmp oldfnct;
+  tmap_fibheap_voidcmp oldfnct;
 
-  if(1 == h->fmap_fibheap_keys) fmap_error("void heap required", Exit, OutOfRange);
-  oldfnct = h->fmap_fibheap_cmp_fnct;
-  h->fmap_fibheap_cmp_fnct = fnct;
+  if(1 == h->tmap_fibheap_keys) tmap_error("void heap required", Exit, OutOfRange);
+  oldfnct = h->tmap_fibheap_cmp_fnct;
+  h->tmap_fibheap_cmp_fnct = fnct;
 
   return oldfnct;
 }
 
 void *
-fmap_fibheap_setneginf(fmap_fibheap_t *h, void *data)
+tmap_fibheap_setneginf(tmap_fibheap_t *h, void *data)
 {
   void *old;
 
-  if(1 == h->fmap_fibheap_keys) fmap_error("void heap required", Exit, OutOfRange);
-  old = h->fmap_fibheap_neginf;
-  h->fmap_fibheap_neginf = data;
+  if(1 == h->tmap_fibheap_keys) tmap_error("void heap required", Exit, OutOfRange);
+  old = h->tmap_fibheap_neginf;
+  h->tmap_fibheap_neginf = data;
 
   return old;
 }
 
-fmap_fibheap_t *
-fmap_fibheap_union(fmap_fibheap_t *ha, fmap_fibheap_t *hb)
+tmap_fibheap_t *
+tmap_fibheap_union(tmap_fibheap_t *ha, tmap_fibheap_t *hb)
 {
-  fmap_fibheap_element_t *x;
+  tmap_fibheap_element_t *x;
 
-  if(ha->fmap_fibheap_root == NULL || hb->fmap_fibheap_root == NULL) {
+  if(ha->tmap_fibheap_root == NULL || hb->tmap_fibheap_root == NULL) {
       /* either one or both are empty */
-      if(ha->fmap_fibheap_root == NULL) {
-          fmap_fibheap_destroyheap(ha);
+      if(ha->tmap_fibheap_root == NULL) {
+          tmap_fibheap_destroyheap(ha);
           return hb;
       } else {
-          fmap_fibheap_destroyheap(hb);
+          tmap_fibheap_destroyheap(hb);
           return ha;
       }
   }
-  ha->fmap_fibheap_root->fmap_fibheap_element_left->fmap_fibheap_element_right = hb->fmap_fibheap_root;
-  hb->fmap_fibheap_root->fmap_fibheap_element_left->fmap_fibheap_element_right = ha->fmap_fibheap_root;
-  x = ha->fmap_fibheap_root->fmap_fibheap_element_left;
-  ha->fmap_fibheap_root->fmap_fibheap_element_left = hb->fmap_fibheap_root->fmap_fibheap_element_left;
-  hb->fmap_fibheap_root->fmap_fibheap_element_left = x;
-  ha->fmap_fibheap_n += hb->fmap_fibheap_n;
+  ha->tmap_fibheap_root->tmap_fibheap_element_left->tmap_fibheap_element_right = hb->tmap_fibheap_root;
+  hb->tmap_fibheap_root->tmap_fibheap_element_left->tmap_fibheap_element_right = ha->tmap_fibheap_root;
+  x = ha->tmap_fibheap_root->tmap_fibheap_element_left;
+  ha->tmap_fibheap_root->tmap_fibheap_element_left = hb->tmap_fibheap_root->tmap_fibheap_element_left;
+  hb->tmap_fibheap_root->tmap_fibheap_element_left = x;
+  ha->tmap_fibheap_n += hb->tmap_fibheap_n;
   /*
    * we probably should also keep stats on number of unions
    */
 
-  /* set fmap_fibheap_min if necessary */
-  if(fmap_fibheap_compare(ha, hb->fmap_fibheap_min, ha->fmap_fibheap_min) < 0)
-    ha->fmap_fibheap_min = hb->fmap_fibheap_min;
+  /* set tmap_fibheap_min if necessary */
+  if(tmap_fibheap_compare(ha, hb->tmap_fibheap_min, ha->tmap_fibheap_min) < 0)
+    ha->tmap_fibheap_min = hb->tmap_fibheap_min;
 
-  fmap_fibheap_destroyheap(hb);
+  tmap_fibheap_destroyheap(hb);
   return ha;
 }
 
 void
-fmap_fibheap_deleteheap(fmap_fibheap_t *h)
+tmap_fibheap_deleteheap(tmap_fibheap_t *h)
 {
   /*
    * We could do this even faster by walking each binomial tree, but
    * this is simpler to code.
    */
-  while (h->fmap_fibheap_min != NULL)
-    fmap_fibheap_element_destroy(fmap_fibheap_extractminel(h));
+  while (h->tmap_fibheap_min != NULL)
+    tmap_fibheap_element_destroy(tmap_fibheap_extractminel(h));
 
-  fmap_fibheap_destroyheap(h);
+  tmap_fibheap_destroyheap(h);
 }
 
 /*
  * Public Key Heap Functions
  */
-fmap_fibheap_element_t *
-fmap_fibheap_insertkey(fmap_fibheap_t *h, int key, void *data)
+tmap_fibheap_element_t *
+tmap_fibheap_insertkey(tmap_fibheap_t *h, int key, void *data)
 {
-  fmap_fibheap_element_t *x;
+  tmap_fibheap_element_t *x;
 
-  if(0 == h->fmap_fibheap_keys) fmap_error("key heap required", Exit, OutOfRange);
+  if(0 == h->tmap_fibheap_keys) tmap_error("key heap required", Exit, OutOfRange);
 
-  if((x = fmap_fibheap_element_newelem()) == NULL) {
+  if((x = tmap_fibheap_element_newelem()) == NULL) {
     return NULL;
   }
 
   /* just insert on root list, and make sure it's not the new min */
-  x->fmap_fibheap_element_data = data;
-  x->fmap_fibheap_element_key = key;
+  x->tmap_fibheap_element_data = data;
+  x->tmap_fibheap_element_key = key;
 
-  fmap_fibheap_insertel(h, x);
+  tmap_fibheap_insertel(h, x);
 
   return x;
 }
 
 int
-fmap_fibheap_minkey(fmap_fibheap_t *h)
+tmap_fibheap_minkey(tmap_fibheap_t *h)
 {
-  if(0 == h->fmap_fibheap_keys) fmap_error("key heap required", Exit, OutOfRange);
-  if(h->fmap_fibheap_min == NULL)
+  if(0 == h->tmap_fibheap_keys) tmap_error("key heap required", Exit, OutOfRange);
+  if(h->tmap_fibheap_min == NULL)
     return INT_MIN;
-  return h->fmap_fibheap_min->fmap_fibheap_element_key;
+  return h->tmap_fibheap_min->tmap_fibheap_element_key;
 }
 
 int
-fmap_fibheap_replacekey(fmap_fibheap_t *h, fmap_fibheap_element_t *x, int key)
+tmap_fibheap_replacekey(tmap_fibheap_t *h, tmap_fibheap_element_t *x, int key)
 {
   int ret;
 
-  if(0 == h->fmap_fibheap_keys) fmap_error("key heap required", Exit, OutOfRange);
-  ret = x->fmap_fibheap_element_key;
-  (void)fmap_fibheap_replacekeydata(h, x, key, x->fmap_fibheap_element_data);
+  if(0 == h->tmap_fibheap_keys) tmap_error("key heap required", Exit, OutOfRange);
+  ret = x->tmap_fibheap_element_key;
+  (void)tmap_fibheap_replacekeydata(h, x, key, x->tmap_fibheap_element_data);
 
   return ret;
 }
 
 void *
-fmap_fibheap_replacekeydata(fmap_fibheap_t *h, fmap_fibheap_element_t *x, int key, void *data)
+tmap_fibheap_replacekeydata(tmap_fibheap_t *h, tmap_fibheap_element_t *x, int key, void *data)
 {
   void *odata;
   int okey;
-  fmap_fibheap_element_t *y;
+  tmap_fibheap_element_t *y;
   int r;
 
-  if(0 == h->fmap_fibheap_keys) fmap_error("key heap required", Exit, OutOfRange);
+  if(0 == h->tmap_fibheap_keys) tmap_error("key heap required", Exit, OutOfRange);
 
-  odata = x->fmap_fibheap_element_data;
-  okey = x->fmap_fibheap_element_key;
+  odata = x->tmap_fibheap_element_data;
+  okey = x->tmap_fibheap_element_key;
 
   /*
    * we can increase a key by deleting and reinserting, that
    * requires O(lgn) time.
    */
-  if((r = fmap_fibheap_comparedata(h, key, data, x)) > 0) {
+  if((r = tmap_fibheap_comparedata(h, key, data, x)) > 0) {
       /* XXX - bad code! */
       abort();
-      fmap_fibheap_deleteel(h, x);
+      tmap_fibheap_deleteel(h, x);
 
-      x->fmap_fibheap_element_data = data;
-      x->fmap_fibheap_element_key = key;
+      x->tmap_fibheap_element_data = data;
+      x->tmap_fibheap_element_key = key;
 
-      fmap_fibheap_insertel(h, x);
+      tmap_fibheap_insertel(h, x);
 
       return odata;
   }
 
-  x->fmap_fibheap_element_data = data;
-  x->fmap_fibheap_element_key = key;
+  x->tmap_fibheap_element_data = data;
+  x->tmap_fibheap_element_key = key;
 
   /* because they are equal, we don't have to do anything */
   if(r == 0)
     return odata;
 
-  y = x->fmap_fibheap_element_p;
+  y = x->tmap_fibheap_element_p;
 
-  if(1 == h->fmap_fibheap_keys && okey == key)
+  if(1 == h->tmap_fibheap_keys && okey == key)
     return odata;
 
-  if(y != NULL && fmap_fibheap_compare(h, x, y) <= 0) {
-      fmap_fibheap_cut(h, x, y);
-      fmap_fibheap_cascading_cut(h, y);
+  if(y != NULL && tmap_fibheap_compare(h, x, y) <= 0) {
+      tmap_fibheap_cut(h, x, y);
+      tmap_fibheap_cascading_cut(h, y);
   }
 
   /*
-   * the = is so that the call from fmap_fibheap_delete will delete the proper
+   * the = is so that the call from tmap_fibheap_delete will delete the proper
    * element.
    */
-  if(fmap_fibheap_compare(h, x, h->fmap_fibheap_min) <= 0)
-    h->fmap_fibheap_min = x;
+  if(tmap_fibheap_compare(h, x, h->tmap_fibheap_min) <= 0)
+    h->tmap_fibheap_min = x;
 
   return odata;
 }
@@ -658,63 +658,63 @@ fmap_fibheap_replacekeydata(fmap_fibheap_t *h, fmap_fibheap_element_t *x, int ke
  *	NULL	failed for some reason
  *	ptr	token to use for manipulation of data
  */
-fmap_fibheap_element_t *
-fmap_fibheap_insert(fmap_fibheap_t *h, void *data)
+tmap_fibheap_element_t *
+tmap_fibheap_insert(tmap_fibheap_t *h, void *data)
 {
-  fmap_fibheap_element_t *x;
+  tmap_fibheap_element_t *x;
 
-  if(1 == h->fmap_fibheap_keys) fmap_error("void heap required", Exit, OutOfRange);
-  if((x = fmap_fibheap_element_newelem()) == NULL)
+  if(1 == h->tmap_fibheap_keys) tmap_error("void heap required", Exit, OutOfRange);
+  if((x = tmap_fibheap_element_newelem()) == NULL)
     return NULL;
 
   /* just insert on root list, and make sure it's not the new min */
-  x->fmap_fibheap_element_data = data;
+  x->tmap_fibheap_element_data = data;
 
-  fmap_fibheap_insertel(h, x);
+  tmap_fibheap_insertel(h, x);
 
   return x;
 }
 
 void *
-fmap_fibheap_min(fmap_fibheap_t *h)
+tmap_fibheap_min(tmap_fibheap_t *h)
 {
-  if(h->fmap_fibheap_min == NULL)
+  if(h->tmap_fibheap_min == NULL)
     return NULL;
-  return h->fmap_fibheap_min->fmap_fibheap_element_data;
+  return h->tmap_fibheap_min->tmap_fibheap_element_data;
 }
 
 void *
-fmap_fibheap_extractmin(fmap_fibheap_t *h)
+tmap_fibheap_extractmin(tmap_fibheap_t *h)
 {
-  fmap_fibheap_element_t *z;
+  tmap_fibheap_element_t *z;
   void *ret = NULL;
 
-  if(h->fmap_fibheap_min != NULL) {
-      z = fmap_fibheap_extractminel(h);
-      ret = z->fmap_fibheap_element_data;
-      fmap_fibheap_element_destroy(z);
+  if(h->tmap_fibheap_min != NULL) {
+      z = tmap_fibheap_extractminel(h);
+      ret = z->tmap_fibheap_element_data;
+      tmap_fibheap_element_destroy(z);
   }
 
   return ret;
 }
 
 void *
-fmap_fibheap_replacedata(fmap_fibheap_t *h, fmap_fibheap_element_t *x, void *data)
+tmap_fibheap_replacedata(tmap_fibheap_t *h, tmap_fibheap_element_t *x, void *data)
 {
-  return fmap_fibheap_replacekeydata(h, x, x->fmap_fibheap_element_key, data);
+  return tmap_fibheap_replacekeydata(h, x, x->tmap_fibheap_element_key, data);
 }
 
 void *
-fmap_fibheap_delete(fmap_fibheap_t *h, fmap_fibheap_element_t *x)
+tmap_fibheap_delete(tmap_fibheap_t *h, tmap_fibheap_element_t *x)
 {
   void *k;
 
-  k = x->fmap_fibheap_element_data;
-  if(0 == h->fmap_fibheap_keys)
-    fmap_fibheap_replacedata(h, x, h->fmap_fibheap_neginf);
+  k = x->tmap_fibheap_element_data;
+  if(0 == h->tmap_fibheap_keys)
+    tmap_fibheap_replacedata(h, x, h->tmap_fibheap_neginf);
   else
-    fmap_fibheap_replacekey(h, x, INT_MIN);
-  fmap_fibheap_extractmin(h);
+    tmap_fibheap_replacekey(h, x, INT_MIN);
+  tmap_fibheap_extractmin(h);
 
   return k;
 }

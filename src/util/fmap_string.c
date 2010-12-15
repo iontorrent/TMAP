@@ -2,20 +2,20 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include "fmap_error.h"
-#include "fmap_alloc.h"
-#include "fmap_definitions.h"
-#include "fmap_string.h"
+#include "tmap_error.h"
+#include "tmap_alloc.h"
+#include "tmap_definitions.h"
+#include "tmap_string.h"
 
-inline fmap_string_t *
-fmap_string_init(int32_t mem)
+inline tmap_string_t *
+tmap_string_init(int32_t mem)
 {
-  fmap_string_t *str = NULL;
+  tmap_string_t *str = NULL;
 
-  str = fmap_calloc(1, sizeof(fmap_string_t), "str");
+  str = tmap_calloc(1, sizeof(tmap_string_t), "str");
   if(0 < mem) {
       str->m = mem;
-      str->s = fmap_calloc(str->m, sizeof(char), "str->s");
+      str->s = tmap_calloc(str->m, sizeof(char), "str->s");
       str->l = 0;
       str->s[str->l] = '\0';
   }
@@ -24,7 +24,7 @@ fmap_string_init(int32_t mem)
 }
 
 inline void
-fmap_string_destroy(fmap_string_t *str)
+tmap_string_destroy(tmap_string_t *str)
 {
   if(NULL == str) return;
   free(str->s);
@@ -32,12 +32,12 @@ fmap_string_destroy(fmap_string_t *str)
 }
 
 inline void
-fmap_string_copy(fmap_string_t *dest, fmap_string_t *src)
+tmap_string_copy(tmap_string_t *dest, tmap_string_t *src)
 {
   int32_t i;
   if(dest->m < src->m) {
       dest->m = src->m;
-      dest->s = fmap_realloc(dest->s, sizeof(char)*dest->m, "dest->s");
+      dest->s = tmap_realloc(dest->s, sizeof(char)*dest->m, "dest->s");
   }
   for(i=0;i<src->m;i++) { // copy over all memory
       dest->s[i] = src->s[i];
@@ -45,13 +45,13 @@ fmap_string_copy(fmap_string_t *dest, fmap_string_t *src)
   dest->l = src->l;
 }
 
-inline fmap_string_t *
-fmap_string_clone(fmap_string_t *str)
+inline tmap_string_t *
+tmap_string_clone(tmap_string_t *str)
 {
   int32_t i;
-  fmap_string_t *ret = NULL;
+  tmap_string_t *ret = NULL;
   
-  ret = fmap_string_init(str->m);
+  ret = tmap_string_init(str->m);
   for(i=0;i<str->m;i++) { // copy over all memory
       ret->s[i] = str->s[i];
   }
@@ -61,35 +61,35 @@ fmap_string_clone(fmap_string_t *str)
 }
 
 inline void
-fmap_string_lsprintf(fmap_string_t *dest, int32_t l, const char *format, ...) 
+tmap_string_lsprintf(tmap_string_t *dest, int32_t l, const char *format, ...) 
 {
   va_list ap;
   int32_t length;
-  if(l < 0) fmap_error(NULL, Exit, OutOfRange);
+  if(l < 0) tmap_error(NULL, Exit, OutOfRange);
   va_start(ap, format);
   length = vsnprintf(dest->s + l, dest->m - l, format, ap);
-  if(length < 0) fmap_error(NULL, Exit, OutOfRange);
+  if(length < 0) tmap_error(NULL, Exit, OutOfRange);
   va_end(ap);
   if(dest->m - l - 1 < length) {
       dest->m = length + l + 2;
-      fmap_roundup32(dest->m);
-      dest->s = fmap_realloc(dest->s, sizeof(char)*dest->m, "dest->s");
+      tmap_roundup32(dest->m);
+      dest->s = tmap_realloc(dest->s, sizeof(char)*dest->m, "dest->s");
       va_start(ap, format);
       length = vsnprintf(dest->s + l, dest->m - l, format, ap);
       va_end(ap);
-      if(length < 0) fmap_error(NULL, Exit, OutOfRange);
+      if(length < 0) tmap_error(NULL, Exit, OutOfRange);
   }
   dest->l += length;
 }
 
 inline void
-fmap_string_reverse(fmap_string_t *str)
+tmap_string_reverse(tmap_string_t *str)
 {
-  fmap_reverse(str->s, str->l);
+  tmap_reverse(str->s, str->l);
 }
 
 void
-fmap_string_reverse_compliment(fmap_string_t *str, int32_t is_int)
+tmap_string_reverse_compliment(tmap_string_t *str, int32_t is_int)
 {
   int i;
 
@@ -104,6 +104,6 @@ fmap_string_reverse_compliment(fmap_string_t *str, int32_t is_int)
       }
   }
   else { // bases are ASCII values
-      fmap_reverse_compliment(str->s, str->l);
+      tmap_reverse_compliment(str->s, str->l);
   }
 }

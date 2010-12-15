@@ -1,10 +1,10 @@
-#ifndef FMAP_SA_H_
-#define FMAP_SA_H_
+#ifndef TMAP_SA_H_
+#define TMAP_SA_H_
 
-#define FMAP_SA_INTERVAL 32
+#define TMAP_SA_INTERVAL 32
 
 #include <stdint.h>
-#include "fmap_bwt.h"
+#include "tmap_bwt.h"
 
 /*! 
   A Suffix Array Library
@@ -20,15 +20,15 @@ typedef struct {
     uint32_t n_sa;  /*!< number of suffix array entries */
     uint32_t *sa;  /*!< pointer to the suffix array entries */
     uint32_t is_shm;  /*!< 1 if loaded from shared memory, 0 otherwise */
-} fmap_sa_t;
+} tmap_sa_t;
 
 /*! 
   @param  fn_fasta  the FASTA file name
   @param  is_rev    0 if to read the reverse packed sequence, 1 otherwise
   @return           pointer to the sa structure 
   */
-fmap_sa_t *
-fmap_sa_read(const char *fn_fasta, uint32_t is_rev);
+tmap_sa_t *
+tmap_sa_read(const char *fn_fasta, uint32_t is_rev);
 
 /*! 
   @param  fn_fasta  the FASTA file name
@@ -36,14 +36,14 @@ fmap_sa_read(const char *fn_fasta, uint32_t is_rev);
   @param  sa        the sa structure to write
   */
 void
-fmap_sa_write(const char *fn_fasta, fmap_sa_t *sa, uint32_t is_rev);
+tmap_sa_write(const char *fn_fasta, tmap_sa_t *sa, uint32_t is_rev);
 
 /*! 
   @param  sa  the sa structure 
   @return     the number of bytes required for this sa in shared memory
   */
 size_t
-fmap_sa_shm_num_bytes(fmap_sa_t *sa);
+tmap_sa_shm_num_bytes(tmap_sa_t *sa);
 
 /*! 
   @param  fn_fasta  the FASTA file name
@@ -51,7 +51,7 @@ fmap_sa_shm_num_bytes(fmap_sa_t *sa);
   @return     the number of bytes required for this sa in shared memory
   */
 size_t
-fmap_sa_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev);
+tmap_sa_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev);
 
 /*! 
   @param  sa  the sa structure to pack 
@@ -59,20 +59,20 @@ fmap_sa_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev);
   @return      a pointer to the next unused byte in memory
   */
 uint8_t *
-fmap_sa_shm_pack(fmap_sa_t *sa, uint8_t *buf);
+tmap_sa_shm_pack(tmap_sa_t *sa, uint8_t *buf);
 
 /*! 
   @param  buf  the byte array in which to unpack the sa data
   @return      a pointer to the initialized sa structure
   */
-fmap_sa_t *
-fmap_sa_shm_unpack(uint8_t *buf);
+tmap_sa_t *
+tmap_sa_shm_unpack(uint8_t *buf);
 
 /*! 
   @param  sa  pointer to the suffix array structure
   */
 void 
-fmap_sa_destroy(fmap_sa_t *sa);
+tmap_sa_destroy(tmap_sa_t *sa);
 
 /*! 
   returns the suffix array position given the occurence position
@@ -82,13 +82,13 @@ fmap_sa_destroy(fmap_sa_t *sa);
   @return      the pac position
 */
 uint32_t 
-fmap_sa_pac_pos(const fmap_sa_t *sa, const fmap_bwt_t *bwt, uint32_t k);
+tmap_sa_pac_pos(const tmap_sa_t *sa, const tmap_bwt_t *bwt, uint32_t k);
 /*! 
   @param  fn_fasta  the FASTA file name
   @param  intv      the suffix array interval
   */
 void
-fmap_sa_bwt2sa(const char *fn_fasta, uint32_t intv);
+tmap_sa_bwt2sa(const char *fn_fasta, uint32_t intv);
 
 /*! 
   constructs the suffix array of a given string.
@@ -98,17 +98,17 @@ fmap_sa_bwt2sa(const char *fn_fasta, uint32_t intv);
   @return    0 if no error occurred
  */
 uint32_t 
-fmap_sa_gen_short(const uint8_t *T, int32_t *SA, uint32_t n);
+tmap_sa_gen_short(const uint8_t *T, int32_t *SA, uint32_t n);
 
 
 /*! 
-  main-like function for 'fmap bwt2sa'
+  main-like function for 'tmap bwt2sa'
   @param  argc  the number of arguments
   @param  argv  the argument list
   @return       0 if executed successful
   */
 int
-fmap_sa_bwt2sa_main(int argc, char *argv[]);
+tmap_sa_bwt2sa_main(int argc, char *argv[]);
 
 #define KEY(V, I, p, h)                                 ( V[ I[p] + h ] )
 #define INSERT_SORT_NUM_ITEM    16

@@ -2,11 +2,11 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "../util/fmap_error.h"
-#include "../util/fmap_alloc.h"
-#include "../seq/fmap_fq.h"
-#include "fmap_file.h"
-#include "fmap_fq_io.h"
+#include "../util/tmap_error.h"
+#include "../util/tmap_alloc.h"
+#include "../seq/tmap_fq.h"
+#include "tmap_file.h"
+#include "tmap_fq_io.h"
 
 /* The MIT License
 
@@ -36,18 +36,18 @@
 
 /* Nils Homer - modified not to be macro-ized */
 
-static inline fmap_stream_t *
-fmap_stream_init(fmap_file_t *f, int32_t bufsize)
+static inline tmap_stream_t *
+tmap_stream_init(tmap_file_t *f, int32_t bufsize)
 {
-  fmap_stream_t *ks = fmap_calloc(1, sizeof(fmap_stream_t), "ks");
+  tmap_stream_t *ks = tmap_calloc(1, sizeof(tmap_stream_t), "ks");
   ks->f = f;
   ks->bufsize = bufsize;
-  ks->buf = fmap_malloc(sizeof(char)*ks->bufsize, "ks->buf");
+  ks->buf = tmap_malloc(sizeof(char)*ks->bufsize, "ks->buf");
   return ks;
 }
 
 static inline void 
-fmap_stream_destroy(fmap_stream_t *ks)
+tmap_stream_destroy(tmap_stream_t *ks)
 {
   if(NULL != ks) {
       free(ks->buf);
@@ -55,18 +55,18 @@ fmap_stream_destroy(fmap_stream_t *ks)
   }
 }
 
-#define fmap_stream_eof(ks) \
+#define tmap_stream_eof(ks) \
   ((ks)->is_eof && (ks)->begin >= (ks)->end)
-#define fmap_stream_rewind(ks) \
+#define tmap_stream_rewind(ks) \
   ((ks)->is_eof = (ks)->begin = (ks)->end = 0)
 
 static inline int 
-fmap_stream_getc(fmap_stream_t *ks)
+tmap_stream_getc(tmap_stream_t *ks)
 {
   if (ks->is_eof && ks->begin >= ks->end) return -1;
   if (ks->begin >= ks->end) {
       ks->begin = 0;
-      ks->end = fmap_file_fread2(ks->f, ks->buf, ks->bufsize);
+      ks->end = tmap_file_fread2(ks->f, ks->buf, ks->bufsize);
       if (ks->end < ks->bufsize) ks->is_eof = 1;
       if (ks->end == 0) return -1;
   }
@@ -74,7 +74,7 @@ fmap_stream_getc(fmap_stream_t *ks)
 }
 
 static int 
-fmap_stream_getuntil(fmap_stream_t *ks, int delimiter, fmap_string_t *str, int *dret)
+tmap_stream_getuntil(tmap_stream_t *ks, int delimiter, tmap_string_t *str, int *dret)
 {
   if (dret) *dret = 0;
   str->l = 0;
@@ -84,7 +84,7 @@ fmap_stream_getuntil(fmap_stream_t *ks, int delimiter, fmap_string_t *str, int *
       if (ks->begin >= ks->end) {
           if (!ks->is_eof) {
               ks->begin = 0;
-              ks->end = fmap_file_fread2(ks->f, ks->buf, ks->bufsize);
+              ks->end = tmap_file_fread2(ks->f, ks->buf, ks->bufsize);
               if (ks->end < ks->bufsize) ks->is_eof = 1;
               if (ks->end == 0) break;
           } else break;
@@ -98,8 +98,8 @@ fmap_stream_getuntil(fmap_stream_t *ks, int delimiter, fmap_string_t *str, int *
       }
       if (str->m - str->l < i - ks->begin + 1) {
           str->m = str->l + (i - ks->begin) + 1;
-          fmap_roundup32(str->m);
-          str->s = fmap_realloc(str->s, str->m, "str->s");
+          tmap_roundup32(str->m);
+          str->s = tmap_realloc(str->s, str->m, "str->s");
       }
       memcpy(str->s + str->l, ks->buf + ks->begin, i - ks->begin);
       str->l = str->l + (i - ks->begin);
@@ -113,26 +113,26 @@ fmap_stream_getuntil(fmap_stream_t *ks, int delimiter, fmap_string_t *str, int *
   return str->l;
 }
 
-inline fmap_fq_io_t *
-fmap_fq_io_init(fmap_file_t *fp)
+inline tmap_fq_io_t *
+tmap_fq_io_init(tmap_file_t *fp)
 {
-  fmap_fq_io_t *s = fmap_calloc(1, sizeof(fmap_fq_io_t), "s");
-  s->f = fmap_stream_init(fp, FMAP_STREAM_BUFFER_SIZE);
+  tmap_fq_io_t *s = tmap_calloc(1, sizeof(tmap_fq_io_t), "s");
+  s->f = tmap_stream_init(fp, TMAP_STREAM_BUFFER_SIZE);
   return s;
 }
 
 static inline void 
-fmap_fq_io_rewind(fmap_fq_io_t *fq)
+tmap_fq_io_rewind(tmap_fq_io_t *fq)
 {
   fq->last_char = 0;
   fq->f->is_eof = fq->f->begin = fq->f->end = 0;
 }
 
 inline void 
-fmap_fq_io_destroy(fmap_fq_io_t *fqio)
+tmap_fq_io_destroy(tmap_fq_io_t *fqio)
 {
   if(NULL == fqio) return;
-  fmap_stream_destroy(fqio->f);
+  tmap_stream_destroy(fqio->f);
   free(fqio);
 }
 
@@ -142,24 +142,24 @@ fmap_fq_io_destroy(fmap_fq_io_t *fqio)
    -2   truncated quality string
    */
 int 
-fmap_fq_io_read(fmap_fq_io_t *fqio, fmap_fq_t *fq)
+tmap_fq_io_read(tmap_fq_io_t *fqio, tmap_fq_t *fq)
 {
   int c;
-  fmap_stream_t *ks = fqio->f;
+  tmap_stream_t *ks = fqio->f;
   if (fqio->last_char == 0) { /* then jump to the next header line */
-      while ((c = fmap_stream_getc(ks)) != -1 && c != '>' && c != '@');
+      while ((c = tmap_stream_getc(ks)) != -1 && c != '>' && c != '@');
       if (c == -1) return -1; /* end of file */
       fqio->last_char = c;
   } /* the first header char has been read */
   fq->comment->l = fq->seq->l = fq->qual->l = 0;
-  if (fmap_stream_getuntil(ks, 0, fq->name, &c) < 0) return -1;
-  if (c != '\n') fmap_stream_getuntil(ks, '\n', fq->comment, 0);
-  while ((c = fmap_stream_getc(ks)) != -1 && c != '>' && c != '+' && c != '@') {
+  if (tmap_stream_getuntil(ks, 0, fq->name, &c) < 0) return -1;
+  if (c != '\n') tmap_stream_getuntil(ks, '\n', fq->comment, 0);
+  while ((c = tmap_stream_getc(ks)) != -1 && c != '>' && c != '+' && c != '@') {
       if (isgraph(c)) { /* printable non-space character */
           if (fq->seq->l + 1 >= fq->seq->m) { /* double the memory */
               fq->seq->m = fq->seq->l + 2;
-              fmap_roundup32(fq->seq->m); /* rounded to next closest 2^k */
-              fq->seq->s = fmap_realloc(fq->seq->s, fq->seq->m, "fq->seq->s");
+              tmap_roundup32(fq->seq->m); /* rounded to next closest 2^k */
+              fq->seq->s = tmap_realloc(fq->seq->s, fq->seq->m, "fq->seq->s");
           }
           fq->seq->s[fq->seq->l++] = (char)c;
       }
@@ -169,11 +169,11 @@ fmap_fq_io_read(fmap_fq_io_t *fqio, fmap_fq_t *fq)
   if (c != '+') return fq->seq->l; /* FASTA */
   if (fq->qual->m < fq->seq->m) {	/* allocate enough memory */
       fq->qual->m = fq->seq->m;
-      fq->qual->s = fmap_realloc(fq->qual->s, fq->qual->m, "fq->qual->s");
+      fq->qual->s = tmap_realloc(fq->qual->s, fq->qual->m, "fq->qual->s");
   }
-  while ((c = fmap_stream_getc(ks)) != -1 && c != '\n'); /* skip the rest of '+' line */
+  while ((c = tmap_stream_getc(ks)) != -1 && c != '\n'); /* skip the rest of '+' line */
   if (c == -1) return -2; /* we should not stop here */
-  while ((c = fmap_stream_getc(ks)) != -1 && fq->qual->l < fq->seq->l)
+  while ((c = tmap_stream_getc(ks)) != -1 && fq->qual->l < fq->seq->l)
     if (c >= 33 && c <= 127) fq->qual->s[fq->qual->l++] = (unsigned char)c;
   fq->qual->s[fq->qual->l] = 0; /* null terminated string */
   fqio->last_char = 0;	/* we have not come to the next header line */
@@ -182,13 +182,13 @@ fmap_fq_io_read(fmap_fq_io_t *fqio, fmap_fq_t *fq)
 }
 
 int
-fmap_fq_io_read_buffer(fmap_fq_io_t *fqio, fmap_fq_t **fq_buffer, int32_t buffer_length)
+tmap_fq_io_read_buffer(tmap_fq_io_t *fqio, tmap_fq_t **fq_buffer, int32_t buffer_length)
 {
   int32_t n = 0;
   
   if(buffer_length <= 0) return 0;
 
-  while(n < buffer_length && 0 <= fmap_fq_io_read(fqio, fq_buffer[n])) {
+  while(n < buffer_length && 0 <= tmap_fq_io_read(fqio, fq_buffer[n])) {
       n++;
   }
 

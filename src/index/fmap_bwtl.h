@@ -1,5 +1,5 @@
-#ifndef FMAP_BWT_LITE_H_
-#define FMAP_BWT_LITE_H_
+#ifndef TMAP_BWT_LITE_H_
+#define TMAP_BWT_LITE_H_
 
 #include <stdint.h>
 
@@ -21,16 +21,16 @@ typedef struct {
     uint32_t *sa;  /*!< the suffix array */
     uint32_t L2[5];  /*!< C(), cumulative count */
     uint32_t cnt_table[256];  /*!< occurrence array */
-} fmap_bwtl_t;
+} tmap_bwtl_t;
 
 /*! 
   @param  b   pointer to the bwt light-weight structure
   @param  k   the zero-based index of the bwt character to retrieve
   @return     the bwt character from the $-removed BWT string.
-  @details    Note that fmap_bwt_t::bwt is not exactly the BWT string 
-  and therefore this define is called fmap_bwtl_B0 instead of fmap_bwtl_B. 
+  @details    Note that tmap_bwt_t::bwt is not exactly the BWT string 
+  and therefore this define is called tmap_bwtl_B0 instead of tmap_bwtl_B. 
   */
-#define fmap_bwtl_B0(b, k) ((b)->bwt[(k)>>4]>>((~(k)&0xf)<<1)&3)
+#define tmap_bwtl_B0(b, k) ((b)->bwt[(k)>>4]>>((~(k)&0xf)<<1)&3)
 
 /*! 
   creates a light-weight bwt from the given sequence
@@ -38,8 +38,8 @@ typedef struct {
   @param  seq  the sequence
   @return      a pointer to the initalized bwt-light-weight structure
   */
-fmap_bwtl_t *
-fmap_bwtl_seq2bwtl(int32_t len, const uint8_t *seq);
+tmap_bwtl_t *
+tmap_bwtl_seq2bwtl(int32_t len, const uint8_t *seq);
 
 /*! 
   calculates the next occurrence given the previous occurence and the next base
@@ -49,7 +49,7 @@ fmap_bwtl_seq2bwtl(int32_t len, const uint8_t *seq);
   @return       the next occurrence given the base
   */
 inline uint32_t 
-fmap_bwtl_occ(const fmap_bwtl_t *bwtl, uint32_t k, uint8_t c);
+tmap_bwtl_occ(const tmap_bwtl_t *bwtl, uint32_t k, uint8_t c);
 
 /*! 
   calculates the next occurrences given the previous occurence for all four bases
@@ -58,7 +58,7 @@ fmap_bwtl_occ(const fmap_bwtl_t *bwtl, uint32_t k, uint8_t c);
   @param  cnt   pointer to the next occurences for all four bases
   */
 inline void 
-fmap_bwtl_occ4(const fmap_bwtl_t *bwtl, uint32_t k, uint32_t cnt[4]);
+tmap_bwtl_occ4(const tmap_bwtl_t *bwtl, uint32_t k, uint32_t cnt[4]);
 
 /*! 
   calculates the next SA intervals given the previous SA intervals for all four bases
@@ -70,12 +70,12 @@ fmap_bwtl_occ4(const fmap_bwtl_t *bwtl, uint32_t k, uint32_t cnt[4]);
   @details      more efficient version of bwt_occ4 but requires that k <= l (not checked)
   */
 inline void 
-fmap_bwtl_2occ4(const fmap_bwtl_t *bwtl, uint32_t k, uint32_t l, uint32_t cntk[4], uint32_t cntl[4]);
+tmap_bwtl_2occ4(const tmap_bwtl_t *bwtl, uint32_t k, uint32_t l, uint32_t cntk[4], uint32_t cntl[4]);
 
 /*! 
   @param  bwtl  pointer to the bwt structure 
   */
 void 
-fmap_bwtl_destroy(fmap_bwtl_t *bwtl);
+tmap_bwtl_destroy(tmap_bwtl_t *bwtl);
 
 #endif

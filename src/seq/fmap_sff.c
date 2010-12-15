@@ -3,29 +3,29 @@
 #include <netinet/in.h>
 #include <config.h>
 
-#include "../util/fmap_error.h"
-#include "../util/fmap_alloc.h"
-#include "../util/fmap_definitions.h"
-#include "../io/fmap_file.h"
-#include "fmap_sff.h"
+#include "../util/tmap_error.h"
+#include "../util/tmap_alloc.h"
+#include "../util/tmap_definitions.h"
+#include "../io/tmap_file.h"
+#include "tmap_sff.h"
 
 static inline uint32_t
-fmap_sff_read_padding(fmap_file_t *fp, uint32_t n)
+tmap_sff_read_padding(tmap_file_t *fp, uint32_t n)
 {
   char padding[8]="\0";
   n = (n & 7); // (n % 8)
   if(0 != n) {
       n = 8 - n; // number of bytes of padding
-      if(n != fmap_file_fread(padding, sizeof(char), n, fp)) {
-          fmap_error("fmap_file_fread", Exit, ReadFileError);
+      if(n != tmap_file_fread(padding, sizeof(char), n, fp)) {
+          tmap_error("tmap_file_fread", Exit, ReadFileError);
       }
   }
   return n;
 }
 
-#ifdef FMAP_SFF_DEBUG
+#ifdef TMAP_SFF_DEBUG
 static void
-fmap_sff_header_print(FILE *fp, fmap_sff_header_t *h)
+tmap_sff_header_print(FILE *fp, tmap_sff_header_t *h)
 {
   fprintf(stderr, "** SFF HEADER - START **\n");
   fprintf(stderr, "magic=%u\n", h->magic);
@@ -43,24 +43,24 @@ fmap_sff_header_print(FILE *fp, fmap_sff_header_t *h)
 }
 #endif
 
-fmap_sff_header_t *
-fmap_sff_header_read(fmap_file_t *fp)
+tmap_sff_header_t *
+tmap_sff_header_read(tmap_file_t *fp)
 {
-  fmap_sff_header_t *h = NULL;
+  tmap_sff_header_t *h = NULL;
   uint32_t n = 0;
 
-  h = fmap_calloc(1, sizeof(fmap_sff_header_t), "h");
+  h = tmap_calloc(1, sizeof(tmap_sff_header_t), "h");
 
-  if(1 != fmap_file_fread(&h->magic, sizeof(uint32_t), 1, fp)
-     || 1 != fmap_file_fread(&h->version, sizeof(uint32_t), 1, fp)
-     || 1 != fmap_file_fread(&h->index_offset, sizeof(uint64_t), 1, fp)
-     || 1 != fmap_file_fread(&h->index_length, sizeof(uint32_t), 1, fp)
-     || 1 != fmap_file_fread(&h->n_reads, sizeof(uint32_t), 1, fp)
-     || 1 != fmap_file_fread(&h->gheader_length, sizeof(uint16_t), 1, fp)
-     || 1 != fmap_file_fread(&h->key_length, sizeof(uint16_t), 1, fp)
-     || 1 != fmap_file_fread(&h->flow_length, sizeof(uint16_t), 1, fp)
-     || 1 != fmap_file_fread(&h->flowgram_format, sizeof(uint8_t), 1, fp)) {
-      fmap_error("fmap_file_fread", Exit, ReadFileError);
+  if(1 != tmap_file_fread(&h->magic, sizeof(uint32_t), 1, fp)
+     || 1 != tmap_file_fread(&h->version, sizeof(uint32_t), 1, fp)
+     || 1 != tmap_file_fread(&h->index_offset, sizeof(uint64_t), 1, fp)
+     || 1 != tmap_file_fread(&h->index_length, sizeof(uint32_t), 1, fp)
+     || 1 != tmap_file_fread(&h->n_reads, sizeof(uint32_t), 1, fp)
+     || 1 != tmap_file_fread(&h->gheader_length, sizeof(uint16_t), 1, fp)
+     || 1 != tmap_file_fread(&h->key_length, sizeof(uint16_t), 1, fp)
+     || 1 != tmap_file_fread(&h->flow_length, sizeof(uint16_t), 1, fp)
+     || 1 != tmap_file_fread(&h->flowgram_format, sizeof(uint8_t), 1, fp)) {
+      tmap_error("tmap_file_fread", Exit, ReadFileError);
   }
   n += 4*sizeof(uint32_t) + sizeof(uint64_t) + 3*sizeof(uint16_t) + sizeof(uint8_t);
 
@@ -74,19 +74,19 @@ fmap_sff_header_read(fmap_file_t *fp)
   h->key_length = ntohs(h->key_length);
   h->flow_length = ntohs(h->flow_length);
 
-  if(FMAP_SFF_MAGIC != h->magic) {
-      fmap_error("SFF magic number did not match", Exit, ReadFileError);
+  if(TMAP_SFF_MAGIC != h->magic) {
+      tmap_error("SFF magic number did not match", Exit, ReadFileError);
   }
-  if(h->version != FMAP_SFF_VERSION) {
-      fmap_error("SFF version number did not match", Exit, ReadFileError);
+  if(h->version != TMAP_SFF_VERSION) {
+      tmap_error("SFF version number did not match", Exit, ReadFileError);
   }
 
-  h->flow = fmap_string_init(h->flow_length+1);
-  h->key = fmap_string_init(h->key_length+1);
+  h->flow = tmap_string_init(h->flow_length+1);
+  h->key = tmap_string_init(h->key_length+1);
 
-  if(h->flow_length != fmap_file_fread(h->flow->s, sizeof(char), h->flow_length, fp)
-     || h->key_length != fmap_file_fread(h->key->s, sizeof(char), h->key_length, fp)) {
-      fmap_error("fmap_file_fread", Exit, ReadFileError);
+  if(h->flow_length != tmap_file_fread(h->flow->s, sizeof(char), h->flow_length, fp)
+     || h->key_length != tmap_file_fread(h->key->s, sizeof(char), h->key_length, fp)) {
+      tmap_error("tmap_file_fread", Exit, ReadFileError);
   }
   n += sizeof(char)*(h->flow_length + h->key_length);
 
@@ -96,31 +96,31 @@ fmap_sff_header_read(fmap_file_t *fp)
   h->flow->s[h->flow->l]='\0';
   h->key->s[h->key->l]='\0';
 
-  n += fmap_sff_read_padding(fp, n);
+  n += tmap_sff_read_padding(fp, n);
 
-#ifdef FMAP_SFF_DEBUG
-  fmap_sff_header_print(stderr, h);
+#ifdef TMAP_SFF_DEBUG
+  tmap_sff_header_print(stderr, h);
 #endif
 
   if(h->gheader_length != n) {
-      fmap_error("SFF global header length did not match", Exit, ReadFileError);
+      tmap_error("SFF global header length did not match", Exit, ReadFileError);
   }
 
   return h;
 }
 
 void
-fmap_sff_header_destroy(fmap_sff_header_t *h)
+tmap_sff_header_destroy(tmap_sff_header_t *h)
 {
   if(NULL == h) return;
-  fmap_string_destroy(h->flow);
-  fmap_string_destroy(h->key);
+  tmap_string_destroy(h->flow);
+  tmap_string_destroy(h->key);
   free(h);
 }
 
-#ifdef FMAP_SFF_DEBUG
+#ifdef TMAP_SFF_DEBUG
 static void
-fmap_sff_read_header_print(FILE *fp, fmap_sff_read_header_t *rh)
+tmap_sff_read_header_print(FILE *fp, tmap_sff_read_header_t *rh)
 {
   fprintf(stderr, "** SFF READ HEADER - START **\n");
   fprintf(stderr, "rheader_length=%u\n", rh->rheader_length);
@@ -135,22 +135,22 @@ fmap_sff_read_header_print(FILE *fp, fmap_sff_read_header_t *rh)
 }
 #endif
 
-fmap_sff_read_header_t *
-fmap_sff_read_header_read(fmap_file_t *fp)
+tmap_sff_read_header_t *
+tmap_sff_read_header_read(tmap_file_t *fp)
 {
-  fmap_sff_read_header_t *rh = NULL;
+  tmap_sff_read_header_t *rh = NULL;
   uint32_t n = 0;
 
-  rh = fmap_calloc(1, sizeof(fmap_sff_read_header_t), "rh");
+  rh = tmap_calloc(1, sizeof(tmap_sff_read_header_t), "rh");
 
-  if(1 != fmap_file_fread(&rh->rheader_length, sizeof(uint16_t), 1, fp)
-     || 1 != fmap_file_fread(&rh->name_length, sizeof(uint16_t), 1, fp)
-     || 1 != fmap_file_fread(&rh->n_bases, sizeof(uint32_t), 1, fp)
-     || 1 != fmap_file_fread(&rh->clip_qual_left, sizeof(uint16_t), 1, fp)
-     || 1 != fmap_file_fread(&rh->clip_qual_right, sizeof(uint16_t), 1, fp)
-     || 1 != fmap_file_fread(&rh->clip_adapter_left, sizeof(uint16_t), 1, fp)
-     || 1 != fmap_file_fread(&rh->clip_adapter_right, sizeof(uint16_t), 1, fp)) {
-      fmap_error("fmap_file_fread", Exit, ReadFileError);
+  if(1 != tmap_file_fread(&rh->rheader_length, sizeof(uint16_t), 1, fp)
+     || 1 != tmap_file_fread(&rh->name_length, sizeof(uint16_t), 1, fp)
+     || 1 != tmap_file_fread(&rh->n_bases, sizeof(uint32_t), 1, fp)
+     || 1 != tmap_file_fread(&rh->clip_qual_left, sizeof(uint16_t), 1, fp)
+     || 1 != tmap_file_fread(&rh->clip_qual_right, sizeof(uint16_t), 1, fp)
+     || 1 != tmap_file_fread(&rh->clip_adapter_left, sizeof(uint16_t), 1, fp)
+     || 1 != tmap_file_fread(&rh->clip_adapter_right, sizeof(uint16_t), 1, fp)) {
+      tmap_error("tmap_file_fread", Exit, ReadFileError);
   }
   n += sizeof(uint32_t) + 6*sizeof(uint16_t);
 
@@ -163,10 +163,10 @@ fmap_sff_read_header_read(fmap_file_t *fp)
   rh->clip_adapter_left = ntohs(rh->clip_adapter_left);
   rh->clip_adapter_right = ntohs(rh->clip_adapter_left);
 
-  rh->name = fmap_string_init(rh->name_length+1);
+  rh->name = tmap_string_init(rh->name_length+1);
 
-  if(rh->name_length != fmap_file_fread(rh->name->s, sizeof(char), rh->name_length, fp)) {
-      fmap_error("fmap_file_fread", Exit, ReadFileError);
+  if(rh->name_length != tmap_file_fread(rh->name->s, sizeof(char), rh->name_length, fp)) {
+      tmap_error("tmap_file_fread", Exit, ReadFileError);
   }
   n += sizeof(char)*rh->name_length;
 
@@ -174,33 +174,33 @@ fmap_sff_read_header_read(fmap_file_t *fp)
   rh->name->l = rh->name_length;
   rh->name->s[rh->name->l]='\0';
 
-  n += fmap_sff_read_padding(fp, n);
+  n += tmap_sff_read_padding(fp, n);
 
-#ifdef FMAP_SFF_DEBUG
-  fmap_sff_read_header_print(stderr, rh);
+#ifdef TMAP_SFF_DEBUG
+  tmap_sff_read_header_print(stderr, rh);
 #endif
 
   if(rh->rheader_length != n) {
-      fmap_error("SFF read header length did not match", Exit, ReadFileError);
+      tmap_error("SFF read header length did not match", Exit, ReadFileError);
   }
 
   return rh;
 }
 
 void
-fmap_sff_read_header_destroy(fmap_sff_read_header_t *rh)
+tmap_sff_read_header_destroy(tmap_sff_read_header_t *rh)
 {
   if(NULL == rh) return;
-  fmap_string_destroy(rh->name);
+  tmap_string_destroy(rh->name);
   free(rh);
 }
 
-static fmap_sff_read_header_t *
-fmap_sff_read_header_clone(fmap_sff_read_header_t *rh)
+static tmap_sff_read_header_t *
+tmap_sff_read_header_clone(tmap_sff_read_header_t *rh)
 {
-  fmap_sff_read_header_t *ret = NULL;
+  tmap_sff_read_header_t *ret = NULL;
 
-  ret = fmap_calloc(1, sizeof(fmap_sff_read_header_t), "rh");
+  ret = tmap_calloc(1, sizeof(tmap_sff_read_header_t), "rh");
 
   ret->rheader_length = rh->rheader_length; 
   ret->name_length = rh->name_length; 
@@ -209,14 +209,14 @@ fmap_sff_read_header_clone(fmap_sff_read_header_t *rh)
   ret->clip_qual_right = rh->clip_qual_left; 
   ret->clip_adapter_left = rh->clip_adapter_left; 
   ret->clip_adapter_right = rh->clip_adapter_left; 
-  ret->name = fmap_string_clone(rh->name);
+  ret->name = tmap_string_clone(rh->name);
 
   return ret;
 }
 
-#ifdef FMAP_SFF_DEBUG
+#ifdef TMAP_SFF_DEBUG
 static void
-fmap_sff_read_print(FILE *fp, fmap_sff_read_t *r, fmap_sff_header_t *gh, fmap_sff_read_header_t *rh)
+tmap_sff_read_print(FILE *fp, tmap_sff_read_t *r, tmap_sff_header_t *gh, tmap_sff_read_header_t *rh)
 {
   uint32_t i;
 
@@ -241,25 +241,25 @@ fmap_sff_read_print(FILE *fp, fmap_sff_read_t *r, fmap_sff_header_t *gh, fmap_sf
 }
 #endif
 
-fmap_sff_read_t *
-fmap_sff_read_read(fmap_file_t *fp, fmap_sff_header_t *gh, fmap_sff_read_header_t *rh)
+tmap_sff_read_t *
+tmap_sff_read_read(tmap_file_t *fp, tmap_sff_header_t *gh, tmap_sff_read_header_t *rh)
 {
-  fmap_sff_read_t *r = NULL;
+  tmap_sff_read_t *r = NULL;
   uint32_t i, n = 0;
 
-  r = fmap_calloc(1, sizeof(fmap_sff_read_t), "r");
+  r = tmap_calloc(1, sizeof(tmap_sff_read_t), "r");
 
-  r->flowgram = fmap_malloc(sizeof(uint16_t)*gh->flow_length, "r->flowgram");
-  r->flow_index = fmap_malloc(sizeof(uint8_t)*rh->n_bases, "r->flow_index");
+  r->flowgram = tmap_malloc(sizeof(uint16_t)*gh->flow_length, "r->flowgram");
+  r->flow_index = tmap_malloc(sizeof(uint8_t)*rh->n_bases, "r->flow_index");
 
-  r->bases = fmap_string_init(rh->n_bases+1);
-  r->quality = fmap_string_init(rh->n_bases+1);
+  r->bases = tmap_string_init(rh->n_bases+1);
+  r->quality = tmap_string_init(rh->n_bases+1);
 
-  if(gh->flow_length != fmap_file_fread(r->flowgram, sizeof(uint16_t), gh->flow_length, fp)
-     || rh->n_bases != fmap_file_fread(r->flow_index, sizeof(uint8_t), rh->n_bases, fp)
-     || rh->n_bases != fmap_file_fread(r->bases->s, sizeof(char), rh->n_bases, fp)
-     || rh->n_bases != fmap_file_fread(r->quality->s, sizeof(char), rh->n_bases, fp)) {
-      fmap_error("fmap_file_fread", Exit, ReadFileError);
+  if(gh->flow_length != tmap_file_fread(r->flowgram, sizeof(uint16_t), gh->flow_length, fp)
+     || rh->n_bases != tmap_file_fread(r->flow_index, sizeof(uint8_t), rh->n_bases, fp)
+     || rh->n_bases != tmap_file_fread(r->bases->s, sizeof(char), rh->n_bases, fp)
+     || rh->n_bases != tmap_file_fread(r->quality->s, sizeof(char), rh->n_bases, fp)) {
+      tmap_error("tmap_file_fread", Exit, ReadFileError);
   }
   n += sizeof(uint16_t)*gh->flow_length + 3*sizeof(uint8_t)*rh->n_bases;
 
@@ -279,57 +279,57 @@ fmap_sff_read_read(fmap_file_t *fp, fmap_sff_header_t *gh, fmap_sff_read_header_
       r->flowgram[i] = ntohs(r->flowgram[i]);
   }
 
-  n += fmap_sff_read_padding(fp, n);
+  n += tmap_sff_read_padding(fp, n);
 
-#ifdef FMAP_SFF_DEBUG
-  fmap_sff_read_print(stderr, r, gh, rh);
+#ifdef TMAP_SFF_DEBUG
+  tmap_sff_read_print(stderr, r, gh, rh);
 #endif
 
   return r;
 }
 
 void
-fmap_sff_read_destroy(fmap_sff_read_t *r)
+tmap_sff_read_destroy(tmap_sff_read_t *r)
 {
   if(NULL == r) return;
   free(r->flowgram);
   free(r->flow_index);
-  fmap_string_destroy(r->bases);
-  fmap_string_destroy(r->quality);
+  tmap_string_destroy(r->bases);
+  tmap_string_destroy(r->quality);
   free(r);
 
 }
 
-static fmap_sff_read_t *
-fmap_sff_read_clone(fmap_sff_read_t *r, fmap_sff_header_t *gh, fmap_sff_read_header_t *rh)
+static tmap_sff_read_t *
+tmap_sff_read_clone(tmap_sff_read_t *r, tmap_sff_header_t *gh, tmap_sff_read_header_t *rh)
 {
-  fmap_sff_read_t *ret = NULL;
+  tmap_sff_read_t *ret = NULL;
   int32_t i;
 
-  ret = fmap_calloc(1, sizeof(fmap_sff_read_t), "r");
+  ret = tmap_calloc(1, sizeof(tmap_sff_read_t), "r");
 
-  ret->flowgram = fmap_malloc(sizeof(uint16_t)*gh->flow_length, "ret->flowgram");
+  ret->flowgram = tmap_malloc(sizeof(uint16_t)*gh->flow_length, "ret->flowgram");
   for(i=0;i<gh->flow_length;i++) {
       ret->flowgram[i] = r->flowgram[i];
   }
 
-  ret->flow_index = fmap_malloc(sizeof(uint8_t)*rh->n_bases, "ret->flow_index");
+  ret->flow_index = tmap_malloc(sizeof(uint8_t)*rh->n_bases, "ret->flow_index");
   for(i=0;i<rh->n_bases;i++) {
       ret->flow_index[i] = r->flow_index[i];
   }
 
-  ret->bases = fmap_string_clone(r->bases);
-  ret->quality = fmap_string_clone(r->quality);
+  ret->bases = tmap_string_clone(r->bases);
+  ret->quality = tmap_string_clone(r->quality);
 
   return ret;
 }
 
-fmap_sff_t *
-fmap_sff_init()
+tmap_sff_t *
+tmap_sff_init()
 {
-  fmap_sff_t *sff = NULL;
+  tmap_sff_t *sff = NULL;
 
-  sff = fmap_calloc(1, sizeof(fmap_sff_t), "sff");
+  sff = tmap_calloc(1, sizeof(tmap_sff_t), "sff");
   sff->gheader = NULL;
   sff->rheader = NULL;
   sff->read = NULL;
@@ -338,31 +338,31 @@ fmap_sff_init()
 }
 
 void 
-fmap_sff_destroy(fmap_sff_t *sff)
+tmap_sff_destroy(tmap_sff_t *sff)
 {
   if(NULL == sff) return;
-  fmap_sff_read_header_destroy(sff->rheader);
-  fmap_sff_read_destroy(sff->read);
+  tmap_sff_read_header_destroy(sff->rheader);
+  tmap_sff_read_destroy(sff->read);
   free(sff);
 }
 
-fmap_sff_t *
-fmap_sff_clone(fmap_sff_t *sff)
+tmap_sff_t *
+tmap_sff_clone(tmap_sff_t *sff)
 {
-  fmap_sff_t *ret = NULL;
+  tmap_sff_t *ret = NULL;
 
-  ret = fmap_sff_init();
+  ret = tmap_sff_init();
 
   ret->gheader = sff->gheader;
-  ret->rheader = fmap_sff_read_header_clone(sff->rheader);
-  ret->read = fmap_sff_read_clone(sff->read, sff->gheader, sff->rheader);
+  ret->rheader = tmap_sff_read_header_clone(sff->rheader);
+  ret->read = tmap_sff_read_clone(sff->read, sff->gheader, sff->rheader);
 
   return ret;
 
 }
 
 void
-fmap_sff_reverse_compliment(fmap_sff_t *sff)
+tmap_sff_reverse_compliment(tmap_sff_t *sff)
 {
   int32_t i;
 
@@ -379,24 +379,24 @@ fmap_sff_reverse_compliment(fmap_sff_t *sff)
       sff->read->flow_index[i] = tmp;
   }
   // reverse compliment the bases
-  fmap_string_reverse_compliment(sff->read->bases, sff->is_int);
+  tmap_string_reverse_compliment(sff->read->bases, sff->is_int);
   // reverse the qualities
-  fmap_string_reverse(sff->read->quality);
+  tmap_string_reverse(sff->read->quality);
 }
 
 void
-fmap_sff_to_int(fmap_sff_t *sff)
+tmap_sff_to_int(tmap_sff_t *sff)
 {
   int32_t i;
   if(1 == sff->is_int) return;
   for(i=0;i<sff->read->bases->l;i++) {
-      sff->read->bases->s[i] = fmap_nt_char_to_int[(int)sff->read->bases->s[i]];
+      sff->read->bases->s[i] = tmap_nt_char_to_int[(int)sff->read->bases->s[i]];
   }
   sff->is_int = 1;
 }
 
 void
-fmap_sff_to_char(fmap_sff_t *sff)
+tmap_sff_to_char(tmap_sff_t *sff)
 {
   int32_t i;
   if(0 == sff->is_int) return;
@@ -406,20 +406,20 @@ fmap_sff_to_char(fmap_sff_t *sff)
   sff->is_int = 0;
 }
 
-inline fmap_string_t *
-fmap_sff_get_bases(fmap_sff_t *sff)
+inline tmap_string_t *
+tmap_sff_get_bases(tmap_sff_t *sff)
 {
   return sff->read->bases;
 }
 
-inline fmap_string_t *
-fmap_sff_get_qualities(fmap_sff_t *sff)
+inline tmap_string_t *
+tmap_sff_get_qualities(tmap_sff_t *sff)
 {
   return sff->read->quality;
 }
 
 inline void
-fmap_sff_remove_key_sequence(fmap_sff_t *sff)
+tmap_sff_remove_key_sequence(tmap_sff_t *sff)
 {
   int32_t i;
   // remove the key sequence

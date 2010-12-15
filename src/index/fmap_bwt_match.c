@@ -1,17 +1,17 @@
 #include <stdlib.h>
 #include <unistd.h>
-#include "fmap_bwt.h"
-#include "fmap_bwt_match.h"
+#include "tmap_bwt.h"
+#include "tmap_bwt_match.h"
 
 inline void
-fmap_bwt_match_occ(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, uint8_t c, fmap_bwt_match_occ_t *next)
+tmap_bwt_match_occ(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8_t c, tmap_bwt_match_occ_t *next)
 {
   uint32_t offset;
   offset = (NULL == prev) ? 0 : prev->offset;
   if(bwt->hash_width <= offset) { // do not use the hash
       uint32_t prev_k;
       prev_k = (NULL == prev) ? 0 : prev->k;
-      next->k = fmap_bwt_occ(bwt, prev_k-1, c) + bwt->L2[c] + 1;
+      next->k = tmap_bwt_occ(bwt, prev_k-1, c) + bwt->L2[c] + 1;
       next->offset = offset + 1;
       next->hi = UINT32_MAX;
       next->l = UINT32_MAX; 
@@ -26,7 +26,7 @@ fmap_bwt_match_occ(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, uint8_t c,
 }
 
 inline void
-fmap_bwt_match_2occ(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, uint8_t c, fmap_bwt_match_occ_t *next)
+tmap_bwt_match_2occ(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8_t c, tmap_bwt_match_occ_t *next)
 {
   uint32_t offset;
   offset = (NULL == prev) ? 0 : prev->offset;
@@ -34,7 +34,7 @@ fmap_bwt_match_2occ(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, uint8_t c
       uint32_t prev_k, prev_l;
       prev_k = (NULL == prev) ? 0 : prev->k;
       prev_l = (NULL == prev) ? bwt->seq_len : prev->l;
-      fmap_bwt_2occ(bwt, prev_k-1, prev_l, c, &next->k, &next->l);
+      tmap_bwt_2occ(bwt, prev_k-1, prev_l, c, &next->k, &next->l);
       next->offset = offset + 1;
       next->hi = UINT32_MAX;
       next->k += bwt->L2[c] + 1;
@@ -50,7 +50,7 @@ fmap_bwt_match_2occ(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, uint8_t c
 }
 
 inline void
-fmap_bwt_match_occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt_match_occ_t next[4])
+tmap_bwt_match_occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, tmap_bwt_match_occ_t next[4])
 {
   uint32_t i, offset;
   offset = (NULL == prev) ? 0 : prev->offset;
@@ -58,7 +58,7 @@ fmap_bwt_match_occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt_
       uint32_t cntk[4];
       uint32_t prev_k;
       prev_k = (NULL == prev) ? 0 : prev->k;
-      fmap_bwt_occ4(bwt, prev_k-1, cntk);
+      tmap_bwt_occ4(bwt, prev_k-1, cntk);
       for(i=0;i<4;i++) {
           next[i].offset = offset + 1;
           next[i].hi = UINT32_MAX;
@@ -78,7 +78,7 @@ fmap_bwt_match_occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt_
 }
 
 inline void
-fmap_bwt_match_2occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt_match_occ_t next[4])
+tmap_bwt_match_2occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, tmap_bwt_match_occ_t next[4])
 {
   uint32_t i, offset;
   offset = (NULL == prev) ? 0 : prev->offset;
@@ -87,7 +87,7 @@ fmap_bwt_match_2occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt
       uint32_t prev_k, prev_l;
       prev_k = (NULL == prev) ? 0 : prev->k;
       prev_l = (NULL == prev) ? bwt->seq_len : prev->l;
-      fmap_bwt_2occ4(bwt, prev_k-1, prev_l, cntk, cntl);
+      tmap_bwt_2occ4(bwt, prev_k-1, prev_l, cntk, cntl);
       for(i=0;i<4;i++) {
           next[i].offset = offset + 1;
           next[i].hi = UINT32_MAX;
@@ -107,7 +107,7 @@ fmap_bwt_match_2occ4(const fmap_bwt_t *bwt, fmap_bwt_match_occ_t *prev, fmap_bwt
 }
 
 void
-fmap_bwt_match_cal_width(const fmap_bwt_t *bwt, int len, const char *str, fmap_bwt_match_width_t *width)
+tmap_bwt_match_cal_width(const tmap_bwt_t *bwt, int len, const char *str, tmap_bwt_match_width_t *width)
 {
   // 'width[i]' is the lower bound of the number of differences in str[i,len]
   uint32_t k, l, ok, ol;
@@ -118,7 +118,7 @@ fmap_bwt_match_cal_width(const fmap_bwt_t *bwt, int len, const char *str, fmap_b
   for(i=len-1;0<=i;i--) {
       uint8_t c = (int)str[i];
       if(c < 4) {
-          fmap_bwt_2occ(bwt, k-1, l, c, &ok, &ol);
+          tmap_bwt_2occ(bwt, k-1, l, c, &ok, &ol);
           k = bwt->L2[c] + ok + 1;
           l = bwt->L2[c] + ol;
       }
@@ -133,10 +133,10 @@ fmap_bwt_match_cal_width(const fmap_bwt_t *bwt, int len, const char *str, fmap_b
 }
 
 uint32_t
-fmap_bwt_match_exact(const fmap_bwt_t *bwt, int len, const uint8_t *str, fmap_bwt_match_occ_t *match_sa)
+tmap_bwt_match_exact(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa)
 {
   int32_t i;
-  fmap_bwt_match_occ_t prev, next;
+  tmap_bwt_match_occ_t prev, next;
 
   prev.k = 0; prev.l = bwt->seq_len;
   prev.offset = 0;
@@ -145,7 +145,7 @@ fmap_bwt_match_exact(const fmap_bwt_t *bwt, int len, const uint8_t *str, fmap_bw
   for(i=0;i<len;i++) {
       uint8_t c = str[i];
       if(c > 3) return 0; // no match
-      fmap_bwt_match_2occ(bwt, &prev, c, &next);
+      tmap_bwt_match_2occ(bwt, &prev, c, &next);
       prev = next;
       if(next.k > next.l) break; // no match
   }
@@ -157,17 +157,17 @@ fmap_bwt_match_exact(const fmap_bwt_t *bwt, int len, const uint8_t *str, fmap_bw
 }
 
 uint32_t
-fmap_bwt_match_exact_alt(const fmap_bwt_t *bwt, int len, const uint8_t *str, fmap_bwt_match_occ_t *match_sa)
+tmap_bwt_match_exact_alt(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa)
 {
   int i;
-  fmap_bwt_match_occ_t prev, next;
+  tmap_bwt_match_occ_t prev, next;
 
   prev = (*match_sa);
 
   for(i=0;i<len;i++) {
       uint8_t c = str[i];
       if(c > 3) return 0; // there is an N here. no match
-      fmap_bwt_match_2occ(bwt, &prev, c, &next);
+      tmap_bwt_match_2occ(bwt, &prev, c, &next);
       prev = next;
       if(next.k > next.l) return 0; // no match
   }

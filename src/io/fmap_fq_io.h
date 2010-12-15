@@ -1,5 +1,5 @@
-#ifndef FMAP_FQ_IO_H_
-#define FMAP_FQ_IO_H_
+#ifndef TMAP_FQ_IO_H_
+#define TMAP_FQ_IO_H_
 
 /* The MIT License
 
@@ -33,14 +33,14 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "../seq/fmap_fq.h"
-#include "fmap_file.h"
+#include "../seq/tmap_fq.h"
+#include "tmap_file.h"
 
 /*! 
   A FASTQ Reading Library
   */
 
-#define FMAP_STREAM_BUFFER_SIZE 4096
+#define TMAP_STREAM_BUFFER_SIZE 4096
 
 /*! 
   */
@@ -49,32 +49,32 @@ typedef struct {
     int32_t begin;  /*!< the index of the next character in the buffer */
     int32_t end;  /*!< the number of characters last read */
     int32_t is_eof;  /*!< 1 if the EOF marker has been reached, 0 otherwise */
-    fmap_file_t *f;  /*!< the file pointer associated with this stream */
+    tmap_file_t *f;  /*!< the file pointer associated with this stream */
     int32_t bufsize;  /*!< the size of the character buffer */
-} fmap_stream_t; 
+} tmap_stream_t; 
 
 /*! 
   structure for reading FASTA/FASTQ strings
   */
 typedef struct {
     int last_char;  /*!< the last character read */
-    fmap_stream_t *f;  /*!< pointer to the file structure */
-} fmap_fq_io_t;
+    tmap_stream_t *f;  /*!< pointer to the file structure */
+} tmap_fq_io_t;
 
 /*! 
   initializes fastq reading structure
   @param  fp  a pointer to a file structure from which to read
   @return     pointer to the initialized memory for reading in fastqs
   */
-inline fmap_fq_io_t *
-fmap_fq_io_init(fmap_file_t *fp);
+inline tmap_fq_io_t *
+tmap_fq_io_init(tmap_file_t *fp);
 
 /*! 
   destroys fastq reading structure
   @param  fqio  a pointer to the fastq structure
   */
 inline void 
-fmap_fq_io_destroy(fmap_fq_io_t *fqio);
+tmap_fq_io_destroy(tmap_fq_io_t *fqio);
 
 /*! 
   reads in a reading structure
@@ -83,7 +83,7 @@ fmap_fq_io_destroy(fmap_fq_io_t *fqio);
   @return       the length of the fastq read, -1 indicates an a EOF, -2 indicates a truncated quality string
   */
 int 
-fmap_fq_io_read(fmap_fq_io_t *fqio, fmap_fq_t *fq);
+tmap_fq_io_read(tmap_fq_io_t *fqio, tmap_fq_t *fq);
 
 /*! 
   reads fastqs into a buffer
@@ -93,6 +93,6 @@ fmap_fq_io_read(fmap_fq_io_t *fqio, fmap_fq_t *fq);
   @return                the number of fastqs read
   */
 int
-fmap_fq_io_read_buffer(fmap_fq_io_t *fqio, fmap_fq_t **fq_buffer, int32_t buffer_length);
+tmap_fq_io_read_buffer(tmap_fq_io_t *fqio, tmap_fq_t **fq_buffer, int32_t buffer_length);
 
 #endif

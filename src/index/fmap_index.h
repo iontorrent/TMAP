@@ -1,16 +1,16 @@
-#ifndef FMAP_INDEX_H_
-#define FMAP_INDEX_H_
+#ifndef TMAP_INDEX_H_
+#define TMAP_INDEX_H_
 
-#define FMAP_INDEX_LARGE_GENOME 0x1000000
+#define TMAP_INDEX_LARGE_GENOME 0x1000000
 // (2^32) - 1
-#define FMAP_INDEX_TOO_BIG_GENOME 0xFFFFFFFF
+#define TMAP_INDEX_TOO_BIG_GENOME 0xFFFFFFFF
 
 /*! 
   @details  Constructs the packed reference sequence, BWT string, and Suffix Array.
   */
 
 /*! 
-  structure to store the command line options for 'fmap index'
+  structure to store the command line options for 'tmap index'
   */
 typedef struct {
     char *fn_fasta;  /*!< the fasta file name (-f) */
@@ -18,14 +18,14 @@ typedef struct {
     int32_t hash_width;  /*!< the occurrence hash width (-w) */
     int32_t sa_interval;  /*!< the suffix array interval (-i) */
     int32_t is_large;  /*!< 0 to use the short BWT construction algorith, 1 otherwise (large BWT construction algorithm) */
-} fmap_index_opt_t;
+} tmap_index_opt_t;
 
 /*! 
-  main-like function for 'fmap index'
+  main-like function for 'tmap index'
   @param  argc  the number of arguments
   @param  argv  the argument list
   @return       0 if executed successful
   */
-int fmap_index(int argc, char *argv[]);
+int tmap_index(int argc, char *argv[]);
 
 #endif
