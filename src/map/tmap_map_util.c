@@ -689,6 +689,15 @@ tmap_map_sams_realloc(tmap_map_sams_t *s, int32_t n)
       tmap_map_sam_destroy(&s->sams[i]);
   }
   s->sams = tmap_realloc(s->sams, sizeof(tmap_map_sam_t) * n, "s->sams");
+  for(i=s->n;i<n;i++) {
+      // nullify
+      s->sams[i].algo_id = TMAP_MAP_ALGO_NONE;
+      s->sams[i].n_cigar = 0;
+      s->sams[i].cigar = NULL;
+      s->sams[i].aux.map1_aux = NULL;
+      s->sams[i].aux.map2_aux = NULL;
+      s->sams[i].aux.map3_aux = NULL;
+  }
   s->n = n;
 }
 
