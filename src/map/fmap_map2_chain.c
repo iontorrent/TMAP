@@ -14,7 +14,7 @@
 FMAP_SORT_INIT(fmap_map2_chain, fmap_map2_chain_t, _fmap_map2_chain_lt)
 
 static int 
-fmap_map2_chain_chaining(const fmap_map2_opt_t *opt, int shift, int n, fmap_map2_chain_t *z, fmap_map2_chain_t *chain)
+fmap_map2_chain_chaining(const fmap_map_opt_t *opt, int shift, int n, fmap_map2_chain_t *z, fmap_map2_chain_t *chain)
 {
   int32_t j, k, m = 0;
   fmap_sort_introsort(fmap_map2_chain, n, z);
@@ -43,7 +43,7 @@ fmap_map2_chain_chaining(const fmap_map2_opt_t *opt, int shift, int n, fmap_map2
 }
 
 void 
-fmap_map2_chain_filter(const fmap_map2_opt_t *opt, int len, fmap_map2_aln_t *b[2])
+fmap_map2_chain_filter(const fmap_map_opt_t *opt, int len, fmap_map2_aln_t *b[2])
 {
   fmap_map2_chain_t *z[2], *chain[2];
   int32_t i, j, k, n[2], m[2];

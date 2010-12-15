@@ -23,7 +23,7 @@
   @return             a set of alignments
   */
 fmap_map2_aln_t **
-fmap_map2_core_aln(const fmap_map2_opt_t *opt, const fmap_bwtl_t *target, 
+fmap_map2_core_aln(const fmap_map_opt_t *opt, const fmap_bwtl_t *target, 
                const fmap_bwt_t *query_bwt, const fmap_sa_t *query_sa,
                fmap_map2_global_mempool_t *pool);
 

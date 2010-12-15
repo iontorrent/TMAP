@@ -51,7 +51,7 @@ static int32_t fmap_map_all_read_lock_low = 0;
 #endif
 
 static inline void
-fmap_map_all_mapq(fmap_map_sams_t *sams, fmap_map_all_opt_t *opt)
+fmap_map_all_mapq(fmap_map_sams_t *sams, fmap_map_opt_t *opt)
 {
   int32_t i;
   int32_t n_best = 0, n_best_subo = 0;
@@ -215,7 +215,7 @@ fmap_map_all_remove_duplicates(fmap_map_sams_t *sams, int32_t dup_window)
 static fmap_map_sams_t *
 fmap_map_all_sams_merge(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt[2], fmap_sa_t *sa[2],
                        fmap_map_sams_t *sams_map1, fmap_map_sams_t *sams_map2, fmap_map_sams_t *sams_map3,
-                       int32_t stage, fmap_map_all_opt_t *opt)
+                       int32_t stage, fmap_map_opt_t *opt)
 {
   fmap_map_sams_t *sams = NULL;
 
@@ -251,7 +251,7 @@ fmap_map_all_sams_merge(fmap_seq_t *seq, fmap_refseq_t *refseq, fmap_bwt_t *bwt[
 static void
 fmap_map_all_core_worker(fmap_seq_t **seq_buffer, fmap_map_sams_t **sams, int32_t seq_buffer_length, 
                          fmap_refseq_t *refseq, fmap_bwt_t *bwt[2], fmap_sa_t *sa[2],
-                         int32_t tid, fmap_map_all_opt_t *opt)
+                         int32_t tid, fmap_map_opt_t *opt)
 {
   int32_t low = 0, high, i, j;
   // map1 
@@ -286,18 +286,17 @@ fmap_map_all_core_worker(fmap_seq_t **seq_buffer, fmap_map_sams_t **sams, int32_
       // map3
       if(opt->algos[i] & FMAP_MAP_ALGO_MAP3) {
           // set up the flow order
-          if(0 < seq_buffer_length) {
-              flow_map3[i][0] = fmap_malloc(sizeof(uint8_t) * 4, "flow[i][0]");
-              flow_map3[i][1] = fmap_malloc(sizeof(uint8_t) * 4, "flow[i][1]");
-              for(j=0;j<4;j++) {
-                  if(FMAP_SEQ_TYPE_SFF == seq_buffer[0]->type) {
+          if(0 < seq_buffer_length && 0 < opt->opt_map3[i]->hp_diff) {
+              if(FMAP_SEQ_TYPE_SFF == seq_buffer[0]->type) {
+                  flow_map3[i][0] = fmap_malloc(sizeof(uint8_t) * 4, "flow[i][0]");
+                  flow_map3[i][1] = fmap_malloc(sizeof(uint8_t) * 4, "flow[i][1]");
+                  for(j=0;j<4;j++) {
                       flow_map3[i][0][j] = fmap_nt_char_to_int[(int)seq_buffer[0]->data.sff->gheader->flow->s[j]];
                       flow_map3[i][1][j] = 3 - fmap_nt_char_to_int[(int)seq_buffer[0]->data.sff->gheader->flow->s[j]];
                   }
-                  else {
-                      flow_map3[i][0][j] = fmap_nt_char_to_int[(int)opt->opt_map3[i]->flow[j]];
-                      flow_map3[i][1][j] = 3 - fmap_nt_char_to_int[(int)opt->opt_map3[i]->flow[j]];
-                  }
+              }
+              else {
+                  fmap_error("bug encountered", Exit, OutOfRange);
               }
           }
       }
@@ -328,7 +327,7 @@ fmap_map_all_core_worker(fmap_seq_t **seq_buffer, fmap_map_sams_t **sams, int32_
           fmap_seq_t *seq[2]={NULL, NULL}, *orig_seq=NULL, *seq_char=NULL;
           orig_seq = seq_buffer[low];
           fmap_string_t *bases[2]={NULL, NULL};
-          fmap_map1_opt_t opt_local_map1[2];
+          fmap_map_opt_t opt_local_map1[2];
 
           // map1
           for(i=0;i<2;i++) {
@@ -519,7 +518,7 @@ fmap_map_all_core_thread_worker(void *arg)
 }
 
 static void 
-fmap_map_all_core(fmap_map_all_opt_t *opt)
+fmap_map_all_core(fmap_map_opt_t *opt)
 {
   uint32_t i, n_reads_processed=0;
   int32_t seq_buffer_length;
@@ -730,146 +729,18 @@ fmap_map_all_core(fmap_map_all_opt_t *opt)
   }
 }
 
-int 
-fmap_map_all_usage(fmap_map_all_opt_t *opt)
-{
-  char *reads_format = fmap_get_reads_file_format_string(opt->reads_format);
-
-  fmap_file_fprintf(fmap_file_stderr, "\n");
-  fmap_file_fprintf(fmap_file_stderr, "Usage: %s mapall [global options] (algorithm [options])+ (ALGORITHM [options])*", PACKAGE);
-  fmap_file_fprintf(fmap_file_stderr, "\n");
-  fmap_file_fprintf(fmap_file_stderr, "Options (required):\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -f FILE     the FASTA reference file name [%s]\n", opt->fn_fasta);
-  fmap_file_fprintf(fmap_file_stderr, "         -r FILE     the reads file name [%s]\n", (NULL == opt->fn_reads) ? "stdin" : opt->fn_reads);
-  fmap_file_fprintf(fmap_file_stderr, "\n");
-  fmap_file_fprintf(fmap_file_stderr, "Options (optional):\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -F STRING   the reads file format (fastq|fq|fasta|fa|sff) [%s]\n", reads_format);
-  fmap_file_fprintf(fmap_file_stderr, "         -A INT      the match score [%d]\n", opt->score_match); 
-  fmap_file_fprintf(fmap_file_stderr, "         -M INT      the mismatch penalty [%d]\n", opt->pen_mm); 
-  fmap_file_fprintf(fmap_file_stderr, "         -O INT      the indel start penalty [%d]\n", opt->pen_gapo); 
-  fmap_file_fprintf(fmap_file_stderr, "         -E INT      the indel extend penalty [%d]\n", opt->pen_gape); 
-  fmap_file_fprintf(fmap_file_stderr, "         -X INT      the flow score penalty [%d]\n", opt->fscore);
-  fmap_file_fprintf(fmap_file_stderr, "         -w INT      the extra bases to add before and after the target during Smith-Waterman [%d]\n", opt->bw);
-  fmap_file_fprintf(fmap_file_stderr, "         -x STRING   the flow order ([ACGT]{4}) [%s]\n",
-                    (NULL == opt->flow) ? "not using" : opt->flow);
-  fmap_file_fprintf(fmap_file_stderr, "         -g          align the full read (global alignment) [%s]\n", (0 == opt->aln_global) ? "false" : "true");
-  fmap_file_fprintf(fmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
-  fmap_file_fprintf(fmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
-  fmap_file_fprintf(fmap_file_stderr, "         -a INT      output filter [%d]\n", opt->aln_output_mode);
-  fmap_file_fprintf(fmap_file_stderr, "                             0 - unique best hits\n");
-  fmap_file_fprintf(fmap_file_stderr, "                             1 - random best hit\n");
-  fmap_file_fprintf(fmap_file_stderr, "                             2 - all best hits\n");
-  fmap_file_fprintf(fmap_file_stderr, "                             3 - all alignments\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -R STRING   the RG line in the SAM header [%s]\n", opt->sam_rg);
-  fmap_file_fprintf(fmap_file_stderr, "         -Y          include SFF specific SAM tags [%s]\n",
-                    (1 == opt->sam_sff_tags) ? "true" : "false");
-  fmap_file_fprintf(fmap_file_stderr, "         -W INT      remove duplicate alignments from different algorithms within this bp window [%d]\n",
-                    opt->dup_window);
-  fmap_file_fprintf(fmap_file_stderr, "         -I          apply the output filter for each algorithm separately [%s]\n",
-                    (1 == opt->aln_output_mode_ind) ? "true" : "false");
-  fmap_file_fprintf(fmap_file_stderr, "         -j          the input is bz2 compressed (bzip2) [%s]\n",
-                    (FMAP_FILE_BZ2_COMPRESSION == opt->input_compr) ? "true" : "false");
-  fmap_file_fprintf(fmap_file_stderr, "         -z          the input is gz compressed (gzip) [%s]\n",
-                    (FMAP_FILE_GZ_COMPRESSION == opt->input_compr) ? "true" : "false");
-  fmap_file_fprintf(fmap_file_stderr, "         -J          the output is bz2 compressed (bzip2) [%s]\n",
-                    (FMAP_FILE_BZ2_COMPRESSION == opt->output_compr) ? "true" : "false");
-  fmap_file_fprintf(fmap_file_stderr, "         -Z          the output is gz compressed (gzip) [%s]\n",
-                    (FMAP_FILE_GZ_COMPRESSION == opt->output_compr) ? "true" : "false");
-  fmap_file_fprintf(fmap_file_stderr, "         -s INT      use shared memory with the following key [%d]\n", opt->shm_key);
-  fmap_file_fprintf(fmap_file_stderr, "         -v          print verbose progress information\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -h          print this message\n");
-  fmap_file_fprintf(fmap_file_stderr, "\n");
-  // TODO: more description of how to use map{1,2,3} and 2-stage algo
-
-  free(reads_format);
-
-  return 1;
-}
-
-fmap_map_all_opt_t *
-fmap_map_all_opt_init()
-{
-  int32_t i;
-  fmap_map_all_opt_t *opt = NULL;
-
-  opt = fmap_calloc(1, sizeof(fmap_map_all_opt_t), "opt");
-
-  // program defaults
-  opt->argv = NULL;
-  opt->argc = -1;
-  opt->fn_fasta = opt->fn_reads = NULL;
-  opt->reads_format = FMAP_READS_FORMAT_UNKNOWN;
-  opt->score_match = FMAP_MAP_UTIL_SCORE_MATCH;
-  opt->pen_mm = FMAP_MAP_UTIL_PEN_MM; 
-  opt->pen_gapo = FMAP_MAP_UTIL_PEN_GAPO;
-  opt->pen_gape = FMAP_MAP_UTIL_PEN_GAPE;
-  opt->fscore = FMAP_MAP_UTIL_FSCORE;
-  opt->bw = 10; 
-  opt->flow = NULL;
-  opt->aln_global = 0;
-  opt->reads_queue_size = 65536; 
-  opt->num_threads = 1;
-  opt->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_RAND_BEST;
-  opt->dup_window = 128;
-  opt->aln_output_mode_ind = 0;
-  opt->sam_rg = NULL;
-  opt->sam_sff_tags = 0;
-  opt->input_compr = FMAP_FILE_NO_COMPRESSION;
-  opt->output_compr = FMAP_FILE_NO_COMPRESSION;
-  opt->shm_key = 0;
-
-  // these must be checked for agreement above later
-  for(i=0;i<2;i++) {
-      opt->algos[i] = 0;
-      opt->opt_map1[i] = fmap_map1_opt_init();
-      opt->opt_map2[i] = fmap_map2_opt_init();
-      opt->opt_map3[i] = fmap_map3_opt_init();
-  }
-
-  return opt;
-}
-
-void
-fmap_map_all_opt_destroy(fmap_map_all_opt_t *opt)
-{
-  int32_t i;
-
-  // free common options
-  free(opt->fn_fasta);
-  free(opt->fn_reads);
-  free(opt->sam_rg);
-
-  for(i=0;i<2;i++) {
-      // since we shallow copied, do not free
-      opt->opt_map1[i]->fn_fasta = opt->opt_map2[i]->fn_fasta = opt->opt_map3[i]->fn_fasta = NULL;
-      opt->opt_map1[i]->fn_reads = opt->opt_map2[i]->fn_reads = opt->opt_map3[i]->fn_reads = NULL;
-      opt->opt_map1[i]->flow = opt->opt_map2[i]->flow = opt->opt_map3[i]->flow = NULL;
-      opt->opt_map1[i]->sam_rg = opt->opt_map2[i]->sam_rg = opt->opt_map3[i]->sam_rg = NULL;
-
-      // destroy other opts
-      fmap_map1_opt_destroy(opt->opt_map1[i]);
-      fmap_map2_opt_destroy(opt->opt_map2[i]);
-      fmap_map3_opt_destroy(opt->opt_map3[i]);
-  }
-
-  // free the current opt
-  free(opt);
-}
-
 // for map1/map2/map3
 #define __fmap_map_all_opts_copy1(opt_map_all, opt_map_other) do { \
-    (opt_map_other)->fn_fasta = (opt_map_all)->fn_fasta; \
-    (opt_map_other)->fn_reads = (opt_map_all)->fn_reads; \
+    (opt_map_other)->fn_fasta = fmap_strdup((opt_map_all)->fn_fasta); \
+    (opt_map_other)->fn_reads = fmap_strdup((opt_map_all)->fn_reads); \
     (opt_map_other)->reads_format = (opt_map_all)->reads_format; \
     (opt_map_other)->pen_mm = (opt_map_all)->pen_mm; \
     (opt_map_other)->pen_gapo = (opt_map_all)->pen_gapo; \
     (opt_map_other)->pen_gape = (opt_map_all)->pen_gape; \
-    (opt_map_other)->flow = fmap_strdup((opt_map_all)->flow); \
     (opt_map_other)->reads_queue_size = (opt_map_all)->reads_queue_size; \
     (opt_map_other)->num_threads = (opt_map_all)->num_threads; \
     (opt_map_other)->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_ALL; \
-    (opt_map_other)->sam_rg = (opt_map_all)->sam_rg; \
-    (opt_map_other)->sam_sff_tags = (opt_map_all)->sam_sff_tags; \
+    (opt_map_other)->sam_rg = fmap_strdup((opt_map_all)->sam_rg); \
     (opt_map_other)->input_compr = (opt_map_all)->input_compr; \
     (opt_map_other)->output_compr = (opt_map_all)->output_compr; \
     (opt_map_other)->shm_key = (opt_map_all)->shm_key; \
@@ -879,82 +750,12 @@ fmap_map_all_opt_destroy(fmap_map_all_opt_t *opt)
 #define __fmap_map_all_opts_copy2(opt_map_all, opt_map_other) do { \
     __fmap_map_all_opts_copy1(opt_map_all, opt_map_other); \
     (opt_map_other)->score_match = (opt_map_all)->score_match; \
-    (opt_map_other)->fscore = (opt_map_all)->fscore; \
     (opt_map_other)->bw = (opt_map_all)->bw; \
     (opt_map_other)->aln_global = (opt_map_all)->aln_global; \
 } while(0)
 
-static int32_t
-fmap_map_all_opt_parse_common(int argc, char *argv[], fmap_map_all_opt_t *opt)
-{
-  int c;
-
-  while((c = getopt(argc, argv, "f:r:F:A:M:O:E:X:w:x:gq:n:a:R:Y:W:IjzJZs:vh")) >= 0) {
-      switch(c) {
-        case 'f':
-          opt->fn_fasta = fmap_strdup(optarg); break;
-        case 'r':
-          opt->fn_reads = fmap_strdup(optarg); 
-          fmap_get_reads_file_format_from_fn_int(opt->fn_reads, &opt->reads_format, &opt->input_compr);
-          break;
-        case 'F':
-          opt->reads_format = fmap_get_reads_file_format_int(optarg); break;
-        case 'A':
-          opt->score_match = atoi(optarg); break;
-        case 'M':
-          opt->pen_mm = atoi(optarg); break;
-        case 'O':
-          opt->pen_gapo = atoi(optarg); break;
-        case 'E':
-          opt->pen_gape = atoi(optarg); break;
-        case 'X':
-          opt->fscore = atoi(optarg); break;
-        case 'w':
-          opt->bw = atoi(optarg); break;
-        case 'x':
-          opt->flow = fmap_strdup(optarg); break;
-        case 'g':
-          opt->aln_global = 1; break;
-        case 'q': 
-          opt->reads_queue_size = atoi(optarg); break;
-        case 'n':
-          opt->num_threads = atoi(optarg); break;
-        case 'a':
-          opt->aln_output_mode = atoi(optarg); break;
-        case 'R':
-          opt->sam_rg = fmap_strdup(optarg); break;
-        case 'Y':
-          opt->sam_sff_tags = 1; break;
-        case 'W':
-          opt->dup_window = atoi(optarg); break;
-        case 'I':
-          opt->aln_output_mode_ind = 1; break;
-        case 'j':
-          opt->input_compr = FMAP_FILE_BZ2_COMPRESSION; 
-          fmap_get_reads_file_format_from_fn_int(opt->fn_reads, &opt->reads_format, &opt->input_compr);
-          break;
-        case 'z':
-          opt->input_compr = FMAP_FILE_GZ_COMPRESSION; 
-          fmap_get_reads_file_format_from_fn_int(opt->fn_reads, &opt->reads_format, &opt->input_compr);
-          break;
-        case 'J':
-          opt->output_compr = FMAP_FILE_BZ2_COMPRESSION; break;
-        case 'Z':
-          opt->output_compr = FMAP_FILE_GZ_COMPRESSION; break;
-        case 's':
-          opt->shm_key = atoi(optarg); break;
-        case 'v':
-          fmap_progress_set_verbosity(1); break;
-        case 'h':
-        default:
-          return 0;
-      }
-  }
-  return 1;
-}
-
 int32_t
-fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
+fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_opt_t *opt)
 {
   int32_t i, j, start, opt_type, opt_type_next, opt_stage, opt_stage_next;
 
@@ -1011,7 +812,7 @@ fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
           switch(opt_type) {
             case FMAP_MAP_ALGO_NONE:
               // parse common options
-              if(0 == fmap_map_all_opt_parse_common(i-start, argv+start, opt)) {
+              if(0 == fmap_map_opt_parse(i-start, argv+start, opt)) {
                   return 0;
               }
               // copy over common values into the other opts
@@ -1022,9 +823,8 @@ fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
               }
               break;
             case FMAP_MAP_ALGO_MAP1:
-              // parse map1 options
               if(0 < i - start) {
-                  if(0 == fmap_map1_opt_parse(i-start, argv+start, opt->opt_map1[opt_stage-1])) {
+                  if(0 == fmap_map_opt_parse(i-start, argv+start, opt->opt_map1[opt_stage-1])) {
                       return 0;
                   }
               }
@@ -1032,7 +832,7 @@ fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
             case FMAP_MAP_ALGO_MAP2:
               // parse map2 options
               if(0 < i - start) {
-                  if(0 == fmap_map2_opt_parse(i-start, argv+start, opt->opt_map2[opt_stage-1])) {
+                  if(0 == fmap_map_opt_parse(i-start, argv+start, opt->opt_map2[opt_stage-1])) {
                       return 0;
                   }
               }
@@ -1040,7 +840,7 @@ fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
             case FMAP_MAP_ALGO_MAP3:
               // parse map3 options
               if(0 < i - start) {
-                  if(0 == fmap_map3_opt_parse(i-start, argv+start, opt->opt_map3[opt_stage-1])) {
+                  if(0 == fmap_map_opt_parse(i-start, argv+start, opt->opt_map3[opt_stage-1])) {
                       return 0;
                   }
               }
@@ -1062,164 +862,33 @@ fmap_map_all_opt_parse(int argc, char *argv[], fmap_map_all_opt_t *opt)
   return 1;
 }
 
-static int32_t 
-fmap_map_all_file_check_with_null(char *fn1, char *fn2)
-{
-    if(NULL == fn1 && NULL == fn2) { 
-        return 0;
-    }
-    else if((NULL == fn1 && NULL != fn2) 
-       || (NULL != fn1 && NULL == fn2)) {
-        return 1;
-    }
-    else if(0 != strcmp(fn1, fn2)) {
-        return 1;
-    }
-    return 0;
-}
-
-// for map1
-#define __fmap_map_all_opts_check_common1(opt_map_all, opt_map_other) do { \
-    if(0 != fmap_map_all_file_check_with_null((opt_map_other)->fn_fasta, (opt_map_all)->fn_fasta)) { \
-        fmap_error("option -f was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if(0 != fmap_map_all_file_check_with_null((opt_map_other)->fn_reads, (opt_map_all)->fn_reads)) { \
-        fmap_error("option -r was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->reads_format != (opt_map_all)->reads_format) { \
-        fmap_error("option -F was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->pen_mm != (opt_map_all)->pen_mm) { \
-        fmap_error("option -M was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->pen_gapo != (opt_map_all)->pen_gapo) { \
-        fmap_error("option -O was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->pen_gape != (opt_map_all)->pen_gape) { \
-        fmap_error("option -E was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if(0 != fmap_map_all_file_check_with_null((opt_map_other)->flow, (opt_map_all)->flow)) { \
-        fmap_error("option -x was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->reads_queue_size != (opt_map_all)->reads_queue_size) { \
-        fmap_error("option -q was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->num_threads != (opt_map_all)->num_threads) { \
-        fmap_error("option -n was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if(0 != fmap_map_all_file_check_with_null((opt_map_other)->sam_rg, (opt_map_all)->sam_rg)) { \
-        fmap_error("option -R was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->sam_sff_tags != (opt_map_all)->sam_sff_tags) { \
-        fmap_error("option -Y was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->input_compr != (opt_map_all)->input_compr) { \
-        fmap_error("option -j or -z was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->output_compr != (opt_map_all)->output_compr) { \
-        fmap_error("option -J or -Z was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->shm_key != (opt_map_all)->shm_key) { \
-        fmap_error("option -s was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-} while(0)
-
-// for map2/map3
-#define __fmap_map_all_opts_check_common2(opt_map_all, opt_map_other) do { \
-    __fmap_map_all_opts_check_common1(opt_map_all, opt_map_other); \
-    if((opt_map_other)->score_match != (opt_map_all)->score_match) { \
-        fmap_error("option -A was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->fscore != (opt_map_all)->fscore) { \
-        fmap_error("option -X was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->bw != (opt_map_all)->bw) { \
-        fmap_error("option -w was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->aln_global != (opt_map_all)->aln_global) { \
-        fmap_error("option -g was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-} while(0)
-
-void
-fmap_map_all_opt_check(fmap_map_all_opt_t *opt)
-{
-  int32_t i;
-  // common options
-  if(NULL == opt->fn_fasta && 0 == opt->shm_key) {
-      fmap_error("option -f or option -s must be specified", Exit, CommandLineArgument);
-  }
-  else if(NULL != opt->fn_fasta && 0 < opt->shm_key) {
-      fmap_error("option -f and option -s may not be specified together", Exit, CommandLineArgument);
-  }
-  if(NULL == opt->fn_reads && FMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
-      fmap_error("option -F or option -r must be specified", Exit, CommandLineArgument);
-  }
-  if(FMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
-      fmap_error("the reads format (-r) was unrecognized", Exit, CommandLineArgument);
-  }
-  fmap_error_cmd_check_int(opt->score_match, 0, INT32_MAX, "-A");
-  fmap_error_cmd_check_int(opt->pen_mm, 0, INT32_MAX, "-M");
-  fmap_error_cmd_check_int(opt->pen_gapo, 0, INT32_MAX, "-O");
-  fmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
-  fmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
-  fmap_error_cmd_check_int(opt->bw, 1, INT32_MAX, "-w");
-  fmap_error_cmd_check_int(strlen(opt->flow), 4, 4, "-x");
-  if(-1 != opt->reads_queue_size) fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
-  fmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
-  fmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
-  fmap_error_cmd_check_int(opt->dup_window, 0, INT32_MAX, "-W");
-  fmap_error_cmd_check_int(opt->aln_output_mode_ind, 0, 1, "-I");
-
-  if(0 == opt->algos[0]) {
-      fmap_error("no algorithms given for stage 1", Exit, CommandLineArgument);
-  }
-
-  if(FMAP_FILE_BZ2_COMPRESSION == opt->output_compr 
-     && -1 == opt->reads_queue_size) {
-      fmap_error("cannot buffer reads with bzip2 output (options \"-q 1 -J\")", Exit, OutOfRange);
-  }
-
-  for(i=0;i<2;i++) {
-      // check mapping algorithm specific options
-      fmap_map1_opt_check(opt->opt_map1[i]);
-      fmap_map2_opt_check(opt->opt_map2[i]);
-      fmap_map3_opt_check(opt->opt_map3[i]);
-
-      // check that common values match other opt values
-      __fmap_map_all_opts_check_common1(opt, opt->opt_map1[i]);
-      __fmap_map_all_opts_check_common2(opt, opt->opt_map2[i]);
-      __fmap_map_all_opts_check_common2(opt, opt->opt_map3[i]);
-  }
-}
-
 int 
 fmap_map_all_main(int argc, char *argv[])
 {
-  fmap_map_all_opt_t *opt = NULL;
+  fmap_map_opt_t *opt = NULL;
 
   // random seed
   srand48(0); 
 
   // init opt
-  opt = fmap_map_all_opt_init();
+  opt = fmap_map_opt_init(FMAP_MAP_ALGO_MAPALL);
       
   // get options
   if(1 != fmap_map_all_opt_parse(argc, argv, opt) // options parsed successfully
      || argc != optind  // all options should be used
      || 1 == argc) { // some options should be specified
-      return fmap_map_all_usage(opt);
+      return fmap_map_opt_usage(opt);
   }
   else { 
       // check command line arguments
-      fmap_map_all_opt_check(opt);
+      fmap_map_opt_check(opt);
   }
 
   // run map_all
   fmap_map_all_core(opt);
 
   // destroy opt
-  fmap_map_all_opt_destroy(opt);
+  fmap_map_opt_destroy(opt);
 
   fmap_progress_print2("terminating successfully");
 

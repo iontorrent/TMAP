@@ -90,6 +90,13 @@ enum {
     FMAP_READS_FORMAT_SFF      = 2 /*!< the reads are in SFF format */
 };
 
+/*! 
+  @param  algo_id  the algorithm identifier
+  @return          algorithm name
+ */
+char *
+fmap_algo_id_to_name(uint16_t algo_id);
+
 /*! nt_char_to_int
   @details  converts a DNA base in ASCII format to its 2-bit format [0-4]. 
   */

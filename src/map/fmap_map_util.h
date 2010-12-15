@@ -1,11 +1,7 @@
 #ifndef FMAP_MAP_UTIL_H_
 #define FMAP_MAP_UTIL_H_
 
-/*
-#include "fmap_map1.h"
-#include "fmap_map2_aux.h"
-#include "fmap_map3.h"
-*/
+#include <sys/types.h>
 
 #define FMAP_MAP_UTIL_FSW_OFFSET 2
 #define FMAP_MAP_UTIL_SCORE_MATCH 5
@@ -24,6 +20,7 @@ enum {
     FMAP_MAP_ALGO_MAP1 = 0x1,  /*!< the map1 algorithm */
     FMAP_MAP_ALGO_MAP2 = 0x2,  /*!< the map2 algorithm */
     FMAP_MAP_ALGO_MAP3 = 0x4,  /*!< the map3 algorithm */
+    FMAP_MAP_ALGO_MAPALL = 0x8000 /*!< the mapall algorithm */
 };
 
 /*!
@@ -35,6 +32,122 @@ enum {
     FMAP_MAP_UTIL_ALN_MODE_ALL_BEST       = 2,  /*!< output all the alignments with the best score */
     FMAP_MAP_UTIL_ALN_MODE_ALL            = 3   /*!< Output all alignments */
 };
+
+typedef struct __fmap_map_opt_t {
+    int32_t algo_id;
+
+    // global options
+    char **argv;  /*!< the command line argv structure */
+    int argc;  /*!< the number of command line arguments passed */
+    char *fn_fasta;  /*!< the fasta reference file name (-f) */
+    char *fn_reads;  /*!< the reads file name (-r) */
+    int32_t reads_format;  /*!< the reads file format (-F)  */
+    int32_t score_match;  /*!< the match score (-A) */
+    int32_t pen_mm;  /*!< the mismatch penalty (-M) */
+    int32_t pen_gapo;  /*!< the indel open penalty (-O) */
+    int32_t pen_gape;  /*!< the indel extension penalty (-E) */
+    int32_t fscore;  /*!< the flow score penalty (-X) */
+    char *flow; /*!< the flow order (-x) */
+    int32_t aln_global; /*!< align the full read (-g) */
+    int32_t reads_queue_size;  /*!< the reads queue size (-q) */
+    int32_t num_threads;  /*!< the number of threads (-n) */
+    int32_t aln_output_mode;  /*!< specifies how to choose alignments (-a)  */
+    char *sam_rg;  /*!< specifies the RG line in the SAM header (-R) */
+    int32_t sam_sff_tags;  /*!< specifies to output SFF specific SAM tags (-Y) */
+    int32_t input_compr;  /*!< the input compression type (-j and -z) */
+    int32_t output_compr;  /*!< the output compression type (-J and -Z) */
+    key_t shm_key;  /*!< the shared memory key (-s) */
+
+    // map1/map3 options
+    int32_t seed_length; /*!< the kmer seed length (-l) */
+    int32_t seed_length_set; /*!< 1 if the user has set seed length (-l) */
+    
+    // map2/map3 options
+    int32_t bw; /*!< the extra bases to add before and after the target during Smith-Waterman (-w) */
+    int32_t score_thr;  /*!< the score threshold (match-score-scaled) (-T) */
+    
+    // map1 options
+    int32_t seed_max_mm;  /*!< maximum number of mismatches in hte seed (-k) */
+    int32_t max_mm;  /*!< maximum number of mismatches (-m) */
+    double max_mm_frac;  /*!< maximum (read length) fraction of mismatches (-m) */
+    int32_t max_gapo;  /*!< maximum number of indel opens (-o) */
+    double max_gapo_frac;  /*!< maximum (read length) fraction of indel opens (-o) */
+    int32_t max_gape;  /*!< maximum number of indel extensions (-e) */
+    double max_gape_frac;  /*!< maximum fraction of indel extensions (-e) */
+    int32_t max_cals_del;  /*!< the maximum number of CALs to extend a deletion (-d) */
+    int32_t indel_ends_bound;  /*!< indels are not allowed within INT number of bps from the end of the read (-i) */
+    int32_t max_best_cals;  /*!< stop searching when INT optimal CALs have been found (-b) */
+    int32_t max_entries;  /*!< maximum number of alignment nodes (-Q) */
+    
+    // map2 options
+    double yita;  /*!< the error recurrence coefficient (-y)  */
+    //double mask_level;  /*!< the mask level (-m) */
+    double length_coef;  /*!< the coefficient of length-threshold adjustment (-c) */
+    int32_t max_seed_intv;  /*!< the maximum seed interval (-S) */
+    int32_t z_best;  /*!< the number of top scoring hits to keep (-b) */
+    int32_t seeds_rev;  /*!< the maximum number of seeds for which reverse alignment is triggered (-N) */
+
+    // map3 options
+    int32_t max_seed_hits; /*!< the maximum number of hits returned by a seed (-S) */
+    int32_t max_seed_band; /*!< the band to group seeds (-b)*/
+    int32_t hp_diff; /*!< single homopolymer error difference for enumeration (-H) */
+
+    // mapall options
+    uint32_t algos[2];  /*!< the algorithms that should be run in stage 1 and stage 2, bit-packed */
+    int32_t dup_window; /*!< remove duplicate alignments from different algorithms within this bp window (-W) */
+    int32_t aln_output_mode_ind; /*!< apply the output filter for each algorithm separately (-I) */
+    // stage 1/2 mapping algorithm specific options
+    struct __fmap_map_opt_t *opt_map1[2]; /*!< map 1 options */
+    struct __fmap_map_opt_t *opt_map2[2]; /*!< map 2 options */
+    struct __fmap_map_opt_t *opt_map3[2]; /*!< map 3 options */
+
+} fmap_map_opt_t;
+
+/*!
+  Gets the initialized options
+  @return  pointer to the initialized options
+  */
+fmap_map_opt_t *
+fmap_map_opt_init();
+
+/*!
+  Destroys the memory associated with these options
+  @param  opt  pointer to the options
+  */
+void
+fmap_map_opt_destroy(fmap_map_opt_t *opt);
+
+/*!
+  Prints the usage of the map algorithms
+  @param  opt  the current options
+  @return      always 1
+  */
+int
+fmap_map_opt_usage(fmap_map_opt_t *opt);
+
+/*!
+  Parses the command line options and stores them in the options structure
+  @param  argc  the number of arguments
+  @param  argv  the argument list
+  @param  opt   pointer to the options
+  @return       1 if successful, 0 otherwise
+  */
+int32_t
+fmap_map_opt_parse(int argc, char *argv[], fmap_map_opt_t *opt);
+
+/*!
+  Checks that all options are within range
+  @param  opt   pointer to the options
+  */
+void
+fmap_map_opt_check(fmap_map_opt_t *opt);
+
+/*!
+  @param  opt   pointer to the options
+  */
+void
+fmap_map_opt_print(fmap_map_opt_t *opt);
+
 
 /*! 
   Auxiliary data for map1

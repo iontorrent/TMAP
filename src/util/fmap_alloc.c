@@ -37,6 +37,7 @@ fmap_calloc1(size_t num, size_t size, const char *function_name, const char *var
 inline char *
 fmap_strdup1(const char *str, const char *function_name)
 {
+  if(NULL == str) return NULL;
   char *ptr = strdup(str);
   if(NULL == ptr) {
       fmap_error1(function_name, NULL, Exit, MallocMemory);

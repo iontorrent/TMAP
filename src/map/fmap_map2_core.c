@@ -122,7 +122,7 @@ fmap_map2_core_remove_duplicate(fmap_map2_entry_t *u, fmap_hash_t(64) *hash)
 
 // merge two entries
 static void 
-fmap_map2_core_merge_entry(const fmap_map2_opt_t * __restrict opt, 
+fmap_map2_core_merge_entry(const fmap_map_opt_t * __restrict opt, 
                            fmap_map2_entry_t *u, fmap_map2_entry_t *v)
 {
   int32_t i;
@@ -207,7 +207,7 @@ fmap_map2_save_narrow_hits(const fmap_bwtl_t *bwtl, fmap_map2_entry_t *u, fmap_m
 /* --- END: processing partial hits --- */
 
 static inline int32_t 
-fmap_map2_core_fill_cell(const fmap_map2_opt_t *opt, int32_t match_score, fmap_map2_cell_t *c[4])
+fmap_map2_core_fill_cell(const fmap_map_opt_t *opt, int32_t match_score, fmap_map2_cell_t *c[4])
 {
   int32_t G = c[3]? c[3]->G + match_score : FMAP_MAP2_MINUS_INF;
   if(c[1]) {
@@ -239,7 +239,7 @@ fmap_map2_core_init(const fmap_bwtl_t *target, const fmap_bwt_t *query_bwt, fmap
 }
 
 fmap_map2_aln_t **
-fmap_map2_core_aln(const fmap_map2_opt_t *opt, const fmap_bwtl_t *target, 
+fmap_map2_core_aln(const fmap_map_opt_t *opt, const fmap_bwtl_t *target, 
                const fmap_bwt_t *query_bwt, const fmap_sa_t *query_sa, 
                fmap_map2_global_mempool_t *pool)
 {

@@ -89,7 +89,7 @@ fmap_map1_aux_stack_push(fmap_map1_aux_stack_t *stack, int32_t strand,
                          int32_t n_mm, int32_t n_gapo, int32_t n_gape,
                          int32_t state, int32_t is_diff, 
                          fmap_map1_aux_stack_entry_t *prev_entry,
-                         const fmap_map1_opt_t *opt)
+                         const fmap_map_opt_t *opt)
 {
   fmap_map1_aux_stack_entry_t *entry = NULL;
 
@@ -286,7 +286,7 @@ fmap_map1_sam_to_real(fmap_map_sams_t *sams, int32_t seq_len,
 
 fmap_map_sams_t *
 fmap_map1_aux_core(fmap_seq_t *seq[2], fmap_refseq_t *refseq, fmap_bwt_t *bwt, fmap_sa_t *sa,
-                   fmap_bwt_match_width_t *width[2], fmap_bwt_match_width_t *seed_width[2], fmap_map1_opt_t *opt,
+                   fmap_bwt_match_width_t *width[2], fmap_bwt_match_width_t *seed_width[2], fmap_map_opt_t *opt,
                    fmap_map1_aux_stack_t *stack)
 {
   int32_t max_mm = opt->max_mm, max_gapo = opt->max_gapo, max_gape = opt->max_gape, seed_max_mm = opt->seed_max_mm;

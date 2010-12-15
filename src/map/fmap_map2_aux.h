@@ -71,7 +71,7 @@ fmap_map2_aux_resolve_duphits(const fmap_bwt_t *bwt, const fmap_sa_t *sa, fmap_m
   @return         pointer to the alignment
   */
 fmap_map_sams_t *
-fmap_map2_aux_core(fmap_map2_opt_t *_opt,
+fmap_map2_aux_core(fmap_map_opt_t *_opt,
                    fmap_seq_t *query,
                    fmap_refseq_t *refseq,
                    fmap_bwt_t *bwt[2],

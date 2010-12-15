@@ -40,6 +40,6 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
                    fmap_refseq_t *refseq,
                    fmap_bwt_t *bwt,
                    fmap_sa_t *sa,
-                   fmap_map3_opt_t *opt);
+                   fmap_map_opt_t *opt);
 
 #endif

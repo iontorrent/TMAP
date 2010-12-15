@@ -37,7 +37,7 @@ static int32_t fmap_map2_read_lock_low = 0;
 static void
 fmap_map2_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_map_sams_t **sams,
                       fmap_refseq_t *refseq, fmap_bwt_t *bwt[2], fmap_sa_t *sa[2],
-                      int32_t tid, fmap_map2_opt_t * opt)
+                      int32_t tid, fmap_map_opt_t * opt)
 {
   int32_t low, high;
   fmap_map2_global_mempool_t *pool = NULL;
@@ -114,7 +114,7 @@ fmap_map2_core_thread_worker(void *arg)
 }
 
 static void
-fmap_map2_core(fmap_map2_opt_t *opt)
+fmap_map2_core(fmap_map_opt_t *opt)
 {
   uint32_t i, n_reads_processed=0;
   int32_t seq_buffer_length;
@@ -319,257 +319,33 @@ fmap_map2_core(fmap_map2_opt_t *opt)
   }
 }
 
-int
-fmap_map2_usage(fmap_map2_opt_t *opt)
-{
-  char *reads_format = fmap_get_reads_file_format_string(opt->reads_format);
-  fmap_file_fprintf(fmap_file_stderr, "\n");
-  fmap_file_fprintf(fmap_file_stderr, "Usage: %s map2 [options]", PACKAGE);
-  fmap_file_fprintf(fmap_file_stderr, "\n");
-  fmap_file_fprintf(fmap_file_stderr, "Options (required):\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -f FILE     the FASTA reference file name [%s]\n", opt->fn_fasta);
-  fmap_file_fprintf(fmap_file_stderr, "         -r FILE     the reads file name [%s]\n", (NULL == opt->fn_reads) ? "stdin" : opt->fn_reads);
-  fmap_file_fprintf(fmap_file_stderr, "Options (optional):\n");
-  fmap_file_fprintf(fmap_file_stderr, "\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -F STRING   the reads file format (fastq|fq|fasta|fa|sff) [%s]\n", reads_format);
-  fmap_file_fprintf(fmap_file_stderr, "         -A INT      score for a match [%d]\n", opt->score_match);
-  fmap_file_fprintf(fmap_file_stderr, "         -M INT      mismatch penalty [%d]\n", opt->pen_mm);
-  fmap_file_fprintf(fmap_file_stderr, "         -O INT      gap open penalty [%d]\n", opt->pen_gapo);
-  fmap_file_fprintf(fmap_file_stderr, "         -E INT      gap extension penalty [%d]\n", opt->pen_gape);
-  fmap_file_fprintf(fmap_file_stderr, "         -X INT      the flow score penalty [%d]\n", opt->fscore);
-  //fmap_file_fprintf(fmap_file_stderr, "         -y FLOAT    error recurrence coef. (4..16) [%.1lf]\n", opt->yita);
-  //fmap_file_fprintf(fmap_file_stderr, "         -m FLOAT    mask level [%.2f]\n", opt->mask_level);
-  fmap_file_fprintf(fmap_file_stderr, "         -c FLOAT    coefficient of length-threshold adjustment [%.1lf]\n", opt->length_coef);
-  fmap_file_fprintf(fmap_file_stderr, "         -w INT      band width [%d]\n", opt->bw);
-  fmap_file_fprintf(fmap_file_stderr, "         -T INT      score threshold divided by the match score [%d]\n", opt->score_thr);
-  fmap_file_fprintf(fmap_file_stderr, "         -S INT      maximum seeding interval size [%d]\n", opt->max_seed_intv);
-  fmap_file_fprintf(fmap_file_stderr, "         -b INT      Z-best [%d]\n", opt->z_best);
-  fmap_file_fprintf(fmap_file_stderr, "         -N INT      # seeds to trigger reverse alignment [%d]\n", opt->seeds_rev);
-  fmap_file_fprintf(fmap_file_stderr, "         -x STRING   the flow order ([ACGT]{4}) [%s]\n", 
-                    (NULL == opt->flow) ? "not using" : opt->flow);
-  fmap_file_fprintf(fmap_file_stderr, "         -g          align the full read (global alignment) [%s]\n", (0 == opt->aln_global) ? "false" : "true");
-  fmap_file_fprintf(fmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
-  fmap_file_fprintf(fmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
-  fmap_file_fprintf(fmap_file_stderr, "         -a INT      output filter [%d]\n", opt->aln_output_mode);
-  fmap_file_fprintf(fmap_file_stderr, "                             0 - unique best hits\n");
-  fmap_file_fprintf(fmap_file_stderr, "                             1 - random best hit\n");
-  fmap_file_fprintf(fmap_file_stderr, "                             2 - all best hits\n");
-  fmap_file_fprintf(fmap_file_stderr, "                             3 - all alignments\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -R STRING   the RG line in the SAM header [%s]\n", opt->sam_rg);
-  fmap_file_fprintf(fmap_file_stderr, "         -Y          include SFF specific SAM tags [%s]\n",
-                    (1 == opt->sam_sff_tags) ? "true" : "false");
-  fmap_file_fprintf(fmap_file_stderr, "         -j          the input is bz2 compressed (bzip2) [%s]\n",
-                    (FMAP_FILE_BZ2_COMPRESSION == opt->input_compr) ? "true" : "false");
-  fmap_file_fprintf(fmap_file_stderr, "         -z          the input is gz compressed (gzip) [%s]\n",
-                    (FMAP_FILE_GZ_COMPRESSION == opt->input_compr) ? "true" : "false");
-  fmap_file_fprintf(fmap_file_stderr, "         -J          the output is bz2 compressed (bzip2) [%s]\n",
-                    (FMAP_FILE_BZ2_COMPRESSION == opt->output_compr) ? "true" : "false");
-  fmap_file_fprintf(fmap_file_stderr, "         -Z          the output is gz compressed (gzip) [%s]\n",
-                    (FMAP_FILE_GZ_COMPRESSION == opt->output_compr) ? "true" : "false");
-  fmap_file_fprintf(fmap_file_stderr, "         -s INT      use shared memory with the following key [%d]\n", opt->shm_key);
-  fmap_file_fprintf(fmap_file_stderr, "         -v          print verbose progress information\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -h          print this message\n");
-
-
-
-  fmap_file_fprintf(fmap_file_stderr, "\n");
-
-  return 1;
-}
-
-fmap_map2_opt_t *
-fmap_map2_opt_init()
-{
-  fmap_map2_opt_t *opt = NULL;
-
-  opt = fmap_calloc(1, sizeof(fmap_map2_opt_t), "opt");
-
-  opt->fn_fasta = opt->fn_reads = NULL;
-  opt->reads_format = FMAP_READS_FORMAT_UNKNOWN;
-  opt->score_match = FMAP_MAP_UTIL_SCORE_MATCH;
-  opt->pen_mm = FMAP_MAP_UTIL_PEN_MM; 
-  opt->pen_gapo = FMAP_MAP_UTIL_PEN_GAPO;
-  opt->pen_gape = FMAP_MAP_UTIL_PEN_GAPE;
-  opt->fscore = FMAP_MAP_UTIL_FSCORE;
-  opt->yita = 5.5f; 
-  //opt->mask_level = 0.50; 
-  opt->length_coef = 5.5f;
-  opt->bw = 50; opt->score_thr = 30;
-  opt->max_seed_intv = 3; opt->z_best = 5; opt->seeds_rev = 5;
-  opt->flow = NULL;
-  opt->aln_global = 0;
-  opt->reads_queue_size = 65536;
-  opt->num_threads = 1;
-  opt->aln_output_mode = FMAP_MAP_UTIL_ALN_MODE_RAND_BEST; 
-  opt->sam_rg = NULL;
-  opt->sam_sff_tags = 0;
-  opt->input_compr = FMAP_FILE_NO_COMPRESSION;
-  opt->output_compr = FMAP_FILE_NO_COMPRESSION;
-  opt->shm_key = 0;
-
-  return opt;
-}
-
-void
-fmap_map2_opt_destroy(fmap_map2_opt_t *opt)
-{
-  free(opt->fn_fasta);
-  free(opt->fn_reads);
-  free(opt->sam_rg);
-  free(opt);
-}
-
-int 
-fmap_map2_opt_parse(int argc, char *argv[], fmap_map2_opt_t *opt)
-{
-  int c;
-
-  opt->argc = argc; opt->argv = argv;
-
-  while((c = getopt(argc, argv, "f:r:F:A:M:O:E:X:c:w:T:S:b:N:x:gq:n:a:R:Y:jzJZs:vh")) >= 0) {
-      switch (c) {
-        case 'f':
-          opt->fn_fasta = fmap_strdup(optarg); break;
-        case 'r':
-          opt->fn_reads = fmap_strdup(optarg);
-          fmap_get_reads_file_format_from_fn_int(opt->fn_reads, &opt->reads_format, &opt->input_compr);
-          break;
-        case 'F':
-          opt->reads_format = fmap_get_reads_file_format_int(optarg); break;
-        case 'A':
-          opt->score_match = atoi(optarg); break;
-        case 'M':
-          opt->pen_mm = atoi(optarg); break;
-        case 'O':
-          opt->pen_gapo = atoi(optarg); break;
-        case 'E':
-          opt->pen_gape = atoi(optarg); break;
-        case 'X':
-          opt->fscore = atoi(optarg); break;
-          /*
-             case 'y': 
-             opt->yita = atof(optarg); break;
-             */
-          /*
-        case 'm': 
-          opt->mask_level = atof(optarg); break;
-          */
-        case 'c': 
-          opt->length_coef = atof(optarg); break;
-        case 'w': 
-          opt->bw = atoi(optarg); break;
-        case 'T': 
-          opt->score_thr = atoi(optarg); break;
-        case 'S':
-          opt->max_seed_intv = atoi(optarg); break;
-        case 'b': 
-          opt->z_best= atoi(optarg); break;
-        case 'N':
-          opt->seeds_rev = atoi(optarg); break;
-        case 'x':
-          opt->flow = fmap_strdup(optarg); break;
-        case 'g':
-          opt->aln_global = 1; break;
-        case 'q':
-          opt->reads_queue_size = atoi(optarg); break;
-        case 'n':
-          opt->num_threads = atoi(optarg); break;
-        case 'a':
-          opt->aln_output_mode = atoi(optarg); break;
-        case 'R':
-          opt->sam_rg = fmap_strdup(optarg); break;
-        case 'Y':
-          opt->sam_sff_tags = 1; break;
-        case 'j':
-          opt->input_compr = FMAP_FILE_BZ2_COMPRESSION;
-          fmap_get_reads_file_format_from_fn_int(opt->fn_reads, &opt->reads_format, &opt->input_compr);
-          break;
-        case 'z':
-          opt->input_compr = FMAP_FILE_GZ_COMPRESSION;
-          fmap_get_reads_file_format_from_fn_int(opt->fn_reads, &opt->reads_format, &opt->input_compr);
-          break;
-        case 'J':
-          opt->output_compr = FMAP_FILE_BZ2_COMPRESSION; break;
-        case 'Z':
-          opt->output_compr = FMAP_FILE_GZ_COMPRESSION; break;
-        case 's':
-          opt->shm_key = atoi(optarg); break;
-        case 'v':
-          fmap_progress_set_verbosity(1); break;
-        case 'h':
-        default:
-          return 0;
-      }
-  }
-  return 1;
-}
-
-void
-fmap_map2_opt_check(fmap_map2_opt_t *opt)
-{
-  if(NULL == opt->fn_fasta && 0 == opt->shm_key) {
-      fmap_error("option -f or option -s must be specified", Exit, CommandLineArgument);
-  }
-  else if(NULL != opt->fn_fasta && 0 < opt->shm_key) {
-      fmap_error("option -f and option -s may not be specified together", Exit, CommandLineArgument);
-  }
-  if(NULL == opt->fn_reads && FMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
-      fmap_error("option -F or option -r must be specified", Exit, CommandLineArgument);
-  }
-  if(FMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
-      fmap_error("the reads format (-r) was unrecognized", Exit, CommandLineArgument);
-  }
-
-  fmap_error_cmd_check_int(opt->score_match, 0, INT32_MAX, "-A");
-  fmap_error_cmd_check_int(opt->pen_mm, 0, INT32_MAX, "-M");
-  fmap_error_cmd_check_int(opt->pen_gapo, 0, INT32_MAX, "-O");
-  fmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
-  fmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
-  //fmap_error_cmd_check_int(opt->yita, 0, 1, "-y");
-  //fmap_error_cmd_check_int(opt->mask_level, 0, 1, "-m");
-  fmap_error_cmd_check_int(opt->length_coef, 0, INT32_MAX, "-c");
-  fmap_error_cmd_check_int(opt->bw, 0, INT32_MAX, "-w");
-  fmap_error_cmd_check_int(opt->score_thr, 0, INT32_MAX, "-T");
-  fmap_error_cmd_check_int(opt->max_seed_intv, 0, INT32_MAX, "-S");
-  fmap_error_cmd_check_int(opt->z_best, 1, INT32_MAX, "-Z");
-  fmap_error_cmd_check_int(opt->seeds_rev, 0, INT32_MAX, "-N");
-  fmap_error_cmd_check_int(strlen(opt->flow), 4, 4, "-x");
-  if(-1 != opt->reads_queue_size) fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
-  fmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
-
-  if(FMAP_FILE_BZ2_COMPRESSION == opt->output_compr
-     && -1 == opt->reads_queue_size) {
-      fmap_error("cannot buffer reads with bzip2 output (options \"-q 1 -J\")", Exit, OutOfRange);
-  }   
-}
-
 int 
 fmap_map2_main(int argc, char *argv[])
 {
-  fmap_map2_opt_t *opt = NULL;
+  fmap_map_opt_t *opt = NULL;
 
   // random seed
   srand48(0);
 
   // init opt
-  opt = fmap_map2_opt_init();
+  opt = fmap_map_opt_init(FMAP_MAP_ALGO_MAP2);
 
   // get options
-  if(1 != fmap_map2_opt_parse(argc, argv, opt) // options parsed successfully
+  if(1 != fmap_map_opt_parse(argc, argv, opt) // options parsed successfully
      || argc != optind  // all options should be used
      || 1 == argc) { // some options should be specified
-      return fmap_map2_usage(opt);
+      return fmap_map_opt_usage(opt);
   }
   else { 
       // check command line arguments
-      fmap_map2_opt_check(opt);
+      fmap_map_opt_check(opt);
   }
 
   // run map2
   fmap_map2_core(opt);
 
   // destroy opt
-  fmap_map2_opt_destroy(opt);
+  fmap_map_opt_destroy(opt);
 
   fmap_progress_print2("terminating successfully");
 

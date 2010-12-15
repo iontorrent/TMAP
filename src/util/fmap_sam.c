@@ -10,21 +10,13 @@
 #endif
 
 #include "fmap_alloc.h"
+#include "fmap_definitions.h"
 #include "../io/fmap_file.h"
 #include "../io/fmap_seq_io.h"
 #include "../sw/fmap_sw.h"
 #include "fmap_sam.h"
 
 static char fmap_sam_rg_id[1024]="ID";
-static char *algos[6] = {
-    "dummy",
-    "map1", // 0x1 
-    "map2", // 0x2 
-    "dummy",
-    "map3", // 0x4
-    "dummy"
-};
-
 
 static void
 fmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
@@ -332,7 +324,7 @@ fmap_sam_print_mapped(fmap_file_t *fp, fmap_seq_t *seq, int32_t sam_sff_tags, fm
 
   // XA
   if(0 < algo_stage) {
-      fmap_file_fprintf(fp, "\tXA:Z:%s-%d", algos[algo_id], algo_stage);
+      fmap_file_fprintf(fp, "\tXA:Z:%s-%d", fmap_algo_id_to_name(algo_id), algo_stage);
   }
   
   // FI

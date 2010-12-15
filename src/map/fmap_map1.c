@@ -66,7 +66,7 @@ fmap_map1_sam_mapq(int32_t num_best_sa, int32_t num_all_sa, int32_t max_mm, int3
 }
 
 static inline void
-fmap_map1_sams_mapq(fmap_map_sams_t *sams, fmap_map1_opt_t *opt)
+fmap_map1_sams_mapq(fmap_map_sams_t *sams, fmap_map_opt_t *opt)
 {
   int32_t i;
   int32_t num_best_sa, num_best, num_all_sa;
@@ -98,7 +98,7 @@ fmap_map1_sams_mapq(fmap_map_sams_t *sams, fmap_map1_opt_t *opt)
 static void
 fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_map_sams_t **sams,
                       fmap_refseq_t *refseq, fmap_bwt_t *bwt[2], fmap_sa_t *sa, 
-                      int32_t tid, fmap_map1_opt_t *opt)
+                      int32_t tid, fmap_map_opt_t *opt)
 {
   int32_t low = 0, high;
   fmap_bwt_match_width_t *width[2]={NULL,NULL}, *seed_width[2]={NULL,NULL};
@@ -135,7 +135,7 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
       high = seq_buffer_length; // process all
 #endif
       while(low<high) {
-          fmap_map1_opt_t opt_local = (*opt); // copy over values
+          fmap_map_opt_t opt_local = (*opt); // copy over values
           fmap_seq_t *seq[2]={NULL, NULL}, *orig_seq=NULL;
           orig_seq = seq_buffer[low];
           fmap_string_t *bases[2]={NULL, NULL};
@@ -181,6 +181,9 @@ fmap_map1_core_worker(fmap_seq_t **seq_buffer, int32_t seq_buffer_length, fmap_m
           }
 
           sams[low] = fmap_map1_aux_core(seq, refseq, bwt[1], sa, width, (0 < opt_local.seed_length) ? seed_width : NULL, &opt_local, stack);
+                  
+          // adjust map1 scoring, since it does not consider opt->score_match
+          fmap_map_util_map1_adjust_score(sams[low], opt->score_match, opt->pen_mm, opt->pen_gapo, opt->pen_gape);
 
           // mapping quality
           fmap_map1_sams_mapq(sams[low], opt);
@@ -226,7 +229,7 @@ fmap_map1_core_thread_worker(void *arg)
 }
 
 static void 
-fmap_map1_core(fmap_map1_opt_t *opt)
+fmap_map1_core(fmap_map_opt_t *opt)
 {
   uint32_t i, n_reads_processed=0;
   int32_t seq_buffer_length;
@@ -409,281 +412,32 @@ fmap_map1_core(fmap_map1_opt_t *opt)
 }
 
 int 
-fmap_map1_usage(fmap_map1_opt_t *opt)
-{
-  char *reads_format = fmap_get_reads_file_format_string(opt->reads_format);
-  // Future options:
-  // - adapter trimming ?
-  // - homopolymer enumeration ?
-  // - add option to try various seed offsets
-  // - add option for "how many edits away" to search
-  // - add an option to only output all alignments
-  // - add an option to randomize best scoring alignments
-
-  fmap_file_fprintf(fmap_file_stderr, "\n");
-  fmap_file_fprintf(fmap_file_stderr, "Usage: %s map1 [options]", PACKAGE);
-  fmap_file_fprintf(fmap_file_stderr, "\n");
-  fmap_file_fprintf(fmap_file_stderr, "Options (required):\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -f FILE     the FASTA reference file name [%s]\n", opt->fn_fasta);
-  fmap_file_fprintf(fmap_file_stderr, "         -r FILE     the reads file name [%s]\n", (NULL == opt->fn_reads) ? "stdin" : opt->fn_reads);
-  fmap_file_fprintf(fmap_file_stderr, "\n");
-  fmap_file_fprintf(fmap_file_stderr, "Options (optional):\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -F STRING   the reads file format (fastq|fq|fasta|fa|sff) [%s]\n", reads_format);
-  fmap_file_fprintf(fmap_file_stderr, "         -l INT      the k-mer length to seed CALs (-1 to disable) [%d]\n", opt->seed_length);
-  fmap_file_fprintf(fmap_file_stderr, "         -k INT      maximum number of mismatches in the seed [%d]\n", opt->seed_max_mm);
-
-  fmap_file_fprintf(fmap_file_stderr, "         -m NUM      maximum number of or (read length) fraction of mismatches");
-  if(opt->max_mm < 0) fmap_file_fprintf(fmap_file_stderr, " [fraction: %lf]\n", opt->max_mm_frac);
-  else fmap_file_fprintf(fmap_file_stderr, " [number: %d]\n", opt->max_mm); 
-
-  fmap_file_fprintf(fmap_file_stderr, "         -o NUM      maximum number of or (read length) fraction of indel starts");
-  if(opt->max_gapo < 0) fmap_file_fprintf(fmap_file_stderr, " [fraction: %lf]\n", opt->max_gapo_frac);
-  else fmap_file_fprintf(fmap_file_stderr, " [number: %d]\n", opt->max_gapo); 
-
-  fmap_file_fprintf(fmap_file_stderr, "         -e NUM      maximum number of or (read length) fraction of indel extensions");
-  if(opt->max_gape < 0) fmap_file_fprintf(fmap_file_stderr, " [fraction: %lf]\n", opt->max_gape_frac);
-  else fmap_file_fprintf(fmap_file_stderr, " [number: %d]\n", opt->max_gape); 
-
-  fmap_file_fprintf(fmap_file_stderr, "         -M INT      the mismatch penalty [%d]\n", opt->pen_mm); 
-  fmap_file_fprintf(fmap_file_stderr, "         -O INT      the indel start penalty [%d]\n", opt->pen_gapo); 
-  fmap_file_fprintf(fmap_file_stderr, "         -E INT      the indel extend penalty [%d]\n", opt->pen_gape); 
-  fmap_file_fprintf(fmap_file_stderr, "         -X INT      the flow score penalty [%d]\n", opt->fscore);
-  fmap_file_fprintf(fmap_file_stderr, "         -d INT      the maximum number of CALs to extend a deletion [%d]\n", opt->max_cals_del); 
-  fmap_file_fprintf(fmap_file_stderr, "         -i INT      indels are not allowed within INT number of bps from the end of the read [%d]\n", opt->indel_ends_bound);
-  fmap_file_fprintf(fmap_file_stderr, "         -b INT      stop searching when INT optimal CALs have been found [%d]\n", opt->max_best_cals);
-  fmap_file_fprintf(fmap_file_stderr, "         -Q INT      maximum number of alignment nodes [%d]\n", opt->max_entries);
-  fmap_file_fprintf(fmap_file_stderr, "         -x STRING   the flow order ([ACGT]{4}) [%s]\n", 
-                    (NULL == opt->flow) ? "not using" : opt->flow);
-  fmap_file_fprintf(fmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
-  fmap_file_fprintf(fmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
-  fmap_file_fprintf(fmap_file_stderr, "         -a INT      output filter [%d]\n", opt->aln_output_mode);
-  fmap_file_fprintf(fmap_file_stderr, "                             0 - unique best hits\n");
-  fmap_file_fprintf(fmap_file_stderr, "                             1 - random best hit\n");
-  fmap_file_fprintf(fmap_file_stderr, "                             2 - all best hits\n");
-  fmap_file_fprintf(fmap_file_stderr, "                             3 - all alignments\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -R STRING   the RG line in the SAM header [%s]\n", opt->sam_rg);
-  fmap_file_fprintf(fmap_file_stderr, "         -Y          include SFF specific SAM tags [%s]\n",
-                    (1 == opt->sam_sff_tags) ? "true" : "false");
-  fmap_file_fprintf(fmap_file_stderr, "         -j          the input is bz2 compressed (bzip2) [%s]\n",
-                    (FMAP_FILE_BZ2_COMPRESSION == opt->input_compr) ? "true" : "false");
-  fmap_file_fprintf(fmap_file_stderr, "         -z          the input is gz compressed (gzip) [%s]\n",
-                    (FMAP_FILE_GZ_COMPRESSION == opt->input_compr) ? "true" : "false");
-  fmap_file_fprintf(fmap_file_stderr, "         -J          the output is bz2 compressed (bzip2) [%s]\n",
-                    (FMAP_FILE_BZ2_COMPRESSION == opt->output_compr) ? "true" : "false");
-  fmap_file_fprintf(fmap_file_stderr, "         -Z          the output is gz compressed (gzip) [%s]\n",
-                    (FMAP_FILE_GZ_COMPRESSION == opt->output_compr) ? "true" : "false");
-  fmap_file_fprintf(fmap_file_stderr, "         -s INT      use shared memory with the following key [%d]\n", opt->shm_key);
-  fmap_file_fprintf(fmap_file_stderr, "         -v          print verbose progress information\n");
-  fmap_file_fprintf(fmap_file_stderr, "         -h          print this message\n");
-  fmap_file_fprintf(fmap_file_stderr, "\n");
-
-  free(reads_format);
-
-  return 1;
-}
-
-fmap_map1_opt_t *
-fmap_map1_opt_init()
-{
-  fmap_map1_opt_t *opt = NULL;
-
-  opt = fmap_calloc(1, sizeof(fmap_map1_opt_t), "opt");
-
-  // program defaults
-  opt->argv = NULL;
-  opt->argc = -1;
-  opt->fn_fasta = opt->fn_reads = NULL;
-  opt->reads_format = FMAP_READS_FORMAT_UNKNOWN;
-  opt->seed_length = 32; // move this to a define block
-  opt->seed_max_mm = 3; // move this to a define block
-  opt->max_mm = 2; opt->max_mm_frac = -1.;
-  opt->max_gapo = 1; opt->max_gapo_frac = -1.;
-  opt->max_gape = 6; opt->max_gape_frac = -1.;
-  opt->pen_mm = FMAP_MAP_UTIL_PEN_MM; 
-  opt->pen_gapo = FMAP_MAP_UTIL_PEN_GAPO;
-  opt->pen_gape = FMAP_MAP_UTIL_PEN_GAPE;
-  opt->fscore = FMAP_MAP_UTIL_FSCORE;
-  opt->max_cals_del = 10; // TODO: move this to a define block
-  opt->indel_ends_bound = 5; // TODO: move this to a define block
-  opt->max_best_cals = 32; // TODO: move this to a define block
-  opt->max_entries= 2000000; // TODO: move this to a define block
-  opt->flow = NULL;
-  opt->reads_queue_size = 65536; // TODO: move this to a define block
-  opt->num_threads = 1;
-  opt->aln_output_mode = FMAP_MAP1_ALN_OUTPUT_MODE_BEST_RAND; // TODO: move this to a define block
-  opt->sam_rg = NULL;
-  opt->sam_sff_tags = 0;
-  opt->input_compr = FMAP_FILE_NO_COMPRESSION;
-  opt->output_compr = FMAP_FILE_NO_COMPRESSION;
-  opt->shm_key = 0;
-
-  return opt;
-}
-
-void
-fmap_map1_opt_destroy(fmap_map1_opt_t *opt)
-{
-  free(opt->fn_fasta);
-  free(opt->fn_reads);
-  free(opt->sam_rg);
-  free(opt);
-}
-
-int32_t 
-fmap_map1_opt_parse(int argc, char *argv[], fmap_map1_opt_t *opt)
-{
-  int c;
-
-  opt->argc = argc; opt->argv = argv;
-
-  while((c = getopt(argc, argv, "f:r:F:l:k:m:o:e:M:O:E:X:d:i:b:Q:x:q:n:a:R:Y:jzJZs:vh")) >= 0) {
-      switch(c) {
-        case 'f':
-          opt->fn_fasta = fmap_strdup(optarg); break;
-        case 'r':
-          opt->fn_reads = fmap_strdup(optarg); 
-          fmap_get_reads_file_format_from_fn_int(opt->fn_reads, &opt->reads_format, &opt->input_compr);
-          break;
-        case 'F':
-          opt->reads_format = fmap_get_reads_file_format_int(optarg); break;
-        case 'l':
-          opt->seed_length = atoi(optarg); break;
-        case 'k':
-          opt->seed_max_mm = atoi(optarg); break;
-        case 'm':
-          if(NULL != strstr(optarg, ".")) opt->max_mm = -1, opt->max_mm_frac = atof(optarg);
-          else opt->max_mm = atoi(optarg), opt->max_mm_frac = -1.0;
-          break;
-        case 'o':
-          if(NULL != strstr(optarg, ".")) opt->max_gapo = -1, opt->max_gapo_frac = atof(optarg);
-          else opt->max_gapo = atoi(optarg), opt->max_gapo_frac = -1.0;
-          break;
-        case 'e':
-          if(NULL != strstr(optarg, ".")) opt->max_gape = -1, opt->max_gape_frac = atof(optarg);
-          else opt->max_gape = atoi(optarg), opt->max_gape_frac = -1.0;
-          break;
-        case 'M':
-          opt->pen_mm = atoi(optarg); break;
-        case 'O':
-          opt->pen_gapo = atoi(optarg); break;
-        case 'E':
-          opt->pen_gape = atoi(optarg); break;
-        case 'X':
-          opt->fscore = atoi(optarg); break;
-        case 'd':
-          opt->max_cals_del = atoi(optarg); break;
-        case 'i':
-          opt->indel_ends_bound = atoi(optarg); break;
-        case 'b':
-          opt->max_best_cals = atoi(optarg); break;
-        case 'Q': 
-          opt->max_entries = atoi(optarg); break;
-        case 'x':
-          opt->flow = fmap_strdup(optarg); break;
-        case 'q': 
-          opt->reads_queue_size = atoi(optarg); break;
-        case 'n':
-          opt->num_threads = atoi(optarg); break;
-        case 'a':
-          opt->aln_output_mode = atoi(optarg); break;
-        case 'R':
-          opt->sam_rg = fmap_strdup(optarg); break;
-        case 'Y':
-          opt->sam_sff_tags = 1; break;
-        case 'j':
-          opt->input_compr = FMAP_FILE_BZ2_COMPRESSION; 
-          fmap_get_reads_file_format_from_fn_int(opt->fn_reads, &opt->reads_format, &opt->input_compr);
-          break;
-        case 'z':
-          opt->input_compr = FMAP_FILE_GZ_COMPRESSION; 
-          fmap_get_reads_file_format_from_fn_int(opt->fn_reads, &opt->reads_format, &opt->input_compr);
-          break;
-        case 'J':
-          opt->output_compr = FMAP_FILE_BZ2_COMPRESSION; break;
-        case 'Z':
-          opt->output_compr = FMAP_FILE_GZ_COMPRESSION; break;
-        case 's':
-          opt->shm_key = atoi(optarg); break;
-        case 'v':
-          fmap_progress_set_verbosity(1); break;
-        case 'h':
-        default:
-          return 0;
-      }
-  }
-  return 1;
-}
-
-void 
-fmap_map1_opt_check(fmap_map1_opt_t *opt)
-{
-  if(NULL == opt->fn_fasta && 0 == opt->shm_key) {
-      fmap_error("option -f or option -s must be specified", Exit, CommandLineArgument);
-  }
-  else if(NULL != opt->fn_fasta && 0 < opt->shm_key) {
-      fmap_error("option -f and option -s may not be specified together", Exit, CommandLineArgument);
-  }
-  if(NULL == opt->fn_reads && FMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
-      fmap_error("option -F or option -r must be specified", Exit, CommandLineArgument);
-  }
-  if(FMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
-      fmap_error("the reads format (-r) was unrecognized", Exit, CommandLineArgument);
-  }
-  if(-1 != opt->seed_length) fmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "-l");
-
-  // this will take care of the case where they are both < 0
-  fmap_error_cmd_check_int((opt->max_mm_frac < 0) ? opt->max_mm : (int32_t)opt->max_mm_frac, 0, INT32_MAX, "-m"); 
-  // this will take care of the case where they are both < 0
-  fmap_error_cmd_check_int((opt->max_gapo_frac < 0) ? opt->max_gapo : (int32_t)opt->max_gapo_frac, 0, INT32_MAX, "-m"); 
-  // this will take care of the case where they are both < 0
-  fmap_error_cmd_check_int((opt->max_gape_frac < 0) ? opt->max_gape : (int32_t)opt->max_gape_frac, 0, INT32_MAX, "-m"); 
-
-  fmap_error_cmd_check_int(opt->pen_mm, 0, INT32_MAX, "-M");
-  fmap_error_cmd_check_int(opt->pen_gapo, 0, INT32_MAX, "-O");
-  fmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
-  fmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
-  fmap_error_cmd_check_int(opt->max_cals_del, 1, INT32_MAX, "-d");
-  fmap_error_cmd_check_int(opt->indel_ends_bound, 0, INT32_MAX, "-i");
-  fmap_error_cmd_check_int(opt->max_best_cals, 0, INT32_MAX, "-b");
-  fmap_error_cmd_check_int(strlen(opt->flow), 4, 4, "-x");
-  fmap_error_cmd_check_int(opt->max_entries, 1, INT32_MAX, "-Q");
-  if(-1 != opt->reads_queue_size) fmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
-  fmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
-  fmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
-
-  if(FMAP_FILE_BZ2_COMPRESSION == opt->output_compr 
-     && -1 == opt->reads_queue_size) {
-      fmap_error("cannot buffer reads with bzip2 output (options \"-q 1 -J\")", Exit, OutOfRange);
-  }
-}
-
-int 
 fmap_map1_main(int argc, char *argv[])
 {
-  fmap_map1_opt_t *opt = NULL;
+  fmap_map_opt_t *opt = NULL;
 
   // random seed
   srand48(0); 
 
   // init opt
-  opt = fmap_map1_opt_init();
+  opt = fmap_map_opt_init(FMAP_MAP_ALGO_MAP1);
 
   // get options
-  if(1 != fmap_map1_opt_parse(argc, argv, opt) // options parsed successfully
+  if(1 != fmap_map_opt_parse(argc, argv, opt) // options parsed successfully
      || argc != optind  // all options should be used
      || 1 == argc) { // some options should be specified
-      return fmap_map1_usage(opt);
+      return fmap_map_opt_usage(opt);
   }
   else { 
       // check command line arguments
-      fmap_map1_opt_check(opt);
+      fmap_map_opt_check(opt);
   }
 
   // run map1
   fmap_map1_core(opt);
 
   // destroy opt
-  fmap_map1_opt_destroy(opt);
+  fmap_map_opt_destroy(opt);
 
   fmap_progress_print2("terminating successfully");
 

@@ -5,6 +5,39 @@
 #include "fmap_definitions.h"
 #include "../io/fmap_file.h"
 
+// Algorithm IDs
+
+static char *algo_id_to_name[17] = {
+    "none",
+    "map1", 
+    "map2", 
+    "map3", 
+    "dummy4",
+    "dummy5",
+    "dummy6",
+    "dummy7",
+    "dummy8",
+    "dummy9",
+    "dummy10",
+    "dummy11",
+    "dummy12",
+    "dummy13",
+    "dummy14",
+    "dummy15",
+    "mapall"
+};
+
+char *
+fmap_algo_id_to_name(uint16_t algo_id)
+{
+  int32_t i=0;
+  while(0 < algo_id) {
+      algo_id >>= 1;
+      i++;
+  }
+  return algo_id_to_name[i];
+}
+
 // Input: ASCII character
 // Output: 2-bit DNA value
 uint8_t fmap_nt_char_to_int[256] = {
@@ -182,6 +215,8 @@ fmap_get_reads_file_format_from_fn_int(char *fn, int32_t *reads_format, int32_t 
   else if(FMAP_FILE_GZ_COMPRESSION == (*compr_type)) {
       compr_suffix_length = 3; // ".gz"
   }
+
+  if(NULL == fn) return;
 
   // auto-recognize the reads format
   if(FMAP_READS_FORMAT_UNKNOWN == (*reads_format)) {

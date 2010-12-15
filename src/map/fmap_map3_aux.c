@@ -61,7 +61,7 @@ fmap_map3_aux_core_seed_helper(uint8_t *query,
                                fmap_refseq_t *refseq,
                                fmap_bwt_t *bwt,
                                fmap_sa_t *sa,
-                               fmap_map3_opt_t *opt,
+                               fmap_map_opt_t *opt,
                                fmap_map3_aux_seed_t **seeds,
                                int32_t *n_seeds,
                                int32_t *m_seeds,
@@ -171,7 +171,7 @@ fmap_map3_aux_core_seed(uint8_t *query,
                         fmap_refseq_t *refseq,
                         fmap_bwt_t *bwt,
                         fmap_sa_t *sa,
-                        fmap_map3_opt_t *opt,
+                        fmap_map_opt_t *opt,
                         fmap_map3_aux_seed_t **seeds,
                         int32_t *n_seeds,
                         int32_t *m_seeds,
@@ -224,7 +224,7 @@ fmap_map3_aux_core(fmap_seq_t *seq[2],
                    fmap_refseq_t *refseq,
                    fmap_bwt_t *bwt,
                    fmap_sa_t *sa,
-                   fmap_map3_opt_t *opt)
+                   fmap_map_opt_t *opt)
 {
   int32_t i, j, seed_length;
   int32_t seq_len[2];

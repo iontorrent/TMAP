@@ -184,7 +184,7 @@ fmap_map2_aln_destroy(fmap_map2_aln_t *a)
   }
 
 static void 
-fmap_map2_aux_extend_left(fmap_map2_opt_t *opt, fmap_map2_aln_t *b, 
+fmap_map2_aux_extend_left(fmap_map_opt_t *opt, fmap_map2_aln_t *b, 
                           uint8_t *query,
                           int32_t query_length,
                           fmap_refseq_t *refseq,
@@ -258,7 +258,7 @@ fmap_map2_aux_extend_left(fmap_map2_opt_t *opt, fmap_map2_aln_t *b,
 }
 
 static void 
-fmap_map2_aux_extend_right(fmap_map2_opt_t *opt, fmap_map2_aln_t *b, 
+fmap_map2_aux_extend_right(fmap_map_opt_t *opt, fmap_map2_aln_t *b, 
                            uint8_t *query,
                            int32_t query_length,
                            fmap_refseq_t *refseq,
@@ -312,7 +312,7 @@ fmap_map2_aux_extend_right(fmap_map2_opt_t *opt, fmap_map2_aln_t *b,
 
 /* generate CIGAR array(s) in b->cigar[] */
 static void 
-fmap_map2_aux_gen_cigar(fmap_map2_opt_t *opt, uint8_t *queries[2], 
+fmap_map2_aux_gen_cigar(fmap_map_opt_t *opt, uint8_t *queries[2], 
                         int32_t query_length, fmap_refseq_t *refseq, fmap_map2_aln_t *b)
 {
   uint8_t *target = NULL;
@@ -400,7 +400,7 @@ fmap_map2_aux_merge_hits(fmap_map2_aln_t *b[2], int32_t l, int32_t is_reverse, i
 }
 
 static fmap_map2_aln_t *
-fmap_map2_aux_aln(fmap_map2_opt_t *opt, fmap_refseq_t *refseq, 
+fmap_map2_aux_aln(fmap_map_opt_t *opt, fmap_refseq_t *refseq, 
                   fmap_bwt_t *target_bwt, fmap_sa_t *target_sa,
                   fmap_string_t *seq[2], int32_t is_rev, fmap_map2_global_mempool_t *pool)
 {
@@ -533,7 +533,7 @@ fmap_map2_aux_fix_cigar(fmap_refseq_t *refseq, fmap_map2_hit_t *p, int32_t n_cig
 }
 
 static fmap_map_sams_t *
-fmap_map1_aux_store_hits(fmap_refseq_t *refseq, fmap_map2_opt_t *opt, 
+fmap_map1_aux_store_hits(fmap_refseq_t *refseq, fmap_map_opt_t *opt, 
                          fmap_map2_aln_t *aln)
 {
   int32_t i, j;
@@ -610,14 +610,14 @@ fmap_map1_aux_store_hits(fmap_refseq_t *refseq, fmap_map2_opt_t *opt,
 }
 
 fmap_map_sams_t *
-fmap_map2_aux_core(fmap_map2_opt_t *_opt,
+fmap_map2_aux_core(fmap_map_opt_t *_opt,
                    fmap_seq_t *query,
                    fmap_refseq_t *refseq,
                    fmap_bwt_t *bwt[2],
                    fmap_sa_t *sa[2],
                    fmap_map2_global_mempool_t *pool)
 {
-  fmap_map2_opt_t opt;
+  fmap_map_opt_t opt;
   fmap_string_t *seq[2]={NULL, NULL};
   fmap_string_t *rseq[2]={NULL, NULL};
   fmap_map_sams_t *sams = NULL;
@@ -695,7 +695,6 @@ fmap_map2_aux_core(fmap_map2_opt_t *_opt,
       // Note: this will give duplicate mappings
       //fmap_map2_aux_resolve_query_overlaps(b[0], opt.mask_level, (0 == opt.aln_global) ? 0 : FMAP_MAP2_MINUS_INF);
   } else b[1] = 0;
-
 
   // generate CIGAR and print SAM
   _seq[0] = (uint8_t*)seq[0]->s;

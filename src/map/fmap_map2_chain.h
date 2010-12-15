@@ -25,6 +25,6 @@ typedef struct {
   @param  b    pointer to the alignment
   */
 void 
-fmap_map2_chain_filter(const fmap_map2_opt_t *opt, int len, fmap_map2_aln_t *b[2]);
+fmap_map2_chain_filter(const fmap_map_opt_t *opt, int len, fmap_map2_aln_t *b[2]);
 
 #endif
