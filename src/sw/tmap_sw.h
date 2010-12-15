@@ -24,8 +24,8 @@
    SOFTWARE.
    */
 
-#ifndef TMAP_SW_H_
-#define TMAP_SW_H_
+#ifndef TMAP_SW_H
+#define TMAP_SW_H
 
 #define TMAP_SW_CIGAR_OP(_cigar) (((_cigar) & 0xf))
 #define TMAP_SW_CIGAR_LENGTH(_cigar) (((_cigar) >> 4))

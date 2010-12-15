@@ -1,6 +1,6 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
-#ifndef TMAP_BWT_MATCH_H_
-#define TMAP_BWT_MATCH_H_
+#ifndef TMAP_BWT_MATCH_H
+#define TMAP_BWT_MATCH_H
 
 /*! 
   API for BWT Index Lookups

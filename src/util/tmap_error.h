@@ -1,6 +1,6 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
-#ifndef TMAP_ERROR_H_
-#define TMAP_ERROR_H_
+#ifndef TMAP_ERROR_H
+#define TMAP_ERROR_H
 
 #define BREAK_LINE "************************************************************\n"
 

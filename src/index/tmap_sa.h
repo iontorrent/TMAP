@@ -1,6 +1,6 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
-#ifndef TMAP_SA_H_
-#define TMAP_SA_H_
+#ifndef TMAP_SA_H
+#define TMAP_SA_H
 
 #define TMAP_SA_INTERVAL 32
 

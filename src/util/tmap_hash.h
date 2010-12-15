@@ -25,8 +25,8 @@
    */
 
 
-#ifndef TMAP_HASH_H_
-#define TMAP_HASH_H_
+#ifndef TMAP_HASH_H
+#define TMAP_HASH_H
 
 /*! 
   Generic Hash Libary

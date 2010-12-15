@@ -1,6 +1,6 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
-#ifndef TMAP_SFF_H_
-#define TMAP_SFF_H_
+#ifndef TMAP_SFF_H
+#define TMAP_SFF_H
 
 #define TMAP_SFF_MAGIC 0x2E736666
 #define TMAP_SFF_VERSION 1

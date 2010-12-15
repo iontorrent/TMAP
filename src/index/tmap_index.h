@@ -1,6 +1,6 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
-#ifndef TMAP_INDEX_H_
-#define TMAP_INDEX_H_
+#ifndef TMAP_INDEX_H
+#define TMAP_INDEX_H
 
 #define TMAP_INDEX_LARGE_GENOME 0x1000000
 // (2^32) - 1

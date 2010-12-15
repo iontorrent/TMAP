@@ -1,6 +1,6 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
-#ifndef TMAP_MAIN_H_
-#define TMAP_MAIN_H_
+#ifndef TMAP_MAIN_H
+#define TMAP_MAIN_H
 
 /*! 
   Main TMAP Function

@@ -1,6 +1,6 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
-#ifndef TMAP_MAP1_AUX_H_
-#define TMAP_MAP1_AUX_H_
+#ifndef TMAP_MAP1_AUX_H
+#define TMAP_MAP1_AUX_H
 
 #include "../util/tmap_fibheap.h"
 #include "tmap_map1.h"

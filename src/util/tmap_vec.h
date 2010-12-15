@@ -24,8 +24,8 @@
    SOFTWARE.
    */
 
-#ifndef TMAP_VEC_H_
-#define TMAP_VEC_H_
+#ifndef TMAP_VEC_H
+#define TMAP_VEC_H
 
 #include <stdlib.h>
 #include "tmap_alloc.h"

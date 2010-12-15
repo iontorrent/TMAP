@@ -1,6 +1,6 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
-#ifndef TMAP_REFSEQ_H_
-#define TMAP_REFSEQ_H_
+#ifndef TMAP_REFSEQ_H
+#define TMAP_REFSEQ_H
 
 #include <stdint.h>
 #include "../util/tmap_string.h"

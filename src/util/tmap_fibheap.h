@@ -30,8 +30,8 @@
 
 /* Nils Homer - modified */
 
-#ifndef TMAP_FIBHEAP_H_
-#define TMAP_FIBHEAP_H_
+#ifndef TMAP_FIBHEAP_H
+#define TMAP_FIBHEAP_H
 
 /*! 
   */

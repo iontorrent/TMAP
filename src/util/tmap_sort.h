@@ -24,8 +24,8 @@
    SOFTWARE.
    */
 
-#ifndef TMAP_SORT_H_
-#define TMAP_SORT_H_
+#ifndef TMAP_SORT_H
+#define TMAP_SORT_H
 
 #include <stdlib.h>
 #include <string.h>

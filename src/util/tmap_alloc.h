@@ -1,6 +1,6 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
-#ifndef TMAP_ALLOC_H_
-#define TMAP_ALLOC_H_
+#ifndef TMAP_ALLOC_H
+#define TMAP_ALLOC_H
 
 #include "tmap_error.h"
 

@@ -1,6 +1,6 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
-#ifndef TMAP_PROGRESS_H_
-#define TMAP_PROGRESS_H_
+#ifndef TMAP_PROGRESS_H
+#define TMAP_PROGRESS_H
 
 #include <time.h>
 

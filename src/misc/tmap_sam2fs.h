@@ -1,6 +1,6 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
-#ifndef TMAP_SAM2FS_H_
-#define TMAP_SAM2FS_H_
+#ifndef TMAP_SAM2FS_H
+#define TMAP_SAM2FS_H
 
 #include <config.h>
 

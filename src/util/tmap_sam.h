@@ -1,6 +1,6 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
-#ifndef TMAP_SAM_H_
-#define TMAP_SAM_H_
+#ifndef TMAP_SAM_H
+#define TMAP_SAM_H
 
 #include <config.h>
 #ifdef HAVE_SAMTOOLS

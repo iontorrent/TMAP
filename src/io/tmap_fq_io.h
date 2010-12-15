@@ -1,6 +1,6 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
-#ifndef TMAP_FQ_IO_H_
-#define TMAP_FQ_IO_H_
+#ifndef TMAP_FQ_IO_H
+#define TMAP_FQ_IO_H
 
 /* The MIT License
 

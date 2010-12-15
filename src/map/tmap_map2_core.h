@@ -1,6 +1,6 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
-#ifndef TMAP_MAP2_CORE_H_
-#define TMAP_MAP2_CORE_H_
+#ifndef TMAP_MAP2_CORE_H
+#define TMAP_MAP2_CORE_H
 
 #include "../index/tmap_bwtl.h"
 #include "../index/tmap_bwt.h"

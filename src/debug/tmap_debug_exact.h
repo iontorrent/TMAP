@@ -1,6 +1,6 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
-#ifndef TMAP_DEBUG_EXACT_H_
-#define TMAP_DEBUG_EXACT_H_
+#ifndef TMAP_DEBUG_EXACT_H
+#define TMAP_DEBUG_EXACT_H
 
 /*! 
   Debugging Functions

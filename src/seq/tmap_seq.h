@@ -1,6 +1,6 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
-#ifndef TMAP_SEQ_H_
-#define TMAP_SEQ_H_
+#ifndef TMAP_SEQ_H
+#define TMAP_SEQ_H
 
 #include "tmap_fq.h"
 #include "tmap_sff.h"

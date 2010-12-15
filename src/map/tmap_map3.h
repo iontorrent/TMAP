@@ -1,6 +1,6 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
-#ifndef TMAP_MAP3_H_
-#define TMAP_MAP3_H_
+#ifndef TMAP_MAP3_H
+#define TMAP_MAP3_H
 
 #include <config.h>
 #include <sys/types.h>
