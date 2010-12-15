@@ -154,6 +154,8 @@ tmap_map_all_sams_merge_helper(tmap_map_sams_t *dest, tmap_map_sams_t *src, int3
 {
   int32_t i, n;
 
+  if(0 == src->n) return;
+
   // make room
   n = dest->n;
   tmap_map_sams_realloc(dest, dest->n + src->n);
@@ -264,7 +266,7 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
   tmap_map2_global_mempool_t *pool_map2 = NULL;
   tmap_map_sams_t *sams_map2;
   // map3
-  tmap_map_sams_t *sams_map3;
+  tmap_map_sams_t *sams_map3 = NULL;
   uint8_t *flow_map3[2][2];
 
   // map1
@@ -501,8 +503,12 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
       }
       // map3
       if(opt->algos[i] & TMAP_MAP_ALGO_MAP3) {
-          free(flow_map3[i][0]);
-          free(flow_map3[i][1]);
+          if(0 < seq_buffer_length && 0 < opt->opt_map3[i]->hp_diff) {
+              if(TMAP_SEQ_TYPE_SFF == seq_buffer[0]->type) {
+                  free(flow_map3[i][0]);
+                  free(flow_map3[i][1]);
+              }
+          }
       }
   }
 }

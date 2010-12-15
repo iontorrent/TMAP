@@ -313,6 +313,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
         case 'v':
           tmap_progress_set_verbosity(1); break;
         case 'h':
+          free(getopt_format);
           return 0;
           break;
         default:
@@ -345,6 +346,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
                 case 'Q':
                   opt->max_entries = atoi(optarg); break;
                 default:
+                  free(getopt_format);
                   return 0;
               }
               break;
@@ -368,6 +370,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
                   opt->seeds_rev = atoi(optarg); break;
                   break;
                 default: 
+                  free(getopt_format);
                   return 0;
               }
               break;
@@ -383,6 +386,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
                   opt->hp_diff = atoi(optarg); break;
                   break;
                 default:
+                  free(getopt_format);
                   return 0;
               }
               break;
@@ -393,6 +397,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
                 case 'I':
                   opt->aln_output_mode_ind = 1; break;
                 default:
+                  free(getopt_format);
                   return 0;
               }
               break;
@@ -402,6 +407,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           break;
       }
   }
+  free(getopt_format);
   return 1;
 }
 
@@ -680,7 +686,7 @@ tmap_map_sams_realloc(tmap_map_sams_t *s, int32_t n)
   int32_t i;
   if(n == s->n) return; 
   for(i=n;i<s->n;i++) {
-      tmap_map_sam_destroy_aux(&s->sams[i]);
+      tmap_map_sam_destroy(&s->sams[i]);
   }
   s->sams = tmap_realloc(s->sams, sizeof(tmap_map_sam_t) * n, "s->sams");
   s->n = n;
@@ -692,7 +698,7 @@ tmap_map_sams_destroy(tmap_map_sams_t *s)
   int32_t i;
   if(NULL == s) return;
   for(i=0;i<s->n;i++) {
-      tmap_map_sam_destroy_aux(&s->sams[i]);
+      tmap_map_sam_destroy(&s->sams[i]);
   }
   free(s->sams);
   free(s);
@@ -891,6 +897,7 @@ tmap_map_sams_filter1(tmap_map_sams_t *sams, int32_t aln_output_mode, int32_t al
       // keep the rth one
       if(TMAP_MAP_ALGO_NONE == algo_id) {
           if(0 != r) {
+              tmap_map_sam_destroy(&sams->sams[0]);
               tmap_map_sam_copy_and_nullify(&sams->sams[0], &sams->sams[r]);
           }
           // reallocate
