@@ -73,7 +73,7 @@ fmap_map_all_mapq(fmap_map_sams_t *sams, fmap_map_opt_t *opt)
           // update
           best_score = cur_score;
           n_best = 1;
-          stage = (algo_id == FMAP_MAP_ALGO_NONE) ? sams->sams[i].algo_stage : -1;
+          stage = (algo_id == FMAP_MAP_ALGO_NONE) ? sams->sams[i].algo_stage-1 : -1;
           algo_id = (algo_id == FMAP_MAP_ALGO_NONE) ? sams->sams[i].algo_id : -1;
       }
       else if(cur_score == best_score) { // qual
