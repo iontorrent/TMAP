@@ -1195,6 +1195,11 @@ fmap_fsw_sff_to_flowseq(fmap_sff_t *sff)
           fprintf(stderr, "num_flows=%d sff->read->bases->l=%d\n", 
                   num_flows, (int)sff->read->bases->l);
           fprintf(stderr, "i=%d j=%d\n", i, j);
+          int k;
+          for(k=0;k<sff->read->bases->l;k++) {
+              fputc("ACGTN"[(int)sff->read->bases->s[k]], stderr);
+          }
+          fputc('\n', stderr);
           fmap_error("num_flows <= j", Exit, OutOfRange);
       }
       // get the number of bases called in this flow 

@@ -435,6 +435,7 @@ fmap_map_all_core_worker(fmap_seq_t **seq_buffer, fmap_map_sams_t **sams, int32_
                                                  i+1, opt);
 
               // re-align the alignments in flow-space
+              /*
               if(FMAP_SEQ_TYPE_SFF == seq_buffer[low]->type) {
                   fmap_map_util_fsw(seq_buffer[low]->data.sff,
                                     sams[low], refseq,
@@ -442,7 +443,7 @@ fmap_map_all_core_worker(fmap_seq_t **seq_buffer, fmap_map_sams_t **sams, int32_
                                     opt->score_match, opt->pen_mm, opt->pen_gapo,
                                     opt->pen_gape, opt->fscore);
               }
-
+              */
 
               // destroy
               // map1
