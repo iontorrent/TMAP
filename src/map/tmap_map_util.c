@@ -557,7 +557,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
     case TMAP_MAP_ALGO_MAPALL:
       tmap_error_cmd_check_int(opt->dup_window, 0, INT32_MAX, "-W");
       tmap_error_cmd_check_int(opt->aln_output_mode_ind, 0, 1, "-I");
-      if(0 == opt->algos[0]) {
+      if(0 == opt->algos[0] || 0 == opt->num_stages) {
           tmap_error("no algorithms given for stage 1", Exit, CommandLineArgument);
       }
       for(i=0;i<2;i++) {

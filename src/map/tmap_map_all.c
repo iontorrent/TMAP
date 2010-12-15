@@ -230,6 +230,9 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
   tmap_map_all_sams_merge_helper(sams, sams_map2, stage);
   tmap_map_all_sams_merge_helper(sams, sams_map3, stage);
 
+  // no alignments
+  if(0 == sams->n) return sams;
+
   // remove duplicates
   tmap_map_all_remove_duplicates(sams, opt->dup_window);
 
@@ -270,7 +273,7 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
   uint8_t *flow_map3[2][2];
 
   // map1
-  for(i=0;i<2;i++) {
+  for(i=0;i<opt->num_stages;i++) {
       if(opt->algos[i] & TMAP_MAP_ALGO_MAP1) {
           width_map1[i][0] = width_map1[i][1] = NULL;
           width_length_map1[i] = 0;
@@ -333,7 +336,7 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
           tmap_map_opt_t opt_local_map1[2];
 
           // map1
-          for(i=0;i<2;i++) {
+          for(i=0;i<opt->num_stages;i++) {
               if(opt->algos[i] & TMAP_MAP_ALGO_MAP1) {
                   opt_local_map1[i] = (*opt->opt_map1[i]); // copy over values
               }
@@ -369,7 +372,7 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
           bases[1] = tmap_seq_get_bases(seq[1]);
 
           // map1
-          for(i=0;i<2;i++) {
+          for(i=0;i<opt->num_stages;i++) {
               if(opt->algos[i] & TMAP_MAP_ALGO_MAP1) {
                   opt_local_map1[i].max_mm = (opt->opt_map1[i]->max_mm < 0) ? (int)(0.99 + opt->opt_map1[i]->max_mm_frac * bases[0]->l) : opt->opt_map1[i]->max_mm;
                   opt_local_map1[i].max_gape = (opt->opt_map1[i]->max_gape < 0) ? (int)(0.99 + opt->opt_map1[i]->max_gape_frac * bases[0]->l) : opt->opt_map1[i]->max_gape;
@@ -402,7 +405,7 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
           }
 
           // run the core algorithms
-          for(i=0;i<2;i++) {
+          for(i=0;i<opt->num_stages;i++) {
               // tmap_map1_aux_core
               if(opt->algos[i] & TMAP_MAP_ALGO_MAP1) {
                   sams_map1 = tmap_map1_aux_core(seq, refseq, bwt[1], sa[1], width_map1[i], 
@@ -447,7 +450,6 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
                                     opt->pen_gape, opt->fscore);
               }
               */
-
               // destroy
               // map1
               if(opt->algos[i] & TMAP_MAP_ALGO_MAP1) {
@@ -470,6 +472,9 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
                   // yes we did
                   break;
               }
+              else if(0 == i && 2 == opt->num_stages) {
+                  tmap_map_sams_destroy(sams[low]);
+              }
           }
 
           // destroy
@@ -483,7 +488,7 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
   }
 
   // map1
-  for(i=0;i<2;i++) {
+  for(i=0;i<opt->num_stages;i++) {
       if(opt->algos[i] & TMAP_MAP_ALGO_MAP1) {
           if(NULL != stack_map1) {
               tmap_map1_aux_stack_destroy(stack_map1);
@@ -577,7 +582,7 @@ tmap_map_all_core(tmap_map_opt_t *opt)
 
   // TODO: this could be dangerous if algorithms change, needs to be refactored
   // adjust mapping algorithm specific options
-  for(i=0;i<2;i++) {
+  for(i=0;i<opt->num_stages;i++) {
       // map1
       if(opt->algos[i] & TMAP_MAP_ALGO_MAP1) {
           // - none
@@ -774,36 +779,43 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   i = 1;
   opt_type = opt_type_next = TMAP_MAP_ALGO_NONE;
   opt_stage = opt_stage_next = 0;
+  opt->num_stages = 0;
   while(i<argc) {
       if(0 == strcmp("map1", argv[i])) {
           opt_type_next = TMAP_MAP_ALGO_MAP1;
           opt->algos[0] |= opt_type_next;
           opt_stage_next = 1;
+          if(0 == opt->num_stages) opt->num_stages++;
       }
       else if(0 == strcmp("map2", argv[i])) {
           opt_type_next = TMAP_MAP_ALGO_MAP2;
           opt->algos[0] |= opt_type_next;
           opt_stage_next = 1;
+          if(0 == opt->num_stages) opt->num_stages++;
       }
       else if(0 == strcmp("map3", argv[i])) {
           opt_type_next = TMAP_MAP_ALGO_MAP3;
           opt->algos[0] |= opt_type_next;
           opt_stage_next = 1;
+          if(0 == opt->num_stages) opt->num_stages++;
       }
       else if(0 == strcmp("MAP1", argv[i])) {
           opt_type_next = TMAP_MAP_ALGO_MAP1;
           opt->algos[1] |= opt_type_next;
           opt_stage_next = 2;
+          if(1 == opt->num_stages) opt->num_stages++;
       }
       else if(0 == strcmp("MAP2", argv[i])) {
           opt_type_next = TMAP_MAP_ALGO_MAP2;
           opt->algos[1] |= opt_type_next;
           opt_stage_next = 2;
+          if(1 == opt->num_stages) opt->num_stages++;
       }
       else if(0 == strcmp("MAP3", argv[i])) {
           opt_type_next = TMAP_MAP_ALGO_MAP3;
           opt->algos[1] |= opt_type_next;
           opt_stage_next = 2;
+          if(1 == opt->num_stages) opt->num_stages++;
       }
 
       /*

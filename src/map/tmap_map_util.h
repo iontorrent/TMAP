@@ -97,6 +97,7 @@ typedef struct __tmap_map_opt_t {
     uint32_t algos[2];  /*!< the algorithms that should be run in stage 1 and stage 2, bit-packed */
     int32_t dup_window; /*!< remove duplicate alignments from different algorithms within this bp window (-W) */
     int32_t aln_output_mode_ind; /*!< apply the output filter for each algorithm separately (-I) */
+    int32_t num_stages;  /*!< the number of stages */ 
     // stage 1/2 mapping algorithm specific options
     struct __tmap_map_opt_t *opt_map1[2]; /*!< map 1 options */
     struct __tmap_map_opt_t *opt_map2[2]; /*!< map 2 options */
