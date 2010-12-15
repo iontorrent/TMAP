@@ -1,11 +1,11 @@
 #  See LICENSE for details
 #
-#  The version number in AC_INIT is for the fmap package.
+#  The version number in AC_INIT is for the tmap package.
 #  Developers - the version number should *NEVER* be changed except by, 
 #  or with explicit permission from, Nils Homer.
 
 AC_PREREQ(2.59);
-AC_INIT([fmap],[0.0.1],[nils.homer@lifetech.com],[fmap])
+AC_INIT([tmap],[0.0.1],[nils.homer@lifetech.com],[tmap])
 AC_COPYRIGHT([See LICENSE for copyright information.])
 AC_CONFIG_AUX_DIR(config)
 AM_INIT_AUTOMAKE([dist-bzip2 subdir-objects])

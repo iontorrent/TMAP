@@ -14,7 +14,7 @@ tmap_file_t *tmap_file_stderr = NULL;
 static int version()
 {
   fprintf(stdout, "\n");
-  fprintf(stdout, "%s:   flow mapper\n", PACKAGE);
+  fprintf(stdout, "%s:   torrent mapper\n", PACKAGE);
 #ifdef GIT_REV
   fprintf(stdout, "Version: %s git:%s\n", PACKAGE_VERSION, GIT_REV);
 #else
@@ -27,7 +27,7 @@ static int version()
 static int usage()
 {
   fprintf(stderr, "\n");
-  fprintf(stderr, "%s:   flow mapper\n", PACKAGE);
+  fprintf(stderr, "%s:   torrent mapper\n", PACKAGE);
 #ifdef GIT_REV
   fprintf(stderr, "Version: %s git:%s\n", PACKAGE_VERSION, GIT_REV);
 #else

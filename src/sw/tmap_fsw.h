@@ -9,7 +9,7 @@
 #define TMAP_FSW_SET_SCORE_INF(s) (s).match_score = (s).ins_score = (s).del_score = TMAP_SW_MINOR_INF
 #define TMAP_FSW_SET_FROM(s, from) (s).match_from = (s).ins_from = (s).del_from = from 
 #define TMAP_FSW_SET_BC(s, bc) (s).match_bc = (s).ins_bc = (s).del_bc = bc
-#define TMAP_FSW_INIT_CELL(s) (TMAP_FSW_SET_FROM(s,FMAP_FSW_FROM_S), FMAP_FSW_SET_BC(s, 0))
+#define TMAP_FSW_INIT_CELL(s) (TMAP_FSW_SET_FROM(s,TMAP_FSW_FROM_S), TMAP_FSW_SET_BC(s, 0))
 
 #define TMAP_FSW_MAX_PATH_LENGTH(ref_len, flow_len, offset) ((1 + (ref_len * (flow_len + 1) * (offset + 1))))
 
