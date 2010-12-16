@@ -134,13 +134,15 @@ tmap_sam2fs_aux_flow_convert(tmap_sam2fs_aux_flow_t *a, uint8_t *seq, int32_t le
       }
       if(len <= i) break;
 
+      /*
       if(3 < seq[i]) {
           fprintf(stderr, "i=%d seq[i]=%d len=%d NULL=%d\n", i, seq[i], len, (NULL==qseq) ? 1 : 0);
           tmap_error(NULL, Exit, OutOfRange);
       }
+      */
 
       // skip over empty flow
-      while(flow_order[k] != seq[i]) {
+      while(flow_order[k] != seq[i] && seq[i] <= 3) {
           if(a->m <= a->l) {
               a->m = a->l + 1;
               tmap_roundup32(a->m);
@@ -155,8 +157,8 @@ tmap_sam2fs_aux_flow_convert(tmap_sam2fs_aux_flow_t *a, uint8_t *seq, int32_t le
       next_i = i+1;
       l = 1;
       while(next_i < len 
-            && (flow_order[k] == seq[next_i] || '-' == seq[next_i])) {
-          if(flow_order[k] == seq[next_i]) {
+            && (flow_order[k] == seq[next_i] || '-' == seq[next_i] || 3 < seq[next_i])) {
+          if(flow_order[k] == seq[next_i] || 3 < seq[i]) {
               l++;
           }
           next_i++;
