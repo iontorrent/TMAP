@@ -249,24 +249,29 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
   tmap_sam2fs_aux_flow_convert(f_tseq, tseq, tseq_len, flow_order, qseq, qseq_len);
 
   /*
-  // target
-  for(i=0;i<tseq_len;i++) {
-  fputc("ACGT"[tseq[i]], stderr);
+  // flow order
+  for(i=0;i<4;i++) {
+      fputc("ACGT"[flow_order[i]], stderr);
   }
   fputc('\n', stderr);
-  for(i=0;i<f_tseq->l;i++) {
-  if(0 < i) fputc(',', stderr);
-  fprintf(stderr, "%d", f_tseq->flow[i]);
-  }
-  fputc('\n', stderr);
-  // query
+  // read - query
   for(i=0;i<qseq_len;i++) {
-  fputc("ACGT"[qseq[i]], stderr);
+      fputc("ACGT"[qseq[i]], stderr);
   }
   fputc('\n', stderr);
   for(i=0;i<f_qseq->l;i++) {
-  if(0 < i) fputc(',', stderr);
-  fprintf(stderr, "%d", f_qseq->flow[i]);
+      if(0 < i) fputc(',', stderr);
+      fprintf(stderr, "%d", f_qseq->flow[i]);
+  }
+  fputc('\n', stderr);
+  // ref - target
+  for(i=0;i<tseq_len;i++) {
+      fputc("ACGT"[tseq[i]], stderr);
+  }
+  fputc('\n', stderr);
+  for(i=0;i<f_tseq->l;i++) {
+      if(0 < i) fputc(',', stderr);
+      fprintf(stderr, "%d", f_tseq->flow[i]);
   }
   fputc('\n', stderr);
   */
@@ -523,8 +528,26 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
       ctype = next_ctype;
   }
 
+  if(1 == strand) { // reverse back
+      for(i=0;i<(aln->len>>1);i++) {
+          char c;
+          // qseq
+          c = aln->qseq[i];
+          aln->qseq[i] = aln->qseq[aln->len-i-1];
+          aln->qseq[aln->len-i-1] = c;
+          // tseq
+          c = aln->tseq[i];
+          aln->tseq[i] = aln->tseq[aln->len-i-1];
+          aln->tseq[aln->len-i-1] = c;
+          // aln
+          c = aln->aln[i];
+          aln->aln[i] = aln->aln[aln->len-i-1];
+          aln->aln[aln->len-i-1] = c;
+      }
+  }
+
   // print
-  // read
+  // read - query
   for(i=aln->len-1;0<=i;i--) {
       if(0 <= aln->qseq[i]) tmap_file_fprintf(fp, "%d", aln->qseq[i]);
       else tmap_file_fprintf(fp, "-");
@@ -536,7 +559,7 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
       tmap_file_fprintf(fp, "%c", aln->aln[i]);
       if(0 < i) tmap_file_fprintf(fp, ","); 
   }
-  // ref
+  // ref - target
   tmap_file_fprintf(fp, "\t"); 
   for(i=aln->len-1;0<=i;i--) {
       if(0 <= aln->tseq[i]) tmap_file_fprintf(fp, "%d", aln->tseq[i]);
@@ -544,7 +567,7 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
       if(0 < i) tmap_file_fprintf(fp, ","); 
   }
   
-  if(1 == strand) { // reverse
+  if(1 == strand) { // reverse back
       for(i=0;i<(qseq_len>>1);i++) {
           uint8_t tmp = qseq[i];
           qseq[i] = qseq[qseq_len-i-1];
