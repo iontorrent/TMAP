@@ -463,6 +463,8 @@ tmap_map2_aux_fix_cigar(tmap_refseq_t *refseq, tmap_map2_hit_t *p, int32_t n_cig
   uint32_t coor, seqid, refl;
 
   if(0 == tmap_refseq_pac2real(refseq, p->k, p->len, &seqid, &coor)) {
+      // TODO: we could instead of aborting simply align the longest match on
+      // either contig
       return -1;
   }
 
@@ -553,8 +555,10 @@ tmap_map1_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
 
       if(p->l == 0) {
           aln->n_cigar[i] = tmap_map2_aux_fix_cigar(refseq, p, aln->n_cigar[i], aln->cigar[i]);
-          if(aln->n_cigar[i] < 0
-             || tmap_refseq_pac2real(refseq, p->k, p->len, &seqid, &coor) <= 0) {
+          if(aln->n_cigar[i] < 0) {
+              continue; // no cigar
+          }
+          if(tmap_refseq_pac2real(refseq, p->k, p->len, &seqid, &coor) <= 0) {
               continue; // spanning two or more chromosomes
           }
       }
@@ -668,7 +672,7 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
   seq[0]->l = seq[1]->l = rseq[0]->l = rseq[1]->l = l;
 
   // will we always be lower than the score threshold
-  if(l - k < opt.score_thr) {
+  if((l*opt.score_match) + (k*opt.pen_mm) < opt.score_thr) {
       tmap_string_destroy(seq[0]);
       tmap_string_destroy(seq[1]);
       tmap_string_destroy(rseq[0]);
