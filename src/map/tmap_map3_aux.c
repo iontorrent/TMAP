@@ -290,6 +290,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
       m_seeds[i] = seq_len[i] - seed_length + 1; // maximum number of seeds possible
       seeds[i] = tmap_malloc(m_seeds[i]*sizeof(tmap_map3_aux_seed_t), "seeds[i]");
 
+      // seed the alignment
       tmap_map3_aux_core_seed(query, seq_len[i], flow[i],
                               refseq, bwt, sa, opt, &seeds[i], &n_seeds[i], &m_seeds[i],
                               seed_length);
@@ -316,13 +317,23 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
               }
               if(0 < tmap_refseq_pac2real(refseq, pacpos, 1,
                                           &hits[i][n_hits[i]].seqid, &hits[i][n_hits[i]].pos)) {
-                  if(hits[i][n_hits[i]].pos < seed_length + seeds[i][j].offset - 1 ) {
+                  uint32_t tmp_seqid, tmp_pos;
+                  // we need to check if we crossed contig boundaries
+                  if(0 < tmap_refseq_pac2real(refseq, pacpos + seeds[i][j].start, 1, &tmp_seqid, &tmp_pos) &&
+                     hits[i][n_hits[i]].seqid < tmp_seqid) {
+                      hits[i][n_hits[i]].seqid = tmp_seqid;
                       hits[i][n_hits[i]].pos = 0;
+                      hits[i][n_hits[i]].start = seeds[i][j].start;
                   }
                   else {
-                      hits[i][n_hits[i]].pos -= seed_length + seeds[i][j].offset - 1;
+                      if(hits[i][n_hits[i]].pos < seed_length + seeds[i][j].offset - 1 ) {
+                          hits[i][n_hits[i]].pos = 0;
+                      }
+                      else {
+                          hits[i][n_hits[i]].pos -= seed_length + seeds[i][j].offset - 1;
+                      }
+                      hits[i][n_hits[i]].start = seeds[i][j].start;
                   }
-                  hits[i][n_hits[i]].start = seeds[i][j].start;
                   n_hits[i]++;
               }
           }
