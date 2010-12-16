@@ -180,6 +180,10 @@ tmap_map2_core_save_hits(const tmap_bwtl_t *bwtl, int32_t thres, tmap_map2_hit_t
   }
 }
 
+/* 
+ "narrow hits" are node-to-node hits that have a high score and
+ are not so repetitive (|SA interval|<=IS). 
+ */
 static void 
 tmap_map2_save_narrow_hits(const tmap_bwtl_t *bwtl, tmap_map2_entry_t *u, tmap_map2_aln_t *b1, int32_t t, int32_t IS)
 {
@@ -239,6 +243,10 @@ tmap_map2_core_init(const tmap_bwtl_t *target, const tmap_bwt_t *query_bwt, tmap
   tmap_map2_stack_push0(s, u);
 }
 
+/*
+ On return, ret[1] keeps not-so-repetitive hits (narrow SA hits); ret[0]
+ keeps all hits (right?) 
+ */
 tmap_map2_aln_t **
 tmap_map2_core_aln(const tmap_map_opt_t *opt, const tmap_bwtl_t *target, 
                const tmap_bwt_t *query_bwt, const tmap_sa_t *query_sa, 

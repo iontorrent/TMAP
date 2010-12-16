@@ -108,6 +108,16 @@ tmap_map2_aux_resolve_duphits(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_m
    int32_t i, j, n;
    if(b->n == 0) return 0;
    tmap_sort_introsort(hitG, b->n, b->hits);
+   { // choose a random one
+   int G0 = b->hits[0].G;
+   for (i = 1; i < b->n; ++i)
+   if (b->hits[i].G != G0) break;
+   j = (int)(i * drand48());
+   if (j) {
+   tmap_map2_hit_t tmp;
+   tmp = b->hits[0]; b->hits[0] = b->hits[j]; b->hits[j] = tmp;
+   }
+   }
    for(i = 1; i < b->n; ++i) {
    tmap_map2_hit_t *p = b->hits + i;
    int32_t all_compatible = 1;
@@ -412,17 +422,17 @@ tmap_map2_aux_aln(tmap_map_opt_t *opt, tmap_refseq_t *refseq,
       bb[k] = tmap_map2_core_aln(opt, query, target_bwt, target_sa, pool);
       tmap_bwtl_destroy(query);
   }
-  b[0] = bb[0][1]; b[1] = bb[1][1];
+  b[0] = bb[0][1]; b[1] = bb[1][1]; // bb[*][1] are "narrow SA hits"
   tmap_map2_chain_filter(opt, seq[0]->l, b);
   for(k = 0; k < 2; ++k) {
       tmap_map2_aux_extend_left(opt, bb[k][1], (uint8_t*)seq[k]->s, seq[k]->l, refseq, is_rev, pool->aln_mem);
-      tmap_map2_aux_merge_hits(bb[k], seq[k]->l, 0, 0);
+      tmap_map2_aux_merge_hits(bb[k], seq[k]->l, 0, 0); // bb[k][1] and bb[k][0] are merged into bb[k][0]
       tmap_map2_aux_resolve_duphits(NULL, NULL, bb[k][0], TMAP_MAP2_AUX_IS, (0 == opt->aln_global) ? 0 : TMAP_MAP2_MINUS_INF);
       tmap_map2_aux_extend_right(opt, bb[k][0], (uint8_t*)seq[k]->s, seq[k]->l, refseq, is_rev, pool->aln_mem);
       b[k] = bb[k][0];
       free(bb[k]);		
   }
-  tmap_map2_aux_merge_hits(b, seq[0]->l, 1, opt->aln_global);
+  tmap_map2_aux_merge_hits(b, seq[0]->l, 1, opt->aln_global); // b[1] and b[0] are merged into b[0]
   // Note: this will give duplicate mappings
   //tmap_map2_aux_resolve_query_overlaps(b[0], opt->mask_level, (0 == opt->aln_global) ? 0 : TMAP_MAP2_MINUS_INF);
 

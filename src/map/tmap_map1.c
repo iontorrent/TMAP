@@ -165,10 +165,11 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
           opt_local.max_gape = (opt->max_gape < 0) ? (int)(0.99 + opt->max_gape_frac * bases[0]->l) : opt->max_gape; 
           opt_local.max_gapo = (opt->max_gapo < 0) ? (int)(0.99 + opt->max_gapo_frac * bases[0]->l) : opt->max_gapo; 
           if(width_length < bases[0]->l) {
-              free(width[0]); free(width[1]);
               width_length = bases[0]->l;
-              width[0] = tmap_calloc(width_length, sizeof(tmap_bwt_match_width_t), "width[0]");
-              width[1] = tmap_calloc(width_length, sizeof(tmap_bwt_match_width_t), "width[1]");
+              width[0] = tmap_realloc(width[0], width_length * sizeof(tmap_bwt_match_width_t), "width[0]");
+              width[1] = tmap_realloc(wdith[1], width_length * sizeof(tmap_bwt_match_width_t), "width[1]");
+              memset(width[0], 0, width_length * sizeof(tmap_bwt_match_width_t));
+              memset(width[1], 0, width_length * sizeof(tmap_bwt_match_width_t));
           }
           tmap_bwt_match_cal_width(bwt[0], bases[0]->l, bases[0]->s, width[0]);
           tmap_bwt_match_cal_width(bwt[0], bases[1]->l, bases[1]->s, width[1]);
