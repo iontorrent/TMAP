@@ -456,6 +456,10 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
   }
   tmap_fsw_flowseq_destroy(flowseq);
 
+  if(0 == path_len) {
+      tmap_error("bug encountered", Exit, OutOfRange);
+  }
+
   switch(output_type) {
     case TMAP_SAM2FS_OUTPUT_ALN:
       // bound, since we could start with an insertion (read starts with bases,

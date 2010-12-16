@@ -681,6 +681,7 @@ tmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
           }
           break;
         case TMAP_SW_TYPE_EXTEND_FITTING:
+        case TMAP_SW_TYPE_FITTING:
           if(flowseq->num_flows == i) {
               for(j=1;j<=len;j++) {
                   if(best_score < dpscore[i][j].match_score) {
@@ -700,6 +701,8 @@ tmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
                   }
               }
           }
+          break;
+        default:
           break;
       }
   }
@@ -790,7 +793,7 @@ tmap_fsw_local_core(uint8_t *seq, int32_t len,
                     tmap_fsw_path_t *path, int32_t *path_len, int32_t _thres, int32_t *_subo)
 {
   return tmap_fsw_stdaln_aux(seq, len, flowseq,
-                             ap, path, path_len, TMAP_SW_TYPE_GLOBAL, 0,
+                             ap, path, path_len, TMAP_SW_TYPE_LOCAL, 0,
                              _thres, _subo);
 }
 
