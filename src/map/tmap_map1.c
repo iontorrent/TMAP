@@ -167,7 +167,7 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
           if(width_length < bases[0]->l) {
               width_length = bases[0]->l;
               width[0] = tmap_realloc(width[0], width_length * sizeof(tmap_bwt_match_width_t), "width[0]");
-              width[1] = tmap_realloc(wdith[1], width_length * sizeof(tmap_bwt_match_width_t), "width[1]");
+              width[1] = tmap_realloc(width[1], width_length * sizeof(tmap_bwt_match_width_t), "width[1]");
               memset(width[0], 0, width_length * sizeof(tmap_bwt_match_width_t));
               memset(width[1], 0, width_length * sizeof(tmap_bwt_match_width_t));
           }
