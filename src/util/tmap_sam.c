@@ -138,7 +138,8 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags)
 
   tmap_file_fprintf(fp, "%s\t%u\t%s\t%u\t%u\t*\t*\t0\t0\t%s\t%s",
                     name->s, flag, "*",
-                    0, 0, bases->s, qualities->s);
+                    0, 0, 
+                    bases->s, (0 == qualities->l) ? "*" : qualities->s);
   tmap_file_fprintf(fp, "\tRG:Z:%s\tPG:Z:%s",
                     tmap_sam_rg_id,
                     PACKAGE_NAME);
@@ -308,7 +309,7 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
 
   // bases and qualities
   tmap_file_fprintf(fp, "\t*\t0\t0\t%s\t%s",
-                    bases->s, qualities->s);
+                    bases->s, (0 == qualities->l) ? "*" : qualities->s);
   
   // RG and PG
   tmap_file_fprintf(fp, "\tRG:Z:%s\tPG:Z:%s",
