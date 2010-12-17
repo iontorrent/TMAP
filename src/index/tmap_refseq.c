@@ -463,7 +463,7 @@ tmap_refseq_get_seqid1(const tmap_refseq_t *refseq, uint32_t pacpos)
       mid = (left + right) >> 1;
       if(refseq->annos[mid].offset <= pacpos) {
           if(mid == refseq->num_annos - 1) break;
-          if(pacpos < refseq->annos[mid+1].offset) break;
+          if(pacpos <= refseq->annos[mid+1].offset) break;
           left = mid + 1;
       } else right = mid;
   }
@@ -478,8 +478,9 @@ tmap_refseq_get_seqid(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln
   int32_t seqid_left, seqid_right;
 
   seqid_left = tmap_refseq_get_seqid1(refseq, pacpos);
-  seqid_right = tmap_refseq_get_seqid1(refseq, pacpos+aln_len-1);
+  if(1 == aln_len) return seqid_left;
 
+  seqid_right = tmap_refseq_get_seqid1(refseq, pacpos+aln_len-1);
   if(seqid_left != seqid_right) return -1; // overlaps two chromosomes
 
   return seqid_left;
@@ -496,7 +497,10 @@ inline uint32_t
 tmap_refseq_pac2real(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos)
 {
   (*seqid) = tmap_refseq_get_seqid(refseq, pacpos, aln_length);
-  if((*seqid) == -1) return 0;
+  if((*seqid) == -1) {
+      (*pos) = -1;
+      return 0;
+  }
   (*pos) = tmap_refseq_get_pos(refseq, pacpos, (*seqid));
 
   return (*pos);
@@ -515,7 +519,6 @@ tmap_refseq_fasta2pac_main(int argc, char *argv[])
       }
   }
   if(1 != argc - optind || 1 == help) {
-      tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [-v -h] <in.fasta>\n", PACKAGE, argv[0]);
       return 1;
   }
 

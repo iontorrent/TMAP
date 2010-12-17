@@ -349,16 +349,40 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
   for(i = 0; i < b->n; ++i) {
       tmap_map2_hit_t *p = b->hits + i;
       uint8_t *query;
-      uint32_t k;
+      uint32_t k, seqid, coor;
       int32_t path_len, beg, end;
       if(p->l) continue;
+
+      // adjust for contig boundaries
+      if(tmap_refseq_pac2real(refseq, p->k, p->len, &seqid, &coor) <= 0) {
+          if(p->flag & 0x10) { // reverse
+              if(tmap_refseq_pac2real(refseq, p->k + p->len - 1, 1, &seqid, &coor) <= 0) {
+                  // do nothing, this should fail later
+              }
+              else {
+                  // move to the contig and position
+                  p->k = refseq->annos[seqid].offset+1;
+                  p->len = refseq->annos[seqid].len;
+              }
+          }
+          else {
+              if(tmap_refseq_pac2real(refseq, p->k, 1, &seqid, &coor) <= 0) {
+                  // do nothing, this should fail later
+              }
+              else {
+                  // move to the contig and position
+                  p->k = refseq->annos[seqid].offset+1;
+                  p->len = refseq->annos[seqid].len;
+              }
+          }
+      }
 
       beg = (p->flag & 0x10)? query_length - p->end : p->beg;
       end = (p->flag & 0x10)? query_length - p->beg : p->end;
 
       query = queries[(p->flag & 0x10)? 1 : 0] + beg;
       for(k = p->k; k < p->k + p->len; ++k) { // in principle, no out-of-boundary here
-          target[k - p->k] = tmap_refseq_seq_i(refseq, k);
+          target[k - p->k] = tmap_refseq_seq_i(refseq, k-1);
       }
       p->G = tmap_sw_global_core(target, p->len, query, end - beg, &par, path, &path_len);
       b->cigar[i] = tmap_sw_path2cigar(path, path_len, &b->n_cigar[i]);
@@ -473,13 +497,11 @@ tmap_map2_aux_fix_cigar(tmap_refseq_t *refseq, tmap_map2_hit_t *p, int32_t n_cig
   uint32_t coor, seqid, refl;
 
   if(0 == tmap_refseq_pac2real(refseq, p->k, p->len, &seqid, &coor)) {
-      // TODO: we could instead of aborting simply align the longest match on
-      // either contig
       return -1;
   }
 
   refl = refseq->annos[seqid].len;
-  x = coor; y = 0;
+  x = coor-1; y = 0;
   // test if the alignment goes beyond the boundary
   for(i = 0; i < n_cigar; ++i) {
       int32_t op = TMAP_SW_CIGAR_OP(cigar[i]);
@@ -494,7 +516,7 @@ tmap_map2_aux_fix_cigar(tmap_refseq_t *refseq, tmap_map2_hit_t *p, int32_t n_cig
       uint32_t *cn, kk = 0;
       nc = mq[0] = mq[1] = nlen[0] = nlen[1] = 0;
       cn = tmap_calloc(n_cigar + 3, sizeof(uint32_t), "cn");
-      x = coor; y = 0;
+      x = coor-1; y = 0;
       for(i = j = 0; i < n_cigar; ++i) {
           int32_t op = TMAP_SW_CIGAR_OP(cigar[i]);
           int32_t ln = TMAP_SW_CIGAR_LENGTH(cigar[i]);
@@ -507,7 +529,7 @@ tmap_map2_aux_fix_cigar(tmap_refseq_t *refseq, tmap_map2_hit_t *p, int32_t n_cig
                   nc = j;
                   TMAP_SW_CIGAR_STORE(cn[j++], BAM_CSOFT_CLIP, (uint32_t)y);
                   kk = p->k + (x + ln - refl);
-                  nlen[0] = x - coor;
+                  nlen[0] = x - (coor-1);
                   nlen[1] = p->len - nlen[0] - ln;
               } else cn[j++] = cigar[i];
               x += ln;
@@ -522,7 +544,7 @@ tmap_map2_aux_fix_cigar(tmap_refseq_t *refseq, tmap_map2_hit_t *p, int32_t n_cig
                   if(x + ln - refl) TMAP_SW_CIGAR_STORE(cn[j++], BAM_CMATCH, (uint32_t)(x+ln-refl)); // write M
                   mq[1] += x + ln - refl;
                   kk = refseq->annos[seqid].offset + refl;
-                  nlen[0] = refl - coor;
+                  nlen[0] = refl - (coor-1);
                   nlen[1] = p->len - nlen[0];
               } else {
                   cn[j++] = cigar[i];
@@ -573,9 +595,10 @@ tmap_map1_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
           }
       }
 
+
       sam->strand = (p->flag & 0x10) ? 1 : 0; // strand
       sam->seqid = seqid;
-      sam->pos = coor;
+      sam->pos = coor-1; // make it zero-based
       if(p->l == 0) {
           // estimate mapping quality
           double c = 1.0;	
@@ -710,6 +733,11 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
       // Note: this will give duplicate mappings
       //tmap_map2_aux_resolve_query_overlaps(b[0], opt.mask_level, (0 == opt.aln_global) ? 0 : TMAP_MAP2_MINUS_INF);
   } else b[1] = 0;
+  
+  // make one-based for pac2real
+  for(i = 0; i < b[0]->n; ++i) {
+      b[0]->hits[i].k++;
+  }
 
   // generate CIGAR and print SAM
   _seq[0] = (uint8_t*)seq[0]->s;
