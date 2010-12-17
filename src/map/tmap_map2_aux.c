@@ -223,6 +223,7 @@ tmap_map2_aux_extend_left(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
       if(target_length < lt) tmap_error("target_length < lt", Exit, OutOfRange);
       p->n_seeds = 1;
       if(p->l || p->k == 0) continue;
+      if(0 == p->beg) continue; // no more base to extend
       for(j = score = 0; j < i; ++j) {
           tmap_map2_hit_t *q = b->hits + j;
           if(q->beg <= p->beg && q->k <= p->k && q->k + q->len >= p->k + p->len) {
@@ -234,7 +235,6 @@ tmap_map2_aux_extend_left(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
           p->G = TMAP_MAP2_MINUS_INF; 
           continue;
       }
-      if(0 == p->beg) continue; // no more base to extend
       if(lt > p->k) lt = p->k;
       if(is_rev) {
           for(k = p->k - 1, j = 0; k > 0 && j < lt; --k) // FIXME: k=0 not considered!
@@ -594,7 +594,6 @@ tmap_map1_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
               continue; // spanning two or more chromosomes
           }
       }
-
 
       sam->strand = (p->flag & 0x10) ? 1 : 0; // strand
       sam->seqid = seqid;

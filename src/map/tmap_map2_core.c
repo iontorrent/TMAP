@@ -76,7 +76,7 @@ tmap_map2_core_cut_tail(tmap_map2_entry_t *u, int32_t T, tmap_map2_entry_t *aux)
   }
   a = (int*)aux->array;
   for(i = n = 0; i != u->n; ++i)
-    if(u->array[i].match_sa.l && u->array[i].G > 0)
+    if(u->array[i].match_sa.l && u->array[i].G > TMAP_MAP2_MINUS_INF)
       a[n++] = -u->array[i].G;
   if(n <= T) return;
   x = -tmap_sort_small(int32_t, n, a, T);
@@ -85,7 +85,7 @@ tmap_map2_core_cut_tail(tmap_map2_entry_t *u, int32_t T, tmap_map2_entry_t *aux)
       tmap_map2_cell_t *p = u->array + i;
       if(p->G == x) ++n;
       if(p->G < x || (p->G == x && n >= T)) {
-          p->match_sa.k = p->match_sa.l = 0; p->G = 0;
+          p->match_sa.k = p->match_sa.l = 0; p->G = TMAP_MAP2_MINUS_INF;
           p->match_sa.hi = p->match_sa.offset = 0;
           if(p->ppos >= 0) u->array[p->ppos].cpos[p->pj] = -1;
       }
@@ -114,7 +114,7 @@ tmap_map2_core_remove_duplicate(tmap_map2_entry_t *u, tmap_hash_t(64) *hash)
       } else tmap_hash_value(hash, k) = (uint64_t)i<<32 | p->G;
       if(j >= 0) {
           p = u->array + j;
-          p->match_sa.k = p->match_sa.l = 0; p->G = 0;
+          p->match_sa.k = p->match_sa.l = 0; p->G = TMAP_MAP2_MINUS_INF;
           p->match_sa.hi = p->match_sa.offset = 0;
           if(p->ppos >= 0) u->array[p->ppos].cpos[p->pj] = -3;
       }
@@ -203,7 +203,7 @@ tmap_map2_save_narrow_hits(const tmap_bwtl_t *bwtl, tmap_map2_entry_t *u, tmap_m
           q->beg = bwtl->sa[u->tk]; q->end = q->beg + p->tlen;
           q->flag = 0;
           // delete p
-          p->match_sa.k = p->match_sa.l = 0; p->G = 0;
+          p->match_sa.k = p->match_sa.l = 0; p->G = TMAP_MAP2_MINUS_INF;
           p->match_sa.hi = p->match_sa.offset = 0;
           if(p->ppos >= 0) u->array[p->ppos].cpos[p->pj] = -3;
       }
@@ -236,7 +236,7 @@ tmap_map2_core_init(const tmap_bwtl_t *target, const tmap_bwt_t *query_bwt, tmap
   u->tk = 0; u->tl = target->seq_len;
   x = tmap_map2_core_push_array_p(u);
   *x = tmap_map2_core_default_cell;
-  x->G = 0; 
+  x->G = 0; // set to zero, no TMAP_MAP2_MINUS_INF
   x->match_sa.k = 0; x->match_sa.l = query_bwt->seq_len;
   x->match_sa.hi = 0; x->match_sa.offset = 0;
   u->n++;
@@ -323,7 +323,7 @@ tmap_map2_core_aln(const tmap_map_opt_t *opt, const tmap_bwtl_t *target,
               if(p->ppos >= 0) { // parent has been visited
                   c[1] = (v->array[p->ppos].upos >= 0)? u->array + v->array[p->ppos].upos : 0;
                   c[3] = v->array + p->ppos; c[2] = p;
-                  if(tmap_map2_core_fill_cell(opt, curr_score_mat[p->pj], c) > 0) { // then update topology at p and x
+                  if(tmap_map2_core_fill_cell(opt, curr_score_mat[p->pj], c) > TMAP_MAP2_MINUS_INF) { // then update topology at p and x
                       x->ppos = v->array[p->ppos].upos; // the parent pos in u
                       p->upos = u->n++; // the current pos in u
                       if(x->ppos >= 0) u->array[x->ppos].cpos[p->pj] = p->upos; // the child pos of its parent in u
@@ -331,7 +331,7 @@ tmap_map2_core_aln(const tmap_map_opt_t *opt, const tmap_bwtl_t *target,
                   }
               } else {
                   x->D = p->D > p->G - opt->pen_gapo? p->D - opt->pen_gape : p->G - opt->pen_gapo - opt->pen_gape;
-                  if(x->D > 0) {
+                  if(x->D > TMAP_MAP2_MINUS_INF) {
                       x->G = x->D;
                       x->I = TMAP_MAP2_MINUS_INF; x->ppos = -1;
                       p->upos = u->n++;
@@ -413,5 +413,6 @@ tmap_map2_core_aln(const tmap_map_opt_t *opt, const tmap_bwtl_t *target,
   tmap_hash_destroy(64, rhash);
   tmap_hash_destroy(64, chash);
   stack->pending.n = stack->stack0.n = 0;
+
   return b_ret;
 }
