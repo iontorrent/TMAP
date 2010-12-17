@@ -26,6 +26,10 @@ tmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
 
   len = strlen(rg);
 
+  // ID, CN, DS, DT, LB, PG, PI, PL, PU, SM
+  int32_t tags_found[10] = {0,0,0,0,0,0,0,0,0,0};
+  char *tags_name[10] = {"ID","CN","DS","DT","LB","PG","PI","PL","PU","SM"};
+
   // must have at least "@RG\tID:."
   if(len < 8
      || 0 != strncmp(rg, "@RG\tID:", 7)) {
@@ -40,6 +44,7 @@ tmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
               tmap_error("Improper tag in the RG line", Exit, OutOfRange);
           }
           else if('I' == rg[i] && 'D' == rg[i+1]) {
+              tags_found[0]++;
               // copy over the id
               for(j=i;j<len;j++) {
                   if('\t' == rg[j]) break;
@@ -47,21 +52,19 @@ tmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
               }
               if(j == i) tmap_error("Malformed RG line", Exit, OutOfRange);
               tmap_sam_rg_id[j-i]='\0'; // null terminator
-              fprintf(stderr, "RGID:%s\n", tmap_sam_rg_id);
           }
+          else if('C' == rg[i] && 'N' == rg[i+1]) tags_found[1]++;
+          else if('D' == rg[i] && 'S' == rg[i+1]) tags_found[2]++;
+          else if('D' == rg[i] && 'T' == rg[i+1]) tags_found[3]++;
+          else if('L' == rg[i] && 'B' == rg[i+1]) tags_found[4]++;
           else if('P' == rg[i] && 'G' == rg[i+1]) {
+              tags_found[5]++;
               tmap_error("PG tag not allowed in the RG line", Exit, OutOfRange);
           }
-          else if(('C' == rg[i] && 'N' == rg[i+1])
-                  || ('D' == rg[i] && 'S' == rg[i+1])
-                  || ('D' == rg[i] && 'T' == rg[i+1])
-                  || ('L' == rg[i] && 'B' == rg[i+1])
-                  || ('P' == rg[i] && 'I' == rg[i+1])
-                  || ('L' == rg[i] && 'L' == rg[i+1])
-                  || ('P' == rg[i] && 'U' == rg[i+1])
-                  || ('S' == rg[i] && 'M' == rg[i+1])) {
-              // OK
-          }
+          else if('P' == rg[i] && 'I' == rg[i+1]) tags_found[6]++;
+          else if('L' == rg[i] && 'L' == rg[i+1]) tags_found[7]++;
+          else if('P' == rg[i] && 'U' == rg[i+1]) tags_found[8]++;
+          else if('S' == rg[i] && 'M' == rg[i+1]) tags_found[9]++;
           else if(('F' == rg[i] && 'O' == rg[i+1])
                   || ('K' == rg[i] && 'S' == rg[i+1])) {
               if(0 == fs_data_ok) {
@@ -73,6 +76,13 @@ tmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
           }
       }
       i++;
+  }
+
+  for(i=0;i<10;i++) {
+      if(1 < tags_found[i]) {
+          tmap_file_fprintf(tmap_file_stderr, "\nFound multiple %s tags for the RG SAM header\n", tags_name[i]);
+          tmap_error(NULL, Exit, OutOfRange);
+      }
   }
 }
 

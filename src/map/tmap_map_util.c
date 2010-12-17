@@ -293,7 +293,12 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
         case 'a':
           opt->aln_output_mode = atoi(optarg); break;
         case 'R':
-          if(NULL == opt->sam_rg) tmap_strdup(optarg); 
+          if(NULL == opt->sam_rg) {
+              // add fiv for the string "@RG\t" and null terminator
+              opt->sam_rg = tmap_realloc(opt->sam_rg, sizeof(char) * (5 + strlen(optarg)), "opt->sam_rg");
+              strcpy(opt->sam_rg, "@RG\t");
+              strcat(opt->sam_rg, optarg);
+          }
           else {
               // add two for the tab separator and null terminator
               opt->sam_rg = tmap_realloc(opt->sam_rg, sizeof(char) * (2 + strlen(optarg) + strlen(opt->sam_rg)), "opt->sam_rg");
