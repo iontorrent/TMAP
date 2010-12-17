@@ -162,7 +162,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "                             1 - random best hit\n");
   tmap_file_fprintf(tmap_file_stderr, "                             2 - all best hits\n");
   tmap_file_fprintf(tmap_file_stderr, "                             3 - all alignments\n");
-  tmap_file_fprintf(tmap_file_stderr, "         -R STRING   the RG line in the SAM header [%s]\n", opt->sam_rg);
+  tmap_file_fprintf(tmap_file_stderr, "         -R STRING   the RG tags to add to the SAM header [%s]\n", opt->sam_rg);
   tmap_file_fprintf(tmap_file_stderr, "         -Y          include SFF specific SAM tags [%s]\n",
                     (1 == opt->sam_sff_tags) ? "true" : "false");
   tmap_file_fprintf(tmap_file_stderr, "         -j          the input is bz2 compressed (bzip2) [%s]\n",
@@ -293,7 +293,19 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
         case 'a':
           opt->aln_output_mode = atoi(optarg); break;
         case 'R':
-          opt->sam_rg = tmap_strdup(optarg); break;
+          if(NULL == opt->sam_rg) {
+              // add fiv for the string "@RG\t" and null terminator
+              opt->sam_rg = tmap_realloc(opt->sam_rg, sizeof(char) * (5 + strlen(optarg)), "opt->sam_rg");
+              strcpy(opt->sam_rg, "@RG\t");
+              strcat(opt->sam_rg, optarg);
+          }
+          else {
+              // add two for the tab separator and null terminator
+              opt->sam_rg = tmap_realloc(opt->sam_rg, sizeof(char) * (2 + strlen(optarg) + strlen(opt->sam_rg)), "opt->sam_rg");
+              if(0 < strlen(optarg) && '\t' != optarg[0]) strcat(opt->sam_rg, "\t"); // add a tab separator
+              strcat(opt->sam_rg, optarg);
+          }
+          break;
         case 'Y':
           opt->sam_sff_tags = 1; break;
         case 'j':
