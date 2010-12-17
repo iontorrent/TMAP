@@ -179,8 +179,9 @@ Specifies the output filter for the mappings.
 Reads that have no mapping are returned as unmapped reads.
 
 \subsubsection{\TT{-R STRING}}
-Specifies the RG (read group) line to use in the SAM file.
+Specifies the RG (read group) line to use in the SAM file (with tab separators).
 The ``PG'', ``FO'', and ``KS'' tags should not be specified in this string; they will be added by tmap.
+Alternatively, multiple \TT{-R} options can also be used to populate the RG line. 
 
 \subsubsection{\TT{-Y}}
 Specifies that SFF specific tags should be added to the output SAM file.
