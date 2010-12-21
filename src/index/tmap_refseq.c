@@ -454,7 +454,7 @@ tmap_refseq_get_seqid1(const tmap_refseq_t *refseq, uint32_t pacpos)
 {
   int32_t left, right, mid;
 
-  if(refseq->len <= pacpos) {
+  if(refseq->len < pacpos) {
       tmap_error("Coordinate was larger than the reference", Exit, OutOfRange);
   }
 
@@ -466,6 +466,10 @@ tmap_refseq_get_seqid1(const tmap_refseq_t *refseq, uint32_t pacpos)
           if(pacpos < refseq->annos[mid+1].offset) break;
           left = mid + 1;
       } else right = mid;
+  }
+
+  if(refseq->num_annos < mid) {
+      return refseq->num_annos;
   }
 
   return mid;
