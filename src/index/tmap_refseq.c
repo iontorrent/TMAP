@@ -454,8 +454,8 @@ tmap_refseq_get_seqid1(const tmap_refseq_t *refseq, uint32_t pacpos)
 {
   int32_t left, right, mid;
 
-  if(refseq->len < pacpos) {
-      tmap_error("Coordinate was larger than the reference", Exit, OutOfRange);
+  if(refseq->len < pacpos) { // out of range
+      return -1;
   }
 
   left = 0; mid = 0; right = refseq->num_annos;
@@ -468,10 +468,6 @@ tmap_refseq_get_seqid1(const tmap_refseq_t *refseq, uint32_t pacpos)
       } else right = mid;
   }
 
-  if(refseq->num_annos < mid) {
-      return refseq->num_annos;
-  }
-
   return mid;
 }
 
@@ -482,6 +478,9 @@ tmap_refseq_get_seqid(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln
   int32_t seqid_left, seqid_right;
 
   seqid_left = tmap_refseq_get_seqid1(refseq, pacpos);
+  if(seqid_left < 0) return -1;
+  if(1 == aln_len) return seqid_left;
+
   seqid_right = tmap_refseq_get_seqid1(refseq, pacpos+aln_len-1);
 
   if(seqid_left != seqid_right) return -1; // overlaps two chromosomes
