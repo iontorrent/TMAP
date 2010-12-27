@@ -67,7 +67,7 @@ tmap_map_opt_init(int32_t algo_id)
       opt->length_coef = 5.5f;
       opt->score_thr = 30;
       opt->max_seed_intv = 3; 
-      opt->z_best = 5; 
+      opt->z_best = 1; 
       opt->seeds_rev = 5;
       break;
     case TMAP_MAP_ALGO_MAP3:
