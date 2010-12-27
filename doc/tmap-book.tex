@@ -193,7 +193,7 @@ This is auto-recognized if the input file name has the extension \TT{.bz2} for b
 \subsubsection{\TT{-J}, \TT{-Z}}
 Specifies that the output should be bzip2 (\TT{-J}) or gzip (\TT{-Z}) compressed.
 
-\subsubsection{\TT{-s INT}}
+\subsubsection{\TT{-k INT}}
 Specifies the shared memory key if the reference index has been loaded into shared memory.
 
 \subsubsection{\TT{-v}}
@@ -248,7 +248,7 @@ See \autoref{sec:commonoptions} for common options that are in use in this comma
 \subsubsection{-l INT}
 Specifies the k-mer length for seeding candidate alignment locations (CALs) using the first $k$ bases of the read.
 
-\subsubsection{-k INT}
+\subsubsection{-s INT}
 Specifies the number of mismatches allowed in the seed.
 
 \subsubsection{-m NUM}
@@ -355,8 +355,8 @@ An algorithm to be applied in the second stage should be specified using its nam
 The options specific to this algorithm should be specified directly thereafter.
 
 An example would be:\\
-\TT{tmap mapall -f ref.fasta -r reads.fastq -g -M 3 map1 -l 12 -k 24 MAP2 -b 5 MAP3 -S 10}.\\
-In this case, the \TT{map1} algorithm will be applied with the options \TT{-l 12 -k 24 -M 3} in the first stage.
+\TT{tmap mapall -f ref.fasta -r reads.fastq -g -M 3 map1 -l 12 -s 4 MAP2 -b 5 MAP3 -S 10}.\\
+In this case, the \TT{map1} algorithm will be applied with the options \TT{-l 12 -s 4 -M 3} in the first stage.
 If no mapping is found for a read, the \TT{map2} algorithm with the options \TT{-b 5 -g -M 3} and the \TT{map3} algorithm with the options \TT{-g -M 3 -S 10} will be applied in the second stage.
 Notice how the global options \TT{-g -M 3} are applied to all the algorithms where applicable.
 It is possible to have a given algorithm run in both stages with different options.

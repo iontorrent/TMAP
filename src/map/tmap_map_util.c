@@ -173,7 +173,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
                     (TMAP_FILE_BZ2_COMPRESSION == opt->output_compr) ? "true" : "false");
   tmap_file_fprintf(tmap_file_stderr, "         -Z          the output is gz compressed (gzip) [%s]\n",
                     (TMAP_FILE_GZ_COMPRESSION == opt->output_compr) ? "true" : "false");
-  tmap_file_fprintf(tmap_file_stderr, "         -s INT      use shared memory with the following key [%d]\n", opt->shm_key);
+  tmap_file_fprintf(tmap_file_stderr, "         -k INT      use shared memory with the following key [%d]\n", opt->shm_key);
   tmap_file_fprintf(tmap_file_stderr, "         -v          print verbose progress information\n");
   tmap_file_fprintf(tmap_file_stderr, "         -h          print this message\n");
   tmap_file_fprintf(tmap_file_stderr, "\n");
@@ -183,7 +183,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
     case TMAP_MAP_ALGO_MAP1:
       // map1
       tmap_file_fprintf(tmap_file_stderr, "         -l INT      the k-mer length to seed CALs (-1 to disable) [%d]\n", opt->seed_length);
-      tmap_file_fprintf(tmap_file_stderr, "         -k INT      maximum number of mismatches in the seed [%d]\n", opt->seed_max_mm);
+      tmap_file_fprintf(tmap_file_stderr, "         -s INT      maximum number of mismatches in the seed [%d]\n", opt->seed_max_mm);
 
       tmap_file_fprintf(tmap_file_stderr, "         -m NUM      maximum number of or (read length) fraction of mismatches");
       if(opt->max_mm < 0) tmap_file_fprintf(tmap_file_stderr, " [fraction: %lf]\n", opt->max_mm_frac);
@@ -241,16 +241,16 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   opt->argc = argc; opt->argv = argv;
   switch(opt->algo_id) {
     case TMAP_MAP_ALGO_MAP1:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:gw:T:q:n:a:R:YjzJZs:vhl:k:m:o:e:d:i:b:Q:");
+      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:gw:T:q:n:a:R:YjzJZk:vhl:s:m:o:e:d:i:b:Q:");
       break;
     case TMAP_MAP_ALGO_MAP2:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:gw:T:q:n:a:R:YjzJZs:vhc:S:b:N:");
+      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:gw:T:q:n:a:R:YjzJZk:vhc:S:b:N:");
       break;
     case TMAP_MAP_ALGO_MAP3:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:gw:T:q:n:a:R:YjzJZs:vhl:S:b:H:");
+      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:gw:T:q:n:a:R:YjzJZk:vhl:S:b:H:");
       break;
     case TMAP_MAP_ALGO_MAPALL:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:gw:T:q:n:a:R:YjzJZs:vhW:I");
+      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:gw:T:q:n:a:R:YjzJZk:vhW:I");
       break;
     default:
       break;
@@ -320,7 +320,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           opt->output_compr = TMAP_FILE_BZ2_COMPRESSION; break;
         case 'Z':
           opt->output_compr = TMAP_FILE_GZ_COMPRESSION; break;
-        case 's':
+        case 'k':
           opt->shm_key = atoi(optarg); break;
         case 'v':
           tmap_progress_set_verbosity(1); break;
@@ -335,7 +335,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
               switch(c) {
                 case 'l':
                   opt->seed_length = atoi(optarg); break;
-                case 'k':
+                case 's':
                   opt->seed_max_mm = atoi(optarg); break;
                 case 'm':
                   if(NULL != strstr(optarg, ".")) opt->max_mm = -1, opt->max_mm_frac = atof(optarg);

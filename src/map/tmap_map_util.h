@@ -57,7 +57,7 @@ typedef struct __tmap_map_opt_t {
     int32_t sam_sff_tags;  /*!< specifies to output SFF specific SAM tags (-Y) */
     int32_t input_compr;  /*!< the input compression type (-j and -z) */
     int32_t output_compr;  /*!< the output compression type (-J and -Z) */
-    key_t shm_key;  /*!< the shared memory key (-s) */
+    key_t shm_key;  /*!< the shared memory key (-k) */
 
     // map1/map3 options
     int32_t seed_length; /*!< the kmer seed length (-l) */
@@ -68,7 +68,7 @@ typedef struct __tmap_map_opt_t {
     int32_t score_thr;  /*!< the score threshold (match-score-scaled) (-T) */
     
     // map1 options
-    int32_t seed_max_mm;  /*!< maximum number of mismatches in hte seed (-k) */
+    int32_t seed_max_mm;  /*!< maximum number of mismatches in the seed (-s) */
     int32_t max_mm;  /*!< maximum number of mismatches (-m) */
     double max_mm_frac;  /*!< maximum (read length) fraction of mismatches (-m) */
     int32_t max_gapo;  /*!< maximum number of indel opens (-o) */
