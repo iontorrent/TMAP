@@ -476,13 +476,15 @@ tmap_map2_aux_flag_fr(tmap_map2_aln_t *b[2])
       tmap_map2_hit_t *p = b[1]->hits + i;
       p->flag |= 0x20000;
   }
-  for(i = 0; i < b[0]->n; ++i) {
-      tmap_map2_hit_t *p = b[0]->hits + i;
-      for(j = 0; j < b[1]->n; ++j) {
-          tmap_map2_hit_t *q = b[1]->hits + i;
-          if(q->beg == p->beg && q->end == p->end && q->k == p->k && q->len == p->len && q->G == p->G) {
-              q->flag |= 0x30000; p->flag |= 0x30000;
-              break;
+  if(0 < b[0]->n && 0 < b[1]->n) {
+      for(i = 0; i < b[0]->n; ++i) {
+          tmap_map2_hit_t *p = b[0]->hits + i;
+          for(j = 0; j < b[1]->n; ++j) {
+              tmap_map2_hit_t *q = b[1]->hits + j;
+              if(q->beg == p->beg && q->end == p->end && q->k == p->k && q->len == p->len && q->G == p->G) {
+                  q->flag |= 0x30000; p->flag |= 0x30000;
+                  break;
+              }
           }
       }
   }
