@@ -817,24 +817,41 @@ tmap_map_sams_filter1(tmap_map_sams_t *sams, int32_t aln_output_mode, int32_t al
   int32_t i, j, k;
   int32_t n_best = 0;
   int32_t best_score, cur_score;
+  int32_t best_subo;
 
   if(sams->n <= 1) {
       return;
   }
 
-  best_score = INT32_MIN;
+  best_score = best_subo = INT32_MIN;
   n_best = 0;
   for(i=0;i<sams->n;i++) {
       if(TMAP_MAP_ALGO_NONE == algo_id
          || sams->sams[i].algo_id == algo_id) {
           cur_score = sams->sams[i].score;
           if(best_score < cur_score) {
+              if(0 < n_best) {
+                  best_subo = best_score;
+              }
               best_score = cur_score;
               n_best = 1;
           }
           else if(!(cur_score < best_score)) { // equal
+              best_subo = best_score; // more than one mapping
               n_best++;
           }
+          else if(best_subo < cur_score) {
+              best_subo = cur_score;
+          }
+          // check sub-optimal
+          if(TMAP_MAP_ALGO_MAP2 == sams->sams[i].algo_id
+             || TMAP_MAP_ALGO_MAP3 == sams->sams[i].algo_id) {
+              cur_score = sams->sams[i].score_subo;
+              if(best_subo < cur_score) {
+                  best_subo = cur_score;
+              }
+          }
+
       }
   }
 
@@ -856,6 +873,13 @@ tmap_map_sams_filter1(tmap_map_sams_t *sams, int32_t aln_output_mode, int32_t al
                   sams->sams[i].mapq = 0;
               }
           }
+      }
+  }
+
+  // adjust suboptimal
+  if(TMAP_MAP_ALGO_NONE == algo_id) {
+      for(i=0;i<sams->n;i++) {
+          sams->sams[i].score_subo = best_subo;
       }
   }
 
