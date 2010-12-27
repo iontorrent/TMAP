@@ -242,6 +242,11 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
           tseq[i] = tseq[tseq_len-i-1];
           tseq[tseq_len-i-1] = tmp;
       }
+      for(i=0;i<2;i++) {
+          uint8_t tmp = flow_order[i];
+          flow_order[i] = flow_order[4-i-1];
+          flow_order[4-i-1] = tmp;
+      }
   }
 
   // convert bases to flow space
@@ -250,8 +255,8 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
   tmap_sam2fs_aux_flow_convert(f_qseq, qseq, qseq_len, flow_order, NULL, 0);
   tmap_sam2fs_aux_flow_convert(f_tseq, tseq, tseq_len, flow_order, qseq, qseq_len);
 
-  /*
   // flow order
+  /*
   for(i=0;i<4;i++) {
       fputc("ACGT"[flow_order[i]], stderr);
   }
@@ -579,6 +584,11 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
           uint8_t tmp = tseq[i];
           tseq[i] = tseq[tseq_len-i-1];
           tseq[tseq_len-i-1] = tmp;
+      }
+      for(i=0;i<2;i++) {
+          uint8_t tmp = flow_order[i];
+          flow_order[i] = flow_order[4-i-1];
+          flow_order[4-i-1] = tmp;
       }
   }
 
