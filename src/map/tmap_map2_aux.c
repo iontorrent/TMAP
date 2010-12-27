@@ -327,15 +327,15 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
                         int32_t query_length, tmap_refseq_t *refseq, tmap_map2_aln_t *b)
 {
   uint8_t *target = NULL;
-  int32_t i, matrix[25];
+  int32_t i, matrix[25], target_len;
   tmap_sw_param_t par;
   tmap_sw_path_t *path;
 
   par.matrix = matrix;
   __gen_ap(par, opt);
-  i = ((query_length + 1) / 2 * opt->score_match + opt->pen_gape) / opt->pen_gape + query_length; // maximum possible target length
-  target = tmap_calloc(i, sizeof(uint8_t), "target");
-  path = tmap_calloc(i + query_length, sizeof(tmap_sw_path_t), "path");
+  target_len = ((query_length + 1) / 2 * opt->score_match + opt->pen_gape) / opt->pen_gape + query_length; // maximum possible target length
+  target = tmap_calloc(target_len, sizeof(uint8_t), "target");
+  path = tmap_calloc(target_len + query_length, sizeof(tmap_sw_path_t), "path");
   // memory clean up for b
   if(b->n < b->max) {
       b->max = b->n;
@@ -362,7 +362,7 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
               else {
                   // move to the contig and position
                   p->k = refseq->annos[seqid].offset+1;
-                  p->len = refseq->annos[seqid].len;
+                  p->len = (target_len < refseq->annos[seqid].len) ? target_len : refseq->annos[seqid].len;
               }
           }
           else {
@@ -372,7 +372,7 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
               else {
                   // move to the contig and position
                   p->k = refseq->annos[seqid].offset+1;
-                  p->len = refseq->annos[seqid].len;
+                  p->len = (target_len < refseq->annos[seqid].len) ? target_len : refseq->annos[seqid].len;
               }
           }
       }
