@@ -319,13 +319,14 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
   }
   // align
   gap_sum_i = gap_sum_j = TMAP_SAM2FS_AUX_GAP;
-  for(i=1;i<=f_qseq->l;i++) {
+  for(i=1;i<=f_qseq->l;i++) { // query
       int32_t i_from = ((i<4) ? 0 : (i-4)); // don't go before the first row
 
       if(4 < i) gap_sum_i -= f_qseq->flow[i-5]; // substract off
       gap_sum_i += f_qseq->flow[i-1]; // add current flow
 
-      for(j=1;j<=f_tseq->l;j++) {
+      gap_sum_j = TMAP_SAM2FS_AUX_GAP;
+      for(j=1;j<=f_tseq->l;j++) { // target
           int32_t j_from = ((j<4) ? 0 : (j-4)); // don't go before the first column
 
           // gap sum
@@ -462,6 +463,13 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
   }
   }
   */
+  /*
+  fprintf(stderr, "best_score=%d MID{%d,%d,%d}\n",
+          best_score,
+          dp[f_qseq->l][f_tseq->l].match_score,
+          dp[f_qseq->l][f_tseq->l].ins_score,
+          dp[f_qseq->l][f_tseq->l].del_score);
+          */
   if(best_score < dp[f_qseq->l][f_tseq->l].del_score) {
       best_i = f_qseq->l;
       best_j = f_tseq->l;
@@ -487,11 +495,6 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
 
   aln = tmap_sam2fs_aux_aln_init();
 
-  /*
-     fprintf(stderr, "f_qseq->l=%d f_tseq->l=%d\n",
-     f_qseq->l, f_tseq->l);
-     */
-
   // add in alignment end padding
   for(k=f_qseq->l;i<k;k--) { // insertion
       tmap_sam2fs_aux_aln_add(aln, f_qseq->flow[k-1], -1);
@@ -503,7 +506,6 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
   // trace path back
   while(0 < i || 0 < j) {
       int32_t next_ctype = -1;
-      //fprintf(stderr, "i=%d j=%d ctype=%d\n", i, j, ctype);
 
       switch(ctype) {
         case TMAP_SAM2FS_AUX_FROM_M:
@@ -532,6 +534,12 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
           tmap_error(NULL, Exit, OutOfRange);
       }
 
+      /*
+      fprintf(stderr, "i=%d j=%d ctype=%d %c next=%d %c\n", 
+              i, j, 
+              ctype, "MIDS"[ctype], 
+              next_ctype, "MIDS"[next_ctype]);
+              */
       ctype = next_ctype;
   }
 
