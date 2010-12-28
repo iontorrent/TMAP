@@ -130,6 +130,21 @@ tmap_map_opt_destroy(tmap_map_opt_t *opt)
   free(opt);
 }
 
+#define __tmap_map_print_compression(_type) switch(_type) { \
+  case TMAP_FILE_NO_COMPRESSION: \
+    tmap_file_fprintf(tmap_file_stderr, " [none]\n"); \
+    break; \
+  case TMAP_FILE_GZ_COMPRESSION: \
+    tmap_file_fprintf(tmap_file_stderr, " [gz]\n"); \
+    break; \
+  case TMAP_FILE_BZ2_COMPRESSION: \
+    tmap_file_fprintf(tmap_file_stderr, " [bz2]\n"); \
+    break; \
+  default: \
+    tmap_file_fprintf(tmap_file_stderr, " [?]\n"); \
+    break; \
+}
+
 int
 tmap_map_opt_usage(tmap_map_opt_t *opt)
 {
@@ -165,14 +180,10 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "         -R STRING   the RG tags to add to the SAM header [%s]\n", opt->sam_rg);
   tmap_file_fprintf(tmap_file_stderr, "         -Y          include SFF specific SAM tags [%s]\n",
                     (1 == opt->sam_sff_tags) ? "true" : "false");
-  tmap_file_fprintf(tmap_file_stderr, "         -j          the input is bz2 compressed (bzip2) [%s]\n",
-                    (TMAP_FILE_BZ2_COMPRESSION == opt->input_compr) ? "true" : "false");
-  tmap_file_fprintf(tmap_file_stderr, "         -z          the input is gz compressed (gzip) [%s]\n",
-                    (TMAP_FILE_GZ_COMPRESSION == opt->input_compr) ? "true" : "false");
-  tmap_file_fprintf(tmap_file_stderr, "         -J          the output is bz2 compressed (bzip2) [%s]\n",
-                    (TMAP_FILE_BZ2_COMPRESSION == opt->output_compr) ? "true" : "false");
-  tmap_file_fprintf(tmap_file_stderr, "         -Z          the output is gz compressed (gzip) [%s]\n",
-                    (TMAP_FILE_GZ_COMPRESSION == opt->output_compr) ? "true" : "false");
+  tmap_file_fprintf(tmap_file_stderr, "         -z/-j       the input is gz/bz2 compressed (gzip/bzip2)");
+  __tmap_map_print_compression(opt->input_compr);
+  tmap_file_fprintf(tmap_file_stderr, "         -Z/-J       the output is gz/bz2 compressed (gzip/bzip2)");
+  __tmap_map_print_compression(opt->output_compr);
   tmap_file_fprintf(tmap_file_stderr, "         -k INT      use shared memory with the following key [%d]\n", opt->shm_key);
   tmap_file_fprintf(tmap_file_stderr, "         -v          print verbose progress information\n");
   tmap_file_fprintf(tmap_file_stderr, "         -h          print this message\n");
