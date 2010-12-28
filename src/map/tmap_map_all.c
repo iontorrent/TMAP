@@ -749,6 +749,7 @@ tmap_map_all_core(tmap_map_opt_t *opt)
     (opt_map_other)->pen_mm = (opt_map_all)->pen_mm; \
     (opt_map_other)->pen_gapo = (opt_map_all)->pen_gapo; \
     (opt_map_other)->pen_gape = (opt_map_all)->pen_gape; \
+    (opt_map_other)->fscore = (opt_map_all)->fscore; \
     (opt_map_other)->reads_queue_size = (opt_map_all)->reads_queue_size; \
     (opt_map_other)->num_threads = (opt_map_all)->num_threads; \
     (opt_map_other)->aln_output_mode = TMAP_MAP_UTIL_ALN_MODE_ALL; \
