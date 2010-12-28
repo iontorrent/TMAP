@@ -441,7 +441,6 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
                                                  i+1, opt);
 
               // re-align the alignments in flow-space
-              /*
               if(TMAP_SEQ_TYPE_SFF == seq_buffer[low]->type) {
                   tmap_map_util_fsw(seq_buffer[low]->data.sff,
                                     sams[low], refseq,
@@ -449,7 +448,6 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
                                     opt->score_match, opt->pen_mm, opt->pen_gapo,
                                     opt->pen_gape, opt->fscore);
               }
-              */
               // destroy
               // map1
               if(opt->algos[i] & TMAP_MAP_ALGO_MAP1) {

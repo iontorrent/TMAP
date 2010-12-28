@@ -1145,7 +1145,7 @@ tmap_fsw_sff_to_flowseq(tmap_sff_t *sff)
       // get the number bases in the key that contribute to the first read flow
       for(i=sff->gheader->key_length-1;0<=i;i--) {
           uint8_t c = tmap_nt_char_to_int[(int)sff->gheader->key->s[i]];
-          if(c == sff->read->bases->s[0]) {
+          if(c == sff->read->bases->s[sff->gheader->key_length]) {
               key_bases++;
           }
           else {
@@ -1184,34 +1184,42 @@ tmap_fsw_sff_to_flowseq(tmap_sff_t *sff)
   // get the number of bases called per flow
   base_calls = tmap_calloc(num_flows, sizeof(uint8_t), "base_calls");
   // i = 0-based index into sff->read->bases->s
-  i = sff->gheader->key_length;
+  i = sff->gheader->key_length - key_bases; // include key bases
   // j = 0-based index into base_calls 
   j = 0;
   // go through the base calls
   while(i<sff->read->bases->l) {
       // skip to the correct flow
       while(j < num_flows 
-            && flow[(j+l) & 3] != sff->read->bases->s[i]) {
+            && flow[j & 3] != sff->read->bases->s[i]) {
           j++;
       }
 
       if(num_flows <= j) {
+          /*
+          int k;
+          fprintf(stderr, "i=%d j=%d\n", i, j);
           fprintf(stderr, "num_flows=%d sff->read->bases->l=%d\n", 
                   num_flows, (int)sff->read->bases->l);
-          fprintf(stderr, "i=%d j=%d\n", i, j);
-          int k;
           for(k=0;k<sff->read->bases->l;k++) {
               fputc("ACGTN"[(int)sff->read->bases->s[k]], stderr);
           }
           fputc('\n', stderr);
+          for(k=0;k<j;k++) {
+              if(0 < k) fputc(',', stderr);
+              fprintf(stderr, "%d", base_calls[k]);
+          }
+          fputc('\n', stderr);
+          */
           tmap_error("num_flows <= j", Exit, OutOfRange);
       }
       // get the number of bases called in this flow 
       while(i < sff->read->bases->l
-            && flow[(j+l) & 3] == sff->read->bases->s[i]) {
+            && flow[j&3] == sff->read->bases->s[i]) {
           base_calls[j]++;
           i++;
       }
+      //fprintf(stderr, "i=%d j=%d base_calls[j]=%d %c\n", i, j, base_calls[j], "ACGT"[flow[j&3]]);
       if(0 == base_calls[j]) {
           tmap_error("bug encountered", Exit, OutOfRange);
       }

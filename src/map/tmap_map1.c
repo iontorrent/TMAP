@@ -140,7 +140,7 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
           tmap_seq_t *seq[2]={NULL, NULL}, *orig_seq=NULL;
           orig_seq = seq_buffer[low];
           tmap_string_t *bases[2]={NULL, NULL};
-
+          
           // clone the sequence 
           seq[0] = tmap_seq_clone(orig_seq);
           seq[1] = tmap_seq_clone(orig_seq);
@@ -194,15 +194,13 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
           tmap_map_sams_filter(sams[low], opt->aln_output_mode);
 
           // re-align the alignments in flow-space
-          /*
           if(TMAP_SEQ_TYPE_SFF == seq_buffer[low]->type) {
               tmap_map_util_fsw(seq_buffer[low]->data.sff, 
                                 sams[low], refseq, 
-                                TMAP_MAP1_FSW_BW, 1, INT32_MIN,
-                                0, opt->pen_mm, opt->pen_gapo,
+                                opt->bw, opt->aln_global, opt->score_thr,
+                                opt->score_match, opt->pen_mm, opt->pen_gapo,
                                 opt->pen_gape, opt->fscore);
           }
-          */
 
           // destroy
           tmap_seq_destroy(seq[0]);

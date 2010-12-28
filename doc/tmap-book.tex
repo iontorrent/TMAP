@@ -425,7 +425,7 @@ The RG field can be populated using the \TT{-R} option.
 By default the \TT{ID} and \TT{PG} tags are included.
 When specifying an RG line, do not include any of the following tags, as they will be populated by tmap:
 ID, PG, FO, and KS.
-The FO and KS tags indicate the flow order and the key sequence, and is outputted if an SFF is inputted and the \TT{-Y} option is used. 
+The FO and KS tags indicate the flow order and the key sequence, and is outputted if both an SFF is inputted and the \TT{-Y} option is used. 
 
 \subsubsection{PG}
 The PG field will include the ID, VN, and CL tags.
@@ -463,6 +463,9 @@ This stores the size of the suffix interval for this mapping.
 \subsubsection{XA}
 This stores the algorithm that produced this mapping and from what stage.
 The format is the algorithm name, and then the zero-based stage, separated by a dash.
+
+\subsubsection{XZ}
+This stores the original alignment score, if an SFF was inputted.
 
 \subsubsection{FI}
 This stores the flow signals when an SFF is inputted and the \TT{-Y} option is used.

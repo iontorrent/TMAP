@@ -251,7 +251,7 @@ inline void
 tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tmap_refseq_t *refseq,
                       uint8_t strand, uint32_t seqid, uint32_t pos, 
                       uint8_t mapq, uint32_t *cigar, int32_t n_cigar,
-                      int32_t score, int32_t algo_id, int32_t algo_stage,
+                      int32_t score, int32_t ascore, int32_t algo_id, int32_t algo_stage,
                       const char *format, ...)
 {
   va_list ap;
@@ -349,6 +349,11 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
                             ((seq->data.sff->read->flowgram[i] >> 4) & 0xF),
                             seq->data.sff->read->flowgram[i] & 0xF);
       }
+  }
+  
+  // XZ
+  if(TMAP_SEQ_TYPE_SFF == seq->type) {
+      tmap_file_fprintf(fp, "\tXZ:i:%d", ascore);
   }
 
   // optional tags

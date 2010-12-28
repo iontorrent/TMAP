@@ -757,7 +757,7 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
           tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, refseq, 
                                 sam->strand, sam->seqid, sam->pos,
                                 sam->mapq, sam->cigar, sam->n_cigar,
-                                sam->score, sam->algo_id, sam->algo_stage, 
+                                sam->score, sam->ascore, sam->algo_id, sam->algo_stage, 
                                 "\tXM:i:%d\tXO:i:%d\tXG:i:%d",
                                 sam->aux.map1_aux->n_mm,
                                 sam->aux.map1_aux->n_gapo,
@@ -768,7 +768,7 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
               tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, refseq, 
                                     sam->strand, sam->seqid, sam->pos,
                                     sam->mapq, sam->cigar, sam->n_cigar,
-                                    sam->score, sam->algo_id, sam->algo_stage, 
+                                    sam->score, sam->ascore, sam->algo_id, sam->algo_stage, 
                                     "\tXS:i:%d\tXF:i:%d\tXE:i:%d\tXI:i:%d",
                                     sam->score_subo,
                                     sam->aux.map2_aux->XF, sam->aux.map2_aux->XE, 
@@ -778,7 +778,7 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
               tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, refseq, 
                                     sam->strand, sam->seqid, sam->pos,
                                     sam->mapq, sam->cigar, sam->n_cigar,
-                                    sam->score, sam->algo_id, sam->algo_stage, 
+                                    sam->score, sam->ascore, sam->algo_id, sam->algo_stage, 
                                     "\tXS:i:%d\tXF:i:%d\tXE:i:%d",
                                     sam->score_subo,
                                     sam->aux.map2_aux->XF, sam->aux.map2_aux->XE);
@@ -788,7 +788,7 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
           tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, refseq, 
                                 sam->strand, sam->seqid, sam->pos,
                                 sam->mapq, sam->cigar, sam->n_cigar,
-                                sam->score, sam->algo_id, sam->algo_stage, 
+                                sam->score, sam->ascore, sam->algo_id, sam->algo_stage, 
                                 "\tXS:i:%d\tXE:i:%d",
                                 sam->score_subo,
                                 sam->aux.map3_aux->n_seeds);
@@ -1106,20 +1106,21 @@ tmap_map_util_fsw(tmap_sff_t *sff,
 
       // make sure we have enough memory for the path
       while(path_mem <= target_len + fseq[s->strand]->num_flows) { // lengthen the path
-          path_mem = target_len + fseq[s->strand]->num_flows;
+          path_mem = target_len + fseq[s->strand]->num_flows + 1;
           tmap_roundup32(path_mem);
           target = tmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
       }
 
       // re-align
       if(0 == aln_global) {
+          s->ascore = s->score;
           s->score = tmap_fsw_local_core(target, target_len, fseq[s->strand], &param, path, &path_len, score_thr, &s->score_subo);
       }
       else {
+          s->ascore = s->score;
           s->score = tmap_fsw_fitting_core(target, target_len, fseq[s->strand], &param, path, &path_len);
           s->score_subo = INT32_MIN;
       }
-
 
       if(path_len < 0) { // update
           s->pos = (ref_start-1) + (path[path_len-1].j-1);

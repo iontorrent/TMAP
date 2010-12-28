@@ -187,6 +187,7 @@ typedef struct {
     uint32_t pos; /*!< the position (0-based) */
     int16_t mapq; /*!< the mapping quality */
     int32_t score; /*!< the alignment score */
+    int32_t ascore;  /*!< the base alignment score (SFF only) */
     int32_t score_subo; /*!< the alignment score of the sub-optimal hit */
     int32_t n_cigar; /*!< the number of cigar operators */
     uint32_t *cigar; /*!< the cigar operator array */

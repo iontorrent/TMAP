@@ -54,6 +54,7 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags);
   @param  cigar       the cigar array
   @param  n_cigar     the number of cigar operations
   @param  score       the alignment score
+  @param  ascore      the original base alignment score (SFF only)
   @param  algo_id     the algorithm id
   @param  algo_stage  the algorithm stage (1 or 2) 
   @param  format      optional tag format (printf-style)
@@ -64,7 +65,7 @@ inline void
 tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tmap_refseq_t *refseq,
                       uint8_t strand, uint32_t seqid, uint32_t pos,
                       uint8_t mapq, uint32_t *cigar, int32_t n_cigar,
-                      int32_t score, int32_t algo_id, int32_t algo_stage,
+                      int32_t score, int32_t ascore, int32_t algo_id, int32_t algo_stage,
                       const char *format, ...);
 
 #ifdef HAVE_SAMTOOLS
