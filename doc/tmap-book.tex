@@ -424,8 +424,11 @@ Specific details can be found below.
 The RG field can be populated using the \TT{-R} option.
 By default the \TT{ID} and \TT{PG} tags are included.
 When specifying an RG line, do not include any of the following tags, as they will be populated by tmap:
-ID, PG, FO, and KS.
-The FO and KS tags indicate the flow order and the key sequence, and is outputted if both an SFF is inputted and the \TT{-Y} option is used. 
+ID, and PG.
+If the input is an SFF file and the \TT{-Y} option is used, then a comment line will be placed in the header with the following tags:
+RG, FO, and KS.
+The RG tag in the comment is the associated read group ID.
+The FO and KS tags indicate the flow order and the key sequence.
 
 \subsubsection{PG}
 The PG field will include the ID, VN, and CL tags.
@@ -467,9 +470,9 @@ The format is the algorithm name, and then the zero-based stage, separated by a 
 \subsubsection{XZ}
 This stores the original alignment score, if an SFF was inputted.
 
-\subsubsection{FI}
+\subsubsection{FZ}
 This stores the flow signals when an SFF is inputted and the \TT{-Y} option is used.
-The flowgram values are stored as a string of hexidecimal values, with each four hexidecimal values corresponding to one flow signal.
+The flowgram values are stored as a string of hexidecimal values, with each group of four hexidecimal values corresponding to one flow signal.
 
 \chapter{Appendix}
 

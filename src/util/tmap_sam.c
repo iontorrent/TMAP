@@ -65,12 +65,6 @@ tmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
           else if('L' == rg[i] && 'L' == rg[i+1]) tags_found[7]++;
           else if('P' == rg[i] && 'U' == rg[i+1]) tags_found[8]++;
           else if('S' == rg[i] && 'M' == rg[i+1]) tags_found[9]++;
-          else if(('F' == rg[i] && 'O' == rg[i+1])
-                  || ('K' == rg[i] && 'S' == rg[i+1])) {
-              if(0 == fs_data_ok) {
-                  tmap_error("The FO/KS tag should not be specified in the RG line", Exit, OutOfRange);
-              }
-          }
           else {
               tmap_error("Improper tag in the RG line", Exit, OutOfRange);
           }
@@ -101,16 +95,18 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, tmap_seq_io_t *seq
   if(NULL != seqio && TMAP_SEQ_TYPE_SFF == seqio->type && 1 == sam_sff_tags) {
       if(NULL != sam_rg) {
           tmap_sam_parse_rg(sam_rg, 0);
-          tmap_file_fprintf(fp, "%s\tPG:%s\tFO:%s\tKS:%s\n",
+          tmap_file_fprintf(fp, "%s\tPG:%s\n@CO\tRG:%s\tFO:%s\tKS:%s\n",
                             sam_rg,
                             PACKAGE_NAME, 
+                            tmap_sam_rg_id,
                             seqio->io.sffio->gheader->flow->s,
                             seqio->io.sffio->gheader->key->s);
       }
       else {
-          tmap_file_fprintf(fp, "@RG\tID:%s\tPG:%s\tFO:%s\tKS:%s\n",
+          tmap_file_fprintf(fp, "@RG\tID:%s\tPG:s\n@CO\tRG:%s\tFO:%s\tKS:%s\n",
                             tmap_sam_rg_id,
                             PACKAGE_NAME, 
+                            tmap_sam_rg_id,
                             seqio->io.sffio->gheader->flow->s,
                             seqio->io.sffio->gheader->key->s);
       }
@@ -154,7 +150,7 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags)
                     tmap_sam_rg_id,
                     PACKAGE_NAME);
   if(TMAP_SEQ_TYPE_SFF == seq->type && 1 == sam_sff_tags) {
-      tmap_file_fprintf(fp, "\tFI:H:");
+      tmap_file_fprintf(fp, "\tFZ:H:");
       for(i=0;i<seq->data.sff->gheader->flow_length;i++) {
           tmap_file_fprintf(fp, "%X%X%X%X", 
                             ((seq->data.sff->read->flowgram[i] >> 12) & 0xF),
