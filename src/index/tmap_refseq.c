@@ -59,7 +59,7 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   tmap_refseq_t *refseq = NULL;
   char *fn_pac = NULL, *fn_anno = NULL;
   uint8_t buffer[TMAP_REFSEQ_BUFFER_SIZE];
-  int32_t i, l, buffer_length;
+  int32_t i, j, l, buffer_length;
   uint8_t x = 0;
   uint64_t ref_len;
 
@@ -130,6 +130,8 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   }
   refseq->seq = NULL; // IMPORTANT: nullify this
   ref_len = refseq->len; // save for return
+      
+  tmap_progress_print2("total genome length [%u]", refseq->len);
 
   // write annotation file
   fn_anno = tmap_get_file_name(fn_fasta, TMAP_ANNO_FILE);
@@ -140,6 +142,18 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   tmap_file_fclose(fp_fasta);
   tmap_file_fclose(fp_pac);
   tmap_file_fclose(fp_anno);
+
+  // check sequence name uniqueness
+  for(i=0;i<refseq->num_annos;i++) {
+      for(j=i+1;j<refseq->num_annos;j++) {
+          if(0 == strcmp(refseq->annos[i].name->s, refseq->annos[j].name->s)) {
+              tmap_file_fprintf(tmap_file_stderr, "Contigs have the same name: #%d [%s] and #%d [%s]\n",
+                                i+1, refseq->annos[i].name->s, 
+                                j+1, refseq->annos[j].name->s); 
+              tmap_error("Contig names must be unique", Exit, OutOfRange);
+          }
+      }
+  }
 
   tmap_refseq_destroy(refseq); 
   tmap_seq_io_destroy(seqio);
