@@ -26,6 +26,18 @@ tmap_refseq_write_header(tmap_file_t *fp, tmap_refseq_t *refseq)
   }
 }
 
+static inline void 
+tmap_refseq_print_header(tmap_file_t *fp, tmap_refseq_t *refseq)
+{
+  uint32_t i;
+  tmap_file_fprintf(fp, "version_id:\t%llu\n", (unsigned long long int)refseq->version_id);
+  tmap_file_fprintf(fp, "seed:\t%u\n", refseq->seed);
+  for(i=0;i<refseq->num_annos;i++) {
+      tmap_file_fprintf(fp, "contig-%d:\t%s\t%u\n", i+1, refseq->annos[i].name->s, refseq->annos[i].len);
+  }
+  tmap_file_fprintf(fp, "length:\t%llu\n", (unsigned long long int)refseq->len);
+}
+
 static inline void
 tmap_refseq_write_annos(tmap_file_t *fp, tmap_anno_t *anno) 
 {
@@ -537,10 +549,64 @@ tmap_refseq_fasta2pac_main(int argc, char *argv[])
       }
   }
   if(1 != argc - optind || 1 == help) {
+      tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [-vh] <in.fasta>\n", PACKAGE, argv[0]);
       return 1;
   }
 
   tmap_refseq_fasta2pac(argv[optind], TMAP_FILE_NO_COMPRESSION);
+
+  return 0;
+}
+
+int
+tmap_refseq_refinfo_main(int argc, char *argv[])
+{
+  int c, help=0;
+  tmap_refseq_t *refseq = NULL;
+  tmap_file_t *fp_anno = NULL;
+  char *fn_anno = NULL;
+  char *fn_fasta = NULL;
+
+  while((c = getopt(argc, argv, "vh")) >= 0) {
+      switch(c) {
+        case 'v': tmap_progress_set_verbosity(1); break;
+        case 'h': help = 1; break;
+        default: return 1;
+      }
+  }
+  if(1 != argc - optind || 1 == help) {
+      tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [-vh] <in.fasta>\n", PACKAGE, argv[0]);
+      return 1;
+  }
+
+  fn_fasta = argv[optind];
+
+  // Note: 'tmap_file_stdout' should not have been previously modified
+  tmap_file_stdout = tmap_file_fdopen(fileno(stdout), "wb", TMAP_FILE_NO_COMPRESSION);
+
+  // allocate some memory 
+  refseq = tmap_calloc(1, sizeof(tmap_refseq_t), "refseq");
+  refseq->is_rev = 0;
+  refseq->is_shm = 0;
+
+  // read the annotation file
+  fn_anno = tmap_get_file_name(fn_fasta, TMAP_ANNO_FILE);
+  fp_anno = tmap_file_fopen(fn_anno, "rb", TMAP_ANNO_COMPRESSION);
+  tmap_refseq_read_anno(fp_anno, refseq);
+  tmap_file_fclose(fp_anno);
+  free(fn_anno);
+  
+  // no need to read in the pac
+  refseq->seq = NULL;
+
+  // print the header
+  tmap_refseq_print_header(tmap_file_stdout, refseq);
+
+  // destroy
+  tmap_refseq_destroy(refseq);
+
+  // close the output
+  tmap_file_fclose(tmap_file_stdout);
 
   return 0;
 }
