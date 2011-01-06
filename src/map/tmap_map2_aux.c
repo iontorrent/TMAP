@@ -237,10 +237,10 @@ tmap_map2_aux_extend_left(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
       }
       if(lt > p->k) lt = p->k;
       if(is_rev) {
-          for(k = p->k - 1, j = 0; k > 0 && j < lt; --k) // FIXME: k=0 not considered!
+          for(k = p->k - 1, j = 0; 0 <= k && j < lt; --k) 
             target[j++] = tmap_refseq_seq_i(refseq, refseq->len-k-1);
       } else {
-          for(k = p->k - 1, j = 0; k > 0 && j < lt; --k) // FIXME: k=0 not considered!
+          for(k = p->k - 1, j = 0; 0 <= k && j < lt; --k) 
             target[j++] = tmap_refseq_seq_i(refseq, k);
       }
       lt = j;
@@ -493,7 +493,6 @@ tmap_map2_aux_flag_fr(tmap_map2_aln_t *b[2])
 static int32_t 
 tmap_map2_aux_fix_cigar(tmap_refseq_t *refseq, tmap_map2_hit_t *p, int32_t n_cigar, uint32_t *cigar)
 {
-  // FIXME: this routine does not work if the query bridge three reference sequences
   int32_t lq;
   int32_t x, y, i;
   uint32_t coor, seqid, refl;
