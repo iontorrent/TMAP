@@ -256,8 +256,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, int32_t seq_len,
           // SA position to packed refseq position
           pacpos = bwt->seq_len - tmap_sa_pac_pos(sa, bwt, k) - aln_ref_l + 1;
 
-          if(pacpos + seq_len - 1 <= bwt->seq_len 
-             && 0 < tmap_refseq_pac2real(refseq, pacpos, seq_len, &seqid, &pos)) {
+          if(0 < tmap_refseq_pac2real(refseq, pacpos, aln_ref_l, &seqid, &pos)) {
               // copy over
               sams_tmp->sams[j] = sams->sams[i];
               sams_tmp->sams[j].seqid = seqid;
