@@ -141,6 +141,12 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
           orig_seq = seq_buffer[low];
           tmap_string_t *bases[2]={NULL, NULL};
           
+          // not enough bases, ignore
+          if(0 < opt->seed_length && tmap_seq_get_bases(orig_seq)->l < opt->seed_length){
+              sams[low] = tmap_map_sams_init();
+              continue;
+          }
+          
           // clone the sequence 
           seq[0] = tmap_seq_clone(orig_seq);
           seq[1] = tmap_seq_clone(orig_seq);
@@ -174,10 +180,7 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
           tmap_bwt_match_cal_width(bwt[0], bases[0]->l, bases[0]->s, width[0]);
           tmap_bwt_match_cal_width(bwt[0], bases[1]->l, bases[1]->s, width[1]);
 
-          if(bases[0]->l < opt->seed_length) {
-              opt_local.seed_length = -1;
-          }
-          else {
+          if(0 < opt->seed_length) {
               tmap_bwt_match_cal_width(bwt[0], opt->seed_length, bases[0]->s, seed_width[0]);
               tmap_bwt_match_cal_width(bwt[0], opt->seed_length, bases[1]->s, seed_width[1]);
           }

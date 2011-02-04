@@ -373,7 +373,8 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
 
           // map1
           for(i=0;i<opt->num_stages;i++) {
-              if(opt->algos[i] & TMAP_MAP_ALGO_MAP1) {
+              if(opt->algos[i] & TMAP_MAP_ALGO_MAP1
+                 && (opt->seed_length < 0 || opt->seed_length <= bases[0]->l)) {
                   opt_local_map1[i].max_mm = (opt->opt_map1[i]->max_mm < 0) ? (int)(0.99 + opt->opt_map1[i]->max_mm_frac * bases[0]->l) : opt->opt_map1[i]->max_mm;
                   opt_local_map1[i].max_gape = (opt->opt_map1[i]->max_gape < 0) ? (int)(0.99 + opt->opt_map1[i]->max_gape_frac * bases[0]->l) : opt->opt_map1[i]->max_gape;
                   opt_local_map1[i].max_gapo = (opt->opt_map1[i]->max_gapo < 0) ? (int)(0.99 + opt->opt_map1[i]->max_gapo_frac * bases[0]->l) : opt->opt_map1[i]->max_gapo;
@@ -407,7 +408,8 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
           // run the core algorithms
           for(i=0;i<opt->num_stages;i++) {
               // tmap_map1_aux_core
-              if(opt->algos[i] & TMAP_MAP_ALGO_MAP1) {
+              if(opt->algos[i] & TMAP_MAP_ALGO_MAP1
+                 && (opt->seed_length < 0 || opt->seed_length <= bases[0]->l)) {
                   sams_map1 = tmap_map1_aux_core(seq, refseq, bwt[1], sa[1], width_map1[i], 
                                                 (0 < opt_local_map1[i].seed_length) ? seed_width_map1[i] : NULL, 
                                                 &opt_local_map1[i], stack_map1);
