@@ -184,7 +184,7 @@ tmap_map_all_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
           if(sams->sams[end].seqid == sams->sams[end+1].seqid
              && fabs(sams->sams[end].pos - sams->sams[end+1].pos) <= dup_window) {
               // track the best scoring
-              if(sams->sams[best_score_i].score < sams->sams[end].score) {
+              if(sams->sams[best_score_i].score < sams->sams[end+1].score) {
                   best_score_i = end+1;
               }
               end++;
