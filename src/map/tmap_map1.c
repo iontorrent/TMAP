@@ -144,6 +144,7 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
           // not enough bases, ignore
           if(0 < opt->seed_length && tmap_seq_get_bases(orig_seq)->l < opt->seed_length){
               sams[low] = tmap_map_sams_init();
+              low++;
               continue;
           }
           
