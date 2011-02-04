@@ -448,7 +448,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
                   TMAP_SW_CIGAR_STORE(s->cigar[0], BAM_CSOFT_CLIP, path[path_len-1].j-1);
                   s->n_cigar++;
               }
-              if(path[0].j < seq_len[i]) { // 
+              if(path[0].j < seq_len[i]) { 
                   // soft clip the end of the read
                   s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*(1+s->n_cigar), "s->cigar");
                   TMAP_SW_CIGAR_STORE(s->cigar[s->n_cigar], BAM_CSOFT_CLIP, seq_len[i] - path[0].j);

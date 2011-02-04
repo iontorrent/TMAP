@@ -487,7 +487,7 @@ tmap_refseq_get_seqid1(const tmap_refseq_t *refseq, uint32_t pacpos)
   left = 0; mid = 0; right = refseq->num_annos;
   while (left < right) {
       mid = (left + right) >> 1;
-      if(refseq->annos[mid].offset <= pacpos) {
+      if(refseq->annos[mid].offset < pacpos) {
           if(mid == refseq->num_annos - 1) break;
           if(pacpos <= refseq->annos[mid+1].offset) break;
           left = mid + 1;
@@ -520,6 +520,7 @@ tmap_refseq_get_seqid(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln
 static inline uint32_t
 tmap_refseq_get_pos(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t seqid)
 {
+  // note: offset is zero-based
   return pacpos - refseq->annos[seqid].offset;
 }
 
@@ -527,8 +528,8 @@ inline uint32_t
 tmap_refseq_pac2real(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos)
 {
   (*seqid) = tmap_refseq_get_seqid(refseq, pacpos, aln_length);
-  if((*seqid) == -1) {
-      (*pos) = -1;
+  if((*seqid) == (uint32_t)-1) {
+      (*pos) = (uint32_t)-1;
       return 0;
   }
   (*pos) = tmap_refseq_get_pos(refseq, pacpos, (*seqid));
