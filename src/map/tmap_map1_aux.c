@@ -21,7 +21,7 @@
 #define STATE_D 2
 
 // TODO redefine
-#define aln_score(m,o,e,p) ((m)*(p)->pen_mm + (o)*(p)->pen_gapo + (e)*(p)->pen_gape)
+#define aln_score(m,o,e,p) ((m)*(p)->pen_mm + (o)*((p)->pen_gapo + (p)->pen_gape) + (e)*(p)->pen_gape)
 
 static int 
 tmap_map1_aux_stack_cmp(void *a, void *b)
@@ -306,7 +306,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt, t
   if(0 == bwt->is_rev) tmap_error("0 == bwt->is_rev", Exit, OutOfRange);
 
   max_edit_score = opt->pen_mm;
-  if(max_edit_score < opt->pen_gapo) max_edit_score = opt->pen_gapo;
+  if(max_edit_score < opt->pen_gapo + opt->pen_gape) max_edit_score = opt->pen_gapo;
   if(max_edit_score < opt->pen_gape) max_edit_score = opt->pen_gape;
 
   bases[0] = tmap_seq_get_bases(seq[0]);
