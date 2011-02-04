@@ -172,6 +172,11 @@ static void
 tmap_map_all_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
 {
   int32_t i, j, end, best_score_i;
+
+  if(dup_window < 0) {
+      return;
+  }
+
   // sort
   tmap_sort_introsort(tmap_map_sam_t, sams->n, sams->sams);
   

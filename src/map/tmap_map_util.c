@@ -226,7 +226,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
       tmap_file_fprintf(tmap_file_stderr, "         -H INT      single homopolymer error difference for enumeration [%d]\n", opt->hp_diff);
       break;
     case TMAP_MAP_ALGO_MAPALL:
-      tmap_file_fprintf(tmap_file_stderr, "         -W INT      remove duplicate alignments from different algorithms within this bp window [%d]\n",
+      tmap_file_fprintf(tmap_file_stderr, "         -W INT      remove duplicate alignments from different algorithms within this bp window (-1 to disable) [%d]\n",
                         opt->dup_window);
       tmap_file_fprintf(tmap_file_stderr, "         -I          apply the output filter for each algorithm separately [%s]\n",
                         (1 == opt->aln_output_mode_ind) ? "true" : "false");
@@ -578,7 +578,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       if(0 < opt->hp_diff && TMAP_SEQ_TYPE_SFF != opt->reads_format) tmap_error("-H option must be used with SFF only", Exit, OutOfRange); 
       break;
     case TMAP_MAP_ALGO_MAPALL:
-      tmap_error_cmd_check_int(opt->dup_window, 0, INT32_MAX, "-W");
+      tmap_error_cmd_check_int(opt->dup_window, -1, INT32_MAX, "-W");
       tmap_error_cmd_check_int(opt->aln_output_mode_ind, 0, 1, "-I");
       if(0 == opt->algos[0] || 0 == opt->num_stages) {
           tmap_error("no algorithms given for stage 1", Exit, CommandLineArgument);
@@ -1018,7 +1018,7 @@ tmap_map_util_map1_adjust_score(tmap_map_sams_t *sams, int32_t score_match, int3
       // update the score
       sam->score = n_match * score_match;
       sam->score -= sam->aux.map1_aux->n_mm * pen_mm;
-      sam->score -= sam->aux.map1_aux->n_gapo * pen_gapo;
+      sam->score -= sam->aux.map1_aux->n_gapo * (pen_gapo + pen_gape);
       sam->score -= sam->aux.map1_aux->n_gape * pen_gape;
   }
 }
