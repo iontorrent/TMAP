@@ -49,7 +49,10 @@ typedef struct __tmap_map_opt_t {
     int32_t pen_gape;  /*!< the indel extension penalty (-E) */
     int32_t fscore;  /*!< the flow score penalty (-X) */
     char *flow; /*!< the flow order (-x) */
+    int32_t bw; /*!< the extra bases to add before and after the target during Smith-Waterman (-w) */
     int32_t aln_global; /*!< align the full read (-g) */
+    int32_t dup_window; /*!< remove duplicate alignments from different algorithms within this bp window (-W) */
+    int32_t score_thr;  /*!< the score threshold (match-score-scaled) (-T) */
     int32_t reads_queue_size;  /*!< the reads queue size (-q) */
     int32_t num_threads;  /*!< the number of threads (-n) */
     int32_t aln_output_mode;  /*!< specifies how to choose alignments (-a)  */
@@ -62,10 +65,6 @@ typedef struct __tmap_map_opt_t {
     // map1/map3 options
     int32_t seed_length; /*!< the kmer seed length (-l) */
     int32_t seed_length_set; /*!< 1 if the user has set seed length (-l) */
-    
-    // map2/map3 options
-    int32_t bw; /*!< the extra bases to add before and after the target during Smith-Waterman (-w) */
-    int32_t score_thr;  /*!< the score threshold (match-score-scaled) (-T) */
     
     // map1 options
     int32_t seed_max_mm;  /*!< maximum number of mismatches in the seed (-s) */
@@ -95,7 +94,6 @@ typedef struct __tmap_map_opt_t {
 
     // mapall options
     uint32_t algos[2];  /*!< the algorithms that should be run in stage 1 and stage 2, bit-packed */
-    int32_t dup_window; /*!< remove duplicate alignments from different algorithms within this bp window (-W) */
     int32_t aln_output_mode_ind; /*!< apply the output filter for each algorithm separately (-I) */
     int32_t num_stages;  /*!< the number of stages */ 
     // stage 1/2 mapping algorithm specific options
@@ -149,7 +147,6 @@ tmap_map_opt_check(tmap_map_opt_t *opt);
   */
 void
 tmap_map_opt_print(tmap_map_opt_t *opt);
-
 
 /*! 
   Auxiliary data for map1
@@ -285,6 +282,14 @@ tmap_map_sams_filter(tmap_map_sams_t *sams, int32_t aln_output_mode);
   */
 void
 tmap_map_sams_filter1(tmap_map_sams_t *sams, int32_t aln_output_mode, int32_t algo_id);
+
+/*!
+  removes duplicate alignments that fall within a given window
+  @param  sams        the mappings to adjust 
+  @param  dup_window  the window size to cluster mappings
+  */
+void
+tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window);
 
 /*!
   adjusts the alignment score of map1 mappings to accout for the match score

@@ -160,6 +160,10 @@ This number must always be positive.
 \subsubsection{\TT{-g}}
 Specifies that the entire read should be mapped to the reference.
 Otherwise a sub-sequence of the read may be mapped.
+
+\subsubsection{\TT{-W INT}}
+Specifies to remove duplicate mappings from the different algorithms that occur within this bp window.
+
 \subsubsection{\TT{-q INT}}
 Specifies the number of reads to cache or load into memory at one time.
 
@@ -360,9 +364,6 @@ In this case, the \TT{map1} algorithm will be applied with the options \TT{-l 12
 If no mapping is found for a read, the \TT{map2} algorithm with the options \TT{-b 5 -g -M 3} and the \TT{map3} algorithm with the options \TT{-g -M 3 -S 10} will be applied in the second stage.
 Notice how the global options \TT{-g -M 3} are applied to all the algorithms where applicable.
 It is possible to have a given algorithm run in both stages with different options.
-
-\subsubsection{\TT{-W INT}}
-Specifies to remove duplicate mappings from the different algorithms that occur within this bp window.
 
 \subsubsection{\TT{-I}}
 Specifies to apply the output filter separately for each algorithm.

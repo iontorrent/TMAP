@@ -189,6 +189,9 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
                   
           // adjust map1 scoring, since it does not consider opt->score_match
           tmap_map_util_map1_adjust_score(sams[low], opt->score_match, opt->pen_mm, opt->pen_gapo, opt->pen_gape);
+  
+          // remove duplicates
+          tmap_map_util_remove_duplicates(sams[low], opt->dup_window);
 
           // mapping quality
           tmap_map1_sams_mapq(sams[low], opt);

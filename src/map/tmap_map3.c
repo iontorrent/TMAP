@@ -167,6 +167,9 @@ tmap_map3_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_t s
 
           // align
           sams[low] = tmap_map3_aux_core(seq, flow, refseq, bwt, sa, opt);
+          
+          // remove duplicates
+          tmap_map_util_remove_duplicates(sams[low], opt->dup_window);
 
           // mapping quality
           tmap_map3_mapq(sams[low], opt->score_thr, opt->score_match, opt->aln_output_mode);

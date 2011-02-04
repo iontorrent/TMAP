@@ -388,16 +388,17 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
       if(0 == opt->aln_global) {
           p->G = tmap_sw_local_core(target, p->len, query, end - beg, &par, path, &path_len, opt->score_thr, &p->G2);
           b->cigar[i] = tmap_sw_path2cigar(path, path_len, &b->n_cigar[i]);
-          // adjust the start position and the alignment length 
-          p->len = path[0].j - path[path_len-1].i + 1;
+          // adjust the alignment length
+          p->len = path[0].i - path[path_len-1].i + 1;
           if(1 < path[path_len-1].i) {
+              // adjust the alignment start
               p->k += path[path_len-1].i-1;
           }
           // soft clip the front of the read
-          if(beg + 1 < path[path_len-1].j) {
+          if(1 < path[path_len-1].j) {
               b->cigar[i] = tmap_realloc(b->cigar[i], sizeof(uint32_t) * (b->n_cigar[i] + 1), "b->cigar");
               memmove(b->cigar[i] + 1, b->cigar[i], b->n_cigar[i] * 4);
-              TMAP_SW_CIGAR_STORE(b->cigar[i][0], BAM_CSOFT_CLIP, path[path_len-1].j-beg-1);
+              TMAP_SW_CIGAR_STORE(b->cigar[i][0], BAM_CSOFT_CLIP, path[path_len-1].j-1);
               ++b->n_cigar[i];
           }
           // soft clip the end of the read
@@ -786,6 +787,9 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
   _seq[1] = (uint8_t*)seq[1]->s;
   tmap_map2_aux_gen_cigar(&opt, _seq, l, refseq, b[0]);
   sams = tmap_map1_aux_store_hits(refseq, &opt, b[0]);
+  // remove duplicate alignments
+  tmap_map_util_remove_duplicates(sams, opt.dup_window);
+
   // free
   tmap_string_destroy(seq[0]);
   tmap_string_destroy(seq[1]);

@@ -13,7 +13,6 @@
 #include "../util/tmap_definitions.h"
 #include "../util/tmap_progress.h"
 #include "../util/tmap_sam.h"
-#include "../util/tmap_sort.h"
 #include "../seq/tmap_seq.h"
 #include "../index/tmap_refseq.h"
 #include "../index/tmap_bwt_gen.h"
@@ -36,14 +35,6 @@
    run. This includes stacks, memory pools, as well as not loading 
    in all reference data.
    */
-
-// sort by min-seqid, min-position, max-score
-#define __tmap_map_sam_sort_lt(a, b) ( ((a).seqid < (b).seqid \
-                                            || ( (a).seqid == (b).seqid && (a).pos < (b).pos ) \
-                                            || ( (a).seqid == (b).seqid && (a).pos == (b).pos && (a).score < (b).score )) \
-                                          ? 1 : 0 )
-
-TMAP_SORT_INIT(tmap_map_sam_t, tmap_map_sam_t, __tmap_map_sam_sort_lt)
 
 #ifdef HAVE_LIBPTHREAD
 static pthread_mutex_t tmap_map_all_read_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -168,58 +159,6 @@ tmap_map_all_sams_merge_helper(tmap_map_sams_t *dest, tmap_map_sams_t *src, int3
   }
 }
 
-static void
-tmap_map_all_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
-{
-  int32_t i, j, end, best_score_i;
-
-  if(dup_window < 0) {
-      return;
-  }
-
-  // sort
-  tmap_sort_introsort(tmap_map_sam_t, sams->n, sams->sams);
-  
-  // remove duplicates within a window
-  for(i=j=0;i<sams->n;) {
-
-      // get the change
-      end = best_score_i = i;
-      while(end+1 < sams->n) {
-          if(sams->sams[end].seqid == sams->sams[end+1].seqid
-             && fabs(sams->sams[end].pos - sams->sams[end+1].pos) <= dup_window) {
-              // track the best scoring
-              if(sams->sams[best_score_i].score < sams->sams[end+1].score) {
-                  best_score_i = end+1;
-              }
-              end++;
-          }
-          else {
-              break;
-          }
-      }
-      // TODO: randomize the best scoring
-
-      // copy over the best
-      if(j != best_score_i) {
-          // destroy
-          tmap_map_sam_destroy(&sams->sams[j]);
-          // nullify
-          tmap_map_sam_copy_and_nullify(&sams->sams[j], &sams->sams[best_score_i]);
-      }
-
-      // next
-      i = end+1;
-      j++;
-  }
-
-  // destroy the sams
-  for(i=j;i<sams->n;i++) {
-      tmap_map_sam_destroy(&sams->sams[i]);
-  }
-  tmap_map_sams_realloc(sams, j);
-}
-
 static tmap_map_sams_t *
 tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2],
                        tmap_map_sams_t *sams_map1, tmap_map_sams_t *sams_map2, tmap_map_sams_t *sams_map3,
@@ -239,7 +178,7 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
   if(0 == sams->n) return sams;
 
   // remove duplicates
-  tmap_map_all_remove_duplicates(sams, opt->dup_window);
+  tmap_map_util_remove_duplicates(sams, opt->dup_window);
 
   // mapping quality
   tmap_map_all_mapq(sams, opt);
@@ -753,10 +692,14 @@ tmap_map_all_core(tmap_map_opt_t *opt)
     (opt_map_other)->fn_fasta = tmap_strdup((opt_map_all)->fn_fasta); \
     (opt_map_other)->fn_reads = tmap_strdup((opt_map_all)->fn_reads); \
     (opt_map_other)->reads_format = (opt_map_all)->reads_format; \
+    (opt_map_other)->score_match = (opt_map_all)->score_match; \
     (opt_map_other)->pen_mm = (opt_map_all)->pen_mm; \
     (opt_map_other)->pen_gapo = (opt_map_all)->pen_gapo; \
     (opt_map_other)->pen_gape = (opt_map_all)->pen_gape; \
     (opt_map_other)->fscore = (opt_map_all)->fscore; \
+    (opt_map_other)->bw = (opt_map_all)->bw; \
+    (opt_map_other)->aln_global = (opt_map_all)->aln_global; \
+    (opt_map_other)->dup_window = -1; \
     (opt_map_other)->reads_queue_size = (opt_map_all)->reads_queue_size; \
     (opt_map_other)->num_threads = (opt_map_all)->num_threads; \
     (opt_map_other)->aln_output_mode = TMAP_MAP_UTIL_ALN_MODE_ALL; \
@@ -764,14 +707,6 @@ tmap_map_all_core(tmap_map_opt_t *opt)
     (opt_map_other)->input_compr = (opt_map_all)->input_compr; \
     (opt_map_other)->output_compr = (opt_map_all)->output_compr; \
     (opt_map_other)->shm_key = (opt_map_all)->shm_key; \
-} while(0)
-
-// for map2 and map3
-#define __tmap_map_all_opts_copy2(opt_map_all, opt_map_other) do { \
-    __tmap_map_all_opts_copy1(opt_map_all, opt_map_other); \
-    (opt_map_other)->score_match = (opt_map_all)->score_match; \
-    (opt_map_other)->bw = (opt_map_all)->bw; \
-    (opt_map_other)->aln_global = (opt_map_all)->aln_global; \
 } while(0)
 
 int32_t
@@ -845,8 +780,8 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
               // copy over common values into the other opts
               for(j=0;j<2;j++) {
                   __tmap_map_all_opts_copy1(opt, opt->opt_map1[j]);
-                  __tmap_map_all_opts_copy2(opt, opt->opt_map2[j]);
-                  __tmap_map_all_opts_copy2(opt, opt->opt_map3[j]);
+                  __tmap_map_all_opts_copy1(opt, opt->opt_map2[j]);
+                  __tmap_map_all_opts_copy1(opt, opt->opt_map3[j]);
               }
               break;
             case TMAP_MAP_ALGO_MAP1:
