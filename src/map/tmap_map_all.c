@@ -396,20 +396,14 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
               }
               // destroy
               // map1
-              if(opt->algos[i] & TMAP_MAP_ALGO_MAP1) {
-                  tmap_map_sams_destroy(sams_map1);
-                  sams_map1 = NULL;
-              }
+              tmap_map_sams_destroy(sams_map1);
+              sams_map1 = NULL;
               // map2
-              if(opt->algos[i] & TMAP_MAP_ALGO_MAP2) {
-                  tmap_map_sams_destroy(sams_map2);
-                  sams_map2 = NULL;
-              }
+              tmap_map_sams_destroy(sams_map2);
+              sams_map2 = NULL;
               // map3
-              if(opt->algos[i] & TMAP_MAP_ALGO_MAP3) {
-                  tmap_map_sams_destroy(sams_map3);
-                  sams_map3 = NULL;
-              }
+              tmap_map_sams_destroy(sams_map3);
+              sams_map3 = NULL;
 
               // check if we found any mappings
               if(0 < sams[low]->n) {
