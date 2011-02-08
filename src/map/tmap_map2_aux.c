@@ -386,7 +386,10 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
           target[k - p->k] = tmap_refseq_seq_i(refseq, k-1);
       }
       if(0 == opt->aln_global) {
-          p->G = tmap_sw_local_core(target, p->len, query, end - beg, &par, path, &path_len, opt->score_thr, &p->G2);
+          p->G = tmap_sw_local_core(target, p->len, query, end - beg, &par, path, &path_len, 0, &p->G2);
+          if(0 == path_len) {
+              tmap_error("0 == path_len", Exit, OutOfRange);
+          }
           b->cigar[i] = tmap_sw_path2cigar(path, path_len, &b->n_cigar[i]);
           // adjust the alignment length
           p->len = path[0].i - path[path_len-1].i + 1;
@@ -412,6 +415,10 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
       else {
           p->G = tmap_sw_fitting_core(target, p->len, query, end - beg, &par, path, &path_len);
           b->cigar[i] = tmap_sw_path2cigar(path, path_len, &b->n_cigar[i]);
+      }
+
+      if(0 == b->n_cigar[i]) {
+          tmap_error("0 == b->n_cigar[i]", Exit, OutOfRange);
       }
 
       // add latent soft clipping at the front

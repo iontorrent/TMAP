@@ -208,10 +208,10 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
   tmap_bwt_match_width_t *width_map1[2][2], *seed_width_map1[2][2];
   int32_t width_length_map1[2] = {0, 0};
   tmap_map1_aux_stack_t *stack_map1=NULL;
-  tmap_map_sams_t *sams_map1;
+  tmap_map_sams_t *sams_map1 = NULL;
   // map2
   tmap_map2_global_mempool_t *pool_map2 = NULL;
-  tmap_map_sams_t *sams_map2;
+  tmap_map_sams_t *sams_map2 = NULL;
   // map3
   tmap_map_sams_t *sams_map3 = NULL;
   uint8_t *flow_map3[2][2];
