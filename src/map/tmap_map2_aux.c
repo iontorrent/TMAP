@@ -424,7 +424,7 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
       // add latent soft clipping at the front
       if(0 < beg){
           if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(b->cigar[i][0])) {
-              TMAP_SW_CIGAR_ADD_LENGTH(b->cigar[i][b->n_cigar[0]], beg);
+              TMAP_SW_CIGAR_ADD_LENGTH(b->cigar[i][0], beg);
           }
           else {
               b->cigar[i] = tmap_realloc(b->cigar[i], sizeof(uint32_t) * (b->n_cigar[i] + 1), "b->cigar");
