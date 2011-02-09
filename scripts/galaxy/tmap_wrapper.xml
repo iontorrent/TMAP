@@ -1,0 +1,434 @@
+<tool id="tmap_wrapper" name="Map with TMAP" version="0.0.1">
+	<description>for Ion Torrent</description>
+	<parallelism method="basic"></parallelism>
+	<command interpreter="python">
+		tmap_wrapper.py 
+
+		## reference source
+		--fileSource=$genomeSource.refGenomeSource
+		#if $genomeSource.refGenomeSource == "history":
+			##build index on the fly
+			--ref="${genomeSource.ownFile}"
+			--dbkey=$dbkey
+		#else:
+			##use precomputed indexes
+			--ref="${ filter( lambda x: str( x[0] ) == str( $genomeSource.indices ), $__app__.tool_data_tables[ 'tmap_indexes' ].get_fields() )[0][-1] }"
+			--do_not_build_index
+		#end if
+
+		## input fastq
+		--fastq=$input
+
+		## output file
+		--output=$output
+
+		## run parameters
+		--params=$params.source_select
+		#if $params.source_select != "pre_set":
+			--mapall=$params.mapall.source_select
+			#if $params.mapall.source_select == "true":
+				--threads=$params.mapall.threads
+				--matchScore=$params.mapall.matchScore
+				--mismatchPenalty=$params.mapall.mismatchPenalty
+				--gapOpenPenalty=$params.mapall.gapOpenPenalty
+				--gapExtensPenalty=$params.mapall.gapExtensPenalty
+				--bandWidth=$params.mapall.bandWidth
+				--globalMap=$params.mapall.globalMap
+				--duplicateWindow=$params.mapall.duplicateWindow
+				--scoringThreshold=$params.mapall.scoringThreshold
+				--queueSize=$params.mapall.queueSize
+				--outputFilter=$params.mapall.outputFilter
+				--rgTag=$params.mapall.rgTag.source_select
+				#if $params.mapall.rgTag.source_select == "true":
+					--rgTagID=$params.mapall.rgTag.rgTagID
+					--rgTagCN=$params.mapall.rgTag.rgTagCN
+					--rgTagDS=$params.mapall.rgTag.rgTagDS
+					--rgTagDT=$params.mapall.rgTag.rgTagDT
+					--rgTagLB=$params.mapall.rgTag.rgTagLB
+					--rgTagPI=$params.mapall.rgTag.rgTagPI
+					--rgTagPL=$params.mapall.rgTag.rgTagPL
+					--rgTagPU=$params.mapall.rgTag.rgTagPU
+					--rgTagSM=$params.mapall.rgTag.rgTagSM
+				#end if
+				--filterIndependently=$params.mapall.filterIndependently 
+			#end if
+			--map1=$params.map1.source_select
+			#if $params.map1.source_select == "true":
+				--map1SeedLength=$params.map1.map1SeedLength
+				--map1SeedMismatches=$params.map1.map1SeedMismatches
+				--map1Mismatches=$params.map1.map1Mismatches
+				--map1GapOpens=$params.map1.map1GapOpens
+				--map1GapExtensions=$params.map1.map1GapExtensions
+				--map1MaxCALsDeletion=$params.map1.map1MaxCALsDeletion
+				--map1EndIndels=$params.map1.map1EndIndels
+				--map1MaxOptimalCALs=$params.map1.map1MaxOptimalCALs
+				--map1MaxNodes=$params.map1.map1MaxNodes
+			#end if
+			--map2=$params.map2.source_select
+			#if $params.map2.source_select == "true":
+				--map2Coefficient=$params.map2.map2Coefficient
+				--map2SeedIntervalSize=$params.map2.map2SeedIntervalSize
+				--map2ZBest=$params.map2.map2ZBest
+				--map2ReverseTrigger=$params.map2.map2ReverseTrigger
+			#end if
+			--map3=$params.map3.source_select
+			#if $params.map3.source_select == "true":
+				--map3SeedLength=$params.map3.map3SeedLength
+				--map3SeedMaxHits=$params.map3.map3SeedMaxHits
+				--map3SeedWindow=$params.map3.map3SeedWindow
+				--map3HPEnumeration=$params.map3.map3HPEnumeration
+			#end if
+			--MAP1=$params.MAP1.source_select
+			#if $params.MAP1.source_select == "true":
+				--MAP1SeedLength=$params.MAP1.MAP1SeedLength
+				--MAP1SeedMismatches=$params.MAP1.MAP1SeedMismatches
+				--MAP1Mismatches=$params.MAP1.MAP1Mismatches
+				--MAP1GapOpens=$params.MAP1.MAP1GapOpens
+				--MAP1GapExtensions=$params.MAP1.MAP1GapExtensions
+				--MAP1MaxCALsDeletion=$params.MAP1.MAP1MaxCALsDeletion
+				--MAP1EndIndels=$params.MAP1.MAP1EndIndels
+				--MAP1MaxOptimalCALs=$params.MAP1.MAP1MaxOptimalCALs
+				--MAP1MaxNodes=$params.MAP1.MAP1MaxNodes
+			#end if
+			--MAP2=$params.MAP2.source_select
+			#if $params.MAP2.source_select == "true":
+				--MAP2Coefficient=$params.MAP2.MAP2Coefficient
+				--MAP2SeedIntervalSize=$params.MAP2.MAP2SeedIntervalSize
+				--MAP2ZBest=$params.MAP2.MAP2ZBest
+				--MAP2ReverseTrigger=$params.MAP2.MAP2ReverseTrigger
+			#end if
+			--MAP3=$params.MAP3.source_select
+			#if $params.MAP3.source_select == "true":
+				--MAP3SeedLength=$params.MAP3.MAP3SeedLength
+				--MAP3SeedMaxHits=$params.MAP3.MAP3SeedMaxHits
+				--MAP3SeedWindow=$params.MAP3.MAP3SeedWindow
+				--MAP3HPEnumeration=$params.MAP3.MAP3HPEnumeration
+			#end if
+		#else:
+			--threads="4"
+			--map1="false"
+			--map2="false"
+			--map3="false"
+			--MAP1="false"
+			--MAP2="false"
+			--MAP3="false"
+		#end if
+
+		## suppress output SAM header
+		--suppressHeader=$suppressHeader
+  </command>
+  <requirements>
+	  <requirement type='package'>tmap</requirement>
+  </requirements>
+  <inputs>
+	  <conditional name="genomeSource">
+		  <param name="refGenomeSource" type="select" label="Will you select a reference genome from your history or use a built-in index?">
+			  <option value="indexed">Use a built-in index</option>
+			  <option value="history">Use one from the history</option>
+		  </param>
+		  <when value="indexed">
+			  <param name="indices" type="select" label="Select a reference genome">
+				  <options from_data_table="tmap_indexes">
+					  <filter type="sort_by" column="3" />
+					  <validator type="no_options" message="No indexes are available for the selected input dataset" />
+				  </options>
+			  </param>
+		  </when>
+		  <when value="history">
+			  <param name="ownFile" type="data" format="fasta" metadata_name="dbkey" label="Select a reference from history" />
+		  </when>
+	  </conditional>
+	  <param name="input" type="data" format="fastqsanger" label="FASTQ file" help="Must have Sanger-scaled quality values with ASCII offset 33" />
+	  <conditional name="params">
+		  <param name="source_select" type="select" label="TMAP settings to use" help="For most mapping needs use Commonly Used settings. If you want full control use Full Parameter List">
+			  <option value="pre_set">Commonly Used</option>
+			  <option value="full">Full Parameter List</option>
+		  </param>
+		  <when value="pre_set" />
+		  <when value="full">
+			  <conditional name="mapall">
+				  <param name="source_select" type="select" label="Global options to use">
+					  <option value="false" selected="true">Commonly Used</option>
+					  <option value="true">Full Parameter List</option>
+				  </param>
+				  <when value="false" />
+				  <when value="true">
+					  <param name="threads" type="integer" value="4" label="The number of threads (-n)" />
+					  <param name="matchScore" type="integer" value="5" label="Match score (-A)" />
+					  <param name="mismatchPenalty" type="integer" value="3" label="Mismatch penalty (-M)" />
+					  <param name="gapOpenPenalty" type="integer" value="3" label="Gap open penalty (-O)" />
+					  <param name="gapExtensPenalty" type="integer" value="1" label="Gap extension penalty (-E)" />
+					  <param name="bandWidth" type="integer" value="50" label="The band width (-w)" />
+					  <param name="globalMap" type="boolean" truevalue="true" falsevalue="false" checked="no" label="Map globally (-g)" help="Map the full read with no soft-clipping" />
+					  <param name="duplicateWindow" type="integer" value="128" label="The duplicate window (-W)" help="Remove duplicate alignments from different algorithms within this bp window (-1 to disable)"/>
+					  <param name="scoringThreshold" type="integer" value="30" label="The scoring threshold (-T)" help="The score threshold divided by the match score" />
+					  <param name="queueSize" type="integer" value="65536" label="The queue size (-q)" help="The queue size for the reads" />
+					  <param name="outputFilter" type="integer" value="1" label="The output filter (-a)" help="The output filter (0 - unique best hits, 1 - random best hit, 2 - all best htis, 3 - all alignments)" />
+					  <conditional name="rgTag">
+						  <param name="source_select" type="select" label="Include Custom Read Group Tags">
+							  <option value="false" selected="true">Default</option>
+							  <option value="true">Custom</option>
+						  </param>
+						  <when value="false" />
+						  <when value="true">
+							  <param name="rgTagID" type="text" value="" label="The Read Group ID (-R)" help="The RG ID used in the RG record in the SAM header" />
+							  <param name="rgTagCN" type="text" value="" label="The Read Group CN (-R)" help="The RG CN used in the RG record in the SAM header" />
+							  <param name="rgTagDS" type="text" value="" label="The Read Group DS (-R)" help="The RG DS used in the RG record in the SAM header" />
+							  <param name="rgTagDT" type="text" value="" label="The Read Group DT (-R)" help="The RG DT used in the RG record in the SAM header" />
+							  <param name="rgTagLB" type="text" value="" label="The Read Group LB (-R)" help="The RG LB used in the RG record in the SAM header" />
+							  <param name="rgTagPI" type="text" value="" label="The Read Group PI (-R)" help="The RG PI used in the RG record in the SAM header" />
+							  <param name="rgTagPL" type="text" value="" label="The Read Group PL (-R)" help="The RG PL used in the RG record in the SAM header" />
+							  <param name="rgTagPU" type="text" value="" label="The Read Group PU (-R)" help="The RG PU used in the RG record in the SAM header" />
+							  <param name="rgTagSM" type="text" value="" label="The Read Group SM (-R)" help="The RG SM used in the RG record in the SAM header" />
+						  </when>
+					  </conditional>
+					  <param name="filterIndependently" type="boolean" truevalue="true" falsevalue="false" checked="no" label="Filter algorithm independently (-I)" help="apply the output filter for each algorithm separately" />
+				  </when>
+			  </conditional>
+			  <conditional name="map1">
+				  <param name="source_select" type="select" label="Map1 Stage One" help="Turn on mapping algorithm #1 in the first stage">
+					  <option value="true">Turn On</option>
+					  <option value="false" selected="true">Turn Off</option>
+				  </param>
+				  <when value="true">
+					  <param name="map1SeedLength" type="integer" value="32" label="The k-mer length to seed CALs (-1 to disable) (-l)" />
+					  <param name="map1SeedMismatches" type="integer" value="3" label="The maximum number of mismatches in the seed (-s) " />
+					  <param name="map1Mismatches" type="float" value="2" label="The maximum number of or (read length) fraction of mismatches (-m) " />
+					  <param name="map1GapOpens" type="float" value="1" label="The maximum number of or (read length) fraction of indel starts (-o)" />
+					  <param name="map1GapExtensions" type="float" value="6" label="The maximum number of or (read length) fraction of indel extensions (-e)" />
+					  <param name="map1MaxCALsDeletion" type="integer" value="10" label="The maximum number of CALs to extend a deletion (-d)" />
+					  <param name="map1EndIndels" type="integer" value="5" label="Indels are not allowed within this number of bps from the end of the read (-i)" />
+					  <param name="map1MaxOptimalCALs" type="integer" value="32" label="Stop searching when INT optimal CALs have been found (-b)" />
+					  <param name="map1MaxNodes" type="integer" value="2000000" label="The maximum number of alignment nodes (-Q)" />
+				  </when>
+				  <when value="false" />
+			  </conditional>
+			  <conditional name="map2">
+				  <param name="source_select" type="select" label="Map2 Stage One" help="Turn on mapping algorithm #2 in the first stage">
+					  <option value="true">Turn On</option>
+					  <option value="false" selected="true">Turn Off</option>
+				  </param>
+				  <when value="true">
+					  <param name="map2Coefficient" type="float" value="5.5" label="The coefficient of length-threshold adjustment (-c)" />
+					  <param name="map2SeedIntervalSize" type="integer" value="3" label="The maximum seeding interval size (-S)" />
+					  <param name="map2ZBest" type="integer" value="1" label="Keep the z-best nodes during prefix trie traversal (-b)" />
+					  <param name="map2ReverseTrigger" type="integer" value="5" label="The # seeds to trigger reverse alignment (-N)" />
+				  </when>
+				  <when value="false" />
+			  </conditional>
+			  <conditional name="map3">
+				  <param name="source_select" type="select" label="Map3 Stage One" help="Turn on mapping algorithm #3 in the first stage">
+					  <option value="true">Turn On</option>
+					  <option value="false" selected="true">Turn Off</option>
+				  </param>
+				  <when value="true">
+					  <param name="map3SeedLength" type="integer" value="-1" label="The k-mer length to seed CALs (-1 tunes to the genome size) (-l)" />
+					  <param name="map3SeedMaxHits" type="integer" value="8" label="The maximum number of hits returned by a seed (-S)" />
+					  <param name="map3SeedWindow" type="integer" value="50" label="The window of bases in which to group seeds (-b)" />
+					  <param name="map3HPEnumeration" type="integer" value="0" label="The single homopolymer error difference for enumeration (-H)" />
+				  </when>
+				  <when value="false" />
+			  </conditional>
+			  <conditional name="MAP1">
+				  <param name="source_select" type="select" label="Map1 Stage Two" help="Turn on mapping algorithm #1 in the second stage">
+					  <option value="true">Turn On</option>
+					  <option value="false" selected="true">Turn Off</option>
+				  </param>
+				  <when value="true">
+					  <param name="MAP1SeedLength" type="integer" value="32" label="The k-mer length to seed CALs (-1 to disable) (-l)" />
+					  <param name="MAP1SeedMismatches" type="integer" value="3" label="The maximum number of mismatches in the seed (-s) " />
+					  <param name="MAP1Mismatches" type="float" value="2" label="The maximum number of or (read length) fraction of mismatches (-m) " />
+					  <param name="MAP1GapOpens" type="float" value="1" label="The maximum number of or (read length) fraction of indel starts (-o)" />
+					  <param name="MAP1GapExtensions" type="float" value="6" label="The maximum number of or (read length) fraction of indel extensions (-e)" />
+					  <param name="MAP1MaxCALsDeletion" type="integer" value="10" label="The maximum number of CALs to extend a deletion (-d)" />
+					  <param name="MAP1EndIndels" type="integer" value="5" label="Indels are not allowed within this number of bps from the end of the read (-i)" />
+					  <param name="MAP1MaxOptimalCALs" type="integer" value="32" label="Stop searching when INT optimal CALs have been found (-b)" />
+					  <param name="MAP1MaxNodes" type="integer" value="2000000" label="The maximum number of alignment nodes (-Q)" />
+				  </when>
+				  <when value="false" />
+			  </conditional>
+			  <conditional name="MAP2">
+				  <param name="source_select" type="select" label="Map2 Stage Two" help="Turn on mapping algorithm #2 in the second stage">
+					  <option value="true">Turn On</option>
+					  <option value="false" selected="true">Turn Off</option>
+				  </param>
+				  <when value="true">
+					  <param name="MAP2Coefficient" type="float" value="5.5" label="The coefficient of length-threshold adjustment (-c)" />
+					  <param name="MAP2SeedIntervalSize" type="integer" value="3" label="The maximum seeding interval size (-S)" />
+					  <param name="MAP2ZBest" type="integer" value="1" label="Keep the z-best nodes during prefix trie traversal (-b)" />
+					  <param name="MAP2ReverseTrigger" type="integer" value="5" label="The # seeds to trigger reverse alignment (-N)" />
+				  </when>
+				  <when value="false" />
+			  </conditional>
+			  <conditional name="MAP3">
+				  <param name="source_select" type="select" label="Map3 Stage Two" help="Turn on mapping algorithm #3 in the second stage">
+					  <option value="true">Turn On</option>
+					  <option value="false" selected="true">Turn Off</option>
+				  </param>
+				  <when value="true">
+					  <param name="MAP3SeedLength" type="integer" value="-1" label="The k-mer length to seed CALs (-1 tunes to the genome size) (-l)" />
+					  <param name="MAP3SeedMaxHits" type="integer" value="8" label="The maximum number of hits returned by a seed (-S)" />
+					  <param name="MAP3SeedWindow" type="integer" value="50" label="The window of bases in which to group seeds (-b)" />
+					  <param name="MAP3HPEnumeration" type="integer" value="0" label="The single homopolymer error difference for enumeration (-H)" />
+				  </when>
+				  <when value="false" />
+			  </conditional>
+		  </when>
+	  </conditional>
+	  <param name="suppressHeader" type="boolean" truevalue="true" falsevalue="false" checked="true" label="Suppress the header in the output SAM file" help="TMAP produces SAM with several lines of header information" />
+  </inputs>
+  <outputs>
+	  <data format="sam" name="output" label="${tool.name} on ${on_string}: mapped reads">
+		  <actions>
+			  <conditional name="genomeSource.refGenomeSource">
+				  <when value="indexed">
+					  <action type="metadata" name="dbkey">
+						  <option type="from_data_table" name="tmap_indexes" column="0">
+							  <filter type="param_value" ref="genomeSource.indices" column="1"/>
+						  </option>
+					  </action>
+				  </when>
+			  </conditional>
+		  </actions>
+	  </data>
+  </outputs>
+  <help>
+
+**What it does**
+
+TMAP is a fast light-weight tool that aligns DNA sequences (small queries) to a sequence database (large sequences), such as the human reference genome. TMAP follows a two-stage approach, with a set of algorithms and associated settings for each stage. If there are no mappings for a read by applying the algorithms in the first stage, then the algorithms in the second stage are applied. For example, a set of algorithms to quickly align near-perfect reads may be used in the first stage, while a set of sensitive algorithms may be used to map difficult reads in the second stage.
+ 
+It combines multiple mapping algorithms to give sensitive and accurate alignments quickly.  It uses three core algorithms, BWA-short, BWA-long, and a variant of the SSAHA algorithm. These algorithms are described in the following publications:
+ - Li, H. and Durbin, R. (2009). Fast and accurate short read alignment with Burrows-Wheeler transform. Bioinformatics, 25, 1754–1760.
+ - Li, H. and Durbin, R. (2010). Fast and accurate long-read alignment with Burrows-Wheeler
+ - Ning, Z., Cox, A., and Mullikin, J. (2001). SSAHA: a fast search method for large DNA databases. Genome Res., 11, 1725–1729.
+
+------
+
+**Know what you are doing**
+
+.. class:: warningmark
+
+There is no such thing (yet) as an automated gearshift in short read mapping. It is all like stick-shift driving in San Francisco. In other words = running this tool with default parameters will probably not give you meaningful results. A way to deal with this is to **understand** the parameters by carefully reading the `documentation`__ and experimenting. Fortunately, Galaxy makes experimenting easy.
+
+ .. __: http://www.iontorrent.com/
+
+------
+
+**Input formats**
+
+TMAP accepts files in Sanger FASTQ format. Use the FASTQ Groomer to prepare your files.
+
+------
+
+**A Note on Built-in Reference Genomes**
+
+Some genomes have multiple variants. If only one "type" of genome is listed, it is the Full version, which means that everything that came in the original genome data download (possibly with mitochondrial and plasmid DNA added if it wasn't already included). The Full version is available for every genome. Some genomes also come in the Canonical variant, which contains only the "canonical" (well-defined) chromosomes or segments, such as chr1-chr22, chrX, chrY, and chrM for human. Other variations include gender. These will come in the canonical form only, so the general Canonical variant is actually Canonical Female and the other is Canonical Male (identical to female excluding chrX).
+
+------
+
+**Outputs**
+
+The output is in SAM format, and has the following columns::
+
+    Column  Description
+  --------  --------------------------------------------------------
+  1  QNAME  Query (pair) NAME
+  2  FLAG   bitwise FLAG
+  3  RNAME  Reference sequence NAME
+  4  POS    1-based leftmost POSition/coordinate of clipped sequence
+  5  MAPQ   MAPping Quality (Phred-scaled)
+  6  CIGAR  extended CIGAR string
+  7  MRNM   Mate Reference sequence NaMe ('=' if same as RNAME)
+  8  MPOS   1-based Mate POSition
+  9  ISIZE  Inferred insert SIZE
+  10 SEQ    query SEQuence on the same strand as the reference
+  11 QUAL   query QUALity (ASCII-33 gives the Phred base quality)
+  12 OPT    variable OPTional fields in the format TAG:VTYPE:VALU
+  
+The flags are as follows::
+
+    Flag  Description
+  ------  -------------------------------------
+  0x0001  the read is paired in sequencing
+  0x0002  the read is mapped in a proper pair
+  0x0004  the query sequence itself is unmapped
+  0x0008  the mate is unmapped
+  0x0010  strand of the query (1 for reverse)
+  0x0020  strand of the mate
+  0x0040  the read is the first read in a pair
+  0x0080  the read is the second read in a pair
+  0x0100  the alignment is not primary
+
+It looks like this (scroll sideways to see the entire example)::
+
+  QNAME	FLAG	RNAME	POS	MAPQ	CIAGR	MRNM	MPOS	ISIZE	SEQ	QUAL	OPT
+  HWI-EAS91_1_30788AAXX:1:1:1761:343	4	*	0	0	*	*	0	0	AAAAAAANNAAAAAAAAAAAAAAAAAAAAAAAAAAACNNANNGAGTNGNNNNNNNGCTTCCCACAGNNCTGG	hhhhhhh;;hhhhhhhhhhh^hOhhhhghhhfhhhgh;;h;;hhhh;h;;;;;;;hhhhhhghhhh;;Phhh
+  HWI-EAS91_1_30788AAXX:1:1:1578:331	4	*	0	0	*	*	0	0	GTATAGANNAATAAGAAAAAAAAAAATGAAGACTTTCNNANNTCTGNANNNNNNNTCTTTTTTCAGNNGTAG	hhhhhhh;;hhhhhhhhhhhhhhhhhhhhhhhhhhhh;;h;;hhhh;h;;;;;;;hhhhhhhhhhh;;hhVh
+
+-------
+
+**TMAP settings**
+
+All of the options have a default value. You can change most of them. Most of the options in TMAP have been implemented here.
+
+------
+
+**TMAP parameter list**
+
+This is an exhaustive list of TMAP options implemented here:
+
+For the **global** options::
+
+  -A INT      score for a match [5]
+  -M INT      the mismatch penalty [3]
+  -O INT      the indel start penalty [3]
+  -E INT      the indel extend penalty [1]
+  -X INT      the flow score penalty [7]
+  -w INT      the band width [50]
+  -g          map the full read [false]
+  -W INT      remove duplicate alignments from different algorithms within this bp window (-1 to disable) [128]
+  -T INT      score threshold divided by the match score [30]
+  -q INT      the queue size for the reads (-1 disables) [65536]
+  -n INT      the number of threads [1]
+  -a INT      output filter [1]
+		  0 - unique best hits
+ 		  1 - random best hit
+ 		  2 - all best hits
+ 		  3 - all alignments
+  -R STRING   the RG tags to add to the SAM header [(null)]
+
+For **mapall** options::
+
+  -I          apply the output filter for each algorithm separately [false]
+ 
+For **map1** options::
+
+  -l INT      the k-mer length to seed CALs (-1 to disable) [32]
+  -s INT      maximum number of mismatches in the seed [3]
+  -m NUM      maximum number of or (read length) fraction of mismatches [number: 2]
+  -o NUM      maximum number of or (read length) fraction of indel starts [number: 1]
+  -e NUM      maximum number of or (read length) fraction of indel extensions [number: 6]
+  -d INT      the maximum number of CALs to extend a deletion [10]
+  -i INT      indels are not allowed within INT number of bps from the end of the read [5]
+  -b INT      stop searching when INT optimal CALs have been found [32]
+  -Q INT      maximum number of alignment nodes [2000000]
+ 
+For **map2** options::
+
+  -c FLOAT    coefficient of length-threshold adjustment [5.5]
+  -S INT      maximum seeding interval size [3]
+  -b INT      Z-best [1]
+  -N INT      # seeds to trigger reverse alignment [5]
+ 
+For **map3** options::
+
+  -l INT      the k-mer length to seed CALs (-1 tunes to the genome size) [-1]
+  -S INT      the maximum number of hits returned by a seed [8]
+  -b INT      the window of bases in which to group seeds [50]
+  -H INT      single homopolymer error difference for enumeration [0]
+
+  </help>
+</tool>
+
+
