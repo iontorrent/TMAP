@@ -307,17 +307,6 @@ void
 tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window);
 
 /*!
-  adjusts the alignment score of map1 mappings to accout for the match score
-  @param  sams         the mappings to adjust 
-  @param  score_match  the match score
-  @param  pen_mm       the mismatch penalty
-  @param  pen_gapo     the gap open penalty
-  @param  pen_gape     the gap extension penalty
-  */
-void
-tmap_map_util_map1_adjust_score(tmap_map_sams_t *sams, int32_t score_match, int32_t pen_mm, int32_t pen_gapo, int32_t pen_gape);
-
-/*!
   re-aligns mappings in flow space
   @param  sff          the sff read sequence
   @param  sams         the mappings to adjust 

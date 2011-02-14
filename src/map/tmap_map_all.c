@@ -365,8 +365,6 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
                   sams_map1 = tmap_map1_aux_core(seq, refseq, bwt[1], sa[1], width_map1[i], 
                                                 (0 < opt_local_map1[i].seed_length) ? seed_width_map1[i] : NULL, 
                                                 &opt_local_map1[i], stack_map1, seed2_len_map1[i]);
-                  // adjust map1 scoring, since it does not consider opt->score_match
-                  tmap_map_util_map1_adjust_score(sams_map1, opt->score_match, opt->pen_mm, opt->pen_gapo, opt->pen_gape);
               }
               else {
                   // empty

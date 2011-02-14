@@ -787,11 +787,7 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
           tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, refseq, 
                                 sam->strand, sam->seqid, sam->pos,
                                 sam->mapq, sam->cigar, sam->n_cigar,
-                                sam->score, sam->ascore, sam->algo_id, sam->algo_stage, 
-                                "\tXM:i:%d\tXO:i:%d\tXG:i:%d",
-                                sam->aux.map1_aux->n_mm,
-                                sam->aux.map1_aux->n_gapo,
-                                sam->aux.map1_aux->n_gape);
+                                sam->score, sam->ascore, sam->algo_id, sam->algo_stage, "");
           break;
         case TMAP_MAP_ALGO_MAP2:
           if(0 < sam->aux.map2_aux->XI) {
@@ -1015,31 +1011,6 @@ void
 tmap_map_sams_filter(tmap_map_sams_t *sams, int32_t aln_output_mode)
 {
   tmap_map_sams_filter1(sams, aln_output_mode, TMAP_MAP_ALGO_NONE);
-}
-
-void
-tmap_map_util_map1_adjust_score(tmap_map_sams_t *sams, int32_t score_match, int32_t pen_mm, int32_t pen_gapo, int32_t pen_gape)
-{
-  int32_t i, j, n_match;
-  for(i=0;i<sams->n;i++) {
-      tmap_map_sam_t *sam = &sams->sams[i];
-      n_match = 0 - sam->aux.map1_aux->n_mm;
-      for(j=0;j<sam->n_cigar;j++) {
-          switch(TMAP_SW_CIGAR_OP(sam->cigar[j])) {
-            case BAM_CMATCH:
-              n_match += TMAP_SW_CIGAR_LENGTH(sam->cigar[j]);
-              break;
-            default:
-              break;
-          }
-      }
-
-      // update the score
-      sam->score = n_match * score_match;
-      sam->score -= sam->aux.map1_aux->n_mm * pen_mm;
-      sam->score -= sam->aux.map1_aux->n_gapo * (pen_gapo + pen_gape);
-      sam->score -= sam->aux.map1_aux->n_gape * pen_gape;
-  }
 }
 
 void
