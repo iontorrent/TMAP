@@ -13,6 +13,19 @@
 
 #define TMAP_MAP_UTIL_FLOW_ORDER "TACG"
 
+#define __gen_ap(par, opt) do { \
+    int32_t i; \
+    for(i=0;i<25;i++) { \
+        (par).matrix[i] = -(opt)->pen_mm; \
+    } \
+    for(i=0;i<4;i++) { \
+        (par).matrix[i*5+i] = (opt)->score_match; \
+    } \
+    (par).gap_open = (opt)->pen_gapo; (par).gap_ext = (opt)->pen_gape; \
+    (par).gap_end = (opt)->pen_gape; \
+    (par).row = 5; (par).band_width = opt->bw; \
+} while(0)
+
 /*!
   The various algorithm types (flags)
   */
@@ -69,6 +82,7 @@ typedef struct __tmap_map_opt_t {
     // map1 options
     int32_t seed_max_mm;  /*!< maximum number of mismatches in the seed (-s) */
     int32_t max_mm;  /*!< maximum number of mismatches (-m) */
+    int32_t seed2_length;  /*!< the secondary seed length (-L) */
     double max_mm_frac;  /*!< maximum (read length) fraction of mismatches (-m) */
     int32_t max_gapo;  /*!< maximum number of indel opens (-o) */
     double max_gapo_frac;  /*!< maximum (read length) fraction of indel opens (-o) */
@@ -155,6 +169,7 @@ typedef struct {
     uint16_t n_mm;  /*!< the current number of mismatches  */
     uint16_t n_gapo;  /*!< the current number of gap opens */
     uint16_t n_gape;  /*!< the current number of gap extensions */
+    uint16_t aln_ref;  /*!< the number of reference bases in the alignment */
 } tmap_map_map1_aux_t;
 
 /*! 

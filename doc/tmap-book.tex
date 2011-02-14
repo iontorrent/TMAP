@@ -250,21 +250,27 @@ See \autoref{sec:commonoptions} for common options that are in use in this comma
 \subsection{Usage}
 
 \subsubsection{-l INT}
-Specifies the k-mer length for seeding candidate alignment locations (CALs) using the first $k$ bases of the read.
+Specifies the primary seed (k-mer) length; reads must be of at least this length.
 
 \subsubsection{-s INT}
-Specifies the number of mismatches allowed in the seed.
+Specifies the maximum number of mismatches allowed in the primary seed.
+
+\subsubsection{-L INT}
+Specifies the secondary seed (k-mer) length; this number of bases will be examimed before extending all mappings.
 
 \subsubsection{-m NUM}
-Specifies the maximum number of mismatches allowed in the mapping, or the fraction of mismatches with respect to the read length.
+Specifies the maximum number of mismatches allowed, or the fraction of mismatches with respect to the read length.
+When the secondary seed is enabled, this parameter is relative to the secondary seed length, not the read length;
 
 \subsubsection{-o NUM}
 Specifies the maximum number of indels allowed in the mapping, or the fraction of indels with respect to the read length.
 The number of indels is equal to the number of gap opens.
+When the secondary seed is enabled, this parameter is relative to the secondary seed length, not the read length;
 
 \subsubsection{-e NUM}
 Specifies the maximum number of indel extensions allowed in the mapping, or the fraction of indel extensionswith respect to the read length.
 The number of indel extensions is equal to the number of gap extensions.
+When the secondary seed is enabled, this parameter is relative to the secondary seed length, not the read length;
 
 \subsubsection{-d INT}
 Specifies the maximum number of candidate alignment locations (CALs) to allow a deletion to be extended.

@@ -171,19 +171,6 @@ tmap_map2_aln_destroy(tmap_map2_aln_t *a)
   free(a);
 }
 
-#define __gen_ap(par, opt) do { \
-    int32_t i; \
-    for(i=0;i<25;i++) { \
-        (par).matrix[i] = -(opt)->pen_mm; \
-    } \
-    for(i=0;i<4;i++) { \
-        (par).matrix[i*5+i] = (opt)->score_match; \
-    } \
-    (par).gap_open = (opt)->pen_gapo; (par).gap_ext = (opt)->pen_gape; \
-    (par).gap_end = (opt)->pen_gape; \
-    (par).row = 5; (par).band_width = opt->bw; \
-} while(0)
-
 // Note: this is the reverse, not the reverse compliment
 #define tmap_map2_rseq_i(_refseq, _i) (tmap_refseq_seq_i(_refseq, _refseq->len-_i-1))
 

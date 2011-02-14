@@ -216,11 +216,24 @@ tmap_map1_aux_get_bam_state(int state)
 } while(0)
 
 static tmap_map_sams_t *
-tmap_map1_sam_to_real(tmap_map_sams_t *sams, int32_t seq_len,
-                       tmap_refseq_t *refseq, tmap_bwt_t *bwt, tmap_sa_t *sa) 
+tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t seed2_len,
+                       tmap_refseq_t *refseq, tmap_bwt_t *bwt, tmap_sa_t *sa, tmap_map_opt_t *opt) 
 {
   tmap_map_sams_t *sams_tmp = NULL;
-  uint32_t i, j, k, l, n;
+  uint32_t i, j, k, l, m, n;
+  int32_t matrix[25];
+  uint8_t *target = NULL;
+  int32_t target_length;
+  tmap_sw_param_t par;
+  tmap_sw_path_t *path = NULL;
+  int32_t path_len, path_mem=0;
+  int32_t seq_len; 
+
+  seq_len = bases[0]->l;
+  par.matrix = matrix;
+  __gen_ap(par, opt);
+  target_length = ((seq_len + 1) / 2 * opt->score_match + opt->pen_gape) / opt->pen_gape + seq_len;
+  target = tmap_calloc(target_length, sizeof(uint8_t), "target");
 
   // max # of entries
   for(i=n=0;i<sams->n;i++) {
@@ -233,45 +246,101 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, int32_t seq_len,
 
   // copy over
   for(i=j=0;i<sams->n;i++) {
-      tmap_map_sam_t *sam;
-      int32_t aln_ref_l = 0;
+      tmap_map_sam_t *sam, *sam_tmp;
 
       sam = &sams->sams[i];
-          
-      // get the number of non-inserted bases 
-      for(l=0;l<sam->n_cigar;l++) {
-          switch(TMAP_SW_CIGAR_OP(sam->cigar[l])) {
-            case BAM_CMATCH:
-            case BAM_CDEL:
-              aln_ref_l += TMAP_SW_CIGAR_LENGTH(sam->cigar[l]); break;
-            default:
-              break;
-          }
-      }
+      sam_tmp = &sams_tmp->sams[j];
 
       // go through SA interval
       for(k=sams->sams[i].seqid;k<=sams->sams[i].pos;k++) { // k -> l
-          uint32_t pos = 0, seqid = 0, pacpos = 0;
+          uint32_t pos = 0, seqid = 0, pacpos = 0, lt;
+          int32_t score, score_subo, aln_ref_l;
+          uint8_t *query;
+
+          lt = target_length;
 
           // SA position to packed refseq position
-          pacpos = bwt->seq_len - tmap_sa_pac_pos(sa, bwt, k) - aln_ref_l + 1;
-
-          if(0 < tmap_refseq_pac2real(refseq, pacpos, aln_ref_l, &seqid, &pos)) {
-              // copy over
-              sams_tmp->sams[j] = sams->sams[i];
-              sams_tmp->sams[j].seqid = seqid;
-              sams_tmp->sams[j].pos = pos-1;
-              // cigar
-              sams_tmp->sams[j].cigar = tmap_malloc(sizeof(uint32_t)*sams_tmp->sams[j].n_cigar, "sams_tmp->sams[j].cigar");
-              for(l=0;l<sams_tmp->sams[j].n_cigar;l++) {
-                  sams_tmp->sams[j].cigar[l] = sams->sams[i].cigar[l];
+          pacpos = bwt->seq_len - tmap_sa_pac_pos(sa, bwt, k) - sam->aux.map1_aux->aln_ref; // pacpos is zero-based
+          
+          // get the target sequence to which we will align
+          if(1 == sam->strand) {  //reverse
+              for(l = pacpos, m = 0; l < pacpos + lt && l < refseq->len; l++) {
+                  target[m++] = tmap_refseq_seq_i(refseq, refseq->len - l - 1);
               }
-              // aux
-              tmap_map_sam_malloc_aux(&sams_tmp->sams[j], TMAP_MAP_ALGO_MAP1);
-              sams_tmp->sams[j].aux.map1_aux->n_mm = sams->sams[i].aux.map1_aux->n_mm;
-              sams_tmp->sams[j].aux.map1_aux->n_gapo = sams->sams[i].aux.map1_aux->n_gapo;
-              sams_tmp->sams[j].aux.map1_aux->n_gape = sams->sams[i].aux.map1_aux->n_gape;
+              query = (uint8_t*)bases[1]->s;
+          }
+          else {
+              for(l = pacpos, m = 0; l < pacpos + lt && l < refseq->len; l++) {
+                  target[m++] = tmap_refseq_seq_i(refseq, l);
+              }
+              query = (uint8_t*)bases[0]->s;
+          }
+          lt = m;
+
+          // get more memory if required
+          if(path_mem <= lt + seq_len) { 
+              path_mem = lt + seq_len;
+              tmap_roundup32(path_mem);
+              path = tmap_realloc(path, sizeof(tmap_sw_path_t)*path_mem, "path");
+          }
+          // align
+          if(0 == opt->aln_global) {
+              score = tmap_sw_local_core(target, lt, query, seq_len, &par, path, &path_len, opt->score_thr, &score_subo);
+          }
+          else {
+              score = tmap_sw_fitting_core(target, lt, query, seq_len, &par, path, &path_len);
+              score_subo = INT32_MIN;
+          }
+
+          // adjust pacpos
+          pacpos += path[path_len-1].i; // now pacpos is one-based
+          aln_ref_l = path[0].i - path[path_len-1].i + 1; // HERE: is htis correct?
+
+          // save the hit
+          if(0 < tmap_refseq_pac2real(refseq, pacpos, aln_ref_l, &seqid, &pos)) {
+              // copy over previous parameters
+              (*sam_tmp) = (*sam);
+
+              sam_tmp->seqid = seqid;
+              sam_tmp->pos = pos-1; // make zero based
+
+              sam_tmp->score = score;
+              sam_tmp->score_subo = score_subo;
+              sam_tmp->cigar = tmap_sw_path2cigar(path, path_len, &sam_tmp->n_cigar);
+
+              // add soft clipping after local alignment
+              if(1 < path[path_len-1].j) {
+                  // soft clip the front of the read
+                  sam_tmp->cigar = tmap_realloc(sam_tmp->cigar, sizeof(uint32_t)*(1+sam_tmp->n_cigar), "sam_tmp->cigar");
+                  for(l=sam_tmp->n_cigar-1;0<=l;l--) { // shift up
+                      sam_tmp->cigar[l+1] = sam_tmp->cigar[l];
+                  }
+                  TMAP_SW_CIGAR_STORE(sam_tmp->cigar[0], BAM_CSOFT_CLIP, path[path_len-1].j-1);
+                  sam_tmp->n_cigar++;
+              }
+              if(path[0].j < seq_len) {
+                  // soft clip the end of the read
+                  sam_tmp->cigar = tmap_realloc(sam_tmp->cigar, sizeof(uint32_t)*(1+sam_tmp->n_cigar), "sam_tmp->cigar");
+                  TMAP_SW_CIGAR_STORE(sam_tmp->cigar[sam_tmp->n_cigar], BAM_CSOFT_CLIP, seq_len - path[0].j);
+                  sam_tmp->n_cigar++;
+              }
               j++;
+
+              // aux
+              tmap_map_sam_malloc_aux(sam_tmp, TMAP_MAP_ALGO_MAP1);
+              (*sam_tmp->aux.map1_aux) = (*sam->aux.map1_aux);
+              // get the number of non-inserted bases 
+              for(l=0;l<sam_tmp->n_cigar;l++) {
+                  switch(TMAP_SW_CIGAR_OP(sam_tmp->cigar[l])) {
+                    case BAM_CMATCH:
+                    case BAM_CDEL:
+                      sam_tmp->aux.map1_aux->aln_ref += TMAP_SW_CIGAR_LENGTH(sam_tmp->cigar[l]); 
+                      break;
+                    default:
+                      break;
+                  }
+              }
+              // TODO: n_mm, n_gapo, n_gape
           }
       }
   }
@@ -281,14 +350,18 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, int32_t seq_len,
 
   // realloc
   tmap_map_sams_realloc(sams_tmp, j);
-
+  
+  // free memory
+  free(path);
+  free(target);
+  
   return sams_tmp;
 }
 
 tmap_map_sams_t *
 tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt, tmap_sa_t *sa,
                    tmap_bwt_match_width_t *width[2], tmap_bwt_match_width_t *seed_width[2], tmap_map_opt_t *opt,
-                   tmap_map1_aux_stack_t *stack)
+                   tmap_map1_aux_stack_t *stack, int32_t seed2_len)
 {
   int32_t max_mm = opt->max_mm, max_gapo = opt->max_gapo, max_gape = opt->max_gape, seed_max_mm = opt->seed_max_mm;
   int32_t best_score, next_best_score;
@@ -298,7 +371,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt, t
   tmap_bwt_match_occ_t match_sa_start;
   tmap_string_t *bases[2]={NULL,NULL};
   tmap_map_sams_t *sams = NULL;
-
+  
   sams = tmap_map_sams_init();
 
   best_score = next_best_score = aln_score(max_mm+1, max_gapo+1, max_gape+1, opt);
@@ -354,7 +427,8 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt, t
 
       offset = e->offset; // zero-based
       str = (uint8_t*)bases[strand]->s;
-      len = bases[strand]->l;
+      len = (0 < seed2_len) ? seed2_len : bases[strand]->l;
+      //len = bases[strand]->l;
       width_cur = width[strand];
 
       if(NULL != seed_width && offset < opt->seed_length) { 
@@ -440,7 +514,36 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt, t
               sam->aux.map1_aux->n_mm = cur->n_mm;
               sam->aux.map1_aux->n_gapo = cur->n_gapo;
               sam->aux.map1_aux->n_gape = cur->n_gape;
+              // aux data: reference length
+              sam->aux.map1_aux->aln_ref = 0;
+              cigar_i = 0;
+              if(offset < len) { // we used 'tmap_bwt_match_exact_alt' 
+                  op = STATE_M;
+                  op_len = len - offset;
+              }
+              else {
+                  op = -1;
+                  op_len = 0;
+              }
+              while(0 < cur->offset) {
+                  if(op != cur->state) {
+                      if(STATE_M == op || STATE_D == op) {
+                          sam->aux.map1_aux->aln_ref += op_len;
+                      }
+                      op = cur->state;
+                      op_len = 1;
+                  }
+                  else {
+                      op_len++;
+                  }
+                  cur = stack->entry_pool[cur->prev_i];
+              }
+              if(STATE_M == op || STATE_D == op) {
+                  sam->aux.map1_aux->aln_ref += op_len;
+              }
 
+              // TODO: later
+              /*
               // cigar
               sam->n_cigar = 1 + cur->n_gapo;
               sam->cigar = tmap_malloc(sizeof(uint32_t)*sam->n_cigar, "sam->cigar");
@@ -483,6 +586,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt, t
               if(NULL == sam->cigar) {
                   tmap_error(NULL, Exit, OutOfRange);
               }
+              */
               
               // TODO: use the shadow ?
               //tmap_map1_aux_stack_shadow(l - k + 1, len, bwt->seq_len, e->last_diff_offset, width_cur);
@@ -573,6 +677,5 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt, t
       }
   }
 
-
-  return tmap_map1_sam_to_real(sams, bases[0]->l, refseq, bwt, sa);
+  return tmap_map1_sam_to_real(sams, bases, seed2_len, refseq, bwt, sa, opt);
 }

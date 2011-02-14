@@ -64,6 +64,7 @@ tmap_map_opt_init(int32_t algo_id)
       // map1
       opt->seed_length = 32; // move this to a define block
       opt->seed_max_mm = 3; // move this to a define block
+      opt->seed2_length = 64; // move this to a define block
       opt->max_mm = 2; opt->max_mm_frac = -1.;
       opt->max_gapo = 1; opt->max_gapo_frac = -1.;
       opt->max_gape = 6; opt->max_gape_frac = -1.;
@@ -206,6 +207,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
       // map1
       tmap_file_fprintf(tmap_file_stderr, "         -l INT      the k-mer length to seed CALs (-1 to disable) [%d]\n", opt->seed_length);
       tmap_file_fprintf(tmap_file_stderr, "         -s INT      maximum number of mismatches in the seed [%d]\n", opt->seed_max_mm);
+      tmap_file_fprintf(tmap_file_stderr, "         -L INT      the secondary seed length (-1 to disable) [%d]\n", opt->seed2_length);
 
       tmap_file_fprintf(tmap_file_stderr, "         -m NUM      maximum number of or (read length) fraction of mismatches");
       if(opt->max_mm < 0) tmap_file_fprintf(tmap_file_stderr, " [fraction: %lf]\n", opt->max_mm_frac);
@@ -261,7 +263,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   opt->argc = argc; opt->argv = argv;
   switch(opt->algo_id) {
     case TMAP_MAP_ALGO_MAP1:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:gW:T:q:n:a:R:YjzJZk:vhl:s:m:o:e:d:i:b:Q:");
+      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:gW:T:q:n:a:R:YjzJZk:vhl:s:L:m:o:e:d:i:b:Q:");
       break;
     case TMAP_MAP_ALGO_MAP2:
       getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:gW:T:q:n:a:R:YjzJZk:vhc:S:b:N:");
@@ -359,6 +361,8 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
                   opt->seed_length = atoi(optarg); break;
                 case 's':
                   opt->seed_max_mm = atoi(optarg); break;
+                case 'L':
+                  opt->seed2_length = atoi(optarg); break;
                 case 'm':
                   if(NULL != strstr(optarg, ".")) opt->max_mm = -1, opt->max_mm_frac = atof(optarg);
                   else opt->max_mm = atoi(optarg), opt->max_mm_frac = -1.0;
@@ -572,6 +576,10 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       tmap_error_cmd_check_int(opt->max_best_cals, 0, INT32_MAX, "-b");
       tmap_error_cmd_check_int(opt->max_entries, 1, INT32_MAX, "-Q");
       if(-1 != opt->seed_length) tmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "-l");
+      if(-1 != opt->seed2_length) tmap_error_cmd_check_int(opt->seed2_length, 1, INT32_MAX, "-l");
+      if(-1 != opt->seed_length && -1 != opt->seed2_length) {
+          tmap_error_cmd_check_int(opt->seed_length, 1, opt->seed2_length, "The secondary seed length (-L) must be less than the primary seed length (-l)");
+      }
       break;
     case TMAP_MAP_ALGO_MAP2:
       //tmap_error_cmd_check_int(opt->yita, 0, 1, "-y");
@@ -638,6 +646,7 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "seed_length=%d\n", opt->seed_length);
   fprintf(stderr, "seed_length_set=%d\n", opt->seed_length_set);
   fprintf(stderr, "seed_max_mm=%d\n", opt->seed_max_mm);
+  fprintf(stderr, "seed2_length=%d\n", opt->seed2_length);
   fprintf(stderr, "max_mm=%d\n", opt->max_mm);
   fprintf(stderr, "max_mm_frac=%lf\n", opt->max_mm_frac);
   fprintf(stderr, "max_gapo=%d\n", opt->max_gapo);

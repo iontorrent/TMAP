@@ -206,7 +206,7 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
   int32_t low = 0, high, i, j;
   // map1 
   tmap_bwt_match_width_t *width_map1[2][2], *seed_width_map1[2][2];
-  int32_t width_length_map1[2] = {0, 0};
+  int32_t width_length_map1[2] = {0, 0}, seed2_len_map1[2];
   tmap_map1_aux_stack_t *stack_map1=NULL;
   tmap_map_sams_t *sams_map1 = NULL;
   // map2
@@ -319,19 +319,26 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
           for(i=0;i<opt->num_stages;i++) {
               if((opt->algos[i] & TMAP_MAP_ALGO_MAP1)
                  && (opt->opt_map1[i]->seed_length < 0 || opt->opt_map1[i]->seed_length <= bases[0]->l)) {
-                  opt_local_map1[i].max_mm = (opt->opt_map1[i]->max_mm < 0) ? (int)(0.99 + opt->opt_map1[i]->max_mm_frac * bases[0]->l) : opt->opt_map1[i]->max_mm;
-                  opt_local_map1[i].max_gape = (opt->opt_map1[i]->max_gape < 0) ? (int)(0.99 + opt->opt_map1[i]->max_gape_frac * bases[0]->l) : opt->opt_map1[i]->max_gape;
-                  opt_local_map1[i].max_gapo = (opt->opt_map1[i]->max_gapo < 0) ? (int)(0.99 + opt->opt_map1[i]->max_gapo_frac * bases[0]->l) : opt->opt_map1[i]->max_gapo;
-                  if(width_length_map1[i] < bases[0]->l) {
+                  if(opt_local_map1[i].seed2_length < 0 || bases[0]->l < opt_local_map1[i].seed2_length) {
+                      seed2_len_map1[i] = bases[0]->l;
+                  }
+                  else {
+                      seed2_len_map1[i] = opt_local_map1[i].seed2_length;
+                  }
+
+                  opt_local_map1[i].max_mm = (opt->opt_map1[i]->max_mm < 0) ? (int)(0.99 + opt->opt_map1[i]->max_mm_frac * seed2_len_map1[i]) : opt->opt_map1[i]->max_mm;
+                  opt_local_map1[i].max_gape = (opt->opt_map1[i]->max_gape < 0) ? (int)(0.99 + opt->opt_map1[i]->max_gape_frac * seed2_len_map1[i]) : opt->opt_map1[i]->max_gape;
+                  opt_local_map1[i].max_gapo = (opt->opt_map1[i]->max_gapo < 0) ? (int)(0.99 + opt->opt_map1[i]->max_gapo_frac * seed2_len_map1[i]) : opt->opt_map1[i]->max_gapo;
+                  if(width_length_map1[i] < seed2_len_map1[i]) {
                       free(width_map1[i][0]); free(width_map1[i][1]);
-                      width_length_map1[i] = bases[0]->l;
+                      width_length_map1[i] = seed2_len_map1[i];
                       width_map1[i][0] = tmap_calloc(width_length_map1[i], sizeof(tmap_bwt_match_width_t), "width[0]");
                       width_map1[i][1] = tmap_calloc(width_length_map1[i], sizeof(tmap_bwt_match_width_t), "width[1]");
                   }
-                  tmap_bwt_match_cal_width(bwt[0], bases[0]->l, bases[0]->s, width_map1[i][0]);
-                  tmap_bwt_match_cal_width(bwt[0], bases[1]->l, bases[1]->s, width_map1[i][1]);
+                  tmap_bwt_match_cal_width(bwt[0], seed2_len_map1[i], bases[0]->s, width_map1[i][0]);
+                  tmap_bwt_match_cal_width(bwt[0], seed2_len_map1[i], bases[1]->s, width_map1[i][1]);
 
-                  if(bases[0]->l < opt->opt_map1[i]->seed_length) {
+                  if(seed2_len_map1[i] < opt->opt_map1[i]->seed_length) {
                       opt_local_map1[i].seed_length = -1;
                   }
                   else {
@@ -354,9 +361,10 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
               // tmap_map1_aux_core
               if((opt->algos[i] & TMAP_MAP_ALGO_MAP1)
                  && (opt->opt_map1[i]->seed_length < 0 || opt->opt_map1[i]->seed_length <= bases[0]->l)) {
+                  // TODO: seed2_length
                   sams_map1 = tmap_map1_aux_core(seq, refseq, bwt[1], sa[1], width_map1[i], 
                                                 (0 < opt_local_map1[i].seed_length) ? seed_width_map1[i] : NULL, 
-                                                &opt_local_map1[i], stack_map1);
+                                                &opt_local_map1[i], stack_map1, seed2_len_map1[i]);
                   // adjust map1 scoring, since it does not consider opt->score_match
                   tmap_map_util_map1_adjust_score(sams_map1, opt->score_match, opt->pen_mm, opt->pen_gapo, opt->pen_gape);
               }
