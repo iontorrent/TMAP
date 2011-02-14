@@ -220,8 +220,8 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
                        tmap_refseq_t *refseq, tmap_bwt_t *bwt, tmap_sa_t *sa, tmap_map_opt_t *opt) 
 {
   tmap_map_sams_t *sams_tmp = NULL;
-  uint32_t i, j, k, l, m, n;
-  int32_t matrix[25];
+  uint32_t i, j, k, m, n;
+  int32_t l, matrix[25];
   uint8_t *target = NULL;
   int32_t target_length;
   tmap_sw_param_t par;
@@ -286,7 +286,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
           }
           // align
           if(0 == opt->aln_global) {
-              score = tmap_sw_local_core(target, lt, query, seq_len, &par, path, &path_len, opt->score_thr, &score_subo);
+              score = tmap_sw_local_core(target, lt, query, seq_len, &par, path, &path_len, 1, &score_subo);
           }
           else {
               score = tmap_sw_fitting_core(target, lt, query, seq_len, &par, path, &path_len);
