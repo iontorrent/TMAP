@@ -220,8 +220,8 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
                        tmap_refseq_t *refseq, tmap_bwt_t *bwt, tmap_sa_t *sa, tmap_map_opt_t *opt) 
 {
   tmap_map_sams_t *sams_tmp = NULL;
-  uint32_t i, j, k, m, n;
-  int32_t l, matrix[25];
+  uint32_t i, j, k, l, m, n;
+  int32_t matrix[25];
   uint8_t *target = NULL;
   int32_t target_length;
   tmap_sw_param_t par;
@@ -262,17 +262,9 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
           pacpos = bwt->seq_len - tmap_sa_pac_pos(sa, bwt, k) - sam->aux.map1_aux->aln_ref; // pacpos is zero-based
 
           // get the target sequence to which we will align
-          if(1 == sam->strand) {  //reverse
-              for(l = pacpos, m = 0; l < pacpos + lt && l < refseq->len; l++) {
-                  target[m++] = tmap_refseq_seq_i(refseq, refseq->len - l - 1);
-              }
-              query = (uint8_t*)bases[1]->s;
-          }
-          else {
-              for(l = pacpos, m = 0; l < pacpos + lt && l < refseq->len; l++) {
-                  target[m++] = tmap_refseq_seq_i(refseq, l);
-              }
-              query = (uint8_t*)bases[0]->s;
+          query = (uint8_t*)bases[sam->strand]->s;
+          for(l = pacpos, m = 0; l < pacpos + lt && l < refseq->len; l++) {
+              target[m++] = tmap_refseq_seq_i(refseq, l);
           }
           lt = m;
 
@@ -317,8 +309,8 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
               if(1 < path[path_len-1].j) {
                   // soft clip the front of the read
                   sams_tmp->sams[j].cigar = tmap_realloc(sams_tmp->sams[j].cigar, sizeof(uint32_t)*(1+sams_tmp->sams[j].n_cigar), "sams_tmp->sams[j].cigar");
-                  for(l=sams_tmp->sams[j].n_cigar-1;0<=l;l--) { // shift up
-                      sams_tmp->sams[j].cigar[l+1] = sams_tmp->sams[j].cigar[l];
+                  for(m=sams_tmp->sams[j].n_cigar;0<m;m--) { // shift up
+                      sams_tmp->sams[j].cigar[m] = sams_tmp->sams[j].cigar[m-1];
                   }
                   TMAP_SW_CIGAR_STORE(sams_tmp->sams[j].cigar[0], BAM_CSOFT_CLIP, path[path_len-1].j-1);
                   sams_tmp->sams[j].n_cigar++;
