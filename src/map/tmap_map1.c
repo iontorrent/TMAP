@@ -136,10 +136,18 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
       high = seq_buffer_length; // process all
 #endif
       while(low<high) {
+          int32_t seed2_len = 0;
           tmap_map_opt_t opt_local = (*opt); // copy over values
           tmap_seq_t *seq[2]={NULL, NULL}, *orig_seq=NULL;
           orig_seq = seq_buffer[low];
           tmap_string_t *bases[2]={NULL, NULL};
+          
+          // not enough bases, ignore
+          if(0 < opt->seed_length && tmap_seq_get_bases(orig_seq)->l < opt->seed_length){
+              sams[low] = tmap_map_sams_init();
+              low++;
+              continue;
+          }
           
           // clone the sequence 
           seq[0] = tmap_seq_clone(orig_seq);
@@ -160,32 +168,37 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
           bases[0] = tmap_seq_get_bases(seq[0]);
           bases[1] = tmap_seq_get_bases(seq[1]);
 
+          if(opt->seed2_length < 0 || bases[0]->l < opt->seed2_length) {
+              seed2_len = bases[0]->l;
+          }
+          else {
+              seed2_len = opt->seed2_length;
+          }
+
           // remember to round up
-          opt_local.max_mm = (opt->max_mm < 0) ? (int)(0.99 + opt->max_mm_frac * bases[0]->l) : opt->max_mm; 
-          opt_local.max_gape = (opt->max_gape < 0) ? (int)(0.99 + opt->max_gape_frac * bases[0]->l) : opt->max_gape; 
-          opt_local.max_gapo = (opt->max_gapo < 0) ? (int)(0.99 + opt->max_gapo_frac * bases[0]->l) : opt->max_gapo; 
-          if(width_length < bases[0]->l) {
-              width_length = bases[0]->l;
+          opt_local.max_mm = (opt->max_mm < 0) ? (int)(0.99 + opt->max_mm_frac * seed2_len) : opt->max_mm; 
+          opt_local.max_gape = (opt->max_gape < 0) ? (int)(0.99 + opt->max_gape_frac * seed2_len) : opt->max_gape; 
+          opt_local.max_gapo = (opt->max_gapo < 0) ? (int)(0.99 + opt->max_gapo_frac * seed2_len) : opt->max_gapo; 
+          if(width_length < seed2_len) {
+              width_length = seed2_len;
               width[0] = tmap_realloc(width[0], width_length * sizeof(tmap_bwt_match_width_t), "width[0]");
               width[1] = tmap_realloc(width[1], width_length * sizeof(tmap_bwt_match_width_t), "width[1]");
               memset(width[0], 0, width_length * sizeof(tmap_bwt_match_width_t));
               memset(width[1], 0, width_length * sizeof(tmap_bwt_match_width_t));
           }
-          tmap_bwt_match_cal_width(bwt[0], bases[0]->l, bases[0]->s, width[0]);
-          tmap_bwt_match_cal_width(bwt[0], bases[1]->l, bases[1]->s, width[1]);
+          tmap_bwt_match_cal_width(bwt[0], seed2_len, bases[0]->s, width[0]);
+          tmap_bwt_match_cal_width(bwt[0], seed2_len, bases[1]->s, width[1]);
 
-          if(bases[0]->l < opt->seed_length) {
-              opt_local.seed_length = -1;
-          }
-          else {
+          if(0 < opt->seed_length) {
               tmap_bwt_match_cal_width(bwt[0], opt->seed_length, bases[0]->s, seed_width[0]);
               tmap_bwt_match_cal_width(bwt[0], opt->seed_length, bases[1]->s, seed_width[1]);
           }
 
-          sams[low] = tmap_map1_aux_core(seq, refseq, bwt[1], sa, width, (0 < opt_local.seed_length) ? seed_width : NULL, &opt_local, stack);
-                  
-          // adjust map1 scoring, since it does not consider opt->score_match
-          tmap_map_util_map1_adjust_score(sams[low], opt->score_match, opt->pen_mm, opt->pen_gapo, opt->pen_gape);
+          // TOOD: seed2_length
+          sams[low] = tmap_map1_aux_core(seq, refseq, bwt[1], sa, width, (0 < opt_local.seed_length) ? seed_width : NULL, &opt_local, stack, seed2_len);
+      
+          // remove duplicates
+          tmap_map_util_remove_duplicates(sams[low], opt->dup_window);
 
           // mapping quality
           tmap_map1_sams_mapq(sams[low], opt);

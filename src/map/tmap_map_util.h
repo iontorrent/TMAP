@@ -13,6 +13,19 @@
 
 #define TMAP_MAP_UTIL_FLOW_ORDER "TACG"
 
+#define __gen_ap(par, opt) do { \
+    int32_t i; \
+    for(i=0;i<25;i++) { \
+        (par).matrix[i] = -(opt)->pen_mm; \
+    } \
+    for(i=0;i<4;i++) { \
+        (par).matrix[i*5+i] = (opt)->score_match; \
+    } \
+    (par).gap_open = (opt)->pen_gapo; (par).gap_ext = (opt)->pen_gape; \
+    (par).gap_end = (opt)->pen_gape; \
+    (par).row = 5; (par).band_width = opt->bw; \
+} while(0)
+
 /*!
   The various algorithm types (flags)
   */
@@ -49,7 +62,10 @@ typedef struct __tmap_map_opt_t {
     int32_t pen_gape;  /*!< the indel extension penalty (-E) */
     int32_t fscore;  /*!< the flow score penalty (-X) */
     char *flow; /*!< the flow order (-x) */
+    int32_t bw; /*!< the extra bases to add before and after the target during Smith-Waterman (-w) */
     int32_t aln_global; /*!< align the full read (-g) */
+    int32_t dup_window; /*!< remove duplicate alignments from different algorithms within this bp window (-W) */
+    int32_t score_thr;  /*!< the score threshold (match-score-scaled) (-T) */
     int32_t reads_queue_size;  /*!< the reads queue size (-q) */
     int32_t num_threads;  /*!< the number of threads (-n) */
     int32_t aln_output_mode;  /*!< specifies how to choose alignments (-a)  */
@@ -63,13 +79,10 @@ typedef struct __tmap_map_opt_t {
     int32_t seed_length; /*!< the kmer seed length (-l) */
     int32_t seed_length_set; /*!< 1 if the user has set seed length (-l) */
     
-    // map2/map3 options
-    int32_t bw; /*!< the extra bases to add before and after the target during Smith-Waterman (-w) */
-    int32_t score_thr;  /*!< the score threshold (match-score-scaled) (-T) */
-    
     // map1 options
     int32_t seed_max_mm;  /*!< maximum number of mismatches in the seed (-s) */
     int32_t max_mm;  /*!< maximum number of mismatches (-m) */
+    int32_t seed2_length;  /*!< the secondary seed length (-L) */
     double max_mm_frac;  /*!< maximum (read length) fraction of mismatches (-m) */
     int32_t max_gapo;  /*!< maximum number of indel opens (-o) */
     double max_gapo_frac;  /*!< maximum (read length) fraction of indel opens (-o) */
@@ -95,7 +108,6 @@ typedef struct __tmap_map_opt_t {
 
     // mapall options
     uint32_t algos[2];  /*!< the algorithms that should be run in stage 1 and stage 2, bit-packed */
-    int32_t dup_window; /*!< remove duplicate alignments from different algorithms within this bp window (-W) */
     int32_t aln_output_mode_ind; /*!< apply the output filter for each algorithm separately (-I) */
     int32_t num_stages;  /*!< the number of stages */ 
     // stage 1/2 mapping algorithm specific options
@@ -150,7 +162,6 @@ tmap_map_opt_check(tmap_map_opt_t *opt);
 void
 tmap_map_opt_print(tmap_map_opt_t *opt);
 
-
 /*! 
   Auxiliary data for map1
   */
@@ -158,6 +169,7 @@ typedef struct {
     uint16_t n_mm;  /*!< the current number of mismatches  */
     uint16_t n_gapo;  /*!< the current number of gap opens */
     uint16_t n_gape;  /*!< the current number of gap extensions */
+    uint16_t aln_ref;  /*!< the number of reference bases in the alignment */
 } tmap_map_map1_aux_t;
 
 /*! 
@@ -287,15 +299,12 @@ void
 tmap_map_sams_filter1(tmap_map_sams_t *sams, int32_t aln_output_mode, int32_t algo_id);
 
 /*!
-  adjusts the alignment score of map1 mappings to accout for the match score
-  @param  sams         the mappings to adjust 
-  @param  score_match  the match score
-  @param  pen_mm       the mismatch penalty
-  @param  pen_gapo     the gap open penalty
-  @param  pen_gape     the gap extension penalty
+  removes duplicate alignments that fall within a given window
+  @param  sams        the mappings to adjust 
+  @param  dup_window  the window size to cluster mappings
   */
 void
-tmap_map_util_map1_adjust_score(tmap_map_sams_t *sams, int32_t score_match, int32_t pen_mm, int32_t pen_gapo, int32_t pen_gape);
+tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window);
 
 /*!
   re-aligns mappings in flow space

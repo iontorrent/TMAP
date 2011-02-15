@@ -78,6 +78,9 @@ tmap_map2_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
 
           // process
           sams[low] = tmap_map2_aux_core(opt, seq, refseq, bwt, sa, pool);
+          
+          // remove duplicates
+          tmap_map_util_remove_duplicates(sams[low], opt->dup_window);
 
           // filter
           tmap_map_sams_filter(sams[low], opt->aln_output_mode);

@@ -13,7 +13,6 @@
 #include "../util/tmap_definitions.h"
 #include "../util/tmap_progress.h"
 #include "../util/tmap_sam.h"
-#include "../util/tmap_sort.h"
 #include "../seq/tmap_seq.h"
 #include "../index/tmap_refseq.h"
 #include "../index/tmap_bwt_gen.h"
@@ -36,14 +35,6 @@
    run. This includes stacks, memory pools, as well as not loading 
    in all reference data.
    */
-
-// sort by min-seqid, min-position, max-score
-#define __tmap_map_sam_sort_lt(a, b) ( ((a).seqid < (b).seqid \
-                                            || ( (a).seqid == (b).seqid && (a).pos < (b).pos ) \
-                                            || ( (a).seqid == (b).seqid && (a).pos == (b).pos && (a).score < (b).score )) \
-                                          ? 1 : 0 )
-
-TMAP_SORT_INIT(tmap_map_sam_t, tmap_map_sam_t, __tmap_map_sam_sort_lt)
 
 #ifdef HAVE_LIBPTHREAD
 static pthread_mutex_t tmap_map_all_read_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -168,53 +159,6 @@ tmap_map_all_sams_merge_helper(tmap_map_sams_t *dest, tmap_map_sams_t *src, int3
   }
 }
 
-static void
-tmap_map_all_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
-{
-  int32_t i, j, end, best_score_i;
-  // sort
-  tmap_sort_introsort(tmap_map_sam_t, sams->n, sams->sams);
-  
-  // remove duplicates within a window
-  for(i=j=0;i<sams->n;) {
-
-      // get the change
-      end = best_score_i = i;
-      while(end+1 < sams->n) {
-          if(sams->sams[end].seqid == sams->sams[end+1].seqid
-             && fabs(sams->sams[end].pos - sams->sams[end+1].pos) <= dup_window) {
-              // track the best scoring
-              if(sams->sams[best_score_i].score < sams->sams[end].score) {
-                  best_score_i = end+1;
-              }
-              end++;
-          }
-          else {
-              break;
-          }
-      }
-      // TODO: randomize the best scoring
-
-      // copy over the best
-      if(j != best_score_i) {
-          // destroy
-          tmap_map_sam_destroy(&sams->sams[j]);
-          // nullify
-          tmap_map_sam_copy_and_nullify(&sams->sams[j], &sams->sams[best_score_i]);
-      }
-
-      // next
-      i = end+1;
-      j++;
-  }
-
-  // destroy the sams
-  for(i=j;i<sams->n;i++) {
-      tmap_map_sam_destroy(&sams->sams[i]);
-  }
-  tmap_map_sams_realloc(sams, j);
-}
-
 static tmap_map_sams_t *
 tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2],
                        tmap_map_sams_t *sams_map1, tmap_map_sams_t *sams_map2, tmap_map_sams_t *sams_map3,
@@ -234,7 +178,7 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
   if(0 == sams->n) return sams;
 
   // remove duplicates
-  tmap_map_all_remove_duplicates(sams, opt->dup_window);
+  tmap_map_util_remove_duplicates(sams, opt->dup_window);
 
   // mapping quality
   tmap_map_all_mapq(sams, opt);
@@ -262,12 +206,12 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
   int32_t low = 0, high, i, j;
   // map1 
   tmap_bwt_match_width_t *width_map1[2][2], *seed_width_map1[2][2];
-  int32_t width_length_map1[2] = {0, 0};
+  int32_t width_length_map1[2] = {0, 0}, seed2_len_map1[2];
   tmap_map1_aux_stack_t *stack_map1=NULL;
-  tmap_map_sams_t *sams_map1;
+  tmap_map_sams_t *sams_map1 = NULL;
   // map2
   tmap_map2_global_mempool_t *pool_map2 = NULL;
-  tmap_map_sams_t *sams_map2;
+  tmap_map_sams_t *sams_map2 = NULL;
   // map3
   tmap_map_sams_t *sams_map3 = NULL;
   uint8_t *flow_map3[2][2];
@@ -373,20 +317,28 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
 
           // map1
           for(i=0;i<opt->num_stages;i++) {
-              if(opt->algos[i] & TMAP_MAP_ALGO_MAP1) {
-                  opt_local_map1[i].max_mm = (opt->opt_map1[i]->max_mm < 0) ? (int)(0.99 + opt->opt_map1[i]->max_mm_frac * bases[0]->l) : opt->opt_map1[i]->max_mm;
-                  opt_local_map1[i].max_gape = (opt->opt_map1[i]->max_gape < 0) ? (int)(0.99 + opt->opt_map1[i]->max_gape_frac * bases[0]->l) : opt->opt_map1[i]->max_gape;
-                  opt_local_map1[i].max_gapo = (opt->opt_map1[i]->max_gapo < 0) ? (int)(0.99 + opt->opt_map1[i]->max_gapo_frac * bases[0]->l) : opt->opt_map1[i]->max_gapo;
-                  if(width_length_map1[i] < bases[0]->l) {
+              if((opt->algos[i] & TMAP_MAP_ALGO_MAP1)
+                 && (opt->opt_map1[i]->seed_length < 0 || opt->opt_map1[i]->seed_length <= bases[0]->l)) {
+                  if(opt_local_map1[i].seed2_length < 0 || bases[0]->l < opt_local_map1[i].seed2_length) {
+                      seed2_len_map1[i] = bases[0]->l;
+                  }
+                  else {
+                      seed2_len_map1[i] = opt_local_map1[i].seed2_length;
+                  }
+
+                  opt_local_map1[i].max_mm = (opt->opt_map1[i]->max_mm < 0) ? (int)(0.99 + opt->opt_map1[i]->max_mm_frac * seed2_len_map1[i]) : opt->opt_map1[i]->max_mm;
+                  opt_local_map1[i].max_gape = (opt->opt_map1[i]->max_gape < 0) ? (int)(0.99 + opt->opt_map1[i]->max_gape_frac * seed2_len_map1[i]) : opt->opt_map1[i]->max_gape;
+                  opt_local_map1[i].max_gapo = (opt->opt_map1[i]->max_gapo < 0) ? (int)(0.99 + opt->opt_map1[i]->max_gapo_frac * seed2_len_map1[i]) : opt->opt_map1[i]->max_gapo;
+                  if(width_length_map1[i] < seed2_len_map1[i]) {
                       free(width_map1[i][0]); free(width_map1[i][1]);
-                      width_length_map1[i] = bases[0]->l;
+                      width_length_map1[i] = seed2_len_map1[i];
                       width_map1[i][0] = tmap_calloc(width_length_map1[i], sizeof(tmap_bwt_match_width_t), "width[0]");
                       width_map1[i][1] = tmap_calloc(width_length_map1[i], sizeof(tmap_bwt_match_width_t), "width[1]");
                   }
-                  tmap_bwt_match_cal_width(bwt[0], bases[0]->l, bases[0]->s, width_map1[i][0]);
-                  tmap_bwt_match_cal_width(bwt[0], bases[1]->l, bases[1]->s, width_map1[i][1]);
+                  tmap_bwt_match_cal_width(bwt[0], seed2_len_map1[i], bases[0]->s, width_map1[i][0]);
+                  tmap_bwt_match_cal_width(bwt[0], seed2_len_map1[i], bases[1]->s, width_map1[i][1]);
 
-                  if(bases[0]->l < opt->opt_map1[i]->seed_length) {
+                  if(seed2_len_map1[i] < opt->opt_map1[i]->seed_length) {
                       opt_local_map1[i].seed_length = -1;
                   }
                   else {
@@ -407,12 +359,12 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
           // run the core algorithms
           for(i=0;i<opt->num_stages;i++) {
               // tmap_map1_aux_core
-              if(opt->algos[i] & TMAP_MAP_ALGO_MAP1) {
+              if((opt->algos[i] & TMAP_MAP_ALGO_MAP1)
+                 && (opt->opt_map1[i]->seed_length < 0 || opt->opt_map1[i]->seed_length <= bases[0]->l)) {
+                  // TODO: seed2_length
                   sams_map1 = tmap_map1_aux_core(seq, refseq, bwt[1], sa[1], width_map1[i], 
                                                 (0 < opt_local_map1[i].seed_length) ? seed_width_map1[i] : NULL, 
-                                                &opt_local_map1[i], stack_map1);
-                  // adjust map1 scoring, since it does not consider opt->score_match
-                  tmap_map_util_map1_adjust_score(sams_map1, opt->score_match, opt->pen_mm, opt->pen_gapo, opt->pen_gape);
+                                                &opt_local_map1[i], stack_map1, seed2_len_map1[i]);
               }
               else {
                   // empty
@@ -450,20 +402,14 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
               }
               // destroy
               // map1
-              if(opt->algos[i] & TMAP_MAP_ALGO_MAP1) {
-                  tmap_map_sams_destroy(sams_map1);
-                  sams_map1 = NULL;
-              }
+              tmap_map_sams_destroy(sams_map1);
+              sams_map1 = NULL;
               // map2
-              if(opt->algos[i] & TMAP_MAP_ALGO_MAP2) {
-                  tmap_map_sams_destroy(sams_map2);
-                  sams_map2 = NULL;
-              }
+              tmap_map_sams_destroy(sams_map2);
+              sams_map2 = NULL;
               // map3
-              if(opt->algos[i] & TMAP_MAP_ALGO_MAP3) {
-                  tmap_map_sams_destroy(sams_map3);
-                  sams_map3 = NULL;
-              }
+              tmap_map_sams_destroy(sams_map3);
+              sams_map3 = NULL;
 
               // check if we found any mappings
               if(0 < sams[low]->n) {
@@ -746,10 +692,14 @@ tmap_map_all_core(tmap_map_opt_t *opt)
     (opt_map_other)->fn_fasta = tmap_strdup((opt_map_all)->fn_fasta); \
     (opt_map_other)->fn_reads = tmap_strdup((opt_map_all)->fn_reads); \
     (opt_map_other)->reads_format = (opt_map_all)->reads_format; \
+    (opt_map_other)->score_match = (opt_map_all)->score_match; \
     (opt_map_other)->pen_mm = (opt_map_all)->pen_mm; \
     (opt_map_other)->pen_gapo = (opt_map_all)->pen_gapo; \
     (opt_map_other)->pen_gape = (opt_map_all)->pen_gape; \
     (opt_map_other)->fscore = (opt_map_all)->fscore; \
+    (opt_map_other)->bw = (opt_map_all)->bw; \
+    (opt_map_other)->aln_global = (opt_map_all)->aln_global; \
+    (opt_map_other)->dup_window = -1; \
     (opt_map_other)->reads_queue_size = (opt_map_all)->reads_queue_size; \
     (opt_map_other)->num_threads = (opt_map_all)->num_threads; \
     (opt_map_other)->aln_output_mode = TMAP_MAP_UTIL_ALN_MODE_ALL; \
@@ -757,14 +707,6 @@ tmap_map_all_core(tmap_map_opt_t *opt)
     (opt_map_other)->input_compr = (opt_map_all)->input_compr; \
     (opt_map_other)->output_compr = (opt_map_all)->output_compr; \
     (opt_map_other)->shm_key = (opt_map_all)->shm_key; \
-} while(0)
-
-// for map2 and map3
-#define __tmap_map_all_opts_copy2(opt_map_all, opt_map_other) do { \
-    __tmap_map_all_opts_copy1(opt_map_all, opt_map_other); \
-    (opt_map_other)->score_match = (opt_map_all)->score_match; \
-    (opt_map_other)->bw = (opt_map_all)->bw; \
-    (opt_map_other)->aln_global = (opt_map_all)->aln_global; \
 } while(0)
 
 int32_t
@@ -838,8 +780,8 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
               // copy over common values into the other opts
               for(j=0;j<2;j++) {
                   __tmap_map_all_opts_copy1(opt, opt->opt_map1[j]);
-                  __tmap_map_all_opts_copy2(opt, opt->opt_map2[j]);
-                  __tmap_map_all_opts_copy2(opt, opt->opt_map3[j]);
+                  __tmap_map_all_opts_copy1(opt, opt->opt_map2[j]);
+                  __tmap_map_all_opts_copy1(opt, opt->opt_map3[j]);
               }
               break;
             case TMAP_MAP_ALGO_MAP1:

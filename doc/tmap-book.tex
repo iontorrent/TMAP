@@ -29,7 +29,7 @@ urlcolor=myurlcolor     % color of external links
 \usepackage{courier}
 
 % Version number
-\newcommand{\Version}{0.0.8}
+\newcommand{\Version}{0.0.10}
 
 % layout
 \setlength\topmargin{0in}
@@ -160,6 +160,10 @@ This number must always be positive.
 \subsubsection{\TT{-g}}
 Specifies that the entire read should be mapped to the reference.
 Otherwise a sub-sequence of the read may be mapped.
+
+\subsubsection{\TT{-W INT}}
+Specifies to remove duplicate mappings from the different algorithms that occur within this bp window.
+
 \subsubsection{\TT{-q INT}}
 Specifies the number of reads to cache or load into memory at one time.
 
@@ -246,21 +250,27 @@ See \autoref{sec:commonoptions} for common options that are in use in this comma
 \subsection{Usage}
 
 \subsubsection{-l INT}
-Specifies the k-mer length for seeding candidate alignment locations (CALs) using the first $k$ bases of the read.
+Specifies the primary seed (k-mer) length; reads must be of at least this length.
 
 \subsubsection{-s INT}
-Specifies the number of mismatches allowed in the seed.
+Specifies the maximum number of mismatches allowed in the primary seed.
+
+\subsubsection{-L INT}
+Specifies the secondary seed (k-mer) length; this number of bases will be examimed before extending all mappings.
 
 \subsubsection{-m NUM}
-Specifies the maximum number of mismatches allowed in the mapping, or the fraction of mismatches with respect to the read length.
+Specifies the maximum number of mismatches allowed, or the fraction of mismatches with respect to the read length.
+When the secondary seed is enabled, this parameter is relative to the secondary seed length, not the read length;
 
 \subsubsection{-o NUM}
 Specifies the maximum number of indels allowed in the mapping, or the fraction of indels with respect to the read length.
 The number of indels is equal to the number of gap opens.
+When the secondary seed is enabled, this parameter is relative to the secondary seed length, not the read length;
 
 \subsubsection{-e NUM}
 Specifies the maximum number of indel extensions allowed in the mapping, or the fraction of indel extensionswith respect to the read length.
 The number of indel extensions is equal to the number of gap extensions.
+When the secondary seed is enabled, this parameter is relative to the secondary seed length, not the read length;
 
 \subsubsection{-d INT}
 Specifies the maximum number of candidate alignment locations (CALs) to allow a deletion to be extended.
@@ -361,9 +371,6 @@ If no mapping is found for a read, the \TT{map2} algorithm with the options \TT{
 Notice how the global options \TT{-g -M 3} are applied to all the algorithms where applicable.
 It is possible to have a given algorithm run in both stages with different options.
 
-\subsubsection{\TT{-W INT}}
-Specifies to remove duplicate mappings from the different algorithms that occur within this bp window.
-
 \subsubsection{\TT{-I}}
 Specifies to apply the output filter separately for each algorithm.
 This is useful for comparing the mappings across all the algorithms.
@@ -422,9 +429,8 @@ Specific details can be found below.
 
 \subsubsection{RG}
 The RG field can be populated using the \TT{-R} option.
-By default the \TT{ID} and \TT{PG} tags are included.
-When specifying an RG line, do not include any of the following tags, as they will be populated by tmap:
-ID, and PG.
+By default the TT{ID} and \TT{PG} tags are included.
+When specifying an RG line, do not include the PG tag as it will be populated by tmap:
 If the input is an SFF file and the \TT{-Y} option is used, then a comment line will be placed in the header with the following tags:
 RG, FO, and KS.
 The RG tag in the comment is the associated read group ID.
@@ -443,13 +449,13 @@ This stores the alignment score.
 This stores the edit distance from the reference sequence.
 
 \subsubsection{XM}
-This stores the number of mismatches in the mapping.
+This stores the number of mismatches in the mapping, or in the secondary seed if used.
 
 \subsubsection{XO}
-This stores the number of indels (gap opens) in the mapping.
+This stores the number of indels (gap opens) in the mapping, or in the secondary seed if used.
 
 \subsubsection{XG}
-This stores the number of indel extensions (gap extensions) in the mapping.
+This stores the number of indel extensions (gap extensions) in the mapping, or in the secondary seed if used.
 
 \subsubsection{XS}
 This stores the alignment score of next-best sub-optimal mapping.

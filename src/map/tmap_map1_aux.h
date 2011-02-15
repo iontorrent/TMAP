@@ -59,11 +59,12 @@ tmap_map1_aux_stack_destroy(tmap_map1_aux_stack_t *stack);
   @param  seed_width  the bounds within the seed (forward/reverse)
   @param  opt         the program parameters structure
   @param  stack       the stack structure
+  @param  seed2_len   the secondary seed length (overides the parameter in opt) 
   @return             pointer to the alignments
   */
 tmap_map_sams_t *
 tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt, tmap_sa_t *sa,
                    tmap_bwt_match_width_t *width[2], tmap_bwt_match_width_t *seed_width[2], tmap_map_opt_t *opt,
-                   tmap_map1_aux_stack_t *stack);
+                   tmap_map1_aux_stack_t *stack, int32_t seed2_length);
 
 #endif
