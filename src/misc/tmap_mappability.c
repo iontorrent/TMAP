@@ -120,9 +120,15 @@ tmap_mappability_core(tmap_map_opt_t *opt)
   }
   seq_buffer = tmap_malloc(sizeof(tmap_seq_t*)*reads_queue_size, "seq_buffer");
   sams = tmap_malloc(sizeof(tmap_map_sams_t*)*reads_queue_size, "sams");
+  read_length = opt->read_length;
   // initialize the buffer
   for(i=0;i<reads_queue_size;i++) { 
+      tmap_fq_t *fq = NULL;
       seq_buffer[i] = tmap_seq_init(TMAP_SEQ_TYPE_FQ);
+      // initialize as fastqs
+      fq = seq_buffer[i]->data.fq;
+      tmap_string_destroy(fq->seq);
+      fq->seq = tmap_string_init(read_length+1);
   }
 
   // Note: 'tmap_file_stdout' should not have been previously modified
@@ -132,10 +138,12 @@ tmap_mappability_core(tmap_map_opt_t *opt)
   tmap_sam_print_header(tmap_file_stdout, refseq, NULL, opt->sam_rg, opt->sam_sff_tags, opt->argc, opt->argv);
 
   tmap_progress_print("processing reads");
-  read_length = opt->read_length;
 
   tid = pos = strand = 0;
   while(1) {
+      if(-1 != opt->reads_queue_size) {
+          tmap_progress_print("simulating reads");
+      }
       seq_buffer_length = 0;
       while(tid < refseq->num_annos &&
             pos < refseq->annos[tid].len - read_length && 
@@ -146,8 +154,6 @@ tmap_mappability_core(tmap_map_opt_t *opt)
           fq = seq_buffer[seq_buffer_length]->data.fq;
           tmap_string_lsprintf(fq->name, 0, "%s:%c:%d-%d", 
                                (char*)refseq->annos[tid].name->s, "+-"[strand], pos+i+1, pos+i+read_length);
-          tmap_string_destroy(fq->seq);
-          fq->seq = tmap_string_init(read_length+1);
           if(0 == strand) {
               for(j=0;j<read_length;j++) {
                   fq->seq->s[j] = "ACGTN"[tmap_refseq_seq_i(refseq, (i+j+refseq->annos[tid].offset))];
@@ -177,6 +183,17 @@ tmap_mappability_core(tmap_map_opt_t *opt)
           if(reads_queue_size <= seq_buffer_length) {
               break;
           }
+      }
+      if(-1 != opt->reads_queue_size) {
+          tmap_progress_print2("simulated reads");
+      }
+      
+      if(0 == seq_buffer_length) {
+          break;
+      }
+      
+      if(-1 != opt->reads_queue_size) {
+          tmap_progress_print("aligning reads");
       }
 
       // do alignment
@@ -248,7 +265,8 @@ tmap_mappability_core(tmap_map_opt_t *opt)
       if(-1 != opt->reads_queue_size) {
           tmap_progress_print2("processed %d reads", n_reads_processed);
       }
-      if(0 == seq_buffer_length) {
+
+      if(refseq->num_annos <= tid) { 
           break;
       }
   }
