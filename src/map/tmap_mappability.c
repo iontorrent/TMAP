@@ -264,8 +264,8 @@ tmap_mappability_core(tmap_map_opt_t *opt)
       }
       if(-1 != opt->reads_queue_size) {
           tmap_progress_print2("simulated reads from %s:%d:%c to %s:%d:%c",
-                               (char*)refseq->annos[tmp_tid_start].name->s, tmp_pos_start, "+-"[tmp_strand_start],
-                               (char*)refseq->annos[tmp_tid_end].name->s, tmp_pos_end, "+-"[tmp_strand_end]);
+                               (char*)refseq->annos[tmp_tid_start].name->s, 1+tmp_pos_start, "+-"[tmp_strand_start],
+                               (char*)refseq->annos[tmp_tid_end].name->s, 1+tmp_pos_end, "+-"[tmp_strand_end]);
       }
       
       if(0 == seq_buffer_length) {
