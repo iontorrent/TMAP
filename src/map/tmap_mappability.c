@@ -209,6 +209,14 @@ tmap_mappability_core(tmap_map_opt_t *opt)
   pos = pos_start;
   strand = 0;
   while(1) {
+      uint32_t tmp_tid_start, tmp_pos_start, tmp_strand_start;
+      uint32_t tmp_tid_end, tmp_pos_end, tmp_strand_end;
+      tmp_tid_start = tid;
+      tmp_pos_start = pos;
+      tmp_strand_start = strand;
+      tmp_tid_end = tid;
+      tmp_pos_end = pos;
+      tmp_strand_end = strand;
       if(-1 != opt->reads_queue_size) {
           tmap_progress_print("simulating reads");
       }
@@ -216,6 +224,10 @@ tmap_mappability_core(tmap_map_opt_t *opt)
       while(tid < tid_end || (tid == tid_end && pos <= pos_end && pos + read_length <= refseq->annos[tid_end].len)) {
           // TODO: simulate the reads
           tmap_fq_t *fq = NULL;
+
+          tmp_tid_end = tid;
+          tmp_pos_end = pos;
+          tmp_strand_end = strand;
 
           fq = seq_buffer[seq_buffer_length]->data.fq;
           tmap_string_lsprintf(fq->name, 0, "%s:%c:%d-%d", 
@@ -251,7 +263,9 @@ tmap_mappability_core(tmap_map_opt_t *opt)
           }
       }
       if(-1 != opt->reads_queue_size) {
-          tmap_progress_print2("simulated reads");
+          tmap_progress_print2("simulated reads from %s:%d:%c to %s:%d:%c",
+                               (char*)refseq->annos[tmp_tid_start].name->s, tmp_pos_start, "+-"[tmp_strand_start],
+                               (char*)refseq->annos[tmp_tid_end].name->s, tmp_pos_end, "+-"[tmp_strand_end]);
       }
       
       if(0 == seq_buffer_length) {
