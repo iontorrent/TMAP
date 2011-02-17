@@ -34,7 +34,8 @@ enum {
     TMAP_MAP_ALGO_MAP1 = 0x1,  /*!< the map1 algorithm */
     TMAP_MAP_ALGO_MAP2 = 0x2,  /*!< the map2 algorithm */
     TMAP_MAP_ALGO_MAP3 = 0x4,  /*!< the map3 algorithm */
-    TMAP_MAP_ALGO_MAPALL = 0x8000 /*!< the mapall algorithm */
+    TMAP_MAP_ALGO_MAPALL = 0x4000, /*!< the mapall algorithm */
+    TMAP_MAP_ALGO_MAPPABILTY = 0x8000 /*!< the mappabilty algorithm */
 };
 
 /*!
@@ -114,6 +115,9 @@ typedef struct __tmap_map_opt_t {
     struct __tmap_map_opt_t *opt_map1[2]; /*!< map 1 options */
     struct __tmap_map_opt_t *opt_map2[2]; /*!< map 2 options */
     struct __tmap_map_opt_t *opt_map3[2]; /*!< map 3 options */
+
+    // mappabilty
+    int32_t read_length;
 
 } tmap_map_opt_t;
 

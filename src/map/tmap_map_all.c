@@ -37,8 +37,8 @@
    */
 
 #ifdef HAVE_LIBPTHREAD
-static pthread_mutex_t tmap_map_all_read_lock = PTHREAD_MUTEX_INITIALIZER;
-static int32_t tmap_map_all_read_lock_low = 0;
+pthread_mutex_t tmap_map_all_read_lock = PTHREAD_MUTEX_INITIALIZER;
+int32_t tmap_map_all_read_lock_low = 0;
 #define TMAP_MAP_ALL_THREAD_BLOCK_SIZE 512
 #endif
 
@@ -198,7 +198,7 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
   return sams;
 }
 
-static void
+void
 tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_t seq_buffer_length, 
                          tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2],
                          int32_t tid, tmap_map_opt_t *opt)
@@ -462,7 +462,7 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
   }
 }
 
-static void *
+void *
 tmap_map_all_core_thread_worker(void *arg)
 {
   tmap_map_all_thread_data_t *thread_data = (tmap_map_all_thread_data_t*)arg;
