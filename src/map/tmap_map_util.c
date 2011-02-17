@@ -92,6 +92,7 @@ tmap_map_opt_init(int32_t algo_id)
       break;
     case TMAP_MAP_ALGO_MAPPABILTY:
       opt->read_length = 50;
+      opt->region = NULL;
     case TMAP_MAP_ALGO_MAPALL:
       // mapall
       opt->aln_output_mode_ind = 0;
@@ -124,8 +125,9 @@ tmap_map_opt_destroy(tmap_map_opt_t *opt)
     case TMAP_MAP_ALGO_MAP2:
     case TMAP_MAP_ALGO_MAP3:
       break;
-    case TMAP_MAP_ALGO_MAPALL:
     case TMAP_MAP_ALGO_MAPPABILTY:
+      free(opt->region);
+    case TMAP_MAP_ALGO_MAPALL:
       // mapall
       for(i=0;i<2;i++) {
           opt->algos[i] = 0;
@@ -248,7 +250,9 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
       tmap_file_fprintf(tmap_file_stderr, "         -H INT      single homopolymer error difference for enumeration [%d]\n", opt->hp_diff);
       break;
     case TMAP_MAP_ALGO_MAPPABILTY:
-      tmap_file_fprintf(tmap_file_stderr, "         -r INT      the read length [%d]\n", opt->read_length);
+      tmap_file_fprintf(tmap_file_stderr, "         -r INT      the read length to simulate [%d]\n", opt->read_length);
+      tmap_file_fprintf(tmap_file_stderr, "         -X STRING   the region from which to simulate [%s]\n", 
+                        (NULL == opt->region) ? "whole genome" : opt->region);
     case TMAP_MAP_ALGO_MAPALL:
       tmap_file_fprintf(tmap_file_stderr, "         -I          apply the output filter for each algorithm separately [%s]\n",
                         (1 == opt->aln_output_mode_ind) ? "true" : "false");
@@ -286,7 +290,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:gW:T:q:n:a:R:YjzJZk:vhW:I");
       break;
     case TMAP_MAP_ALGO_MAPPABILTY:
-      getopt_format = tmap_strdup("f:r:A:M:O:E:X:x:w:gW:T:q:n:a:R:YJZk:vhW:I");
+      getopt_format = tmap_strdup("f:r:A:M:O:E:X:x:w:gW:T:q:n:a:R:YJZk:vhW:IU:");
       break;
     default:
       break;
@@ -461,6 +465,8 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
               switch(c) {
                 case 'I':
                   opt->aln_output_mode_ind = 1; break;
+                case 'U':
+                  opt->region = tmap_strdup(optarg); break;
                 default:
                   free(getopt_format);
                   return 0;
@@ -699,7 +705,9 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "max_seed_hits=%d\n", opt->max_seed_hits);
   fprintf(stderr, "max_seed_band=%d\n", opt->max_seed_band);
   fprintf(stderr, "hp_diff=%d\n", opt->hp_diff);
+  fprintf(stderr, "read_length=%d\n", opt->read_length);
   fprintf(stderr, "aln_output_mode_ind=%d\n", opt->aln_output_mode_ind);
+  fprintf(stderr, "region=%s\n", opt->region);
 }
 
 void

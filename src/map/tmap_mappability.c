@@ -55,6 +55,7 @@ tmap_mappability_core(tmap_map_opt_t *opt)
   tmap_shm_t *shm = NULL;
   int32_t reads_queue_size;
   uint32_t tid, pos, strand;
+  uint32_t tid_start, tid_end, pos_start, pos_end;
   int32_t read_length;
   
   if(0 == opt->shm_key) {
@@ -86,6 +87,71 @@ tmap_mappability_core(tmap_map_opt_t *opt)
       }
       tmap_progress_print2("reference data retrieved from shared memory");
 
+  }
+
+  if(NULL == opt->region) {
+      tid_start = 0;
+      tid_end = refseq->num_annos-1;
+      pos_start = 0;
+      pos_end = refseq->annos[tid_end].len-1;
+  }
+  else {
+      i=0;
+      while(i < strlen(opt->region)) {
+          if(':' == opt->region[i]) {
+              break;
+          }
+          i++;
+      }
+      for(j=0;j<refseq->num_annos;j++) {
+          if(i == (int32_t)refseq->annos[j].name->l &&
+             0 == strncmp(opt->region, (char*)refseq->annos[j].name->s, i)) {
+              break;
+          }
+      }
+      if(refseq->num_annos <= j) {
+          tmap_file_fprintf(tmap_file_stderr, "region=[%s]\n", opt->region);
+          tmap_error("Could not find the given contig in the reference", Exit, OutOfRange);
+      }
+      tid_start = tid_end = j;
+      if(i == strlen(opt->region)) {
+          pos_start = 0;
+          pos_end = refseq->annos[tid_start].len-1;
+      }
+      else {
+          i++; // skip over the colon
+          pos_start = atoi(opt->region + i) - 1;
+          j = i;
+          while(j < strlen(opt->region)) {
+              if('-' == opt->region[j]) {
+                  break;
+              }
+              j++;
+          }
+          if(j == strlen(opt->region)) {
+              pos_end = refseq->annos[tid_end].len-1;
+          }
+          else {
+              j++; // skip over the dash
+              pos_end = atoi(opt->region + j) - 1;
+          }
+      }
+  }
+  if(refseq->num_annos <= tid_start) {
+      tmap_file_fprintf(tmap_file_stderr, "region=[%s]\n", opt->region);
+      tmap_error("region start contig out of range", Exit, OutOfRange);
+  }
+  if(refseq->num_annos <= tid_end) {
+      tmap_file_fprintf(tmap_file_stderr, "region=[%s]\n", opt->region);
+      tmap_error("region end contig out of range", Exit, OutOfRange);
+  }
+  if(refseq->annos[tid_start].len <= pos_start) {
+      tmap_file_fprintf(tmap_file_stderr, "region=[%s]\n", opt->region);
+      tmap_error("region start position out of range", Exit, OutOfRange);
+  }
+  if(refseq->annos[tid_end].len <= pos_end) {
+      tmap_file_fprintf(tmap_file_stderr, "region=[%s]\n", opt->region);
+      tmap_error("region end position out of range", Exit, OutOfRange);
   }
 
   // TODO: this could be dangerous if algorithms change, needs to be refactored
@@ -139,29 +205,29 @@ tmap_mappability_core(tmap_map_opt_t *opt)
 
   tmap_progress_print("processing reads");
 
-  tid = pos = strand = 0;
+  tid = tid_start;
+  pos = pos_start;
+  strand = 0;
   while(1) {
       if(-1 != opt->reads_queue_size) {
           tmap_progress_print("simulating reads");
       }
       seq_buffer_length = 0;
-      while(tid < refseq->num_annos &&
-            pos < refseq->annos[tid].len - read_length && 
-            strand < 2) {
+      while(tid < tid_end || (tid == tid_end && pos <= pos_end && pos + read_length <= refseq->annos[tid_end].len)) {
           // TODO: simulate the reads
           tmap_fq_t *fq = NULL;
 
           fq = seq_buffer[seq_buffer_length]->data.fq;
           tmap_string_lsprintf(fq->name, 0, "%s:%c:%d-%d", 
-                               (char*)refseq->annos[tid].name->s, "+-"[strand], pos+i+1, pos+i+read_length);
+                               (char*)refseq->annos[tid].name->s, "+-"[strand], pos+1, pos+read_length);
           if(0 == strand) {
-              for(j=0;j<read_length;j++) {
-                  fq->seq->s[j] = "ACGTN"[tmap_refseq_seq_i(refseq, (i+j+refseq->annos[tid].offset))];
+              for(i=0;i<read_length;i++) {
+                  fq->seq->s[i] = "ACGTN"[tmap_refseq_seq_i(refseq, (pos+i+refseq->annos[tid].offset))];
               }
           }
           else {
-              for(j=0;j<read_length;j++) {
-                  fq->seq->s[read_length-j-1] = "TGCAN"[tmap_refseq_seq_i(refseq, (i+j+refseq->annos[tid].offset))];
+              for(i=0;i<read_length;i++) {
+                  fq->seq->s[read_length-i-1] = "TGCAN"[tmap_refseq_seq_i(refseq, (pos+i+refseq->annos[tid].offset))];
               }
           }
           fq->seq->s[read_length] = '\0';
@@ -266,7 +332,10 @@ tmap_mappability_core(tmap_map_opt_t *opt)
           tmap_progress_print2("processed %d reads", n_reads_processed);
       }
 
-      if(refseq->num_annos <= tid) { 
+      if(tid_end < tid ||
+         (tid_end == tid && 
+          (pos_end + read_length < pos || 
+           refseq->annos[tid_end].len < pos + read_length))) {
           break;
       }
   }

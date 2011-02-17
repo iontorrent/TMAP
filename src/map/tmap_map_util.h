@@ -117,7 +117,8 @@ typedef struct __tmap_map_opt_t {
     struct __tmap_map_opt_t *opt_map3[2]; /*!< map 3 options */
 
     // mappabilty
-    int32_t read_length;
+    int32_t read_length; /*!< the read length to simulate (-r) */
+    char *region; /*!< the region from which to simulate (-U) */
 
 } tmap_map_opt_t;
 
