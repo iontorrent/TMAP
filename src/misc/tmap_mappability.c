@@ -54,7 +54,7 @@ tmap_mappability_core(tmap_map_opt_t *opt)
   tmap_map_sams_t **sams = NULL;
   tmap_shm_t *shm = NULL;
   int32_t reads_queue_size;
-  uint32_t tid, pos;
+  uint32_t tid, pos, strand;
   int32_t read_length;
   
   if(0 == opt->shm_key) {
@@ -113,10 +113,10 @@ tmap_mappability_core(tmap_map_opt_t *opt)
   }
   // allocate the buffer
   if(-1 == opt->reads_queue_size) {
-      reads_queue_size = 2;
+      reads_queue_size = 1;
   }
   else {
-      reads_queue_size = 2 * opt->reads_queue_size;
+      reads_queue_size = opt->reads_queue_size;
   }
   seq_buffer = tmap_malloc(sizeof(tmap_seq_t*)*reads_queue_size, "seq_buffer");
   sams = tmap_malloc(sizeof(tmap_map_sams_t*)*reads_queue_size, "sams");
@@ -134,110 +134,122 @@ tmap_mappability_core(tmap_map_opt_t *opt)
   tmap_progress_print("processing reads");
   read_length = opt->read_length;
 
-  for(tid=0;tid<refseq->num_annos;tid++) {
-      for(pos=0;pos<refseq->annos[tid].len-read_length;pos+=reads_queue_size) {
-          // fill in the queue
-          seq_buffer_length = 0;
-          for(i=0;seq_buffer_length<reads_queue_size && pos+i<refseq->annos[tid].len-read_length;i++) { 
-              // TODO: simulate the reads
-              tmap_fq_t *fq = NULL;
+  tid = pos = strand = 0;
+  while(1) {
+      seq_buffer_length = 0;
+      while(tid < refseq->num_annos &&
+            pos < refseq->annos[tid].len - read_length && 
+            strand < 2) {
+          // TODO: simulate the reads
+          tmap_fq_t *fq = NULL;
 
-              // forward
-              fq = seq_buffer[seq_buffer_length]->data.fq;
-              tmap_string_lsprintf(fq->name, 0, "%s:%c:%d-%d", 
-                                   (char*)refseq->annos[tid].name->s, '+', pos+i+1, pos+i+read_length);
-              tmap_string_destroy(fq->seq);
-              fq->seq = tmap_string_init(read_length+1);
+          fq = seq_buffer[seq_buffer_length]->data.fq;
+          tmap_string_lsprintf(fq->name, 0, "%s:%c:%d-%d", 
+                               (char*)refseq->annos[tid].name->s, "+-"[strand], pos+i+1, pos+i+read_length);
+          tmap_string_destroy(fq->seq);
+          fq->seq = tmap_string_init(read_length+1);
+          if(0 == strand) {
               for(j=0;j<read_length;j++) {
                   fq->seq->s[j] = "ACGTN"[tmap_refseq_seq_i(refseq, (i+j+refseq->annos[tid].offset))];
               }
-              fq->seq->s[read_length] = '\0';
-              fq->seq->l = read_length;
-              seq_buffer_length++;
-              
-              // reverse
-              fq = seq_buffer[seq_buffer_length]->data.fq;
-              tmap_string_lsprintf(fq->name, 0, "%s:%c:%d-%d", 
-                                   (char*)refseq->annos[tid].name->s, '-', pos+i+1, pos+i+read_length);
-              tmap_string_destroy(fq->seq);
-              fq->seq = tmap_string_init(read_length+1);
+          }
+          else {
               for(j=0;j<read_length;j++) {
                   fq->seq->s[read_length-j-1] = "TGCAN"[tmap_refseq_seq_i(refseq, (i+j+refseq->annos[tid].offset))];
               }
-              fq->seq->s[read_length] = '\0';
-              fq->seq->l = read_length;
-              seq_buffer_length++;
           }
+          fq->seq->s[read_length] = '\0';
+          fq->seq->l = read_length;
+          seq_buffer_length++;
 
-          // do alignment
-#ifdef HAVE_LIBPTHREAD
-          int32_t num_threads = opt->num_threads;
-          if(seq_buffer_length < num_threads * TMAP_MAP_ALL_THREAD_BLOCK_SIZE) {
-              num_threads = 1 + (seq_buffer_length / TMAP_MAP_ALL_THREAD_BLOCK_SIZE);
-          }
-          tmap_map_all_read_lock_low = 0; // ALWAYS set before running threads 
-          if(1 == num_threads) {
-              tmap_map_all_core_worker(seq_buffer, sams, seq_buffer_length, refseq, bwt, sa, 0, opt);
+          if(1 == strand) {
+              strand = 0;
+              pos++;
+              if(pos == refseq->annos[tid].len - read_length) {
+                  pos = 0;
+                  tid++;
+              }
           }
           else {
-              pthread_attr_t attr;
-              pthread_t *threads = NULL;
-              tmap_map_all_thread_data_t *thread_data=NULL;
-
-              pthread_attr_init(&attr);
-              pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-
-              threads = tmap_calloc(num_threads, sizeof(pthread_t), "threads");
-              thread_data = tmap_calloc(num_threads, sizeof(tmap_map_all_thread_data_t), "thread_data");
-
-              for(i=0;i<num_threads;i++) {
-                  thread_data[i].seq_buffer = seq_buffer;
-                  thread_data[i].seq_buffer_length = seq_buffer_length;
-                  thread_data[i].sams = sams;
-                  thread_data[i].refseq = refseq;
-                  thread_data[i].bwt[0] = bwt[0];
-                  thread_data[i].bwt[1] = bwt[1];
-                  thread_data[i].sa[0] = sa[0];
-                  thread_data[i].sa[1] = sa[1];
-                  thread_data[i].tid = i;
-                  thread_data[i].opt = opt; 
-                  if(0 != pthread_create(&threads[i], &attr, tmap_map_all_core_thread_worker, &thread_data[i])) {
-                      tmap_error("error creating threads", Exit, ThreadError);
-                  }
-              }
-              for(i=0;i<num_threads;i++) {
-                  if(0 != pthread_join(threads[i], NULL)) {
-                      tmap_error("error joining threads", Exit, ThreadError);
-                  }
-              }
-
-              free(threads);
-              free(thread_data);
+              strand++;
           }
-#else 
+
+          if(reads_queue_size <= seq_buffer_length) {
+              break;
+          }
+      }
+
+      // do alignment
+#ifdef HAVE_LIBPTHREAD
+      int32_t num_threads = opt->num_threads;
+      if(seq_buffer_length < num_threads * TMAP_MAP_ALL_THREAD_BLOCK_SIZE) {
+          num_threads = 1 + (seq_buffer_length / TMAP_MAP_ALL_THREAD_BLOCK_SIZE);
+      }
+      tmap_map_all_read_lock_low = 0; // ALWAYS set before running threads 
+      if(1 == num_threads) {
           tmap_map_all_core_worker(seq_buffer, sams, seq_buffer_length, refseq, bwt, sa, 0, opt);
+      }
+      else {
+          pthread_attr_t attr;
+          pthread_t *threads = NULL;
+          tmap_map_all_thread_data_t *thread_data=NULL;
+
+          pthread_attr_init(&attr);
+          pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+
+          threads = tmap_calloc(num_threads, sizeof(pthread_t), "threads");
+          thread_data = tmap_calloc(num_threads, sizeof(tmap_map_all_thread_data_t), "thread_data");
+
+          for(i=0;i<num_threads;i++) {
+              thread_data[i].seq_buffer = seq_buffer;
+              thread_data[i].seq_buffer_length = seq_buffer_length;
+              thread_data[i].sams = sams;
+              thread_data[i].refseq = refseq;
+              thread_data[i].bwt[0] = bwt[0];
+              thread_data[i].bwt[1] = bwt[1];
+              thread_data[i].sa[0] = sa[0];
+              thread_data[i].sa[1] = sa[1];
+              thread_data[i].tid = i;
+              thread_data[i].opt = opt; 
+              if(0 != pthread_create(&threads[i], &attr, tmap_map_all_core_thread_worker, &thread_data[i])) {
+                  tmap_error("error creating threads", Exit, ThreadError);
+              }
+          }
+          for(i=0;i<num_threads;i++) {
+              if(0 != pthread_join(threads[i], NULL)) {
+                  tmap_error("error joining threads", Exit, ThreadError);
+              }
+          }
+
+          free(threads);
+          free(thread_data);
+      }
+#else 
+      tmap_map_all_core_worker(seq_buffer, sams, seq_buffer_length, refseq, bwt, sa, 0, opt);
 #endif
 
-          if(-1 != opt->reads_queue_size) {
-              tmap_progress_print("writing alignments");
-          }
-          for(i=0;i<seq_buffer_length;i++) {
-              // write
-              tmap_map_sams_print(seq_buffer[i], refseq, sams[i], opt->sam_sff_tags);
+      if(-1 != opt->reads_queue_size) {
+          tmap_progress_print("writing alignments");
+      }
+      for(i=0;i<seq_buffer_length;i++) {
+          // write
+          tmap_map_sams_print(seq_buffer[i], refseq, sams[i], opt->sam_sff_tags);
 
-              // free alignments
-              tmap_map_sams_destroy(sams[i]);
-              sams[i] = NULL;
-          }
+          // free alignments
+          tmap_map_sams_destroy(sams[i]);
+          sams[i] = NULL;
+      }
 
-          if(-1 == opt->reads_queue_size) {
-              tmap_file_fflush(tmap_file_stdout, 1);
-          }
+      if(-1 == opt->reads_queue_size) {
+          tmap_file_fflush(tmap_file_stdout, 1);
+      }
 
-          n_reads_processed += seq_buffer_length;
-          if(-1 != opt->reads_queue_size) {
-              tmap_progress_print2("processed %d reads", n_reads_processed);
-          }
+      n_reads_processed += seq_buffer_length;
+      if(-1 != opt->reads_queue_size) {
+          tmap_progress_print2("processed %d reads", n_reads_processed);
+      }
+      if(0 == seq_buffer_length) {
+          break;
       }
   }
   if(-1 == opt->reads_queue_size) {
