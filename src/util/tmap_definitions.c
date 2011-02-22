@@ -24,8 +24,8 @@ static char *algo_id_to_name[17] = {
     "dummy12",
     "dummy13",
     "dummy14",
-    "dummy15",
-    "mapall"
+    "mapall",
+    "mappability"
 };
 
 char *

@@ -71,7 +71,7 @@ tmap_string_lsprintf(tmap_string_t *dest, int32_t l, const char *format, ...)
   length = vsnprintf(dest->s + l, dest->m - l, format, ap);
   if(length < 0) tmap_error(NULL, Exit, OutOfRange);
   va_end(ap);
-  if(dest->m - l - 1 < length) {
+  if(((int32_t)dest->m) - l - 1 < length) {
       dest->m = length + l + 2;
       tmap_roundup32(dest->m);
       dest->s = tmap_realloc(dest->s, sizeof(char)*dest->m, "dest->s");
