@@ -38,6 +38,16 @@ enum {
 };
 
 /*!
+  The various soft-clipping types
+  */
+enum {
+    TMAP_MAP_UTIL_SOFT_CLIP_ALL = 0,  /*!< allow soft-clipping on the right and left portion of the read */
+    TMAP_MAP_UTIL_SOFT_CLIP_LEFT = 1,  /*!< allow soft-clipping on the left portion of the read */
+    TMAP_MAP_UTIL_SOFT_CLIP_RIGHT = 2,  /*!< allow soft-clipping on the right portion of the read */
+    TMAP_MAP_UTIL_SOFT_CLIP_NONE = 3,  /*!< do not soft-clip the read */
+};
+
+/*!
   The various modes to modify the alignment score
   */
 enum {
@@ -63,7 +73,7 @@ typedef struct __tmap_map_opt_t {
     int32_t fscore;  /*!< the flow score penalty (-X) */
     char *flow; /*!< the flow order (-x) */
     int32_t bw; /*!< the extra bases to add before and after the target during Smith-Waterman (-w) */
-    int32_t aln_global; /*!< align the full read (-g) */
+    int32_t softclip_type; /*!< soft clip type (-g) */
     int32_t dup_window; /*!< remove duplicate alignments from different algorithms within this bp window (-W) */
     int32_t score_thr;  /*!< the score threshold (match-score-scaled) (-T) */
     int32_t reads_queue_size;  /*!< the reads queue size (-q) */
@@ -308,22 +318,22 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window);
 
 /*!
   re-aligns mappings in flow space
-  @param  sff          the sff read sequence
-  @param  sams         the mappings to adjust 
-  @param  refseq       the reference sequence
-  @param  bw           the band width
-  @param  aln_global   1 to align the full read, 0 otherwise
-  @param  score_thr    the alignment score threshold
-  @param  score_match  the match score
-  @param  pen_mm       the mismatch penalty
-  @param  pen_gapo     the gap open penalty
-  @param  pen_gape     the gap extension penalty
-  @param  fscore       the flow penalty
+  @param  sff           the sff read sequence
+  @param  sams          the mappings to adjust 
+  @param  refseq        the reference sequence
+  @param  bw            the band width
+  @param  softclip_type the soft clip type
+  @param  score_thr     the alignment score threshold
+  @param  score_match   the match score
+  @param  pen_mm        the mismatch penalty
+  @param  pen_gapo      the gap open penalty
+  @param  pen_gape      the gap extension penalty
+  @param  fscore        the flow penalty
   */
 void
 tmap_map_util_fsw(tmap_sff_t *sff, 
                   tmap_map_sams_t *sams, tmap_refseq_t *refseq,
-                  int32_t bw, int32_t aln_global, int32_t score_thr,
+                  int32_t bw, int32_t softclip_type, int32_t score_thr,
                   int32_t score_match, int32_t pen_mm, int32_t pen_gapo, 
                   int32_t pen_gape, int32_t fscore);
 #endif

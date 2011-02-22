@@ -47,7 +47,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->fscore = TMAP_MAP_UTIL_FSCORE;
   opt->flow = NULL;
   opt->bw = 50; 
-  opt->aln_global = 0;
+  opt->softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_ALL;
   opt->dup_window = 128;
   opt->score_thr = 30;
   opt->reads_queue_size = 65536; // TODO: move this to a define block
@@ -177,8 +177,11 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
                     (NULL == opt->flow) ? "not using" : opt->flow);
                     */
   tmap_file_fprintf(tmap_file_stderr, "         -w INT      the band width [%d]\n", opt->bw);
-  tmap_file_fprintf(tmap_file_stderr, "         -g          map the full read [%s]\n", 
-                    (0 == opt->aln_global) ? "false" : "true");
+  tmap_file_fprintf(tmap_file_stderr, "         -g          the soft-clipping type [%d]\n", opt->softclip_type);
+  tmap_file_fprintf(tmap_file_stderr, "                             0 - allow on the right and left portions of the read\n");
+  tmap_file_fprintf(tmap_file_stderr, "                             1 - allow on the left portion of the read\n");
+  tmap_file_fprintf(tmap_file_stderr, "                             2 - allow on the right portion of the read\n");
+  tmap_file_fprintf(tmap_file_stderr, "                             3 - do not allow soft-clipping\n");
   tmap_file_fprintf(tmap_file_stderr, "         -W INT      remove duplicate alignments from different algorithms within this bp window (-1 to disable) [%d]\n",
                     opt->dup_window);
   tmap_file_fprintf(tmap_file_stderr, "         -T INT      score threshold divided by the match score [%d]\n", opt->score_thr);
@@ -263,16 +266,16 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   opt->argc = argc; opt->argv = argv;
   switch(opt->algo_id) {
     case TMAP_MAP_ALGO_MAP1:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:gW:T:q:n:a:R:YjzJZk:vhl:s:L:m:o:e:d:i:b:Q:");
+      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:T:q:n:a:R:YjzJZk:vhl:s:L:m:o:e:d:i:b:Q:");
       break;
     case TMAP_MAP_ALGO_MAP2:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:gW:T:q:n:a:R:YjzJZk:vhc:S:b:N:");
+      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:T:q:n:a:R:YjzJZk:vhc:S:b:N:");
       break;
     case TMAP_MAP_ALGO_MAP3:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:gW:T:q:n:a:R:YjzJZk:vhl:S:b:H:");
+      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:T:q:n:a:R:YjzJZk:vhl:S:b:H:");
       break;
     case TMAP_MAP_ALGO_MAPALL:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:gW:T:q:n:a:R:YjzJZk:vhW:I");
+      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:T:q:n:a:R:YjzJZk:vhW:I");
       break;
     default:
       break;
@@ -305,7 +308,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
         case 'w':
           opt->bw = atoi(optarg); break;
         case 'g':
-          opt->aln_global = 1; break;
+          opt->softclip_type = atoi(optarg); break;
         case 'W':
           opt->dup_window = atoi(optarg); break;
         case 'T':
@@ -494,7 +497,7 @@ tmap_map_opt_file_check_with_null(char *fn1, char *fn2)
     if((opt_map_other)->bw != (opt_map_all)->bw) { \
         tmap_error("option -w was specified outside of the common options", Exit, CommandLineArgument); \
     } \
-    if((opt_map_other)->aln_global != (opt_map_all)->aln_global) { \
+    if((opt_map_other)->softclip_type != (opt_map_all)->softclip_type) { \
         tmap_error("option -g was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     /* \
@@ -552,6 +555,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
   if(NULL != opt->flow) tmap_error_cmd_check_int(strlen(opt->flow), 4, 4, "-x");
   tmap_error_cmd_check_int(opt->bw, 0, INT32_MAX, "-w");
+  tmap_error_cmd_check_int(opt->softclip_type, 0, 3, "-g");
   tmap_error_cmd_check_int(opt->dup_window, -1, INT32_MAX, "-W");
   tmap_error_cmd_check_int(opt->score_thr, 0, INT32_MAX, "-T");
   if(-1 != opt->reads_queue_size) tmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
@@ -632,7 +636,7 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "fscore=%d\n", opt->fscore);
   fprintf(stderr, "flow=%s\n", opt->flow);
   fprintf(stderr, "bw=%d\n", opt->bw);
-  fprintf(stderr, "aln_global=%d\n", opt->aln_global);
+  fprintf(stderr, "softclip_type=%d\n", opt->softclip_type);
   fprintf(stderr, "dup_window=%d\n", opt->dup_window);
   fprintf(stderr, "score_thr=%d\n", opt->score_thr);
   fprintf(stderr, "reads_queue_size=%d\n", opt->reads_queue_size);
@@ -1068,7 +1072,7 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
 void
 tmap_map_util_fsw(tmap_sff_t *sff, 
                   tmap_map_sams_t *sams, tmap_refseq_t *refseq,
-                  int32_t bw, int32_t aln_global, int32_t score_thr,
+                  int32_t bw, int32_t softclip_type, int32_t score_thr,
                   int32_t score_match, int32_t pen_mm, int32_t pen_gapo, 
                   int32_t pen_gape, int32_t fscore)
 {
@@ -1165,14 +1169,27 @@ tmap_map_util_fsw(tmap_sff_t *sff,
       }
 
       // re-align
-      if(0 == aln_global) {
+      switch(softclip_type) {
+        case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
           s->ascore = s->score;
           s->score = tmap_fsw_local_core(target, target_len, fseq[s->strand], &param, path, &path_len, score_thr, &s->score_subo);
-      }
-      else {
+          break;
+        case TMAP_MAP_UTIL_SOFT_CLIP_LEFT:
+          // TODO
+          tmap_error("soft clipping type is not supported", Exit, OutOfRange);
+          break;
+        case TMAP_MAP_UTIL_SOFT_CLIP_RIGHT:
+          // TODO
+          tmap_error("soft clipping type is not supported", Exit, OutOfRange);
+          break;
+        case TMAP_MAP_UTIL_SOFT_CLIP_NONE:
           s->ascore = s->score;
           s->score = tmap_fsw_fitting_core(target, target_len, fseq[s->strand], &param, path, &path_len);
           s->score_subo = INT32_MIN;
+          break;
+        default:
+          tmap_error("soft clipping type was not recognized", Exit, OutOfRange);
+          break;
       }
 
       if(path_len < 0) { // update
