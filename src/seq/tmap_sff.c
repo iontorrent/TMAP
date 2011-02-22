@@ -363,6 +363,29 @@ tmap_sff_clone(tmap_sff_t *sff)
 }
 
 void
+tmap_sff_reverse(tmap_sff_t *sff)
+{
+  int32_t i;
+
+  // reverse flowgram
+  for(i=0;i<(sff->gheader->flow_length>>1);i++) {
+      uint16_t tmp = sff->read->flowgram[sff->gheader->flow_length-1-i];
+      sff->read->flowgram[sff->gheader->flow_length-1-i] = sff->read->flowgram[i];
+      sff->read->flowgram[i] = tmp;
+  }
+  // reverse flow index
+  for(i=0;i<(sff->rheader->n_bases>>1);i++) {
+      uint8_t tmp = sff->read->flow_index[sff->rheader->n_bases-1-i];
+      sff->read->flow_index[sff->rheader->n_bases-1-i] = sff->read->flow_index[i];
+      sff->read->flow_index[i] = tmp;
+  }
+  // reverse compliment the bases
+  tmap_string_reverse(sff->read->bases);
+  // reverse the qualities
+  tmap_string_reverse(sff->read->quality);
+}
+
+void
 tmap_sff_reverse_compliment(tmap_sff_t *sff)
 {
   int32_t i;
@@ -383,6 +406,13 @@ tmap_sff_reverse_compliment(tmap_sff_t *sff)
   tmap_string_reverse_compliment(sff->read->bases, sff->is_int);
   // reverse the qualities
   tmap_string_reverse(sff->read->quality);
+}
+
+void
+tmap_sff_compliment(tmap_sff_t *sff)
+{
+  // reverse compliment the bases
+  tmap_string_compliment(sff->read->bases, sff->is_int);
 }
 
 void

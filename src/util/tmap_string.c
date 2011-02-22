@@ -108,3 +108,19 @@ tmap_string_reverse_compliment(tmap_string_t *str, int32_t is_int)
       tmap_reverse_compliment(str->s, str->l);
   }
 }
+
+void
+tmap_string_compliment(tmap_string_t *str, int32_t is_int)
+{
+  int i;
+
+  if(1 == is_int) { // bases are integer values
+      for(i = 0; i < str->l; ++i) {
+          uint8_t tmp = str->s[str->l-1-i];
+          str->s[str->l-1-i] = (4 <= tmp) ? tmp : 3 - tmp;
+      }
+  }
+  else { // bases are ASCII values
+      tmap_compliment(str->s, str->l);
+  }
+}

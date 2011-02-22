@@ -31,7 +31,7 @@ typedef struct {
     tmap_map_sams_t **sams;  /*!< alignments for each sequence */
     tmap_refseq_t *refseq; /*!< pointer to the reference sequence */
     tmap_bwt_t *bwt[2];  /*!< pointer to the BWT indices (forward/reverse) */
-    tmap_sa_t *sa; /*!< pointer to the SA (reverse) */
+    tmap_sa_t *sa[2]; /*!< pointer to the SA (reverse) */
     int32_t tid;  /*!< the zero-based thread id */
     tmap_map_opt_t *opt;  /*!< the options to this program */
 } tmap_map1_thread_data_t;

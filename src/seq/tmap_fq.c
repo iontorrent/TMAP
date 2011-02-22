@@ -46,10 +46,23 @@ tmap_fq_clone(tmap_fq_t *fq)
 }
 
 void
+tmap_fq_reverse(tmap_fq_t *fq)
+{
+  tmap_string_reverse(fq->seq);
+  tmap_string_reverse(fq->qual);
+}
+
+void
 tmap_fq_reverse_compliment(tmap_fq_t *fq)
 {
   tmap_string_reverse_compliment(fq->seq, fq->is_int);
   tmap_string_reverse(fq->qual);
+}
+
+void
+tmap_fq_compliment(tmap_fq_t *fq)
+{
+  tmap_string_compliment(fq->seq, fq->is_int);
 }
 
 void

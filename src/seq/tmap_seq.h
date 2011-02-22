@@ -49,33 +49,45 @@ tmap_seq_t *
 tmap_seq_clone(tmap_seq_t *seq);
 
 /*! 
-  @param  seq  pointer to the structure to clone
+  @param  seq  pointer to the structure to reverse 
+  */
+void
+tmap_seq_reverse(tmap_seq_t *seq);
+
+/*! 
+  @param  seq  pointer to the structure to reverse compliment
   */
 void
 tmap_seq_reverse_compliment(tmap_seq_t *seq);
 
 /*! 
-  @param  seq  pointer to the structure to clone
+  @param  seq  pointer to the structure to compliment
+  */
+void
+tmap_seq_compliment(tmap_seq_t *seq);
+
+/*! 
+  @param  seq  pointer to the structure 
   */
 void
 tmap_seq_to_int(tmap_seq_t *seq);
 
 /*! 
-  @param  seq  pointer to the structure to clone
+  @param  seq  pointer to the structure 
   @return      a pointer to the name string
   */
 tmap_string_t *
 tmap_seq_get_name(tmap_seq_t *seq);
 
 /*! 
-  @param  seq  pointer to the structure to clone
+  @param  seq  pointer to the structure 
   @return      a pointer to the base sequence string
   */
 inline tmap_string_t *
 tmap_seq_get_bases(tmap_seq_t *seq);
 
 /*! 
-  @param  seq  pointer to the structure to clone
+  @param  seq  pointer to the structure 
   @return      a pointer to the quality string
   */
 inline tmap_string_t *

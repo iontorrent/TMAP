@@ -73,11 +73,25 @@ inline tmap_fq_t *
 tmap_fq_clone(tmap_fq_t *fq);
 
 /*! 
+  reverse the sequence and reverse the qualities
+  @param  fq  a pointer to a sequence structure
+  */
+void
+tmap_fq_reverse(tmap_fq_t *fq);
+
+/*! 
   reverse compliments the sequence and reverse the qualities
   @param  fq  a pointer to a sequence structure
   */
 void
 tmap_fq_reverse_compliment(tmap_fq_t *fq);
+
+/*! 
+  compliments the sequence 
+  @param  fq  a pointer to a sequence structure
+  */
+void
+tmap_fq_compliment(tmap_fq_t *fq);
 
 /*! 
   converts bases to integer values

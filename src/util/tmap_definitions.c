@@ -324,3 +324,12 @@ tmap_reverse_compliment(char *seq, int32_t len)
       seq[i] = tmap_nt_char_to_rc_char[(int)seq[i]];
   }
 }
+
+inline void
+tmap_compliment(char *seq, int32_t len) 
+{
+  int32_t i;
+  for(i=0;i<len;i++) {
+      seq[i] = tmap_nt_char_to_rc_char[(int)seq[i]];
+  }
+}
