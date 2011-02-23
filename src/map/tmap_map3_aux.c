@@ -239,7 +239,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
   int32_t matrix[25];
   tmap_sw_param_t par;
   tmap_sw_path_t *path = NULL;
-  int32_t path_len, path_mem=0, score, score_subo;
+  int32_t path_len, path_mem=0;
   int32_t bw = 0;
 
   tmap_map3_aux_seed_t *seeds[2];
@@ -353,13 +353,16 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
 
   // band hits
   for(i=0;i<2;i++) {
+      int32_t start, end;
+
       bases = tmap_seq_get_bases(seq[i]);
       seq_len[i] = bases->l;
       query = (uint8_t*)bases->s;
-  
-      int32_t start, end;
+
       start = end = 0;
       while(end < n_hits[i]) {
+          tmap_map_sam_t tmp_sam;
+
           if(end+1 < n_hits[i]) { 
               // check if the next interval can be banded
               if(hits[i][end].seqid == hits[i][end+1].seqid
@@ -387,7 +390,6 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
               // off the end)
               ref_end = refseq->annos[hits[i][end].seqid].len;
           }
-
           // get the target sequence
           target_len = ref_end - ref_start + 1;
           if(target_mem < target_len) { // more memory?
@@ -413,42 +415,25 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
 
           // threshold the score by assuming that one seed's worth of
           // matches occurs in the alignment
-
-          score = tmap_map_util_sw(target, target_len, query, seq_len[i], &par, path, &path_len, opt->score_thr, &score_subo, opt->softclip_type);
-
-          if(0 < path_len && opt->score_thr < score) {
+          if(0 < tmap_map_util_sw(&tmp_sam,
+                                  target, target_len, 
+                                  query, seq_len[i], 
+                                  hits[i][start].seqid, ref_start-1,
+                                  &par, path, &path_len, 
+                                  opt->score_thr, opt->softclip_type, i)) {
               tmap_map_sam_t *s = NULL;
 
               // realloc
               tmap_map_sams_realloc(sams, sams->n+1);
               s = &sams->sams[sams->n-1];
 
+              // copy over (shallow copy) 
+              (*s) = tmp_sam;
+
               // save the hit
               s->algo_id = TMAP_MAP_ALGO_MAP3;
               s->algo_stage = 0;
-              s->strand = i;
-              s->seqid = hits[i][start].seqid; 
-              s->pos = (ref_start-1) + (path[path_len-1].i-1); // zero-based 
-              s->score = score;
-              s->score_subo = score_subo;
-              s->cigar = tmap_sw_path2cigar(path, path_len, &s->n_cigar);
 
-              // add soft clipping after local alignment
-              if(1 < path[path_len-1].j) {
-                  // soft clip the front of the read
-                  s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*(1+s->n_cigar), "s->cigar");
-                  for(j=s->n_cigar-1;0<=j;j--) { // shift up
-                      s->cigar[j+1] = s->cigar[j];
-                  }
-                  TMAP_SW_CIGAR_STORE(s->cigar[0], BAM_CSOFT_CLIP, path[path_len-1].j-1);
-                  s->n_cigar++;
-              }
-              if(path[0].j < seq_len[i]) { 
-                  // soft clip the end of the read
-                  s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*(1+s->n_cigar), "s->cigar");
-                  TMAP_SW_CIGAR_STORE(s->cigar[s->n_cigar], BAM_CSOFT_CLIP, seq_len[i] - path[0].j);
-                  s->n_cigar++;
-              }
               // map3 aux data
               tmap_map_sam_malloc_aux(s, TMAP_MAP_ALGO_MAP3);
               s->aux.map3_aux->n_seeds = ((1 << 15) < end - start + 1) ? (1 << 15) : (end - start + 1);

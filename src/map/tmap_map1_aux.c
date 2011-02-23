@@ -263,7 +263,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
       // go through SA interval
       for(k=sams->sams[i].seqid;k<=sams->sams[i].pos;k++) { // k -> l
           uint32_t pos = 0, seqid = 0, pacpos = 0, lt;
-          int32_t score, score_subo, aln_ref_l;
+          int32_t aln_ref_l, added;
           uint8_t strand;
 
           lt = target_length;
@@ -283,6 +283,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
               target[m++] = tmap_refseq_seq_i(refseq, l); 
           }
           lt = m;
+
           /*
           fprintf(stderr, "Q=");
           for(l=0;l<seq_len;l++) {
@@ -305,44 +306,27 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
               path = tmap_realloc(path, sizeof(tmap_sw_path_t)*path_mem, "path");
           }
           // align
-          score = tmap_map_util_sw(target, lt, query, seq_len, &par, path, &path_len, opt->score_thr, &score_subo, opt->softclip_type);
+          added = tmap_map_util_sw(&sams_tmp->sams[j],
+                                   target, lt, 
+                                   query, seq_len, 
+                                   seqid, 0,
+                                   &par, path, &path_len, 
+                                   opt->score_thr, opt->softclip_type, strand);
           if(0 == path_len) {
               tmap_error("0 == path_len", Exit, OutOfRange);
           }
 
           // adjust pacpos
-          pacpos += path[path_len-1].i; // now pacpos is one-based
+          pacpos += sams_tmp->sams[j].pos + 1; // now pacpos is one-based
           aln_ref_l = path[0].i - path[path_len-1].i + 1; 
 
           // save the hit
-          if(0 < tmap_refseq_pac2real(refseq, pacpos, aln_ref_l, &seqid, &pos)) {
+          if(1 == added && 0 < tmap_refseq_pac2real(refseq, pacpos, aln_ref_l, &seqid, &pos)) {
               // copy over previous parameters
               sams_tmp->sams[j].algo_id = TMAP_MAP_ALGO_MAP1;
               sams_tmp->sams[j].algo_stage = 0;
-              sams_tmp->sams[j].strand = sam->strand;
-              sams_tmp->sams[j].seqid = seqid;
-              sams_tmp->sams[j].pos = pos-1; // make zero based
-              sams_tmp->sams[j].score = score;
-              sams_tmp->sams[j].score_subo = score_subo;
-              sams_tmp->sams[j].cigar = tmap_sw_path2cigar(path, path_len, &sams_tmp->sams[j].n_cigar);
-              
-              // add soft clipping after local alignment
-              //fprintf(stderr, "soft=[%d,%d]\n", path[path_len-1].j-1, seq_len - path[0].j);
-              if(1 < path[path_len-1].j) {
-                  // soft clip the front of the read
-                  sams_tmp->sams[j].cigar = tmap_realloc(sams_tmp->sams[j].cigar, sizeof(uint32_t)*(1+sams_tmp->sams[j].n_cigar), "sams_tmp->sams[j].cigar");
-                  for(m=sams_tmp->sams[j].n_cigar;0<m;m--) { // shift up
-                      sams_tmp->sams[j].cigar[m] = sams_tmp->sams[j].cigar[m-1];
-                  }
-                  TMAP_SW_CIGAR_STORE(sams_tmp->sams[j].cigar[0], BAM_CSOFT_CLIP, path[path_len-1].j-1);
-                  sams_tmp->sams[j].n_cigar++;
-              }
-              if(path[0].j < seq_len) {
-                  // soft clip the end of the read
-                  sams_tmp->sams[j].cigar = tmap_realloc(sams_tmp->sams[j].cigar, sizeof(uint32_t)*(1+sams_tmp->sams[j].n_cigar), "sams_tmp->sams[j].cigar");
-                  TMAP_SW_CIGAR_STORE(sams_tmp->sams[j].cigar[sams_tmp->sams[j].n_cigar], BAM_CSOFT_CLIP, seq_len - path[0].j);
-                  sams_tmp->sams[j].n_cigar++;
-              }
+
+              sams_tmp->sams[j].pos = pos-1; // adjust
             
               // aux
               tmap_map_sam_malloc_aux(&sams_tmp->sams[j], TMAP_MAP_ALGO_MAP1);

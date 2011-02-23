@@ -323,23 +323,26 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window);
 
 /*!
   perform local alignment
-  @param  target         the target sequence
+  @param  target         the target sequence (forward strand)
   @param  target_length  the target sequence length
-  @param  query          the query sequence
+  @param  query          the query sequence (forward strand)
   @param  query_length   the query sequence length
+  @param  seqid          the target sequence id (zero-based)
+  @param  pos            the target position (zero-based)
   @param  par            the alignment parameters
   @param  path           the alignment path (must be pre-allocated)
   @param  path_len       the alignment path length
   @param  score_thr      the scoring threshold
-  @param  score_subo     the suboptimal alignment score
   @param  softclip_type  the soft-clipping type
+  @param  strand         the strand of the hit
   */
 int32_t
-tmap_map_util_sw(uint8_t *target, int32_t target_length,
-                          uint8_t *query, int32_t query_length,
-                          tmap_sw_param_t *par, tmap_sw_path_t *path, int32_t *path_len,
-                          int32_t score_thr, int32_t *sub_score,
-                          int32_t softclip_type);
+tmap_map_util_sw(tmap_map_sam_t *sam,
+                 uint8_t *target, int32_t target_length,
+                 uint8_t *query, int32_t query_length,
+                 uint32_t seqid, uint32_t pos,
+                 tmap_sw_param_t *par, tmap_sw_path_t *path, int32_t *path_len,
+                 int32_t score_thr, int32_t softclip_type, int32_t strand);
 
 /*!
   re-aligns mappings in flow space

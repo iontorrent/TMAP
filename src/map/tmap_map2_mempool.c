@@ -8,6 +8,7 @@
 #include "../index/tmap_bwt.h"
 #include "../index/tmap_bwtl.h"
 #include "../index/tmap_sa.h"
+#include "../sw/tmap_sw.h"
 #include "tmap_map_util.h"
 #include "tmap_map2.h"
 #include "tmap_map2_aux.h"

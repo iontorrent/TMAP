@@ -930,8 +930,9 @@ tmap_sw_extend_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t 
 
 // TODO: optimize similar to tmap_sw_local
 int32_t 
-tmap_sw_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
-                     tmap_sw_path_t *path, int32_t *path_len)
+tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
+             int32_t seq2_start_clip, int32_t seq2_end_clip,
+             tmap_sw_path_t *path, int32_t *path_len)
 {
   register int32_t i, j;
 
@@ -947,6 +948,11 @@ tmap_sw_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, c
   int32_t best_i=-1, best_j=-1;
   uint8_t best_ctype=0;
   int32_t best_score = TMAP_SW_MINOR_INF;
+  
+  /*
+  char aln1[1024], aln2[1024];
+  int32_t k = 0;
+  */
 
   gap_open = ap->gap_open;
   gap_ext = ap->gap_ext;
@@ -962,19 +968,41 @@ tmap_sw_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, c
   curr = tmap_malloc(sizeof(tmap_sw_dpscore_t) * (len2 + 1), "curr");
   last = tmap_malloc(sizeof(tmap_sw_dpscore_t) * (len2 + 1), "curr");
 
+  /*
+  fprintf(stderr, "\nHERE %s [%d,%d]\n", __func__, seq2_start_clip, seq2_end_clip);
+  for(i=0;i<len2;i++) {
+      fputc("ACGTN"[seq2[i]], stderr);
+  }
+  fputc('\n', stderr);
+  for(i=0;i<len1;i++) {
+      fputc("ACGTN"[seq1[i]], stderr);
+  }
+  fputc('\n', stderr);
+  */
+
   // set first row
   TMAP_SW_SET_INF(curr[0]); curr[0].match_score = 0;
   TMAP_SW_SET_FROM(dpcell[0][0], TMAP_SW_FROM_S);
-  for(j=1;j<=len2;j++) { // for each col
-      TMAP_SW_SET_INF(curr[j]);
-      TMAP_SW_SET_FROM(dpcell[0][j], TMAP_SW_FROM_S);
-      tmap_sw_set_end_ins(curr[j].ins_score, dpcell[0]+j, curr+j-1);
+  if(1 == seq2_start_clip) { // start anywhere in seq2
+      for(j=1;j<=len2;j++) { // for each col
+          TMAP_SW_SET_INF(curr[j]);
+          TMAP_SW_SET_FROM(dpcell[0][j], TMAP_SW_FROM_S);
+          curr[j].match_score = 0;
+          //tmap_sw_set_end_ins(curr[j].ins_score, dpcell[0]+j, curr+j-1);
+      }
+  }
+  else { // start at the first base in seq2
+      for(j=1;j<=len2;j++) { // for each col
+          TMAP_SW_SET_INF(curr[j]);
+          tmap_sw_set_end_ins(curr[j].ins_score, dpcell[0]+j, curr+j-1);
+      }
   }
   // swap curr and last
   s = curr; curr = last; last = s;
 
   for(i=1;i<=len1;i++) { // for each row (seq1)
       // set first column
+      // -- start anywhere in seq 1
       TMAP_SW_SET_INF(curr[0]); curr[0].match_score = 0;
       TMAP_SW_SET_FROM(dpcell[i][0], TMAP_SW_FROM_S);
 
@@ -985,38 +1013,43 @@ tmap_sw_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, c
                             last + j - 1, mat[seq2[j-1]]);
           tmap_sw_set_del(curr[j].del_score, dpcell[i] + j, last + j);
           tmap_sw_set_ins(curr[j].ins_score, dpcell[i] + j, curr + j - 1);
-      }
-      if(best_score < curr[len2].match_score) {
-          best_i = i;
-          best_j = len2; // obviously
-          best_score = curr[len2].match_score;
-          best_ctype = TMAP_SW_FROM_M;
-      }
-      if(best_score < curr[len2].ins_score) {
-          best_i = i;
-          best_j = len2; // obviously
-          best_score = curr[len2].ins_score;
-          best_ctype = TMAP_SW_FROM_I;
-      }
-      if(best_score < curr[len2].del_score) {
-          best_i = i;
-          best_j = len2; // obviously
-          best_score = curr[len2].del_score;
-          best_ctype = TMAP_SW_FROM_D;
+          if(1 == seq2_end_clip || j == len2) { // end anywhere in seq 2
+              if(best_score < curr[j].match_score) {
+                  best_i = i;
+                  best_j = j; 
+                  best_score = curr[j].match_score;
+                  best_ctype = TMAP_SW_FROM_M;
+              }
+              if(best_score < curr[j].ins_score) {
+                  best_i = i;
+                  best_j = j; 
+                  best_score = curr[j].ins_score;
+                  best_ctype = TMAP_SW_FROM_I;
+              }
+              if(best_score < curr[j].del_score) {
+                  best_i = i;
+                  best_j = j; 
+                  best_score = curr[j].del_score;
+                  best_ctype = TMAP_SW_FROM_D;
+              }
+          }
       }
       // swap curr and last
       s = curr; curr = last; last = s;
   }
+  
+  // get best scoring end cell
+  //fprintf(stderr, "best_i=%d best_j=%d len1=%d len2=%d\n", best_i, best_j, len1, len2);
   if(best_i < 0 || best_j < 0) { // was not updated
       (*path_len) = 0;
       return 0;
   }
-
-  // get best scoring end cell
   i = best_i; j = best_j; p = path;
   ctype = best_ctype;
 
-  while(0 < j) { // fit to seq2
+  while(TMAP_SW_FROM_S != ctype
+        && ((0 < i && 0 < j) || TMAP_SW_FROM_I == ctype)) {
+
       // get:
       // - # of read bases called from the flow
       // - the next cell type 
@@ -1038,15 +1071,19 @@ tmap_sw_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, c
       // add to the path
       p->ctype = ctype;
       p->i = i; p->j = j;
+      //fprintf(stderr, "[%d,%d,%d]\n", i, j, ctype);
       ++p;
 
       // move the row and column (as necessary)
       switch(ctype) {
         case TMAP_SW_FROM_M:
+          //aln1[k]=seq1[i-1]; aln2[k]=seq2[j-1]; k++;
           --i; --j; break;
         case TMAP_SW_FROM_I:
+          //aln1[k]=5; aln2[k]=seq2[j-1]; k++;
           --j; break;
         case TMAP_SW_FROM_D:
+          //aln1[k]=seq1[i-1]; aln2[k]=5; k++;
           --i; break;
         default:
           tmap_error(NULL, Exit, OutOfRange);
@@ -1055,7 +1092,9 @@ tmap_sw_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, c
       // move to the next cell type
       ctype = ctype_next;
   }
+  //fprintf(stderr, "i=%d j=%d\n", i, j);
   (*path_len) = p - path;
+  //fprintf(stderr, "path_len=%d best_score=%d\n", (*path_len), best_score);
 
   // free memory for the main cells
   for(i=0;i<=len1;i++) {
@@ -1064,8 +1103,33 @@ tmap_sw_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, c
   free(dpcell);
   free(curr);
   free(last);
+      
+  /*
+  aln1[k]=aln2[k]='\0';
+  for(i=0;i<k>>1;i++) {
+      char c;
+      c = aln1[i];
+      aln1[i] = aln1[k-i-1];
+      aln1[k-i-1] = c;
+      c = aln2[i];
+      aln2[i] = aln2[k-i-1];
+      aln2[k-i-1] = c;
+  }
+  for(i=0;i<k;i++) {
+      aln1[i] = "ACGTN-"[(int)aln1[i]];
+      aln2[i] = "ACGTN-"[(int)aln2[i]];
+  }
+  fprintf(stderr, "%s\n%s\n", aln2, aln1);
+  */
 
   return best_score;
+}
+
+int32_t 
+tmap_sw_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
+                     tmap_sw_path_t *path, int32_t *path_len)
+{
+  return tmap_sw_clipping_core(seq1, len1, seq2, len2, ap, 0, 0, path, path_len);
 }
 
 uint32_t *

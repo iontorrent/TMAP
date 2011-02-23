@@ -1118,53 +1118,93 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
   tmap_map_sams_realloc(sams, j);
 }
 
-int32_t
-tmap_map_util_sw(uint8_t *target, int32_t target_length,
-                          uint8_t *query, int32_t query_length,
-                          tmap_sw_param_t *par, tmap_sw_path_t *path, int32_t *path_len,
-                          int32_t score_thr, int32_t *score_subo,
-                          int32_t softclip_type)
+int32_t 
+tmap_map_util_sw(tmap_map_sam_t *sam,
+                 uint8_t *target, int32_t target_length,
+                 uint8_t *query, int32_t query_length,
+                 uint32_t seqid, uint32_t pos,
+                 tmap_sw_param_t *par, tmap_sw_path_t *path, int32_t *path_len,
+                 int32_t score_thr, int32_t softclip_type, int32_t strand)
 {
-  int32_t i, score;
+  int32_t i, score, score_subo;
+
+  if(1 == strand) {
+      if(TMAP_MAP_UTIL_SOFT_CLIP_LEFT == softclip_type) {
+          softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_RIGHT;
+      }
+      else if(TMAP_MAP_UTIL_SOFT_CLIP_RIGHT == softclip_type) {
+          softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_LEFT;
+      }
+  }
+
+  /*
+  int32_t i;
+  fprintf(stderr, "softclip_type=%d\n", softclip_type);
+  for(i=0;i<query_length;i++) {
+      fputc("ACGTN"[query[i]], stderr);
+  }
+  fputc('\n', stderr);
+  for(i=0;i<target_length;i++) {
+      fputc("ACGTN"[target[i]], stderr);
+  }
+  fputc('\n', stderr);
+  */
 
   switch(softclip_type) {
     case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
-      score = tmap_sw_local_core(target, query_length, query, query_length, par, path, path_len, score_thr, score_subo);
+      //fprintf(stderr, "TMAP_MAP_UTIL_SOFT_CLIP_ALL\n");
+      //score = tmap_sw_local_core(target, target_length, query, query_length, par, path, path_len, score_thr, score_subo);
+      score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 1, 1, path, path_len);
       break;
     case TMAP_MAP_UTIL_SOFT_CLIP_LEFT:
-      // reverse the query and target
-      tmap_map_util_reverse_query(query, query_length, i);
-      tmap_map_util_reverse_query(target, target_length, i);
-      // local align
-      score = tmap_sw_extend_core(target, query_length, query, query_length, par, path, path_len, 1, NULL);
-      // reverse back the query
-      tmap_map_util_reverse_query(query, query_length, i);
-      tmap_map_util_reverse_query(target, target_length, i);
-      (*score_subo) = INT32_MIN;
-      // reverse the path
-      for(i=0;i<(*path_len)>>1;i++) {
-          tmap_sw_path_t t = path[i];
-          path[i] = path[(*path_len)-i-1];
-          path[(*path_len)-i-1] = t;
-      }
-      // adjust the path
-      for(i=0;i<(*path_len);i++) {
-          // remember to make this one-based
-          path[i].i = target_length - path[i].i + 1;
-          path[i].j = query_length - path[i].j + 1;
-      }
+      //fprintf(stderr, "TMAP_MAP_UTIL_SOFT_CLIP_LEFT\n");
+      score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 1, 0, path, path_len);
       break;
     case TMAP_MAP_UTIL_SOFT_CLIP_RIGHT:
-      score = tmap_sw_extend_core(target, query_length, query, query_length, par, path, path_len, 1, NULL);
-      (*score_subo) = INT32_MIN;
+      //fprintf(stderr, "TMAP_MAP_UTIL_SOFT_CLIP_RIGHT\n");
+      score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 0, 1, path, path_len);
       break;
     case TMAP_MAP_UTIL_SOFT_CLIP_NONE:
     default:
-      score = tmap_sw_fitting_core(target, query_length, query, query_length, par, path, path_len);
-      (*score_subo) = INT32_MIN;
+      //fprintf(stderr, "TMAP_MAP_UTIL_SOFT_CLIP_NONE\n");
+      //score = tmap_sw_fitting_core(target, target_length, query, query_length, par, path, path_len);
+      score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 0, 0, path, path_len);
       break;
   }
-  return score;
+  score_subo = INT32_MIN;
+
+  if(0 < (*path_len) && score_thr < score) {
+      sam->strand = strand;
+      sam->seqid = seqid;
+      sam->pos = pos + (path[(*path_len)-1].i-1); // zero-based 
+      if(path[(*path_len)-1].ctype == TMAP_SW_FROM_I) {
+          sam->pos++;
+      }
+      sam->score = score;
+      sam->score_subo = score_subo;
+      sam->cigar = tmap_sw_path2cigar(path, (*path_len), &sam->n_cigar);
+
+      // add soft clipping 
+      if(1 < path[(*path_len)-1].j) {
+          // soft clip the front of the read
+          sam->cigar = tmap_realloc(sam->cigar, sizeof(uint32_t)*(1+sam->n_cigar), "sam->cigar");
+          for(i=sam->n_cigar-1;0<=i;i--) { // shift up
+              sam->cigar[i+1] = sam->cigar[i];
+          }
+          TMAP_SW_CIGAR_STORE(sam->cigar[0], BAM_CSOFT_CLIP, path[(*path_len)-1].j-1);
+          sam->n_cigar++;
+      }
+      if(path[0].j < query_length) {
+          // soft clip the end of the read
+          sam->cigar = tmap_realloc(sam->cigar, sizeof(uint32_t)*(1+sam->n_cigar), "sam->cigar");
+          TMAP_SW_CIGAR_STORE(sam->cigar[sam->n_cigar], BAM_CSOFT_CLIP, query_length - path[0].j);
+          sam->n_cigar++;
+      }
+      return 1;
+  }
+  else {
+      return 0;
+  }
 }
 
 

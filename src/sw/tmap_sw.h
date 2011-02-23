@@ -230,6 +230,24 @@ tmap_sw_extend_fitting_core(uint8_t *seq1, int32_t len1,
 
 /*!
   Performs a fitting aligment, whereby seq2 is fit into seq1
+  @param  seq1             the first DNA sequence (in 2-bit format)
+  @param  len1             the length of the first sequence
+  @param  seq2             the second DNA sequence (in 2-bit format)
+  @param  len2             the length of the second sequence
+  @param  ap               the alignment parameters
+  @param  seq2_start_clip  1 to allow clipping at the start of se2, 0 otherwise
+  @param  seq2_end_clip    1 to allow clipping at the end of se2, 0 otherwise
+  @param  path             the Smith-Waterman alignment path
+  @param  path_len         the Smith-Waterman alignment path length
+  @return                  the alignment score, 0 if none was found
+  */
+int32_t
+tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
+                      int32_t seq2_start_clip, int32_t seq2_end_clip,
+                      tmap_sw_path_t *path, int32_t *path_len);
+
+/*!
+  Performs a fitting aligment, whereby seq2 is fit into seq1
   @param  seq1      the first DNA sequence (in 2-bit format)
   @param  len1      the length of the first sequence
   @param  seq2      the second DNA sequence (in 2-bit format)

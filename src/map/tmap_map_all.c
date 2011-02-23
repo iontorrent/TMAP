@@ -21,6 +21,7 @@
 #include "../index/tmap_sa.h"
 #include "../io/tmap_seq_io.h"
 #include "../server/tmap_shm.h"
+#include "../sw/tmap_sw.h"
 #include "tmap_map_util.h"
 #include "tmap_map1.h"
 #include "tmap_map1_aux.h"
@@ -403,7 +404,7 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
               if(TMAP_SEQ_TYPE_SFF == seq_buffer[low]->type) {
                   tmap_map_util_fsw(seq_buffer[low]->data.sff,
                                     sams[low], refseq,
-                                    opt->bw, opt->aln_global, INT32_MIN,
+                                    opt->bw, opt->softclip_type, INT32_MIN,
                                     opt->score_match, opt->pen_mm, opt->pen_gapo,
                                     opt->pen_gape, opt->fscore);
               }
@@ -706,7 +707,7 @@ tmap_map_all_core(tmap_map_opt_t *opt)
     (opt_map_other)->pen_gape = (opt_map_all)->pen_gape; \
     (opt_map_other)->fscore = (opt_map_all)->fscore; \
     (opt_map_other)->bw = (opt_map_all)->bw; \
-    (opt_map_other)->aln_global = (opt_map_all)->aln_global; \
+    (opt_map_other)->softclip_type = (opt_map_all)->softclip_type; \
     (opt_map_other)->dup_window = -1; \
     (opt_map_other)->reads_queue_size = (opt_map_all)->reads_queue_size; \
     (opt_map_other)->num_threads = (opt_map_all)->num_threads; \

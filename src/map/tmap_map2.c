@@ -90,7 +90,7 @@ tmap_map2_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
           if(TMAP_SEQ_TYPE_SFF == seq_buffer[low]->type) {
               tmap_map_util_fsw(seq_buffer[low]->data.sff, 
                                 sams[low], refseq, 
-                                opt->bw, opt->aln_global, opt->score_thr,
+                                opt->bw, opt->softclip_type, opt->score_thr,
                                 opt->score_match, opt->pen_mm, opt->pen_gapo,
                                 opt->pen_gape, opt->fscore);
           }

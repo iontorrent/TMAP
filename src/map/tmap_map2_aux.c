@@ -380,19 +380,6 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
           }
       }
 
-      // HERE
-      // sanity checking
-      fprintf(stderr, "p->beg=%d p->end=%d strand=%d\n", p->beg, p->end, (p->flag & 0x10) ? 1 : 0);
-
-      switch(opt->softclip_type) {
-        case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
-        case TMAP_MAP_UTIL_SOFT_CLIP_LEFT:
-        case TMAP_MAP_UTIL_SOFT_CLIP_RIGHT:
-        case TMAP_MAP_UTIL_SOFT_CLIP_NONE:
-        default:
-          break;
-      }
-
       beg = (p->flag & 0x10)? query_length - p->end : p->beg;
       end = (p->flag & 0x10)? query_length - p->beg : p->end;
 
@@ -401,37 +388,47 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
           target[k - p->k] = tmap_refseq_seq_i(refseq, k-1);
       }
 
+      // HERE
+      // sanity checking
+      fprintf(stderr, "p->beg=%d p->end=%d strand=%d\n", p->beg, p->end, (p->flag & 0x10) ? 1 : 0);
+
       // align
-      p->G = tmap_sw_fitting_core(target, p->len, query, end - beg, &par, path, &path_len);
+      switch(opt->softclip_type) {
+        case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
+          p->G = tmap_sw_fitting_core(target, p->len, query, end - beg, &par, path, &path_len);
+          break;
+        case TMAP_MAP_UTIL_SOFT_CLIP_LEFT:
+        case TMAP_MAP_UTIL_SOFT_CLIP_RIGHT:
+        case TMAP_MAP_UTIL_SOFT_CLIP_NONE:
+          p->G = tmap_sw_local_core(target, p->len, query, end - beg, &par, path, &path_len, 1, &p->G2);
+        default:
+          break;
+      }
+
+      if(0 == path_len) {
+          tmap_error("0 == path_len", Exit, OutOfRange);
+      }
       b->cigar[i] = tmap_sw_path2cigar(path, path_len, &b->n_cigar[i]);
 
-
-      if(0 == opt->softclip_type) {
-          p->G = tmap_sw_local_core(target, p->len, query, end - beg, &par, path, &path_len, 1, &p->G2);
-          if(0 == path_len) {
-              tmap_error("0 == path_len", Exit, OutOfRange);
-          }
-          b->cigar[i] = tmap_sw_path2cigar(path, path_len, &b->n_cigar[i]);
-          // adjust the alignment length
-          p->len = path[0].i - path[path_len-1].i + 1;
-          if(1 < path[path_len-1].i) {
-              // adjust the alignment start
-              p->k += path[path_len-1].i-1;
-          }
-          // soft clip the front of the read
-          if(1 < path[path_len-1].j) {
-              b->cigar[i] = tmap_realloc(b->cigar[i], sizeof(uint32_t) * (b->n_cigar[i] + 1), "b->cigar");
-              memmove(b->cigar[i] + 1, b->cigar[i], b->n_cigar[i] * 4);
-              TMAP_SW_CIGAR_STORE(b->cigar[i][0], BAM_CSOFT_CLIP, path[path_len-1].j-1);
-              ++b->n_cigar[i];
-          }
+      // adjust the alignment length
+      p->len = path[0].i - path[path_len-1].i + 1;
+      if(1 < path[path_len-1].i) {
+          // adjust the alignment start
+          p->k += path[path_len-1].i-1;
+      }
+      // soft clip the front of the read
+      if(1 < path[path_len-1].j) {
+          b->cigar[i] = tmap_realloc(b->cigar[i], sizeof(uint32_t) * (b->n_cigar[i] + 1), "b->cigar");
+          memmove(b->cigar[i] + 1, b->cigar[i], b->n_cigar[i] * 4);
+          TMAP_SW_CIGAR_STORE(b->cigar[i][0], BAM_CSOFT_CLIP, path[path_len-1].j-1);
+          ++b->n_cigar[i];
+      }
+      // soft clip the end of the read
+      if(path[0].j < end - beg) {
           // soft clip the end of the read
-          if(path[0].j < end - beg) {
-              // soft clip the end of the read
-              b->cigar[i] = tmap_realloc(b->cigar[i], sizeof(uint32_t) * (b->n_cigar[i] + 1), "b->cigar");
-              TMAP_SW_CIGAR_STORE(b->cigar[i][b->n_cigar[i]], BAM_CSOFT_CLIP, (end-beg) - path[0].j);
-              ++b->n_cigar[i];
-          }
+          b->cigar[i] = tmap_realloc(b->cigar[i], sizeof(uint32_t) * (b->n_cigar[i] + 1), "b->cigar");
+          TMAP_SW_CIGAR_STORE(b->cigar[i][b->n_cigar[i]], BAM_CSOFT_CLIP, (end-beg) - path[0].j);
+          ++b->n_cigar[i];
       }
 
       if(0 == b->n_cigar[i]) {
@@ -760,7 +757,7 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
   for(i=k=0;i<l;i++) {
       uint8_t c = (uint8_t)tmap_nt_char_to_int[(int)bases->s[i]];
       if(c >= 4) { c = (int)(drand48() * 4); ++k; } // FIXME: ambiguous bases are not properly handled
-      seq[0]->s[i] = c;
+      seq[0]->s[i] = c; // original
       seq[1]->s[l-1-i] = 3 - c; // reverse compliment
       rseq[0]->s[l-1-i] = c; // reverse 
       rseq[1]->s[i] = 3 - c; // compliment

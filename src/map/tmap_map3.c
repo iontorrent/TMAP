@@ -182,7 +182,7 @@ tmap_map3_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_t s
           if(TMAP_SEQ_TYPE_SFF == seq_buffer[low]->type) {
               tmap_map_util_fsw(seq_buffer[low]->data.sff, 
                                 sams[low], refseq, 
-                                opt->bw, opt->aln_global, opt->score_thr,
+                                opt->bw, opt->softclip_type, opt->score_thr,
                                 opt->score_match, opt->pen_mm, opt->pen_gapo,
                                 opt->pen_gape, opt->fscore);
           }

@@ -266,6 +266,10 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
       tmap_string_reverse(qualities);
   }
 
+  if(0 == pos + 1) {
+      tmap_error("position is out of range", Exit, OutOfRange);
+  }
+
   tmap_file_fprintf(fp, "%s\t%u\t%s\t%u\t%u\t",
                     name->s, (1 == strand) ? 0x10 : 0, refseq->annos[seqid].name->s,
                     pos + 1,

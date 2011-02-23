@@ -6,6 +6,7 @@
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_sort.h"
 #include "../seq/tmap_seq.h"
+#include "../sw/tmap_sw.h"
 #include "tmap_map_util.h"
 #include "tmap_map2.h"
 #include "tmap_map2_aux.h"
