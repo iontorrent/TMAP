@@ -162,7 +162,9 @@ tmap_map1_aux_stack_shadow(int32_t x, int32_t len, uint32_t max,
                            int32_t last_diff_offset, tmap_bwt_match_width_t *w)
 {
   int32_t i, j;
-  for(i=j=len-1;last_diff_offset<i;i--) {
+  //fprintf(stderr, "%s x=%d len=%d max=%d last_diff_pos=%d\n", __func__, x, len, max, last_diff_offset);
+  for(i=len-1,j=0;len-last_diff_offset-1<i;i--) {
+      //fprintf(stderr, "i=%d j=%d w[i].w=%d x=%d\n", i, j, w[i].w, x);
       if(x < w[i].w) { 
           w[i].w -= x;
       }
@@ -501,7 +503,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
               }
           }
           if(do_add) { // append
-              uint32_t op, op_len, cigar_i;
+              uint32_t op, op_len, cigar_i, k, l;
               tmap_map_sam_t *sam = NULL;
               tmap_map1_aux_stack_entry_t *cur = e;
           
@@ -512,8 +514,8 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
               sam->algo_stage = 0;
               sam->score = cur->score;
               sam->strand = cur->strand;
-              sam->seqid = cur->match_sa.k;
-              sam->pos = cur->match_sa.l;
+              k = sam->seqid = cur->match_sa.k;
+              l = sam->pos = cur->match_sa.l;
               
               // aux data
               tmap_map_sam_malloc_aux(sam, TMAP_MAP_ALGO_MAP1);
