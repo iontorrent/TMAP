@@ -21,6 +21,7 @@
 #include "../index/tmap_sa.h"
 #include "../io/tmap_seq_io.h"
 #include "../server/tmap_shm.h"
+#include "../sw/tmap_sw.h"
 #include "../map/tmap_map_util.h"
 #include "../map/tmap_map1.h"
 #include "../map/tmap_map1_aux.h"

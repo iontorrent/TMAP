@@ -22,6 +22,13 @@
                                             || ( (a).seqid == (b).seqid && (a).pos == (b).pos && (a).score < (b).score )) \
                                           ? 1 : 0 )
 
+#define tmap_map_util_reverse_query(_query, _ql, _i) \
+    for(_i=0;_i<(_ql>>1);_i++) { \
+              uint8_t _tmp = _query[_i]; \
+              _query[_i] = _query[_ql-_i-1]; \
+              _query[_ql-_i-1] = _tmp; \
+          }
+
 TMAP_SORT_INIT(tmap_map_sam_t, tmap_map_sam_t, __tmap_map_sam_sort_lt)
 
 tmap_map_opt_t *
@@ -1110,6 +1117,56 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
   }
   tmap_map_sams_realloc(sams, j);
 }
+
+int32_t
+tmap_map_util_sw(uint8_t *target, int32_t target_length,
+                          uint8_t *query, int32_t query_length,
+                          tmap_sw_param_t *par, tmap_sw_path_t *path, int32_t *path_len,
+                          int32_t score_thr, int32_t *score_subo,
+                          int32_t softclip_type)
+{
+  int32_t i, score;
+
+  switch(softclip_type) {
+    case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
+      score = tmap_sw_local_core(target, query_length, query, query_length, par, path, path_len, score_thr, score_subo);
+      break;
+    case TMAP_MAP_UTIL_SOFT_CLIP_LEFT:
+      // reverse the query and target
+      tmap_map_util_reverse_query(query, query_length, i);
+      tmap_map_util_reverse_query(target, target_length, i);
+      // local align
+      score = tmap_sw_extend_core(target, query_length, query, query_length, par, path, path_len, 1, NULL);
+      // reverse back the query
+      tmap_map_util_reverse_query(query, query_length, i);
+      tmap_map_util_reverse_query(target, target_length, i);
+      (*score_subo) = INT32_MIN;
+      // reverse the path
+      for(i=0;i<(*path_len)>>1;i++) {
+          tmap_sw_path_t t = path[i];
+          path[i] = path[(*path_len)-i-1];
+          path[(*path_len)-i-1] = t;
+      }
+      // adjust the path
+      for(i=0;i<(*path_len);i++) {
+          // remember to make this one-based
+          path[i].i = target_length - path[i].i + 1;
+          path[i].j = query_length - path[i].j + 1;
+      }
+      break;
+    case TMAP_MAP_UTIL_SOFT_CLIP_RIGHT:
+      score = tmap_sw_extend_core(target, query_length, query, query_length, par, path, path_len, 1, NULL);
+      (*score_subo) = INT32_MIN;
+      break;
+    case TMAP_MAP_UTIL_SOFT_CLIP_NONE:
+    default:
+      score = tmap_sw_fitting_core(target, query_length, query, query_length, par, path, path_len);
+      (*score_subo) = INT32_MIN;
+      break;
+  }
+  return score;
+}
+
 
 void
 tmap_map_util_fsw(tmap_sff_t *sff, 

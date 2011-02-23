@@ -413,13 +413,8 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
 
           // threshold the score by assuming that one seed's worth of
           // matches occurs in the alignment
-          if(0 == opt->aln_global) {
-              score = tmap_sw_local_core(target, target_len, query, seq_len[i], &par, path, &path_len, opt->score_thr, &score_subo);
-          }
-          else {
-              score = tmap_sw_fitting_core(target, target_len, query, seq_len[i], &par, path, &path_len);
-              score_subo = INT32_MIN;
-          }
+
+          score = tmap_map_util_sw(target, target_len, query, seq_len[i], &par, path, &path_len, opt->score_thr, &score_subo, opt->softclip_type);
 
           if(0 < path_len && opt->score_thr < score) {
               tmap_map_sam_t *s = NULL;

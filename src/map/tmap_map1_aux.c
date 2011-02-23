@@ -11,7 +11,6 @@
 #include "../index/tmap_bwt_match.h"
 #include "../index/tmap_sa.h"
 #include "../sw/tmap_sw.h"
-#include "../sw/tmap_fsw.h"
 #include "tmap_map_util.h"
 #include "tmap_map1.h"
 #include "tmap_map1_aux.h"
@@ -22,6 +21,13 @@
 
 // TODO redefine
 #define aln_score(m,o,e,p) ((m)*(p)->pen_mm + (o)*((p)->pen_gapo + (p)->pen_gape) + (e)*(p)->pen_gape)
+
+#define tmap_map1_aux_reverse_query(_query, _ql, _i) \
+  for(_i=0;_i<(_ql>>1);_i++) { \
+      uint8_t _tmp = _query[_i]; \
+      _query[_i] = _query[_ql-_i-1]; \
+      _query[_ql-_i-1] = _tmp; \
+  }
 
 static int 
 tmap_map1_aux_stack_cmp(void *a, void *b)
@@ -228,6 +234,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
   tmap_sw_path_t *path = NULL;
   int32_t path_len, path_mem=0;
   int32_t seq_len; 
+  uint8_t *query=NULL;
 
   seq_len = bases[0]->l;
   par.matrix = matrix;
@@ -243,8 +250,8 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
   // alloc
   sams_tmp = tmap_map_sams_init();
   tmap_map_sams_realloc(sams_tmp, n);
-
-  // reverse
+            
+  // reverse (it has been complimented)
   tmap_string_reverse(bases[1]);
 
   // copy over
@@ -257,7 +264,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
       for(k=sams->sams[i].seqid;k<=sams->sams[i].pos;k++) { // k -> l
           uint32_t pos = 0, seqid = 0, pacpos = 0, lt;
           int32_t score, score_subo, aln_ref_l;
-          uint8_t *query, strand;
+          uint8_t strand;
 
           lt = target_length;
           strand = sams->sams[i].strand;
@@ -288,6 +295,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
           }
           fputc('\n', stderr);
           */
+
           //fprintf(stderr, "i=%d j=%d k=%d lt=%d pacpos=%d seq_len=%d\n", i, j, k, lt, pacpos, seq_len);
 
           // get more memory if required
@@ -297,13 +305,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
               path = tmap_realloc(path, sizeof(tmap_sw_path_t)*path_mem, "path");
           }
           // align
-          if(0 == opt->aln_global) {
-              score = tmap_sw_local_core(target, lt, query, seq_len, &par, path, &path_len, 1, &score_subo);
-          }
-          else {
-              score = tmap_sw_fitting_core(target, lt, query, seq_len, &par, path, &path_len);
-              score_subo = INT32_MIN;
-          }
+          score = tmap_map_util_sw(target, lt, query, seq_len, &par, path, &path_len, opt->score_thr, &score_subo, opt->softclip_type);
           if(0 == path_len) {
               tmap_error("0 == path_len", Exit, OutOfRange);
           }
@@ -341,7 +343,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
                   TMAP_SW_CIGAR_STORE(sams_tmp->sams[j].cigar[sams_tmp->sams[j].n_cigar], BAM_CSOFT_CLIP, seq_len - path[0].j);
                   sams_tmp->sams[j].n_cigar++;
               }
-
+            
               // aux
               tmap_map_sam_malloc_aux(&sams_tmp->sams[j], TMAP_MAP_ALGO_MAP1);
               sams_tmp->sams[j].aux.map1_aux->n_mm = sam->aux.map1_aux->n_mm;
