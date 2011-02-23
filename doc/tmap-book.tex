@@ -157,9 +157,15 @@ This number must always be positive.
 Specifies the band width for local alignment.
 This number must always be positive.
 
-\subsubsection{\TT{-g}}
-Specifies that the entire read should be mapped to the reference.
-Otherwise a sub-sequence of the read may be mapped.
+\subsubsection{\TT{-g INT}}
+Specifies that the type of soft-clipping to perform.
+\begin{enumerate}
+	\setcounter{enumi}{-1} % start at zero
+	\item soft-clip both the left and right portions of the read.
+	\item soft-clip only the left portion of the read.
+	\item soft-clip only the right portion of the read.
+	\item do not soft-clip any portion of the read
+\end{enumerate}
 
 \subsubsection{\TT{-W INT}}
 Specifies to remove duplicate mappings from the different algorithms that occur within this bp window.
