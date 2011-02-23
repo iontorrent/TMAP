@@ -251,7 +251,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
       break;
     case TMAP_MAP_ALGO_MAPPABILTY:
       tmap_file_fprintf(tmap_file_stderr, "         -r INT      the read length to simulate [%d]\n", opt->read_length);
-      tmap_file_fprintf(tmap_file_stderr, "         -X STRING   the region from which to simulate [%s]\n", 
+      tmap_file_fprintf(tmap_file_stderr, "         -U STRING   the region from which to simulate [%s]\n", 
                         (NULL == opt->region) ? "whole genome" : opt->region);
     case TMAP_MAP_ALGO_MAPALL:
       tmap_file_fprintf(tmap_file_stderr, "         -I          apply the output filter for each algorithm separately [%s]\n",

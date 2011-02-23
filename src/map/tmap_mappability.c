@@ -116,6 +116,7 @@ tmap_mappability_core(tmap_map_opt_t *opt)
       tid_start = tid_end = j;
       if(i == strlen(opt->region)) {
           pos_start = 0;
+          tid_end = tid_start;
           pos_end = refseq->annos[tid_start].len-1;
       }
       else {
@@ -153,6 +154,8 @@ tmap_mappability_core(tmap_map_opt_t *opt)
       tmap_file_fprintf(tmap_file_stderr, "region=[%s]\n", opt->region);
       tmap_error("region end position out of range", Exit, OutOfRange);
   }
+
+  fprintf(stderr, "RANGE %d:%d %d:%d\n", tid_start, pos_start, tid_end, pos_end);
 
   // TODO: this could be dangerous if algorithms change, needs to be refactored
   // adjust mapping algorithm specific options
@@ -222,7 +225,6 @@ tmap_mappability_core(tmap_map_opt_t *opt)
       }
       seq_buffer_length = 0;
       while(tid < tid_end || (tid == tid_end && pos <= pos_end && pos + read_length <= refseq->annos[tid_end].len)) {
-          // TODO: simulate the reads
           tmap_fq_t *fq = NULL;
 
           tmp_tid_end = tid;
