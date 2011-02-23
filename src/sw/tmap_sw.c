@@ -766,9 +766,10 @@ end_func:
   return score_f;
 }
 
+/*
 static int32_t 
 tmap_sw_extend_aux(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
-                    tmap_sw_path_t *path, int32_t *path_len, int32_t prev_score, int32_t seq2_fit, uint8_t *_mem)
+                    tmap_sw_path_t *path, int32_t *path_len, int32_t prev_score, uint8_t *_mem)
 {
   int32_t q, r, qr;
   int32_t **s_array, *score_array;
@@ -779,7 +780,7 @@ tmap_sw_extend_aux(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, con
   int32_t *score_matrix, N_MATRIX_ROW;
   uint8_t *mem, *_p;
 
-  /* initialize some align-related parameters. just for compatibility */
+  // initialize some align-related parameters. just for compatibility 
   q = ap->gap_open;
   r = ap->gap_ext;
   qr = q + r;
@@ -788,30 +789,30 @@ tmap_sw_extend_aux(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, con
 
   if(len1 == 0 || len2 == 0) return TMAP_SW_MINOR_INF;
 
-  /* allocate memory */
+  // allocate memory 
   mem = _mem ? _mem : tmap_calloc((len1 + 2) * (N_MATRIX_ROW + 1), sizeof(uint32_t), "mem");
   _p = mem;
   eh = (uint32_t*)_p, _p += 4 * (len1 + 2);
   s_array = tmap_calloc(N_MATRIX_ROW, sizeof(void*), "s_array");
   for(i = 0; i != N_MATRIX_ROW; ++i)
     s_array[i] = (int32_t*)_p, _p += 4 * len1;
-  /* initialization */
+  // initialization 
   tmap_sw_score_array_init(seq1, len1, N_MATRIX_ROW, score_matrix, s_array);
   start = 1; end = 2;
   end_i = end_j = 0;
   score = 0;
   is_overflow = of_base = 0;
-  /* convert the coordinate */
+  // convert the coordinate 
   --seq1; --seq2;
   for(i = 0; i != N_MATRIX_ROW; ++i) --s_array[i];
-  /* dynamic programming */
+  // dynamic programming 
   memset(eh, 0, 4 * (len1 + 2));
   eh[1] = (uint32_t)prev_score<<16;
   for(j = 1; j <= len2; ++j) {
       int32_t _start, _end;
       int32_t h1 = 0, f = 0;
       score_array = s_array[seq2[j]];
-      /* set start and end */
+      // set start and end 
       _start = j - ap->band_width;
       if(_start < 1) _start = 1;
       if(_start > start) start = _start;
@@ -819,7 +820,7 @@ tmap_sw_extend_aux(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, con
       if(_end > len1 + 1) _end = len1 + 1;
       if(_end < end) end = _end;
       if(start == end) break;
-      /* adjust eh[] array if overflow occurs. */
+      // adjust eh[] array if overflow occurs. 
       if(is_overflow) {
           int32_t tmp, tmp2;
           score -= TMAP_SW_LOCAL_OVERFLOW_REDUCE;
@@ -836,32 +837,31 @@ tmap_sw_extend_aux(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, con
           }
       }
       _start = _end = 0;
-      /* the inner loop */
+      // the inner loop 
       for(i = start; i < end; ++i) {
-          /* At the beginning of each cycle:
-             eh[i] -> h[j-1,i-1]<<16 | e[j,i]
-             f     -> f[j,i]
-             h1    -> h[j,i-1]
-             */
+          // At the beginning of each cycle:
+          // eh[i] -> h[j-1,i-1]<<16 | e[j,i]
+          // f     -> f[j,i]
+          // h1    -> h[j,i-1]
+             
           uint32_t *s = &eh[i];
           int32_t h = (int32_t)(*s >> 16);
-          int32_t e = *s & 0xffff; /* this is e[j,i] */
-          *s = (uint32_t)h1 << 16; /* eh[i] now stores h[j,i-1]<<16 */
-          h += h? score_array[i] : 0; /* this is left_core() specific */
-          /* calculate h[j,i]; don't need to test 0, as {e,f}>=0 */
+          int32_t e = *s & 0xffff; // this is e[j,i] 
+          *s = (uint32_t)h1 << 16; // eh[i] now stores h[j,i-1]<<16 
+          h += h? score_array[i] : 0; // this is left_core() specific 
+          // calculate h[j,i]; don't need to test 0, as {e,f}>=0 
           h = h > e? h : e;
-          h = h > f? h : f; /* h now is h[j,i] */
+          h = h > f? h : f; // h now is h[j,i] 
           h1 = h;
           if(h > 0) {
               if(_start == 0) _start = i;
               _end = i;
-              if(score < h &&
-                 (0 == seq2_fit || j == len2)) { // align all of seq2
+              if(score < h) {
                   score = h; end_i = i; end_j = j;
                   if(score > TMAP_SW_LOCAL_OVERFLOW_THRESHOLD) is_overflow = 1;
               }
           }
-          /* calculate e[j+1,i] and f[j,i+1] */
+          // calculate e[j+1,i] and f[j,i+1] 
           h -= qr;
           h = h > 0? h : 0;
           e -= r;
@@ -871,8 +871,8 @@ tmap_sw_extend_aux(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, con
           *s |= e;
       }			
       eh[end] = h1 << 16;
-      /* recalculate start and end, the boundaries of the band */
-      if(_end <= 0) break; /* no cell in this row has a positive score */
+      // recalculate start and end, the boundaries of the band 
+      if(_end <= 0) break; // no cell in this row has a positive score 
       start = _start;
       end = _end + 3;
   }
@@ -889,10 +889,10 @@ tmap_sw_extend_aux(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, con
       (*path_len) = 0;
   }
   else {
-      /* call global alignment to fill the path */
+      // call global alignment to fill the path 
       int32_t score_g = 0;
       j = (end_i - 1 > end_j - 1)? end_i - 1 : end_j - 1;
-      ++j; /* j is the maximum band_width */
+      ++j; // j is the maximum band_width 
       for(i = ap->band_width;; i <<= 1) {
           tmap_sw_param_t ap_real = *ap;
           ap_real.gap_end = -1;
@@ -908,24 +908,24 @@ tmap_sw_extend_aux(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, con
       score = score_g + prev_score;
   }
 
-  /* free */
   free(s_array);
   if(!_mem) free(mem);
   return score;
 }
+*/
 
 int32_t 
 tmap_sw_extend_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
                     tmap_sw_path_t *path, int32_t *path_len, int32_t prev_score, uint8_t *_mem)
 {
-  return tmap_sw_extend_aux(seq1, len1, seq2, len2, ap, path, path_len, prev_score, 0, _mem);
+  return tmap_sw_clipping_core(seq1, len1, seq2, len2, ap, 0, 1, path, path_len);
 }
 
 int32_t 
 tmap_sw_extend_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
                     tmap_sw_path_t *path, int32_t *path_len, int32_t prev_score, uint8_t *_mem)
 {
-  return tmap_sw_extend_aux(seq1, len1, seq2, len2, ap, path, path_len, prev_score, 1, _mem);
+  return tmap_sw_clipping_core(seq1, len1, seq2, len2, ap, 0, 0, path, path_len);
 }
 
 // TODO: optimize similar to tmap_sw_local
@@ -1040,61 +1040,72 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
   
   // get best scoring end cell
   //fprintf(stderr, "best_i=%d best_j=%d len1=%d len2=%d\n", best_i, best_j, len1, len2);
-  if(best_i < 0 || best_j < 0) { // was not updated
-      (*path_len) = 0;
-      return 0;
-  }
+
   i = best_i; j = best_j; p = path;
   ctype = best_ctype;
 
-  while(TMAP_SW_FROM_S != ctype
-        && ((0 < i && 0 < j) || TMAP_SW_FROM_I == ctype)) {
-
-      // get:
-      // - # of read bases called from the flow
-      // - the next cell type 
-      // - the current offset
-      switch(ctype) {
-        case TMAP_SW_FROM_M:
-          ctype_next = dpcell[i][j].match_from;
-          break;
-        case TMAP_SW_FROM_I:
-          ctype_next = dpcell[i][j].ins_from;
-          break;
-        case TMAP_SW_FROM_D:
-          ctype_next = dpcell[i][j].del_from;
-          break;
-        default:
-          tmap_error(NULL, Exit, OutOfRange);
-      }
-
-      // add to the path
-      p->ctype = ctype;
-      p->i = i; p->j = j;
-      //fprintf(stderr, "[%d,%d,%d]\n", i, j, ctype);
-      ++p;
-
-      // move the row and column (as necessary)
-      switch(ctype) {
-        case TMAP_SW_FROM_M:
-          //aln1[k]=seq1[i-1]; aln2[k]=seq2[j-1]; k++;
-          --i; --j; break;
-        case TMAP_SW_FROM_I:
-          //aln1[k]=5; aln2[k]=seq2[j-1]; k++;
-          --j; break;
-        case TMAP_SW_FROM_D:
-          //aln1[k]=seq1[i-1]; aln2[k]=5; k++;
-          --i; break;
-        default:
-          tmap_error(NULL, Exit, OutOfRange);
-      }
-
-      // move to the next cell type
-      ctype = ctype_next;
+  if(NULL == path) {
+      // do nothing
   }
-  //fprintf(stderr, "i=%d j=%d\n", i, j);
-  (*path_len) = p - path;
-  //fprintf(stderr, "path_len=%d best_score=%d\n", (*path_len), best_score);
+  else if(NULL == path_len) {
+      path[0].i = best_i; path[0].j = best_j;
+  }
+  else if(best_i < 0 || best_j < 0) { // was not updated
+      if(NULL != path_len) {
+          (*path_len) = 0;
+      }
+      // do nothing
+  }
+  else {
+      while(TMAP_SW_FROM_S != ctype
+            && ((0 < i && 0 < j) || TMAP_SW_FROM_I == ctype)) {
+
+          // get:
+          // - # of read bases called from the flow
+          // - the next cell type 
+          // - the current offset
+          switch(ctype) {
+            case TMAP_SW_FROM_M:
+              ctype_next = dpcell[i][j].match_from;
+              break;
+            case TMAP_SW_FROM_I:
+              ctype_next = dpcell[i][j].ins_from;
+              break;
+            case TMAP_SW_FROM_D:
+              ctype_next = dpcell[i][j].del_from;
+              break;
+            default:
+              tmap_error(NULL, Exit, OutOfRange);
+          }
+
+          // add to the path
+          p->ctype = ctype;
+          p->i = i; p->j = j;
+          //fprintf(stderr, "[%d,%d,%d]\n", i, j, ctype);
+          ++p;
+
+          // move the row and column (as necessary)
+          switch(ctype) {
+            case TMAP_SW_FROM_M:
+              //aln1[k]=seq1[i-1]; aln2[k]=seq2[j-1]; k++;
+              --i; --j; break;
+            case TMAP_SW_FROM_I:
+              //aln1[k]=5; aln2[k]=seq2[j-1]; k++;
+              --j; break;
+            case TMAP_SW_FROM_D:
+              //aln1[k]=seq1[i-1]; aln2[k]=5; k++;
+              --i; break;
+            default:
+              tmap_error(NULL, Exit, OutOfRange);
+          }
+
+          // move to the next cell type
+          ctype = ctype_next;
+      }
+      //fprintf(stderr, "i=%d j=%d\n", i, j);
+      (*path_len) = p - path;
+      //fprintf(stderr, "path_len=%d best_score=%d\n", (*path_len), best_score);
+  }
 
   // free memory for the main cells
   for(i=0;i<=len1;i++) {
