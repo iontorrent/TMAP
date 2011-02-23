@@ -98,7 +98,7 @@ tmap_map1_sams_mapq(tmap_map_sams_t *sams, tmap_map_opt_t *opt)
 
 static void
 tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_map_sams_t **sams,
-                      tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa, 
+                      tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], 
                       int32_t tid, tmap_map_opt_t *opt)
 {
   int32_t low = 0, high;
@@ -157,8 +157,8 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
           tmap_seq_remove_key_sequence(seq[0]);
           tmap_seq_remove_key_sequence(seq[1]);
 
-          // reverse compliment
-          tmap_seq_reverse_compliment(seq[1]);
+          // reverse 
+          tmap_seq_compliment(seq[1]);
 
           // convert to integers
           tmap_seq_to_int(seq[0]);
@@ -187,15 +187,15 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
               memset(width[1], 0, width_length * sizeof(tmap_bwt_match_width_t));
           }
           tmap_bwt_match_cal_width(bwt[0], seed2_len, bases[0]->s, width[0]);
-          tmap_bwt_match_cal_width(bwt[0], seed2_len, bases[1]->s, width[1]);
+          tmap_bwt_match_cal_width(bwt[1], seed2_len, bases[1]->s, width[1]);
 
           if(0 < opt->seed_length) {
               tmap_bwt_match_cal_width(bwt[0], opt->seed_length, bases[0]->s, seed_width[0]);
-              tmap_bwt_match_cal_width(bwt[0], opt->seed_length, bases[1]->s, seed_width[1]);
+              tmap_bwt_match_cal_width(bwt[1], opt->seed_length, bases[1]->s, seed_width[1]);
           }
 
           // TOOD: seed2_length
-          sams[low] = tmap_map1_aux_core(seq, refseq, bwt[1], sa, width, (0 < opt_local.seed_length) ? seed_width : NULL, &opt_local, stack, seed2_len);
+          sams[low] = tmap_map1_aux_core(seq, refseq, bwt, sa, width, (0 < opt_local.seed_length) ? seed_width : NULL, &opt_local, stack, seed2_len);
       
           // remove duplicates
           tmap_map_util_remove_duplicates(sams[low], opt->dup_window);
@@ -250,7 +250,7 @@ tmap_map1_core(tmap_map_opt_t *opt)
   int32_t seq_buffer_length;
   tmap_refseq_t *refseq=NULL;
   tmap_bwt_t *bwt[2]={NULL,NULL};
-  tmap_sa_t *sa=NULL;
+  tmap_sa_t *sa[2]={NULL,NULL};
   tmap_file_t *fp_reads=NULL;
   tmap_seq_io_t *seqio = NULL;
   tmap_seq_t **seq_buffer = NULL;
@@ -268,7 +268,8 @@ tmap_map1_core(tmap_map_opt_t *opt)
       refseq = tmap_refseq_read(opt->fn_fasta, 0);
       bwt[0] = tmap_bwt_read(opt->fn_fasta, 0);
       bwt[1] = tmap_bwt_read(opt->fn_fasta, 1);
-      sa = tmap_sa_read(opt->fn_fasta, 1);
+      sa[0] = tmap_sa_read(opt->fn_fasta, 0);
+      sa[1] = tmap_sa_read(opt->fn_fasta, 1);
       tmap_progress_print2("reference data read in");
   }
   else {
@@ -283,7 +284,10 @@ tmap_map1_core(tmap_map_opt_t *opt)
       if(NULL == (bwt[1] = tmap_bwt_shm_unpack(tmap_shm_get_buffer(shm, TMAP_SHM_LISTING_REV_BWT)))) {
           tmap_error("the reverse BWT string was not found in shared memory", Exit, SharedMemoryListing);
       }
-      if(NULL == (sa = tmap_sa_shm_unpack(tmap_shm_get_buffer(shm, TMAP_SHM_LISTING_REV_SA)))) {
+      if(NULL == (sa[0] = tmap_sa_shm_unpack(tmap_shm_get_buffer(shm, TMAP_SHM_LISTING_SA)))) {
+          tmap_error("the reverse SA was not found in shared memory", Exit, SharedMemoryListing);
+      }
+      if(NULL == (sa[1] = tmap_sa_shm_unpack(tmap_shm_get_buffer(shm, TMAP_SHM_LISTING_REV_SA)))) {
           tmap_error("the reverse SA was not found in shared memory", Exit, SharedMemoryListing);
       }
       tmap_progress_print2("reference data retrieved from shared memory");
@@ -361,7 +365,8 @@ tmap_map1_core(tmap_map_opt_t *opt)
               thread_data[i].refseq = refseq;
               thread_data[i].bwt[0] = bwt[0];
               thread_data[i].bwt[1] = bwt[1];
-              thread_data[i].sa = sa;
+              thread_data[i].sa[0] = sa[0];
+              thread_data[i].sa[1] = sa[1];
               thread_data[i].tid = i;
               thread_data[i].opt = opt; 
               if(0 != pthread_create(&threads[i], &attr, tmap_map1_core_thread_worker, &thread_data[i])) {
@@ -419,7 +424,8 @@ tmap_map1_core(tmap_map_opt_t *opt)
   tmap_refseq_destroy(refseq);
   tmap_bwt_destroy(bwt[0]);
   tmap_bwt_destroy(bwt[1]);
-  tmap_sa_destroy(sa);
+  tmap_sa_destroy(sa[0]);
+  tmap_sa_destroy(sa[1]);
   tmap_seq_io_destroy(seqio);
   if(0 < opt->shm_key) {
       tmap_shm_destroy(shm, 0);

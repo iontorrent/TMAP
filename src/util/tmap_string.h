@@ -71,4 +71,12 @@ tmap_string_reverse(tmap_string_t *str);
 void
 tmap_string_reverse_compliment(tmap_string_t *str, int32_t is_int);
 
+/*! 
+  compliments the string
+  @param  str       pointer to the string
+  @param  is_int    1 if the sequence is in integer format, 0 otherwise
+  */
+void
+tmap_string_compliment(tmap_string_t *str, int32_t is_int);
+
 #endif

@@ -127,7 +127,19 @@ tmap_sff_clone(tmap_sff_t *sff);
   @param  sff  a pointer to the sff 
 */
 void
+tmap_sff_reverse(tmap_sff_t *sff);
+
+/*! 
+  @param  sff  a pointer to the sff 
+*/
+void
 tmap_sff_reverse_compliment(tmap_sff_t *sff);
+
+/*! 
+  @param  sff  a pointer to the sff 
+*/
+void
+tmap_sff_compliment(tmap_sff_t *sff);
 
 /*! 
   @param  sff  a pointer to the sff 

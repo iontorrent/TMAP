@@ -61,6 +61,7 @@ static int usage()
   fprintf(stderr, "Debugging:\n");
   fprintf(stderr, "         exact          perform simple exact matching\n");
   fprintf(stderr, "         fsw            perform flow Smith-Waterman\n");
+  fprintf(stderr, "         mappability    performs mappability routines\n");
   return 1;
 }
 
@@ -93,6 +94,7 @@ int main(int argc, char *argv[])
 #endif
       else if (0 == strcmp("exact", argv[1])) ret = tmap_debug_exact(argc-1, argv+1);
       else if (0 == strcmp("fsw", argv[1])) ret = tmap_fsw_main(argc-1, argv+1);
+      else if (0 == strcmp("mappability", argv[1])) ret = tmap_mappability_main(argc-1, argv+1);
       else if (0 == strcmp("--version", argv[1]) || 0 == strcmp("-v", argv[1])) ret = version();
       else if (0 == strcmp("--help", argv[1]) || 0 == strcmp("-h", argv[1])) ret = usage();
       else {

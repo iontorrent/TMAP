@@ -71,6 +71,22 @@ tmap_seq_clone(tmap_seq_t *seq)
 }
 
 void
+tmap_seq_reverse(tmap_seq_t *seq)
+{
+  switch(seq->type) {
+    case TMAP_SEQ_TYPE_FQ:
+      tmap_fq_reverse(seq->data.fq);
+      break;
+    case TMAP_SEQ_TYPE_SFF:
+      tmap_sff_reverse(seq->data.sff);
+      break;
+    default:
+      tmap_error("type is unrecognized", Exit, OutOfRange);
+      break;
+  }
+}
+
+void
 tmap_seq_reverse_compliment(tmap_seq_t *seq)
 {
   switch(seq->type) {
@@ -79,6 +95,22 @@ tmap_seq_reverse_compliment(tmap_seq_t *seq)
       break;
     case TMAP_SEQ_TYPE_SFF:
       tmap_sff_reverse_compliment(seq->data.sff);
+      break;
+    default:
+      tmap_error("type is unrecognized", Exit, OutOfRange);
+      break;
+  }
+}
+
+void
+tmap_seq_compliment(tmap_seq_t *seq)
+{
+  switch(seq->type) {
+    case TMAP_SEQ_TYPE_FQ:
+      tmap_fq_compliment(seq->data.fq);
+      break;
+    case TMAP_SEQ_TYPE_SFF:
+      tmap_sff_compliment(seq->data.sff);
       break;
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);

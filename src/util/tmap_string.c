@@ -71,7 +71,7 @@ tmap_string_lsprintf(tmap_string_t *dest, int32_t l, const char *format, ...)
   length = vsnprintf(dest->s + l, dest->m - l, format, ap);
   if(length < 0) tmap_error(NULL, Exit, OutOfRange);
   va_end(ap);
-  if(dest->m - l - 1 < length) {
+  if(((int32_t)dest->m) - l - 1 < length) {
       dest->m = length + l + 2;
       tmap_roundup32(dest->m);
       dest->s = tmap_realloc(dest->s, sizeof(char)*dest->m, "dest->s");
@@ -106,5 +106,21 @@ tmap_string_reverse_compliment(tmap_string_t *str, int32_t is_int)
   }
   else { // bases are ASCII values
       tmap_reverse_compliment(str->s, str->l);
+  }
+}
+
+void
+tmap_string_compliment(tmap_string_t *str, int32_t is_int)
+{
+  int i;
+
+  if(1 == is_int) { // bases are integer values
+      for(i = 0; i < str->l; ++i) {
+          uint8_t tmp = str->s[str->l-1-i];
+          str->s[str->l-1-i] = (4 <= tmp) ? tmp : 3 - tmp;
+      }
+  }
+  else { // bases are ASCII values
+      tmap_compliment(str->s, str->l);
   }
 }
