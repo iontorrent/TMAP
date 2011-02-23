@@ -127,6 +127,7 @@ tmap_fq_io_rewind(tmap_fq_io_t *fq)
 {
   fq->last_char = 0;
   fq->f->is_eof = fq->f->begin = fq->f->end = 0;
+  fq->line_number = 0;
 }
 
 inline void 
@@ -148,13 +149,18 @@ tmap_fq_io_read(tmap_fq_io_t *fqio, tmap_fq_t *fq)
   int c;
   tmap_stream_t *ks = fqio->f;
   if (fqio->last_char == 0) { /* then jump to the next header line */
-      while ((c = tmap_stream_getc(ks)) != -1 && c != '>' && c != '@');
+      while ((c = tmap_stream_getc(ks)) != -1 && c != '>' && c != '@') {
+          if(c == '\n') fqio->line_number++;
+      }
       if (c == -1) return -1; /* end of file */
       fqio->last_char = c;
   } /* the first header char has been read */
   fq->comment->l = fq->seq->l = fq->qual->l = 0;
   if (tmap_stream_getuntil(ks, 0, fq->name, &c) < 0) return -1;
   if (c != '\n') tmap_stream_getuntil(ks, '\n', fq->comment, 0);
+  fqio->line_number++;
+  // initialize memory
+  // get the sequence
   while ((c = tmap_stream_getc(ks)) != -1 && c != '>' && c != '+' && c != '@') {
       if (isgraph(c)) { /* printable non-space character */
           if (fq->seq->l + 1 >= fq->seq->m) { /* double the memory */
@@ -164,7 +170,15 @@ tmap_fq_io_read(tmap_fq_io_t *fqio, tmap_fq_t *fq)
           }
           fq->seq->s[fq->seq->l++] = (char)c;
       }
+      else if('\n' == c) {
+          fqio->line_number++;
+      }
   }
+  if(0 == fq->seq->l) {
+      tmap_file_fprintf(tmap_file_stderr, "\nAfter line number %d\n", fqio->line_number);
+      tmap_error("Found an empty sequence", Exit, OutOfRange);
+  }
+
   if (c == '>' || c == '@') fqio->last_char = c; /* the first header char has been read */
   fq->seq->s[fq->seq->l] = 0;	/* null terminated string */
   if (c != '+') return fq->seq->l; /* FASTA */
@@ -173,10 +187,12 @@ tmap_fq_io_read(tmap_fq_io_t *fqio, tmap_fq_t *fq)
       fq->qual->s = tmap_realloc(fq->qual->s, fq->qual->m, "fq->qual->s");
   }
   while ((c = tmap_stream_getc(ks)) != -1 && c != '\n'); /* skip the rest of '+' line */
+  fqio->line_number++;
   if (c == -1) return -2; /* we should not stop here */
   while ((c = tmap_stream_getc(ks)) != -1 && fq->qual->l < fq->seq->l)
     if (c >= 33 && c <= 127) fq->qual->s[fq->qual->l++] = (unsigned char)c;
   fq->qual->s[fq->qual->l] = 0; /* null terminated string */
+  fqio->line_number++;
   fqio->last_char = 0;	/* we have not come to the next header line */
   if (fq->seq->l != fq->qual->l) return -2; /* qual string is shorter than fq string */
   return fq->seq->l;
