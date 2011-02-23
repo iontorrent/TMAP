@@ -709,6 +709,7 @@ tmap_map_all_core(tmap_map_opt_t *opt)
     (opt_map_other)->bw = (opt_map_all)->bw; \
     (opt_map_other)->softclip_type = (opt_map_all)->softclip_type; \
     (opt_map_other)->dup_window = -1; \
+    (opt_map_other)->score_thr = (opt_map_all)->score_thr; \
     (opt_map_other)->reads_queue_size = (opt_map_all)->reads_queue_size; \
     (opt_map_other)->num_threads = (opt_map_all)->num_threads; \
     (opt_map_other)->aln_output_mode = TMAP_MAP_UTIL_ALN_MODE_ALL; \
