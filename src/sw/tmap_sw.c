@@ -928,6 +928,7 @@ tmap_sw_extend_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t 
   return tmap_sw_clipping_core(seq1, len1, seq2, len2, ap, 0, 0, path, path_len);
 }
 
+//#define TMAP_SW_CLIPPING_CORE_DEBUG 1
 // TODO: optimize similar to tmap_sw_local
 int32_t 
 tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
@@ -949,8 +950,10 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
   uint8_t best_ctype=0;
   int32_t best_score = TMAP_SW_MINOR_INF;
   
+#ifdef TMAP_SW_CLIPPING_CORE_DEBUG 
   char aln1[1024], aln2[1024];
   int32_t k = 0;
+#endif
 
   gap_open = ap->gap_open;
   gap_ext = ap->gap_ext;
@@ -966,17 +969,17 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
   curr = tmap_malloc(sizeof(tmap_sw_dpscore_t) * (len2 + 1), "curr");
   last = tmap_malloc(sizeof(tmap_sw_dpscore_t) * (len2 + 1), "curr");
 
-  //fprintf(stderr, "\nHERE %s [%d,%d]\n", __func__, seq2_start_clip, seq2_end_clip);
-  /*
+#ifdef TMAP_SW_CLIPPING_CORE_DEBUG 
+  fprintf(stdout, "\nHERE %s [%d,%d]\n", __func__, seq2_start_clip, seq2_end_clip);
   for(i=0;i<len2;i++) {
-      fputc("ACGTN"[seq2[i]], stderr);
+      fputc("ACGTN"[seq2[i]], stdout);
   }
-  fputc('\n', stderr);
+  fputc('\n', stdout);
   for(i=0;i<len1;i++) {
-      fputc("ACGTN"[seq1[i]], stderr);
+      fputc("ACGTN"[seq1[i]], stdout);
   }
-  fputc('\n', stderr);
-  */
+  fputc('\n', stdout);
+#endif
 
   // set first row
   TMAP_SW_SET_INF(curr[0]); 
@@ -1042,19 +1045,12 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
       // swap curr and last
       s = curr; curr = last; last = s;
   }
-  
-  /*
-  fprintf(stderr, "best_i=%d best_j=%d best_score=%d len1=%d len2=%d\n", best_i, best_j, best_score, len1, len2);
+
   for(i=0;i<=len1;i++) {
       for(j=0;j<=len2;j++) {
-          fprintf(stdout, "i=%d j=%d [%d,%d,%d]\n", i, j,
-                  dpcell[i][j].match_from,
-                  dpcell[i][j].ins_from,
-                  dpcell[i][j].del_from);
+          fprintf(stdout, "i=%d j=%d [%d,%d,%d]\n", i, j, dpcell[i][j].match_from, dpcell[i][j].ins_from, dpcell[i][j].del_from);
       }
   }
-  fflush(stdout);
-  */
 
   // get best scoring end cell
   i = best_i; j = best_j; p = path;
@@ -1102,18 +1098,26 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
           p->ctype = ctype;
           p->i = i; p->j = j;
           ++p;
-          //fprintf(stderr, "[%d,%d,%d,%d]\n", i, j, ctype, ctype_next);
+#ifdef TMAP_SW_CLIPPING_CORE_DEBUG 
+          fprintf(stdout, "[%d,%d,%d,%d]\n", i, j, ctype, ctype_next);
+#endif
 
           // move the row and column (as necessary)
           switch(ctype) {
             case TMAP_SW_FROM_M:
+#ifdef TMAP_SW_CLIPPING_CORE_DEBUG 
               aln1[k]=seq1[i-1]; aln2[k]=seq2[j-1]; k++;
+#endif
               --i; --j; break;
             case TMAP_SW_FROM_I:
+#ifdef TMAP_SW_CLIPPING_CORE_DEBUG 
               aln1[k]=5; aln2[k]=seq2[j-1]; k++;
+#endif
               --j; break;
             case TMAP_SW_FROM_D:
+#ifdef TMAP_SW_CLIPPING_CORE_DEBUG 
               aln1[k]=seq1[i-1]; aln2[k]=5; k++;
+#endif
               --i; break;
             default:
               tmap_error(NULL, Exit, OutOfRange);
@@ -1122,10 +1126,12 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
           // move to the next cell type
           ctype = ctype_next;
       }
-      //fprintf(stderr, "i=%d j=%d\n", i, j);
       (*path_len) = p - path;
-      //fprintf(stderr, "best_i=%d best_j=%d best_score=%d len1=%d len2=%d\n", best_i, best_j, best_score, len1, len2);
-      //fprintf(stderr, "path_len=%d best_score=%d\n", (*path_len), best_score);
+#ifdef TMAP_SW_CLIPPING_CORE_DEBUG 
+      fprintf(stdout, "i=%d j=%d\n", i, j);
+      fprintf(stdout, "best_i=%d best_j=%d best_score=%d len1=%d len2=%d\n", best_i, best_j, best_score, len1, len2);
+      fprintf(stdout, "path_len=%d best_score=%d\n", (*path_len), best_score);
+#endif
   }
 
   // free memory for the main cells
@@ -1136,7 +1142,7 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
   free(curr);
   free(last);
       
-  /*
+#ifdef TMAP_SW_CLIPPING_CORE_DEBUG 
   aln1[k]=aln2[k]='\0';
   for(i=0;i<k>>1;i++) {
       char c;
@@ -1151,8 +1157,9 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
       aln1[i] = "ACGTN-"[(int)aln1[i]];
       aln2[i] = "ACGTN-"[(int)aln2[i]];
   }
-  fprintf(stderr, "%s\n%s\n", aln2, aln1);
-  */
+  fprintf(stdout, "%s\n%s\n", aln2, aln1);
+  fflush(stdout);
+#endif
 
   return best_score;
 }
