@@ -54,7 +54,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->fscore = TMAP_MAP_UTIL_FSCORE;
   opt->flow = NULL;
   opt->bw = 50; 
-  opt->softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_ALL;
+  opt->softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_RIGHT;
   opt->dup_window = 128;
   opt->score_thr = 30;
   opt->reads_queue_size = 65536; // TODO: move this to a define block
