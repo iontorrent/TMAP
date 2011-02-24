@@ -328,6 +328,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
                   sams_tmp->sams[j].algo_id = TMAP_MAP_ALGO_MAP1;
                   sams_tmp->sams[j].algo_stage = 0;
 
+                  sams_tmp->sams[j].seqid = seqid;
                   sams_tmp->sams[j].pos = pos-1; // adjust
 
                   // aux

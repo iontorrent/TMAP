@@ -173,7 +173,6 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
   uint8_t read_base, ref_base;
   tmap_string_t *md=NULL;
 
-
   md = tmap_string_init(32);
   (*nm) = 0;
 
