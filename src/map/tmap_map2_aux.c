@@ -37,34 +37,56 @@ tmap_map2_aux_resolve_duphits(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_m
   int32_t i, j, n;
   if(b->n == 0) return 0;
   if(NULL != bwt) { // convert to chromosomal coordinates if suitable
-      int32_t old_n = b->n;      
-      tmap_map2_hit_t *old_hits = b->hits;
-      for(i = n = 0; i < b->n; ++i) {
-          tmap_map2_hit_t *p = old_hits + i;
+      tmap_map2_aln_t *tmp_b;
+      // copy over
+      tmp_b = tmap_map2_aln_init();
+      tmp_b->hits = b->hits;
+      tmp_b->n = b->n;
+      tmp_b->max = b->max;
+      // nullify
+      b->hits = NULL;
+      b->n = b->max = 0;
+      // go through tmp hits
+      for(i = n = 0; i < tmp_b->n; ++i) {
+          tmap_map2_hit_t *p = tmp_b->hits + i;
+          if(0 != p->n_cigar) {
+              tmap_error("bug encountered", Exit, OutOfRange);
+          }
+          if(NULL != p->cigar) {
+              tmap_error("bug encountered", Exit, OutOfRange);
+          }
           if(p->l - p->k + 1 <= IS) n += p->l - p->k + 1;
           else if(p->G > min_as) ++n;
       }
-      b->n = b->max = n;
-      b->hits = tmap_calloc(b->max, sizeof(tmap_map2_hit_t), "b->hits");
-      for(i = j = 0; i < old_n; ++i) {
-          tmap_map2_hit_t *p = old_hits + i;
+      // realloc
+      tmap_map2_aln_realloc(b, n);
+      // copy over
+      for(i = j = 0; i < tmp_b->n; ++i) {
+          tmap_map2_hit_t *p = tmp_b->hits + i;
           if(p->l - p->k + 1 <= IS) {
               uint32_t k;
               for(k = p->k; k <= p->l; ++k) {
                   b->hits[j] = *p;
                   b->hits[j].k = tmap_sa_pac_pos(sa, bwt, k);
                   b->hits[j].l = 0;
+                  // do not copy over cigar
+                  b->hits[j].cigar = NULL;
+                  b->hits[j].n_cigar = 0;
                   ++j;
               }
           } else if(p->G > min_as) {
               b->hits[j] = *p;
+              p->cigar = NULL; // nullify
               b->hits[j].k = tmap_sa_pac_pos(sa, bwt, p->k);
               b->hits[j].l = 0;
               b->hits[j].flag |= 1;
+              // do not copy over cigar
+              b->hits[j].cigar = NULL;
+              b->hits[j].n_cigar = 0;
               ++j;
           }
       }
-      free(old_hits);
+      tmap_map2_aln_destroy(tmp_b);
   }
   tmap_sort_introsort(hitG, b->n, b->hits);
   for(i = 1; i < b->n; ++i) {
@@ -155,29 +177,45 @@ tmap_map2_aux_resolve_duphits(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_m
    }
    */
 
-static void 
+static void
+tmap_map2_hit_nullify(tmap_map2_hit_t * hit)
+{
+  hit->k = hit->l = hit->flag = hit->n_seeds = 0;
+  hit->len = hit->G = hit->G2 = hit->beg = hit->end = 0;
+  hit->n_cigar = 0;
+  hit->cigar = NULL;
+}
+
+tmap_map2_aln_t*
+tmap_map2_aln_init()
+{
+  return tmap_calloc(1, sizeof(tmap_map2_aln_t), "a");
+}
+
+void 
 tmap_map2_aln_realloc(tmap_map2_aln_t *a, int32_t n)
 {
   int32_t i;
   if(NULL == a) return;
   // free old cigars
-  for(i=n;i<a->n;i++) {
-      free(a->cigar[i]);
+  if(n < a->n) {
+      for(i=n;i<a->n;i++) {
+          free(a->hits[i].cigar);
+          tmap_map2_hit_nullify(&a->hits[i]);
+      }
+      a->n = n;
   }
-  // memory
-  if(a->max < n) {
-      a->max = n;
+  else if(a->max < n) { // allocate more memory
+      i = a->max; // save for init
+      a->max = (0 == a->max && n < 4) ? 4 : tmap_roundup32(n);
+      // resize
+      a->hits = tmap_realloc(a->hits, sizeof(tmap_map2_hit_t) * a->max, "a->hits");
+      // init
+      while(i < a->max) {
+          tmap_map2_hit_nullify(&a->hits[i]);
+          i++;
+      }
   }
-  // realloc
-  a->hits = tmap_realloc(a->hits, sizeof(tmap_map2_hit_t) * a->max, "a->hits");
-  a->cigar = tmap_realloc(a->cigar, sizeof(int32_t*) * a->max, "a->cigar");
-  a->n_cigar = tmap_realloc(a->n_cigar, sizeof(int32_t) * a->max, "a->n_cigar");
-  // init
-  for(i=a->n;i<a->max;i++) {
-      a->n_cigar[i] = 0;
-      a->cigar[i] = NULL;
-  }
-  a->n = n;
 }
 
 void 
@@ -185,13 +223,9 @@ tmap_map2_aln_destroy(tmap_map2_aln_t *a)
 {
   int32_t i;
   if(NULL == a) return;
-  if(NULL != a->cigar) {
-      for(i=0;i<a->n;i++) {
-          free(a->cigar[i]);
-      }
+  for(i=0;i<a->n;i++) {
+      free(a->hits[i].cigar);
   }
-  free(a->cigar); 
-  free(a->n_cigar); 
   free(a->hits);
   free(a);
 }
@@ -425,14 +459,7 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
   target = tmap_calloc(target_len, sizeof(uint8_t), "target");
   path = tmap_calloc(target_len + query_length, sizeof(tmap_sw_path_t), "path");
   // memory clean up for b
-  if(b->n < b->max) {
-      b->max = b->n;
-      b->hits = tmap_realloc(b->hits, b->n * sizeof(tmap_map2_hit_t), "b->hits");
-  }
-  if(b->cigar) free(b->cigar);
-  if(b->n_cigar) free(b->n_cigar);
-  b->cigar = (uint32_t**)tmap_calloc(b->max, sizeof(void*), "b->cigar");
-  b->n_cigar = (int*)tmap_calloc(b->max, sizeof(int), "b->n_cigar");
+  tmap_map2_aln_realloc(b, b->n);
   // generate CIGAR
   for(i = n = 0; i < b->n; ++i) {
       tmap_map2_hit_t *p = b->hits + i;
@@ -504,30 +531,30 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
           // adjust the alignment length
           p->len = path[0].i - path[path_len-1].i + 1;
           p->k += tmp_sam.pos; // adjust the alignment start
-          b->cigar[n] = tmp_sam.cigar;
-          b->n_cigar[n] = tmp_sam.n_cigar;
+          p->cigar = tmp_sam.cigar;
+          p->n_cigar = tmp_sam.n_cigar;
 
           // add latent soft clipping at the front
           if(0 < beg){
-              if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(b->cigar[n][0])) {
-                  TMAP_SW_CIGAR_ADD_LENGTH(b->cigar[n][0], beg);
+              if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(p->cigar[0])) {
+                  TMAP_SW_CIGAR_ADD_LENGTH(p->cigar[0], beg);
               }
               else {
-                  b->cigar[n] = tmap_realloc(b->cigar[n], sizeof(uint32_t) * (b->n_cigar[n] + 1), "b->cigar");
-                  memmove(b->cigar[n] + 1, b->cigar[n], b->n_cigar[n] * 4);
-                  TMAP_SW_CIGAR_STORE(b->cigar[n][0], BAM_CSOFT_CLIP, beg);
-                  ++b->n_cigar[n];
+                  p->cigar = tmap_realloc(p->cigar, sizeof(uint32_t) * (p->n_cigar + 1), "b->cigar");
+                  memmove(p->cigar + 1, p->cigar, p->n_cigar * sizeof(uint32_t));
+                  TMAP_SW_CIGAR_STORE(p->cigar[0], BAM_CSOFT_CLIP, beg);
+                  ++p->n_cigar;
               }
           }
           // soft clipping at the end
           if(end < query_length) { 
-              if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(b->cigar[n][b->n_cigar[n]-1])) {
-                  TMAP_SW_CIGAR_ADD_LENGTH(b->cigar[n][b->n_cigar[n]-1], (query_length - end));
+              if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(p->cigar[p->n_cigar-1])) {
+                  TMAP_SW_CIGAR_ADD_LENGTH(p->cigar[p->n_cigar-1], (query_length - end));
               }
               else {
-                  b->cigar[n] = tmap_realloc(b->cigar[n], sizeof(uint32_t) * (b->n_cigar[n] + 1), "b->cigar");
-                  TMAP_SW_CIGAR_STORE(b->cigar[n][b->n_cigar[n]], BAM_CSOFT_CLIP, (query_length-end));
-                  ++b->n_cigar[n];
+                  p->cigar = tmap_realloc(p->cigar, sizeof(uint32_t) * (p->n_cigar + 1), "b->cigar");
+                  TMAP_SW_CIGAR_STORE(p->cigar[p->n_cigar], BAM_CSOFT_CLIP, (query_length-end));
+                  ++p->n_cigar;
               }
           }
 
@@ -546,20 +573,20 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
           // do not check
           break;
           case TMAP_MAP_UTIL_SOFT_CLIP_LEFT:
-          if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(b->cigar[n][b->n_cigar[n]])) {
+          if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(p->cigar[p->n_cigar])) {
           tmap_error("found right soft clip", Exit, OutOfRange);
           }
           break;
           case TMAP_MAP_UTIL_SOFT_CLIP_RIGHT:
-          if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(b->cigar[n][0])) {
+          if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(p->cigar[0])) {
           tmap_error("found leftsoft clip", Exit, OutOfRange);
           }
           break;
           case TMAP_MAP_UTIL_SOFT_CLIP_NONE:
-          if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(b->cigar[n][b->n_cigar[n]])) {
+          if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(p->cigar[p->n_cigar])) {
           tmap_error("found right soft clip", Exit, OutOfRange);
           }
-          if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(b->cigar[n][0])) {
+          if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(p->cigar[0])) {
           tmap_error("found leftsoft clip", Exit, OutOfRange);
           }
           break;
@@ -568,6 +595,7 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
           break;
           }
           */
+          n++;
       }
   }
   free(target); free(path);
@@ -762,8 +790,8 @@ tmap_map1_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
       tmap_map_sam_t *sam = &sams->sams[j];
 
       if(p->l == 0) {
-          aln->n_cigar[i] = tmap_map2_aux_fix_cigar(refseq, p, aln->n_cigar[i], aln->cigar[i]);
-          if(aln->n_cigar[i] < 0) {
+          aln->hits[i].n_cigar = tmap_map2_aux_fix_cigar(refseq, p, aln->hits[i].n_cigar, aln->hits[i].cigar);
+          if(aln->hits[i].n_cigar < 0) {
               continue; // no cigar
           }
           if(tmap_refseq_pac2real(refseq, p->k, p->len, &seqid, &coor) <= 0) {
@@ -789,10 +817,10 @@ tmap_map1_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
           sam->mapq = qual;
 
           // copy cigar memory
-          sam->n_cigar = aln->n_cigar[i];
-          sam->cigar = aln->cigar[i];
-          aln->n_cigar[i] = 0;
-          aln->cigar[i] = NULL;
+          sam->n_cigar = aln->hits[i].n_cigar;
+          sam->cigar = aln->hits[i].cigar;
+          aln->hits[i].n_cigar = 0;
+          aln->hits[i].cigar = NULL;
       } 
       else {
           sam->mapq = 0;

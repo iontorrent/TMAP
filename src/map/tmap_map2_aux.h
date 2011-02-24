@@ -29,6 +29,8 @@ typedef struct {
     int32_t G2;  /*!< the sub-optimal alignment score */
     int32_t beg;  /*!< the beginning of the alignment (0-based) */
     int32_t end;  /*!< the end of the alignment (0-based) */
+    int32_t n_cigar;  /*!< the number of cigar operations per hit */
+    uint32_t *cigar;  /*!< the cigar operations per hit */
 } tmap_map2_hit_t;
 
 /*! 
@@ -36,11 +38,24 @@ typedef struct {
   */
 typedef struct {
     int32_t n;  /*!< the number of hits */
-    int32_t max;  /*!< the maximum memory for the number of hits */
+    int32_t max;  /*!< the memory allocateed for the hits */
     tmap_map2_hit_t *hits;  /*!< the hits */
-    int32_t *n_cigar;  /*!< the number of cigar operations per hit */
-    uint32_t **cigar;  /*!< the cigar operations per hit */
 } tmap_map2_aln_t;
+
+/*!
+  allocates an alignment
+  @return an initialized alignment
+  */
+tmap_map2_aln_t*
+tmap_map2_aln_init();
+
+/*!
+  reallocates an alignment
+  @param  a  the alignment to reallocate
+  @param  n  the new number of alignments to store
+  */
+void
+tmap_map2_aln_realloc(tmap_map2_aln_t *a, int32_t n);
 
 /*! 
   destroys an alignment

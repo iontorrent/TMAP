@@ -193,9 +193,8 @@ tmap_map2_save_narrow_hits(const tmap_bwtl_t *bwtl, tmap_map2_entry_t *u, tmap_m
       tmap_map2_hit_t *q;
       tmap_map2_cell_t *p = u->array + i;
       if(p->G >= t && p->match_sa.l - p->match_sa.k + 1 <= IS) { // good narrow hit
-          if(b1->max == b1->n) {
-              b1->max = b1->max? b1->max<<1 : 4;
-              b1->hits = tmap_realloc(b1->hits, b1->max * sizeof(tmap_map2_hit_t), "b1->hits");
+          if(b1->max <= b1->n) { // check if we need more memory
+              tmap_map2_aln_realloc(b1, b1->n+1);
           }
           q = &b1->hits[b1->n++];
           q->k = p->match_sa.k; q->l = p->match_sa.l;
@@ -270,10 +269,10 @@ tmap_map2_core_aln(const tmap_map_opt_t *opt, const tmap_bwtl_t *target,
   heap_size = opt->z_best;
   heap = tmap_calloc(heap_size, sizeof(int32_t), "heap");
   // initialize the return struct
-  b = tmap_calloc(1, sizeof(tmap_map2_aln_t), "b");
-  b->n = b->max = target->seq_len * 2;
-  b->hits = tmap_calloc(b->max, sizeof(tmap_map2_hit_t), "b->hits");
-  b1 = tmap_calloc(1, sizeof(tmap_map2_aln_t), "b1");
+  b = tmap_map2_aln_init();
+  b1 = tmap_map2_aln_init();
+  tmap_map2_aln_realloc(b, target->seq_len * 2);
+  b->n = target->seq_len * 2; // why?
   b_ret = tmap_calloc(2, sizeof(tmap_map2_aln_t*), "b_ret");
   b_ret[0] = b; b_ret[1] = b1;
   // the main loop: traversal of the DAG
