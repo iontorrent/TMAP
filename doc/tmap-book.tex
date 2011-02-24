@@ -186,6 +186,7 @@ Reads that have no mapping are returned as unmapped reads.
 Specifies the RG (read group) line to use in the SAM file (with tab separators).
 The ``PG'', ``FO'', and ``KS'' tags should not be specified in this string; they will be added by tmap.
 Alternatively, multiple \TT{-R} options can also be used to populate the RG line. 
+For example, \TT{-R CN:SEQUENCING\_CENTER -R PG:TMAP -R PL:IONTORRENT} will populate the \TT{CN}, \TT{PG}, and \TT{PL} tags in the RG record.
 
 \subsubsection{\TT{-Y}}
 Specifies that SFF specific tags should be added to the output SAM file.
