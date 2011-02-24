@@ -26,6 +26,19 @@ tmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
 
   len = strlen(rg);
 
+  // convert strings of "\t" to tab characters '\t'
+  for(i=0;i<len-1;i++) {
+      if(rg[i] == '\\' && rg[i+1] == 't') {
+          rg[i] = '\t';
+          // shift down
+          for(j=i+1;j<len-1;j++) {
+              rg[j] = rg[j+1];
+          }
+          len--;
+          rg[len]='\0';
+      }
+  }
+
   // ID, CN, DS, DT, LB, PG, PI, PL, PU, SM
   int32_t tags_found[10] = {0,0,0,0,0,0,0,0,0,0};
   char *tags_name[10] = {"ID","CN","DS","DT","LB","PG","PI","PL","PU","SM"};
