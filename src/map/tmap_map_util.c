@@ -1121,10 +1121,7 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
       j++;
   }
 
-  // destroy the sams
-  for(i=j;i<sams->n;i++) {
-      tmap_map_sam_destroy(&sams->sams[i]);
-  }
+  // resize
   tmap_map_sams_realloc(sams, j);
 }
 
@@ -1212,6 +1209,10 @@ tmap_map_util_sw(tmap_map_sam_t *sam,
       return 1;
   }
   else {
+      sam->score = INT32_MIN;
+      sam->cigar = NULL;
+      sam->n_cigar = 0;
+      (*path_len) = 0;
       return 0;
   }
 }

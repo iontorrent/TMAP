@@ -146,7 +146,7 @@ tmap_map_all_sams_merge_helper(tmap_map_sams_t *dest, tmap_map_sams_t *src, int3
 {
   int32_t i, n;
 
-  if(0 == src->n) return;
+  if(NULL == src || 0 == src->n) return;
 
   // make room
   n = dest->n;
@@ -172,12 +172,16 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
 
   // remove duplicates before merging
   if(1 == opt->aln_output_mode_ind) {
-      tmap_map_util_remove_duplicates(sams, opt->dup_window);
+      tmap_map_util_remove_duplicates(sams_map1, opt->dup_window);
+      tmap_map_util_remove_duplicates(sams_map2, opt->dup_window);
+      tmap_map_util_remove_duplicates(sams_map3, opt->dup_window);
   }
+
   // merge
   tmap_map_all_sams_merge_helper(sams, sams_map1, stage);
   tmap_map_all_sams_merge_helper(sams, sams_map2, stage);
   tmap_map_all_sams_merge_helper(sams, sams_map3, stage);
+
   // no alignments
   if(0 == sams->n) return sams;
 

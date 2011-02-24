@@ -966,8 +966,8 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
   curr = tmap_malloc(sizeof(tmap_sw_dpscore_t) * (len2 + 1), "curr");
   last = tmap_malloc(sizeof(tmap_sw_dpscore_t) * (len2 + 1), "curr");
 
+  //fprintf(stderr, "\nHERE %s [%d,%d]\n", __func__, seq2_start_clip, seq2_end_clip);
   /*
-  fprintf(stderr, "\nHERE %s [%d,%d]\n", __func__, seq2_start_clip, seq2_end_clip);
   for(i=0;i<len2;i++) {
       fputc("ACGTN"[seq2[i]], stderr);
   }
@@ -1124,6 +1124,7 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
       }
       //fprintf(stderr, "i=%d j=%d\n", i, j);
       (*path_len) = p - path;
+      //fprintf(stderr, "best_i=%d best_j=%d best_score=%d len1=%d len2=%d\n", best_i, best_j, best_score, len1, len2);
       //fprintf(stderr, "path_len=%d best_score=%d\n", (*path_len), best_score);
   }
 
