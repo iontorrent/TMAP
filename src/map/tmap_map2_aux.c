@@ -516,7 +516,7 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
                                query, end-beg,
                                0, 0,
                                &par, path, &path_len,
-                               1, opt->softclip_type, strand);
+                               opt->score_thr, opt->softclip_type, strand);
 
       if(1 == added) {
           if(0 == path_len) {
