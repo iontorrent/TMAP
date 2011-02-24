@@ -46,9 +46,9 @@ tmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
           else if('I' == rg[i] && 'D' == rg[i+1]) {
               tags_found[0]++;
               // copy over the id
-              for(j=i;j<len;j++) {
+              for(j=i+3;j<len;j++) {
                   if('\t' == rg[j]) break;
-                  tmap_sam_rg_id[j-i] = rg[j];
+                  tmap_sam_rg_id[j-i-3] = rg[j];
               }
               if(j == i) tmap_error("Malformed RG line", Exit, OutOfRange);
               tmap_sam_rg_id[j-i]='\0'; // null terminator
