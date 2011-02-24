@@ -1046,12 +1046,6 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
       s = curr; curr = last; last = s;
   }
 
-  for(i=0;i<=len1;i++) {
-      for(j=0;j<=len2;j++) {
-          fprintf(stdout, "i=%d j=%d [%d,%d,%d]\n", i, j, dpcell[i][j].match_from, dpcell[i][j].ins_from, dpcell[i][j].del_from);
-      }
-  }
-
   // get best scoring end cell
   i = best_i; j = best_j; p = path;
   ctype = best_ctype;

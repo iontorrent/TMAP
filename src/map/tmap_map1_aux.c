@@ -314,42 +314,41 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
                                    seqid, 0,
                                    &par, path, &path_len, 
                                    opt->score_thr, opt->softclip_type, strand);
-          if(0 == path_len) {
-              tmap_error("0 == path_len", Exit, OutOfRange);
-          }
 
-          // adjust pacpos
-          //fprintf(stderr, "pacpos=%u sams_tmp->sams[j].pos=%u\n", pacpos, sams_tmp->sams[j].pos);
-          pacpos += sams_tmp->sams[j].pos + 1; // now pacpos is one-based
-          aln_ref_l = path[0].i - path[path_len-1].i + 1; 
+          if(1 == added) {
+              // adjust pacpos
+              //fprintf(stderr, "pacpos=%u sams_tmp->sams[j].pos=%u\n", pacpos, sams_tmp->sams[j].pos);
+              pacpos += sams_tmp->sams[j].pos + 1; // now pacpos is one-based
+              aln_ref_l = path[0].i - path[path_len-1].i + 1; 
 
-          // save the hit
-          if(1 == added && 0 < tmap_refseq_pac2real(refseq, pacpos, aln_ref_l, &seqid, &pos)) {
-              //fprintf(stderr, "pacpos=%u seqid=%u pos=%d\n", pacpos, seqid, pos);
-              // copy over previous parameters
-              sams_tmp->sams[j].algo_id = TMAP_MAP_ALGO_MAP1;
-              sams_tmp->sams[j].algo_stage = 0;
+              // save the hit
+              if(0 < tmap_refseq_pac2real(refseq, pacpos, aln_ref_l, &seqid, &pos)) {
+                  //fprintf(stderr, "pacpos=%u seqid=%u pos=%d\n", pacpos, seqid, pos);
+                  // copy over previous parameters
+                  sams_tmp->sams[j].algo_id = TMAP_MAP_ALGO_MAP1;
+                  sams_tmp->sams[j].algo_stage = 0;
 
-              sams_tmp->sams[j].pos = pos-1; // adjust
-            
-              // aux
-              tmap_map_sam_malloc_aux(&sams_tmp->sams[j], TMAP_MAP_ALGO_MAP1);
-              sams_tmp->sams[j].aux.map1_aux->n_mm = sam->aux.map1_aux->n_mm;
-              sams_tmp->sams[j].aux.map1_aux->n_gapo = sam->aux.map1_aux->n_gapo;
-              sams_tmp->sams[j].aux.map1_aux->n_gape = sam->aux.map1_aux->n_gape;
-              // get the number of non-inserted bases 
-              sams_tmp->sams[j].aux.map1_aux->aln_ref = 0;
-              for(l=0;l<sams_tmp->sams[j].n_cigar;l++) {
-                  switch(TMAP_SW_CIGAR_OP(sams_tmp->sams[j].cigar[l])) {
-                    case BAM_CMATCH:
-                    case BAM_CDEL:
-                      sams_tmp->sams[j].aux.map1_aux->aln_ref += TMAP_SW_CIGAR_LENGTH(sams_tmp->sams[j].cigar[l]); 
-                      break;
-                    default:
-                      break;
+                  sams_tmp->sams[j].pos = pos-1; // adjust
+
+                  // aux
+                  tmap_map_sam_malloc_aux(&sams_tmp->sams[j], TMAP_MAP_ALGO_MAP1);
+                  sams_tmp->sams[j].aux.map1_aux->n_mm = sam->aux.map1_aux->n_mm;
+                  sams_tmp->sams[j].aux.map1_aux->n_gapo = sam->aux.map1_aux->n_gapo;
+                  sams_tmp->sams[j].aux.map1_aux->n_gape = sam->aux.map1_aux->n_gape;
+                  // get the number of non-inserted bases 
+                  sams_tmp->sams[j].aux.map1_aux->aln_ref = 0;
+                  for(l=0;l<sams_tmp->sams[j].n_cigar;l++) {
+                      switch(TMAP_SW_CIGAR_OP(sams_tmp->sams[j].cigar[l])) {
+                        case BAM_CMATCH:
+                        case BAM_CDEL:
+                          sams_tmp->sams[j].aux.map1_aux->aln_ref += TMAP_SW_CIGAR_LENGTH(sams_tmp->sams[j].cigar[l]); 
+                          break;
+                        default:
+                          break;
+                      }
                   }
+                  j++;
               }
-              j++;
           }
       }
   }
