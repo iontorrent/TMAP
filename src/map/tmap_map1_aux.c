@@ -319,11 +319,13 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
           }
 
           // adjust pacpos
+          //fprintf(stderr, "pacpos=%u sams_tmp->sams[j].pos=%u\n", pacpos, sams_tmp->sams[j].pos);
           pacpos += sams_tmp->sams[j].pos + 1; // now pacpos is one-based
           aln_ref_l = path[0].i - path[path_len-1].i + 1; 
 
           // save the hit
           if(1 == added && 0 < tmap_refseq_pac2real(refseq, pacpos, aln_ref_l, &seqid, &pos)) {
+              //fprintf(stderr, "pacpos=%u seqid=%u pos=%d\n", pacpos, seqid, pos);
               // copy over previous parameters
               sams_tmp->sams[j].algo_id = TMAP_MAP_ALGO_MAP1;
               sams_tmp->sams[j].algo_stage = 0;

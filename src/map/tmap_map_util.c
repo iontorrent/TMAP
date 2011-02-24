@@ -901,6 +901,16 @@ tmap_map_sams_filter1(tmap_map_sams_t *sams, int32_t aln_output_mode, int32_t al
   if(sams->n <= 1) {
       return;
   }
+  
+  for(i=j=0;i<sams->n;i++) {
+      if(TMAP_MAP_ALGO_NONE == algo_id
+         || sams->sams[i].algo_id == algo_id) {
+          j++;
+      }
+  }
+  if(j <= 1) {
+      return;
+  }
 
   best_score = best_subo = INT32_MIN;
   n_best = 0;
@@ -1138,7 +1148,6 @@ tmap_map_util_sw(tmap_map_sam_t *sam,
   }
 
   /*
-  int32_t i;
   fprintf(stderr, "softclip_type=%d\n", softclip_type);
   for(i=0;i<query_length;i++) {
       fputc("ACGTN"[query[i]], stderr);
@@ -1183,7 +1192,7 @@ tmap_map_util_sw(tmap_map_sam_t *sam,
       sam->score = score;
       sam->score_subo = score_subo;
       sam->cigar = tmap_sw_path2cigar(path, (*path_len), &sam->n_cigar);
-
+      
       // add soft clipping 
       if(1 < path[(*path_len)-1].j) {
           // soft clip the front of the read

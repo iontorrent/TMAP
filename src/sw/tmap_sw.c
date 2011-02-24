@@ -949,10 +949,8 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
   uint8_t best_ctype=0;
   int32_t best_score = TMAP_SW_MINOR_INF;
   
-  /*
   char aln1[1024], aln2[1024];
   int32_t k = 0;
-  */
 
   gap_open = ap->gap_open;
   gap_ext = ap->gap_ext;
@@ -981,14 +979,15 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
   */
 
   // set first row
-  TMAP_SW_SET_INF(curr[0]); curr[0].match_score = 0;
-  TMAP_SW_SET_FROM(dpcell[0][0], TMAP_SW_FROM_S);
+  TMAP_SW_SET_INF(curr[0]); 
+  dpcell[0][0].match_from = TMAP_SW_FROM_S;
+  curr[0].match_score = 0;
   if(1 == seq2_start_clip) { // start anywhere in seq2
       for(j=1;j<=len2;j++) { // for each col
           TMAP_SW_SET_INF(curr[j]);
           TMAP_SW_SET_FROM(dpcell[0][j], TMAP_SW_FROM_S);
+          //dpcell[0][j].match_from = TMAP_SW_FROM_S;
           curr[j].match_score = 0;
-          //tmap_sw_set_end_ins(curr[j].ins_score, dpcell[0]+j, curr+j-1);
       }
   }
   else { // start at the first base in seq2
@@ -1002,9 +1001,9 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
 
   for(i=1;i<=len1;i++) { // for each row (seq1)
       // set first column
-      // -- start anywhere in seq 1
-      TMAP_SW_SET_INF(curr[0]); curr[0].match_score = 0;
+      TMAP_SW_SET_INF(curr[0]); 
       TMAP_SW_SET_FROM(dpcell[i][0], TMAP_SW_FROM_S);
+      curr[0].match_score = 0; // start anywhere in seq 1
 
       mat = score_matrix + seq1[i-1] * N_MATRIX_ROW;
 
@@ -1013,6 +1012,12 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
                             last + j - 1, mat[seq2[j-1]]);
           tmap_sw_set_del(curr[j].del_score, dpcell[i] + j, last + j);
           tmap_sw_set_ins(curr[j].ins_score, dpcell[i] + j, curr + j - 1);
+          // deal with starting anywhere in seq2
+          if(1 == seq2_start_clip && curr[j].match_score < 0) {
+              curr[j].match_score = 0;
+              dpcell[i][j].match_from = TMAP_SW_FROM_S;
+          }
+
           if(1 == seq2_end_clip || j == len2) { // end anywhere in seq 2
               if(best_score < curr[j].match_score) {
                   best_i = i;
@@ -1038,9 +1043,20 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
       s = curr; curr = last; last = s;
   }
   
-  // get best scoring end cell
-  //fprintf(stderr, "best_i=%d best_j=%d len1=%d len2=%d\n", best_i, best_j, len1, len2);
+  /*
+  fprintf(stderr, "best_i=%d best_j=%d best_score=%d len1=%d len2=%d\n", best_i, best_j, best_score, len1, len2);
+  for(i=0;i<=len1;i++) {
+      for(j=0;j<=len2;j++) {
+          fprintf(stdout, "i=%d j=%d [%d,%d,%d]\n", i, j,
+                  dpcell[i][j].match_from,
+                  dpcell[i][j].ins_from,
+                  dpcell[i][j].del_from);
+      }
+  }
+  fflush(stdout);
+  */
 
+  // get best scoring end cell
   i = best_i; j = best_j; p = path;
   ctype = best_ctype;
 
@@ -1077,23 +1093,27 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
             default:
               tmap_error(NULL, Exit, OutOfRange);
           }
+          
+          if(0 < i && 0 < j && ctype_next == TMAP_SW_FROM_S) {
+              break;
+          }
 
           // add to the path
           p->ctype = ctype;
           p->i = i; p->j = j;
-          //fprintf(stderr, "[%d,%d,%d]\n", i, j, ctype);
           ++p;
+          //fprintf(stderr, "[%d,%d,%d,%d]\n", i, j, ctype, ctype_next);
 
           // move the row and column (as necessary)
           switch(ctype) {
             case TMAP_SW_FROM_M:
-              //aln1[k]=seq1[i-1]; aln2[k]=seq2[j-1]; k++;
+              aln1[k]=seq1[i-1]; aln2[k]=seq2[j-1]; k++;
               --i; --j; break;
             case TMAP_SW_FROM_I:
-              //aln1[k]=5; aln2[k]=seq2[j-1]; k++;
+              aln1[k]=5; aln2[k]=seq2[j-1]; k++;
               --j; break;
             case TMAP_SW_FROM_D:
-              //aln1[k]=seq1[i-1]; aln2[k]=5; k++;
+              aln1[k]=seq1[i-1]; aln2[k]=5; k++;
               --i; break;
             default:
               tmap_error(NULL, Exit, OutOfRange);
@@ -1166,7 +1186,9 @@ tmap_sw_path2cigar(const tmap_sw_path_t *path, int32_t path_len, int32_t *n_ciga
   TMAP_SW_CIGAR_STORE(cigar[0], path[path_len-1].ctype, 1u);
   last_type = path[path_len-1].ctype;
   for(i = path_len - 2, n = 0; i >= 0; --i) {
-      if(path[i].ctype == last_type) TMAP_SW_CIGAR_ADD_LENGTH(cigar[n], 1u);
+      if(path[i].ctype == last_type) {
+          TMAP_SW_CIGAR_ADD_LENGTH(cigar[n], 1u);
+      }
       else {
           TMAP_SW_CIGAR_STORE(cigar[++n], path[i].ctype, 1u);
           last_type = path[i].ctype;

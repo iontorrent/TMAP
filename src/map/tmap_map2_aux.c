@@ -191,7 +191,7 @@ tmap_map2_aux_extend_left(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
   int32_t i, matrix[25];
   uint32_t k;
   uint8_t *target = NULL;
-  int32_t target_length, softclip_type;
+  int32_t target_length, softclip_type, to_fit;
   tmap_sw_param_t par;
 
   softclip_type = opt->softclip_type;
@@ -202,6 +202,17 @@ tmap_map2_aux_extend_left(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
       else if(opt->softclip_type == TMAP_MAP_UTIL_SOFT_CLIP_RIGHT) {
           softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_LEFT;
       }
+  }
+  switch(softclip_type) {
+    case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
+    case TMAP_MAP_UTIL_SOFT_CLIP_LEFT:
+      to_fit = 0;
+      break;
+    case TMAP_MAP_UTIL_SOFT_CLIP_RIGHT:
+    case TMAP_MAP_UTIL_SOFT_CLIP_NONE:
+    default:
+      to_fit = 1;
+      break;
   }
 
   par.matrix = matrix;
@@ -243,7 +254,8 @@ tmap_map2_aux_extend_left(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
       lt = j;
 
       /*
-      fprintf(stderr, "\nIn %s is_rev=%d strand=%d softclip_type=%d query_length=%d\n", __func__, is_rev, strand, softclip_type, query_length);
+      fprintf(stderr, "\nIn %s is_rev=%d strand=%d to_fit=%d p->beg=%d query_length=%d\n", 
+              __func__, is_rev, strand, to_fit, p->beg, query_length);
       for(j=0;j<p->beg;j++) {
           fputc("ACGTN"[query[query_length-p->beg+j]], stderr);
       }
@@ -254,32 +266,27 @@ tmap_map2_aux_extend_left(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
       fputc('\n', stderr);
       */
 
-      switch(softclip_type) {
-        case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
-        case TMAP_MAP_UTIL_SOFT_CLIP_LEFT:
+      if(0 == to_fit) {
           score = tmap_sw_extend_core(target, lt, query + query_length - p->beg, p->beg, &par, &path, 0, p->G, _mem);
-          break;
-        case TMAP_MAP_UTIL_SOFT_CLIP_RIGHT:
-        case TMAP_MAP_UTIL_SOFT_CLIP_NONE:
-        default:
+      }
+      else {
           score = tmap_sw_extend_fitting_core(target, lt, query + query_length - p->beg, p->beg, &par, &path, 0, p->G, _mem);
-          break;
       }
 
-      if(opt->score_thr < score) {
-          if(TMAP_MAP_UTIL_SOFT_CLIP_NONE == softclip_type
-             || TMAP_MAP_UTIL_SOFT_CLIP_RIGHT == softclip_type
-             || score >= p->G) {
-              p->G = score;
-              p->len += path.i;
-              p->beg -= path.j;
-              p->k -= path.i;
-          }
+      /*
+      fprintf(stderr, "before p->G=%d p->len=%d p->beg=%d p->end=%d p->k=%u score=%d\n",
+              p->G, p->len, p->beg, p->end, p->k, score);
+              */
+      if(1 == to_fit || (opt->score_thr < score && p->G <= score)) {
+          p->G = score;
+          p->len += path.i;
+          p->beg -= path.j;
+          p->k -= path.i;
       }
-      else if(TMAP_MAP_UTIL_SOFT_CLIP_NONE == softclip_type
-         || TMAP_MAP_UTIL_SOFT_CLIP_RIGHT == softclip_type) {
-          p->G = TMAP_MAP2_MINUS_INF; 
-      }
+      /*
+      fprintf(stderr, "after p->G=%d p->len=%d p->beg=%d p->end=%d p->k=%u\n",
+              p->G, p->len, p->beg, p->end, p->k);
+              */
   }
   tmap_map2_aux_reverse_query(query, query_length); // reverse back the query
   free(target);
@@ -295,9 +302,9 @@ tmap_map2_aux_extend_right(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
   int32_t i, matrix[25];
   uint32_t k;
   uint8_t *target = NULL;
-  int32_t target_length, softclip_type;
+  int32_t target_length, softclip_type, to_fit;
   tmap_sw_param_t par;
-  
+
   softclip_type = opt->softclip_type;
   if(1 == (strand ^ is_rev)) { // one or the other but not both
       if(opt->softclip_type == TMAP_MAP_UTIL_SOFT_CLIP_LEFT) {
@@ -306,6 +313,17 @@ tmap_map2_aux_extend_right(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
       else if(opt->softclip_type == TMAP_MAP_UTIL_SOFT_CLIP_RIGHT) {
           softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_LEFT;
       }
+  }
+  switch(softclip_type) {
+    case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
+    case TMAP_MAP_UTIL_SOFT_CLIP_LEFT:
+      to_fit = 0;
+      break;
+    case TMAP_MAP_UTIL_SOFT_CLIP_RIGHT:
+    case TMAP_MAP_UTIL_SOFT_CLIP_NONE:
+    default:
+      to_fit = 1;
+      break;
   }
 
   par.matrix = matrix;
@@ -329,7 +347,8 @@ tmap_map2_aux_extend_right(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
       lt = j;
 
       /*
-      fprintf(stderr, "\nIn %s is_rev=%d strand=%d softclip_type=%d p->beg=%d query_length=%d\n", __func__, is_rev, strand, softclip_type, p->beg, query_length);
+      fprintf(stderr, "\nIn %s is_rev=%d strand=%d to_fit=%d p->beg=%d query_length=%d\n", 
+              __func__, is_rev, strand, to_fit, p->beg, query_length);
       for(j=0;j<query_length - p->beg;j++) {
           fputc("ACGTN"[query[p->beg+j]], stderr);
       }
@@ -338,32 +357,28 @@ tmap_map2_aux_extend_right(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
           fputc("ACGTN"[target[j]], stderr);
       }
       fputc('\n', stderr);
-      */
+              */
 
-      switch(softclip_type) {
-        case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
-        case TMAP_MAP_UTIL_SOFT_CLIP_RIGHT:
+      if(0 == to_fit) {
           score = tmap_sw_extend_core(target, lt, query + p->beg, query_length - p->beg, &par, &path, NULL, 1, _mem);
-          break;
-        case TMAP_MAP_UTIL_SOFT_CLIP_NONE:
-        case TMAP_MAP_UTIL_SOFT_CLIP_LEFT:
-        default:
+      }
+      else {
           score = tmap_sw_extend_fitting_core(target, lt, query + p->beg, query_length - p->beg, &par, &path, NULL, 1, _mem);
-          break;
       }
-      if(opt->score_thr < score) {
-          if(TMAP_MAP_UTIL_SOFT_CLIP_ALL == softclip_type 
-             || TMAP_MAP_UTIL_SOFT_CLIP_LEFT == softclip_type 
-             || score >= p->G) {
-              p->G = score;
-              p->len = path.i;
-              p->end = path.j + p->beg;
-          }
+
+      /*
+      fprintf(stderr, "before p->G=%d p->len=%d p->beg=%d p->end=%d p->k=%u\n",
+              p->G, p->len, p->beg, p->end, p->k);
+              */
+      if(1 == to_fit || (opt->score_thr < score && p->G <= score)) {
+          p->G = score;
+          p->len = path.i;
+          p->end = path.j + p->beg;
       }
-      else if(TMAP_MAP_UTIL_SOFT_CLIP_ALL == softclip_type 
-             || TMAP_MAP_UTIL_SOFT_CLIP_LEFT == softclip_type) { 
-          p->G = TMAP_MAP2_MINUS_INF; 
-      }
+      /*
+      fprintf(stderr, "after p->G=%d p->len=%d p->beg=%d p->end=%d p->k=%u\n",
+              p->G, p->len, p->beg, p->end, p->k);
+              */
   }
   free(target);
 }
@@ -432,6 +447,13 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
       beg = (1 == strand) ? query_length - p->end : p->beg;
       end = (1 == strand) ? query_length - p->beg : p->end;
 
+      // get more reference
+      if(target_len < p->len) {
+          target_len = p->len;
+          target = tmap_realloc(target, target_len * sizeof(uint8_t), "target");
+          path = tmap_realloc(path, (target_len + query_length) * sizeof(tmap_sw_path_t), "path");
+      }
+
       query = queries[strand] + beg;
       for(k = p->k; k < p->k + p->len; ++k) { // in principle, no out-of-boundary here
           target[k - p->k] = tmap_refseq_seq_i(refseq, k-1);
@@ -456,7 +478,7 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
       if(0 == b->n_cigar[i]) {
           tmap_error("0 == b->n_cigar[i]", Exit, OutOfRange);
       }
-
+      
       // add latent soft clipping at the front
       if(0 < beg){
           if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(b->cigar[i][0])) {
@@ -480,6 +502,44 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
               ++b->n_cigar[i];
           }
       }
+
+      /*
+      int32_t softclip_type = opt->softclip_type;
+      if(1 == strand) {
+          if(opt->softclip_type == TMAP_MAP_UTIL_SOFT_CLIP_LEFT) {
+              softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_RIGHT;
+          }
+          else if(opt->softclip_type == TMAP_MAP_UTIL_SOFT_CLIP_RIGHT) {
+              softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_LEFT;
+          }
+      }
+      switch(softclip_type) {
+        case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
+          // do not check
+          break;
+        case TMAP_MAP_UTIL_SOFT_CLIP_LEFT:
+          if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(b->cigar[i][b->n_cigar[i]])) {
+              tmap_error("found right soft clip", Exit, OutOfRange);
+          }
+          break;
+        case TMAP_MAP_UTIL_SOFT_CLIP_RIGHT:
+          if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(b->cigar[i][0])) {
+              tmap_error("found leftsoft clip", Exit, OutOfRange);
+          }
+          break;
+        case TMAP_MAP_UTIL_SOFT_CLIP_NONE:
+          if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(b->cigar[i][b->n_cigar[i]])) {
+              tmap_error("found right soft clip", Exit, OutOfRange);
+          }
+          if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(b->cigar[i][0])) {
+              tmap_error("found leftsoft clip", Exit, OutOfRange);
+          }
+          break;
+        default:
+          tmap_error("soft clipping type was not recognized", Exit, OutOfRange);
+          break;
+      }
+      */
   }
   free(target); free(path);
 }
