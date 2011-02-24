@@ -533,6 +533,7 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
           p->k += tmp_sam.pos; // adjust the alignment start
           p->cigar = tmp_sam.cigar;
           p->n_cigar = tmp_sam.n_cigar;
+          p->G = tmp_sam.score;
 
           // add latent soft clipping at the front
           if(0 < beg){
