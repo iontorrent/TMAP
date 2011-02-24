@@ -170,16 +170,21 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
   // init
   sams = tmap_map_sams_init();
 
+  // remove duplicates before merging
+  if(1 == opt->aln_output_mode_ind) {
+      tmap_map_util_remove_duplicates(sams, opt->dup_window);
+  }
   // merge
   tmap_map_all_sams_merge_helper(sams, sams_map1, stage);
   tmap_map_all_sams_merge_helper(sams, sams_map2, stage);
   tmap_map_all_sams_merge_helper(sams, sams_map3, stage);
-
   // no alignments
   if(0 == sams->n) return sams;
 
-  // remove duplicates
-  tmap_map_util_remove_duplicates(sams, opt->dup_window);
+  // remove duplicates after merging
+  if(0 == opt->aln_output_mode_ind) {
+      tmap_map_util_remove_duplicates(sams, opt->dup_window);
+  }
 
   // mapping quality
   tmap_map_all_mapq(sams, opt);
