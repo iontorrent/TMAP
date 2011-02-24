@@ -225,7 +225,7 @@ tmap_fq_io_read(tmap_fq_io_t *fqio, tmap_fq_t *fq)
   }
   if(0 == fq->seq->l) {
       tmap_file_fprintf(tmap_file_stderr, "\nAfter line number %d\n", fqio->line_number);
-      tmap_error("Found an empty sequence.  Are newlines not present or did you forget to add some DNA sequence?", Exit, OutOfRange);
+      tmap_error("Found an empty sequence.  Did you forget to add some DNA sequence?", Exit, OutOfRange);
   }
   if (c == '>' || c == '@') fqio->last_char = c; /* the first header char has been read */
   fq->seq->s[fq->seq->l] = 0;	/* null terminated string */
