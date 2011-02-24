@@ -52,6 +52,7 @@ typedef struct {
     int32_t is_eof;  /*!< 1 if the EOF marker has been reached, 0 otherwise */
     tmap_file_t *f;  /*!< the file pointer associated with this stream */
     int32_t bufsize;  /*!< the size of the character buffer */
+    char last_char;  /*!< the last character read in the previous buffer */
 } tmap_stream_t; 
 
 /*! 

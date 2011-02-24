@@ -37,6 +37,12 @@
 
 /* Nils Homer - modified not to be macro-ized */
 
+#define TMAP_FQ_IO_DELIMITER_EOL -1
+#define TMAP_FQ_IO_DELIMITER_NL '\n'
+#define TMAP_FQ_IO_DELIMITER_CR '\r'
+
+#define __is_eol(_c) (((_c) == TMAP_FQ_IO_DELIMITER_NL || (_c) == TMAP_FQ_IO_DELIMITER_CR) ? 1 : 0)
+
 static inline tmap_stream_t *
 tmap_stream_init(tmap_file_t *f, int32_t bufsize)
 {
@@ -61,13 +67,54 @@ tmap_stream_destroy(tmap_stream_t *ks)
 #define tmap_stream_rewind(ks) \
   ((ks)->is_eof = (ks)->begin = (ks)->end = 0)
 
+static inline void
+tmap_stream_convert_eol(tmap_stream_t *ks)
+{
+  int i;
+  // search for:
+  // 1. <CR> <NL>
+  // 2. <NL>
+  // 3. <CR>
+  for (i = ks->begin; i < ks->end; ++i) {
+      if(TMAP_FQ_IO_DELIMITER_CR == ks->buf[i]) {
+          if(i < ks->end-1) {
+              if(ks->buf[i+1] == TMAP_FQ_IO_DELIMITER_NL) {
+                  int j;
+                  // shift down;
+                  for(j=i+1;j<ks->end-1;j++) {
+                      ks->buf[j] = ks->buf[j+1];
+                  }
+                  ks->end--; // shorten
+              }
+          }
+          else {
+              // we must save that it was a carriage return
+              ks->last_char = ks->buf[i];
+          }
+          ks->buf[i] = TMAP_FQ_IO_DELIMITER_NL;
+      }
+      else if(TMAP_FQ_IO_DELIMITER_NL == ks->buf[i]) {
+          if(0 == i && TMAP_FQ_IO_DELIMITER_CR == ks->last_char) {
+              int j;
+              // shift down;
+              for(j=i;j<ks->end-1;j++) {
+                  ks->buf[j] = ks->buf[j+1];
+              }
+              ks->end--; // shorten
+          }
+      }
+  }
+}
+
 static inline int 
 tmap_stream_getc(tmap_stream_t *ks)
 {
   if (ks->is_eof && ks->begin >= ks->end) return -1;
   if (ks->begin >= ks->end) {
       ks->begin = 0;
+      ks->last_char = ks->buf[ks->end-1];
       ks->end = tmap_file_fread2(ks->f, ks->buf, ks->bufsize);
+      tmap_stream_convert_eol(ks);
       if (ks->end < ks->bufsize) ks->is_eof = 1;
       if (ks->end == 0) return -1;
   }
@@ -85,12 +132,14 @@ tmap_stream_getuntil(tmap_stream_t *ks, int delimiter, tmap_string_t *str, int *
       if (ks->begin >= ks->end) {
           if (!ks->is_eof) {
               ks->begin = 0;
+              ks->last_char = ks->buf[ks->end-1];
               ks->end = tmap_file_fread2(ks->f, ks->buf, ks->bufsize);
+              tmap_stream_convert_eol(ks);
               if (ks->end < ks->bufsize) ks->is_eof = 1;
               if (ks->end == 0) break;
           } else break;
       }
-      if (delimiter) {
+      if (0 < delimiter) {
           for (i = ks->begin; i < ks->end; ++i)
             if (ks->buf[i] == delimiter) break;
       } else {
@@ -150,14 +199,14 @@ tmap_fq_io_read(tmap_fq_io_t *fqio, tmap_fq_t *fq)
   tmap_stream_t *ks = fqio->f;
   if (fqio->last_char == 0) { /* then jump to the next header line */
       while ((c = tmap_stream_getc(ks)) != -1 && c != '>' && c != '@') {
-          if(c == '\n') fqio->line_number++;
+          if(c == TMAP_FQ_IO_DELIMITER_NL) fqio->line_number++;
       }
       if (c == -1) return -1; /* end of file */
       fqio->last_char = c;
   } /* the first header char has been read */
   fq->comment->l = fq->seq->l = fq->qual->l = 0;
   if (tmap_stream_getuntil(ks, 0, fq->name, &c) < 0) return -1;
-  if (c != '\n') tmap_stream_getuntil(ks, '\n', fq->comment, 0);
+  if (c != TMAP_FQ_IO_DELIMITER_NL) tmap_stream_getuntil(ks, TMAP_FQ_IO_DELIMITER_NL, fq->comment, 0);
   fqio->line_number++;
   // initialize memory
   // get the sequence
@@ -170,7 +219,7 @@ tmap_fq_io_read(tmap_fq_io_t *fqio, tmap_fq_t *fq)
           }
           fq->seq->s[fq->seq->l++] = (char)c;
       }
-      else if('\n' == c) {
+      else if(TMAP_FQ_IO_DELIMITER_NL == c) {
           fqio->line_number++;
       }
   }
@@ -185,7 +234,7 @@ tmap_fq_io_read(tmap_fq_io_t *fqio, tmap_fq_t *fq)
       fq->qual->m = fq->seq->m;
       fq->qual->s = tmap_realloc(fq->qual->s, fq->qual->m, "fq->qual->s");
   }
-  while ((c = tmap_stream_getc(ks)) != -1 && c != '\n'); /* skip the rest of '+' line */
+  while ((c = tmap_stream_getc(ks)) != -1 && c != TMAP_FQ_IO_DELIMITER_NL); /* skip the rest of '+' line */
   fqio->line_number++;
   if (c == -1) return -2; /* we should not stop here */
   while ((c = tmap_stream_getc(ks)) != -1 && fq->qual->l < fq->seq->l)
