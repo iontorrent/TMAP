@@ -60,6 +60,7 @@ typedef struct {
 typedef struct {
     int last_char;  /*!< the last character read */
     tmap_stream_t *f;  /*!< pointer to the file structure */
+    int64_t line_number;  /*< the line number in the file */ 
 } tmap_fq_io_t;
 
 /*! 
