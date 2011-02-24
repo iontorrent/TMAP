@@ -75,7 +75,7 @@ tmap_stream_getc(tmap_stream_t *ks)
 }
 
 static int 
-tmap_stream_getuntil(tmap_stream_t *ks, int delimiter, tmap_string_t *str, int *dret)
+tmap_stream_getuntil(tmap_stream_t *ks, int line_number, int delimiter, tmap_string_t *str, int *dret)
 {
   if (dret) *dret = 0;
   str->l = 0;
@@ -89,6 +89,13 @@ tmap_stream_getuntil(tmap_stream_t *ks, int delimiter, tmap_string_t *str, int *
               if (ks->end < ks->bufsize) ks->is_eof = 1;
               if (ks->end == 0) break;
           } else break;
+      }
+      // check for windows-like carriage returns
+      for (i = ks->begin; i < ks->end; ++i) {
+          if(13 == ks->buf[i]) {
+              tmap_file_fprintf(tmap_file_stderr, "\nOn line number %d\n", 1+line_number);
+              tmap_error("Found a ^M (CR) character.  Please convert Windows-like newlines to unix-like newlines.", Exit, OutOfRange);
+          }
       }
       if (delimiter) {
           for (i = ks->begin; i < ks->end; ++i)
@@ -156,8 +163,8 @@ tmap_fq_io_read(tmap_fq_io_t *fqio, tmap_fq_t *fq)
       fqio->last_char = c;
   } /* the first header char has been read */
   fq->comment->l = fq->seq->l = fq->qual->l = 0;
-  if (tmap_stream_getuntil(ks, 0, fq->name, &c) < 0) return -1;
-  if (c != '\n') tmap_stream_getuntil(ks, '\n', fq->comment, 0);
+  if (tmap_stream_getuntil(ks, fqio->line_number, 0, fq->name, &c) < 0) return -1;
+  if (c != '\n') tmap_stream_getuntil(ks, fqio->line_number, '\n', fq->comment, 0);
   fqio->line_number++;
   // initialize memory
   // get the sequence
