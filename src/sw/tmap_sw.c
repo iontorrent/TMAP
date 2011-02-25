@@ -930,6 +930,7 @@ tmap_sw_extend_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t 
 
 //#define TMAP_SW_CLIPPING_CORE_DEBUG 1
 // TODO: optimize similar to tmap_sw_local
+// - local align within a band
 int32_t 
 tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
              int32_t seq2_start_clip, int32_t seq2_end_clip,

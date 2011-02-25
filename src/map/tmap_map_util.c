@@ -1159,7 +1159,7 @@ tmap_map_util_sw(tmap_map_sam_t *sam,
   switch(softclip_type) {
     case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
       //fprintf(stderr, "TMAP_MAP_UTIL_SOFT_CLIP_ALL\n");
-      //score = tmap_sw_local_core(target, target_length, query, query_length, par, path, path_len, score_thr, score_subo);
+      //score = tmap_sw_local_core(target, target_length, query, query_length, par, path, path_len, score_thr, &score_subo);
       score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 1, 1, path, path_len);
       break;
     case TMAP_MAP_UTIL_SOFT_CLIP_LEFT:
