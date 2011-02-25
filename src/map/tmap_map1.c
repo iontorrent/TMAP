@@ -230,6 +230,7 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
   free(width[1]);
 }
 
+#ifdef HAVE_LIBPTHREAD
 static void *
 tmap_map1_core_thread_worker(void *arg)
 {
@@ -241,6 +242,7 @@ tmap_map1_core_thread_worker(void *arg)
 
   return arg;
 }
+#endif
 
 static void 
 tmap_map1_core(tmap_map_opt_t *opt)

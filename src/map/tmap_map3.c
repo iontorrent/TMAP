@@ -201,6 +201,7 @@ tmap_map3_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_t s
   free(flow[1]);
 }
 
+#ifdef HAVE_LIBPTHREAD
 static void *
 tmap_map3_core_thread_worker(void *arg)
 {
@@ -212,6 +213,7 @@ tmap_map3_core_thread_worker(void *arg)
 
   return arg;
 }
+#endif
 
 static void 
 tmap_map3_core(tmap_map_opt_t *opt)

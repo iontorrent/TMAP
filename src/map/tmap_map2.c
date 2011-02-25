@@ -106,6 +106,7 @@ tmap_map2_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
   tmap_map2_global_mempool_destroy(pool);
 }
 
+#ifdef HAVE_LIBPTHREAD
 static void *
 tmap_map2_core_thread_worker(void *arg)
 {
@@ -117,6 +118,7 @@ tmap_map2_core_thread_worker(void *arg)
 
   return arg;
 }
+#endif
 
 static void
 tmap_map2_core(tmap_map_opt_t *opt)
