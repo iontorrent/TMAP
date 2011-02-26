@@ -112,7 +112,7 @@ tmap_stream_getc(tmap_stream_t *ks)
   if (ks->is_eof && ks->begin >= ks->end) return -1;
   if (ks->begin >= ks->end) {
       ks->begin = 0;
-      ks->last_char = ks->buf[ks->end-1];
+      ks->last_char = (0 < ks->end) ? ks->buf[ks->end-1] : 0;
       ks->end = tmap_file_fread2(ks->f, ks->buf, ks->bufsize);
       tmap_stream_convert_eol(ks);
       if (ks->end < ks->bufsize) ks->is_eof = 1;
