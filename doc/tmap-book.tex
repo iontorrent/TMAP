@@ -168,7 +168,7 @@ Specifies that the type of soft-clipping to perform.
 \end{enumerate}
 
 \subsubsection{\TT{-W INT}}
-Specifies to remove duplicate mappings from the different algorithms that occur within this bp window.
+Specifies to remove duplicate mappings that occur within this bp window.
 
 \subsubsection{\TT{-q INT}}
 Specifies the number of reads to cache or load into memory at one time.
@@ -379,7 +379,7 @@ Notice how the global options \TT{-g -M 3} are applied to all the algorithms whe
 It is possible to have a given algorithm run in both stages with different options.
 
 \subsubsection{\TT{-I}}
-Specifies to apply the output filter separately for each algorithm.
+Specifies to apply the output filter (\TT{-a}) and duplicate removal (\TT{-W}) separately for each algorithm.
 This is useful for comparing the mappings across all the algorithms.
 
 \section{tmap server}

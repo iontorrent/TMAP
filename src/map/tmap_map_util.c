@@ -198,7 +198,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "                             1 - allow on the left portion of the read\n");
   tmap_file_fprintf(tmap_file_stderr, "                             2 - allow on the right portion of the read\n");
   tmap_file_fprintf(tmap_file_stderr, "                             3 - do not allow soft-clipping\n");
-  tmap_file_fprintf(tmap_file_stderr, "         -W INT      remove duplicate alignments from different algorithms within this bp window (-1 to disable) [%d]\n",
+  tmap_file_fprintf(tmap_file_stderr, "         -W INT      remove duplicate alignments within this bp window (-1 to disable) [%d]\n",
                     opt->dup_window);
   tmap_file_fprintf(tmap_file_stderr, "         -T INT      score threshold divided by the match score [%d]\n", opt->score_thr);
   tmap_file_fprintf(tmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
@@ -264,7 +264,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
       tmap_file_fprintf(tmap_file_stderr, "         -U STRING   the region from which to simulate [%s]\n", 
                         (NULL == opt->region) ? "whole genome" : opt->region);
     case TMAP_MAP_ALGO_MAPALL:
-      tmap_file_fprintf(tmap_file_stderr, "         -I          apply the output filter for each algorithm separately [%s]\n",
+      tmap_file_fprintf(tmap_file_stderr, "         -I          apply the output filter (-a) and duplicate removal (-W) for each algorithm separately [%s]\n",
                         (1 == opt->aln_output_mode_ind) ? "true" : "false");
       break;
     default:
