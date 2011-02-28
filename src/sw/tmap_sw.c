@@ -928,6 +928,66 @@ tmap_sw_extend_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t 
   return tmap_sw_clipping_core(seq1, len1, seq2, len2, ap, 0, 0, path, path_len);
 }
 
+static void
+tmap_sw_kmp_create_table(uint8_t *seq, int32_t len, int32_t *table)
+{
+  int32_t cur, next;
+
+  table[0] = -1;
+  table[1] = 0;
+
+  cur = 2;
+  next = 0;
+  while(cur < len) {
+      if(seq[cur-1] == seq[next]) {
+          table[cur] = next+1;
+          cur++; next++;
+      }
+      else if(0 < next) {
+          next = table[next];
+      }
+      else {
+          table[cur] = 0;
+          cur++;
+      }
+  }
+}
+
+static int32_t
+tmap_sw_kmp_search(uint8_t *seq1, int32_t len1, uint8_t *seq2, uint32_t len2) 
+{
+  int32_t *table, i, m, r;
+
+  table = tmap_malloc(sizeof(int32_t) * len2, "table");
+
+  // create the table
+  tmap_sw_kmp_create_table(seq2, len2, table);
+
+  // substring match
+  i = m = 0;
+  r = -1;
+  while(i + m < len1) {
+      if(seq1[m+i] == seq2[i]) {
+          i++;
+          if(i == len2) {
+              r = m;
+              break;
+          }
+      }
+      else {
+          m += i - table[i];
+          if(0 < i) {
+              i = table[i];
+          }
+      }
+  }
+
+  // free
+  free(table);
+
+  return r;
+}
+
 //#define TMAP_SW_CLIPPING_CORE_DEBUG 1
 // TODO: optimize similar to tmap_sw_local
 // - local align within a band
@@ -962,14 +1022,6 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
   score_matrix = ap->matrix;
   N_MATRIX_ROW = ap->row;
 
-  // allocate memory for the main cells
-  dpcell = tmap_malloc(sizeof(tmap_sw_dpcell_t*) * (len1 + 1), "dpcell");
-  for(i=0;i<=len1;i++) {
-      dpcell[i] = tmap_malloc(sizeof(tmap_sw_dpcell_t) * (len2 + 1), "dpcell");
-  }
-  curr = tmap_malloc(sizeof(tmap_sw_dpscore_t) * (len2 + 1), "curr");
-  last = tmap_malloc(sizeof(tmap_sw_dpscore_t) * (len2 + 1), "curr");
-
 #ifdef TMAP_SW_CLIPPING_CORE_DEBUG 
   fprintf(stdout, "\nHERE %s [%d,%d]\n", __func__, seq2_start_clip, seq2_end_clip);
   for(i=0;i<len2;i++) {
@@ -981,6 +1033,62 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
   }
   fputc('\n', stdout);
 #endif
+
+  // check if seq2 is a sub-sequence of seq1
+  if(len2 <= len1) {
+      for(i=j=0;j<len2;j++) { // exact from the start
+          if(seq1[j] != seq2[j]) {
+              i = -1;
+              break;
+          }
+      }
+      if(i < 0) { // try the Knuth Morris Pratt algorithm
+          // Here we use the Knuth-Morris-Pratt algorithms, but we could use
+          // others, such as Boyer-Moore (small alphabet 2007).  KMP is easy
+          // to implement
+          i = tmap_sw_kmp_search(seq1, len1, seq2, len2);
+      }
+      if(0 <= i) {
+          best_i = i + len2; best_j = len2;
+          // get the best score
+          best_score = 0; 
+          for(j=0;i<best_i && j<best_j;i++,j++) {
+              // Note: i and j are zero-based here
+              mat = score_matrix + seq1[i] * N_MATRIX_ROW;
+              best_score += mat[seq2[j]];
+          }
+          //fprintf(stderr, "1 best_i=%d best_j=%d best_score=%d\n", best_i, best_j, best_score);
+          // retrieve the path if necessary
+          if(NULL == path) {
+              // do nothing
+          }
+          else if(NULL == path_len) {
+              path[0].i = best_i; path[0].j = best_j;
+          }
+          else {
+              i = best_i; j = best_j; p = path;
+              while(0 < i && 0 < j) {
+                  // add to the path
+                  p->ctype = TMAP_SW_FROM_M;
+                  p->i = i; p->j = j;
+                  ++p;
+                  i--; j--;
+              }
+              (*path_len) = p - path;
+          }
+          return best_score;
+      }
+  }
+
+  // allocate memory for the main cells
+  dpcell = tmap_malloc(sizeof(tmap_sw_dpcell_t*) * (len1 + 1), "dpcell");
+  for(i=0;i<=len1;i++) {
+      dpcell[i] = tmap_malloc(sizeof(tmap_sw_dpcell_t) * (len2 + 1), "dpcell");
+  }
+  curr = tmap_malloc(sizeof(tmap_sw_dpscore_t) * (len2 + 1), "curr");
+  last = tmap_malloc(sizeof(tmap_sw_dpscore_t) * (len2 + 1), "curr");
+
+  best_score = TMAP_SW_MINOR_INF;
 
   // set first row
   TMAP_SW_SET_INF(curr[0]); 
@@ -1049,6 +1157,7 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
 
   // get best scoring end cell
   i = best_i; j = best_j; p = path;
+  //fprintf(stderr, "2 best_i=%d best_j=%d best_score=%d\n", best_i, best_j, best_score);
   ctype = best_ctype;
 
   if(NULL == path) {
