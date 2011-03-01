@@ -15,7 +15,7 @@ typedef struct {
     char *flow_order; /*!< flow order (-f) */
     int32_t flow_score; /*!< flow penalty (-F) */
     int32_t flow_offset; /*!< search for homopolymer errors +- offset during re-alignment (-o) */
-    int32_t aln_global; /*!< run global alignment (otherwise read fitting) (-g) */
+    int32_t softclip_type; /*!< the soft clip type (-g) */
     int32_t output_type; /*!< the output type: 0-flow space alignment 1-base space alignment 2-SAM (-z) */
     int32_t j_type; /*!< how indels are justified in alignment (-l) */
     int32_t reads_queue_size;  /*!< the reads queue size (-q) */

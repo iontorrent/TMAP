@@ -93,7 +93,7 @@ tmap_sam2fs_aux_flow_init()
 
 static void
 tmap_sam2fs_aux_flow_convert(tmap_sam2fs_aux_flow_t *a, uint8_t *seq, int32_t len, 
-                             uint8_t *flow_order, uint8_t *qseq, int32_t qseq_len)
+                             uint8_t *flow_order, int32_t flow_order_len, uint8_t *qseq, int32_t qseq_len)
 {
   int32_t i, k, l, next_i;
 
@@ -109,7 +109,7 @@ tmap_sam2fs_aux_flow_convert(tmap_sam2fs_aux_flow_t *a, uint8_t *seq, int32_t le
           i++;
       }
       while(flow_order[k] != qseq[i]) {
-          k = (k+1) & 3; // % 4
+          k = (k+1) % flow_order_len;
       }
   }
   else {
@@ -120,7 +120,7 @@ tmap_sam2fs_aux_flow_convert(tmap_sam2fs_aux_flow_t *a, uint8_t *seq, int32_t le
           i++;
       }
       while(flow_order[k] != seq[i]) {
-          k = (k+1) & 3; // % 4
+          k = (k+1) % flow_order_len;
       }
   }
 
@@ -150,7 +150,7 @@ tmap_sam2fs_aux_flow_convert(tmap_sam2fs_aux_flow_t *a, uint8_t *seq, int32_t le
           }
           a->flow[a->l] = 0;
           a->l++;
-          k = (k+1) & 3; // % 4
+          k = (k+1) % flow_order_len;
       }
 
       // get the number of bases in current flow
@@ -170,7 +170,7 @@ tmap_sam2fs_aux_flow_convert(tmap_sam2fs_aux_flow_t *a, uint8_t *seq, int32_t le
       }
       a->flow[a->l] = l;
       a->l++;
-      k = (k+1) & 3; // % 4
+      k = (k+1) % flow_order_len;
       i = next_i;
       if(i <= before) {
           tmap_error(NULL, Exit, OutOfRange);
@@ -182,7 +182,7 @@ tmap_sam2fs_aux_flow_convert(tmap_sam2fs_aux_flow_t *a, uint8_t *seq, int32_t le
   }
 
   if(NULL != qseq) {
-      k = (k+3) & 3; // move back one flow
+      k = (k+flow_order_len-1) % flow_order_len;
 
       // get the last base in qseq
       i = qseq_len-1;
@@ -202,7 +202,7 @@ tmap_sam2fs_aux_flow_convert(tmap_sam2fs_aux_flow_t *a, uint8_t *seq, int32_t le
           }
           a->flow[a->l] = 0;
           a->l++;
-          k = (k+1) & 3; // % 4
+          k = (k+1) % flow_order_len;
       }
   }
 }
@@ -217,7 +217,7 @@ tmap_sam2fs_aux_flow_destroy(tmap_sam2fs_aux_flow_t *a)
 // query - read
 // target - reference
 void
-tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uint8_t *tseq, int32_t tseq_len, uint8_t *flow_order, int8_t strand)
+tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uint8_t *tseq, int32_t tseq_len, uint8_t *flow_order, int32_t flow_order_len, int8_t strand)
 {
   int32_t i, j, k;
   int32_t ctype;
@@ -242,22 +242,22 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
           tseq[i] = tseq[tseq_len-i-1];
           tseq[tseq_len-i-1] = tmp;
       }
-      for(i=0;i<2;i++) {
+      for(i=0;i<flow_order_len>>1;i++) {
           uint8_t tmp = flow_order[i];
-          flow_order[i] = flow_order[4-i-1];
-          flow_order[4-i-1] = tmp;
+          flow_order[i] = flow_order[flow_order_len-i-1];
+          flow_order[flow_order_len-i-1] = tmp;
       }
   }
 
   // convert bases to flow space
   // NOTE: this will pad empty flows at the beginning and the end of the
   // reference
-  tmap_sam2fs_aux_flow_convert(f_qseq, qseq, qseq_len, flow_order, NULL, 0);
-  tmap_sam2fs_aux_flow_convert(f_tseq, tseq, tseq_len, flow_order, qseq, qseq_len);
+  tmap_sam2fs_aux_flow_convert(f_qseq, qseq, qseq_len, flow_order, flow_order_len, NULL, 0);
+  tmap_sam2fs_aux_flow_convert(f_tseq, tseq, tseq_len, flow_order, flow_order_len, qseq, qseq_len);
 
   // flow order
   /*
-  for(i=0;i<4;i++) {
+  for(i=0;i<flow_order_len;i++) {
       fputc("ACGT"[flow_order[i]], stderr);
   }
   fputc('\n', stderr);
@@ -298,39 +298,39 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
   // init start cells
   dp[0][0].match_score = 0; // global
   for(i=k=1,gap_sum_i=TMAP_SAM2FS_AUX_GAP;i<=f_qseq->l;i++) {
-      if(4 < i) gap_sum_i -= f_qseq->flow[i-5]; // substract off
+      if(flow_order_len < i) gap_sum_i -= f_qseq->flow[i-flow_order_len-1]; // substract off
       gap_sum_i += f_qseq->flow[i-1]; // add current flow
       dp[i][0].ins_score = 0 - gap_sum_i;
       //dp[i][0].ins_score = 0 - TMAP_SAM2FS_AUX_GAP_O - (k-1)*TMAP_SAM2FS_AUX_GAP_E;
       dp[i][0].ins_from = ((k==1) ? TMAP_SAM2FS_AUX_FROM_M : TMAP_SAM2FS_AUX_FROM_I);
-      if(0 == (i%4)) {
+      if(0 == (i%flow_order_len)) {
           k++;
       }
   }
   for(j=k=1,gap_sum_j=TMAP_SAM2FS_AUX_GAP;j<=f_tseq->l;j++) {
-      if(4 < j) gap_sum_j -= f_tseq->flow[j-5]; // subtract off
+      if(flow_order_len < j) gap_sum_j -= f_tseq->flow[j-flow_order_len-1]; // subtract off
       gap_sum_j += f_tseq->flow[j-1];
       dp[0][j].del_score = 0 - gap_sum_j;
       //dp[0][j].del_score = 0 - TMAP_SAM2FS_AUX_GAP_O - (k-1)*TMAP_SAM2FS_AUX_GAP_E;
       dp[0][j].del_from = ((1 == k) ? TMAP_SAM2FS_AUX_FROM_M : TMAP_SAM2FS_AUX_FROM_D);
-      if(0 == (j%4)) {
+      if(0 == (j%flow_order_len)) {
           k++;
       }
   }
   // align
   gap_sum_i = gap_sum_j = TMAP_SAM2FS_AUX_GAP;
   for(i=1;i<=f_qseq->l;i++) { // query
-      int32_t i_from = ((i<4) ? 0 : (i-4)); // don't go before the first row
+      int32_t i_from = ((i<flow_order_len) ? 0 : (i-flow_order_len)); // don't go before the first row
 
-      if(4 < i) gap_sum_i -= f_qseq->flow[i-5]; // substract off
+      if(flow_order_len < i) gap_sum_i -= f_qseq->flow[i-flow_order_len-1]; // substract off
       gap_sum_i += f_qseq->flow[i-1]; // add current flow
 
       gap_sum_j = TMAP_SAM2FS_AUX_GAP;
       for(j=1;j<=f_tseq->l;j++) { // target
-          int32_t j_from = ((j<4) ? 0 : (j-4)); // don't go before the first column
+          int32_t j_from = ((j<flow_order_len) ? 0 : (j-flow_order_len)); // don't go before the first column
 
           // gap sum
-          if(4 < j) gap_sum_j -= f_tseq->flow[j-5]; // subtract off
+          if(flow_order_len < j) gap_sum_j -= f_tseq->flow[j-flow_order_len-1]; // subtract off
           gap_sum_j += f_tseq->flow[j-1];
 
           // horizontal
@@ -413,7 +413,7 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
 
   /*
   // last four flows in the last row
-  for(k=0;k<4;k++) {
+  for(k=0;k<flow_order_len;k++) {
   i = f_qseq->l - k;
   if(i <= 0) {
   break;
@@ -438,7 +438,7 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
   }
   }
   // last col, last four flow
-  for(k=0;k<4;k++) {
+  for(k=0;k<flow_order_len;k++) {
   j = f_tseq->l - k;
   if(j <= 0) {
   break;
@@ -516,7 +516,7 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
           break;
         case TMAP_SAM2FS_AUX_FROM_I:
           next_ctype = dp[i][j].ins_from;
-          for(k=0;k<4;k++) {
+          for(k=0;k<flow_order_len;k++) {
               if(i <= 0) break;
               tmap_sam2fs_aux_aln_add(aln, f_qseq->flow[i-1], -1);
               i--;
@@ -524,7 +524,7 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
           break;
         case TMAP_SAM2FS_AUX_FROM_D:
           next_ctype = dp[i][j].del_from;
-          for(k=0;k<4;k++) {
+          for(k=0;k<flow_order_len;k++) {
               if(j <= 0) break;
               tmap_sam2fs_aux_aln_add(aln, -1, f_tseq->flow[j-1]);
               j--;
@@ -595,8 +595,8 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
       }
       for(i=0;i<2;i++) {
           uint8_t tmp = flow_order[i];
-          flow_order[i] = flow_order[4-i-1];
-          flow_order[4-i-1] = tmp;
+          flow_order[i] = flow_order[flow_order_len-i-1];
+          flow_order[flow_order_len-i-1] = tmp;
       }
   }
 

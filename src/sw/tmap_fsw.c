@@ -349,7 +349,7 @@ tmap_fsw_sub_core(uint8_t *seq, int32_t len,
 }
 
 static void
-tmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram,
+tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uint8_t *base_calls, uint16_t *flowgram,
                   int32_t key_index, int32_t key_bases,
                   tmap_fsw_dpcell_t **dpcell, tmap_fsw_dpscore_t **dpscore,
                   tmap_fsw_dpcell_t **sub_dpcell,
@@ -474,7 +474,7 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *fl
           // solve the sub-problem and get the path
           if(j - col_offset < 0) tmap_error("bug encountered", Exit, OutOfRange);
           tmap_fsw_sub_core(seq, j,
-                            flow[(i-1) & 3], base_call, flowgram[i-1], // Note: %4 is the same as &3
+                            flow_order[(i-1) & flow_order_len], base_call, flowgram[i-1], 
                             &ap_tmp,
                             sub_dpcell, sub_dpscore,
                             dpcell[i-1], dpscore[i-1],
@@ -493,7 +493,6 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow, uint8_t *base_calls, uint16_t *fl
               (*p) = sub_path[l]; // store p->j and p->ctype
               p->i = i - 1; // same flow index
               k = p->j; // for base_call_diff < 0
-
 
               if(0 < base_call_diff // there are bases left that were inserted
                  && TMAP_FSW_FROM_M == sub_path[l].ctype) { // delete a "match"
@@ -628,9 +627,9 @@ tmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
       // fill in the columns
       //fprintf(stderr, "i=%d num_flows=%d\n", i, flowseq->num_flows);
       tmap_fsw_sub_core(seq, len,
-                        flowseq->flow[(i-1) & 3], 
+                        flowseq->flow_order[(i-1) & flowseq->flow_order_len], 
                         flowseq->base_calls[i-1], 
-                        flowseq->flowgram[i-1], // Note: %4 is the same as &3
+                        flowseq->flowgram[i-1], 
                         ap,
                         sub_dpcell, sub_dpscore,
                         dpcell[i-1], dpscore[i-1],
@@ -723,7 +722,7 @@ tmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
   }
   else {
       // recover the path
-      tmap_fsw_get_path(seq, flowseq->flow, flowseq->base_calls, flowseq->flowgram,
+      tmap_fsw_get_path(seq, flowseq->flow_order, flowseq->flow_order_len, flowseq->base_calls, flowseq->flowgram,
                         flowseq->key_index, flowseq->key_bases,
                         dpcell, dpscore, 
                         sub_dpcell, sub_dpscore, 
@@ -752,14 +751,15 @@ tmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
 }
 
 tmap_fsw_flowseq_t *
-tmap_fsw_flowseq_init(uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram,
+tmap_fsw_flowseq_init(uint8_t *flow_order, int32_t flow_order_len, uint8_t *base_calls, uint16_t *flowgram,
                                           int32_t num_flows, int32_t key_index, int32_t key_bases)
 {
   tmap_fsw_flowseq_t *flowseq;
 
   flowseq = tmap_calloc(1, sizeof(tmap_fsw_flowseq_t), "flowseq");
 
-  flowseq->flow = flow;
+  flowseq->flow_order = flow_order;
+  flowseq->flow_order_len = flow_order_len;
   flowseq->base_calls = base_calls;
   flowseq->flowgram = flowgram;
   flowseq->num_flows = num_flows;
@@ -1026,7 +1026,7 @@ tmap_fsw_right_justify(char *ref, char *read, char *aln, int32_t len)
 
 void
 tmap_fsw_get_aln(tmap_fsw_path_t *path, int32_t path_len,
-                 uint8_t *flow, uint8_t *target, uint8_t strand,
+                 uint8_t *flow_order, int32_t flow_order_len, uint8_t *target, uint8_t strand,
                  char **ref, char **read, char **aln, int32_t j_type)
 {
   int32_t i, j;
@@ -1052,7 +1052,7 @@ tmap_fsw_get_aln(tmap_fsw_path_t *path, int32_t path_len,
   for(i=path_len-1,j=0;0<=i;i--,j++) {
       switch(path[i].ctype) {
         case TMAP_FSW_FROM_M:
-          if(flow[path[i].i & 3] == target[path[i].j]) {
+          if(flow_order[path[i].i & flow_order_len] == target[path[i].j]) {
               (*aln)[j] = '|';
           }
           else { 
@@ -1078,7 +1078,7 @@ tmap_fsw_get_aln(tmap_fsw_path_t *path, int32_t path_len,
       if(TMAP_FSW_FROM_M == path[i].ctype 
          || TMAP_FSW_FROM_I == path[i].ctype
          || TMAP_FSW_FROM_HP_MINUS == path[i].ctype) {
-          (*read)[j] = "ACGTN"[flow[path[i].i & 3]];
+          (*read)[j] = "ACGTN"[flow_order[path[i].i & flow_order_len]];
       }
       else {
           (*read)[j] = '-';
@@ -1109,11 +1109,11 @@ tmap_fsw_get_aln(tmap_fsw_path_t *path, int32_t path_len,
 
 void 
 tmap_fsw_print_aln(tmap_file_t *fp, int64_t score, tmap_fsw_path_t *path, int32_t path_len,
-                   uint8_t *flow, uint8_t *target, uint8_t strand, int32_t j_type)
+                   uint8_t *flow_order, int32_t flow_order_len, uint8_t *target, uint8_t strand, int32_t j_type)
 {
   char *ref=NULL, *read=NULL, *aln=NULL;
 
-  tmap_fsw_get_aln(path, path_len, flow, target, strand, &ref, &read, &aln, j_type);
+  tmap_fsw_get_aln(path, path_len, flow_order, flow_order_len, target, strand, &ref, &read, &aln, j_type);
 
   tmap_file_fprintf(fp, "%lld\t%s\t%s\t%s",
                     (long long int)score, read, aln, ref);
@@ -1128,9 +1128,9 @@ tmap_fsw_sff_to_flowseq(tmap_sff_t *sff)
 {
   int32_t was_int;
   int32_t i, j, l;
-  uint8_t *flow, *base_calls;
+  uint8_t *flow_order, *base_calls;
   uint16_t *flowgram;
-  int32_t num_flows, key_index, key_bases;
+  int32_t flow_order_len, num_flows, key_index, key_bases;
 
   // convert bases to integers
   was_int = sff->is_int;
@@ -1175,10 +1175,11 @@ tmap_fsw_sff_to_flowseq(tmap_sff_t *sff)
   }
 
   // get the flow
-  flow = tmap_malloc(sizeof(uint8_t) * 4, "flow");
-  for(i=0;i<4;i++) {
+  flow_order_len = sff->gheader->flow->l;
+  flow_order = tmap_malloc(sizeof(uint8_t) * flow_order_len, "flow");
+  for(i=0;i<flow_order_len;i++) {
       // offset it by the start flow
-      flow[i] = tmap_nt_char_to_int[(int)sff->gheader->flow->s[(i + l) & 3]];
+      flow_order[i] = tmap_nt_char_to_int[(int)sff->gheader->flow->s[(i + l) % flow_order_len]];
   }
 
   // get the number of bases called per flow
@@ -1191,7 +1192,7 @@ tmap_fsw_sff_to_flowseq(tmap_sff_t *sff)
   while(i<sff->read->bases->l) {
       // skip to the correct flow
       while(j < num_flows 
-            && flow[j & 3] != sff->read->bases->s[i]) {
+            && flow_order[j % flow_order_len] != sff->read->bases->s[i]) {
           j++;
       }
 
@@ -1215,11 +1216,10 @@ tmap_fsw_sff_to_flowseq(tmap_sff_t *sff)
       }
       // get the number of bases called in this flow 
       while(i < sff->read->bases->l
-            && flow[j&3] == sff->read->bases->s[i]) {
+            && flow_order[j % flow_order_len] == sff->read->bases->s[i]) {
           base_calls[j]++;
           i++;
       }
-      //fprintf(stderr, "i=%d j=%d base_calls[j]=%d %c\n", i, j, base_calls[j], "ACGT"[flow[j&3]]);
       if(0 == base_calls[j]) {
           tmap_error("bug encountered", Exit, OutOfRange);
       }
@@ -1237,7 +1237,7 @@ tmap_fsw_sff_to_flowseq(tmap_sff_t *sff)
       tmap_sff_to_char(sff);
   }
 
-  return tmap_fsw_flowseq_init(flow, base_calls, flowgram, num_flows, key_index, key_bases);
+  return tmap_fsw_flowseq_init(flow_order, flow_order_len, base_calls, flowgram, num_flows, key_index, key_bases);
 }
 
 void
@@ -1246,11 +1246,11 @@ tmap_fsw_flowseq_reverse_compliment(tmap_fsw_flowseq_t *flowseq)
   int32_t i;
 
   // reverse compliment the flow order
-  for(i=0;i<2;i++) {
+  for(i=0;i<flowseq->flow_order_len>>1;i++) {
       uint8_t c;
-      c = flowseq->flow[i];
-      flowseq->flow[i] = 3 - flowseq->flow[3-i];
-      flowseq->flow[3-i] = 3 - c;
+      c = flowseq->flow_order[i];
+      flowseq->flow_order[i] = 3 - flowseq->flow_order[flowseq->flow_order_len-i-1];
+      flowseq->flow_order[flowseq->flow_order_len-i-1] = 3 - c;
   }
 
   // reverse the base_calls and flowgram
@@ -1274,7 +1274,7 @@ tmap_fsw_flowseq_reverse_compliment(tmap_fsw_flowseq_t *flowseq)
 }
 
 typedef struct {
-    char *flow;
+    char *flow_order;
     char *base_calls;
     char *flowgram;
     int32_t num_flows;
@@ -1290,7 +1290,7 @@ tmap_fsw_main_opt_init()
   tmap_fsw_main_opt_t *opt = NULL;
   opt = tmap_calloc(1, sizeof(tmap_fsw_main_opt_t), "opt");
 
-  opt->flow = tmap_strdup("TAGC");
+  opt->flow_order = tmap_strdup("TAGC");
   opt->base_calls = NULL;
   opt->flowgram = NULL;
   opt->target = NULL;
@@ -1313,7 +1313,7 @@ tmap_fsw_main_opt_init()
 static void
 tmap_fsw_main_opt_destroy(tmap_fsw_main_opt_t *opt)
 {
-  free(opt->flow);
+  free(opt->flow_order);
   free(opt->base_calls);
   free(opt->flowgram);
   free(opt->target);
@@ -1395,16 +1395,17 @@ tmap_fsw_main_get_flowgram(char *flowgram, int32_t *num_flows)
 }
 
 uint8_t *
-tmap_fsw_main_get_base_calls(char *optarg, int32_t num_flows, char *flow)
+tmap_fsw_main_get_base_calls(char *optarg, int32_t num_flows, char *flow_order)
 {
   int32_t i, j, k;
   uint8_t *base_calls = NULL;
+  int32_t flow_order_len = strlen(flow_order);
 
   base_calls = tmap_calloc(num_flows, sizeof(uint8_t), "base_calls");
 
   for(i=j=0;i<strlen(optarg);i++) {
       k=0;
-      while(toupper(flow[j & 3]) != toupper(optarg[i])) {
+      while(toupper(flow_order[j % flow_order_len]) != toupper(optarg[i])) {
           j++; k++;
           if(3 < k) tmap_error("could not understand the base", Exit, OutOfRange);
       }
@@ -1434,8 +1435,8 @@ usage(tmap_fsw_main_opt_t *opt)
                     opt->target);
   tmap_file_fprintf(tmap_file_stderr, "\n");
   tmap_file_fprintf(tmap_file_stderr, "Options (optional):\n");
-  tmap_file_fprintf(tmap_file_stderr, "         -k STRING   the flow order ([ACGT]{4}) [%s]\n",
-                    opt->flow);
+  tmap_file_fprintf(tmap_file_stderr, "         -k STRING   the flow order ([ACGT]+) [%s]\n",
+                    opt->flow_order);
   tmap_file_fprintf(tmap_file_stderr, "         -F INT      flow penalty [%d]\n", opt->param.fscore);
   tmap_file_fprintf(tmap_file_stderr, "         -o INT      search for homopolymer errors +- offset [%d]\n", opt->param.offset);
   tmap_file_fprintf(tmap_file_stderr, "         -l INT      indel justification type: 0 - none, 1 - 5' strand of the reference, 2 - 5' strand of the read [%d]\n", opt->j_type);
@@ -1455,7 +1456,8 @@ int tmap_fsw_main(int argc, char *argv[])
   int32_t num_flows = 0;
   uint16_t *flowgram = NULL;
   uint8_t *base_calls = NULL;
-  uint8_t flow[5];
+  uint8_t *flow_order=NULL;
+  int32_t flow_order_len;
   tmap_fsw_flowseq_t *flowseq = NULL;
 
   opt = tmap_fsw_main_opt_init();
@@ -1469,8 +1471,8 @@ int tmap_fsw_main(int argc, char *argv[])
         case 't':
           opt->target = tmap_strdup(optarg); opt->target_length = strlen(opt->target); break;
         case 'k':
-          free(opt->flow);
-          opt->flow = tmap_strdup(optarg); break;
+          free(opt->flow_order);
+          opt->flow_order = tmap_strdup(optarg); break;
         case 'F':
           opt->param.fscore = 100*atoi(optarg); break;
         case 'o':
@@ -1498,7 +1500,7 @@ int tmap_fsw_main(int argc, char *argv[])
       if(NULL == opt->target) {
           tmap_error("option -t must be specified", Exit, CommandLineArgument);
       }
-      if(NULL == opt->flow) {
+      if(NULL == opt->flow_order) {
           tmap_error("option -k must be specified", Exit, CommandLineArgument);
       }
       tmap_error_cmd_check_int(opt->param.fscore, 0, INT32_MAX, "-F");
@@ -1510,20 +1512,22 @@ int tmap_fsw_main(int argc, char *argv[])
   flowgram = tmap_fsw_main_get_flowgram(opt->flowgram, &num_flows); 
 
   // get the flow base calls
-  base_calls = tmap_fsw_main_get_base_calls(opt->base_calls, num_flows, opt->flow);
+  base_calls = tmap_fsw_main_get_base_calls(opt->base_calls, num_flows, opt->flow_order);
 
   // convert the target to 2-bit format 
   for(i=0;i<opt->target_length;i++) {
       opt->target[i] = tmap_nt_char_to_int[(int)opt->target[i]];
   }
 
-  for(i=0;i<4;i++) {
-      flow[i] = tmap_nt_char_to_int[(int)opt->flow[i]];
+  flow_order_len = strlen(opt->flow_order);
+  flow_order = tmap_malloc(sizeof(uint8_t) * flow_order_len, "flow_order"); 
+  for(i=0;i<flow_order_len;i++) {
+      flow_order[i] = tmap_nt_char_to_int[(int)opt->flow_order[i]];
   }
 
   path = tmap_malloc(sizeof(tmap_fsw_path_t)*TMAP_FSW_MAX_PATH_LENGTH(opt->target_length, num_flows, opt->param.offset), "path");
 
-  flowseq = tmap_fsw_flowseq_init(flow, base_calls, flowgram, num_flows, -1, -1);
+  flowseq = tmap_fsw_flowseq_init(flow_order, flow_order_len, base_calls, flowgram, num_flows, -1, -1);
 
   // align
   int64_t score = tmap_fsw_global_core((uint8_t*)opt->target, opt->target_length,
@@ -1535,7 +1539,7 @@ int tmap_fsw_main(int argc, char *argv[])
 
   // print
   tmap_fsw_print_aln(tmap_file_stdout, score, path, path_len,
-                     flow, (uint8_t*)opt->target, 0, opt->j_type);
+                     flow_order, flow_order_len, (uint8_t*)opt->target, 0, opt->j_type);
   tmap_file_fprintf(tmap_file_stdout, "\n");
 
   tmap_file_fclose(tmap_file_stdout);
@@ -1545,6 +1549,7 @@ int tmap_fsw_main(int argc, char *argv[])
   free(flowgram);
   free(base_calls);
   free(path);
+  free(flow_order);
   tmap_fsw_flowseq_destroy(flowseq);
 
   return 0;

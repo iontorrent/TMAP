@@ -98,7 +98,8 @@ typedef struct {
 } tmap_fsw_path_t;
 
 typedef struct {
-    uint8_t *flow; /*!< for each of the four flows, the 2-bit DNA base flowed */
+    uint8_t *flow_order; /*!< for each of the four flows, the 2-bit DNA base flowed */
+    int32_t flow_order_len; /*!< the flow order length */
     uint8_t *base_calls; /*!< for each flow, the number of bases called [0-255] */
     uint16_t *flowgram; /*!< for each flow, the flowgram signal (100*signal)  */
     int32_t num_flows; /*!< the number of flows */
@@ -117,7 +118,7 @@ typedef struct {
   @return             pointer to the initialized memory
   */
 tmap_fsw_flowseq_t *
-tmap_fsw_flowseq_init(uint8_t *flow, uint8_t *base_calls, uint16_t *flowgram,
+tmap_fsw_flowseq_init(uint8_t *flow_order, int32_t flow_order_len, uint8_t *base_calls, uint16_t *flowgram,
                       int32_t num_flows, int32_t key_index, int32_t key_bases);
 
 /*!
@@ -266,35 +267,37 @@ tmap_fsw_path2cigar(const tmap_fsw_path_t *path, int32_t path_len, int32_t *n_ci
 
 /*!
   Gets the pretty-print alignment
-  @param  path      the alignment path
-  @param  path_len  the alignment path length
-  @param  flow       for each of the four flows, the 2-bit DNA base flowed
-  @param  target    the 2-bit DNA reference sequence 
-  @param  strand    0 for the forward strand, 1 for the reverse
-  @param  ref       pointer to the returned reference string
-  @param  read      pointer to the returned read string
-  @param  aln       pointer to the returned alignment string
-  @param  j_type    the indel justification method 
+  @param  path           the alignment path
+  @param  path_len       the alignment path length
+  @param  flow_order      the flow order
+  @param  flow_order_len  the flow order length
+  @param  target         the 2-bit DNA reference sequence 
+  @param  strand         0 for the forward strand, 1 for the reverse
+  @param  ref            pointer to the returned reference string
+  @param  read           pointer to the returned read string
+  @param  aln            pointer to the returned alignment string
+  @param  j_type         the indel justification method 
   */
 void
 tmap_fsw_get_aln(tmap_fsw_path_t *path, int32_t path_len,
-                 uint8_t *flow, uint8_t *target, uint8_t strand,
+                 uint8_t *flow_order, int32_t flow_order_len, uint8_t *target, uint8_t strand,
                  char **ref, char **read, char **aln, int32_t j_type);
 
 /*!
   Pretty-prints an alignment
-  @param  fp        the file pointer to print
-  @param  score     the flow space alignment score
-  @param  path      the alignment path
-  @param  path_len  the alignment path length
-  @param  flow       for each of the four flows, the 2-bit DNA base flowed
-  @param  target    the 2-bit DNA reference sequence 
-  @param  strand    0 for the forward strand, 1 for the reverse
-  @param  j_type    the indel justification method 
+  @param  fp             the file pointer to print
+  @param  score          the flow space alignment score
+  @param  path           the alignment path
+  @param  path_len       the alignment path length
+  @param  flow_order      the flow order
+  @param  flow_order_len  the flow order length
+  @param  target         the 2-bit DNA reference sequence 
+  @param  strand         0 for the forward strand, 1 for the reverse
+  @param  j_type         the indel justification method 
   */
 void 
 tmap_fsw_print_aln(tmap_file_t *fp, int64_t score, tmap_fsw_path_t *path, int32_t path_len,
-                   uint8_t *flow, uint8_t *target, uint8_t strand, int32_t j_type);
+                   uint8_t *flow_order, int32_t flow_order_len, uint8_t *target, uint8_t strand, int32_t j_type);
 
 /*!
   Create a structure for flow-space Smith Waterman from an SFF structure

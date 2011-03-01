@@ -21,6 +21,8 @@
 #include "../util/tmap_sam.h"
 #include "../io/tmap_file.h"
 #include "../sw/tmap_fsw.h"
+#include "../sw/tmap_sw.h"
+#include "../map/tmap_map_util.h"
 #include "tmap_sam2fs_aux.h"
 #include "tmap_sam2fs.h"
 
@@ -216,7 +218,7 @@ tmap_sam2fs_copy_to_sam(bam1_t *bam_old, tmap_fsw_path_t *path, int32_t path_len
 
 bam1_t *
 tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_offset, 
-                int32_t aln_global, int32_t output_type, int32_t j_type)
+                int32_t softclip_type, int32_t output_type, int32_t j_type)
 {
   int32_t i, j, k, l;
 
@@ -233,7 +235,8 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
   int32_t read_bases_len = 0, read_bases_mem = 256;
   char *ref_bases = NULL;
   int32_t ref_bases_len = 0, ref_bases_mem = 64;
-  uint8_t flow_order_tmp[4];
+  uint8_t *flow_order_tmp = NULL;
+  int32_t flow_order_len = 0;
 
   int32_t soft_clip_start=0, soft_clip_end=0;
 
@@ -405,7 +408,9 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
   for(i=0;i<ref_bases_len;i++) {
       ref_bases[i] = tmap_nt_char_to_int[(int)ref_bases[i]];
   }
-  for(i=0;i<4;i++) {
+  flow_order_len = strlen(flow_order);
+  flow_order_tmp = tmap_malloc(sizeof(uint8_t) * flow_order_len, "flow_order_tmp");
+  for(i=0;i<flow_order_len;i++) {
       flow_order_tmp[i] = tmap_nt_char_to_int[(int)flow_order[i]];
   }
 
@@ -414,7 +419,7 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
   for(i=j=0;i<read_bases_len;i++) {
       while(flow_order_tmp[j] != read_bases[i]) {
           flow_len++;
-          j = (1+j) & 3;
+          j = (1+j) % flow_order_len;
       }
   }
   flow_len++; // the last flow
@@ -423,7 +428,7 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
   flowgram = tmap_calloc(flow_len, sizeof(uint16_t), "base_calls");
   // copy the # of flows
   for(i=j=0;i<flow_len;i++) {
-      if(flow_order_tmp[i&3] == read_bases[j]) {
+      if(flow_order_tmp[i % flow_order_len] == read_bases[j]) {
           k=j;
           while(j < read_bases_len 
                 && read_bases[j] == read_bases[k]) {
@@ -442,8 +447,9 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
   path = tmap_calloc(TMAP_FSW_MAX_PATH_LENGTH(ref_bases_len, flow_len, param.offset), sizeof(tmap_fsw_path_t), "path"); 
 
   // re-align 
-  flowseq = tmap_fsw_flowseq_init(flow_order_tmp, base_calls, flowgram, flow_len, -1, 0);
-  if(1 == aln_global) {
+  flowseq = tmap_fsw_flowseq_init(flow_order_tmp, flow_order_len, base_calls, flowgram, flow_len, -1, 0);
+  // TODO
+  if(1 == softclip_type) {
       score = tmap_fsw_global_core((uint8_t*)ref_bases, ref_bases_len,
                                    flowseq,
                                    &param, path, &path_len);
@@ -470,7 +476,7 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
       if(j < 0) j = 0;
 
       tmap_file_fprintf(tmap_file_stdout, "%s\t%c\t", bam1_qname(bam), (1==strand) ? '-' : '+');
-      tmap_fsw_print_aln(tmap_file_stdout, score, path, path_len, flow_order_tmp, 
+      tmap_fsw_print_aln(tmap_file_stdout, score, path, path_len, flow_order_tmp, flow_order_len, 
                          (uint8_t*)ref_bases,
                          strand,
                          j_type);
@@ -481,13 +487,14 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
                                  (uint8_t*)(ref_bases + j),
                                  i - j + 1, 
                                  flow_order_tmp,
+                                 flow_order_len,
                                  strand);
       tmap_file_fprintf(tmap_file_stdout, "\n");
       break;
     case TMAP_SAM2FS_OUTPUT_SAM:
       bam = tmap_sam2fs_copy_to_sam(bam, path, path_len, score, soft_clip_start, soft_clip_end, strand);
 
-      tmap_fsw_get_aln(path, path_len, flow_order_tmp, (uint8_t*)ref_bases, 
+      tmap_fsw_get_aln(path, path_len, flow_order_tmp, flow_order_len, (uint8_t*)ref_bases, 
                        strand,
                        &ref, &read, &aln, j_type);
 
@@ -510,6 +517,7 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
   free(flowgram);
   free(read_bases);
   free(ref_bases);
+  free(flow_order_tmp);
 
   return bam;
 }
@@ -542,7 +550,7 @@ tmap_sam2fs_aux_worker(bam1_t **bams, int32_t buffer_length, tmap_sam2fs_opt_t *
 #endif
       while(low < high) {
           bams[low] = tmap_sam2fs_aux(bams[low], opt->flow_order, opt->flow_score, opt->flow_offset, 
-                                      opt->aln_global, opt->output_type, opt->j_type);
+                                      opt->softclip_type, opt->output_type, opt->j_type);
           low++;
       }
   }
@@ -570,7 +578,11 @@ usage(tmap_sam2fs_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "         -o INT      search for homopolymer errors +- offset during re-alignment [%d]\n",
                     opt->flow_offset);
   tmap_file_fprintf(tmap_file_stderr, "         -S          the input is a SAM file\n");
-  tmap_file_fprintf(tmap_file_stderr, "         -g          run global alignment (otherwise read fitting) [%d]\n", opt->aln_global);
+  tmap_file_fprintf(tmap_file_stderr, "         -g          the soft-clipping type [%d]\n", opt->softclip_type);
+  tmap_file_fprintf(tmap_file_stderr, "                             0 - allow on the right and left portions of the read\n");
+  tmap_file_fprintf(tmap_file_stderr, "                             1 - allow on the left portion of the read\n");
+  tmap_file_fprintf(tmap_file_stderr, "                             2 - allow on the right portion of the read\n");
+  tmap_file_fprintf(tmap_file_stderr, "                             3 - do not allow soft-clipping\n");
   tmap_file_fprintf(tmap_file_stderr, "         -O          the output type: 0-alignment 1-SAM 2-BAM [%d]\n", opt->output_type);
   tmap_file_fprintf(tmap_file_stderr, "         -l INT      indel justification type: 0 - none, 1 - 5' strand of the reference, 2 - 5' strand of the read [%d]\n", opt->j_type);
   tmap_file_fprintf(tmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
@@ -705,7 +717,7 @@ tmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, tmap_sam2fs_opt_
       while(0 < samread(fp_in, b)) { 
           // process 
           b = tmap_sam2fs_aux(b, opt->flow_order, opt->flow_score, opt->flow_offset, 
-                              opt->aln_global, opt->output_type, opt->j_type);
+                              opt->softclip_type, opt->output_type, opt->j_type);
           // write to SAM/BAM if necessary
           if(TMAP_SAM2FS_OUTPUT_SAM == opt->output_type
              || TMAP_SAM2FS_OUTPUT_BAM == opt->output_type) {
@@ -744,7 +756,7 @@ tmap_sam2fs_opt_init()
   opt->flow_order = tmap_strdup("TACG");
   opt->flow_score = 26; 
   opt->flow_offset = 1;
-  opt->aln_global = 0;
+  opt->softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_ALL;
   opt->output_type = TMAP_SAM2FS_OUTPUT_ALN;
   opt->j_type = TMAP_FSW_NO_JUSTIFY;
   opt->reads_queue_size = 65536; 
@@ -770,7 +782,7 @@ tmap_sam2fs_main(int argc, char *argv[])
 
   opt = tmap_sam2fs_opt_init();
 
-  while((c = getopt(argc, argv, "f:F:o:SgO:l:q:n:vh")) >= 0) {
+  while((c = getopt(argc, argv, "f:F:o:Sg:O:l:q:n:vh")) >= 0) {
       switch(c) {
         case 'f':
           strncpy(opt->flow_order, optarg, 4); break;
@@ -781,7 +793,7 @@ tmap_sam2fs_main(int argc, char *argv[])
         case 'S':
           strcpy(sam_open_flags, "r"); break;
         case 'g':
-          opt->aln_global = 1; break;
+          opt->softclip_type = atoi(optarg); break;
         case 'O':
           opt->output_type = atoi(optarg); break;
         case 'l':
