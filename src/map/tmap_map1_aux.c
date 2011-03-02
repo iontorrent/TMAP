@@ -238,20 +238,23 @@ tmap_map1_aux_stack_size(tmap_map1_aux_stack_t *stack)
 }
 
 static inline void 
-tmap_map1_aux_stack_shadow(int32_t x, int32_t len, uint32_t max, 
+tmap_map1_aux_stack_shadow(uint32_t x, int32_t len, uint32_t max, 
                            int32_t last_diff_offset, tmap_bwt_match_width_t *w)
 {
   int32_t i, j;
-  //fprintf(stderr, "%s x=%d len=%d max=%d last_diff_pos=%d\n", __func__, x, len, max, last_diff_offset);
-  for(i=len-1,j=0;len-last_diff_offset-1<i;i--) {
-      //fprintf(stderr, "i=%d j=%d w[i].w=%d x=%d\n", i, j, w[i].w, x);
+  /*
+  fprintf(stderr, "%s x=%d len=%d max=%llu last_diff_pos=%d len-1-last_diff_offset=%d\n", 
+          __func__, x, len, (long long unsigned int)max, last_diff_offset, len-1-last_diff_offset);
+          */
+  //for(i=len-1,j=0;len-1-last_diff_offset<i;i--) {
+  for(i=len-1,j=0;last_diff_offset<i;i--) {
+      //fprintf(stderr, "i=%d j=%d w[i].w=%u x=%d\n", i, j, w[i].w, x);
       if(x < w[i].w) { 
           w[i].w -= x;
       }
       else if(x == w[i].w) {
           w[i].bid = 1;
-          j++;
-          w[i].w = max - j;
+          w[i].w = max - (++j);
       }
       else {
           tmap_error("else happened", Exit, OutOfRange);
@@ -627,7 +630,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
               }
 
               // TODO: use the shadow ?
-              //tmap_map1_aux_stack_shadow(l - k + 1, len, bwt[1-strand]->seq_len, e->last_diff_offset, width_cur);
+              tmap_map1_aux_stack_shadow(l - k + 1, len, bwt[1-strand]->seq_len, e->last_diff_offset, width_cur);
           }
       }
       else {
