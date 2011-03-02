@@ -384,7 +384,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
               }
           }
           // get the end of the target range
-          ref_end = hits[i][end].pos + seq_len[i] + bw - 1;
+          ref_end = hits[i][end].pos + seq_len[i] + bw;
           if(refseq->annos[hits[i][end].seqid].len < ref_end) {
               // this assumes that the seed matched correctly (do not run
               // off the end)
