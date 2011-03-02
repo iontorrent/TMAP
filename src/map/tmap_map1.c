@@ -156,7 +156,7 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
           tmap_seq_remove_key_sequence(seq[0]);
           tmap_seq_remove_key_sequence(seq[1]);
 
-          // reverse 
+          // compliment
           tmap_seq_compliment(seq[1]);
 
           // convert to integers
