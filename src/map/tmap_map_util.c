@@ -72,7 +72,7 @@ tmap_map_opt_init(int32_t algo_id)
       opt->seed_length = 32; // move this to a define block
       opt->seed_max_mm = 3; // move this to a define block
       opt->seed2_length = 64; // move this to a define block
-      opt->max_mm = 2; opt->max_mm_frac = -1.;
+      opt->max_mm = 3; opt->max_mm_frac = -1.;
       opt->max_gapo = 1; opt->max_gapo_frac = -1.;
       opt->max_gape = 6; opt->max_gape_frac = -1.;
       opt->max_cals_del = 10; // TODO: move this to a define block
