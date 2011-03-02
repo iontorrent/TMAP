@@ -29,13 +29,15 @@
       _query[_ql-_i-1] = _tmp; \
   }
 
+
+/*
 static int 
 tmap_map1_aux_stack_cmp(void *a, void *b)
 {
   tmap_map1_aux_stack_entry_t *x = (tmap_map1_aux_stack_entry_t*)a;
   tmap_map1_aux_stack_entry_t *y = (tmap_map1_aux_stack_entry_t*)b;
 
-  /* sort by score, then offset */
+  // sort by score, then offset 
   if(x->score < y->score 
      || (x->score == y->score && x->offset > y->offset)) {
       return -1;
@@ -47,6 +49,7 @@ tmap_map1_aux_stack_cmp(void *a, void *b)
       return 1;
   }
 }
+*/
 
 tmap_map1_aux_stack_t *
 tmap_map1_aux_stack_init()
@@ -54,13 +57,17 @@ tmap_map1_aux_stack_init()
   int32_t i;
   tmap_map1_aux_stack_t *stack = NULL;
   stack = tmap_calloc(1, sizeof(tmap_map1_aux_stack_t), "stack");
-  stack->entry_pool_length = 1024; // TODO: move to a define block
+
+  // small memory pool
+  stack->entry_pool_length = 1024; 
   stack->entry_pool = tmap_malloc(stack->entry_pool_length*sizeof(tmap_map1_aux_stack_entry_t*), "stack->entry_pool");
   for(i=0;i<stack->entry_pool_length;i++) {
       stack->entry_pool[i] = tmap_malloc(sizeof(tmap_map1_aux_stack_entry_t), "stack->entry_pool[i]");
   }
-  stack->heap = tmap_fibheap_makeheap(tmap_map1_aux_stack_cmp);
-  //stack->heap = tmap_fibheap_makekeyheap();
+
+  // nullify bins
+  stack->n_bins = 0;
+  stack->bins = NULL;
 
   return stack;
 }
@@ -69,7 +76,10 @@ void
 tmap_map1_aux_stack_destroy(tmap_map1_aux_stack_t *stack)
 {
   int32_t i;
-  tmap_fibheap_deleteheap(stack->heap);
+  for(i=0;i<stack->n_bins;i++) {
+      free(stack->bins[i].entries);
+  }
+  free(stack->bins);
   for(i=0;i<stack->entry_pool_length;i++) {
       free(stack->entry_pool[i]);
   }
@@ -78,15 +88,36 @@ tmap_map1_aux_stack_destroy(tmap_map1_aux_stack_t *stack)
 }
 
 static void
-tmap_map1_aux_stack_reset(tmap_map1_aux_stack_t *stack)
+tmap_map1_aux_stack_reset(tmap_map1_aux_stack_t *stack,
+                          int32_t max_mm, int32_t max_gapo, int32_t max_gape, 
+                          const tmap_map_opt_t *opt)
 {
-  // reset heap
-  tmap_fibheap_deleteheap(stack->heap);
-  stack->heap = tmap_fibheap_makeheap(tmap_map1_aux_stack_cmp);
-  //stack->heap = tmap_fibheap_makekeyheap();
+  int32_t i, j;
+  int32_t n_bins_needed = 0;
   // move to the beginning of the memory pool
   stack->entry_pool_i = 0;
   stack->best_score = INT32_MAX;
+  // clear the bins 
+  for(i=0;i<stack->n_bins;i++) {
+      for(j=0;j<stack->bins[i].n_entries;j++) {
+          stack->bins[i].entries[j] = NULL;
+      }
+      stack->bins[i].n_entries = 0;
+  }
+  // resize the bins if necessary
+  n_bins_needed = aln_score(max_mm+1, max_gapo+1, max_gape+1, opt);
+  if(stack->n_bins < n_bins_needed) {
+      // realloc
+      tmap_roundup32(n_bins_needed);
+      stack->bins = tmap_realloc(stack->bins, sizeof(tmap_map1_aux_bin_t) * n_bins_needed, "stack->bins"); 
+      // initialize
+      for(i=stack->n_bins;i<n_bins_needed;i++) {
+          stack->bins[i].n_entries = stack->bins[i].m_entries = 0;
+          stack->bins[i].entries = NULL;
+      }
+      stack->n_bins = n_bins_needed;
+  }
+  stack->n_entries = 0;
 }
 
 static inline void
@@ -98,6 +129,7 @@ tmap_map1_aux_stack_push(tmap_map1_aux_stack_t *stack, int32_t strand,
                          tmap_map1_aux_stack_entry_t *prev_entry,
                          const tmap_map_opt_t *opt)
 {
+  int32_t i;
   tmap_map1_aux_stack_entry_t *entry = NULL;
 
   // check to see if we need more memory
@@ -134,27 +166,75 @@ tmap_map1_aux_stack_push(tmap_map1_aux_stack_t *stack, int32_t strand,
 
   if(stack->best_score > entry->score) stack->best_score = entry->score;
 
-  tmap_fibheap_insert(stack->heap, entry);
-  //tmap_fibheap_insertkey(stack->heap, entry->score, entry);
+  if(entry->score < 0) {
+      tmap_error("bug encountered", Exit, OutOfRange);
+  }
+
+  tmap_map1_aux_bin_t *bin;
+  if(stack->n_bins <= entry->score) {
+      tmap_error("bug encountered", Exit, OutOfRange);
+  }
+  bin = &stack->bins[entry->score];
+  if(bin->m_entries <= bin->n_entries) {
+      int32_t m_entries = bin->m_entries;
+      bin->m_entries++;
+      tmap_roundup32(bin->m_entries);
+      bin->entries = tmap_realloc(bin->entries, sizeof(tmap_map1_aux_bin_t) * bin->m_entries, "bin->entries");
+      // initialize
+      for(i=m_entries;i<bin->m_entries;i++) {
+          bin->entries[i] = NULL;
+      }
+  }
+  bin->entries[bin->n_entries] = entry;
+  bin->n_entries++;
 
   stack->entry_pool_i++;
+  stack->n_entries++;
 }
 
 static inline tmap_map1_aux_stack_entry_t *
 tmap_map1_aux_stack_pop(tmap_map1_aux_stack_t *stack)
 {
-  tmap_map1_aux_stack_entry_t *best, *next_best;
+  int32_t i;
+  tmap_map1_aux_bin_t *bin;
+  tmap_map1_aux_stack_entry_t *best = NULL;
 
-  best = tmap_fibheap_extractmin(stack->heap);
-  next_best = tmap_fibheap_min(stack->heap);
-  if(NULL != next_best) {
-      stack->best_score  = next_best->score;
+  if(0 == stack->n_entries) {
+      return NULL;
   }
-  else {
+  
+  // remove from the appropriate bin
+  bin = &stack->bins[stack->best_score];
+  if(0 == bin->n_entries) {
+      tmap_error("bug encountered", Exit, OutOfRange);
+  }
+  best = bin->entries[bin->n_entries-1];
+  bin->entries[bin->n_entries-1] = NULL;
+  bin->n_entries--;
+  stack->n_entries--;
+
+  if(0 == stack->n_entries) {
       stack->best_score = INT32_MAX;
+  }
+  else if(0 == bin->n_entries) { // find the next best
+      for(i=stack->best_score;i<stack->n_bins;i++) {
+          if(0 < stack->bins[i].n_entries) {
+              stack->best_score = i;
+              break;
+          }
+      }
+      if(i == stack->n_bins) {
+          tmap_error("bug encountered", Exit, OutOfRange);
+      }
   }
 
   return best;
+}
+
+static inline int32_t
+tmap_map1_aux_stack_size(tmap_map1_aux_stack_t *stack)
+{
+  return stack->n_entries;
 }
 
 static inline void 
@@ -177,12 +257,6 @@ tmap_map1_aux_stack_shadow(int32_t x, int32_t len, uint32_t max,
           tmap_error("else happened", Exit, OutOfRange);
       }
   }
-}
-
-static inline int32_t
-tmap_map1_aux_stack_size(tmap_map1_aux_stack_t *stack)
-{
-  return stack->heap->tmap_fibheap_n;
 }
 
 static inline int32_t int_log2(uint32_t v)
@@ -410,7 +484,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
   match_sa_start.k = 0;
   match_sa_start.l = bwt[0]->seq_len;
 
-  tmap_map1_aux_stack_reset(stack); // reset stack
+  tmap_map1_aux_stack_reset(stack, max_mm, max_gapo, max_gape, opt); // reset stack
   tmap_map1_aux_stack_push(stack, 0, 0, &match_sa_start, 0, 0, 0, STATE_M, 0, NULL, opt);
   tmap_map1_aux_stack_push(stack, 1, 0, &match_sa_start, 0, 0, 0, STATE_M, 0, NULL, opt);
 

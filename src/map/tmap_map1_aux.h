@@ -25,6 +25,11 @@ typedef struct {
     int32_t prev_i;  /*!< the zero-based index of the previous element (in the alignment) in the memory pool */
 } tmap_map1_aux_stack_entry_t;
 
+typedef struct {
+    int32_t n_entries, m_entries;
+    tmap_map1_aux_stack_entry_t **entries;
+} tmap_map1_aux_bin_t;
+
 /*! 
  Entry stack for searching.
   */
@@ -32,8 +37,10 @@ typedef struct {
     tmap_map1_aux_stack_entry_t **entry_pool;  /*!<  the memory pool of entries */
     int32_t entry_pool_length;  /*!< the memory pool length */ 
     int32_t entry_pool_i;  /*!< the next available entry in the memory pool */
-    tmap_fibheap_t *heap;  /*!< the entry heap for this stack*/
     int32_t best_score;  /*!< the best score for any entry in this stack */
+    int32_t n_bins;
+    tmap_map1_aux_bin_t *bins;
+    int32_t n_entries;
 } tmap_map1_aux_stack_t;
 
 /*
