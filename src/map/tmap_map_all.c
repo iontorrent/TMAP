@@ -40,7 +40,6 @@
 #ifdef HAVE_LIBPTHREAD
 pthread_mutex_t tmap_map_all_read_lock = PTHREAD_MUTEX_INITIALIZER;
 int32_t tmap_map_all_read_lock_low = 0;
-#define TMAP_MAP_ALL_THREAD_BLOCK_SIZE 512
 #endif
 
 static inline void
