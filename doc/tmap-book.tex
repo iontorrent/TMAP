@@ -260,10 +260,20 @@ See \autoref{sec:commonoptions} for common options that are in use in this comma
 Specifies the primary seed (k-mer) length; reads must be of at least this length.
 
 \subsubsection{-s INT}
-Specifies the maximum number of mismatches allowed in the primary seed.
+Specifies the maximum number of edits allowed in the primary seed.
+This includes both mismatches and each base in an insertion or deletion. 
 
 \subsubsection{-L INT}
 Specifies the secondary seed (k-mer) length; this number of bases will be examimed before extending all mappings.
+
+\subsubsection{-p NUM}
+Specified the maximum number of edits or false-negative probability assuming the maximum error rate (\TT{-P}).
+This former includes both mismatches and each base in an insertion or deletion. 
+The latter false-negative probability is the probability of not consideing the correct mapping if it exists. 
+
+\subsubsection{-P NUM}
+Specified the assumed maximum per-base error rate.
+This classifies both mismatches and each base in an insertion or deletion as errors 
 
 \subsubsection{-m NUM}
 Specifies the maximum number of mismatches allowed, or the fraction of mismatches with respect to the read length.

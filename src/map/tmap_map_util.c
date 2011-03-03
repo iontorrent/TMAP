@@ -56,7 +56,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->bw = 50; 
   opt->softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_RIGHT;
   opt->dup_window = 128;
-  opt->score_thr = 30;
+  opt->score_thr = 1;
   opt->reads_queue_size = 65536; // TODO: move this to a define block
   opt->num_threads = 1;
   opt->aln_output_mode = TMAP_MAP_UTIL_ALN_MODE_RAND_BEST; // TODO: move this to a define block
@@ -231,12 +231,11 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
       tmap_file_fprintf(tmap_file_stderr, "         -l INT      the k-mer length to seed CALs (-1 to disable) [%d]\n", opt->seed_length);
       tmap_file_fprintf(tmap_file_stderr, "         -s INT      maximum number of edits in the seed [%d]\n", opt->seed_max_diff);
       tmap_file_fprintf(tmap_file_stderr, "         -L INT      the secondary seed length (-1 to disable) [%d]\n", opt->seed2_length);
-      tmap_file_fprintf(tmap_file_stderr, "         -m NUM      maximum number of or (read length) fraction of mismatches");
 
       tmap_file_fprintf(tmap_file_stderr, "         -p NUM      maximum number of edits or false-negative probability assuming the maximum error rate");
       if(opt->max_diff < 0) tmap_file_fprintf(tmap_file_stderr, "[number: %d]\n", opt->max_diff);
       else tmap_file_fprintf(tmap_file_stderr, "[probability: %d]\n", opt->max_diff_fnr);
-      tmap_file_fprintf(tmap_file_stderr, "         -P NUM      the assumed maximum error rate [%lf]\n", opt->max_err_rate);
+      tmap_file_fprintf(tmap_file_stderr, "         -P NUM      the assumed per-base maximum error rate [%lf]\n", opt->max_err_rate);
       tmap_file_fprintf(tmap_file_stderr, "         -m NUM      maximum number of or (read length) fraction of mismatches");
       if(opt->max_mm < 0) tmap_file_fprintf(tmap_file_stderr, " [fraction: %lf]\n", opt->max_mm_frac);
       else tmap_file_fprintf(tmap_file_stderr, " [number: %d]\n", opt->max_mm);
