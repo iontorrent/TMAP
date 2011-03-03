@@ -254,16 +254,21 @@ tmap_map1_aux_stack_shadow(uint32_t x, int32_t len, uint32_t max,
 {
   int32_t i, j;
   for(i=j=0;i<last_diff_offset;i++) {
+      /*
+      fprintf(stderr, "B i=%d j=%d last_diff_offset=%d x=%u len=%d max=%u w[i].w=%u w[i].bid=%d\n",
+              i, j, last_diff_offset, x, len, max, w[i].w, w[i].bid);
+              */
       if(x < w[i].w) { 
           w[i].w -= x;
       }
-      else if(x == w[i].w) {
-          w[i].bid = 1; // w[i].bid == 0 previously
+      else {
+          w[i].bid++;
           w[i].w = max - (++j);
       }
-      else {
-          tmap_error("bug encountered", Exit, OutOfRange);
-      }
+      /*
+      fprintf(stderr, "A i=%d j=%d last_diff_offset=%d x=%u len=%d max=%u w[i].w=%u w[i].bid=%d\n",
+              i, j, last_diff_offset, x, len, max, w[i].w, w[i].bid);
+              */
   }
 }
 
@@ -468,6 +473,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
   tmap_string_t *bases[2]={NULL,NULL};
   tmap_map_sams_t *sams = NULL;
   int32_t max_diff, best_diff;
+  uint32_t k, l;
       
   sams = tmap_map_sams_init();
 
@@ -589,23 +595,39 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
               for(i=0;i<sams->n;i++) {
                   // check contained
                   if(match_sa_cur.k <= sams->sams[i].seqid
-                     && sams->sams[i].seqid <= match_sa_cur.l) {
-                      sams->sams[i].seqid = match_sa_cur.k;
-                      if(sams->sams[i].pos < match_sa_cur.l) {
-                          sams->sams[i].pos = match_sa_cur.l;
+                     && sams->sams[i].seqid <= match_sa_cur.l) { // MK <= SK <= ML
+                      if(sams->sams[i].pos <= match_sa_cur.l) { // MK <= SK <= SL <= ML
+                          // Want (SK - MK) + (ML - SL)
+                          k = sams->sams[i].seqid - match_sa_cur.k; // (SK - MK)
+                          k += match_sa_cur.l - sams->sams[i].pos; // (ML - SL)
+                          sams->sams[i].pos = match_sa_cur.l; // Make SL = ML
                       }
+                      else { // MK <= SK <= ML <= SL
+                          k = sams->sams[i].seqid - match_sa_cur.k; // (SK - MK)
+                      }
+                      sams->sams[i].seqid = match_sa_cur.k; // Make SK = MK
                       break;
                   }
                   else if(match_sa_cur.k <= sams->sams[i].pos
-                     && sams->sams[i].pos <= match_sa_cur.l) {
-                      sams->sams[i].pos = match_sa_cur.l;
-                      if(match_sa_cur.k < sams->sams[i].seqid) {
-                          sams->sams[i].seqid = match_sa_cur.k;
+                     && sams->sams[i].pos <= match_sa_cur.l) { // MK <= SL <= ML
+                      if(match_sa_cur.k <= sams->sams[i].seqid) { // MK <= SK <= SL <= ML
+                          // Want (SK - MK) + (ML - SL)
+                          k = sams->sams[i].seqid - match_sa_cur.k; // (SK - MK)
+                          k += match_sa_cur.l - sams->sams[i].pos; // (ML - SL)
+                          sams->sams[i].seqid = match_sa_cur.k; // Make SK = MK
                       }
+                      else { // SK <= MK <= SL <= ML
+                          k = match_sa_cur.l - sams->sams[i].pos; // (ML - SL)
+                      }
+                      sams->sams[i].pos = match_sa_cur.l; // Make SL = ML
                       break;
                   }
               }
               if(i < sams->n) {
+                  // shadow
+                  if(0 < k) {
+                      tmap_map1_aux_stack_shadow(k, len, bwt[1-strand]->seq_len, e->last_diff_offset, width_cur);
+                  }
                   //fprintf(stderr, "found duplicate\n");
                   sam_found = 0;
                   continue;
@@ -635,7 +657,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
               }
           }
           if(do_add) { // append
-              uint32_t op, op_len, cigar_i, k, l;
+              uint32_t op, op_len, cigar_i;
               tmap_map_sam_t *sam = NULL;
               tmap_map1_aux_stack_entry_t *cur = NULL;
 
@@ -684,11 +706,12 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
                   sam->aux.map1_aux->aln_ref += op_len;
               }
 
-              // TODO: use the shadow ?
               /*
-              fprintf(stderr, "shadow strand=%d k=%u l=%u len=%d last_diff_offset=%d\n",
-                      strand, k, l, len, e->last_diff_offset);
-                      */
+              fprintf(stderr, "shadow 2 strand=%d k=%u l=%u len=%d offset=%d last_diff_offset=%d\n",
+                      strand, k, l, len, offset, e->last_diff_offset);
+              fprintf(stderr, "e->n_mm=%d e->n_gapo=%d e->n_gape=%d\n",
+                      e->n_mm, e->n_gapo, e->n_gape);
+              */
               tmap_map1_aux_stack_shadow(l - k + 1, len, bwt[1-strand]->seq_len, e->last_diff_offset, width_cur);
               if(opt->max_best_cals < best_cnt) {
                   // ignore if too many "best" have been found

@@ -218,6 +218,7 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
   int32_t width_length_map1[2] = {0, 0}, seed2_len_map1[2];
   tmap_map1_aux_stack_t *stack_map1=NULL;
   tmap_map_sams_t *sams_map1 = NULL;
+  int32_t max_mm_map1[2], max_gapo_map1[2], max_gape_map1[2];
   // map2
   tmap_map2_global_mempool_t *pool_map2 = NULL;
   tmap_map_sams_t *sams_map2 = NULL;
@@ -235,6 +236,9 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
           if(NULL == stack_map1) {
               stack_map1 = tmap_map1_aux_stack_init();
           }
+          max_mm_map1[i] = (opt->opt_map1[i]->max_mm < 0) ? (int)(0.99 + opt->opt_map1[i]->max_mm_frac * opt->opt_map1[i]->seed2_length) : opt->opt_map1[i]->max_mm;
+          max_gapo_map1[i] = (opt->opt_map1[i]->max_gapo < 0) ? (int)(0.99 + opt->opt_map1[i]->max_gapo_frac * opt->opt_map1[i]->seed2_length) : opt->opt_map1[i]->max_gapo;
+          max_gape_map1[i] = (opt->opt_map1[i]->max_gape < 0) ? (int)(0.99 + opt->opt_map1[i]->max_gape_frac * opt->opt_map1[i]->seed2_length) : opt->opt_map1[i]->max_gape;
       }
       // map2
       if(opt->algos[i] & TMAP_MAP_ALGO_MAP2) {
@@ -292,7 +296,6 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
           // map1
           for(i=0;i<opt->num_stages;i++) {
               if(opt->algos[i] & TMAP_MAP_ALGO_MAP1) {
-                  opt_local_map1[i] = (*opt->opt_map1[i]); // copy over values
               }
               // map2
               if(opt->algos[i] & TMAP_MAP_ALGO_MAP2) {
@@ -333,39 +336,44 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
 
           // map1
           for(i=0;i<opt->num_stages;i++) {
-              if((opt->algos[i] & TMAP_MAP_ALGO_MAP1)
-                 && (opt->opt_map1[i]->seed_length < 0 || opt->opt_map1[i]->seed_length <= bases[0]->l)) {
-                  if(opt_local_map1[i].seed2_length < 0 || bases[0]->l < opt_local_map1[i].seed2_length) {
-                      seed2_len_map1[i] = bases[0]->l;
-                  }
-                  else {
-                      seed2_len_map1[i] = opt_local_map1[i].seed2_length;
-                  }
+              if((opt->algos[i] & TMAP_MAP_ALGO_MAP1)) {
+                  opt_local_map1[i] = (*opt->opt_map1[i]); // copy over values
+                  // seed
+                  if(opt->opt_map1[i]->seed_length < 0 || opt->opt_map1[i]->seed_length <= bases[0]->l) {
+                      if(opt_local_map1[i].seed2_length < 0 || bases[0]->l < opt_local_map1[i].seed2_length) {
+                          seed2_len_map1[i] = bases[0]->l;
+                          opt_local_map1[i].max_mm = (opt->opt_map1[i]->max_mm < 0) ? (int)(0.99 + opt->opt_map1[i]->max_mm_frac * seed2_len_map1[i]) : opt->opt_map1[i]->max_mm;
+                          opt_local_map1[i].max_gape = (opt->opt_map1[i]->max_gape < 0) ? (int)(0.99 + opt->opt_map1[i]->max_gape_frac * seed2_len_map1[i]) : opt->opt_map1[i]->max_gape;
+                          opt_local_map1[i].max_gapo = (opt->opt_map1[i]->max_gapo < 0) ? (int)(0.99 + opt->opt_map1[i]->max_gapo_frac * seed2_len_map1[i]) : opt->opt_map1[i]->max_gapo;
+                      }
+                      else {
+                          seed2_len_map1[i] = opt_local_map1[i].seed2_length;
+                          opt_local_map1[i].max_mm = max_mm_map1[i];
+                          opt_local_map1[i].max_gapo = max_gapo_map1[i];
+                          opt_local_map1[i].max_gape = max_gape_map1[i];
+                      }
+                      if(width_length_map1[i] < bases_rev->l) {
+                          free(width_map1[i][0]); free(width_map1[i][1]);
+                          width_length_map1[i] = bases_rev->l;
+                          width_map1[i][0] = tmap_calloc(1+width_length_map1[i], sizeof(tmap_bwt_match_width_t), "width[0]");
+                          width_map1[i][1] = tmap_calloc(1+width_length_map1[i], sizeof(tmap_bwt_match_width_t), "width[1]");
+                      }
+                      tmap_bwt_match_cal_width_reverse(bwt[0], bases_rev->l, bases_rev->s, width_map1[i][0]);
+                      tmap_bwt_match_cal_width_reverse(bwt[1], bases[1]->l, bases[1]->s, width_map1[i][1]);
 
-                  opt_local_map1[i].max_mm = (opt->opt_map1[i]->max_mm < 0) ? (int)(0.99 + opt->opt_map1[i]->max_mm_frac * seed2_len_map1[i]) : opt->opt_map1[i]->max_mm;
-                  opt_local_map1[i].max_gape = (opt->opt_map1[i]->max_gape < 0) ? (int)(0.99 + opt->opt_map1[i]->max_gape_frac * seed2_len_map1[i]) : opt->opt_map1[i]->max_gape;
-                  opt_local_map1[i].max_gapo = (opt->opt_map1[i]->max_gapo < 0) ? (int)(0.99 + opt->opt_map1[i]->max_gapo_frac * seed2_len_map1[i]) : opt->opt_map1[i]->max_gapo;
-                  if(width_length_map1[i] < seed2_len_map1[i]) {
-                      free(width_map1[i][0]); free(width_map1[i][1]);
-                      width_length_map1[i] = seed2_len_map1[i];
-                      width_map1[i][0] = tmap_calloc(1+width_length_map1[i], sizeof(tmap_bwt_match_width_t), "width[0]");
-                      width_map1[i][1] = tmap_calloc(1+width_length_map1[i], sizeof(tmap_bwt_match_width_t), "width[1]");
-                  }
-                  tmap_bwt_match_cal_width_reverse(bwt[0], bases_rev->l, bases_rev->s, width_map1[i][0]);
-                  tmap_bwt_match_cal_width_reverse(bwt[1], bases[1]->l, bases[1]->s, width_map1[i][1]);
-
-                  if(seed2_len_map1[i] < opt->opt_map1[i]->seed_length) {
-                      opt_local_map1[i].seed_length = -1;
-                  }
-                  else {
-                      tmap_bwt_match_cal_width_reverse(bwt[0], 
-                                               opt->opt_map1[i]->seed_length, 
-                                               bases_rev->s + (bases_rev->l - opt->opt_map1[i]->seed_length), 
-                                               seed_width_map1[i][0]);
-                      tmap_bwt_match_cal_width_reverse(bwt[1], 
-                                               opt->opt_map1[i]->seed_length, 
-                                               bases[1]->s + (bases[1]->l - opt->opt_map1[i]->seed_length), 
-                                               seed_width_map1[i][1]);
+                      if(seed2_len_map1[i] < opt->opt_map1[i]->seed_length) {
+                          opt_local_map1[i].seed_length = -1;
+                      }
+                      else {
+                          tmap_bwt_match_cal_width_reverse(bwt[0], 
+                                                           opt->opt_map1[i]->seed_length, 
+                                                           bases_rev->s + (bases_rev->l - opt->opt_map1[i]->seed_length), 
+                                                           seed_width_map1[i][0]);
+                          tmap_bwt_match_cal_width_reverse(bwt[1], 
+                                                           opt->opt_map1[i]->seed_length, 
+                                                           bases[1]->s + (bases[1]->l - opt->opt_map1[i]->seed_length), 
+                                                           seed_width_map1[i][1]);
+                      }
                   }
               }
               // map2

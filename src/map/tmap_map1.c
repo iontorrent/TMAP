@@ -149,7 +149,7 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
 {
   int32_t low = 0, high;
   tmap_bwt_match_width_t *width[2]={NULL,NULL}, *seed_width[2]={NULL,NULL};
-  int32_t width_length = 0;
+  int32_t width_length = 0, max_mm, max_gapo, max_gape;
   tmap_map1_aux_stack_t *stack = NULL;
 
   // for calculating mapping qualities
@@ -159,6 +159,11 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
   seed_width[1] = tmap_calloc(1+opt->seed_length, sizeof(tmap_bwt_match_width_t), "seed_width[1]");
 
   stack = tmap_map1_aux_stack_init();
+          
+  // remember to round up
+  max_mm = (opt->max_mm < 0) ? (int)(0.99 + opt->max_mm_frac * opt->seed2_length) : opt->max_mm; 
+  max_gapo = (opt->max_gapo < 0) ? (int)(0.99 + opt->max_gapo_frac * opt->seed2_length) : opt->max_gapo; 
+  max_gape = (opt->max_gape < 0) ? (int)(0.99 + opt->max_gape_frac * opt->seed2_length) : opt->max_gape; 
 
   while(low < seq_buffer_length) {
 #ifdef HAVE_LIBPTHREAD
@@ -218,17 +223,21 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
 
           if(opt->seed2_length < 0 || bases[0]->l < opt->seed2_length) {
               seed2_len = seq_len;
+              // remember to round up
+              opt_local.max_mm = (opt->max_mm < 0) ? (int)(0.99 + opt->max_mm_frac * seed2_len) : opt->max_mm; 
+              opt_local.max_gapo = (opt->max_gapo < 0) ? (int)(0.99 + opt->max_gapo_frac * seed2_len) : opt->max_gapo; 
+              opt_local.max_gape = (opt->max_gape < 0) ? (int)(0.99 + opt->max_gape_frac * seed2_len) : opt->max_gape; 
           }
           else {
               seed2_len = opt->seed2_length;
+              opt_local.max_mm = max_mm;
+              opt_local.max_gapo = max_gapo;
+              opt_local.max_gape = max_gape;
           }
 
-          // remember to round up
-          opt_local.max_mm = (opt->max_mm < 0) ? (int)(0.99 + opt->max_mm_frac * seed2_len) : opt->max_mm; 
-          opt_local.max_gape = (opt->max_gape < 0) ? (int)(0.99 + opt->max_gape_frac * seed2_len) : opt->max_gape; 
-          opt_local.max_gapo = (opt->max_gapo < 0) ? (int)(0.99 + opt->max_gapo_frac * seed2_len) : opt->max_gapo; 
-          if(width_length < seed2_len) {
-              width_length = seed2_len;
+          // primary width
+          if(width_length < seq_len) {
+              width_length = seq_len;
               width[0] = tmap_realloc(width[0], (1+width_length) * sizeof(tmap_bwt_match_width_t), "width[0]");
               width[1] = tmap_realloc(width[1], (1+width_length) * sizeof(tmap_bwt_match_width_t), "width[1]");
               memset(width[0], 0, (1+width_length) * sizeof(tmap_bwt_match_width_t));
@@ -237,6 +246,7 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
           tmap_bwt_match_cal_width_reverse(bwt[0], seq_len, bases[0]->s, width[0]);
           tmap_bwt_match_cal_width_reverse(bwt[1], seq_len, bases[1]->s, width[1]);
 
+          // seed width
           if(0 < opt->seed_length) {
               tmap_bwt_match_cal_width_reverse(bwt[0], opt->seed_length, bases[0]->s + (seq_len - opt->seed_length), seed_width[0]);
               tmap_bwt_match_cal_width_reverse(bwt[1], opt->seed_length, bases[1]->s + (seq_len - opt->seed_length), seed_width[1]);
