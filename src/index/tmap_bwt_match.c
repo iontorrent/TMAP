@@ -108,7 +108,7 @@ tmap_bwt_match_2occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, tmap_bwt
 }
 
 void
-tmap_bwt_match_cal_width(const tmap_bwt_t *bwt, int len, const char *str, tmap_bwt_match_width_t *width)
+tmap_bwt_match_cal_width_forward(const tmap_bwt_t *bwt, int len, const char *str, tmap_bwt_match_width_t *width)
 {
   // 'width[i]' is the lower bound of the number of differences in str[i,len]
   uint32_t k, l, ok, ol;
@@ -131,6 +131,34 @@ tmap_bwt_match_cal_width(const tmap_bwt_t *bwt, int len, const char *str, tmap_b
       width[i].w = l - k + 1;
       width[i].bid = bid;
   }
+}
+
+void
+tmap_bwt_match_cal_width_reverse(const tmap_bwt_t *bwt, int len, const char *str, tmap_bwt_match_width_t *width)
+{
+  // 'width[i]' is the lower bound of the number of differences in str[0,i]
+  uint32_t k, l, ok, ol;
+  int i, bid;
+
+  bid = 0;
+  k = 0; l = bwt->seq_len;
+  for(i=0;i<len;i++) {
+      uint8_t c = (int)str[i];
+      if(c < 4) {
+          tmap_bwt_2occ(bwt, k-1, l, c, &ok, &ol);
+          k = bwt->L2[c] + ok + 1;
+          l = bwt->L2[c] + ol;
+      }
+      if(l < k || 3 < c) { // new width
+          k = 0;
+          l = bwt->seq_len;
+          bid++;
+      }
+      width[i].w = l - k + 1;
+      width[i].bid = bid;
+  }
+  width[len].w = 0;
+  width[len].bid = ++bid;
 }
 
 uint32_t
@@ -166,6 +194,25 @@ tmap_bwt_match_exact_alt(const tmap_bwt_t *bwt, int len, const uint8_t *str, tma
   prev = (*match_sa);
 
   for(i=0;i<len;i++) {
+      uint8_t c = str[i];
+      if(c > 3) return 0; // there is an N here. no match
+      tmap_bwt_match_2occ(bwt, &prev, c, &next);
+      prev = next;
+      if(next.k > next.l) return 0; // no match
+  }
+  (*match_sa) = prev;
+  return prev.l - prev.k + 1;
+}
+
+uint32_t
+tmap_bwt_match_exact_alt_reverse(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa)
+{
+  int i;
+  tmap_bwt_match_occ_t prev, next;
+
+  prev = (*match_sa);
+
+  for(i=len-1;0<=i;i--) {
       uint8_t c = str[i];
       if(c > 3) return 0; // there is an N here. no match
       tmap_bwt_match_2occ(bwt, &prev, c, &next);

@@ -74,7 +74,18 @@ typedef struct {
   @param  width  array of widths, one for each interval [i,len-1], for 0 <= i < len
 */
 void
-tmap_bwt_match_cal_width(const tmap_bwt_t *bwt, int len, const char *str, tmap_bwt_match_width_t *width);
+tmap_bwt_match_cal_width_forward(const tmap_bwt_t *bwt, int len, const char *str, tmap_bwt_match_width_t *width);
+
+/*! 
+  calculates a lower bound on the number of mismatches in the string for each interval [0,i]
+  @param  bwt    the reverse BWT being used to search
+  @param  len    the length of the string
+  @param  str    the string with bases in integer format
+  @param  width  array of widths, one for each interval [0,i], for 0 <= i < len
+*/
+void
+tmap_bwt_match_cal_width_reverse(const tmap_bwt_t *bwt, int len, const char *str, tmap_bwt_match_width_t *width);
+
 /*! 
   computes the SA interval for the given sequence (if any), using forward search
   @param  bwt       pointer to the bwt structure 
@@ -97,5 +108,17 @@ tmap_bwt_match_exact(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bw
   */
 uint32_t
 tmap_bwt_match_exact_alt(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa);
+
+/*! 
+  computes the SA interval for the given sequence (if any), using forward search
+  @param  bwt       pointer to the bwt structure 
+  @param  len       the length of the sequence
+  @param  str       the DNA sequence in 2-bit format
+  @param  match_sa  pointer to the match structure to be returned
+  @return           the size of the SA interval, 0 if none found
+  @details          the search will be started at SA interval [k0,l0], with the results returned as [k0,l0]
+  */
+uint32_t
+tmap_bwt_match_exact_alt_reverse(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa);
 
 #endif

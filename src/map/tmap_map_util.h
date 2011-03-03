@@ -12,6 +12,7 @@
 #define TMAP_MAP_UTIL_FSCORE 7 
 
 #define TMAP_MAP_UTIL_FLOW_ORDER "TACG"
+#define TMAP_MAP_UTIL_MAX_DIFF_READ_LENGTH 250
 
 #define __gen_ap(par, opt) do { \
     int32_t i; \
@@ -91,9 +92,13 @@ typedef struct __tmap_map_opt_t {
     int32_t seed_length_set; /*!< 1 if the user has set seed length (-l) */
     
     // map1 options
-    int32_t seed_max_mm;  /*!< maximum number of mismatches in the seed (-s) */
-    int32_t max_mm;  /*!< maximum number of mismatches (-m) */
+    int32_t seed_max_diff;  /*!< maximum number of edits in the seed (-s) */
     int32_t seed2_length;  /*!< the secondary seed length (-L) */
+    int32_t max_diff; /*!< maximum number of edits (-p) */
+    double max_diff_fnr; /*!< false-negative probability assuming a maximum error rate (-p) */ 
+    int32_t max_diff_table[TMAP_MAP_UTIL_MAX_DIFF_READ_LENGTH+1]; // TODO
+    double max_err_rate; /*!< the maximum error rate (-P) */
+    int32_t max_mm;  /*!< maximum number of mismatches (-m) */
     double max_mm_frac;  /*!< maximum (read length) fraction of mismatches (-m) */
     int32_t max_gapo;  /*!< maximum number of indel opens (-o) */
     double max_gapo_frac;  /*!< maximum (read length) fraction of indel opens (-o) */

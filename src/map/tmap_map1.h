@@ -37,6 +37,18 @@ typedef struct {
 } tmap_map1_thread_data_t;
 #endif
 
+/*!
+ * TODO
+ */
+int32_t
+tmap_map1_cal_maxdiff(int32_t l, double err, double thres);
+
+/*!
+ * TODO
+ */
+void
+tmap_map1_print_max_diff(tmap_map_opt_t *opt, int32_t stage);
+
 /*! 
   main-like function for 'tmap map1'
   @param  argc  the number of arguments

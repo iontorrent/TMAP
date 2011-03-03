@@ -19,7 +19,7 @@ typedef struct {
     uint8_t state:7;  /*!< the current state (match/mismatch/insertion/deletion) */
     uint8_t strand:1;  /*!< the strand of the alignment */
     int16_t offset;  /*!< the number of (read) bases used (one-based) */
-    int16_t last_diff_offset;  /*!< the last offset of a base difference (mismatch/insertion/deletion) */
+    int16_t last_diff_offset;  /*!< the last offset of a base difference (mismatch/insertion/deletion) (zero-based) */
     tmap_bwt_match_occ_t match_sa;  /*!< the current SA interval information */
     uint32_t i;  /*!< the zero-based index of this element in the memory pool  */
     int32_t prev_i;  /*!< the zero-based index of the previous element (in the alignment) in the memory pool */

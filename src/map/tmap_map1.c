@@ -32,6 +32,53 @@ static int32_t tmap_map1_read_lock_low = 0;
 
 static int32_t g_log_n[256];
 
+int32_t
+tmap_map1_cal_maxdiff(int32_t l, double err, double thres)
+{
+  double elambda = exp(-l * err);
+  double sum, y = 1.0;
+  int32_t k, x = 1;
+  for(k=1, sum=elambda;k<1000;k++) {
+      y *= l * err;
+      x *= k;
+      sum += elambda * y / x;
+      if (1.0 - sum < thres) return k;
+  }
+  // default
+  return 2;
+}
+
+void
+tmap_map1_print_max_diff(tmap_map_opt_t *opt, int32_t stage)
+{
+  int32_t i, k, l;
+
+  // initialize
+  for(i=0;i<=TMAP_MAP_UTIL_MAX_DIFF_READ_LENGTH;i++) {
+      opt->max_diff_table[i] = 0;
+  }
+
+  if(opt->max_diff < 0) {
+      if(0 < stage) tmap_progress_print("calculating maximum differences in map1 for stage %d", stage);
+      else tmap_progress_print("calculating maximum differences in map1");
+
+      for(i = 17, k = 0;i <= TMAP_MAP_UTIL_MAX_DIFF_READ_LENGTH;i++) {
+          l = tmap_map1_cal_maxdiff(i, opt->max_err_rate, opt->max_diff_fnr);
+          if(l != k ) {
+              tmap_progress_print("%dbp reads will have at most %d differences", i, l);
+          }
+          opt->max_diff_table[i] = l;
+          k = l;
+      }
+  }
+  else {
+      for(i=0;i <= TMAP_MAP_UTIL_MAX_DIFF_READ_LENGTH;i++) {
+          opt->max_diff_table[i] = opt->max_diff;
+      }
+  }
+}
+
+
 static inline void
 tmap_map1_set_g_log_n()
 {
@@ -108,8 +155,8 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
   // for calculating mapping qualities
   tmap_map1_set_g_log_n();
 
-  seed_width[0] = tmap_calloc(opt->seed_length, sizeof(tmap_bwt_match_width_t), "seed_width[0]");
-  seed_width[1] = tmap_calloc(opt->seed_length, sizeof(tmap_bwt_match_width_t), "seed_width[1]");
+  seed_width[0] = tmap_calloc(1+opt->seed_length, sizeof(tmap_bwt_match_width_t), "seed_width[0]");
+  seed_width[1] = tmap_calloc(1+opt->seed_length, sizeof(tmap_bwt_match_width_t), "seed_width[1]");
 
   stack = tmap_map1_aux_stack_init();
 
@@ -135,14 +182,16 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
       high = seq_buffer_length; // process all
 #endif
       while(low<high) {
-          int32_t seed2_len = 0;
+          int32_t seed2_len = 0, seq_len = 0;;
           tmap_map_opt_t opt_local = (*opt); // copy over values
           tmap_seq_t *seq[2]={NULL, NULL}, *orig_seq=NULL;
           orig_seq = seq_buffer[low];
           tmap_string_t *bases[2]={NULL, NULL};
           
+          seq_len = tmap_seq_get_bases(orig_seq)->l;
+          
           // not enough bases, ignore
-          if(0 < opt->seed_length && tmap_seq_get_bases(orig_seq)->l < opt->seed_length){
+          if(0 < opt->seed_length && seq_len < opt->seed_length){
               sams[low] = tmap_map_sams_init();
               low++;
               continue;
@@ -156,8 +205,8 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
           tmap_seq_remove_key_sequence(seq[0]);
           tmap_seq_remove_key_sequence(seq[1]);
 
-          // compliment
-          tmap_seq_compliment(seq[1]);
+          tmap_seq_reverse(seq[0]); // reverse
+          tmap_seq_reverse_compliment(seq[1]); // reverse compliment
 
           // convert to integers
           tmap_seq_to_int(seq[0]);
@@ -168,7 +217,7 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
           bases[1] = tmap_seq_get_bases(seq[1]);
 
           if(opt->seed2_length < 0 || bases[0]->l < opt->seed2_length) {
-              seed2_len = bases[0]->l;
+              seed2_len = seq_len;
           }
           else {
               seed2_len = opt->seed2_length;
@@ -180,17 +229,17 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
           opt_local.max_gapo = (opt->max_gapo < 0) ? (int)(0.99 + opt->max_gapo_frac * seed2_len) : opt->max_gapo; 
           if(width_length < seed2_len) {
               width_length = seed2_len;
-              width[0] = tmap_realloc(width[0], width_length * sizeof(tmap_bwt_match_width_t), "width[0]");
-              width[1] = tmap_realloc(width[1], width_length * sizeof(tmap_bwt_match_width_t), "width[1]");
-              memset(width[0], 0, width_length * sizeof(tmap_bwt_match_width_t));
-              memset(width[1], 0, width_length * sizeof(tmap_bwt_match_width_t));
+              width[0] = tmap_realloc(width[0], (1+width_length) * sizeof(tmap_bwt_match_width_t), "width[0]");
+              width[1] = tmap_realloc(width[1], (1+width_length) * sizeof(tmap_bwt_match_width_t), "width[1]");
+              memset(width[0], 0, (1+width_length) * sizeof(tmap_bwt_match_width_t));
+              memset(width[1], 0, (1+width_length) * sizeof(tmap_bwt_match_width_t));
           }
-          tmap_bwt_match_cal_width(bwt[0], seed2_len, bases[0]->s, width[0]);
-          tmap_bwt_match_cal_width(bwt[1], seed2_len, bases[1]->s, width[1]);
+          tmap_bwt_match_cal_width_reverse(bwt[0], seq_len, bases[0]->s, width[0]);
+          tmap_bwt_match_cal_width_reverse(bwt[1], seq_len, bases[1]->s, width[1]);
 
           if(0 < opt->seed_length) {
-              tmap_bwt_match_cal_width(bwt[0], opt->seed_length, bases[0]->s, seed_width[0]);
-              tmap_bwt_match_cal_width(bwt[1], opt->seed_length, bases[1]->s, seed_width[1]);
+              tmap_bwt_match_cal_width_reverse(bwt[0], opt->seed_length, bases[0]->s + (seq_len - opt->seed_length), seed_width[0]);
+              tmap_bwt_match_cal_width_reverse(bwt[1], opt->seed_length, bases[1]->s + (seq_len - opt->seed_length), seed_width[1]);
           }
 
           // TOOD: seed2_length
@@ -293,6 +342,8 @@ tmap_map1_core(tmap_map_opt_t *opt)
       }
       tmap_progress_print2("reference data retrieved from shared memory");
   }
+  
+  tmap_map1_print_max_diff(opt, -1);
 
   // allocate the buffer
   if(-1 == opt->reads_queue_size) {

@@ -105,7 +105,7 @@ tmap_map_all_mapq(tmap_map_sams_t *sams, tmap_map_opt_t *opt)
             case TMAP_MAP_ALGO_MAP1:
               // what is the best value for map1
               if(0 < opt->opt_map1[stage]->seed_length) {
-                  best_subo = opt->score_match * (opt->opt_map1[stage]->seed_length - opt->opt_map1[stage]->seed_max_mm);
+                  best_subo = opt->score_match * (opt->opt_map1[stage]->seed_length - opt->opt_map1[stage]->seed_max_diff);
               }
               else {
                   best_subo = 0;
@@ -230,8 +230,8 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
       if(opt->algos[i] & TMAP_MAP_ALGO_MAP1) {
           width_map1[i][0] = width_map1[i][1] = NULL;
           width_length_map1[i] = 0;
-          seed_width_map1[i][0] = tmap_calloc(opt->opt_map1[i]->seed_length, sizeof(tmap_bwt_match_width_t), "seed_width[0]");
-          seed_width_map1[i][1] = tmap_calloc(opt->opt_map1[i]->seed_length, sizeof(tmap_bwt_match_width_t), "seed_width[1]");
+          seed_width_map1[i][0] = tmap_calloc(1+opt->opt_map1[i]->seed_length, sizeof(tmap_bwt_match_width_t), "seed_width[0]");
+          seed_width_map1[i][1] = tmap_calloc(1+opt->opt_map1[i]->seed_length, sizeof(tmap_bwt_match_width_t), "seed_width[1]");
           if(NULL == stack_map1) {
               stack_map1 = tmap_map1_aux_stack_init();
           }
@@ -283,10 +283,11 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
       high = seq_buffer_length; // process all
 #endif
       while(low<high) {
-          tmap_seq_t *seq[2]={NULL, NULL}, *orig_seq=NULL, *seq_char=NULL, *seq_comp=NULL;
-          orig_seq = seq_buffer[low];
-          tmap_string_t *bases[2]={NULL, NULL}, *bases_comp =NULL;
+          tmap_seq_t *seq[2]={NULL, NULL}, *orig_seq=NULL, *seq_char=NULL, *seq_rev=NULL;
+          tmap_string_t *bases[2]={NULL, NULL}, *bases_rev =NULL;
           tmap_map_opt_t opt_local_map1[2];
+          
+          orig_seq = seq_buffer[low];
 
           // map1
           for(i=0;i<opt->num_stages;i++) {
@@ -307,28 +308,28 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
           seq[0] = tmap_seq_clone(orig_seq);
           seq[1] = tmap_seq_clone(orig_seq);
           seq_char = tmap_seq_clone(orig_seq);
-          seq_comp = tmap_seq_clone(orig_seq);
+          seq_rev = tmap_seq_clone(orig_seq);
 
           // Adjust for SFF
           tmap_seq_remove_key_sequence(seq[0]);
           tmap_seq_remove_key_sequence(seq[1]);
           tmap_seq_remove_key_sequence(seq_char);
-          tmap_seq_remove_key_sequence(seq_comp);
+          tmap_seq_remove_key_sequence(seq_rev);
 
           // reverse compliment
           tmap_seq_reverse_compliment(seq[1]);
-          // compliment (for map1)
-          tmap_seq_compliment(seq_comp);
+          // reverse (for map1)
+          tmap_seq_reverse(seq_rev);
 
           // convert to integers
           tmap_seq_to_int(seq[0]);
           tmap_seq_to_int(seq[1]);
-          tmap_seq_to_int(seq_comp);
+          tmap_seq_to_int(seq_rev);
 
           // get bases
           bases[0] = tmap_seq_get_bases(seq[0]);
           bases[1] = tmap_seq_get_bases(seq[1]);
-          bases_comp = tmap_seq_get_bases(seq_comp);
+          bases_rev = tmap_seq_get_bases(seq_rev);
 
           // map1
           for(i=0;i<opt->num_stages;i++) {
@@ -347,18 +348,24 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
                   if(width_length_map1[i] < seed2_len_map1[i]) {
                       free(width_map1[i][0]); free(width_map1[i][1]);
                       width_length_map1[i] = seed2_len_map1[i];
-                      width_map1[i][0] = tmap_calloc(width_length_map1[i], sizeof(tmap_bwt_match_width_t), "width[0]");
-                      width_map1[i][1] = tmap_calloc(width_length_map1[i], sizeof(tmap_bwt_match_width_t), "width[1]");
+                      width_map1[i][0] = tmap_calloc(1+width_length_map1[i], sizeof(tmap_bwt_match_width_t), "width[0]");
+                      width_map1[i][1] = tmap_calloc(1+width_length_map1[i], sizeof(tmap_bwt_match_width_t), "width[1]");
                   }
-                  tmap_bwt_match_cal_width(bwt[0], seed2_len_map1[i], bases[0]->s, width_map1[i][0]);
-                  tmap_bwt_match_cal_width(bwt[1], seed2_len_map1[i], bases_comp->s, width_map1[i][1]);
+                  tmap_bwt_match_cal_width_reverse(bwt[0], bases_rev->l, bases_rev->s, width_map1[i][0]);
+                  tmap_bwt_match_cal_width_reverse(bwt[1], bases[1]->l, bases[1]->s, width_map1[i][1]);
 
                   if(seed2_len_map1[i] < opt->opt_map1[i]->seed_length) {
                       opt_local_map1[i].seed_length = -1;
                   }
                   else {
-                      tmap_bwt_match_cal_width(bwt[0], opt->opt_map1[i]->seed_length, bases[0]->s, seed_width_map1[i][0]);
-                      tmap_bwt_match_cal_width(bwt[1], opt->opt_map1[i]->seed_length, bases_comp->s, seed_width_map1[i][1]);
+                      tmap_bwt_match_cal_width_reverse(bwt[0], 
+                                               opt->opt_map1[i]->seed_length, 
+                                               bases_rev->s + (bases_rev->l - opt->opt_map1[i]->seed_length), 
+                                               seed_width_map1[i][0]);
+                      tmap_bwt_match_cal_width_reverse(bwt[1], 
+                                               opt->opt_map1[i]->seed_length, 
+                                               bases[1]->s + (bases[1]->l - opt->opt_map1[i]->seed_length), 
+                                               seed_width_map1[i][1]);
                   }
               }
               // map2
@@ -377,7 +384,7 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
               if((opt->algos[i] & TMAP_MAP_ALGO_MAP1)
                  && (opt->opt_map1[i]->seed_length < 0 || opt->opt_map1[i]->seed_length <= bases[0]->l)) {
                   tmap_seq_t *seqs_tmp[2];
-                  seqs_tmp[0] = seq[0]; seqs_tmp[1] = seq_comp;
+                  seqs_tmp[0] = seq_rev; seqs_tmp[1] = seq[1];
                   sams_map1 = tmap_map1_aux_core(seqs_tmp, refseq, bwt, sa, width_map1[i], 
                                                 (0 < opt_local_map1[i].seed_length) ? seed_width_map1[i] : NULL, 
                                                 &opt_local_map1[i], stack_map1, seed2_len_map1[i]);
@@ -441,7 +448,7 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
           tmap_seq_destroy(seq[0]);
           tmap_seq_destroy(seq[1]);
           tmap_seq_destroy(seq_char);
-          tmap_seq_destroy(seq_comp);
+          tmap_seq_destroy(seq_rev);
 
           // next
           low++;
@@ -546,7 +553,8 @@ tmap_map_all_core(tmap_map_opt_t *opt)
   for(i=0;i<opt->num_stages;i++) {
       // map1
       if(opt->algos[i] & TMAP_MAP_ALGO_MAP1) {
-          // - none
+          opt->opt_map1[i]->score_thr *= opt->score_match;
+          tmap_map1_print_max_diff(opt->opt_map3[i], i+1);
       }
       // map2
       if(opt->algos[i] & TMAP_MAP_ALGO_MAP2) {
