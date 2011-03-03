@@ -27,6 +27,12 @@
     (par).row = 5; (par).band_width = opt->bw; \
 } while(0)
 
+#define __tmap_map_util_reverse_soft_clipping(_sc) \
+  (((_sc) == TMAP_MAP_UTIL_SOFT_CLIP_LEFT) ? \
+   TMAP_MAP_UTIL_SOFT_CLIP_LEFT : \
+   (((_sc) == TMAP_MAP_UTIL_SOFT_CLIP_RIGHT) ? \
+    TMAP_MAP_UTIL_SOFT_CLIP_LEFT : (_sc)))
+
 /*!
   The various algorithm types (flags)
   */

@@ -1152,26 +1152,9 @@ tmap_map_util_sw(tmap_map_sam_t *sam,
 {
   int32_t i, score, score_subo;
 
-  if(1 == strand) {
-      if(TMAP_MAP_UTIL_SOFT_CLIP_LEFT == softclip_type) {
-          softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_RIGHT;
-      }
-      else if(TMAP_MAP_UTIL_SOFT_CLIP_RIGHT == softclip_type) {
-          softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_LEFT;
-      }
+  if(1 == strand) { // reverse soft clipping
+      softclip_type = __tmap_map_util_reverse_soft_clipping(softclip_type);
   }
-
-  /*
-  fprintf(stderr, "softclip_type=%d\n", softclip_type);
-  for(i=0;i<query_length;i++) {
-      fputc("ACGTN"[query[i]], stderr);
-  }
-  fputc('\n', stderr);
-  for(i=0;i<target_length;i++) {
-      fputc("ACGTN"[target[i]], stderr);
-  }
-  fputc('\n', stderr);
-  */
 
   switch(softclip_type) {
     case TMAP_MAP_UTIL_SOFT_CLIP_ALL:

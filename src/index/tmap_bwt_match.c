@@ -1,7 +1,6 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
 #include <stdlib.h>
 #include <unistd.h>
-#include <stdio.h> // HERE
 #include "tmap_bwt.h"
 #include "tmap_bwt_match.h"
 
