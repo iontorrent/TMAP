@@ -1206,6 +1206,10 @@ tmap_map_util_sw(tmap_map_sam_t *sam,
       sam->score = score;
       sam->score_subo = score_subo;
       sam->cigar = tmap_sw_path2cigar(path, (*path_len), &sam->n_cigar);
+
+      if(0 == sam->n_cigar) {
+          tmap_error("bug encountered", Exit, OutOfRange);
+      }
       
       // add soft clipping 
       if(1 < path[(*path_len)-1].j) {

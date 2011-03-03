@@ -192,6 +192,10 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
   read_i = 0;
   ref_i = refseq->annos[seqid].offset + pos;
 
+  if(0 == n_cigar) {
+      tmap_error("bug encountered", Exit, OutOfRange);
+  }
+
   for(i=0;i<n_cigar;i++) { // go through each cigar operator
       int32_t op_len, op;
 
