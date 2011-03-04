@@ -90,6 +90,7 @@ tmap_error_full(const char *file, const unsigned int line, const char *function_
       exit(EXIT_FAILURE); 
       break; /* Not necessary actually! */
     case Warn:
+      fprintf(stderr, "trying to continue...\n\n");
       break;
     default:
       exit(EXIT_FAILURE); 
