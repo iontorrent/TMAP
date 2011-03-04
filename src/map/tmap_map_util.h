@@ -29,7 +29,7 @@
 
 #define __tmap_map_util_reverse_soft_clipping(_sc) \
   (((_sc) == TMAP_MAP_UTIL_SOFT_CLIP_LEFT) ? \
-   TMAP_MAP_UTIL_SOFT_CLIP_LEFT : \
+   TMAP_MAP_UTIL_SOFT_CLIP_RIGHT : \
    (((_sc) == TMAP_MAP_UTIL_SOFT_CLIP_RIGHT) ? \
     TMAP_MAP_UTIL_SOFT_CLIP_LEFT : (_sc)))
 

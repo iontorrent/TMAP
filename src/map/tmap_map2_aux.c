@@ -294,6 +294,7 @@ tmap_map2_aux_extend_left(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
 
   // since we reverse the query, we must reverse the soft-clipping
   // we do not need to reverse it twice
+  //fprintf(stderr, "%s 1 softclip_type=%d is_rev=%d strand=%d\n", __func__, softclip_type, is_rev, strand);
   softclip_type = __tmap_map_util_reverse_soft_clipping(softclip_type);
   switch(softclip_type) {
     case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
@@ -306,7 +307,7 @@ tmap_map2_aux_extend_left(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
       to_fit = 1;
       break;
   }
-  //fprintf(stderr, "%s softclip_type=%d is_rev=%d strand=%d to_fit=%d\n", __func__, softclip_type, is_rev, strand, to_fit);
+  //fprintf(stderr, "%s 2 softclip_type=%d is_rev=%d strand=%d to_fit=%d\n", __func__, softclip_type, is_rev, strand, to_fit);
 
   par.matrix = matrix;
   __gen_ap(par, opt);
