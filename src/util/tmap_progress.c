@@ -40,7 +40,7 @@ tmap_progress_vprint1(const char *format, clock_t start_time, va_list ap)
   static char tmap_progress_format[2048]="\0";
   
   if(0 != tmap_progress_verbosity) {
-      if(0 < (float)start_time) {
+      if(0 <= (float)start_time) {
           if(sprintf(tmap_progress_format, "[%s] %.2f sec: ", tmap_progress_command, (float)(clock()-start_time) / CLOCKS_PER_SEC) < 0) {
               tmap_error(NULL, Exit, OutOfRange);
           }
@@ -63,7 +63,7 @@ tmap_progress_print(const char *format, ...)
   va_list ap;
   if(0 != tmap_progress_verbosity) {
       va_start(ap, format);
-      tmap_progress_vprint1(format, 0, ap);
+      tmap_progress_vprint1(format, -1, ap);
       va_end(ap);
   }
 }
