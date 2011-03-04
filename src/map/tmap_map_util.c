@@ -314,7 +314,6 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
 
   // global options
   while((c = getopt(argc, argv, getopt_format)) >= 0) {
-      found_option = 1;
       switch(c) { 
         case 'f': 
           opt->fn_fasta = tmap_strdup(optarg); break;
@@ -383,22 +382,29 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           break;
         default:
           if(TMAP_MAP_ALGO_MAPPABILTY != opt->algo_id) {
-              switch(opt->algo_id) {
+              found_option = 0; // since we need to break out of two switch statements
+              switch(c) {
                 case 'F':
+                  found_option = 1;
                   opt->reads_format = tmap_get_reads_file_format_int(optarg); break;
                 case 'j':
                   if(TMAP_MAP_ALGO_MAPPABILTY != opt->algo_id) {
+                      found_option = 1;
                       opt->input_compr = TMAP_FILE_BZ2_COMPRESSION;
                       tmap_get_reads_file_format_from_fn_int(opt->fn_reads, &opt->reads_format, &opt->input_compr);
                   }
                   break;
                 case 'z':
                   if(TMAP_MAP_ALGO_MAPPABILTY != opt->algo_id) {
+                      found_option = 1;
                       opt->input_compr = TMAP_FILE_GZ_COMPRESSION;
                       tmap_get_reads_file_format_from_fn_int(opt->fn_reads, &opt->reads_format, &opt->input_compr);
                   }
                   break;
                 default: 
+                  break;
+              }
+              if(1 == found_option) {
                   break;
               }
           }
