@@ -365,12 +365,13 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
           query = (uint8_t*)bases[strand]->s; 
           // get the target sequence to which we will align
           if(0 == strand) { // forward
-              pacpos = bwt[1-strand]->seq_len - tmap_sa_pac_pos(sa[1-strand], bwt[1-strand], k) - sam->aux.map1_aux->aln_ref; // pacpos is zero-based
+              pacpos = bwt[1-strand]->seq_len - tmap_sa_pac_pos(sa[1-strand], bwt[1-strand], k);
           }
           else { // reverse
               pacpos = tmap_sa_pac_pos(sa[1-strand], bwt[1-strand], k); // since we used the reverse index
           }
-          pacpos = (pacpos < bw) ? 0 : (pacpos - bw);
+          pacpos = (pacpos < sam->aux.map1_aux->aln_ref) ? 0 : (pacpos - sam->aux.map1_aux->aln_ref); 
+          pacpos = (pacpos < bw) ? 0 : (pacpos - bw); 
           lt = target_length;
 
           for(l = pacpos, m = 0; l < pacpos + lt && l < refseq->len; l++) {
