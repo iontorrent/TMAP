@@ -51,6 +51,16 @@ tmap_map1_aux_stack_cmp(void *a, void *b)
 }
 */
 
+/*
+static void
+tmap_map1_aux_stack_entry_print(tmap_file_t *fp, tmap_map1_aux_stack_entry_t *e)
+{
+  //fprintf(stderr, "score=%u, n_mm=%u, n_gapo=%d, n_gape=%d, state=%u, strand=%u, offset=%d, last_diff_offset=%d, k=%u, l=%u, i=%u, prev_i=%d\n",
+  tmap_file_fprintf(fp, "score=%u, n_mm=%u, n_gapo=%d, n_gape=%d, state=%u, strand=%u, offset=%d, last_diff_offset=%d, k=%u, l=%u, i=%u, prev_i=%d\n",
+                    e->score, e->n_mm, e->n_gapo, e->n_gape, e->state, e->strand, e->offset, e->last_diff_offset, e->match_sa.k, e->match_sa.l, e->i, e->prev_i);
+}
+*/
+
 tmap_map1_aux_stack_t *
 tmap_map1_aux_stack_init()
 {
@@ -484,6 +494,14 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
 
   bases[0] = tmap_seq_get_bases(seq[0]);
   bases[1] = tmap_seq_get_bases(seq[1]);
+  /*
+  for(i=0;i<2;i++) {
+      for(j=0;j<bases[i]->l;j++) {
+          fputc("ACGTN"[(int)bases[i]->s[j]], stderr);
+      }
+      fputc('\n', stderr);
+  }
+  */
   
   // the maximum # of differences
   if(bases[0]->l <= TMAP_MAP_UTIL_MAX_DIFF_READ_LENGTH) {
@@ -492,7 +510,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
   else {
       best_diff = max_diff = opt->max_diff_table[TMAP_MAP_UTIL_MAX_DIFF_READ_LENGTH];
   }
-
+  
   // bound differenes by the maximum # of differences
   if(max_diff < max_mm) max_mm = max_diff;
   if(max_diff < max_gapo) max_gapo = max_diff;
@@ -511,13 +529,17 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
   }
 
   /*
-  for(i=0;i<2;i++) {
-      for(j=0;j<bases[i]->l;j++) {
-          fprintf(stderr, "i=%d j=%d width.w=%u width.bid=%d\n",
-                  i, j, width[i][j].w, width[i][j].bid);
-      }
-  }
-  */
+     for(i=0;i<2;i++) {
+     for(j=0;j<bases[i]->l;j++) {
+     fprintf(stderr, "i=%d j=%d width.w=%u width.bid=%d\n",
+     i, j, width[i][j].w, width[i][j].bid);
+     }
+     for(j=0;j<seed2_len;j++) {
+     fprintf(stderr, "i=%d j=%d width.w=%u width.bid=%d\n",
+     i, j, seed_width[i][j].w, seed_width[i][j].bid);
+     }
+     }
+     */
 
   match_sa_start.offset = 0;
   match_sa_start.hi = 0;
@@ -540,6 +562,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
       
       // get the best entry
       e = tmap_map1_aux_stack_pop(stack); 
+      //tmap_map1_aux_stack_entry_print(tmap_file_stderr, e);
 
       // bound with best score
       if(best_score + max_edit_score < e->score) {
@@ -563,7 +586,6 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
       width_cur = width[strand];
 
       if(NULL != seed_width) {
-          //&& offset < opt->seed_length) { 
           seed_width_cur = seed_width[strand];
           n_seed_mm = seed_max_diff - (e->n_mm + e->n_gapo + e->n_gape); // consider only mismatches in the seed
       }

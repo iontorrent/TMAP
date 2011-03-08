@@ -310,9 +310,6 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
           tmap_map_opt_t opt_local_map1[2];
           
           orig_seq = seq_buffer[low];
-          if(NULL == seq_buffer[low]) {
-              fprintf(stderr, "NULL!\n");
-          }
 
           // map1
           for(i=0;i<opt->num_stages;i++) {
@@ -582,7 +579,7 @@ tmap_map_all_core(tmap_map_opt_t *opt)
       // map1
       if(opt->algos[i] & TMAP_MAP_ALGO_MAP1) {
           opt->opt_map1[i]->score_thr *= opt->score_match;
-          tmap_map1_print_max_diff(opt->opt_map3[i], i+1);
+          tmap_map1_print_max_diff(opt->opt_map1[i], i+1);
       }
       // map2
       if(opt->algos[i] & TMAP_MAP_ALGO_MAP2) {
