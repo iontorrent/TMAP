@@ -23,6 +23,10 @@ static void
 tmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
 {
   int32_t i, j, len;
+  // ID, CN, DS, DT, LB, PG, PI, PL, PU, SM
+  int32_t tags_found[10] = {0,0,0,0,0,0,0,0,0,0};
+  char *tags_name[10] = {"ID","CN","DS","DT","LB","PG","PI","PL","PU","SM"};
+  char *tags_value[10] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
 
   len = strlen(rg);
 
@@ -39,25 +43,22 @@ tmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
       }
   }
 
-  // ID, CN, DS, DT, LB, PG, PI, PL, PU, SM
-  int32_t tags_found[10] = {0,0,0,0,0,0,0,0,0,0};
-  char *tags_name[10] = {"ID","CN","DS","DT","LB","PG","PI","PL","PU","SM"};
-
-  // must have at least "@RG\tID:."
-  if(len < 8
-     || 0 != strncmp(rg, "@RG\tID:", 7)) {
+  // must have at least "@RG\t"
+  if(len < 4
+     || 0 != strncmp(rg, "@RG\t", 4)) {
       tmap_error("Malformed RG line", Exit, OutOfRange);
   }
   i = 3;
-
+  
   while(i<len) {
       if('\t' == rg[i]) {
+          int32_t tag_i = -1;
           i++; // move past the tab
-          if(len-2 <= i) {
+          if(len <= i+2) { // must have "XX:" 
               tmap_error("Improper tag in the RG line", Exit, OutOfRange);
           }
           else if('I' == rg[i] && 'D' == rg[i+1]) {
-              tags_found[0]++;
+              tag_i = 0;
               // copy over the id
               for(j=i+3;j<len;j++) {
                   if('\t' == rg[j]) break;
@@ -66,29 +67,48 @@ tmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
               if(j == i) tmap_error("Malformed RG line", Exit, OutOfRange);
               tmap_sam_rg_id[j-i]='\0'; // null terminator
           }
-          else if('C' == rg[i] && 'N' == rg[i+1]) tags_found[1]++;
-          else if('D' == rg[i] && 'S' == rg[i+1]) tags_found[2]++;
-          else if('D' == rg[i] && 'T' == rg[i+1]) tags_found[3]++;
-          else if('L' == rg[i] && 'B' == rg[i+1]) tags_found[4]++;
+          else if('C' == rg[i] && 'N' == rg[i+1]) tag_i=1;
+          else if('D' == rg[i] && 'S' == rg[i+1]) tag_i=2;
+          else if('D' == rg[i] && 'T' == rg[i+1]) tag_i=3;
+          else if('L' == rg[i] && 'B' == rg[i+1]) tag_i=4;
           else if('P' == rg[i] && 'G' == rg[i+1]) {
-              tags_found[5]++;
+              tag_i=5;
               tmap_error("PG tag not allowed in the RG line", Exit, OutOfRange);
           }
-          else if('P' == rg[i] && 'I' == rg[i+1]) tags_found[6]++;
-          else if('L' == rg[i] && 'L' == rg[i+1]) tags_found[7]++;
-          else if('P' == rg[i] && 'U' == rg[i+1]) tags_found[8]++;
-          else if('S' == rg[i] && 'M' == rg[i+1]) tags_found[9]++;
+          else if('P' == rg[i] && 'I' == rg[i+1]) tag_i=6;
+          else if('P' == rg[i] && 'L' == rg[i+1]) tag_i=7;
+          else if('P' == rg[i] && 'U' == rg[i+1]) tag_i=8;
+          else if('S' == rg[i] && 'M' == rg[i+1]) tag_i=9;
           else {
               tmap_error("Improper tag in the RG line", Exit, OutOfRange);
+          }
+          tags_found[tag_i]++;
+          if(1 == tags_found[tag_i]) {
+              tags_value[tag_i] = tmap_malloc(sizeof(char) * (len + 1), "tags_value[tag_i]");
+              for(j=i;j<len && '\t' != rg[j];j++) {
+                  tags_value[tag_i][j-i] = rg[j];
+              }
+              if(j - i <= 3) {
+                  tmap_file_fprintf(tmap_file_stderr, "\nFound an empty tag in the RG SAM header: %s\n", tags_name[tag_i]);
+                  tmap_error(NULL, Exit, OutOfRange);
+              }
+              tags_value[tag_i][j-i] = '\0';
           }
       }
       i++;
   }
 
+  strcpy(rg, "@RG");
   for(i=0;i<10;i++) {
       if(1 < tags_found[i]) {
           tmap_file_fprintf(tmap_file_stderr, "\nFound multiple %s tags for the RG SAM header\n", tags_name[i]);
           tmap_error(NULL, Exit, OutOfRange);
+      }
+      else if(1 == tags_found[i]) {
+          strcat(rg, "\t");
+          strcat(rg, tags_value[i]);
+          // copy over the tag
+          free(tags_value[i]);
       }
   }
 }
