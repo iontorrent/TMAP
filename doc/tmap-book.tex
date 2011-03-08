@@ -29,7 +29,7 @@ urlcolor=myurlcolor     % color of external links
 \usepackage{courier}
 
 % Version number
-\newcommand{\Version}{0.0.14}
+\newcommand{\Version}{0.0.15}
 
 % layout
 \setlength\topmargin{0in}
@@ -131,7 +131,8 @@ The input reads can be in FASTA, FASTQ, or SFF format.
 \subsubsection{\TT{-F STRING}}
 Specifies the file format of the reads file.
 Without this option, the format is auto-recognized by the file extension.
-The valid inputs are \TT{fa} or \TT{fasta} for FASTA, \TT {fq} or \TT{fastq} for FASTQ, \TT{sff} for SFF, \TT{sam} for SAM, or \TT{bam} for BAM.
+The valid inputs are \TT{fa} or \TT{fasta} for FASTA, \TT {fq} or \TT{fastq} for FASTQ, or \TT{sff} for SFF.
+If compiled with SAMtools support, the option also supports \TT{sam} for SAM, or \TT{bam} for BAM.
 
 \subsubsection{\TT{-A INT}}
 Specifies the match score.
