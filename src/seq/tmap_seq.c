@@ -22,6 +22,12 @@ tmap_seq_init(int8_t type)
     case TMAP_SEQ_TYPE_SFF:
       seq->data.sff = tmap_sff_init();
       break;
+#ifdef HAVE_SAMTOOLS
+    case TMAP_SEQ_TYPE_SAM:
+    case TMAP_SEQ_TYPE_BAM:
+      seq->data.sam = tmap_sam_init();
+      break;
+#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -40,6 +46,12 @@ tmap_seq_destroy(tmap_seq_t *seq)
     case TMAP_SEQ_TYPE_SFF:
       tmap_sff_destroy(seq->data.sff);
       break;
+#ifdef HAVE_SAMTOOLS
+    case TMAP_SEQ_TYPE_SAM:
+    case TMAP_SEQ_TYPE_BAM:
+      tmap_sam_destroy(seq->data.sam);
+      break;
+#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -62,6 +74,12 @@ tmap_seq_clone(tmap_seq_t *seq)
     case TMAP_SEQ_TYPE_SFF:
       ret->data.sff = tmap_sff_clone(seq->data.sff);
       break;
+#ifdef HAVE_SAMTOOLS
+    case TMAP_SEQ_TYPE_SAM:
+    case TMAP_SEQ_TYPE_BAM:
+      ret->data.sam = tmap_sam_clone(seq->data.sam);
+      break;
+#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -80,6 +98,12 @@ tmap_seq_reverse(tmap_seq_t *seq)
     case TMAP_SEQ_TYPE_SFF:
       tmap_sff_reverse(seq->data.sff);
       break;
+#ifdef HAVE_SAMTOOLS
+    case TMAP_SEQ_TYPE_SAM:
+    case TMAP_SEQ_TYPE_BAM:
+      tmap_sam_reverse(seq->data.sam);
+      break;
+#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -96,6 +120,12 @@ tmap_seq_reverse_compliment(tmap_seq_t *seq)
     case TMAP_SEQ_TYPE_SFF:
       tmap_sff_reverse_compliment(seq->data.sff);
       break;
+#ifdef HAVE_SAMTOOLS
+    case TMAP_SEQ_TYPE_SAM:
+    case TMAP_SEQ_TYPE_BAM:
+      tmap_sam_reverse_compliment(seq->data.sam);
+      break;
+#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -112,6 +142,12 @@ tmap_seq_compliment(tmap_seq_t *seq)
     case TMAP_SEQ_TYPE_SFF:
       tmap_sff_compliment(seq->data.sff);
       break;
+#ifdef HAVE_SAMTOOLS
+    case TMAP_SEQ_TYPE_SAM:
+    case TMAP_SEQ_TYPE_BAM:
+      tmap_sam_compliment(seq->data.sam);
+      break;
+#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -128,6 +164,12 @@ tmap_seq_to_int(tmap_seq_t *seq)
     case TMAP_SEQ_TYPE_SFF:
       tmap_sff_to_int(seq->data.sff);
       break;
+#ifdef HAVE_SAMTOOLS
+    case TMAP_SEQ_TYPE_SAM:
+    case TMAP_SEQ_TYPE_BAM:
+      tmap_sam_to_int(seq->data.sam);
+      break;
+#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -144,6 +186,12 @@ tmap_seq_get_name(tmap_seq_t *seq)
     case TMAP_SEQ_TYPE_SFF:
       return seq->data.sff->rheader->name;
       break;
+#ifdef HAVE_SAMTOOLS
+    case TMAP_SEQ_TYPE_SAM:
+    case TMAP_SEQ_TYPE_BAM:
+      return seq->data.sam->name;
+      break;
+#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -161,6 +209,12 @@ tmap_seq_get_bases(tmap_seq_t *seq)
     case TMAP_SEQ_TYPE_SFF:
       return tmap_sff_get_bases(seq->data.sff);
       break;
+#ifdef HAVE_SAMTOOLS
+    case TMAP_SEQ_TYPE_SAM:
+    case TMAP_SEQ_TYPE_BAM:
+      return tmap_sam_get_bases(seq->data.sam);
+      break;
+#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -178,6 +232,12 @@ tmap_seq_get_qualities(tmap_seq_t *seq)
     case TMAP_SEQ_TYPE_SFF:
       return tmap_sff_get_qualities(seq->data.sff);
       break;
+#ifdef HAVE_SAMTOOLS
+    case TMAP_SEQ_TYPE_SAM:
+    case TMAP_SEQ_TYPE_BAM:
+      return tmap_sam_get_qualities(seq->data.sam);
+      break;
+#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -217,3 +277,5 @@ tmap_seq_sff2fq(tmap_seq_t *seq)
 
   return ret;
 }
+
+// TODO sam/bam to fastq

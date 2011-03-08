@@ -38,13 +38,20 @@ typedef struct {
 #endif
 
 /*!
- * TODO
+ Calculates the maximum number of differences allowed given an error rate
+ and false negative rate threshold
+ @param  l      the read length
+ @param  err    the maximum error rate to tolerate
+ @param  thres  the false negative (mapping) rate threshold
+ @return        the maximum number of differences
  */
 int32_t
 tmap_map1_cal_maxdiff(int32_t l, double err, double thres);
 
 /*!
- * TODO
+ Prints the number of differences for various read lengths
+ @param  opt     the program options
+ @param  stage   the mapping stage (-1 for no stage)
  */
 void
 tmap_map1_print_max_diff(tmap_map_opt_t *opt, int32_t stage);

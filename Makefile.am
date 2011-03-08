@@ -7,16 +7,18 @@ GLOBAL_SOURCES = \
 				 src/util/tmap_fibheap.h src/util/tmap_fibheap.c \
 				 src/util/tmap_hash.h \
 				 src/util/tmap_progress.h src/util/tmap_progress.c \
-				 src/util/tmap_sam.h src/util/tmap_sam.c \
 				 src/util/tmap_string.h src/util/tmap_string.c \
 				 src/util/tmap_sort.h \
 				 src/util/tmap_vec.h \
+				 src/util/tmap_sam_print.h src/util/tmap_sam_print.c \
 				 src/seq/tmap_fq.h src/seq/tmap_fq.c \
 				 src/seq/tmap_sff.h src/seq/tmap_sff.c \
+				 src/seq/tmap_sam.h src/seq/tmap_sam.c \
 				 src/seq/tmap_seq.h src/seq/tmap_seq.c \
 				 src/io/tmap_file.h src/io/tmap_file.c \
 				 src/io/tmap_fq_io.h src/io/tmap_fq_io.c \
 				 src/io/tmap_sff_io.h src/io/tmap_sff_io.c \
+				 src/io/tmap_sam_io.h src/io/tmap_sam_io.c \
 				 src/io/tmap_seq_io.h src/io/tmap_seq_io.c \
 				 src/index/tmap_bwt.h src/index/tmap_bwt.c \
 				 src/index/tmap_bwtl.h src/index/tmap_bwtl.c \

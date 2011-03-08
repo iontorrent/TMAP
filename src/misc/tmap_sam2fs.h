@@ -4,11 +4,13 @@
 
 #include <config.h>
 
-// TODO: doc
+/*!
+ The type of output for sam2fs
+ */ 
 enum {
-    TMAP_SAM2FS_OUTPUT_ALN = 0,
-    TMAP_SAM2FS_OUTPUT_SAM = 1,
-    TMAP_SAM2FS_OUTPUT_BAM = 2
+    TMAP_SAM2FS_OUTPUT_ALN = 0, /*!< pretty-print alignment */
+    TMAP_SAM2FS_OUTPUT_SAM = 1, /*!< SAM file */
+    TMAP_SAM2FS_OUTPUT_BAM = 2 /*!< BAM file */
 };
 
 typedef struct {

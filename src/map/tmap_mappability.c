@@ -12,7 +12,7 @@
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_definitions.h"
 #include "../util/tmap_progress.h"
-#include "../util/tmap_sam.h"
+#include "../util/tmap_sam_print.h"
 #include "../seq/tmap_seq.h"
 #include "../index/tmap_refseq.h"
 #include "../index/tmap_bwt_gen.h"

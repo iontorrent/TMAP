@@ -1,10 +1,12 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
 #include <stdlib.h>
 #include <string.h>
+#include <config.h>
 #include "tmap_error.h"
 #include "tmap_alloc.h"
-#include "tmap_definitions.h"
+#include "../seq/tmap_seq.h"
 #include "../io/tmap_file.h"
+#include "tmap_definitions.h"
 
 // Algorithm IDs
 
@@ -81,6 +83,27 @@ uint8_t tmap_nt_char_to_rc_char[256] = {
     'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N',  'N', 'N', 'N', 'N'
 };
 
+int32_t 
+tmap_reads_format_to_seq_type(int32_t reads_format)
+{
+  switch(reads_format) {
+    case TMAP_READS_FORMAT_FASTA:
+    case TMAP_READS_FORMAT_FASTQ:
+      return TMAP_SEQ_TYPE_FQ;
+    case TMAP_READS_FORMAT_SFF:
+      return TMAP_SEQ_TYPE_SFF;
+#ifdef HAVE_SAMTOOLS
+    case TMAP_READS_FORMAT_SAM:
+      return TMAP_SEQ_TYPE_SAM;
+    case TMAP_READS_FORMAT_BAM:
+      return TMAP_SEQ_TYPE_BAM;
+#endif
+    default:
+      return TMAP_SEQ_TYPE_NOTYPE;
+  }
+}
+
+
 inline uint32_t tmap_log2(uint32_t v)
 {
   uint32_t c = 0;
@@ -151,6 +174,14 @@ tmap_get_reads_file_format_int(char *optarg)
   else if(0 == strcmp(optarg, "sff")) {
       return TMAP_READS_FORMAT_SFF;
   }
+#ifdef HAVE_SAMTOOLS
+  else if(0 == strcmp(optarg, "sam")) {
+      return TMAP_READS_FORMAT_SAM;
+  }
+  else if(0 == strcmp(optarg, "bam")) {
+      return TMAP_READS_FORMAT_BAM;
+  }
+#endif
   return TMAP_READS_FORMAT_UNKNOWN;
 }
 
@@ -232,6 +263,14 @@ tmap_get_reads_file_format_from_fn_int(char *fn, int32_t *reads_format, int32_t 
       else if(NULL != tmap_check_suffix(fn, ".sff", compr_suffix_length)) {
           (*reads_format) = TMAP_READS_FORMAT_SFF;
       }
+#ifdef HAVE_SAMTOOLS
+      else if(NULL != tmap_check_suffix(fn, ".sam", compr_suffix_length)) {
+          (*reads_format) = TMAP_READS_FORMAT_SAM;
+      }
+      else if(NULL != tmap_check_suffix(fn, ".bam", compr_suffix_length)) {
+          (*reads_format) = TMAP_READS_FORMAT_BAM;
+      }
+#endif
   }
 
   // check the suffix implied by the compression type
@@ -273,6 +312,18 @@ tmap_get_reads_file_format_from_fn_int(char *fn, int32_t *reads_format, int32_t 
           tmap_error("the expected SFF file extension is \".sff\"", Warn, OutOfRange);
       }
       break;
+#ifdef HAVE_SAMTOOLS
+    case TMAP_READS_FORMAT_SAM:
+      if(NULL == tmap_check_suffix(fn, ".sam", compr_suffix_length)) {
+          tmap_error("the expected SAM file extension is \".sam\"", Warn, OutOfRange);
+      }
+      break;
+    case TMAP_READS_FORMAT_BAM:
+      if(NULL == tmap_check_suffix(fn, ".bam", compr_suffix_length)) {
+          tmap_error("the expected BAM file extension is \".bam\"", Warn, OutOfRange);
+      }
+      break;
+#endif
     case TMAP_READS_FORMAT_UNKNOWN:
     default:
       break;
@@ -291,6 +342,14 @@ tmap_get_reads_file_format_string(int format)
   else if(TMAP_READS_FORMAT_SFF == format) {
       return strdup("sff");
   }
+#ifdef HAVE_SAMTOOLS
+  else if(TMAP_READS_FORMAT_SAM == format) {
+      return strdup("sam");
+  }
+  else if(TMAP_READS_FORMAT_BAM == format) {
+      return strdup("bam");
+  }
+#endif
   else if(TMAP_READS_FORMAT_UNKNOWN == format) {
       return strdup("unknown");
   }

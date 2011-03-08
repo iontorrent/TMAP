@@ -10,12 +10,13 @@
 #include <bam.h>
 #endif
 
-#include "tmap_alloc.h"
-#include "tmap_definitions.h"
+#include "../util/tmap_alloc.h"
+#include "../util/tmap_definitions.h"
+#include "../util/tmap_string.h"
 #include "../io/tmap_file.h"
 #include "../io/tmap_seq_io.h"
 #include "../sw/tmap_sw.h"
-#include "tmap_sam.h"
+#include "tmap_sam_print.h"
 
 static char tmap_sam_rg_id[1024]="ID";
 
@@ -119,7 +120,7 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, tmap_seq_io_t *seq
   int32_t i;
   // SAM header
   tmap_file_fprintf(fp, "@HD\tVN:%s\tSO:unsorted\n",
-                    TMAP_SAM_VERSION);
+                    TMAP_SAM_PRINT_VERSION);
   for(i=0;i<refseq->num_annos;i++) {
       tmap_file_fprintf(fp, "@SQ\tSN:%s\tLN:%d\n",
                         refseq->annos[i].name->s, (int)refseq->annos[i].len);

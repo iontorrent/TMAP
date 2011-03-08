@@ -4,7 +4,7 @@
 #include "../util/tmap_error.h"
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_definitions.h"
-#include "../util/tmap_sam.h"
+#include "../util/tmap_sam_print.h"
 #include "../index/tmap_refseq.h"
 #include "../index/tmap_bwt_gen.h"
 #include "../index/tmap_bwt.h"
@@ -12,6 +12,7 @@
 #include "../index/tmap_sa.h"
 #include "../seq/tmap_fq.h"
 #include "../seq/tmap_seq.h"
+#include "../seq/tmap_sam.h"
 #include "../io/tmap_seq_io.h"
 #include "tmap_debug_exact.h"
 
@@ -102,12 +103,10 @@ tmap_debug_exact_core(tmap_debug_exact_opt_t *opt)
   tmap_refseq_t *refseq=NULL;
   tmap_bwt_t *bwt=NULL;
   tmap_sa_t *sa=NULL;
-  tmap_file_t *fp_reads=NULL;
   tmap_seq_io_t *seqio=NULL;
   tmap_seq_t *seq=NULL;
   
-  fp_reads = tmap_file_fopen(opt->fn_reads, "rb", TMAP_FILE_NO_COMPRESSION);
-  seqio = tmap_seq_io_init(fp_reads, TMAP_SEQ_TYPE_FQ);
+  seqio = tmap_seq_io_init(opt->fn_reads, 1, TMAP_SEQ_TYPE_FQ, TMAP_FILE_NO_COMPRESSION);
   seq = tmap_seq_init(TMAP_SEQ_TYPE_FQ);
 
   bwt = tmap_bwt_read(opt->fn_fasta, 1);
@@ -121,7 +120,6 @@ tmap_debug_exact_core(tmap_debug_exact_opt_t *opt)
       tmap_debug_exact_core_worker(refseq, bwt, sa, seq, opt->n_only);
   }
 
-  tmap_file_fclose(fp_reads);
   tmap_bwt_destroy(bwt);
   if(0 == opt->n_only) {
       tmap_refseq_destroy(refseq);

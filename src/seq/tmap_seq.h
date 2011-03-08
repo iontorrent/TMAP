@@ -2,20 +2,30 @@
 #ifndef TMAP_SEQ_H
 #define TMAP_SEQ_H
 
+#include <config.h>
 #include "tmap_fq.h"
 #include "tmap_sff.h"
+#ifdef HAVE_SAMTOOLS
+#include "tmap_sam.h"
+#endif
 
 /*! 
   An Abstract Library for DNA Sequence Data
   */
 
+// TODO: we could turn this into a macro library
+
 /*! 
-  @details  the type of DNA sequence data
+  the type of DNA sequence data
   */
 enum {
     TMAP_SEQ_TYPE_NOTYPE = -1, /*!< unknown type */
     TMAP_SEQ_TYPE_FQ = 0, /*!< FASTA/FASTQ input/output */
-    TMAP_SEQ_TYPE_SFF = 1 /*!< SFF input/output */
+    TMAP_SEQ_TYPE_SFF = 1, /*!< SFF input/output */
+#ifdef HAVE_SAMTOOLS
+    TMAP_SEQ_TYPE_SAM = 2, /*!< SAM input/output */
+    TMAP_SEQ_TYPE_BAM = 3 /*!< BAM input/output */
+#endif
 };
 
 /*! 
@@ -25,6 +35,9 @@ typedef struct {
     union {
         tmap_fq_t *fq;  /*!< the pointer to the fastq structure */
         tmap_sff_t *sff;  /*!< the pointer to the sff structure */
+#ifdef HAVE_SAMTOOLS
+        tmap_sam_t *sam;  /*!< the pointer to the SAM/BAM structure */
+#endif
     } data;
 } tmap_seq_t;
 
