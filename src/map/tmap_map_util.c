@@ -30,7 +30,7 @@
                                           ? 1 : 0 )
 
 // sort by max-score
-#define __tmap_map_sam_sort_score_lt(a, b) ( ((a).score < (b).score) ? 0 : 1)
+#define __tmap_map_sam_sort_score_lt(a, b) ((a).score > (b).score)
 
 TMAP_SORT_INIT(tmap_map_sam_sort_coord, tmap_map_sam_t, __tmap_map_sam_sort_coord_lt)
 
