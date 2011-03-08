@@ -48,6 +48,7 @@ tmap_map_all_mapq(tmap_map_sams_t *sams, tmap_map_opt_t *opt)
   int32_t i;
   int32_t n_best = 0, n_best_subo = 0;
   int32_t best_score, cur_score, best_subo;
+  int32_t best_score_sum, best_subo_sum;
   int32_t mapq;
   int32_t stage = -1;
   int32_t algo_id = TMAP_MAP_ALGO_NONE; 
@@ -55,28 +56,32 @@ tmap_map_all_mapq(tmap_map_sams_t *sams, tmap_map_opt_t *opt)
   // estimate mapping quality TODO: this needs to be refined
   best_score = INT32_MIN;
   best_subo = INT32_MIN+1;
+  best_score_sum = best_subo_sum = 0;
   n_best = n_best_subo = 0;
   for(i=0;i<sams->n;i++) {
       cur_score = sams->sams[i].score;
       if(best_score < cur_score) {
           // save sub-optimal
           best_subo = best_score;
+          best_subo_sum = best_score_sum;
           n_best_subo = n_best;
           // update
-          best_score = cur_score;
+          best_score = best_score_sum = cur_score;
           n_best = 1;
           stage = (algo_id == TMAP_MAP_ALGO_NONE) ? sams->sams[i].algo_stage-1 : -1;
           algo_id = (algo_id == TMAP_MAP_ALGO_NONE) ? sams->sams[i].algo_id : -1;
       }
       else if(cur_score == best_score) { // qual
+          best_score_sum += cur_score;
           n_best++;
       }
       else {
           if(best_subo < cur_score) {
-              best_subo = cur_score;
+              best_subo = best_subo_sum = cur_score;
               n_best_subo = 1;
           }
           else if(best_subo == cur_score) {
+              best_subo_sum += cur_score;
               n_best_subo++;
           }
       }
@@ -87,10 +92,11 @@ tmap_map_all_mapq(tmap_map_sams_t *sams, tmap_map_opt_t *opt)
               // ignore
           }
           else if(best_subo < cur_score) {
-              best_subo = cur_score;
+              best_subo = best_subo_sum = cur_score;
               n_best_subo=1;
           } 
           else if(best_subo == cur_score) {
+              best_subo_sum += cur_score;
               n_best_subo++;
           }
       }
@@ -99,6 +105,13 @@ tmap_map_all_mapq(tmap_map_sams_t *sams, tmap_map_opt_t *opt)
       mapq = 0;
   }
   else {
+      /*
+      fprintf(stderr, "BEFORE\n");
+      fprintf(stderr, "n_best=%d n_best_subo=%d\n",
+              n_best, n_best_subo);
+      fprintf(stderr, "best_score=%d best_subo=%d\n",
+              best_score, best_subo);
+              */
       if(0 == n_best_subo) {
           n_best_subo = 1;
           switch(algo_id) {
@@ -119,12 +132,17 @@ tmap_map_all_mapq(tmap_map_sams_t *sams, tmap_map_opt_t *opt)
               best_subo = 0; break;
           }
       }
+      else if(opt->score_thr <= best_subo) {
+          // take the mean sub-optimal score
+          best_subo = best_subo_sum / n_best_subo;
+      }
       /*
+      fprintf(stderr, "AFTER\n");
       fprintf(stderr, "n_best=%d n_best_subo=%d\n",
               n_best, n_best_subo);
       fprintf(stderr, "best_score=%d best_subo=%d\n",
               best_score, best_subo);
-      */
+              */
       mapq = (int32_t)((n_best / (1.0 * n_best_subo)) * (best_score - best_subo) * (250.0 / best_score + 0.03 / opt->score_match) + .499);
       if(mapq > 250) mapq = 250;
       if(mapq <= 0) mapq = 1;
