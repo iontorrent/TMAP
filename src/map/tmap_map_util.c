@@ -16,12 +16,6 @@
 #include "../sw/tmap_fsw.h"
 #include "tmap_map_util.h"
 
-// sort by min-seqid, min-position, max-score
-#define __tmap_map_sam_sort_lt(a, b) ( ((a).seqid < (b).seqid \
-                                            || ( (a).seqid == (b).seqid && (a).pos < (b).pos ) \
-                                            || ( (a).seqid == (b).seqid && (a).pos == (b).pos && (a).score < (b).score )) \
-                                          ? 1 : 0 )
-
 #define tmap_map_util_reverse_query(_query, _ql, _i) \
     for(_i=0;_i<(_ql>>1);_i++) { \
               uint8_t _tmp = _query[_i]; \
@@ -29,7 +23,19 @@
               _query[_ql-_i-1] = _tmp; \
           }
 
-TMAP_SORT_INIT(tmap_map_sam_t, tmap_map_sam_t, __tmap_map_sam_sort_lt)
+// sort by min-seqid, min-position, max-score
+#define __tmap_map_sam_sort_coord_lt(a, b) ( ((a).seqid < (b).seqid \
+                                            || ( (a).seqid == (b).seqid && (a).pos < (b).pos ) \
+                                            || ( (a).seqid == (b).seqid && (a).pos == (b).pos && (a).score < (b).score )) \
+                                          ? 1 : 0 )
+
+// sort by max-score
+#define __tmap_map_sam_sort_score_lt(a, b) ( ((a).score < (b).score) ? 0 : 1)
+
+TMAP_SORT_INIT(tmap_map_sam_sort_coord, tmap_map_sam_t, __tmap_map_sam_sort_coord_lt)
+
+TMAP_SORT_INIT(tmap_map_sam_sort_score, tmap_map_sam_t, __tmap_map_sam_sort_score_lt)
+
 
 tmap_map_opt_t *
 tmap_map_opt_init(int32_t algo_id)
@@ -908,6 +914,9 @@ tmap_map_sams_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sams_t *sam
 {
   int32_t i;
   if(0 < sams->n) {
+      if(1 < sams->n) { // sort by alignment score
+          tmap_sort_introsort(tmap_map_sam_sort_score, sams->n, sams->sams);
+      }
       for(i=0;i<sams->n;i++) {
           tmap_map_sam_print(seq, refseq, &sams->sams[i], sam_sff_tags);
       }
@@ -1113,7 +1122,7 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
   }
 
   // sort
-  tmap_sort_introsort(tmap_map_sam_t, sams->n, sams->sams);
+  tmap_sort_introsort(tmap_map_sam_sort_coord, sams->n, sams->sams);
   
   // remove duplicates within a window
   for(i=j=0;i<sams->n;) {
