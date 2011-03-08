@@ -378,7 +378,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
               pacpos = bwt[1-strand]->seq_len - tmap_sa_pac_pos(sa[1-strand], bwt[1-strand], k);
           }
           else { // reverse
-              pacpos = tmap_sa_pac_pos(sa[1-strand], bwt[1-strand], k); // since we used the reverse index
+              pacpos = tmap_sa_pac_pos(sa[1-strand], bwt[1-strand], k) + 1; // since we used the reverse index
           }
           pacpos = (pacpos < sam->aux.map1_aux->aln_ref) ? 0 : (pacpos - sam->aux.map1_aux->aln_ref); 
           pacpos = (pacpos < bw) ? 0 : (pacpos - bw); 
@@ -400,7 +400,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
               fputc("ACGTN"[target[l]], stderr);
           }
           fputc('\n', stderr);
-          //fprintf(stderr, "i=%d j=%d k=%d lt=%d pacpos=%d seq_len=%d\n", i, j, k, lt, pacpos, seq_len);
+          fprintf(stderr, "i=%d j=%d k=%u lt=%d pacpos=%d seq_len=%d\n", i, j, k, lt, pacpos, seq_len);
           */
 
           // get more memory if required
@@ -684,6 +684,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
               tmap_map_sam_t *sam = NULL;
               tmap_map1_aux_stack_entry_t *cur = NULL;
 
+
               tmap_map_sams_realloc(sams, sams->n+1);
               sam = &sams->sams[sams->n-1];
 
@@ -702,17 +703,20 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
 
               // aux data: reference length
               cur = e;
+              i = e->i;
               sam->aux.map1_aux->aln_ref = 0;
               cigar_i = 0;
               if(2 == sam_found) { // we used 'tmap_bwt_match_exact_alt_reverse' 
                   op = STATE_M;
-                  op_len = len - offset;
+                  op_len = offset;
               }
               else {
                   op = -1;
                   op_len = 0;
               }
-              while(cur->offset < len) {
+              while(0 <= i) {
+                  cur = stack->entry_pool[i];
+                  if(len == cur->offset) break;
                   if(op != cur->state) {
                       if(STATE_M == op || STATE_D == op) {
                           sam->aux.map1_aux->aln_ref += op_len;
@@ -723,10 +727,14 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
                   else {
                       op_len++;
                   }
-                  cur = stack->entry_pool[cur->prev_i];
+                  //fprintf(stderr, "cur->state=%c op_len=%d cur->prev_i=%d k=%u l=%u\n", "MIDS"[cur->state], op_len, cur->prev_i, cur->match_sa.k, cur->match_sa.l);
+                  i = cur->prev_i;
               }
               if(STATE_M == op || STATE_D == op) {
                   sam->aux.map1_aux->aln_ref += op_len;
+              }
+              if(1 == strand) { // since it was reverse complimented
+                  sam->aux.map1_aux->aln_ref = len - sam->aux.map1_aux->aln_ref - 1;
               }
 
               /*
