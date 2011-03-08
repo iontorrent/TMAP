@@ -3,6 +3,7 @@
 #define TMAP_DEFINITIONS_H
 
 #include <stdint.h>
+#include <config.h>
 
 /*! 
   Generic Functions
@@ -83,18 +84,22 @@ enum {
 };
 
 /*! 
-  */
+*/
 enum {
     TMAP_READS_FORMAT_UNKNOWN  = -1, /*!< the reads format is unrecognized */
     TMAP_READS_FORMAT_FASTA    = 0, /*!< the reads are in FASTA format */
     TMAP_READS_FORMAT_FASTQ    = 1, /*!< the reads are in FASTQ format */
-    TMAP_READS_FORMAT_SFF      = 2 /*!< the reads are in SFF format */
+    TMAP_READS_FORMAT_SFF      = 2, /*!< the reads are in SFF format */
+#ifdef HAVE_SAMTOOLS
+    TMAP_READS_FORMAT_SAM      = 3, /*!< the reads are in SAM format */
+    TMAP_READS_FORMAT_BAM      = 4 /*!< the reads are in BAM format */
+#endif
 };
 
 /*! 
   @param  algo_id  the algorithm identifier
   @return          algorithm name
- */
+  */
 char *
 tmap_algo_id_to_name(uint16_t algo_id);
 
@@ -146,6 +151,13 @@ extern uint8_t tmap_nt_char_to_rc_char[256];
   */
 #define tmap_roundup32(x) (--(x), (x)|=(x)>>1, (x)|=(x)>>2, (x)|=(x)>>4, (x)|=(x)>>8, (x)|=(x)>>16, ++(x))
 #endif
+
+/*!
+  @param  reads_format  the reads format
+  @return               the sequence format (for tmap_seq_t)
+  */
+int32_t 
+tmap_reads_format_to_seq_type(int32_t reads_format);
 
 /*! 
   @param  v  the value to take the log 2

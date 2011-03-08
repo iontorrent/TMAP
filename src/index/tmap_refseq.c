@@ -65,7 +65,7 @@ tmap_refseq_write_anno(tmap_file_t *fp, tmap_refseq_t *refseq)
 uint64_t
 tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
 {
-  tmap_file_t *fp_fasta = NULL, *fp_pac = NULL, *fp_anno = NULL;
+  tmap_file_t *fp_pac = NULL, *fp_anno = NULL;
   tmap_seq_io_t *seqio = NULL;
   tmap_seq_t *seq = NULL;
   tmap_refseq_t *refseq = NULL;
@@ -92,8 +92,7 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   buffer_length = 0;
 
   // input files
-  fp_fasta = tmap_file_fopen(fn_fasta, "rb", compression); 
-  seqio = tmap_seq_io_init(fp_fasta, TMAP_SEQ_TYPE_FQ);
+  seqio = tmap_seq_io_init(fn_fasta, TMAP_SEQ_TYPE_FQ, 0, compression);
   seq = tmap_seq_init(TMAP_SEQ_TYPE_FQ);
 
   // output files
@@ -151,7 +150,6 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   tmap_refseq_write_anno(fp_anno, refseq); 
 
   // close files
-  tmap_file_fclose(fp_fasta);
   tmap_file_fclose(fp_pac);
   tmap_file_fclose(fp_anno);
 

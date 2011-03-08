@@ -4,7 +4,7 @@
 #include <math.h>
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_error.h"
-#include "../util/tmap_sam.h"
+#include "../util/tmap_sam_print.h"
 #include "../util/tmap_progress.h"
 #include "../util/tmap_sort.h"
 #include "../util/tmap_definitions.h"
@@ -183,7 +183,11 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "\n");
   tmap_file_fprintf(tmap_file_stderr, "global options (optional):\n");
   if(TMAP_MAP_ALGO_MAPPABILTY != opt->algo_id) {
+#ifdef HAVE_SAMTOOLS
+      tmap_file_fprintf(tmap_file_stderr, "         -F STRING   the reads file format (fastq|fq|fasta|fa|sff|sam|bam) [%s]\n", reads_format);
+#else
       tmap_file_fprintf(tmap_file_stderr, "         -F STRING   the reads file format (fastq|fq|fasta|fa|sff) [%s]\n", reads_format);
+#endif
   }
   tmap_file_fprintf(tmap_file_stderr, "         -A INT      score for a match [%d]\n", opt->score_match);
   tmap_file_fprintf(tmap_file_stderr, "         -M INT      the mismatch penalty [%d]\n", opt->pen_mm);

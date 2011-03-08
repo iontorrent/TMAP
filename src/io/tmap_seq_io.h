@@ -2,11 +2,15 @@
 #ifndef TMAP_SEQ_IO_H
 #define TMAP_SEQ_IO_H
 
+#include <config.h>
 #include "../seq/tmap_fq.h"
 #include "../seq/tmap_sff.h"
 #include "../seq/tmap_seq.h"
-#include "tmap_sff_io.h"
 #include "tmap_fq_io.h"
+#include "tmap_sff_io.h"
+#ifdef HAVE_SAMTOOLS
+#include "tmap_sam_io.h"
+#endif
 
 /*! 
   An Abstract DNA Sequence Reading Library
@@ -16,20 +20,26 @@
 */
 typedef struct {
   int8_t type;  /*!< the type of io associated with this structure */
+  tmap_file_t *fp; /*!< the file pointer */
   union {
-  tmap_fq_io_t *fqio;  /*!< the pointer to the fastq io structure */
-  tmap_sff_io_t *sffio;  /*!< the pointer to the sff io structure */
+      tmap_fq_io_t *fqio;  /*!< the pointer to the fastq io structure */
+      tmap_sff_io_t *sffio;  /*!< the pointer to the sff io structure */
+#ifdef HAVE_SAMTOOLS
+      tmap_sam_io_t *samio;  /*!< the pointer to the SAM/BAM io structure */
+#endif
   } io;
 } tmap_seq_io_t;
 
 /*! 
   initializes input/output structure
-  @param  fp    a pointer to a file structure from which to read
-  @param  type  the type of io associated with this structure
-  @return       pointer to the initialized memory for reading in sequences
+  @param  fn           the file name of the input/output
+  @param  seq_type     the type of io associated with this structure
+  @param  out_type     the output type (0 for reading, 1 for writing)
+  @param  compression  the compression type
+  @return              pointer to the initialized memory for reading/writing sequences
   */
 inline tmap_seq_io_t *
-tmap_seq_io_init(tmap_file_t *fp, int8_t type);
+tmap_seq_io_init(const char *fn, int8_t seq_type, int32_t out_type, int32_t compression);
 
 /*! 
   destroys input/output structure

@@ -15,7 +15,7 @@
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_definitions.h"
 #include "../util/tmap_progress.h"
-#include "../util/tmap_sam.h"
+#include "../util/tmap_sam_print.h"
 #include "../seq/tmap_seq.h"
 #include "../index/tmap_refseq.h"
 #include "../index/tmap_bwt.h"
@@ -129,12 +129,11 @@ tmap_map2_core(tmap_map_opt_t *opt)
   tmap_refseq_t *refseq = NULL;
   tmap_bwt_t *bwt[2] = {NULL, NULL};
   tmap_sa_t *sa[2] = {NULL, NULL};
-  tmap_file_t *fp_reads=NULL;
   tmap_seq_io_t *seqio = NULL;
   tmap_shm_t *shm = NULL;
   tmap_seq_t **seq_buffer = NULL;
   tmap_map_sams_t **sams = NULL;
-  int32_t reads_queue_size;
+  int32_t seq_type, reads_queue_size;
 
   if(NULL == opt->fn_reads) {
       tmap_progress_set_verbosity(0); 
@@ -194,30 +193,11 @@ tmap_map2_core(tmap_map_opt_t *opt)
   seq_buffer = tmap_malloc(sizeof(tmap_seq_t*)*reads_queue_size, "seq_buffer");
   sams = tmap_malloc(sizeof(tmap_map_sams_t*)*reads_queue_size, "alnseqs");
 
-  if(NULL == opt->fn_reads) {
-      fp_reads = tmap_file_fdopen(fileno(stdin), "rb", opt->input_compr);
-      tmap_progress_set_verbosity(0); 
-  }
-  else {
-      fp_reads = tmap_file_fopen(opt->fn_reads, "rb", opt->input_compr);
-  }
-  switch(opt->reads_format) {
-    case TMAP_READS_FORMAT_FASTA:
-    case TMAP_READS_FORMAT_FASTQ:
-      seqio = tmap_seq_io_init(fp_reads, TMAP_SEQ_TYPE_FQ);
-      for(i=0;i<reads_queue_size;i++) { // initialize the buffer
-          seq_buffer[i] = tmap_seq_init(TMAP_SEQ_TYPE_FQ);
-      }
-      break;
-    case TMAP_READS_FORMAT_SFF:
-      seqio = tmap_seq_io_init(fp_reads, TMAP_SEQ_TYPE_SFF);
-      for(i=0;i<reads_queue_size;i++) { // initialize the buffer
-          seq_buffer[i] = tmap_seq_init(TMAP_SEQ_TYPE_SFF);
-      }
-      break;
-    default:
-      tmap_error("unrecognized input format", Exit, CommandLineArgument);
-      break;
+  // initialize the read buffer
+  seq_type = tmap_reads_format_to_seq_type(opt->reads_format); 
+  seqio = tmap_seq_io_init(opt->fn_reads, seq_type, 0, opt->input_compr);
+  for(i=0;i<reads_queue_size;i++) { // initialize the buffer
+      seq_buffer[i] = tmap_seq_init(seq_type);
   }
 
   // Note: 'tmap_file_stdout' should not have been previously modified
@@ -306,7 +286,6 @@ tmap_map2_core(tmap_map_opt_t *opt)
   }
 
   // close the input/output
-  tmap_file_fclose(fp_reads);
   tmap_file_fclose(tmap_file_stdout);
 
   // free memory

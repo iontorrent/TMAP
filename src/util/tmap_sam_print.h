@@ -1,12 +1,11 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
-#ifndef TMAP_SAM_H
-#define TMAP_SAM_H
+#ifndef TMAP_SAM_PRINT_H
+#define TMAP_SAM_PRINT_H
 
 #include <config.h>
 #ifdef HAVE_SAMTOOLS
 #include <bam.h>
 #endif
-#include "../seq/tmap_seq.h"
 #include "../index/tmap_refseq.h"
 #include "../io/tmap_file.h"
 #include "../io/tmap_seq_io.h"
@@ -14,7 +13,7 @@
 /*! 
 */
                     
-#define TMAP_SAM_VERSION "1.3"
+#define TMAP_SAM_PRINT_VERSION "1.3"
 
 /*! 
   prints out a SAM header
