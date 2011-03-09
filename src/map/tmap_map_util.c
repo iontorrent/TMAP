@@ -79,10 +79,10 @@ tmap_map_opt_init(int32_t algo_id)
       opt->seed_max_diff = 2;
       opt->seed2_length = 64;
       opt->max_diff = -1; opt->max_diff_fnr = 0.04;
-      opt->max_mm = 3; opt->max_mm_frac = -1.;
+      opt->max_mm = 2; opt->max_mm_frac = -1.;
       opt->max_err_rate = 0.02;
-      opt->max_gapo = 1; opt->max_gapo_frac = -1.;
-      opt->max_gape = 6; opt->max_gape_frac = -1.;
+      opt->max_gapo = 3; opt->max_gapo_frac = -1.;
+      opt->max_gape = 0; opt->max_gape_frac = -1.;
       opt->max_cals_del = 10;
       opt->indel_ends_bound = 5;
       opt->max_best_cals = 32;
