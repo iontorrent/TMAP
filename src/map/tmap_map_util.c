@@ -63,9 +63,9 @@ tmap_map_opt_init(int32_t algo_id)
   opt->softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_RIGHT;
   opt->dup_window = 128;
   opt->score_thr = 1;
-  opt->reads_queue_size = 262144; // TODO: move this to a define block
+  opt->reads_queue_size = 262144;
   opt->num_threads = 1;
-  opt->aln_output_mode = TMAP_MAP_UTIL_ALN_MODE_RAND_BEST; // TODO: move this to a define block
+  opt->aln_output_mode = TMAP_MAP_UTIL_ALN_MODE_RAND_BEST;
   opt->sam_rg = NULL;
   opt->sam_sff_tags = 0;
   opt->input_compr = TMAP_FILE_NO_COMPRESSION;
@@ -75,18 +75,18 @@ tmap_map_opt_init(int32_t algo_id)
   switch(algo_id) {
     case TMAP_MAP_ALGO_MAP1:
       // map1
-      opt->seed_length = 32; // move this to a define block
-      opt->seed_max_diff = 2; // move this to a define block
-      opt->seed2_length = 64; // move this to a define block
+      opt->seed_length = 32;
+      opt->seed_max_diff = 2;
+      opt->seed2_length = 64;
       opt->max_diff = -1; opt->max_diff_fnr = 0.04;
       opt->max_mm = 3; opt->max_mm_frac = -1.;
       opt->max_err_rate = 0.02;
       opt->max_gapo = 1; opt->max_gapo_frac = -1.;
       opt->max_gape = 6; opt->max_gape_frac = -1.;
-      opt->max_cals_del = 10; // TODO: move this to a define block
-      opt->indel_ends_bound = 5; // TODO: move this to a define block
-      opt->max_best_cals = 32; // TODO: move this to a define block
-      opt->max_entries = 2000000; // TODO: move this to a define block
+      opt->max_cals_del = 10;
+      opt->indel_ends_bound = 5;
+      opt->max_best_cals = 32;
+      opt->max_entries = 2000000;
       break;
     case TMAP_MAP_ALGO_MAP2:
       // map2
@@ -99,10 +99,10 @@ tmap_map_opt_init(int32_t algo_id)
       break;
     case TMAP_MAP_ALGO_MAP3:
       // map3
-      opt->seed_length = -1; // move this to a define block
+      opt->seed_length = -1;
       opt->seed_length_set = 0;
-      opt->max_seed_hits = 8; // move this to a define block
-      opt->max_seed_band = 50; // move this to a define block
+      opt->max_seed_hits = 12;
+      opt->max_seed_band = 50;
       opt->hp_diff = 0;
       break;
     case TMAP_MAP_ALGO_MAPPABILTY:
@@ -1159,6 +1159,117 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
 
   // resize
   tmap_map_sams_realloc(sams, j);
+}
+
+inline void
+tmap_map_util_mapq(tmap_map_sams_t *sams, tmap_map_opt_t *opt)
+{
+  int32_t i;
+  int32_t n_best = 0, n_best_subo = 0;
+  int32_t best_score, cur_score, best_subo;
+  int32_t best_score_sum, best_subo_sum;
+  int32_t mapq;
+  int32_t stage = -1;
+  int32_t algo_id = TMAP_MAP_ALGO_NONE; 
+
+  // estimate mapping quality TODO: this needs to be refined
+  best_score = INT32_MIN;
+  best_subo = INT32_MIN+1;
+  best_score_sum = best_subo_sum = 0;
+  n_best = n_best_subo = 0;
+  for(i=0;i<sams->n;i++) {
+      cur_score = sams->sams[i].score;
+      if(best_score < cur_score) {
+          // save sub-optimal
+          best_subo = best_score;
+          best_subo_sum = best_score_sum;
+          n_best_subo = n_best;
+          // update
+          best_score = best_score_sum = cur_score;
+          n_best = 1;
+          stage = (algo_id == TMAP_MAP_ALGO_NONE) ? sams->sams[i].algo_stage-1 : -1;
+          algo_id = (algo_id == TMAP_MAP_ALGO_NONE) ? sams->sams[i].algo_id : -1;
+      }
+      else if(cur_score == best_score) { // qual
+          best_score_sum += cur_score;
+          n_best++;
+      }
+      else {
+          if(best_subo < cur_score) {
+              best_subo = best_subo_sum = cur_score;
+              n_best_subo = 1;
+          }
+          else if(best_subo == cur_score) {
+              best_subo_sum += cur_score;
+              n_best_subo++;
+          }
+      }
+      if(TMAP_MAP_ALGO_MAP2 == sams->sams[i].algo_id
+         || TMAP_MAP_ALGO_MAP3 == sams->sams[i].algo_id) {
+          cur_score = sams->sams[i].score_subo;
+          if(INT32_MIN == cur_score) {
+              // ignore
+          }
+          else if(best_subo < cur_score) {
+              best_subo = cur_score;
+              n_best_subo=1;
+          }
+          else if(best_subo == cur_score) {
+              n_best_subo++;
+          }
+      }
+  }
+  if(1 < n_best || best_score <= best_subo) {
+      mapq = 0;
+  }
+  else {
+      if(0 == n_best_subo) {
+          n_best_subo = 1;
+          switch(algo_id) {
+            case TMAP_MAP_ALGO_MAP1:
+              // what is the best value for map1
+              if(NULL != opt->opt_map1) {
+                  if(0 < opt->opt_map1[stage]->seed_length) {
+                      best_subo = opt->score_match * (opt->opt_map1[stage]->seed_length - opt->opt_map1[stage]->seed_max_diff);
+                  }
+                  else {
+                      best_subo = 0;
+                  }
+              }
+              else {
+                  if(0 < opt->seed_length) {
+                      best_subo = opt->score_match * (opt->seed_length - opt->seed_max_diff);
+                  }
+                  else {
+                      best_subo = 0;
+                  }
+              }
+              break;
+            case TMAP_MAP_ALGO_MAP2:
+            case TMAP_MAP_ALGO_MAP3:
+            default:
+              best_subo = opt->score_thr; break;
+          }
+      }
+      /*
+         fprintf(stderr, "n_best=%d n_best_subo=%d\n",
+         n_best, n_best_subo);
+         fprintf(stderr, "best_score=%d best_subo=%d\n",
+         best_score, best_subo);
+         */
+      mapq = (int32_t)((n_best / (1.0 * n_best_subo)) * (best_score - best_subo) * (250.0 / best_score + 0.03 / opt->score_match) + .499);
+      if(mapq > 250) mapq = 250;
+      if(mapq <= 0) mapq = 1;
+  }
+  for(i=0;i<sams->n;i++) {
+      cur_score = sams->sams[i].score;
+      if(cur_score == best_score) {
+          sams->sams[i].mapq = mapq;
+      }
+      else {
+          sams->sams[i].mapq = 0;
+      }
+  }
 }
 
 int32_t 

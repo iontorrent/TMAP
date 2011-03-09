@@ -333,6 +333,14 @@ void
 tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window);
 
 /*!
+ Computes the mapping quality from the mappings of multiple algorithms
+ @param  sams  the sams to update
+ @param  opt   the program parameters
+ */
+inline void
+tmap_map_util_mapq(tmap_map_sams_t *sams, tmap_map_opt_t *opt);
+
+/*!
   perform local alignment
   @param  target         the target sequence (forward strand)
   @param  target_length  the target sequence length

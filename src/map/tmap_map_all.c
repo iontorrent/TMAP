@@ -42,122 +42,6 @@ pthread_mutex_t tmap_map_all_read_lock = PTHREAD_MUTEX_INITIALIZER;
 int32_t tmap_map_all_read_lock_low = 0;
 #endif
 
-static inline void
-tmap_map_all_mapq(tmap_map_sams_t *sams, tmap_map_opt_t *opt)
-{
-  int32_t i;
-  int32_t n_best = 0, n_best_subo = 0;
-  int32_t best_score, cur_score, best_subo;
-  int32_t best_score_sum, best_subo_sum;
-  int32_t mapq;
-  int32_t stage = -1;
-  int32_t algo_id = TMAP_MAP_ALGO_NONE; 
-
-  // estimate mapping quality TODO: this needs to be refined
-  best_score = INT32_MIN;
-  best_subo = INT32_MIN+1;
-  best_score_sum = best_subo_sum = 0;
-  n_best = n_best_subo = 0;
-  for(i=0;i<sams->n;i++) {
-      cur_score = sams->sams[i].score;
-      if(best_score < cur_score) {
-          // save sub-optimal
-          best_subo = best_score;
-          best_subo_sum = best_score_sum;
-          n_best_subo = n_best;
-          // update
-          best_score = best_score_sum = cur_score;
-          n_best = 1;
-          stage = (algo_id == TMAP_MAP_ALGO_NONE) ? sams->sams[i].algo_stage-1 : -1;
-          algo_id = (algo_id == TMAP_MAP_ALGO_NONE) ? sams->sams[i].algo_id : -1;
-      }
-      else if(cur_score == best_score) { // qual
-          best_score_sum += cur_score;
-          n_best++;
-      }
-      else {
-          if(best_subo < cur_score) {
-              best_subo = best_subo_sum = cur_score;
-              n_best_subo = 1;
-          }
-          else if(best_subo == cur_score) {
-              best_subo_sum += cur_score;
-              n_best_subo++;
-          }
-      }
-      if(TMAP_MAP_ALGO_MAP2 == sams->sams[i].algo_id
-         || TMAP_MAP_ALGO_MAP3 == sams->sams[i].algo_id) {
-          cur_score = sams->sams[i].score_subo;
-          if(INT32_MIN == cur_score) {
-              // ignore
-          }
-          else if(best_subo < cur_score) {
-              best_subo = best_subo_sum = cur_score;
-              n_best_subo=1;
-          } 
-          else if(best_subo == cur_score) {
-              best_subo_sum += cur_score;
-              n_best_subo++;
-          }
-      }
-  }
-  if(1 < n_best || best_score <= best_subo) {
-      mapq = 0;
-  }
-  else {
-      /*
-      fprintf(stderr, "BEFORE\n");
-      fprintf(stderr, "n_best=%d n_best_subo=%d\n",
-              n_best, n_best_subo);
-      fprintf(stderr, "best_score=%d best_subo=%d\n",
-              best_score, best_subo);
-              */
-      if(0 == n_best_subo) {
-          n_best_subo = 1;
-          switch(algo_id) {
-            case TMAP_MAP_ALGO_MAP1:
-              // what is the best value for map1
-              if(0 < opt->opt_map1[stage]->seed_length) {
-                  best_subo = opt->score_match * (opt->opt_map1[stage]->seed_length - opt->opt_map1[stage]->seed_max_diff);
-              }
-              else {
-                  best_subo = 0;
-              }
-              break;
-            case TMAP_MAP_ALGO_MAP2:
-              best_subo = opt->opt_map2[stage]->score_thr; break;
-            case TMAP_MAP_ALGO_MAP3:
-              best_subo = opt->opt_map3[stage]->score_thr; break;
-            default:
-              best_subo = 0; break;
-          }
-      }
-      else if(opt->score_thr <= best_subo) {
-          // take the mean sub-optimal score
-          best_subo = best_subo_sum / n_best_subo;
-      }
-      /*
-      fprintf(stderr, "AFTER\n");
-      fprintf(stderr, "n_best=%d n_best_subo=%d\n",
-              n_best, n_best_subo);
-      fprintf(stderr, "best_score=%d best_subo=%d\n",
-              best_score, best_subo);
-              */
-      mapq = (int32_t)((n_best / (1.0 * n_best_subo)) * (best_score - best_subo) * (250.0 / best_score + 0.03 / opt->score_match) + .499);
-      if(mapq > 250) mapq = 250;
-      if(mapq <= 0) mapq = 1;
-  }
-  for(i=0;i<sams->n;i++) {
-      cur_score = sams->sams[i].score;
-      if(cur_score == best_score) {
-          sams->sams[i].mapq = mapq;
-      }
-      else {
-          sams->sams[i].mapq = 0;
-      }
-  }
-}
-
 static void
 tmap_map_all_sams_merge_helper(tmap_map_sams_t *dest, tmap_map_sams_t *src, int32_t stage)
 {
@@ -208,7 +92,7 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
   }
 
   // mapping quality
-  tmap_map_all_mapq(sams, opt);
+  tmap_map_util_mapq(sams, opt);
 
   // choose alignment(s)
   if(0 == opt->aln_output_mode_ind) {

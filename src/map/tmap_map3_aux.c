@@ -209,12 +209,27 @@ tmap_map3_aux_core_seed(uint8_t *query,
   }
   else {
       tmap_bwt_match_occ_t cur_sa;
+
+      for(i=query_length-seed_length;0<=i;i--) {
+          if(0 < tmap_bwt_match_exact(bwt, seed_length, query + i, &cur_sa)) {
+              if((cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
+                  tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, 0);
+              }
+          }
+          else {
+              // skip over if we came up short
+              i -= (seed_length - cur_sa.offset); 
+          }
+      }
+
+      /*
       for(i=0;i<query_length-seed_length+1;i++) {
           if(0 < tmap_bwt_match_exact(bwt, seed_length, query + i, &cur_sa)
                  && (cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
               tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, 0);
           }
       }
+      */
   }
 }
 

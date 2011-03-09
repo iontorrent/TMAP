@@ -40,6 +40,7 @@ tmap_map3_get_seed_length(uint64_t ref_len)
       ref_len >>= 2; // divide by two
       k++;
   }
+  k += 2;
   return k;
 }
 
