@@ -11,6 +11,7 @@
 #include "../util/tmap_definitions.h"
 #include "../util/tmap_progress.h"
 #include "../util/tmap_sam_print.h"
+#include "../util/tmap_sort.h"
 #include "../seq/tmap_seq.h"
 #include "../index/tmap_refseq.h"
 #include "../index/tmap_bwt_gen.h"
@@ -31,6 +32,10 @@ static int32_t tmap_map1_read_lock_low = 0;
 #endif
 
 static int32_t g_log_n[256];
+
+// sort by max-score
+#define __tmap_map1_sam_sort_score_lt(a, b) ((a).score > (b).score)
+TMAP_SORT_INIT(tmap_map1_sam_sort_score, tmap_map_sam_t, __tmap_map1_sam_sort_score_lt)
 
 int32_t
 tmap_map1_cal_maxdiff(int32_t l, double err, double thres)
@@ -122,18 +127,22 @@ tmap_map1_sams_mapq(tmap_map_sams_t *sams, tmap_map_opt_t *opt)
       return;
   }
 
-  //Note: assumes that the alignments are sorted by increasing score
+  // sort by decreasing score
+  tmap_sort_introsort(tmap_map1_sam_sort_score, sams->n, sams->sams);
+
+  //Note: assumes that the alignments are sorted by decreasing score
   num_best = num_best_sa = num_all_sa = 0;
   for(i=0;i<sams->n;i++) {
-      if(sams->sams[0].score < sams->sams[i].score) {
+      if(0 < i && sams->sams[i-1].score < sams->sams[i].score) { // check assumption
+          tmap_error("bug encountered", Exit, OutOfRange);
+      }
+      if(sams->sams[i].score < sams->sams[0].score) {
           break;
       }
       num_best++;
       num_best_sa++;
   }
-  for(i=0;i<sams->n;i++) {
-      num_all_sa++;
-  }
+  num_all_sa += sams->n;
   for(i=0;i<num_best;i++) {
       sams->sams[i].mapq = tmap_map1_sam_mapq(num_best_sa, num_all_sa, opt->max_mm, sams->sams[i].aux.map1_aux->n_mm);
   }
