@@ -178,10 +178,34 @@ tmap_bwt_match_exact(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bw
       prev = next;
       if(next.k > next.l) break; // no match
   }
-  if(prev.k > prev.l) return 0; // no match
   if(NULL != match_sa) {
       (*match_sa) = prev;
   }
+  if(prev.k > prev.l) return 0; // no match
+  return prev.l - prev.k + 1;
+}
+
+uint32_t
+tmap_bwt_match_exact_reverse(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa)
+{
+  int32_t i;
+  tmap_bwt_match_occ_t prev, next;
+
+  prev.k = 0; prev.l = bwt->seq_len;
+  prev.offset = 0;
+  prev.hi = 0;
+
+  for(i=len-1;0<=i;i--) {
+      uint8_t c = str[i];
+      if(c > 3) return 0; // no match
+      tmap_bwt_match_2occ(bwt, &prev, c, &next);
+      prev = next;
+      if(next.k > next.l) break; // no match
+  }
+  if(NULL != match_sa) {
+      (*match_sa) = prev;
+  }
+  if(prev.k > prev.l) return 0; // no match
   return prev.l - prev.k + 1;
 }
 
@@ -189,36 +213,30 @@ uint32_t
 tmap_bwt_match_exact_alt(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa)
 {
   int i;
-  tmap_bwt_match_occ_t prev, next;
-
-  prev = (*match_sa);
+  tmap_bwt_match_occ_t next;
 
   for(i=0;i<len;i++) {
       uint8_t c = str[i];
       if(c > 3) return 0; // there is an N here. no match
-      tmap_bwt_match_2occ(bwt, &prev, c, &next);
-      prev = next;
+      tmap_bwt_match_2occ(bwt, match_sa, c, &next);
+      (*match_sa) = next;
       if(next.k > next.l) return 0; // no match
   }
-  (*match_sa) = prev;
-  return prev.l - prev.k + 1;
+  return match_sa->l - match_sa->k + 1;
 }
 
 uint32_t
 tmap_bwt_match_exact_alt_reverse(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa)
 {
   int i;
-  tmap_bwt_match_occ_t prev, next;
-
-  prev = (*match_sa);
+  tmap_bwt_match_occ_t next;
 
   for(i=len-1;0<=i;i--) {
       uint8_t c = str[i];
       if(c > 3) return 0; // there is an N here. no match
-      tmap_bwt_match_2occ(bwt, &prev, c, &next);
-      prev = next;
+      tmap_bwt_match_2occ(bwt, match_sa, c, &next);
+      (*match_sa) = next;
       if(next.k > next.l) return 0; // no match
   }
-  (*match_sa) = prev;
-  return prev.l - prev.k + 1;
+  return match_sa->l - match_sa->k + 1;
 }
