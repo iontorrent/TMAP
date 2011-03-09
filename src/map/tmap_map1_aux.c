@@ -55,8 +55,8 @@ tmap_map1_aux_stack_cmp(void *a, void *b)
 static void
 tmap_map1_aux_stack_entry_print(tmap_file_t *fp, tmap_map1_aux_stack_entry_t *e)
 {
-  //fprintf(stderr, "score=%u, n_mm=%u, n_gapo=%d, n_gape=%d, state=%u, strand=%u, offset=%d, last_diff_offset=%d, k=%u, l=%u, i=%u, prev_i=%d\n",
-  tmap_file_fprintf(fp, "score=%u, n_mm=%u, n_gapo=%d, n_gape=%d, state=%u, strand=%u, offset=%d, last_diff_offset=%d, k=%u, l=%u, i=%u, prev_i=%d\n",
+  fprintf(stderr, "score=%u, n_mm=%u, n_gapo=%d, n_gape=%d, state=%u, strand=%u, offset=%d, last_diff_offset=%d, k=%u, l=%u, i=%u, prev_i=%d\n",
+  //tmap_file_fprintf(fp, "score=%u, n_mm=%u, n_gapo=%d, n_gape=%d, state=%u, strand=%u, offset=%d, last_diff_offset=%d, k=%u, l=%u, i=%u, prev_i=%d\n",
                     e->score, e->n_mm, e->n_gapo, e->n_gape, e->state, e->strand, e->offset, e->last_diff_offset, e->match_sa.k, e->match_sa.l, e->i, e->prev_i);
 }
 */
@@ -529,17 +529,12 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
   }
 
   /*
-     for(i=0;i<2;i++) {
-     for(j=0;j<bases[i]->l;j++) {
-     fprintf(stderr, "i=%d j=%d width.w=%u width.bid=%d\n",
-     i, j, width[i][j].w, width[i][j].bid);
-     }
-     for(j=0;j<seed2_len;j++) {
-     fprintf(stderr, "i=%d j=%d width.w=%u width.bid=%d\n",
-     i, j, seed_width[i][j].w, seed_width[i][j].bid);
-     }
-     }
-     */
+  for(j=0;j<bases[0]->l;j++) {
+      fprintf(stderr, "#0 %d: [%d,%u] [%d,%u]\n", j,
+              width[0][j].bid, width[0][j].w,
+              width[1][j].bid, width[1][j].w);
+  }
+  */
 
   match_sa_start.offset = 0;
   match_sa_start.hi = 0;
@@ -562,7 +557,19 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
       
       // get the best entry
       e = tmap_map1_aux_stack_pop(stack); 
-      //tmap_map1_aux_stack_entry_print(tmap_file_stderr, e);
+      /*
+      tmap_map1_aux_stack_entry_print(tmap_file_stderr, e);
+      fprintf(stderr, "bases=");
+      for(i=e->offset;i<bases[e->strand]->l;i++) {
+          if(0 == e->strand) {
+              fputc("ACGTN"[(int)bases[e->strand]->s[i]], stderr);
+          }
+          else {
+              fputc("TGCAN"[(int)bases[e->strand]->s[i]], stderr);
+          }
+      }
+      fprintf(stderr, "\tstrand=%d\n", e->strand);
+      */
 
       // bound with best score
       if(best_score + max_edit_score < e->score) {
@@ -592,6 +599,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
       else {
           seed_width_cur = NULL;
       }
+      //fprintf(stderr, "max_diff=%d offset=%d m=%d width_cur[offset-1].bid=%d\n", max_diff, offset, m, width_cur[offset-1].bid);
       if(0 < offset && m < width_cur[offset-1].bid) { // too many edits
           continue;
       }
@@ -616,34 +624,36 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
           // check for duplicates
           if(0 < sams->n) {
               for(i=0;i<sams->n;i++) {
-                  // check contained
-                  if(match_sa_cur.k <= sams->sams[i].seqid
-                     && sams->sams[i].seqid <= match_sa_cur.l) { // MK <= SK <= ML
-                      if(sams->sams[i].pos <= match_sa_cur.l) { // MK <= SK <= SL <= ML
-                          // Want (SK - MK) + (ML - SL)
-                          k = sams->sams[i].seqid - match_sa_cur.k; // (SK - MK)
-                          k += match_sa_cur.l - sams->sams[i].pos; // (ML - SL)
-                          sams->sams[i].pos = match_sa_cur.l; // Make SL = ML
-                      }
-                      else { // MK <= SK <= ML <= SL
-                          k = sams->sams[i].seqid - match_sa_cur.k; // (SK - MK)
-                      }
-                      sams->sams[i].seqid = match_sa_cur.k; // Make SK = MK
-                      break;
-                  }
-                  else if(match_sa_cur.k <= sams->sams[i].pos
-                     && sams->sams[i].pos <= match_sa_cur.l) { // MK <= SL <= ML
-                      if(match_sa_cur.k <= sams->sams[i].seqid) { // MK <= SK <= SL <= ML
-                          // Want (SK - MK) + (ML - SL)
-                          k = sams->sams[i].seqid - match_sa_cur.k; // (SK - MK)
-                          k += match_sa_cur.l - sams->sams[i].pos; // (ML - SL)
+                  if(strand == sams->sams[i].strand) {
+                      // check contained
+                      if(match_sa_cur.k <= sams->sams[i].seqid
+                         && sams->sams[i].seqid <= match_sa_cur.l) { // MK <= SK <= ML
+                          if(sams->sams[i].pos <= match_sa_cur.l) { // MK <= SK <= SL <= ML
+                              // Want (SK - MK) + (ML - SL)
+                              k = sams->sams[i].seqid - match_sa_cur.k; // (SK - MK)
+                              k += match_sa_cur.l - sams->sams[i].pos; // (ML - SL)
+                              sams->sams[i].pos = match_sa_cur.l; // Make SL = ML
+                          }
+                          else { // MK <= SK <= ML <= SL
+                              k = sams->sams[i].seqid - match_sa_cur.k; // (SK - MK)
+                          }
                           sams->sams[i].seqid = match_sa_cur.k; // Make SK = MK
+                          break;
                       }
-                      else { // SK <= MK <= SL <= ML
-                          k = match_sa_cur.l - sams->sams[i].pos; // (ML - SL)
+                      else if(match_sa_cur.k <= sams->sams[i].pos
+                              && sams->sams[i].pos <= match_sa_cur.l) { // MK <= SL <= ML
+                          if(match_sa_cur.k <= sams->sams[i].seqid) { // MK <= SK <= SL <= ML
+                              // Want (SK - MK) + (ML - SL)
+                              k = sams->sams[i].seqid - match_sa_cur.k; // (SK - MK)
+                              k += match_sa_cur.l - sams->sams[i].pos; // (ML - SL)
+                              sams->sams[i].seqid = match_sa_cur.k; // Make SK = MK
+                          }
+                          else { // SK <= MK <= SL <= ML
+                              k = match_sa_cur.l - sams->sams[i].pos; // (ML - SL)
+                          }
+                          sams->sams[i].pos = match_sa_cur.l; // Make SL = ML
+                          break;
                       }
-                      sams->sams[i].pos = match_sa_cur.l; // Make SL = ML
-                      break;
                   }
               }
               if(i < sams->n) {
@@ -651,7 +661,6 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
                   if(0 < k) {
                       tmap_map1_aux_stack_shadow(k, len, bwt[1-strand]->seq_len, e->last_diff_offset, width_cur);
                   }
-                  //fprintf(stderr, "found duplicate\n");
                   sam_found = 0;
                   continue;
               }
@@ -663,14 +672,14 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
               best_score = score;
               best_cnt = 0;
               best_diff = e->n_mm + e->n_gapo + e->n_gape;
-              if(best_diff + 1 <= max_diff) {
-                  max_diff = best_diff + 1;
-              }
           }
           if(score == best_score) {
               best_cnt += match_sa_cur.l - match_sa_cur.k + 1;
           }
           else {
+              if(best_diff + 1 <= max_diff) {
+                  max_diff = best_diff + 1;
+              }
               if(score < next_best_score) {
                   next_best_score = score;
               }
