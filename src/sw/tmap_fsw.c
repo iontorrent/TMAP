@@ -137,7 +137,7 @@ tmap_fsw_sub_core(uint8_t *seq, int32_t len,
                   tmap_fsw_dpscore_t *dpscore_curr,
                   tmap_fsw_path_t *path, int32_t *path_len, int32_t best_ctype,
                   uint8_t key_bases,
-                  int32_t type)
+                  int32_t flowseq_start_clip, int32_t flowseq_end_clip)
 {
   register int32_t i, j;
   int32_t low_offset, high_offset, flow_score;
@@ -184,26 +184,12 @@ tmap_fsw_sub_core(uint8_t *seq, int32_t len,
       tmap_fsw_set_end_ins(sub_dpcell, sub_dpscore, i, 0, gap_open, gap_ext, gap_end, sub_path);
       // fill in the rest of the columns
       for(j=1;j<=len;j++) { // for each col
-          // HERE
           //if(1 == i) fprintf(stderr, "j=%d flow_base=%d seq[j-1]=%d mat[seq[j-1]]=%d\n", j, flow_base, seq[j-1], mat[seq[j-1]]); 
           tmap_fsw_set_match(sub_dpcell, sub_dpscore, i, j, mat[seq[j-1]], sub_path);
           tmap_fsw_set_ins(sub_dpcell, sub_dpscore, i, j, gap_open, gap_ext, sub_path);
           tmap_fsw_set_del(sub_dpcell, sub_dpscore, i, j, gap_open, gap_ext, sub_path);
       }
   }
-
-  /*
-     fprintf(stderr, "BEFORE\n");
-     for(i=low_offset;i<=high_offset;i++) { // for each row in the sub-alignment
-     for(j=0;j<=len;j++) { // for each col
-     fprintf(stderr, "(%d,%d M[%d,%d,%d,%d] I[%d,%d,%d,%d] D[%d,%d,%d,%d])\n",
-     i, j,
-     sub_dpcell[i][j].match_bc, sub_dpcell[i][j].match_from & 0x3, sub_dpcell[i][j].match_from >> 2, (int)sub_dpscore[i][j].match_score,
-     sub_dpcell[i][j].ins_bc, sub_dpcell[i][j].ins_from & 0x3, sub_dpcell[i][j].ins_from >> 2, (int)sub_dpscore[i][j].ins_score,
-     sub_dpcell[i][j].del_bc, sub_dpcell[i][j].del_from & 0x3, sub_dpcell[i][j].del_from >> 2, (int)sub_dpscore[i][j].del_score);
-     }
-     }
-     */
 
   // add flow scores
   for(i=low_offset;i<=high_offset;i++) { // for each possible base call within +-offset
@@ -219,27 +205,14 @@ tmap_fsw_sub_core(uint8_t *seq, int32_t len,
       }
   }
 
-
   if(NULL != dpcell_curr && NULL != dpscore_curr) {
-      /*
-         fprintf(stderr, "AFTER\n");
-         for(i=low_offset;i<=high_offset;i++) { // for each row in the sub-alignment
-         for(j=0;j<=len;j++) { // for each col
-         fprintf(stderr, "(%d,%d M[%d,%d,%d,%d] I[%d,%d,%d,%d] D[%d,%d,%d,%d])\n",
-         i, j,
-         sub_dpcell[i][j].match_bc, sub_dpcell[i][j].match_from & 0x3, sub_dpcell[i][j].match_from >> 2, (int)sub_dpscore[i][j].match_score,
-         sub_dpcell[i][j].ins_bc, sub_dpcell[i][j].ins_from & 0x3, sub_dpcell[i][j].ins_from >> 2, (int)sub_dpscore[i][j].ins_score,
-         sub_dpcell[i][j].del_bc, sub_dpcell[i][j].del_from & 0x3, sub_dpcell[i][j].del_from >> 2, (int)sub_dpscore[i][j].del_score);
-         }
-         }
-         */
       // set the best cell to be [base_call][0,len]
       // NOTE: set this to the original base call to get consistency between
       // calling homopolymer over/under calls
       for(j=0;j<=len;j++) { // for each col
           dpcell_curr[j] = sub_dpcell[base_call][j];
           dpscore_curr[j] = sub_dpscore[base_call][j];
-          if(TMAP_SW_TYPE_LOCAL == type) { // local alignment
+          if(1 == flowseq_start_clip) { // start anywhere
               if(dpscore_curr[j].match_score < 0) {
                   dpcell_curr[j].match_from = TMAP_FSW_FROM_S;
                   dpcell_curr[j].match_bc = 0;
@@ -281,16 +254,6 @@ tmap_fsw_sub_core(uint8_t *seq, int32_t len,
               }
           }
       }
-      /*
-         fprintf(stderr, "STORED\n");
-         for(j=0;j<=len;j++) { // for each col
-         fprintf(stderr, "(%d M[%d,%d,%d,%d] I[%d,%d,%d,%d] D[%d,%d,%d,%d])\n",
-         j,
-         dpcell_curr[j].match_bc, dpcell_curr[j].match_from & 0x3, dpcell_curr[j].match_from >> 2, (int)dpscore_curr[j].match_score,
-         dpcell_curr[j].ins_bc, dpcell_curr[j].ins_from & 0x3, dpcell_curr[j].ins_from >> 2, (int)dpscore_curr[j].ins_score,
-         dpcell_curr[j].del_bc, dpcell_curr[j].del_from & 0x3, dpcell_curr[j].del_from >> 2, (int)dpscore_curr[j].del_score);
-         }
-         */
   }
 
   if(NULL != path) {
@@ -355,7 +318,8 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
                   tmap_fsw_dpcell_t **sub_dpcell,
                   tmap_fsw_dpscore_t **sub_dpscore, 
                   const tmap_fsw_param_t *ap,
-                  int32_t best_i, int32_t best_j, uint8_t best_ctype, int32_t type,
+                  int32_t best_i, int32_t best_j, uint8_t best_ctype, 
+                  int32_t flowseq_start_clip, int32_t flowseq_end_clip,
                   tmap_fsw_path_t *path, int32_t *path_len)
 {
   register int32_t i, j;
@@ -395,8 +359,7 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
       base_call_diff = 0;
 
       // local
-      if(i <= 0
-         && (TMAP_SW_TYPE_LOCAL == type || TMAP_SW_TYPE_FITTING == type)) {
+      if(i <= 0 && 1 == flowseq_start_clip) {
           break;
       }
 
@@ -481,7 +444,7 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
                             NULL, NULL, // do not update
                             sub_path, &sub_path_len, ctype, // get the path
                             ((key_index+1) == i) ? key_bases : 0,
-                            ctype);
+                            0, 0);
 
           base_call_diff = base_call - base_calls[i-1];
           // if base_call_diff > 0, add insertions
@@ -528,13 +491,12 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
 /*
 Notes: key_index is zero-base and should be -1, 0, or (num_flows-1)
 */
-static int64_t
-tmap_fsw_stdaln_aux(uint8_t *seq, int32_t len, 
+int64_t
+tmap_fsw_clipping_core(uint8_t *seq, int32_t len, 
                     tmap_fsw_flowseq_t *flowseq,
                     const tmap_fsw_param_t *ap,
-                    tmap_fsw_path_t *path, int32_t *path_len, 
-                    int32_t type, int32_t prev_score,
-                    int32_t _thres, int32_t *_subo)
+                    int32_t flowseq_start_clip, int32_t flowseq_end_clip,
+                    tmap_fsw_path_t *path, int32_t *path_len)
 {
   register int32_t i, j;
   int32_t max_bc = 0, bw;
@@ -596,29 +558,20 @@ tmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
   // set first row
   TMAP_FSW_SET_SCORE_INF(dpscore[0][0]); 
   TMAP_FSW_INIT_CELL(dpcell[0][0]);
-  if(TMAP_SW_TYPE_EXTEND == type
-     || TMAP_SW_TYPE_EXTEND_FITTING == type) {
-      dpscore[0][0].match_score = prev_score;
-  }
-  else {
-      dpscore[0][0].match_score = 0;
-  }
-  for(j=1;j<=len;j++) { // for each col
-      TMAP_FSW_SET_SCORE_INF(dpscore[0][j]);
-      TMAP_FSW_INIT_CELL(dpcell[0][j]);
-      switch(type) {
-        case TMAP_SW_TYPE_LOCAL:
-        case TMAP_SW_TYPE_FITTING:
+  dpscore[0][0].match_score = 0;
+  if(1 == flowseq_start_clip) { // start anywhere in flowseq
+      for(j=1;j<=len;j++) { // for each col
+          TMAP_FSW_SET_SCORE_INF(dpscore[0][j]);
+          TMAP_FSW_INIT_CELL(dpcell[0][j]);
           // the alignment can start anywhere with seq 
           dpscore[0][j].match_score = 0; 
-          break;
-        case TMAP_SW_TYPE_GLOBAL:
-        case TMAP_SW_TYPE_EXTEND:
-        case TMAP_SW_TYPE_EXTEND_FITTING:
+      }
+  }
+  else { // start at hte first flow in seq2
+      for(j=1;j<=len;j++) { // for each col
+          TMAP_FSW_SET_SCORE_INF(dpscore[0][j]);
+          TMAP_FSW_INIT_CELL(dpcell[0][j]);
           tmap_fsw_set_end_del(dpcell, dpscore, 0, j, gap_open, gap_ext, gap_end, 0);
-          break;
-        default:
-          tmap_error("alignment type not understood", Exit, OutOfRange);
       }
   }
 
@@ -636,12 +589,11 @@ tmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
                         dpcell[i], dpscore[i],
                         NULL, NULL, 0,
                         ((flowseq->key_index+1) == i) ? flowseq->key_bases : 0,
-                        type);
+                        flowseq_start_clip, flowseq_end_clip);
 
       // Update best
-      switch(type) {
-        case TMAP_SW_TYPE_LOCAL:
-        case TMAP_SW_TYPE_EXTEND:
+      if(1 == flowseq_end_clip // end anywhere in flowseq
+         || i == flowseq->num_flows) {
           for(j=1;j<=len;j++) {
               if(best_score < dpscore[i][j].match_score) {
                   best_score = dpscore[i][j].match_score;
@@ -659,50 +611,6 @@ tmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
                   best_i = i; best_j = j;
               }
           }
-          break;
-        case TMAP_SW_TYPE_GLOBAL:
-          if(i == flowseq->num_flows) {
-              if(best_score < dpscore[i][len].match_score) {
-                  best_score = dpscore[i][len].match_score;
-                  best_ctype = TMAP_FSW_FROM_M;
-                  best_i = i; best_j = len;
-              }
-              if(best_score < dpscore[i][len].ins_score) {
-                  best_score = dpscore[i][len].ins_score;
-                  best_ctype = TMAP_FSW_FROM_I;
-                  best_i = i; best_j = len;
-              }
-              if(best_score < dpscore[i][len].del_score) {
-                  best_score = dpscore[i][len].del_score;
-                  best_ctype = TMAP_FSW_FROM_D;
-                  best_i = i; best_j = len;
-              }
-          }
-          break;
-        case TMAP_SW_TYPE_EXTEND_FITTING:
-        case TMAP_SW_TYPE_FITTING:
-          if(flowseq->num_flows == i) {
-              for(j=1;j<=len;j++) {
-                  if(best_score < dpscore[i][j].match_score) {
-                      best_score = dpscore[i][j].match_score;
-                      best_ctype = TMAP_FSW_FROM_M;
-                      best_i = i; best_j = j;
-                  }
-                  if(best_score < dpscore[i][j].ins_score) {
-                      best_score = dpscore[i][j].ins_score;
-                      best_ctype = TMAP_FSW_FROM_I;
-                      best_i = i; best_j = j;
-                  }
-                  if(best_score < dpscore[i][j].del_score) {
-                      best_score = dpscore[i][j].del_score;
-                      best_ctype = TMAP_FSW_FROM_D;
-                      best_i = i; best_j = j;
-                  }
-              }
-          }
-          break;
-        default:
-          break;
       }
   }
 
@@ -717,9 +625,6 @@ tmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
   else if(NULL == path_len) {
       path[0].i = best_i; path[0].j = best_j;
   }
-  else if(best_score <= _thres) {
-      (*path_len) = 0;
-  }
   else {
       // recover the path
       tmap_fsw_get_path(seq, flowseq->flow_order, flowseq->flow_order_len, flowseq->base_calls, flowseq->flowgram,
@@ -727,7 +632,8 @@ tmap_fsw_stdaln_aux(uint8_t *seq, int32_t len,
                         dpcell, dpscore, 
                         sub_dpcell, sub_dpscore, 
                         ap, 
-                        best_i, best_j, best_ctype, type, 
+                        best_i, best_j, best_ctype, 
+                        flowseq_start_clip, flowseq_end_clip,
                         path, path_len);
   }
 
@@ -776,36 +682,13 @@ tmap_fsw_flowseq_destroy(tmap_fsw_flowseq_t *flowseq)
 }
 
 int64_t
-tmap_fsw_global_core(uint8_t *seq, int32_t len, 
-                     tmap_fsw_flowseq_t *flowseq,
-                     const tmap_fsw_param_t *ap,
-                     tmap_fsw_path_t *path, int32_t *path_len)
-{
-  return tmap_fsw_stdaln_aux(seq, len, flowseq,
-                             ap, path, path_len, TMAP_SW_TYPE_GLOBAL, 0,
-                             INT32_MIN, NULL);
-}
-
-int64_t
-tmap_fsw_local_core(uint8_t *seq, int32_t len, 
-                    tmap_fsw_flowseq_t *flowseq,
-                    const tmap_fsw_param_t *ap,
-                    tmap_fsw_path_t *path, int32_t *path_len, int32_t _thres, int32_t *_subo)
-{
-  return tmap_fsw_stdaln_aux(seq, len, flowseq,
-                             ap, path, path_len, TMAP_SW_TYPE_LOCAL, 0,
-                             _thres, _subo);
-}
-
-int64_t
 tmap_fsw_extend_core(uint8_t *seq, int32_t len, 
                      tmap_fsw_flowseq_t *flowseq,
                      const tmap_fsw_param_t *ap,
                      tmap_fsw_path_t *path, int32_t *path_len, int32_t prev_score)
 {
-  return tmap_fsw_stdaln_aux(seq, len, flowseq,
-                             ap, path, path_len, TMAP_SW_TYPE_EXTEND, prev_score,
-                             0, NULL);
+  return prev_score + tmap_fsw_clipping_core(seq, len, flowseq,
+                             ap, 0, 1, path, path_len);
 }
 
 int64_t
@@ -814,20 +697,8 @@ tmap_fsw_extend_fitting_core(uint8_t *seq, int32_t len,
                              const tmap_fsw_param_t *ap,
                              tmap_fsw_path_t *path, int32_t *path_len, int32_t prev_score)
 {
-  return tmap_fsw_stdaln_aux(seq, len, flowseq,
-                             ap, path, path_len, TMAP_SW_TYPE_EXTEND_FITTING, prev_score,
-                             INT32_MIN, NULL);
-}
-
-int64_t
-tmap_fsw_fitting_core(uint8_t *seq, int32_t len, 
-                      tmap_fsw_flowseq_t *flowseq,
-                      const tmap_fsw_param_t *ap,
-                      tmap_fsw_path_t *path, int32_t *path_len)
-{
-  return tmap_fsw_stdaln_aux(seq, len, flowseq,
-                             ap, path, path_len, TMAP_SW_TYPE_FITTING, 0,
-                             INT32_MIN, NULL);
+  return prev_score + tmap_fsw_clipping_core(seq, len, flowseq,
+                             ap, 0, 0, path, path_len);
 }
 
 static inline
@@ -1530,9 +1401,10 @@ int tmap_fsw_main(int argc, char *argv[])
   flowseq = tmap_fsw_flowseq_init(flow_order, flow_order_len, base_calls, flowgram, num_flows, -1, -1);
 
   // align
-  int64_t score = tmap_fsw_global_core((uint8_t*)opt->target, opt->target_length,
+  int64_t score = tmap_fsw_clipping_core((uint8_t*)opt->target, opt->target_length,
                                        flowseq,
                                        &opt->param,
+                                       0, 0,
                                        path, &path_len);
 
   tmap_file_stdout = tmap_file_fdopen(fileno(stdout), "wb", TMAP_FILE_NO_COMPRESSION);

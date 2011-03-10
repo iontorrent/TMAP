@@ -1461,28 +1461,29 @@ tmap_map_util_fsw(tmap_sff_t *sff,
       }
 
       // re-align
+      s->ascore = s->score;
       switch(softclip_type) {
         case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
-          s->ascore = s->score;
-          s->score = tmap_fsw_local_core(target, target_len, fseq[s->strand], &param, path, &path_len, score_thr, &s->score_subo);
+          s->score = tmap_fsw_clipping_core(target, target_len, fseq[s->strand], &param, 
+                                            1, 1, path, &path_len);
           break;
         case TMAP_MAP_UTIL_SOFT_CLIP_LEFT:
-          // TODO
-          tmap_error("soft clipping type is not supported", Exit, OutOfRange);
+          s->score = tmap_fsw_clipping_core(target, target_len, fseq[s->strand], &param, 
+                                            1, 0, path, &path_len);
           break;
         case TMAP_MAP_UTIL_SOFT_CLIP_RIGHT:
-          // TODO
-          tmap_error("soft clipping type is not supported", Exit, OutOfRange);
+          s->score = tmap_fsw_clipping_core(target, target_len, fseq[s->strand], &param, 
+                                            0, 1, path, &path_len);
           break;
         case TMAP_MAP_UTIL_SOFT_CLIP_NONE:
-          s->ascore = s->score;
-          s->score = tmap_fsw_fitting_core(target, target_len, fseq[s->strand], &param, path, &path_len);
-          s->score_subo = INT32_MIN;
+          s->score = tmap_fsw_clipping_core(target, target_len, fseq[s->strand], &param, 
+                                            0, 0, path, &path_len);
           break;
         default:
           tmap_error("soft clipping type was not recognized", Exit, OutOfRange);
           break;
       }
+      s->score_subo = INT32_MIN;
 
       if(path_len < 0) { // update
           s->pos = (ref_start-1) + (path[path_len-1].j-1);

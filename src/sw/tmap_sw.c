@@ -918,14 +918,14 @@ int32_t
 tmap_sw_extend_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
                     tmap_sw_path_t *path, int32_t *path_len, int32_t prev_score, uint8_t *_mem)
 {
-  return tmap_sw_clipping_core(seq1, len1, seq2, len2, ap, 0, 1, path, path_len);
+  return prev_score + tmap_sw_clipping_core(seq1, len1, seq2, len2, ap, 0, 1, path, path_len);
 }
 
 int32_t 
 tmap_sw_extend_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
                     tmap_sw_path_t *path, int32_t *path_len, int32_t prev_score, uint8_t *_mem)
 {
-  return tmap_sw_clipping_core(seq1, len1, seq2, len2, ap, 0, 0, path, path_len);
+  return prev_score + tmap_sw_clipping_core(seq1, len1, seq2, len2, ap, 0, 0, path, path_len);
 }
 
 static void
@@ -1130,7 +1130,8 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
               dpcell[i][j].match_from = TMAP_SW_FROM_S;
           }
 
-          if(1 == seq2_end_clip || j == len2) { // end anywhere in seq 2
+          if(1 == seq2_end_clip // end anywhere in seq 2
+             || j == len2) { 
               if(best_score < curr[j].match_score) {
                   best_i = i;
                   best_j = j; 

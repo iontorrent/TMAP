@@ -448,17 +448,27 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t flow_score, int32_t flow_
 
   // re-align 
   flowseq = tmap_fsw_flowseq_init(flow_order_tmp, flow_order_len, base_calls, flowgram, flow_len, -1, 0);
-  // TODO
-  if(1 == softclip_type) {
-      score = tmap_fsw_global_core((uint8_t*)ref_bases, ref_bases_len,
-                                   flowseq,
-                                   &param, path, &path_len);
-
-  }
-  else {
-      score = tmap_fsw_fitting_core((uint8_t*)ref_bases, ref_bases_len,
-                                    flowseq,
-                                    &param, path, &path_len);
+  score = INT32_MIN;
+  switch(softclip_type) {
+    case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
+      score = tmap_fsw_clipping_core((uint8_t*)ref_bases, ref_bases_len, flowseq, &param,
+                                        1, 1, path, &path_len);
+      break;
+    case TMAP_MAP_UTIL_SOFT_CLIP_LEFT:
+      score = tmap_fsw_clipping_core((uint8_t*)ref_bases, ref_bases_len, flowseq, &param,
+                                        1, 0, path, &path_len);
+      break;
+    case TMAP_MAP_UTIL_SOFT_CLIP_RIGHT:
+      score = tmap_fsw_clipping_core((uint8_t*)ref_bases, ref_bases_len, flowseq, &param,
+                                        0, 1, path, &path_len);
+      break;
+    case TMAP_MAP_UTIL_SOFT_CLIP_NONE:
+      score = tmap_fsw_clipping_core((uint8_t*)ref_bases, ref_bases_len, flowseq, &param,
+                                        0, 0, path, &path_len);
+      break;
+    default:
+      tmap_error("soft clipping type was not recognized", Exit, OutOfRange);
+      break;
   }
   tmap_fsw_flowseq_destroy(flowseq);
 

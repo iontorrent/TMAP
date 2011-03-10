@@ -48,17 +48,6 @@ enum {
     TMAP_SW_FROM_S = 3  /*!< from a start cell */
 };
 
-/*!
-  The type of Smith-Waterman to perform.
-  */
-enum {
-    TMAP_SW_TYPE_LOCAL          = 0, /*!< local alignment */
-    TMAP_SW_TYPE_GLOBAL         = 1, /*!< global alignment */
-    TMAP_SW_TYPE_EXTEND         = 2, /*!< extend an alignment */
-    TMAP_SW_TYPE_EXTEND_FITTING = 3, /*!< extend an alignment but align the entire the read */
-    TMAP_SW_TYPE_FITTING        = 4  /*!< align the entire read */
-};
-
 /*! This is the smallest integer for Smith-Waterman alignment. It might be CPU-dependent in very RARE cases. */
 #define TMAP_SW_MINOR_INF INT32_MIN/2
 //#define TMAP_SW_MINOR_INF -1073741823
@@ -235,8 +224,8 @@ tmap_sw_extend_fitting_core(uint8_t *seq1, int32_t len1,
   @param  seq2             the second DNA sequence (in 2-bit format)
   @param  len2             the length of the second sequence
   @param  ap               the alignment parameters
-  @param  seq2_start_clip  1 to allow clipping at the start of se2, 0 otherwise
-  @param  seq2_end_clip    1 to allow clipping at the end of se2, 0 otherwise
+  @param  seq2_start_clip  1 to allow clipping at the start of seq2, 0 otherwise
+  @param  seq2_end_clip    1 to allow clipping at the end of seq2, 0 otherwise
   @param  path             the Smith-Waterman alignment path
   @param  path_len         the Smith-Waterman alignment path length
   @return                  the alignment score, 0 if none was found
