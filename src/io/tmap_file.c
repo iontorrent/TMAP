@@ -361,6 +361,21 @@ tmap_file_fprintf(tmap_file_t *fp, const char *format, ...)
   return n;
 } 
 
+int32_t 
+tmap_file_printf(const char *format, ...)
+{
+  int32_t n;
+  va_list ap;
+
+  if(NULL == tmap_file_stdout) tmap_error("stdout file pointer was null", Exit, WriteFileError);
+
+  va_start(ap, format);
+  n = vfprintf(tmap_file_stdout->fp, format, ap);
+  va_end(ap);
+
+  return n;
+} 
+
 int32_t
 tmap_file_fflush(tmap_file_t *fp, int32_t gz_flush)
 {
