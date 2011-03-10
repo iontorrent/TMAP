@@ -325,7 +325,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
                        tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt) 
 {
   tmap_map_sams_t *sams_tmp = NULL;
-  tmap_map_sam_t *sam_prev, *sam_cur = NULL;
+  tmap_map_sam_t *sam_cur = NULL;
   uint32_t i, j, k, l, m, n;
   int32_t matrix[25];
   uint8_t *target = NULL;
@@ -453,27 +453,45 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
                   }
                   j++;
 
+                  /*
                   // we do not need to another smith waterman
                   if(sams->sams[i].seqid == k 
-                     && k+1 < sams->sams[i].pos
+                     && k+1 <= sams->sams[i].pos
                      && seq_len <= opt->seed2_length) {
+                     tmap_map_sam_t *sam_prev = NULL;
                       sam_prev = sam_cur;
                       for(k=sams->sams[i].seqid+1;k<=sams->sams[i].pos;k++) { // k -> l
                           sam_cur = &sams_tmp->sams[j];
-                          // shallow copy
-                          (*sam_cur) = (*sam_prev);
-                          // cigar
-                          sam_cur->cigar = tmap_malloc(sizeof(uint32_t) * sam_prev->n_cigar, "sam_cur");
-                          for(l=0;l<sam_cur->n_cigar;l++) {
-                              sam_cur->cigar[l] = sam_prev->cigar[i];
+                          // get the seqid and position
+                          if(0 == strand) { // forward
+                              pacpos = bwt[1-strand]->seq_len - tmap_sa_pac_pos(sa[1-strand], bwt[1-strand], k);
                           }
-                          // map1_aux
-                          tmap_map_sam_malloc_aux(sam_cur, TMAP_MAP_ALGO_MAP1);
-                          (*sam_cur->aux.map1_aux) = (*sam_prev->aux.map1_aux);
-                          j++;
+                          else { // reverse
+                              pacpos = tmap_sa_pac_pos(sa[1-strand], bwt[1-strand], k) + 1; // since we used the reverse index
+                          }
+                          pacpos = (pacpos < sam->aux.map1_aux->aln_ref) ? 0 : (pacpos - sam->aux.map1_aux->aln_ref); 
+                          pacpos = (pacpos < bw) ? 0 : (pacpos - bw); 
+                          pacpos += path[path_len-1].i; // one-based
+                          if(0 < tmap_refseq_pac2real(refseq, pacpos, aln_ref_l, &seqid, &pos)) {
+                              // shallow copy
+                              (*sam_cur) = (*sam_prev);
+                              // seqid and position
+                              sam_cur->seqid = seqid;
+                              sam_cur->pos = pos;
+                              // cigar
+                              sam_cur->cigar = tmap_malloc(sizeof(uint32_t) * sam_prev->n_cigar, "sam_cur");
+                              for(l=0;l<sam_cur->n_cigar;l++) {
+                                  sam_cur->cigar[l] = sam_prev->cigar[l];
+                              }
+                              // map1_aux
+                              tmap_map_sam_malloc_aux(sam_cur, TMAP_MAP_ALGO_MAP1);
+                              (*sam_cur->aux.map1_aux) = (*sam_prev->aux.map1_aux);
+                              j++;
+                          }
                       }
                       break;
                   }
+                  */
               }
           }
       }
