@@ -816,7 +816,8 @@ tmap_map1_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
       if(p->l == 0) {
           // estimate mapping quality
           double c = 1.0;	
-          int32_t subo = p->G2 > opt->score_thr ? p->G2 : opt->score_thr;
+          int32_t subo = (p->G2 > opt->score_thr) ? p->G2 : opt->score_thr;
+          if(subo < p->G && p->G2 < subo) p->G2 = subo;
           if(p->flag>>16 == 1 || p->flag>>16 == 2) c *= .5;
           if(p->n_seeds < 2) c *= .2;
           qual = (int)(c * (p->G - subo) * (250.0 / p->G + 0.03 / opt->score_match) + .499);
@@ -839,6 +840,7 @@ tmap_map1_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
           sam->cigar = NULL;
       }
       sam->algo_id = TMAP_MAP_ALGO_MAP2;
+      sam->algo_id_found = TMAP_MAP_ALGO_MAP2;
       sam->algo_stage = 0;
       sam->score = p->G;
       sam->score_subo = p->G2;
