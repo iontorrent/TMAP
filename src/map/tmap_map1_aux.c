@@ -325,6 +325,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
                        tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt) 
 {
   tmap_map_sams_t *sams_tmp = NULL;
+  tmap_map_sam_t *sam_prev, *sam_cur = NULL;
   uint32_t i, j, k, l, m, n;
   int32_t matrix[25];
   uint8_t *target = NULL;
@@ -369,6 +370,8 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
           int32_t aln_ref_l, added;
           uint8_t strand;
 
+          sam_cur = &sams_tmp->sams[j];
+
           strand = sams->sams[i].strand;
 
           // query sequence
@@ -410,7 +413,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
               path = tmap_realloc(path, sizeof(tmap_sw_path_t)*path_mem, "path");
           }
           // align
-          added = tmap_map_util_sw(&sams_tmp->sams[j],
+          added = tmap_map_util_sw(sam_cur,
                                    target, lt, 
                                    query, seq_len, 
                                    seqid, 0,
@@ -419,36 +422,58 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
 
           if(1 == added) {
               // adjust pacpos
-              pacpos += sams_tmp->sams[j].pos + 1; // now pacpos is one-based
+              pacpos += sam_cur->pos + 1; // now pacpos is one-based
               aln_ref_l = path[0].i - path[path_len-1].i + 1; 
 
               // save the hit
               if(0 < tmap_refseq_pac2real(refseq, pacpos, aln_ref_l, &seqid, &pos)) {
                   // copy over previous parameters
-                  sams_tmp->sams[j].algo_id = TMAP_MAP_ALGO_MAP1;
-                  sams_tmp->sams[j].algo_stage = 0;
+                  sam_cur->algo_id = TMAP_MAP_ALGO_MAP1;
+                  sam_cur->algo_stage = 0;
 
-                  sams_tmp->sams[j].seqid = seqid;
-                  sams_tmp->sams[j].pos = pos-1; // adjust
+                  sam_cur->seqid = seqid;
+                  sam_cur->pos = pos-1; // adjust
 
                   // aux
-                  tmap_map_sam_malloc_aux(&sams_tmp->sams[j], TMAP_MAP_ALGO_MAP1);
-                  sams_tmp->sams[j].aux.map1_aux->n_mm = sam->aux.map1_aux->n_mm;
-                  sams_tmp->sams[j].aux.map1_aux->n_gapo = sam->aux.map1_aux->n_gapo;
-                  sams_tmp->sams[j].aux.map1_aux->n_gape = sam->aux.map1_aux->n_gape;
+                  tmap_map_sam_malloc_aux(sam_cur, TMAP_MAP_ALGO_MAP1);
+                  sam_cur->aux.map1_aux->n_mm = sam->aux.map1_aux->n_mm;
+                  sam_cur->aux.map1_aux->n_gapo = sam->aux.map1_aux->n_gapo;
+                  sam_cur->aux.map1_aux->n_gape = sam->aux.map1_aux->n_gape;
                   // get the number of non-inserted bases 
-                  sams_tmp->sams[j].aux.map1_aux->aln_ref = 0;
-                  for(l=0;l<sams_tmp->sams[j].n_cigar;l++) {
-                      switch(TMAP_SW_CIGAR_OP(sams_tmp->sams[j].cigar[l])) {
+                  sam_cur->aux.map1_aux->aln_ref = 0;
+                  for(l=0;l<sam_cur->n_cigar;l++) {
+                      switch(TMAP_SW_CIGAR_OP(sam_cur->cigar[l])) {
                         case BAM_CMATCH:
                         case BAM_CDEL:
-                          sams_tmp->sams[j].aux.map1_aux->aln_ref += TMAP_SW_CIGAR_LENGTH(sams_tmp->sams[j].cigar[l]); 
+                          sam_cur->aux.map1_aux->aln_ref += TMAP_SW_CIGAR_LENGTH(sam_cur->cigar[l]); 
                           break;
                         default:
                           break;
                       }
                   }
                   j++;
+
+                  // we do not need to another smith waterman
+                  if(sams->sams[i].seqid == k 
+                     && k+1 < sams->sams[i].pos
+                     && seq_len <= opt->seed2_length) {
+                      sam_prev = sam_cur;
+                      for(k=sams->sams[i].seqid+1;k<=sams->sams[i].pos;k++) { // k -> l
+                          sam_cur = &sams_tmp->sams[j];
+                          // shallow copy
+                          (*sam_cur) = (*sam_prev);
+                          // cigar
+                          sam_cur = tmap_malloc(sizeof(uint32_t) * sam_prev->n_cigar, "sam_cur");
+                          for(l=0;sam_cur->n_cigar;l++) {
+                              sam_cur->cigar[l] = sam_prev->cigar[i];
+                          }
+                          // map1_aux
+                          tmap_map_sam_malloc_aux(sam_cur, TMAP_MAP_ALGO_MAP1);
+                          (*sam_cur->aux.map1_aux) = (*sam_prev->aux.map1_aux);
+                          j++;
+                      }
+                      break;
+                  }
               }
           }
       }
