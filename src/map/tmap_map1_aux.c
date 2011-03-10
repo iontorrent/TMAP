@@ -693,7 +693,6 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
               tmap_map_sam_t *sam = NULL;
               tmap_map1_aux_stack_entry_t *cur = NULL;
 
-
               tmap_map_sams_realloc(sams, sams->n+1);
               sam = &sams->sams[sams->n-1];
 
@@ -743,7 +742,12 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
                   sam->aux.map1_aux->aln_ref += op_len;
               }
               if(1 == strand) { // since it was reverse complimented
-                  sam->aux.map1_aux->aln_ref = len - sam->aux.map1_aux->aln_ref - 1;
+                  if(len < sam->aux.map1_aux->aln_ref + 1) {
+                      sam->aux.map1_aux->aln_ref = 0;
+                  }
+                  else {
+                      sam->aux.map1_aux->aln_ref = len - sam->aux.map1_aux->aln_ref - 1;
+                  }
               }
 
               /*
@@ -755,6 +759,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
               tmap_map1_aux_stack_shadow(l - k + 1, len, bwt[1-strand]->seq_len, e->last_diff_offset, width_cur);
               if(opt->max_best_cals < best_cnt) {
                   // ignore if too many "best" have been found
+                  sam->pos -= (best_cnt - opt->max_best_cals); // only save the maximum
                   break;
               }
           }
