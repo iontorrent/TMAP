@@ -840,7 +840,6 @@ tmap_map1_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
           sam->cigar = NULL;
       }
       sam->algo_id = TMAP_MAP_ALGO_MAP2;
-      sam->algo_id_found = TMAP_MAP_ALGO_MAP2;
       sam->algo_stage = 0;
       sam->score = p->G;
       sam->score_subo = p->G2;
