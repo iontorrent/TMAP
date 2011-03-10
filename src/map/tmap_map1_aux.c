@@ -463,8 +463,8 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
                           // shallow copy
                           (*sam_cur) = (*sam_prev);
                           // cigar
-                          sam_cur = tmap_malloc(sizeof(uint32_t) * sam_prev->n_cigar, "sam_cur");
-                          for(l=0;sam_cur->n_cigar;l++) {
+                          sam_cur->cigar = tmap_malloc(sizeof(uint32_t) * sam_prev->n_cigar, "sam_cur");
+                          for(l=0;l<sam_cur->n_cigar;l++) {
                               sam_cur->cigar[l] = sam_prev->cigar[i];
                           }
                           // map1_aux
