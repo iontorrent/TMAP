@@ -170,10 +170,63 @@ tmap_map_opt_destroy(tmap_map_opt_t *opt)
     break; \
 }
 
+#define __tmap_map_opt_usage_map1(_opt, _stage) do { \
+    if(_stage < 0) tmap_file_fprintf(tmap_file_stderr, "%s options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAP1)); \
+    else tmap_file_fprintf(tmap_file_stderr, "%s stage %d options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAP1), _stage); \
+    tmap_file_fprintf(tmap_file_stderr, "         -l INT      the k-mer length to seed CALs (-1 to disable) [%d]\n", (_opt)->seed_length); \
+    tmap_file_fprintf(tmap_file_stderr, "         -s INT      maximum number of edits in the seed [%d]\n", (_opt)->seed_max_diff); \
+    tmap_file_fprintf(tmap_file_stderr, "         -L INT      the secondary seed length (-1 to disable) [%d]\n", (_opt)->seed2_length); \
+    tmap_file_fprintf(tmap_file_stderr, "         -p NUM      maximum number of edits or false-negative probability assuming the maximum error rate"); \
+    if((_opt)->max_diff < 0) tmap_file_fprintf(tmap_file_stderr, "[number: %d]\n", (_opt)->max_diff); \
+    else tmap_file_fprintf(tmap_file_stderr, "[probability: %d]\n", (_opt)->max_diff_fnr); \
+    tmap_file_fprintf(tmap_file_stderr, "         -P NUM      the assumed per-base maximum error rate [%lf]\n", (_opt)->max_err_rate); \
+    tmap_file_fprintf(tmap_file_stderr, "         -m NUM      maximum number of or (read length) fraction of mismatches"); \
+    if((_opt)->max_mm < 0) tmap_file_fprintf(tmap_file_stderr, " [fraction: %lf]\n", (_opt)->max_mm_frac); \
+    else tmap_file_fprintf(tmap_file_stderr, " [number: %d]\n", (_opt)->max_mm); \
+    tmap_file_fprintf(tmap_file_stderr, "         -o NUM      maximum number of or (read length) fraction of indel starts"); \
+    if((_opt)->max_gapo < 0) tmap_file_fprintf(tmap_file_stderr, " [fraction: %lf]\n", (_opt)->max_gapo_frac); \
+    else tmap_file_fprintf(tmap_file_stderr, " [number: %d]\n", (_opt)->max_gapo); \
+    tmap_file_fprintf(tmap_file_stderr, "         -e NUM      maximum number of or (read length) fraction of indel extensions"); \
+    if((_opt)->max_gape < 0) tmap_file_fprintf(tmap_file_stderr, " [fraction: %lf]\n", (_opt)->max_gape_frac); \
+    else tmap_file_fprintf(tmap_file_stderr, " [number: %d]\n", (_opt)->max_gape); \
+    tmap_file_fprintf(tmap_file_stderr, "         -d INT      the maximum number of CALs to extend a deletion [%d]\n", (_opt)->max_cals_del); \
+    tmap_file_fprintf(tmap_file_stderr, "         -i INT      indels are not allowed within INT number of bps from the end of the read [%d]\n", (_opt)->indel_ends_bound); \
+    tmap_file_fprintf(tmap_file_stderr, "         -b INT      stop searching when INT optimal CALs have been found [%d]\n", (_opt)->max_best_cals); \
+    tmap_file_fprintf(tmap_file_stderr, "         -Q INT      maximum number of alignment nodes [%d]\n", (_opt)->max_entries); \
+    tmap_file_fprintf(tmap_file_stderr, "         -u INT      the minimum sequence length to examine [%d]\n", (_opt)->min_seq_len); \
+    tmap_file_fprintf(tmap_file_stderr, "         -U INT      the maximum sequence length to examaxe [%d]\n", (_opt)->max_seq_len); \
+    tmap_file_fprintf(tmap_file_stderr, "\n"); \
+    } while(0)
+
+#define __tmap_map_opt_usage_map2(_opt, _stage) do { \
+    if(_stage < 0) tmap_file_fprintf(tmap_file_stderr, "%s options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAP2)); \
+    else tmap_file_fprintf(tmap_file_stderr, "%s stage %d options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAP2), _stage); \
+    tmap_file_fprintf(tmap_file_stderr, "         -c FLOAT    coefficient of length-threshold adjustment [%.1lf]\n", (_opt)->length_coef); \
+    tmap_file_fprintf(tmap_file_stderr, "         -S INT      maximum seeding interval size [%d]\n", (_opt)->max_seed_intv); \
+    tmap_file_fprintf(tmap_file_stderr, "         -b INT      Z-best [%d]\n", (_opt)->z_best); \
+    tmap_file_fprintf(tmap_file_stderr, "         -N INT      # seeds to trigger reverse alignment [%d]\n", (_opt)->seeds_rev); \
+    tmap_file_fprintf(tmap_file_stderr, "         -u INT      the minimum sequence length to examine [%d]\n", (_opt)->min_seq_len); \
+    tmap_file_fprintf(tmap_file_stderr, "         -U INT      the maximum sequence length to examaxe [%d]\n", (_opt)->max_seq_len); \
+    tmap_file_fprintf(tmap_file_stderr, "\n"); \
+    } while(0)
+
+#define __tmap_map_opt_usage_map3(_opt, _stage) do { \
+    if(_stage < 0) tmap_file_fprintf(tmap_file_stderr, "%s options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAP3)); \
+    else tmap_file_fprintf(tmap_file_stderr, "%s stage %d options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAP3), _stage); \
+    tmap_file_fprintf(tmap_file_stderr, "         -l INT      the k-mer length to seed CALs (-1 tunes to the genome size) [%d]\n", (_opt)->seed_length); \
+    tmap_file_fprintf(tmap_file_stderr, "         -S INT      the maximum number of hits returned by a seed [%d]\n", (_opt)->max_seed_hits); \
+    tmap_file_fprintf(tmap_file_stderr, "         -b INT      the window of bases in which to group seeds [%d]\n", (_opt)->max_seed_band); \
+    tmap_file_fprintf(tmap_file_stderr, "         -H INT      single homopolymer error difference for enumeration [%d]\n", (_opt)->hp_diff); \
+    tmap_file_fprintf(tmap_file_stderr, "         -u INT      the minimum sequence length to examine [%d]\n", (_opt)->min_seq_len); \
+    tmap_file_fprintf(tmap_file_stderr, "         -U INT      the maximum sequence length to examaxe [%d]\n", (_opt)->max_seq_len); \
+    tmap_file_fprintf(tmap_file_stderr, "\n"); \
+    } while(0)
+
 int
 tmap_map_opt_usage(tmap_map_opt_t *opt)
 {
   char *reads_format = tmap_get_reads_file_format_string(opt->reads_format);
+  int32_t i;
 
   tmap_file_fprintf(tmap_file_stderr, "\n");
   tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [options]\n", tmap_algo_id_to_name(opt->algo_id), PACKAGE);
@@ -225,65 +278,30 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "         -h          print this message\n");
   tmap_file_fprintf(tmap_file_stderr, "\n");
 
-  if(opt->algo_id == TMAP_MAP_ALGO_MAP1 || opt->algo_id == TMAP_MAP_ALGO_MAPALL) {
-      // map1
-      tmap_file_fprintf(tmap_file_stderr, "%s options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAP1));
-      tmap_file_fprintf(tmap_file_stderr, "         -l INT      the k-mer length to seed CALs (-1 to disable) [%d]\n", opt->seed_length);
-      tmap_file_fprintf(tmap_file_stderr, "         -s INT      maximum number of edits in the seed [%d]\n", opt->seed_max_diff);
-      tmap_file_fprintf(tmap_file_stderr, "         -L INT      the secondary seed length (-1 to disable) [%d]\n", opt->seed2_length);
-
-      tmap_file_fprintf(tmap_file_stderr, "         -p NUM      maximum number of edits or false-negative probability assuming the maximum error rate");
-      if(opt->max_diff < 0) tmap_file_fprintf(tmap_file_stderr, "[number: %d]\n", opt->max_diff);
-      else tmap_file_fprintf(tmap_file_stderr, "[probability: %d]\n", opt->max_diff_fnr);
-      tmap_file_fprintf(tmap_file_stderr, "         -P NUM      the assumed per-base maximum error rate [%lf]\n", opt->max_err_rate);
-      tmap_file_fprintf(tmap_file_stderr, "         -m NUM      maximum number of or (read length) fraction of mismatches");
-      if(opt->max_mm < 0) tmap_file_fprintf(tmap_file_stderr, " [fraction: %lf]\n", opt->max_mm_frac);
-      else tmap_file_fprintf(tmap_file_stderr, " [number: %d]\n", opt->max_mm);
-
-      tmap_file_fprintf(tmap_file_stderr, "         -o NUM      maximum number of or (read length) fraction of indel starts");
-      if(opt->max_gapo < 0) tmap_file_fprintf(tmap_file_stderr, " [fraction: %lf]\n", opt->max_gapo_frac);
-      else tmap_file_fprintf(tmap_file_stderr, " [number: %d]\n", opt->max_gapo);
-      tmap_file_fprintf(tmap_file_stderr, "         -e NUM      maximum number of or (read length) fraction of indel extensions");
-      if(opt->max_gape < 0) tmap_file_fprintf(tmap_file_stderr, " [fraction: %lf]\n", opt->max_gape_frac);
-      else tmap_file_fprintf(tmap_file_stderr, " [number: %d]\n", opt->max_gape);
-      tmap_file_fprintf(tmap_file_stderr, "         -d INT      the maximum number of CALs to extend a deletion [%d]\n", opt->max_cals_del);
-      tmap_file_fprintf(tmap_file_stderr, "         -i INT      indels are not allowed within INT number of bps from the end of the read [%d]\n", opt->indel_ends_bound);
-      tmap_file_fprintf(tmap_file_stderr, "         -b INT      stop searching when INT optimal CALs have been found [%d]\n", opt->max_best_cals);
-      tmap_file_fprintf(tmap_file_stderr, "         -Q INT      maximum number of alignment nodes [%d]\n", opt->max_entries);
-      tmap_file_fprintf(tmap_file_stderr, "         -u INT      the minimum sequence length to examine [%d]\n", opt->min_seq_len);
-      tmap_file_fprintf(tmap_file_stderr, "         -U INT      the maximum sequence length to examaxe [%d]\n", opt->max_seq_len);
-      tmap_file_fprintf(tmap_file_stderr, "\n");
-  }
-  if(opt->algo_id == TMAP_MAP_ALGO_MAP2 || opt->algo_id == TMAP_MAP_ALGO_MAPALL) {
-      // map2
-      tmap_file_fprintf(tmap_file_stderr, "%s options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAP2));
-      //tmap_file_fprintf(tmap_file_stderr, "         -y FLOAT    error recurrence coef. (4..16) [%.1lf]\n", opt->yita);
-      //tmap_file_fprintf(tmap_file_stderr, "         -m FLOAT    mask level [%.2f]\n", opt->mask_level);
-      tmap_file_fprintf(tmap_file_stderr, "         -c FLOAT    coefficient of length-threshold adjustment [%.1lf]\n", opt->length_coef);
-      tmap_file_fprintf(tmap_file_stderr, "         -S INT      maximum seeding interval size [%d]\n", opt->max_seed_intv);
-      tmap_file_fprintf(tmap_file_stderr, "         -b INT      Z-best [%d]\n", opt->z_best);
-      tmap_file_fprintf(tmap_file_stderr, "         -N INT      # seeds to trigger reverse alignment [%d]\n", opt->seeds_rev);
-      tmap_file_fprintf(tmap_file_stderr, "         -u INT      the minimum sequence length to examine [%d]\n", opt->min_seq_len);
-      tmap_file_fprintf(tmap_file_stderr, "         -U INT      the maximum sequence length to examaxe [%d]\n", opt->max_seq_len);
-      tmap_file_fprintf(tmap_file_stderr, "\n");
-  }
-  if(opt->algo_id == TMAP_MAP_ALGO_MAP3 || opt->algo_id == TMAP_MAP_ALGO_MAPALL) {
-      // map3
-      tmap_file_fprintf(tmap_file_stderr, "%s options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAP3));
-      tmap_file_fprintf(tmap_file_stderr, "         -l INT      the k-mer length to seed CALs (-1 tunes to the genome size) [%d]\n", opt->seed_length);
-      tmap_file_fprintf(tmap_file_stderr, "         -S INT      the maximum number of hits returned by a seed [%d]\n", opt->max_seed_hits);
-      tmap_file_fprintf(tmap_file_stderr, "         -b INT      the window of bases in which to group seeds [%d]\n", opt->max_seed_band);
-      tmap_file_fprintf(tmap_file_stderr, "         -H INT      single homopolymer error difference for enumeration [%d]\n", opt->hp_diff);
-      tmap_file_fprintf(tmap_file_stderr, "         -u INT      the minimum sequence length to examine [%d]\n", opt->min_seq_len);
-      tmap_file_fprintf(tmap_file_stderr, "         -U INT      the maximum sequence length to examaxe [%d]\n", opt->max_seq_len);
-      tmap_file_fprintf(tmap_file_stderr, "\n");
-  }
-  if(opt->algo_id == TMAP_MAP_ALGO_MAPALL) {
+  switch(opt->algo_id) {
+    case TMAP_MAP_ALGO_MAP1:
+      __tmap_map_opt_usage_map1(opt, -1);
+      break;
+    case TMAP_MAP_ALGO_MAP2:
+      __tmap_map_opt_usage_map2(opt, -1);
+      break;
+    case TMAP_MAP_ALGO_MAP3:
+      __tmap_map_opt_usage_map3(opt, -1);
+      break;
+    case TMAP_MAP_ALGO_MAPALL:
+      for(i=0;i<2;i++) {
+          __tmap_map_opt_usage_map1(opt->opt_map1[i], i+1);
+          __tmap_map_opt_usage_map2(opt->opt_map2[i], i+1);
+          __tmap_map_opt_usage_map3(opt->opt_map3[i], i+1);
+      }
       // mapall
       tmap_file_fprintf(tmap_file_stderr, "%s options (optional):\n", tmap_algo_id_to_name(opt->algo_id));
       tmap_file_fprintf(tmap_file_stderr, "         -I          apply the output filter (-a) and duplicate removal (-W) for each algorithm separately [%s]\n",
                         (1 == opt->aln_output_mode_ind) ? "true" : "false");
       tmap_file_fprintf(tmap_file_stderr, "\n");
+      break;
+    default:
+      break;
   }
 
   // free
