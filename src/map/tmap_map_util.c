@@ -194,7 +194,7 @@ tmap_map_opt_destroy(tmap_map_opt_t *opt)
     tmap_file_fprintf(tmap_file_stderr, "         -b INT      stop searching when INT optimal CALs have been found [%d]\n", (_opt)->max_best_cals); \
     tmap_file_fprintf(tmap_file_stderr, "         -Q INT      maximum number of alignment nodes [%d]\n", (_opt)->max_entries); \
     tmap_file_fprintf(tmap_file_stderr, "         -u INT      the minimum sequence length to examine [%d]\n", (_opt)->min_seq_len); \
-    tmap_file_fprintf(tmap_file_stderr, "         -U INT      the maximum sequence length to examaxe [%d]\n", (_opt)->max_seq_len); \
+    tmap_file_fprintf(tmap_file_stderr, "         -U INT      the maximum sequence length to examine [%d]\n", (_opt)->max_seq_len); \
     tmap_file_fprintf(tmap_file_stderr, "\n"); \
     } while(0)
 
@@ -206,7 +206,7 @@ tmap_map_opt_destroy(tmap_map_opt_t *opt)
     tmap_file_fprintf(tmap_file_stderr, "         -b INT      Z-best [%d]\n", (_opt)->z_best); \
     tmap_file_fprintf(tmap_file_stderr, "         -N INT      # seeds to trigger reverse alignment [%d]\n", (_opt)->seeds_rev); \
     tmap_file_fprintf(tmap_file_stderr, "         -u INT      the minimum sequence length to examine [%d]\n", (_opt)->min_seq_len); \
-    tmap_file_fprintf(tmap_file_stderr, "         -U INT      the maximum sequence length to examaxe [%d]\n", (_opt)->max_seq_len); \
+    tmap_file_fprintf(tmap_file_stderr, "         -U INT      the maximum sequence length to examine [%d]\n", (_opt)->max_seq_len); \
     tmap_file_fprintf(tmap_file_stderr, "\n"); \
     } while(0)
 
@@ -218,7 +218,7 @@ tmap_map_opt_destroy(tmap_map_opt_t *opt)
     tmap_file_fprintf(tmap_file_stderr, "         -b INT      the window of bases in which to group seeds [%d]\n", (_opt)->max_seed_band); \
     tmap_file_fprintf(tmap_file_stderr, "         -H INT      single homopolymer error difference for enumeration [%d]\n", (_opt)->hp_diff); \
     tmap_file_fprintf(tmap_file_stderr, "         -u INT      the minimum sequence length to examine [%d]\n", (_opt)->min_seq_len); \
-    tmap_file_fprintf(tmap_file_stderr, "         -U INT      the maximum sequence length to examaxe [%d]\n", (_opt)->max_seq_len); \
+    tmap_file_fprintf(tmap_file_stderr, "         -U INT      the maximum sequence length to examine [%d]\n", (_opt)->max_seq_len); \
     tmap_file_fprintf(tmap_file_stderr, "\n"); \
     } while(0)
 
