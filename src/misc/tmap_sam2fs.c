@@ -40,22 +40,27 @@ extern char *bam_nt16_rev_table;
 // from tmap_fsw.c
 extern int32_t tmap_fsw_sm_short[];
 
-#define __sam2fs_gen_ap(par, score_match, pen_mm, pen_gapo, pen_gape, fscore, flow_offset) do { \
-    int32_t i; \
-    for(i=0;i<25;i++) { \
-        (par).matrix[i] = -100 * pen_mm; \
-    } \
-    for(i=0;i<4;i++) { \
-        (par).matrix[i*5+i] = 100 * score_match; \
-    } \
-    (par).gap_open = 100 * pen_gapo; \
-    (par).gap_ext = 100 * pen_gape; \
-    (par).gap_end = 100 * pen_gape; \
-    (par).fscore = 100 * fscore; \
-    (par).row = 5; \
-    (par).band_width = 50; \
-    (par).offset = flow_offset; \
-} while(0)
+static void
+tmap_sam2fs_gen_ap(tmap_fsw_param_t *par, 
+                   int32_t score_match, int32_t pen_mm, 
+                   int32_t pen_gapo, int32_t pen_gape,
+                   int32_t fscore, int32_t flow_offset)
+{
+    int32_t i;
+    for(i=0;i<25;i++) {
+        par->matrix[i] = -100 * pen_mm;
+    }
+    for(i=0;i<4;i++) {
+        par->matrix[i*5+i] = 100 * score_match;
+    }
+    par->gap_open = 100 * pen_gapo;
+    par->gap_ext = 100 * pen_gape;
+    par->gap_end = 100 * pen_gape;
+    par->fscore = 100 * fscore;
+    par->row = 5;
+    par->band_width = 50;
+    par->offset = flow_offset;
+}
 
 
 #define TMAP_SAM2FS_FLOW_MATCH '|'
@@ -268,9 +273,11 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t score_match, int32_t pen_
   int64_t score;
   tmap_fsw_flowseq_t *flowseq = NULL;
   uint8_t strand;
+  int32_t matrix[25];
 
   // set the alignment parameters
-  __sam2fs_gen_ap(param, score_match, pen_mm, pen_gapo, pen_gape, fscore, flow_offset);
+  param.matrix = matrix;
+  tmap_sam2fs_gen_ap(&param, score_match, pen_mm, pen_gapo, pen_gape, fscore, flow_offset);
 
   if(BAM_FUNMAP & bam->core.flag) {
       return bam;
@@ -410,8 +417,11 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t score_match, int32_t pen_
       tmap_reverse_compliment(read_bases, read_bases_len);
   }
 
-  //fprintf(stderr, "ref_bases_len=%d\nref_bases=%s\n", ref_bases_len, ref_bases);
-  //fprintf(stderr, "read_bases_len=%d\nread_bases=%s\n", read_bases_len, read_bases);
+  // HERE
+  /*
+  fprintf(stderr, "ref_bases_len=%d\nref_bases=%s\n", ref_bases_len, ref_bases);
+  fprintf(stderr, "read_bases_len=%d\nread_bases=%s\n", read_bases_len, read_bases);
+  */
 
   // DNA to integer
   for(i=0;i<read_bases_len;i++) {

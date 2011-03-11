@@ -437,7 +437,7 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
           // solve the sub-problem and get the path
           if(j - col_offset < 0) tmap_error("bug encountered", Exit, OutOfRange);
           tmap_fsw_sub_core(seq, j,
-                            flow_order[(i-1) & flow_order_len], base_call, flowgram[i-1], 
+                            flow_order[(i-1) % flow_order_len], base_call, flowgram[i-1], 
                             &ap_tmp,
                             sub_dpcell, sub_dpscore,
                             dpcell[i-1], dpscore[i-1],
@@ -537,6 +537,14 @@ tmap_fsw_clipping_core(uint8_t *seq, int32_t len,
       }
   }
 
+  /*
+  fprintf(stderr, "flowseq_start_clip=%d flowseq_end_clip=%d\n", flowseq_start_clip, flowseq_end_clip);
+  fprintf(stderr, "flowseq->flow_order_len=%d\n", flowseq->flow_order_len);
+  for(i=0;i<flowseq->flow_order_len;i++) {
+      fputc("ACGTN"[flowseq->flow_order[i]], stderr);
+  }
+  fputc('\n', stderr);
+  */
   //fprintf(stderr, "max_bc=%d offset=%d len=%d\n", max_bc, offset, len);
 
   // allocate memory for the sub-cells
@@ -578,9 +586,15 @@ tmap_fsw_clipping_core(uint8_t *seq, int32_t len,
   // core loop
   for(i=1;i<=flowseq->num_flows;i++) { // for each row
       // fill in the columns
-      //fprintf(stderr, "i=%d num_flows=%d\n", i, flowseq->num_flows);
+      /*
+      fprintf(stderr, "i=%d num_flows=%d flow_base=%c base_calls=%d flowgram=%d\n", 
+              i, flowseq->num_flows,
+              "ACGTN"[flowseq->flow_order[(i-1) % flowseq->flow_order_len]], 
+              flowseq->base_calls[i-1], 
+              flowseq->flowgram[i-1]);
+              */
       tmap_fsw_sub_core(seq, len,
-                        flowseq->flow_order[(i-1) & flowseq->flow_order_len], 
+                        flowseq->flow_order[(i-1) % flowseq->flow_order_len], 
                         flowseq->base_calls[i-1], 
                         flowseq->flowgram[i-1], 
                         ap,
@@ -664,6 +678,7 @@ tmap_fsw_flowseq_init(uint8_t *flow_order, int32_t flow_order_len, uint8_t *base
 
   flowseq = tmap_calloc(1, sizeof(tmap_fsw_flowseq_t), "flowseq");
 
+  // shallow copy
   flowseq->flow_order = flow_order;
   flowseq->flow_order_len = flow_order_len;
   flowseq->base_calls = base_calls;
@@ -923,7 +938,7 @@ tmap_fsw_get_aln(tmap_fsw_path_t *path, int32_t path_len,
   for(i=path_len-1,j=0;0<=i;i--,j++) {
       switch(path[i].ctype) {
         case TMAP_FSW_FROM_M:
-          if(flow_order[path[i].i & flow_order_len] == target[path[i].j]) {
+          if(flow_order[path[i].i % flow_order_len] == target[path[i].j]) {
               (*aln)[j] = '|';
           }
           else { 
@@ -949,7 +964,7 @@ tmap_fsw_get_aln(tmap_fsw_path_t *path, int32_t path_len,
       if(TMAP_FSW_FROM_M == path[i].ctype 
          || TMAP_FSW_FROM_I == path[i].ctype
          || TMAP_FSW_FROM_HP_MINUS == path[i].ctype) {
-          (*read)[j] = "ACGTN"[flow_order[path[i].i & flow_order_len]];
+          (*read)[j] = "ACGTN"[flow_order[path[i].i % flow_order_len]];
       }
       else {
           (*read)[j] = '-';
