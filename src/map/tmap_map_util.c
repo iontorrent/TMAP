@@ -1171,9 +1171,9 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
 }
 
 inline void
-tmap_map_util_mapq(tmap_map_sams_t *sams, tmap_map_opt_t *opt)
+tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
 {
-  int32_t i;
+  int32_t i, best_i;
   int32_t n_best = 0, n_best_subo = 0;
   int32_t best_score, cur_score, best_subo;
   int32_t best_score_sum, best_subo_sum;
@@ -1182,6 +1182,7 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, tmap_map_opt_t *opt)
   int32_t algo_id = TMAP_MAP_ALGO_NONE; 
 
   // estimate mapping quality TODO: this needs to be refined
+  best_i = 0;
   best_score = INT32_MIN;
   best_subo = INT32_MIN+1;
   best_score_sum = best_subo_sum = 0;
@@ -1196,6 +1197,7 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, tmap_map_opt_t *opt)
           // update
           best_score = best_score_sum = cur_score;
           n_best = 1;
+          best_i = i;
           stage = (algo_id == TMAP_MAP_ALGO_NONE) ? sams->sams[i].algo_stage-1 : -1;
           algo_id = (algo_id == TMAP_MAP_ALGO_NONE) ? sams->sams[i].algo_id : -1;
       }
@@ -1234,31 +1236,7 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, tmap_map_opt_t *opt)
   else {
       if(0 == n_best_subo) {
           n_best_subo = 1;
-          switch(algo_id) {
-            case TMAP_MAP_ALGO_MAP1:
-              // what is the best value for map1
-              if(NULL != opt->opt_map1) {
-                  if(0 < opt->opt_map1[stage]->seed_length) {
-                      best_subo = opt->score_match * (opt->opt_map1[stage]->seed_length - opt->opt_map1[stage]->seed_max_diff);
-                  }
-                  else {
-                      best_subo = 0;
-                  }
-              }
-              else {
-                  if(0 < opt->seed_length) {
-                      best_subo = opt->score_match * (opt->seed_length - opt->seed_max_diff);
-                  }
-                  else {
-                      best_subo = 0;
-                  }
-              }
-              break;
-            case TMAP_MAP_ALGO_MAP2:
-            case TMAP_MAP_ALGO_MAP3:
-            default:
-              best_subo = opt->score_thr; break;
-          }
+          best_subo = opt->score_thr; 
       }
       /*
          fprintf(stderr, "n_best=%d n_best_subo=%d\n",
@@ -1266,7 +1244,14 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, tmap_map_opt_t *opt)
          fprintf(stderr, "best_score=%d best_subo=%d\n",
          best_score, best_subo);
          */
-      mapq = (int32_t)((n_best / (1.0 * n_best_subo)) * (best_score - best_subo) * (250.0 / best_score + 0.03 / opt->score_match) + .499);
+      // Note: this is the old calculationg, based on BWA-long
+      //mapq = (int32_t)((n_best / (1.0 * n_best_subo)) * (best_score - best_subo) * (250.0 / best_score + 0.03 / opt->score_match) + .499);
+      //
+      double sf = 0.2; // initial scaling factor.  Note: 250 * sf is the maximum mapping quality.
+      sf *= 250.0 / ((double)opt->score_match * seq_len); // scale based on the best possible alignment score
+      sf *= (n_best / (1.0 * n_best_subo)); // scale based on number of sub-optimal mappings
+      sf *= (best_score - best_subo) / (1.0 * opt->score_match); // scale based on distance to the sub-optimal mapping
+      mapq = (int32_t)(sf + 1.0);
       if(mapq > 250) mapq = 250;
       if(mapq <= 0) mapq = 1;
   }

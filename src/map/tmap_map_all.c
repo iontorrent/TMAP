@@ -92,7 +92,7 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
   }
 
   // mapping quality
-  tmap_map_util_mapq(sams, opt);
+  tmap_map_util_mapq(sams, tmap_seq_get_bases(seq)->l, opt);
 
   // choose alignment(s)
   if(0 == opt->aln_output_mode_ind) {
