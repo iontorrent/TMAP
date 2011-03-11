@@ -12,9 +12,14 @@
 #include "tmap_map3.h"
 #include "tmap_map3_aux.h"
 
+/*
 #define __tmap_map3_hit_sort_lt(a, b) ( ((a).seqid < (b).seqid \
                                          || ( (a).seqid == (b).seqid && (a).pos < (b).pos ) \
                                          || ( (a).seqid == (b).seqid && (a).pos == (b).pos && (a).start < (b).start )) \
+                                       ? 1 : 0)
+                                       */
+#define __tmap_map3_hit_sort_lt(a, b) ( ((a).seqid < (b).seqid \
+                                         || ( (a).seqid == (b).seqid && (a).pos < (b).pos )) \
                                        ? 1 : 0)
 
 TMAP_SORT_INIT(tmap_map3_aux_hit_t, tmap_map3_aux_hit_t, __tmap_map3_hit_sort_lt)
@@ -338,7 +343,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
                      hits[i][n_hits[i]].seqid < tmp_seqid) {
                       hits[i][n_hits[i]].seqid = tmp_seqid;
                       hits[i][n_hits[i]].pos = 0;
-                      hits[i][n_hits[i]].start = seeds[i][j].start;
+                      //hits[i][n_hits[i]].start = seeds[i][j].start;
                   }
                   else {
                       if(hits[i][n_hits[i]].pos < seed_length + seeds[i][j].offset - 1 ) {
@@ -347,7 +352,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
                       else {
                           hits[i][n_hits[i]].pos -= seed_length + seeds[i][j].offset - 1;
                       }
-                      hits[i][n_hits[i]].start = seeds[i][j].start;
+                      //hits[i][n_hits[i]].start = seeds[i][j].start;
                   }
                   n_hits[i]++;
               }

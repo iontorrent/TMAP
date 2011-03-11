@@ -20,7 +20,7 @@ typedef struct {
 typedef struct {
     uint32_t seqid; /*!< the sequence index (0-based) */
     uint32_t pos; /*!< the position (0-based) */
-    uint16_t start; /*!< the # of bases from the start of the read (0-based) */
+    //uint16_t start; /*!< the # of bases from the start of the read (0-based) */
     // int16_t offset; /*!< the # of bases inserted (+) or deleted (-) from the seed */
 } tmap_map3_aux_hit_t;
 
