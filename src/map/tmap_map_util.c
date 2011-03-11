@@ -610,7 +610,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   if(TMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
       tmap_error("the reads format (-r) was unrecognized", Exit, CommandLineArgument);
   }
-  tmap_error_cmd_check_int(opt->score_match, 0, INT32_MAX, "-M");
+  tmap_error_cmd_check_int(opt->score_match, 0, INT32_MAX, "-A");
   tmap_error_cmd_check_int(opt->pen_mm, 0, INT32_MAX, "-M");
   tmap_error_cmd_check_int(opt->pen_gapo, 0, INT32_MAX, "-O");
   tmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
