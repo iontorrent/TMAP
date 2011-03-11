@@ -195,6 +195,14 @@ tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_
           
           orig_seq = seq_buffer[low];
 
+          if((0 < opt->min_seq_len && tmap_seq_get_bases(orig_seq)->l < opt->min_seq_len)
+             || (0 < opt->max_seq_len && opt->max_seq_len < tmap_seq_get_bases(orig_seq)->l)) {
+              // go to the next loop
+              sams[low] = tmap_map_sams_init();
+              low++;
+              continue;
+          }
+
           // map1
           for(i=0;i<opt->num_stages;i++) {
               if(opt->algos[i] & TMAP_MAP_ALGO_MAP1) {

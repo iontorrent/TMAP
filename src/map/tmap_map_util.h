@@ -41,8 +41,7 @@ enum {
     TMAP_MAP_ALGO_MAP1 = 0x1,  /*!< the map1 algorithm */
     TMAP_MAP_ALGO_MAP2 = 0x2,  /*!< the map2 algorithm */
     TMAP_MAP_ALGO_MAP3 = 0x4,  /*!< the map3 algorithm */
-    TMAP_MAP_ALGO_MAPALL = 0x4000, /*!< the mapall algorithm */
-    TMAP_MAP_ALGO_MAPPABILTY = 0x8000 /*!< the mappabilty algorithm */
+    TMAP_MAP_ALGO_MAPALL = 0x8000, /*!< the mapall algorithm */
 };
 
 /*!
@@ -93,6 +92,10 @@ typedef struct __tmap_map_opt_t {
     int32_t output_compr;  /*!< the output compression type (-J and -Z) */
     key_t shm_key;  /*!< the shared memory key (-k) */
 
+    // map1/map2/map3 options, but specific to each
+    int32_t min_seq_len; /*< the minimum sequence length to examine (-u) */
+    int32_t max_seq_len; /*< the maximum sequence length to examine (-U) */
+
     // map1/map3 options
     int32_t seed_length; /*!< the kmer seed length (-l) */
     int32_t seed_length_set; /*!< 1 if the user has set seed length (-l) */
@@ -136,11 +139,6 @@ typedef struct __tmap_map_opt_t {
     struct __tmap_map_opt_t *opt_map1[2]; /*!< map 1 options */
     struct __tmap_map_opt_t *opt_map2[2]; /*!< map 2 options */
     struct __tmap_map_opt_t *opt_map3[2]; /*!< map 3 options */
-
-    // mappabilty
-    int32_t read_length; /*!< the read length to simulate (-r) */
-    char *region; /*!< the region from which to simulate (-U) */
-
 } tmap_map_opt_t;
 
 /*!
