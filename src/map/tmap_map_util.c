@@ -1251,7 +1251,7 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
       // Note: this is the old calculationg, based on BWA-long
       //mapq = (int32_t)((n_best / (1.0 * n_best_subo)) * (best_score - best_subo) * (250.0 / best_score + 0.03 / opt->score_match) + .499);
       //
-      double sf = 0.2; // initial scaling factor.  Note: 250 * sf is the maximum mapping quality.
+      double sf = 0.5; // initial scaling factor.  Note: 250 * sf is the maximum mapping quality.
       sf *= 250.0 / ((double)opt->score_match * seq_len); // scale based on the best possible alignment score
       sf *= (n_best / (1.0 * n_best_subo)); // scale based on number of sub-optimal mappings
       sf *= (best_score - best_subo) / (1.0 * opt->score_match); // scale based on distance to the sub-optimal mapping
