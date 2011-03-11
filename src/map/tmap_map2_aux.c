@@ -679,15 +679,19 @@ static void
 tmap_map2_aux_flag_fr(tmap_map2_aln_t *b[2])
 {
   int32_t i, j;
-  for(i = 0; i < b[0]->n; ++i) {
-      tmap_map2_hit_t *p = b[0]->hits + i;
-      p->flag |= 0x10000;
+  if(NULL != b[0]) {
+      for(i = 0; i < b[0]->n; ++i) {
+          tmap_map2_hit_t *p = b[0]->hits + i;
+          p->flag |= 0x10000;
+      }
   }
-  for(i = 0; i < b[1]->n; ++i) {
-      tmap_map2_hit_t *p = b[1]->hits + i;
-      p->flag |= 0x20000;
+  if(NULL != b[1]) {
+      for(i = 0; i < b[1]->n; ++i) {
+          tmap_map2_hit_t *p = b[1]->hits + i;
+          p->flag |= 0x20000;
+      }
   }
-  if(0 < b[0]->n && 0 < b[1]->n) {
+  if(NULL != b[0] && NULL != b[1] && 0 < b[0]->n && 0 < b[1]->n) {
       for(i = 0; i < b[0]->n; ++i) {
           tmap_map2_hit_t *p = b[0]->hits + i;
           for(j = 0; j < b[1]->n; ++j) {
@@ -817,7 +821,6 @@ tmap_map1_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
           // estimate mapping quality
           double c = 1.0;	
           int32_t subo = (p->G2 > opt->score_thr) ? p->G2 : opt->score_thr;
-          if(subo < p->G && p->G2 < subo) p->G2 = subo;
           if(p->flag>>16 == 1 || p->flag>>16 == 2) c *= .5;
           if(p->n_seeds < 2) c *= .2;
           qual = (int)(c * (p->G - subo) * (250.0 / p->G + 0.03 / opt->score_match) + .499);
@@ -944,12 +947,14 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
               p->k = refseq->len - (p->k + p->len);
           }
       }
-      tmap_map2_aux_flag_fr(b);
       tmap_map2_aux_merge_hits(b, l, 0, opt.softclip_type);
       tmap_map2_aux_resolve_duphits(NULL, NULL, b[0], TMAP_MAP2_AUX_IS, (0 == opt.softclip_type) ? 0 : TMAP_MAP2_MINUS_INF);
       // Note: this will give duplicate mappings
       //tmap_map2_aux_resolve_query_overlaps(b[0], opt.mask_level, (TMAP_MAP_UTIL_SOFT_CLIP_NONE == opt->softclip_type) ? TMAP_MAP2_MINUS_INF : 0);
   } else b[1] = 0;
+      
+  // set the flag to forward/reverse
+  tmap_map2_aux_flag_fr(b);
   
   // make one-based for pac2real
   for(i = 0; i < b[0]->n; ++i) {
