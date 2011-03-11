@@ -102,7 +102,7 @@ tmap_map_opt_init(int32_t algo_id)
       opt->seed_length = -1;
       opt->seed_length_set = 0;
       opt->max_seed_hits = 12;
-      opt->max_seed_band = 50;
+      opt->max_seed_band = 25;
       opt->hp_diff = 0;
       break;
     case TMAP_MAP_ALGO_MAPPABILTY:
@@ -877,6 +877,10 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
       tmap_sam_print_unmapped(tmap_file_stdout, seq, sam_sff_tags);
   }
   else {
+      // Note: samtools does not like this value
+      if(INT32_MIN == sam->score_subo) {
+          sam->score_subo++;
+      }
       switch(sam->algo_id) {
         case TMAP_MAP_ALGO_MAP1:
           tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, refseq, 
