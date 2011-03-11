@@ -362,6 +362,8 @@ tmap_map1_core(tmap_map_opt_t *opt)
   }
   
   tmap_map1_print_max_diff(opt, -1);
+          
+  opt->score_thr *= opt->score_match;
 
   // allocate the buffer
   if(-1 == opt->reads_queue_size) {
