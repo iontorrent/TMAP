@@ -88,6 +88,7 @@ tmap_map3_mapq(tmap_map_sams_t *sams, int32_t score_thr, int32_t score_match, in
       if(best_subo < score_thr) best_subo = score_thr;
       mapq = (int32_t)(c * (best_score - best_subo) * (250.0 / best_score + 0.03 / score_match) + .499);
       if(mapq > 250) mapq = 250;
+      if(mapq <= 0) mapq = 1;
   }
   for(i=0;i<sams->n;i++) {
       cur_score = sams->sams[i].score;
