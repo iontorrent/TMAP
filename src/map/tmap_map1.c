@@ -201,6 +201,14 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
           tmap_seq_t *seq[2]={NULL, NULL}, *orig_seq=NULL;
           orig_seq = seq_buffer[low];
           tmap_string_t *bases[2]={NULL, NULL};
+
+          if((0 < opt->min_seq_len && tmap_seq_get_bases(orig_seq)->l < opt->min_seq_len)
+             || (0 < opt->max_seq_len && opt->max_seq_len < tmap_seq_get_bases(orig_seq)->l)) {
+              // go to the next loop
+              sams[low] = tmap_map_sams_init();
+              low++;
+              continue;
+          }
           
           seq_len = tmap_seq_get_bases(orig_seq)->l;
           
@@ -362,6 +370,8 @@ tmap_map1_core(tmap_map_opt_t *opt)
   }
   
   tmap_map1_print_max_diff(opt, -1);
+          
+  opt->score_thr *= opt->score_match;
 
   // allocate the buffer
   if(-1 == opt->reads_queue_size) {

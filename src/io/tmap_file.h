@@ -140,6 +140,15 @@ tmap_file_vfprintf(tmap_file_t *fp, const char *format, va_list ap);
 int32_t
 tmap_file_fprintf(tmap_file_t *fp, const char *format, ...);
 
+/*! 
+  emulates printf from stdio.h
+  @param  format  the text and format of what to print
+  @param  ...     depending on the format string, the function may expect a sequence of additional arguments
+  @return         the number of characters written
+  */
+int32_t
+tmap_file_printf(const char *format, ...);
+
 /*!
   emulates fflush from stdio.h
   @param  fp       pointer to the file structure to which to flush (the file should have been opened for writing)

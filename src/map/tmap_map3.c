@@ -88,6 +88,7 @@ tmap_map3_mapq(tmap_map_sams_t *sams, int32_t score_thr, int32_t score_match, in
       if(best_subo < score_thr) best_subo = score_thr;
       mapq = (int32_t)(c * (best_score - best_subo) * (250.0 / best_score + 0.03 / score_match) + .499);
       if(mapq > 250) mapq = 250;
+      if(mapq <= 0) mapq = 1;
   }
   for(i=0;i<sams->n;i++) {
       cur_score = sams->sams[i].score;
@@ -147,6 +148,14 @@ tmap_map3_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_t s
       while(low<high) {
           tmap_seq_t *seq[2]={NULL, NULL}, *orig_seq=NULL;
           orig_seq = seq_buffer[low];
+          
+          if((0 < opt->min_seq_len && tmap_seq_get_bases(orig_seq)->l < opt->min_seq_len)
+             || (0 < opt->max_seq_len && opt->max_seq_len < tmap_seq_get_bases(orig_seq)->l)) {
+              // go to the next loop
+              sams[low] = tmap_map_sams_init();
+              low++;
+              continue;
+          }
 
           // clone the sequence 
           seq[0] = tmap_seq_clone(seq_buffer[low]);

@@ -214,6 +214,16 @@ Specifies to print verbose progress messages, otherwise progress messages will b
 \subsubsection{\TT{-h}}
 Specifies to print a help message, listing all available options.
 
+\subsubsection{\TT{-u INT}}
+Specifies the minimum sequence length to consider (inclusive).
+This is applied to each algorithm independently.
+Therefore, when using \TT{mapall}, we could specify a unique sequence length range (using \TT{-u} and \TT{-U}) each algorithm.
+
+\subsubsection{\TT{-U INT}}
+Specifies the maximum sequence length to consider (inclusive).
+This is applied to each algorithm independently.
+Therefore, when using \TT{mapall}, we could specify a unique sequence length range (using \TT{-u} and \TT{-U}) each algorithm.
+
 \section{tmap index}
 \label{sec:index}
 The \BF{index} command creates a compact version of the reference genome and associated index.

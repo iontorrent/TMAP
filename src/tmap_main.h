@@ -36,7 +36,5 @@ extern int
 tmap_debug_exact(int argc, char *argv[]);
 extern int
 tmap_fsw_main(int argc, char *argv[]);
-extern int
-tmap_mappability_main(int argc, char *argv[]);
 
 #endif

@@ -1042,7 +1042,7 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
               break;
           }
       }
-      if(i < 0) { // try the Knuth Morris Pratt algorithm
+      if(i < 0 && 1 < len1 && 1 < len2) { // try the Knuth Morris Pratt algorithm
           // Here we use the Knuth-Morris-Pratt algorithms, but we could use
           // others, such as Boyer-Moore (small alphabet 2007).  KMP is easy
           // to implement

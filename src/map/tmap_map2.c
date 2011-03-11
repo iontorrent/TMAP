@@ -69,8 +69,15 @@ tmap_map2_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
       high = seq_buffer_length; // process all
 #endif
       while(low<high) {
-
           tmap_seq_t *seq = NULL;
+
+          if((0 < opt->min_seq_len && tmap_seq_get_bases(seq)->l < opt->min_seq_len)
+             || (0 < opt->max_seq_len && opt->max_seq_len < tmap_seq_get_bases(seq)->l)) {
+              // go to the next loop
+              sams[low] = tmap_map_sams_init();
+              low++;
+              continue;
+          }
 
           // Clone the buffer
           seq = tmap_seq_clone(seq_buffer[low]);
