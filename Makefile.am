@@ -36,7 +36,6 @@ tmap_SOURCES = \
 			   src/server/tmap_shm.h src/server/tmap_shm.c \
 			   src/misc/tmap_sam2fs_aux.h src/misc/tmap_sam2fs_aux.c \
 			   src/misc/tmap_sam2fs.h src/misc/tmap_sam2fs.c \
-			   src/map/tmap_mappability.h src/map/tmap_mappability.c \
 			   src/debug/tmap_debug_exact.h src/debug/tmap_debug_exact.c \
 			   src/map/tmap_map_util.h src/map/tmap_map_util.c \
 			   src/map/tmap_map1.h src/map/tmap_map1.c \
