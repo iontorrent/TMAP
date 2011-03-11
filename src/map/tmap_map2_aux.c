@@ -705,6 +705,7 @@ tmap_map2_aux_flag_fr(tmap_map2_aln_t *b[2])
   }
 }
 
+/*
 static int32_t 
 tmap_map2_aux_fix_cigar(tmap_refseq_t *refseq, tmap_map2_hit_t *p, int32_t n_cigar, uint32_t *cigar)
 {
@@ -785,6 +786,7 @@ tmap_map2_aux_fix_cigar(tmap_refseq_t *refseq, tmap_map2_hit_t *p, int32_t n_cig
   }
   return n_cigar;
 }
+*/
 
 static tmap_map_sams_t *
 tmap_map1_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt, 
@@ -805,7 +807,9 @@ tmap_map1_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
       tmap_map_sam_t *sam = &sams->sams[j];
 
       if(p->l == 0) {
+          /*
           aln->hits[i].n_cigar = tmap_map2_aux_fix_cigar(refseq, p, aln->hits[i].n_cigar, aln->hits[i].cigar);
+          */
           if(aln->hits[i].n_cigar <= 0) {
               continue; // no cigar
           }
