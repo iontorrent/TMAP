@@ -424,6 +424,9 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
               // adjust pacpos
               pacpos += sam_cur->pos + 1; // now pacpos is one-based
               aln_ref_l = path[0].i - path[path_len-1].i + 1; 
+              if(0 == path[path_len-1].i) {
+                  aln_ref_l--;
+              }
 
               // save the hit
               if(0 < tmap_refseq_pac2real(refseq, pacpos, aln_ref_l, &seqid, &pos)) {
