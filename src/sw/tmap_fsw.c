@@ -165,6 +165,11 @@ tmap_fsw_sub_core(uint8_t *seq, int32_t len,
   mat = score_matrix + flow_base * N_MATRIX_ROW;
 
   sub_path = (NULL == path) ? 0 : 1; // only if we wish to recover the path  
+  /*
+  fprintf(stderr, "flow_base=%c base_call=%d flow_signal=%d flowseq_start_clip=%d flowseq_end_clip=%d len=%d\n",
+          "ACGTN"[flow_base], base_call, flow_signal,
+          flowseq_start_clip, flowseq_end_clip, len);
+          */
 
   // copy previous row
   for(j=0;j<=len;j++) {
@@ -188,6 +193,12 @@ tmap_fsw_sub_core(uint8_t *seq, int32_t len,
           tmap_fsw_set_match(sub_dpcell, sub_dpscore, i, j, mat[seq[j-1]], sub_path);
           tmap_fsw_set_ins(sub_dpcell, sub_dpscore, i, j, gap_open, gap_ext, sub_path);
           tmap_fsw_set_del(sub_dpcell, sub_dpscore, i, j, gap_open, gap_ext, sub_path);
+          /*
+          if(1 == flowseq_start_clip && sub_dpscore[i][j].match_score < 0) {
+              sub_dpscore[i][j].match_score = 0;
+              sub_dpcell[i][j].match_from = TMAP_FSW_FROM_S;
+          }
+          */
       }
   }
 
@@ -202,6 +213,15 @@ tmap_fsw_sub_core(uint8_t *seq, int32_t len,
       //fprintf(stderr, "flow_score=%d i=%d\n", flow_score, i);
       for(j=0;j<=len;j++) { // for each col
           TMAP_FSW_ADD_FSCORE(sub_dpscore[i][j], flow_score);
+          /*
+          if(TMAP_FSW_FROM_S == sub_dpcell[i][j].match_from) {
+              TMAP_FSW_ADD_FSCORE(sub_dpscore[i][j], flow_score);
+              sub_dpscore[i][j].match_score = 0; // reset
+          }
+          else {
+              TMAP_FSW_ADD_FSCORE(sub_dpscore[i][j], flow_score);
+          }
+          */
       }
   }
 
@@ -216,17 +236,17 @@ tmap_fsw_sub_core(uint8_t *seq, int32_t len,
               if(dpscore_curr[j].match_score < 0) {
                   dpcell_curr[j].match_from = TMAP_FSW_FROM_S;
                   dpcell_curr[j].match_bc = 0;
-                  dpscore_curr[j].match_score = 0;
+                  dpscore_curr[j].match_score = TMAP_SW_MINOR_INF;
               }
               if(dpscore_curr[j].ins_score < 0) {
                   dpcell_curr[j].ins_from = TMAP_FSW_FROM_S;
                   dpcell_curr[j].ins_bc = 0;
-                  dpscore_curr[j].ins_score = 0;
+                  dpscore_curr[j].ins_score = TMAP_SW_MINOR_INF;
               }
               if(dpscore_curr[j].del_score < 0) {
                   dpcell_curr[j].del_from = TMAP_FSW_FROM_S;
                   dpcell_curr[j].del_bc = 0;
-                  dpscore_curr[j].del_score = 0;
+                  dpscore_curr[j].del_score = TMAP_SW_MINOR_INF;
               }
           }
       }
@@ -348,22 +368,22 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
   ctype = best_ctype;
 
   /*
-     fprintf(stderr, "GETTING PATH\n");
-     fprintf(stderr, "best_i=%d best_j=%d ctype=%d\n",
-     best_i, best_j, ctype);
-     */
+  fprintf(stderr, "GETTING PATH\n");
+  fprintf(stderr, "best_i=%d best_j=%d ctype=%d\n",
+          best_i, best_j, ctype);
+          */
 
   while(TMAP_FSW_FROM_S != ctype && (0 < i || 0 < j)) {
       base_call = 0;
       col_offset = 0;
       base_call_diff = 0;
+      //fprintf(stderr, "CORE i=%d j=%d ctype=%d\n", i, j, ctype);
 
       // local
       if(i <= 0 && 1 == flowseq_start_clip) {
           break;
       }
 
-      //fprintf(stderr, "CORE i=%d j=%d ctype=%d\n", i, j, ctype);
       switch(ctype) { 
         case TMAP_FSW_FROM_M: 
           if(i < 0 || j < 0) tmap_error("bug encountered", Exit, OutOfRange);
@@ -385,6 +405,10 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
           break;
         default:
           tmap_error(NULL, Exit, OutOfRange);
+      }
+
+      if(0 < i && 0 < j && ctype_next == TMAP_FSW_FROM_S) {
+          break;
       }
 
       /*
@@ -521,6 +545,11 @@ tmap_fsw_clipping_core(uint8_t *seq, int32_t len,
       (*path_len) = 0;
       return 0;
   }
+  
+  /*
+  fprintf(stderr, "%s flowseq_start_clip=%d flowseq_end_clip=%d\n",
+          __func__, flowseq_start_clip, flowseq_end_clip);
+          */
 
   gap_open = ap->gap_open;
   gap_ext = ap->gap_ext;
@@ -568,23 +597,30 @@ tmap_fsw_clipping_core(uint8_t *seq, int32_t len,
   TMAP_FSW_INIT_CELL(dpcell[0][0]);
   dpscore[0][0].match_score = 0;
   if(1 == flowseq_start_clip) { // start anywhere in flowseq
-      for(j=1;j<=len;j++) { // for each col
+      for(j=1;j<=len;j++) { // for each col (flow in the reference)
           TMAP_FSW_SET_SCORE_INF(dpscore[0][j]);
           TMAP_FSW_INIT_CELL(dpcell[0][j]);
-          // the alignment can start anywhere with seq 
-          dpscore[0][j].match_score = 0; 
+          // the alignment can start anywhere within seq and anywhere within
+          // flowseq
+          for(i=0;i<=flowseq->num_flows;i++) {
+              dpscore[i][j].match_score = 0; 
+              dpcell[i][j].match_from = TMAP_FSW_FROM_S; 
+          }
       }
   }
-  else { // start at hte first flow in seq2
+  else { // start at the first flow in seq2
       for(j=1;j<=len;j++) { // for each col
           TMAP_FSW_SET_SCORE_INF(dpscore[0][j]);
           TMAP_FSW_INIT_CELL(dpcell[0][j]);
           tmap_fsw_set_end_del(dpcell, dpscore, 0, j, gap_open, gap_ext, gap_end, 0);
+          // the alignment can start anywhere within seq 
+          dpscore[0][j].match_score = 0; 
+          dpcell[0][j].match_from = TMAP_FSW_FROM_S; 
       }
   }
 
   // core loop
-  for(i=1;i<=flowseq->num_flows;i++) { // for each row
+  for(i=1;i<=flowseq->num_flows;i++) { // for each row (flow in the read)
       // fill in the columns
       /*
       fprintf(stderr, "i=%d num_flows=%d flow_base=%c base_calls=%d flowgram=%d\n", 
@@ -604,6 +640,23 @@ tmap_fsw_clipping_core(uint8_t *seq, int32_t len,
                         NULL, NULL, 0,
                         ((flowseq->key_index+1) == i) ? flowseq->key_bases : 0,
                         flowseq_start_clip, flowseq_end_clip);
+
+      // deal with start clipping
+      /*
+      for(j=1;j<=len;j++) {
+          fprintf(stderr, "i=%d j=%d match_from=%d match_score=%d\n",
+                  i, j, dpcell[i][j].match_from, (int)dpscore[i][j].match_score);
+      }
+      */
+      if(1 == flowseq_start_clip) {
+          for(j=1;j<=len;j++) {
+              if(dpscore[i][j].match_score < 0) {
+                  //fprintf(stderr, "%s HERE 1 i=%d j=%d\n", __func__, i, j);
+                  dpcell[i][j].match_from = TMAP_FSW_FROM_S;
+                  dpscore[i][j].match_score = 0; 
+              }
+          }
+      }
 
       // Update best
       if(1 == flowseq_end_clip // end anywhere in flowseq
@@ -627,6 +680,7 @@ tmap_fsw_clipping_core(uint8_t *seq, int32_t len,
           }
       }
   }
+  //fprintf(stderr, "%s best_score=%d\n", __func__, (int)best_score);
 
   if(best_i < 0 || best_j < 0) { // was not updated
       (*path_len) = 0;

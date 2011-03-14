@@ -259,6 +259,8 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t score_match, int32_t pen_
   int32_t read_bases_len = 0, read_bases_mem = 256;
   char *ref_bases = NULL;
   int32_t ref_bases_len = 0, ref_bases_mem = 64;
+  int32_t tmp_read_bases_len, tmp_ref_bases_len;
+  int32_t tmp_read_bases_offset, tmp_ref_bases_offset;
   uint8_t *flow_order_tmp = NULL;
   int32_t flow_order_len = 0;
 
@@ -417,11 +419,8 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t score_match, int32_t pen_
       tmap_reverse_compliment(read_bases, read_bases_len);
   }
 
-  // HERE
-  /*
-  fprintf(stderr, "ref_bases_len=%d\nref_bases=%s\n", ref_bases_len, ref_bases);
-  fprintf(stderr, "read_bases_len=%d\nread_bases=%s\n", read_bases_len, read_bases);
-  */
+  //fprintf(stderr, "ref_bases_len=%d\nref_bases=%s\n", ref_bases_len, ref_bases);
+  //fprintf(stderr, "read_bases_len=%d\nread_bases=%s\n", read_bases_len, read_bases);
 
   // DNA to integer
   for(i=0;i<read_bases_len;i++) {
@@ -492,38 +491,81 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t score_match, int32_t pen_
       tmap_error("soft clipping type was not recognized", Exit, OutOfRange);
       break;
   }
-  tmap_fsw_flowseq_destroy(flowseq);
 
   if(0 == path_len) {
       tmap_error("bug encountered", Exit, OutOfRange);
   }
 
+  /*
+  for(i=path_len-1;0<=i;i--) {
+      fprintf(stderr, "i=%d path[i].i=%d path[i].j=%d path[i].ctype=%d\n",
+              i, path[i].i, path[i].j, path[i].ctype);
+  }
+  */
+
+  // Account for soft-clipping
+  tmp_read_bases_len = 0;
+  for(i=0;i<=path[0].i;i++) { // include the last flow
+      tmp_read_bases_len += flowseq->base_calls[i];
+  }
+  tmp_read_bases_offset = 0;
+  for(i=0;i<path[path_len-1].i;i++) { // do not include the first flow
+      tmp_read_bases_offset += flowseq->base_calls[i]; 
+  }
+  tmp_read_bases_len -= tmp_read_bases_offset;
+  // TODO: starting gaps in the reference
+  tmp_ref_bases_len = path[0].j - path[path_len-1].j + 1;
+  if(ref_bases_len < tmp_ref_bases_len) {
+      tmap_error("bug encountered", Exit, OutOfRange);
+  }
+  tmp_ref_bases_offset = path[path_len-1].j;
+  if(tmp_ref_bases_offset < 0) {
+      tmap_error("bug encountered", Exit, OutOfRange);
+  }
+  /*
+     fprintf(stderr, "tmp_read_bases_len=%d\ntmp_read_bases_offset=%d\n",
+     tmp_read_bases_len, tmp_read_bases_offset);
+     fprintf(stderr, "tmp_ref_bases_len=%d\ntmp_ref_bases_offset=%d\n",
+     tmp_ref_bases_len, tmp_ref_bases_offset);
+     */
+
   switch(output_type) {
     case TMAP_SAM2FS_OUTPUT_ALN:
-      // bound, since we could start with an insertion (read starts with bases,
-      // reference starts with gaps)
-      i = path[0].j;
-      j = path[path_len-1].j;
-      if(ref_bases_len <= i) i = ref_bases_len;
-      if(j < 0) j = 0;
-
       tmap_file_fprintf(tmap_file_stdout, "%s\t%c\t", bam1_qname(bam), (1==strand) ? '-' : '+');
       tmap_fsw_print_aln(tmap_file_stdout, score, path, path_len, flow_order_tmp, flow_order_len, 
                          (uint8_t*)ref_bases,
                          strand,
                          j_type);
       tmap_file_fprintf(tmap_file_stdout, "\t");
+      // TODO
+      // what about clipping within a flow and ref?
+      // TODO:
+      // after last reference flow should be gaps!
       tmap_sam2fs_aux_flow_align(tmap_file_stdout, 
-                                 (uint8_t*)read_bases, 
-                                 read_bases_len,
-                                 (uint8_t*)(ref_bases + j),
-                                 i - j + 1, 
+                                 (uint8_t*)(read_bases + tmp_read_bases_offset), 
+                                 tmp_read_bases_len,
+                                 (uint8_t*)(ref_bases + tmp_ref_bases_offset),
+                                 tmp_ref_bases_len,
                                  flow_order_tmp,
                                  flow_order_len,
                                  strand);
       tmap_file_fprintf(tmap_file_stdout, "\n");
       break;
     case TMAP_SAM2FS_OUTPUT_SAM:
+      soft_clip_start += tmp_read_bases_offset;
+      soft_clip_end += read_bases_len - tmp_read_bases_len - tmp_read_bases_offset;
+
+      // Account for soft-clipping
+      tmp_read_bases_len = 0;
+      for(i=0;i<=path[0].i;i++) { // include the last flow
+          tmp_read_bases_len += flowseq->base_calls[i];
+      }
+      tmp_read_bases_offset = 0;
+      for(i=0;i<path[path_len-1].i;i++) { // do not include the first flow
+          tmp_read_bases_offset += flowseq->base_calls[i]; 
+      }
+      tmp_read_bases_len -= tmp_read_bases_offset;
+
       bam = tmap_sam2fs_copy_to_sam(bam, path, path_len, score, soft_clip_start, soft_clip_end, strand);
 
       tmap_fsw_get_aln(path, path_len, flow_order_tmp, flow_order_len, (uint8_t*)ref_bases, 
@@ -544,6 +586,7 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t score_match, int32_t pen_
   }
 
   // free memory
+  tmap_fsw_flowseq_destroy(flowseq);
   free(path);
   free(base_calls);
   free(flowgram);

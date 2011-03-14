@@ -542,21 +542,21 @@ tmap_sam_update_cigar_and_md(bam1_t *b, char *ref, char *read, int32_t len)
   int32_t i, n_cigar, last_type;
   uint32_t *cigar;
   int32_t diff;
-  int32_t soft_clip_start, soft_clip_end;
+  int32_t soft_clip_start_i, soft_clip_end_i;
 
   if(b->data_len - b->l_aux != bam1_aux(b) - b->data) {
       tmap_error("b->data_len - b->l_aux != bam1_aux(b) - b->data", Exit, OutOfRange);
   }
 
   // keep track of soft clipping
-  n_cigar = soft_clip_start = soft_clip_end = 0;
+  n_cigar = soft_clip_start_i = soft_clip_end_i = 0;
   cigar = bam1_cigar(b);
-  if(BAM_CSOFT_CLIP & cigar[0]) {
-      soft_clip_start = 1;
+  if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(cigar[0])) {
+      soft_clip_start_i = 1;
       n_cigar++;
   }
-  if(1 < b->core.n_cigar && BAM_CSOFT_CLIP & cigar[b->core.n_cigar-1]) {
-      soft_clip_end = 1;
+  if(1 < b->core.n_cigar && BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(cigar[b->core.n_cigar-1])) {
+      soft_clip_end_i = 1;
       n_cigar++;
   }
   cigar = NULL;
@@ -603,22 +603,22 @@ tmap_sam_update_cigar_and_md(bam1_t *b, char *ref, char *read, int32_t len)
 
   // create the cigar
   cigar = bam1_cigar(b);
-  for(i=soft_clip_start;i<n_cigar-soft_clip_end;i++) {
+  for(i=soft_clip_start_i;i<n_cigar-soft_clip_end_i;i++) {
       cigar[i] = 0;
   }
-  n_cigar = soft_clip_start; // skip over soft clipping etc.
+  n_cigar = soft_clip_start_i; // skip over soft clipping etc.
   last_type = tmap_sam_get_type(ref[0], read[0]);
-  cigar[n_cigar] = 1u << 4 | last_type;
+  TMAP_SW_CIGAR_STORE(cigar[n_cigar], last_type, 1);
   for(i=1;i<len;i++) {
       int32_t cur_type = tmap_sam_get_type(ref[i], read[i]);
       if(cur_type == last_type) {
           // add to the cigar length
-          cigar[n_cigar] += 1u << 4; 
+          TMAP_SW_CIGAR_ADD_LENGTH(cigar[n_cigar], 1);
       }
       else {
           // add to the cigar
           n_cigar++;
-          cigar[n_cigar] = 1u << 4 | cur_type; 
+          TMAP_SW_CIGAR_STORE(cigar[n_cigar], cur_type, 1);
       }
       last_type = cur_type;
   }
