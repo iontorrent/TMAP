@@ -138,7 +138,7 @@ tmap_refseq_destroy(tmap_refseq_t *refseq);
 
 /*! 
   @param  refseq      pointer to the structure in which the data is stored
-  @param  pacpos      the packed FASTA position
+  @param  pacpos      the packed FASTA position (one-based)
   @param  aln_length  the alignment length
   @param  seqid       the zero-based sequence index to be returned
   @param  pos         the one-based position to be returned
