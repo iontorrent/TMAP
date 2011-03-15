@@ -86,6 +86,20 @@ void
 tmap_seq_to_int(tmap_seq_t *seq);
 
 /*! 
+  converts bases to character values
+  @param  seq  a pointer to a sequence structure
+  */
+void
+tmap_seq_to_char(tmap_seq_t *seq);
+
+/*! 
+  @param  seq  pointer to the structure 
+  return       0 if the sequence is character format, 1 otherwise
+  */
+int32_t
+tmap_seq_is_int(tmap_seq_t *seq);
+
+/*! 
   @param  seq  pointer to the structure 
   @return      a pointer to the name string
   */

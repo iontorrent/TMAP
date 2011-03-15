@@ -10,6 +10,7 @@
 #include "../util/tmap_progress.h"
 #include "../util/tmap_definitions.h"
 #include "../seq/tmap_sff.h"
+#include "../seq/tmap_seq.h"
 #include "../io/tmap_file.h"
 #include "tmap_sw.h"
 #include "tmap_fsw.h"
@@ -1067,7 +1068,7 @@ tmap_fsw_print_aln(tmap_file_t *fp, int64_t score, tmap_fsw_path_t *path, int32_
   free(aln);
 }
 
-tmap_fsw_flowseq_t *
+static tmap_fsw_flowseq_t *
 tmap_fsw_sff_to_flowseq(tmap_sff_t *sff)
 {
   int32_t was_int;
@@ -1182,6 +1183,80 @@ tmap_fsw_sff_to_flowseq(tmap_sff_t *sff)
   }
 
   return tmap_fsw_flowseq_init(flow_order, flow_order_len, base_calls, flowgram, num_flows, key_index, key_bases);
+}
+
+tmap_fsw_flowseq_t *
+tmap_fsw_seq_to_flowseq(tmap_seq_t *seq, uint8_t *flow_order, int32_t flow_order_len)
+{
+  int32_t was_int;
+  int32_t i, j;
+  uint8_t *base_calls;
+  uint16_t *flowgram;
+  int32_t num_flows;
+  uint8_t *tmp_flow_order;
+  tmap_string_t *bases;
+
+  if(TMAP_SEQ_TYPE_SFF == seq->type) {
+      return tmap_fsw_sff_to_flowseq(seq->data.sff);
+  }
+
+  bases = tmap_seq_get_bases(seq);
+  if(0 == bases->l) tmap_error("bug encountered", Exit, OutOfRange);
+
+  // convert bases to integers
+  was_int = tmap_seq_is_int(seq);
+  if(0 == tmap_seq_is_int(seq)) {
+      tmap_seq_to_int(seq);
+  }
+  
+  // get the flow order
+  tmp_flow_order = tmap_malloc(sizeof(uint8_t) * flow_order_len, "flow");
+  for(i=0;i<flow_order_len;i++) {
+      // offset it by the start flow
+      tmp_flow_order[i] = flow_order[i];
+  }
+
+  // get the number of flows
+  j = 0;
+  while(tmp_flow_order[j] != bases->s[0] && j < flow_order_len) {
+      j++;
+  }
+  if(j == flow_order_len) tmap_error("bug encountered", Exit, OutOfRange);
+  num_flows = 1; // we already moved to the fist base/flow
+  for(i=1;i<bases->l;i++) {
+      while(tmp_flow_order[j] != bases->s[i]) {
+          j = (j + 1) % flow_order_len;
+          num_flows++;
+      }
+      i++;
+  }
+
+  // get the flowgram and bases
+  flowgram = tmap_calloc(num_flows, sizeof(uint16_t), "flowgram");
+  base_calls = tmap_calloc(num_flows, sizeof(uint8_t), "base_calls");
+  j = 0;
+  while(tmp_flow_order[j] != bases->s[0] && j < flow_order_len) {
+      j++;
+  }
+  if(j == flow_order_len) tmap_error("bug encountered", Exit, OutOfRange);
+  flowgram[0] = 100; // the first flow was found 
+  base_calls[0] = 1;
+  for(i=1;i<bases->l;i++) {
+      while(tmp_flow_order[j % flow_order_len] != bases->s[i]) {
+          j++;
+      }
+      flowgram[j] += 100;
+      base_calls[j]++;
+      i++;
+  }
+  if(j != num_flows) tmap_error("bug encountered", Exit, OutOfRange);
+
+  if(0 == was_int) {
+      tmap_seq_to_char(seq);
+  }
+
+  // Note: we assume there is no key
+  return tmap_fsw_flowseq_init(tmp_flow_order, flow_order_len, base_calls, flowgram, num_flows, -1, 0);
 }
 
 void

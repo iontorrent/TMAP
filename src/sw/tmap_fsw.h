@@ -268,12 +268,14 @@ tmap_fsw_print_aln(tmap_file_t *fp, int64_t score, tmap_fsw_path_t *path, int32_
                    uint8_t *flow_order, int32_t flow_order_len, uint8_t *target, uint8_t strand, int32_t j_type);
 
 /*!
-  Create a structure for flow-space Smith Waterman from an SFF structure
-  @param  sff  the SFF structure
-  @return      pointer to the flowseq structure
+  Create a structure for flow-space Smith Waterman from an sequence structure
+  @param  fq             the sequence structure
+  @param  flow_order      the flow order (in integer format); not used for an SFF
+  @param  flow_order_len  the flow order length; not used for an SFF
+  @return                pointer to the flowseq structure
   */
 tmap_fsw_flowseq_t *
-tmap_fsw_sff_to_flowseq(tmap_sff_t *sff);
+tmap_fsw_seq_to_flowseq(tmap_seq_t *seq, uint8_t *flow_order, int32_t flow_order_len);
 
 /*!
   Reverse compliments this flow sequence

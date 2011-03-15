@@ -58,7 +58,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->pen_gapo = TMAP_MAP_UTIL_PEN_GAPO;
   opt->pen_gape = TMAP_MAP_UTIL_PEN_GAPE;
   opt->fscore = TMAP_MAP_UTIL_FSCORE;
-  opt->flow = NULL;
+  opt->flow_order = NULL;
   opt->bw = 50; 
   opt->softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_RIGHT;
   opt->dup_window = 128;
@@ -132,7 +132,8 @@ tmap_map_opt_destroy(tmap_map_opt_t *opt)
   free(opt->fn_fasta);
   free(opt->fn_reads); 
   free(opt->sam_rg);
-  free(opt->flow);
+  free(opt->flow_order);
+  free(opt->flow_order_int);
 
   switch(opt->algo_id) {
     case TMAP_MAP_ALGO_MAP1:
@@ -246,10 +247,8 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "         -O INT      the indel start penalty [%d]\n", opt->pen_gapo);
   tmap_file_fprintf(tmap_file_stderr, "         -E INT      the indel extend penalty [%d]\n", opt->pen_gape);
   tmap_file_fprintf(tmap_file_stderr, "         -X INT      the flow score penalty [%d]\n", opt->fscore);
-  /*
-     tmap_file_fprintf(tmap_file_stderr, "         -x STRING   the flow order ([ACGT]{4}) [%s]\n",
-     (NULL == opt->flow) ? "not using" : opt->flow);
-     */
+  tmap_file_fprintf(tmap_file_stderr, "         -x STRING   the flow order ([ACGT]{4+} or \"sff\") [%s]\n",
+                    (NULL == opt->flow_order) ? "not using" : opt->flow_order);
   tmap_file_fprintf(tmap_file_stderr, "         -w INT      the band width [%d]\n", opt->bw);
   tmap_file_fprintf(tmap_file_stderr, "         -g          the soft-clipping type [%d]\n", opt->softclip_type);
   tmap_file_fprintf(tmap_file_stderr, "                             0 - allow on the right and left portions of the read\n");
@@ -356,7 +355,17 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
         case 'X':
           opt->fscore = atoi(optarg); break;
         case 'x':
-          opt->flow = tmap_strdup(optarg); break;
+          opt->flow_order = tmap_strdup(optarg); 
+          if(0 == strcmp("sff", opt->flow_order) || 0 == strcmp("SFF", opt->flow_order)) {
+              opt->flow_order_use_sff = 1;
+          }
+          else {
+              opt->flow_order_int = tmap_malloc(sizeof(uint8_t)*strlen(opt->flow_order), "flow_order");
+              for(c=0;c<strlen(opt->flow_order);c++) {
+                  opt->flow_order_int[c] = tmap_nt_char_to_int[(int)opt->flow_order[c]];
+              }
+          }
+          break;
         case 'w':
           opt->bw = atoi(optarg); break;
         case 'g':
@@ -555,7 +564,7 @@ tmap_map_opt_file_check_with_null(char *fn1, char *fn2)
     if((opt_map_other)->fscore != (opt_map_all)->fscore) { \
         tmap_error("option -X was specified outside of the common options", Exit, CommandLineArgument); \
     } \
-    if(0 != tmap_map_opt_file_check_with_null((opt_map_other)->flow, (opt_map_all)->flow)) { \
+    if(0 != tmap_map_opt_file_check_with_null((opt_map_other)->flow_order, (opt_map_all)->flow_order)) { \
         tmap_error("option -x was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->bw != (opt_map_all)->bw) { \
@@ -598,7 +607,7 @@ tmap_map_opt_file_check_with_null(char *fn1, char *fn2)
 void
 tmap_map_opt_check(tmap_map_opt_t *opt)
 {
-  int32_t i;
+  int32_t i, j;
   // global options
   if(NULL == opt->fn_fasta && 0 == opt->shm_key) {
       tmap_error("option -f or option -s must be specified", Exit, CommandLineArgument);
@@ -617,7 +626,28 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->pen_gapo, 0, INT32_MAX, "-O");
   tmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
   tmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
-  if(NULL != opt->flow) tmap_error_cmd_check_int(strlen(opt->flow), 4, 4, "-x");
+  if(NULL != opt->flow_order) {
+      if(0 == strcmp("sff", opt->flow_order) || 0 == strcmp("SFF", opt->flow_order)) {
+          if(TMAP_READS_FORMAT_SFF != opt->reads_format) {
+              tmap_error("an SFF was not specified (-r and -x)", Exit, CommandLineArgument);
+          }
+      }
+      else {
+          tmap_error_cmd_check_int(strlen(opt->flow_order), 4, INT32_MAX, "-x");
+          for(i=j=0;i<strlen(opt->flow_order);i++) { // each base must be used
+              switch(tolower(opt->flow_order[i])) {
+                case 'a': j |= 0x1; break;
+                case 'c': j |= 0x2; break;
+                case 'g': j |= 0x4; break;
+                case 't': j |= 0x8; break;
+                default: tmap_error("unrecognized DNA base (-x)", Exit, CommandLineArgument); break;
+              }
+          }
+          if(0xf != j) {
+              tmap_error("all DNA bases must be present at least once (-x)", Exit, CommandLineArgument); 
+          }
+      }
+  }
   tmap_error_cmd_check_int(opt->bw, 0, INT32_MAX, "-w");
   tmap_error_cmd_check_int(opt->softclip_type, 0, 3, "-g");
   tmap_error_cmd_check_int(opt->dup_window, -1, INT32_MAX, "-W");
@@ -706,7 +736,8 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "pen_gapo=%d\n", opt->pen_gapo);
   fprintf(stderr, "pen_gape=%d\n", opt->pen_gape);
   fprintf(stderr, "fscore=%d\n", opt->fscore);
-  fprintf(stderr, "flow=%s\n", opt->flow);
+  fprintf(stderr, "flow_order=%s\n", opt->flow_order);
+  fprintf(stderr, "flow_order_use_sff=%d\n", opt->flow_order_use_sff);
   fprintf(stderr, "bw=%d\n", opt->bw);
   fprintf(stderr, "softclip_type=%d\n", opt->softclip_type);
   fprintf(stderr, "dup_window=%d\n", opt->dup_window);
@@ -1335,9 +1366,9 @@ tmap_map_util_sw(tmap_map_sam_t *sam,
   }
 }
 
-
 void
-tmap_map_util_fsw(tmap_sff_t *sff, 
+tmap_map_util_fsw(tmap_seq_t *seq, 
+                  uint8_t *flow_order, int32_t flow_order_len,
                   tmap_map_sams_t *sams, tmap_refseq_t *refseq,
                   int32_t bw, int32_t softclip_type, int32_t score_thr,
                   int32_t score_match, int32_t pen_mm, int32_t pen_gapo, 
@@ -1366,8 +1397,16 @@ tmap_map_util_fsw(tmap_sff_t *sff,
 
       // get flow sequence if necessary
       if(NULL == fseq[s->strand]) {
-          fseq[s->strand] = tmap_fsw_sff_to_flowseq(sff);
+          fseq[s->strand] = tmap_fsw_seq_to_flowseq(seq, flow_order, flow_order_len);
           if(1 == s->strand) tmap_fsw_flowseq_reverse_compliment(fseq[s->strand]);
+      }
+
+      // HERE
+      uint32_t *old_cigar, old_n_cigar;
+      old_n_cigar = s->n_cigar;
+      old_cigar = tmap_malloc(sizeof(uint32_t)*old_n_cigar, "old_cigar");
+      for(j=0;j<s->n_cigar;j++) {
+          old_cigar[j] = s->cigar[j];
       }
 
       param.band_width = 0;
@@ -1491,7 +1530,36 @@ tmap_map_util_fsw(tmap_sff_t *sff,
                   s->n_cigar++;
               }
           }
+
+          // HERE
+          int32_t differs = 0;
+          if(s->n_cigar != old_n_cigar) {
+              differs = 1;
+          }
+          else {
+              for(j=0;j<s->n_cigar;j++) {
+                  if(s->cigar[j] != old_cigar[j]) {
+                      differs = 1;
+                      break;
+                  }
+              }
+          }
+          if(1 == differs) {
+              fprintf(stderr, "OLD: [");
+              for(j=0;j<old_n_cigar;j++) {
+                  fprintf(stderr, "%d%c", old_cigar[j]>>4, "MIDNSHP"[old_cigar[j]&0xf]);
+              }
+              fprintf(stderr, "]\n");
+              fprintf(stderr, "NEW: [");
+              for(j=0;j<s->n_cigar;j++) {
+                  fprintf(stderr, "%d%c", s->cigar[j]>>4, "MIDNSHP"[s->cigar[j]&0xf]);
+              }
+              fprintf(stderr, "]\n");
+          }
       }
+
+      // HERE
+      free(old_cigar);
   }
   // free
   if(NULL != fseq[0]) tmap_fsw_flowseq_destroy(fseq[0]);

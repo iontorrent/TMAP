@@ -176,6 +176,51 @@ tmap_seq_to_int(tmap_seq_t *seq)
   }
 }
 
+void
+tmap_seq_to_char(tmap_seq_t *seq)
+{
+  switch(seq->type) {
+    case TMAP_SEQ_TYPE_FQ:
+      tmap_fq_to_char(seq->data.fq);
+      break;
+    case TMAP_SEQ_TYPE_SFF:
+      tmap_sff_to_char(seq->data.sff);
+      break;
+#ifdef HAVE_SAMTOOLS
+    case TMAP_SEQ_TYPE_SAM:
+    case TMAP_SEQ_TYPE_BAM:
+      tmap_sam_to_char(seq->data.sam);
+      break;
+#endif
+    default:
+      tmap_error("type is unrecognized", Exit, OutOfRange);
+      break;
+  }
+}
+
+int32_t
+tmap_seq_is_int(tmap_seq_t *seq)
+{
+  switch(seq->type) {
+    case TMAP_SEQ_TYPE_FQ:
+      return seq->data.fq->is_int;
+      break;
+    case TMAP_SEQ_TYPE_SFF:
+      return seq->data.sff->is_int;
+      break;
+#ifdef HAVE_SAMTOOLS
+    case TMAP_SEQ_TYPE_SAM:
+    case TMAP_SEQ_TYPE_BAM:
+      return seq->data.sam->is_int;
+      break;
+#endif
+    default:
+      tmap_error("type is unrecognized", Exit, OutOfRange);
+      break;
+  }
+  return -1;
+}
+
 tmap_string_t *
 tmap_seq_get_name(tmap_seq_t *seq)
 {
