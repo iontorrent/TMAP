@@ -107,7 +107,7 @@ tmap_sam2fs_copy_to_sam(bam1_t *bam_old, tmap_fsw_path_t *path, int32_t path_len
                         int32_t soft_clip_start, int32_t soft_clip_end, uint8_t path_strand)
 {
   bam1_t *bam_new = NULL;
-  int32_t i, j;
+  int32_t i, j, unmapped;
   uint32_t *cigar;
   int32_t n_cigar;
   uint8_t *old_score;
@@ -130,6 +130,22 @@ tmap_sam2fs_copy_to_sam(bam1_t *bam_old, tmap_fsw_path_t *path, int32_t path_len
 
   bam_new = tmap_calloc(1, sizeof(bam1_t), "bam_new");
   bam_new->data_len = 0; //bam_new->m_data;
+  
+  // get the cigar
+  cigar = tmap_fsw_path2cigar(path, path_len, &n_cigar, 1);
+
+  // check if the read should be unmapped
+  for(i=0,unmapped=1;1 == unmapped && i<n_cigar;i++) {
+      switch(cigar[i] & 0xf) {
+        case TMAP_FSW_FROM_M:
+        case TMAP_FSW_FROM_HP_MINUS:
+        case TMAP_FSW_FROM_I:
+          unmapped = 0;
+          break;
+        default:
+          break;
+      }
+  }
 
   // query name
   bam_new->core.l_qname = bam_old->core.l_qname;
@@ -138,15 +154,27 @@ tmap_sam2fs_copy_to_sam(bam1_t *bam_old, tmap_fsw_path_t *path, int32_t path_len
   memcpy(bam1_qname(bam_new), bam1_qname(bam_old), bam_old->core.l_qname);
 
   // flag
-  bam_new->core.flag = bam_old->core.flag;
+  if(0 == unmapped) {
+      bam_new->core.flag = bam_old->core.flag;
+  }
+  else {
+      bam_new->core.flag = BAM_FUNMAP;
+  }
 
   // tid, pos, qual
-  bam_new->core.tid = bam_old->core.tid;
-  bam_new->core.pos = bam_old->core.pos; 
-  if(0 < path[path_len-1].j) { // adjust the position
-      bam_new->core.pos += path[path_len-1].j;
+  if(0 == unmapped) {
+      bam_new->core.tid = bam_old->core.tid;
+      bam_new->core.pos = bam_old->core.pos; 
+      if(0 < path[path_len-1].j) { // adjust the position
+          bam_new->core.pos += path[path_len-1].j;
+      }
+      bam_new->core.qual = bam_old->core.qual; 
   }
-  bam_new->core.qual = bam_old->core.qual; 
+  else {
+      bam_new->core.tid = -1;
+      bam_new->core.pos = -1;
+      bam_new->core.qual = 0;
+  }
 
   // no pairing information
   bam_new->core.mtid = -1;
@@ -154,49 +182,53 @@ tmap_sam2fs_copy_to_sam(bam1_t *bam_old, tmap_fsw_path_t *path, int32_t path_len
   bam_new->core.isize = 0;
 
   // cigar
-  tmap_sam2fs_bam_alloc_data(bam_new, bam_new->data_len);
-  cigar = tmap_fsw_path2cigar(path, path_len, &n_cigar, 1);
-  // remove HP edits
-  for(i=j=0;i<n_cigar;i++) {
-      switch(cigar[i] & 0xf) {
-        case TMAP_FSW_FROM_HP_PLUS: // deletion
-          cigar[i] = ((cigar[i] >> 4) << 4) | TMAP_FSW_FROM_D;
-          break;
-        case TMAP_FSW_FROM_HP_MINUS: // insertion
-          cigar[i] = ((cigar[i] >> 4) << 4) | TMAP_FSW_FROM_I;
-          break;
-        default:
-          break;
+  if(0 == unmapped) {
+      tmap_sam2fs_bam_alloc_data(bam_new, bam_new->data_len);
+      // remove HP edits
+      for(i=j=0;i<n_cigar;i++) {
+          switch(cigar[i] & 0xf) {
+            case TMAP_FSW_FROM_HP_PLUS: // deletion
+              cigar[i] = ((cigar[i] >> 4) << 4) | TMAP_FSW_FROM_D;
+              break;
+            case TMAP_FSW_FROM_HP_MINUS: // insertion
+              cigar[i] = ((cigar[i] >> 4) << 4) | TMAP_FSW_FROM_I;
+              break;
+            default:
+              break;
+          }
+          if(0 < j && (cigar[j-1] & 0xf) == (cigar[i] & 0xf)) {
+              cigar[j-1] = ((cigar[j-1] >> 4) + (cigar[i] >> 4)) << 4;
+          }
+          else {
+              j++;
+          }
       }
-      if(0 < j && (cigar[j-1] & 0xf) == (cigar[i] & 0xf)) {
-          cigar[j-1] = ((cigar[j-1] >> 4) + (cigar[i] >> 4)) << 4;
+      n_cigar = j;
+      // add soft-clipping
+      if(0 < soft_clip_start) {
+          cigar = tmap_realloc(cigar, sizeof(uint32_t) * (1 + n_cigar), "cigar"); 
+          for(i=n_cigar-1;0<=i;i--) {
+              cigar[i+1] = cigar[i];
+          }
+          cigar[0] = (soft_clip_start << 4) | BAM_CSOFT_CLIP;
+          n_cigar++;
       }
-      else {
-          j++;
+      if(0 < soft_clip_end) {
+          cigar = tmap_realloc(cigar, sizeof(uint32_t) * (1 + n_cigar), "cigar"); 
+          cigar[n_cigar] = (soft_clip_end << 4) | BAM_CSOFT_CLIP;
+          n_cigar++;
+      }
+      // allocate
+      bam_new->core.n_cigar = n_cigar;
+      bam_new->data_len += bam_new->core.n_cigar * sizeof(uint32_t);
+      tmap_sam2fs_bam_alloc_data(bam_new, bam_new->data_len);
+      // copy over
+      for(i=0;i<bam_new->core.n_cigar;i++) {
+          bam1_cigar(bam_new)[i] = cigar[i];
       }
   }
-  n_cigar = j;
-  // add soft-clipping
-  if(0 < soft_clip_start) {
-      cigar = tmap_realloc(cigar, sizeof(uint32_t) * (1 + n_cigar), "cigar"); 
-      for(i=n_cigar-1;0<=i;i--) {
-          cigar[i+1] = cigar[i];
-      }
-      cigar[0] = (soft_clip_start << 4) | BAM_CSOFT_CLIP;
-      n_cigar++;
-  }
-  if(0 < soft_clip_end) {
-      cigar = tmap_realloc(cigar, sizeof(uint32_t) * (1 + n_cigar), "cigar"); 
-      cigar[n_cigar] = (soft_clip_end << 4) | BAM_CSOFT_CLIP;
-      n_cigar++;
-  }
-  // allocate
-  bam_new->core.n_cigar = n_cigar;
-  bam_new->data_len += bam_new->core.n_cigar * sizeof(uint32_t);
-  tmap_sam2fs_bam_alloc_data(bam_new, bam_new->data_len);
-  // copy over
-  for(i=0;i<bam_new->core.n_cigar;i++) {
-      bam1_cigar(bam_new)[i] = cigar[i];
+  else {
+      bam_new->core.n_cigar = 0;
   }
   free(cigar);
 
@@ -419,8 +451,10 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t score_match, int32_t pen_
       tmap_reverse_compliment(read_bases, read_bases_len);
   }
 
-  //fprintf(stderr, "ref_bases_len=%d\nref_bases=%s\n", ref_bases_len, ref_bases);
-  //fprintf(stderr, "read_bases_len=%d\nread_bases=%s\n", read_bases_len, read_bases);
+  /*
+  fprintf(stderr, "ref_bases_len=%d\nref_bases=%s\n", ref_bases_len, ref_bases);
+  fprintf(stderr, "read_bases_len=%d\nread_bases=%s\n", read_bases_len, read_bases);
+  */
 
   // DNA to integer
   for(i=0;i<read_bases_len;i++) {
@@ -513,14 +547,13 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t score_match, int32_t pen_
       tmp_read_bases_offset += flowseq->base_calls[i]; 
   }
   tmp_read_bases_len -= tmp_read_bases_offset;
-  // TODO: starting gaps in the reference
-  tmp_ref_bases_len = path[0].j - path[path_len-1].j + 1;
-  if(ref_bases_len < tmp_ref_bases_len) {
-      tmap_error("bug encountered", Exit, OutOfRange);
+  if(path[path_len-1].j < 0) { // check if we start with an insertion in the read
+      tmp_ref_bases_len = path[0].j + 1;
+      tmp_ref_bases_offset = 0;
   }
-  tmp_ref_bases_offset = path[path_len-1].j;
-  if(tmp_ref_bases_offset < 0) {
-      tmap_error("bug encountered", Exit, OutOfRange);
+  else {
+      tmp_ref_bases_len = path[0].j - path[path_len-1].j + 1;
+      tmp_ref_bases_offset = path[path_len-1].j;
   }
   /*
      fprintf(stderr, "tmp_read_bases_len=%d\ntmp_read_bases_offset=%d\n",
@@ -540,7 +573,8 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t score_match, int32_t pen_
       // TODO
       // what about clipping within a flow and ref?
       // TODO:
-      // after last reference flow should be gaps!
+      // before the first referene base and after last reference flow should both be gaps!
+      // similarly for the read
       tmap_sam2fs_aux_flow_align(tmap_file_stdout, 
                                  (uint8_t*)(read_bases + tmp_read_bases_offset), 
                                  tmp_read_bases_len,
@@ -568,20 +602,23 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t score_match, int32_t pen_
 
       bam = tmap_sam2fs_copy_to_sam(bam, path, path_len, score, soft_clip_start, soft_clip_end, strand);
 
-      tmap_fsw_get_aln(path, path_len, flow_order_tmp, flow_order_len, (uint8_t*)ref_bases, 
-                       strand,
-                       &ref, &read, &aln, j_type);
+      if(bam->core.n_cigar > 0) {
+          tmap_fsw_get_aln(path, path_len, flow_order_tmp, flow_order_len, (uint8_t*)ref_bases, 
+                           strand,
+                           &ref, &read, &aln, j_type);
 
 
-      // do not worry about read fitting since tmap_fsw_get_aln handles this
-      // above
-      if(1 == strand) { // set it the forward strand of the reference
-          tmap_reverse_compliment(ref, path_len);
-          tmap_reverse_compliment(read, path_len);
+          // do not worry about read fitting since tmap_fsw_get_aln handles this
+          // above
+          if(1 == strand) { // set it the forward strand of the reference
+              tmap_reverse_compliment(ref, path_len);
+              tmap_reverse_compliment(read, path_len);
+          }
+          tmap_sam_update_cigar_and_md(bam, ref, read, path_len);
+          
+          // free
+          free(ref); free(read); free(aln); 
       }
-      tmap_sam_update_cigar_and_md(bam, ref, read, path_len);
-
-      free(ref); free(read); free(aln); 
       break;
   }
 
