@@ -392,3 +392,19 @@ tmap_compliment(char *seq, int32_t len)
       seq[i] = tmap_nt_char_to_rc_char[(int)seq[i]];
   }
 }
+
+int32_t
+tmap_chomp(char *str)
+{
+  int32_t n, len;
+
+  if(NULL == str) return 0;
+
+  len = strlen(str);
+  for(n=len;0<n;n--) {
+      if(0 == isspace(str[n-1])) break;
+      str[n-1]='\0';
+  }
+
+  return len - n;
+}

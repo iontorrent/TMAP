@@ -384,6 +384,8 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
               if(0 < strlen(optarg) && '\t' != optarg[0]) strcat(opt->sam_rg, "\t"); // add a tab separator
               strcat(opt->sam_rg, optarg);
           }
+          // remove trailing white spaces
+          tmap_chomp(opt->sam_rg);
           break;
         case 'Y':
           opt->sam_sff_tags = 1; break;
