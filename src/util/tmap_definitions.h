@@ -223,4 +223,12 @@ tmap_reverse_compliment(char *seq, int32_t len);
 inline void
 tmap_compliment(char *seq, int32_t len); 
 
+/*!
+ removes trailing whitespaces from a given string
+ @param  str  the string to chomp
+ @return      the number of characters removed
+ */
+int32_t
+tmap_chomp(char *str);
+
 #endif
