@@ -269,7 +269,6 @@ tmap_map2_core(tmap_map_opt_t *opt)
       if(-1 != opt->reads_queue_size) {
           tmap_progress_print("writing alignments");
       }
-
       for(i=0;i<seq_buffer_length;i++) {
           // write
           tmap_map_sams_print(seq_buffer[i], refseq, sams[i], opt->sam_sff_tags);
@@ -278,9 +277,11 @@ tmap_map2_core(tmap_map_opt_t *opt)
           tmap_map_sams_destroy(sams[i]);
           sams[i] = NULL;
       }
-
       if(-1 == opt->reads_queue_size) {
           tmap_file_fflush(tmap_file_stdout, 1);
+      }
+      else {
+          tmap_file_fflush(tmap_file_stdout, 0); // flush
       }
 
       n_reads_processed += seq_buffer_length;
