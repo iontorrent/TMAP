@@ -1430,7 +1430,7 @@ tmap_map_util_fsw(tmap_sff_t *sff,
       while(path_mem <= target_len + fseq[s->strand]->num_flows) { // lengthen the path
           path_mem = target_len + fseq[s->strand]->num_flows + 1;
           tmap_roundup32(path_mem);
-          target = tmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
+          path = tmap_realloc(path, sizeof(tmap_fsw_path_t)*path_mem, "path");
       }
 
       // re-align
