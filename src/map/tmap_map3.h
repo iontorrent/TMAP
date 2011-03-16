@@ -36,6 +36,7 @@ typedef struct {
     tmap_refseq_t *refseq; /*< pointer to the packed referene sequence (forward) */
     tmap_bwt_t *bwt;  /*!< pointer to the BWT indices (reverse) */
     tmap_sa_t *sa;  /*< pointer to the SA (reverse) */
+    int32_t thread_block_size; /*!< the number of reads per thread to process */
     int32_t tid;  /*!< the zero-based thread id */
     tmap_map_opt_t *opt;  /*!< the options to this program */
 } tmap_map3_thread_data_t;

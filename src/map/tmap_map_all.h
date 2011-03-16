@@ -17,6 +17,7 @@ typedef struct {
     tmap_refseq_t *refseq;  /*!< pointer to the reference sequence (forward) */
     tmap_bwt_t *bwt[2];  /*!< pointer to the BWT indices (forward/reverse) */
     tmap_sa_t *sa[2];  /*!< pointer to the SA (forward/reverse) */    
+    int32_t thread_block_size; /*!< the number of reads per thread to process */
     int32_t tid;  /*!< the zero-based thread id */
     tmap_map_opt_t *opt;  /*!< the options to this program */    
 } tmap_map_all_thread_data_t;
@@ -29,13 +30,14 @@ typedef struct {
  @param  refseq             the reference sequence
  @param  bwt                the BWT indices (forward/reverse)
  @param  sa                 the SA (forward/reverse)
+ @param  thread_block_size  the number of reads to batch per thread
  @param  tid                the thread ids
  @param  opt                the program parameters 
  */
 void
 tmap_map_all_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_t seq_buffer_length,
                          tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2],
-                         int32_t tid, tmap_map_opt_t *opt);
+                         int32_t thread_block_size, int32_t tid, tmap_map_opt_t *opt);
 
 /*!
  A wrapper around the core function of mapall

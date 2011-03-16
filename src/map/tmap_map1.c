@@ -154,7 +154,7 @@ tmap_map1_sams_mapq(tmap_map_sams_t *sams, tmap_map_opt_t *opt)
 static void
 tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_map_sams_t **sams,
                       tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], 
-                      int32_t tid, tmap_map_opt_t *opt)
+                      int32_t thread_block_size, int32_t tid, tmap_map_opt_t *opt)
 {
   int32_t low = 0, high;
   tmap_bwt_match_width_t *width[2]={NULL,NULL}, *seed_width[2]={NULL,NULL};
@@ -181,8 +181,8 @@ tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_m
 
           // update bounds
           low = tmap_map1_read_lock_low;
-          tmap_map1_read_lock_low += TMAP_MAP1_THREAD_BLOCK_SIZE;
-          high = low + TMAP_MAP1_THREAD_BLOCK_SIZE;
+          tmap_map1_read_lock_low += thread_block_size;
+          high = low + thread_block_size;
           if(seq_buffer_length < high) {
               high = seq_buffer_length; 
           }
@@ -314,7 +314,7 @@ tmap_map1_core_thread_worker(void *arg)
 
   tmap_map1_core_worker(thread_data->seq_buffer, thread_data->seq_buffer_length, thread_data->sams,
                         thread_data->refseq, thread_data->bwt, thread_data->sa, 
-                        thread_data->tid, thread_data->opt);
+                        thread_data->thread_block_size, thread_data->tid, thread_data->opt);
 
   return arg;
 }
@@ -401,13 +401,13 @@ tmap_map1_core(tmap_map_opt_t *opt)
 
       // do alignment
 #ifdef HAVE_LIBPTHREAD
-      int32_t num_threads = opt->num_threads;
+      int32_t thread_block_size = TMAP_MAP1_THREAD_BLOCK_SIZE;;
       tmap_map1_read_lock_low = 0; // ALWAYS set before running threads 
-      if(seq_buffer_length < num_threads * TMAP_MAP1_THREAD_BLOCK_SIZE) {
-          num_threads = 1 + (seq_buffer_length / TMAP_MAP1_THREAD_BLOCK_SIZE);
+      if(seq_buffer_length < opt->num_threads * thread_block_size) {
+          thread_block_size = (int32_t)(1 + (seq_buffer_length / opt->num_threads));
       }
-      if(1 == num_threads) {
-          tmap_map1_core_worker(seq_buffer, seq_buffer_length, sams, refseq, bwt, sa, 0, opt);
+      if(1 == opt->num_threads) {
+          tmap_map1_core_worker(seq_buffer, seq_buffer_length, sams, refseq, bwt, sa, seq_buffer_length, 0, opt);
       }
       else {
           pthread_attr_t attr;
@@ -417,10 +417,10 @@ tmap_map1_core(tmap_map_opt_t *opt)
           pthread_attr_init(&attr);
           pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
-          threads = tmap_calloc(num_threads, sizeof(pthread_t), "threads");
-          thread_data = tmap_calloc(num_threads, sizeof(tmap_map1_thread_data_t), "thread_data");
+          threads = tmap_calloc(opt->num_threads, sizeof(pthread_t), "threads");
+          thread_data = tmap_calloc(opt->num_threads, sizeof(tmap_map1_thread_data_t), "thread_data");
 
-          for(i=0;i<num_threads;i++) {
+          for(i=0;i<opt->num_threads;i++) {
               thread_data[i].seq_buffer = seq_buffer;
               thread_data[i].seq_buffer_length = seq_buffer_length;
               thread_data[i].sams = sams;
@@ -429,13 +429,14 @@ tmap_map1_core(tmap_map_opt_t *opt)
               thread_data[i].bwt[1] = bwt[1];
               thread_data[i].sa[0] = sa[0];
               thread_data[i].sa[1] = sa[1];
+              thread_data[i].thread_block_size = thread_block_size;
               thread_data[i].tid = i;
               thread_data[i].opt = opt; 
               if(0 != pthread_create(&threads[i], &attr, tmap_map1_core_thread_worker, &thread_data[i])) {
                   tmap_error("error creating threads", Exit, ThreadError);
               }
           }
-          for(i=0;i<num_threads;i++) {
+          for(i=0;i<opt->num_threads;i++) {
               if(0 != pthread_join(threads[i], NULL)) {
                   tmap_error("error joining threads", Exit, ThreadError);
               }
@@ -445,7 +446,7 @@ tmap_map1_core(tmap_map_opt_t *opt)
           free(thread_data);
       }
 #else 
-      tmap_map1_core_worker(seq_buffer, seq_buffer_length, sams, refseq, bwt, sa, 0, opt);
+      tmap_map1_core_worker(seq_buffer, seq_buffer_length, sams, refseq, bwt, sa, seq_buffer_length, 0, opt);
 #endif
 
       if(-1 != opt->reads_queue_size) {
