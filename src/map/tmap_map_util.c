@@ -629,7 +629,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   if(NULL != opt->flow_order) {
       if(0 == strcmp("sff", opt->flow_order) || 0 == strcmp("SFF", opt->flow_order)) {
           if(TMAP_READS_FORMAT_SFF != opt->reads_format) {
-              tmap_error("an SFF was not specified (-r and -x)", Exit, CommandLineArgument);
+              tmap_error("an SFF was not specified (-r) but you want to use the sff flow order (-x)", Exit, CommandLineArgument);
           }
       }
       else {
@@ -1474,8 +1474,28 @@ tmap_map_util_fsw(tmap_seq_t *seq,
           path = tmap_realloc(path, sizeof(tmap_fsw_path_t)*path_mem, "path");
       }
 
+      /*
+      fprintf(stderr, "base_calls:\n");
+      for(j=0;j<fseq[s->strand]->num_flows;j++) {
+          for(k=0;k<fseq[s->strand]->base_calls[j];k++) {
+              fputc("ACGTN"[fseq[s->strand]->flow_order[j % fseq[s->strand]->flow_order_len]], stderr);
+          }
+      }
+      fputc('\n', stderr);
+      fprintf(stderr, "target:\n");
+      for(j=0;j<target_len;j++) {
+          fputc("ACGTN"[target[j]], stderr);
+      }
+      fputc('\n', stderr);
+      for(j=0;j<fseq[s->strand]->flow_order_len;j++) {
+          fputc("ACGTN"[fseq[s->strand]->flow_order[j]], stderr);
+      }
+      fputc('\n', stderr);
+      */
+
       // re-align
       s->ascore = s->score;
+      //fprintf(stderr, "old score=%d\n", s->score);
       switch(softclip_type) {
         case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
           s->score = tmap_fsw_clipping_core(target, target_len, fseq[s->strand], &param, 
@@ -1498,11 +1518,13 @@ tmap_map_util_fsw(tmap_seq_t *seq,
           break;
       }
       s->score_subo = INT32_MIN;
+      //fprintf(stderr, "new score=%d path_len=%d\n", s->score, path_len);
 
-      if(path_len < 0) { // update
-          s->pos = (ref_start-1) + (path[path_len-1].j-1);
+      if(0 < path_len) { // update
+          s->pos = (ref_start-1) + (path[path_len-1].j);
           free(s->cigar);
           s->cigar = tmap_fsw_path2cigar(path, path_len, &s->n_cigar, 1);
+          //fprintf(stderr, "path[path_len-1].i=%d path[0].i=%d num_flows=%d\n", path[path_len-1].i, path[0].i, fseq[s->strand]->num_flows);
 
           if(0 < path[path_len-1].i) { // skipped beginning flows
               // get the number of bases to clip
@@ -1519,7 +1541,7 @@ tmap_map_util_fsw(tmap_seq_t *seq,
               }
           }
 
-          if(path[0].i < fseq[s->strand]->num_flows) { // skipped ending flows
+          if(path[0].i < fseq[s->strand]->num_flows-1) { // skipped ending flows
               // get the number of bases to clip 
               for(j=path[0].i,k=0;j<fseq[s->strand]->num_flows;j++) {
                   k += fseq[s->strand]->base_calls[j];

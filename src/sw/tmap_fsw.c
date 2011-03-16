@@ -752,6 +752,9 @@ tmap_fsw_flowseq_init(uint8_t *flow_order, int32_t flow_order_len, uint8_t *base
 void
 tmap_fsw_flowseq_destroy(tmap_fsw_flowseq_t *flowseq)
 {
+  free(flowseq->base_calls);
+  free(flowseq->flowgram);
+  free(flowseq->flow_order);
   free(flowseq);
 }
 
@@ -1189,7 +1192,7 @@ tmap_fsw_flowseq_t *
 tmap_fsw_seq_to_flowseq(tmap_seq_t *seq, uint8_t *flow_order, int32_t flow_order_len)
 {
   int32_t was_int;
-  int32_t i, j;
+  int32_t i, j, start_flow;
   uint8_t *base_calls;
   uint16_t *flowgram;
   int32_t num_flows;
@@ -1203,52 +1206,56 @@ tmap_fsw_seq_to_flowseq(tmap_seq_t *seq, uint8_t *flow_order, int32_t flow_order
   bases = tmap_seq_get_bases(seq);
   if(0 == bases->l) tmap_error("bug encountered", Exit, OutOfRange);
 
+
   // convert bases to integers
   was_int = tmap_seq_is_int(seq);
   if(0 == tmap_seq_is_int(seq)) {
       tmap_seq_to_int(seq);
   }
   
+  /*
+  fprintf(stderr, "BASES:\n");
+  for(i=0;i<bases->l;i++) {
+      fputc("ACGTN"[(int)bases->s[i]], stderr);
+  }
+  fputc('\n', stderr);
+  */
+  
   // get the flow order
   tmp_flow_order = tmap_malloc(sizeof(uint8_t) * flow_order_len, "flow");
+  start_flow = 0;
+  while(flow_order[start_flow] != bases->s[0] && start_flow < flow_order_len) {
+      start_flow++;
+  }
+  if(start_flow == flow_order_len) tmap_error("bug encountered", Exit, OutOfRange);
   for(i=0;i<flow_order_len;i++) {
       // offset it by the start flow
-      tmp_flow_order[i] = flow_order[i];
+      tmp_flow_order[i] = flow_order[(i + start_flow) % flow_order_len];
   }
 
   // get the number of flows
-  j = 0;
-  while(tmp_flow_order[j] != bases->s[0] && j < flow_order_len) {
-      j++;
-  }
-  if(j == flow_order_len) tmap_error("bug encountered", Exit, OutOfRange);
   num_flows = 1; // we already moved to the fist base/flow
-  for(i=1;i<bases->l;i++) {
+  for(i=1,j=0;i<bases->l;i++) {
       while(tmp_flow_order[j] != bases->s[i]) {
           j = (j + 1) % flow_order_len;
           num_flows++;
       }
-      i++;
   }
 
   // get the flowgram and bases
   flowgram = tmap_calloc(num_flows, sizeof(uint16_t), "flowgram");
   base_calls = tmap_calloc(num_flows, sizeof(uint8_t), "base_calls");
-  j = 0;
-  while(tmp_flow_order[j] != bases->s[0] && j < flow_order_len) {
-      j++;
-  }
-  if(j == flow_order_len) tmap_error("bug encountered", Exit, OutOfRange);
   flowgram[0] = 100; // the first flow was found 
   base_calls[0] = 1;
-  for(i=1;i<bases->l;i++) {
+  for(i=1,j=0;i<bases->l;i++) {
       while(tmp_flow_order[j % flow_order_len] != bases->s[i]) {
           j++;
       }
       flowgram[j] += 100;
       base_calls[j]++;
-      i++;
+      //fprintf(stderr, "adding one to j=%d b=%c\n", j, "ACGTN"[tmp_flow_order[j % flow_order_len]]);
   }
+  j++;
   if(j != num_flows) tmap_error("bug encountered", Exit, OutOfRange);
 
   if(0 == was_int) {
