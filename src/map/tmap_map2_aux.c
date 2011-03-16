@@ -369,8 +369,8 @@ tmap_map2_aux_extend_left(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
       }
 
       /*
-      fprintf(stderr, "before p->G=%d p->len=%d p->beg=%d p->end=%d p->k=%u score=%d\n",
-              p->G, p->len, p->beg, p->end, p->k, score);
+      fprintf(stderr, "%s before p->G=%d p->len=%d p->beg=%d p->end=%d p->k=%u score=%d strand=%d is_rev=%d\n",
+              __func__, p->G, p->len, p->beg, p->end, p->k, score, strand, is_rev);
               */
       if(1 == to_fit || (opt->score_thr < score && p->G <= score)) {
           p->G = score;
@@ -379,8 +379,8 @@ tmap_map2_aux_extend_left(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
           p->k -= path.i;
       }
       /*
-      fprintf(stderr, "after p->G=%d p->len=%d p->beg=%d p->end=%d p->k=%u\n",
-              p->G, p->len, p->beg, p->end, p->k);
+      fprintf(stderr, "%s after p->G=%d p->len=%d p->beg=%d p->end=%d p->k=%u\n",
+              __func__, p->G, p->len, p->beg, p->end, p->k);
               */
   }
   tmap_map2_aux_reverse_query(query, query_length); // reverse back the query
@@ -455,8 +455,8 @@ tmap_map2_aux_extend_right(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
       }
 
       /*
-      fprintf(stderr, "before p->G=%d p->len=%d p->beg=%d p->end=%d p->k=%u\n",
-              p->G, p->len, p->beg, p->end, p->k);
+      fprintf(stderr, "%s before p->G=%d p->len=%d p->beg=%d p->end=%d p->k=%u\n",
+              __func__, p->G, p->len, p->beg, p->end, p->k);
               */
       if(1 == to_fit || (opt->score_thr < score && p->G <= score)) {
           p->G = score;
@@ -464,8 +464,8 @@ tmap_map2_aux_extend_right(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
           p->end = path.j + p->beg;
       }
       /*
-      fprintf(stderr, "after p->G=%d p->len=%d p->beg=%d p->end=%d p->k=%u\n",
-              p->G, p->len, p->beg, p->end, p->k);
+      fprintf(stderr, "%s after p->G=%d p->len=%d p->beg=%d p->end=%d p->k=%u\n",
+              __func__, p->G, p->len, p->beg, p->end, p->k);
               */
   }
   free(target);
@@ -526,8 +526,8 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
           }
       }
 
-      beg = (1 == strand) ? query_length - p->end : p->beg;
-      end = (1 == strand) ? query_length - p->beg : p->end;
+      beg = (1 == strand) ? (query_length - p->end) : p->beg;
+      end = (1 == strand) ? (query_length - p->beg) : p->end;
 
       // get more reference
       if(target_len < p->len) {
@@ -570,6 +570,11 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
           q->G = tmp_sam.score;
           
           __check_softclip(opt->softclip_type, strand, q->cigar, q->n_cigar);
+
+          /*
+          fprintf(stderr, "strand=%d beg=%d end=%d p->beg=%d p->end=%d query_length=%d\n", 
+                  strand, beg, end, p->beg, p->end, query_length);
+                  */
 
           // add latent soft clipping at the front
           if(0 < beg){
@@ -661,13 +666,12 @@ tmap_map2_aux_aln(tmap_map_opt_t *opt, tmap_refseq_t *refseq,
           softclip_type = __tmap_map_util_reverse_soft_clipping(softclip_type);
       }
       tmap_map2_aux_extend_left(opt, bb[k][1], (uint8_t*)seq[k]->s, seq[k]->l, refseq, is_rev, k, pool->aln_mem, softclip_type);
-      tmap_map2_aux_merge_hits(bb[k], seq[k]->l, 0, 0); // bb[k][1] and bb[k][0] are merged into bb[k][0]
+      tmap_map2_aux_merge_hits(bb[k], seq[k]->l, 0, TMAP_MAP_UTIL_SOFT_CLIP_NONE); // bb[k][1] and bb[k][0] are merged into bb[k][0]
       tmap_map2_aux_resolve_duphits(NULL, NULL, bb[k][0], TMAP_MAP2_AUX_IS, (TMAP_MAP_UTIL_SOFT_CLIP_NONE == softclip_type) ? TMAP_MAP2_MINUS_INF : 0);
       tmap_map2_aux_extend_right(opt, bb[k][0], (uint8_t*)seq[k]->s, seq[k]->l, refseq, is_rev, k, pool->aln_mem, softclip_type);
       b[k] = bb[k][0];
       free(bb[k]);		
   }
-  // TODO
   tmap_map2_aux_merge_hits(b, seq[0]->l, 1, softclip_type); // b[1] and b[0] are merged into b[0]
   // Note: this will give duplicate mappings
   //tmap_map2_aux_resolve_query_overlaps(b[0], opt->mask_level, (TMAP_MAP_UTIL_SOFT_CLIP_NONE == opt->softclip_type) ? TMAP_MAP2_MINUS_INF : 0);
