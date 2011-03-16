@@ -98,6 +98,7 @@ tmap_map2_aux_resolve_duphits(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_m
       }
       // realloc
       tmap_map2_aln_realloc(b, n);
+      b->n = n;
       // copy over
       for(i = j = 0; i < tmp_b->n; ++i) {
           tmap_map2_hit_t *p = tmp_b->hits + i;
