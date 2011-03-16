@@ -1114,7 +1114,7 @@ tmap_map_sams_filter(tmap_map_sams_t *sams, int32_t aln_output_mode)
 void
 tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
 {
-  int32_t i, j, end, best_score_i;
+  int32_t i, j, k, end, best_score_i, best_score_n;
 
   if(dup_window < 0) {
       return;
@@ -1128,12 +1128,14 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
 
       // get the change
       end = best_score_i = i;
+      best_score_n = 0;
       while(end+1 < sams->n) {
           if(sams->sams[end].seqid == sams->sams[end+1].seqid
              && fabs(sams->sams[end].pos - sams->sams[end+1].pos) <= dup_window) {
               // track the best scoring
-              if(sams->sams[best_score_i].score < sams->sams[end+1].score) {
+              if(sams->sams[best_score_i].score <= sams->sams[end+1].score) {
                   best_score_i = end+1;
+                  best_score_n++;
               }
               end++;
           }
@@ -1141,7 +1143,20 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
               break;
           }
       }
-      // TODO: randomize the best scoring
+
+      // randomize the best scoring
+      if(1 < best_score_n) {
+          k = (int32_t)(best_score_n * drand48()); // make this zero-based 
+          best_score_n = 0; // make this one-based
+          end = i;
+          while(best_score_n <= k) { // this assumes we know there are at least "best_score_n+1" best scores
+              if(sams->sams[best_score_i].score == sams->sams[end+1].score) {
+                  best_score_i = end+1;
+                  best_score_n++;
+              }
+              end++;
+          }
+      }
 
       // copy over the best
       if(j != best_score_i) {

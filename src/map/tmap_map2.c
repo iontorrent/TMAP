@@ -318,9 +318,6 @@ tmap_map2_main(int argc, char *argv[])
 {
   tmap_map_opt_t *opt = NULL;
 
-  // random seed
-  srand48(0);
-
   // init opt
   opt = tmap_map_opt_init(TMAP_MAP_ALGO_MAP2);
 
