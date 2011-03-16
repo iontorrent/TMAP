@@ -1114,7 +1114,7 @@ tmap_map_sams_filter(tmap_map_sams_t *sams, int32_t aln_output_mode)
 void
 tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
 {
-  int32_t i, j, k, end, best_score_i, best_score_n;
+  int32_t i, next_i, j, k, end, best_score_i, best_score_n;
 
   if(dup_window < 0) {
       return;
@@ -1147,6 +1147,7 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
               break;
           }
       }
+      next_i = end+1;
 
       // randomize the best scoring
       if(1 < best_score_n) {
@@ -1171,7 +1172,7 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
       }
 
       // next
-      i = end+1;
+      i = next_i;
       j++;
   }
 
