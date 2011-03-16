@@ -76,10 +76,6 @@ tmap_sam_io_read(tmap_sam_io_t *samio, tmap_sam_t *sam)
       char *str;
       int32_t i, len;
 
-      if(sam->b->core.tid < 0) {
-          tmap_error("Could not find the reference in the SAM header", Exit, OutOfRange);
-      }
-      
       // name
       str = bam1_qname(sam->b);
       len = strlen(str);
