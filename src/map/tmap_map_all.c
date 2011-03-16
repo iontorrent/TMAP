@@ -639,8 +639,6 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
 {
   int32_t i, j, start, opt_type, opt_type_next, opt_stage, opt_stage_next;
 
-  opt->argc = argc; opt->argv = argv;
-
   // parse common options as well as map1/map2/map3 commands
   start = 0;
   i = 1;
@@ -745,6 +743,9 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
   }
   optind = i;
+  
+  // do this after parsing
+  opt->argc = argc; opt->argv = argv;
 
   return 1;
 }
