@@ -66,6 +66,7 @@ enum {
 
 typedef struct __tmap_map_opt_t {
     int32_t algo_id;
+    int32_t algo_stage;
 
     // global options
     char **argv;  /*!< the command line argv structure */
@@ -105,7 +106,7 @@ typedef struct __tmap_map_opt_t {
     int32_t seed2_length;  /*!< the secondary seed length (-L) */
     int32_t max_diff; /*!< maximum number of edits (-p) */
     double max_diff_fnr; /*!< false-negative probability assuming a maximum error rate (-p) */ 
-    int32_t max_diff_table[TMAP_MAP_UTIL_MAX_DIFF_READ_LENGTH+1]; // TODO
+    int32_t max_diff_table[TMAP_MAP_UTIL_MAX_DIFF_READ_LENGTH+1]; /*!< the maximum number of differences for varying read lengths */
     double max_err_rate; /*!< the maximum error rate (-P) */
     int32_t max_mm;  /*!< maximum number of mismatches (-m) */
     double max_mm_frac;  /*!< maximum (read length) fraction of mismatches (-m) */

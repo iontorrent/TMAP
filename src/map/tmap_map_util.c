@@ -47,6 +47,7 @@ tmap_map_opt_init(int32_t algo_id)
 
   // internal data
   opt->algo_id = algo_id;
+  opt->algo_stage = -1;
   opt->argv = NULL;
   opt->argc = -1;
 
