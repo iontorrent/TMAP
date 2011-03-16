@@ -134,7 +134,7 @@ tmap_map2_aux_resolve_duphits(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_m
   tmap_sort_introsort(hitG, b->n, b->hits);
   for(i = 1; i < b->n; ++i) {
       tmap_map2_hit_t *p = b->hits + i;
-      if(p->G == min_as) break;
+      if(p->G <= min_as) break;
       for(j = 0; j < i; ++j) {
           tmap_map2_hit_t *q = b->hits + j;
           int32_t compatible = 1;
@@ -151,14 +151,14 @@ tmap_map2_aux_resolve_duphits(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_m
               }
           }
           if(!compatible) {
-              p->G = min_as;
+              p->G = TMAP_MAP2_MINUS_INF; 
               break;
           }
       }
   }
   n = i;
   for(i = j = 0; i < n; ++i) {
-      if(b->hits[i].G == min_as) continue;
+      if(b->hits[i].G <= min_as) continue;
       if(i != j) b->hits[j++] = b->hits[i];
       else ++j;
   }
@@ -333,7 +333,14 @@ tmap_map2_aux_extend_left(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
               */
       if(target_length < lt) tmap_error("target_length < lt", Exit, OutOfRange);
       p->n_seeds = 1;
-      if(p->l || p->k == 0) continue;
+      if(p->l || p->k == 0) {
+          // we want to remove this mapping since it will cause improper
+          // soft-clipping
+          if(softclip_type != TMAP_MAP_UTIL_SOFT_CLIP_ALL) {
+              p->G = TMAP_MAP2_MINUS_INF; 
+          }
+          continue;
+      }
       if(0 == p->beg) continue; // no more base to extend
       for(j = score = 0; j < i; ++j) {
           tmap_map2_hit_t *q = b->hits + j;
