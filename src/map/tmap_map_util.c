@@ -1133,9 +1133,13 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
           if(sams->sams[end].seqid == sams->sams[end+1].seqid
              && fabs(sams->sams[end].pos - sams->sams[end+1].pos) <= dup_window) {
               // track the best scoring
-              if(sams->sams[best_score_i].score <= sams->sams[end+1].score) {
+              if(sams->sams[best_score_i].score == sams->sams[end+1].score) {
                   best_score_i = end+1;
                   best_score_n++;
+              }
+              else if(sams->sams[best_score_i].score < sams->sams[end+1].score) {
+                  best_score_i = end+1;
+                  best_score_n = 1;
               }
               end++;
           }
@@ -1150,8 +1154,8 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
           best_score_n = 0; // make this one-based
           end = i;
           while(best_score_n <= k) { // this assumes we know there are at least "best_score_n+1" best scores
-              if(sams->sams[best_score_i].score == sams->sams[end+1].score) {
-                  best_score_i = end+1;
+              if(sams->sams[best_score_i].score == sams->sams[end].score) {
+                  best_score_i = end;
                   best_score_n++;
               }
               end++;
