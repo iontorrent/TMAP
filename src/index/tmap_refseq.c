@@ -71,7 +71,7 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   tmap_refseq_t *refseq = NULL;
   char *fn_pac = NULL, *fn_anno = NULL;
   uint8_t buffer[TMAP_REFSEQ_BUFFER_SIZE];
-  int32_t i, j, l, buffer_length;
+  int32_t i, j, l, buffer_length, found_IUPAC = 0;
   uint8_t x = 0;
   uint64_t ref_len;
 
@@ -112,7 +112,13 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
       // fill the buffer
       for(i=0;i<l;i++) {
           int c = tmap_nt_char_to_int[(int)seq->data.fq->seq->s[i]];
-          if(4 <= c) c = lrand48() & 0x3; // random base
+          if(4 <= c) {
+              if(0 == found_IUPAC) { // warn users about IUPAC codes
+                  tmap_error("IUPAC codes were found and will be converted to random DNA bases", Warn, OutOfRange);
+              }
+              found_IUPAC = 1;
+              c = lrand48() & 0x3; // random base
+          }
           if(buffer_length == (TMAP_REFSEQ_BUFFER_SIZE << 2)) { // 2-bit
               if(tmap_refseq_seq_memory(buffer_length) != tmap_file_fwrite(buffer, sizeof(uint8_t), tmap_refseq_seq_memory(buffer_length), fp_pac)) {
                   tmap_error(fn_pac, Exit, WriteFileError);
