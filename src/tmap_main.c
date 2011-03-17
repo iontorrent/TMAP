@@ -55,6 +55,7 @@ static int usage()
   fprintf(stderr, "         bwt2sa         creates the SA file from the BWT string file\n");
   fprintf(stderr, "         sff2fq         converts a SFF file to a FASTQ file\n");
   fprintf(stderr, "         refinfo         prints information about the reference\n");
+  fprintf(stderr, "         pac2fasta      converts a packed FASTA to a FASTA file\n");
 #ifdef HAVE_SAMTOOLS
   fprintf(stderr, "         sam2fs         pretty print SAM records in flow space\n");
 #endif
@@ -90,6 +91,7 @@ int main(int argc, char *argv[])
       else if (0 == strcmp("bwt2sa", argv[1])) ret = tmap_sa_bwt2sa_main(argc-1, argv+1);
       else if (0 == strcmp("sff2fq", argv[1])) ret = tmap_seq_io_sff2fq_main(argc-1, argv+1);
       else if (0 == strcmp("refinfo", argv[1])) ret = tmap_refseq_refinfo_main(argc-1, argv+1);
+      else if (0 == strcmp("pac2fasta", argv[1])) ret = tmap_refseq_pac2fasta_main(argc-1, argv+1);
 #ifdef HAVE_SAMTOOLS
       else if (0 == strcmp("sam2fs", argv[1])) ret = tmap_sam2fs_main(argc-1, argv+1);
 #endif

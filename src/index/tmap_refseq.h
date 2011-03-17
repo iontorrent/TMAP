@@ -15,6 +15,9 @@
 // buffer size for reading in from a FASTA file
 #define TMAP_REFSEQ_BUFFER_SIZE 0x10000
 
+// the number of bases on a given line for "tmap pac2refseq"
+#define TMAP_REFSEQ_FASTA_LINE_LENGTH 72
+
 /*! 
   @param  _len  the number of bases stored 
   @return       the number of bytes allocated
@@ -155,4 +158,22 @@ tmap_refseq_pac2real(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_
   */
 int
 tmap_refseq_fasta2pac_main(int argc, char *argv[]);
+
+/*! 
+  main-like function for 'tmap refinfo'
+  @param  argc  the number of arguments
+  @param  argv  the argument list
+  @return       0 if executed successful
+  */
+int
+tmap_refseq_refinfo_main(int argc, char *argv[]);
+
+/*! 
+  main-like function for 'tmap pac2fasta'
+  @param  argc  the number of arguments
+  @param  argv  the argument list
+  @return       0 if executed successful
+  */
+int
+tmap_refseq_pac2fasta_main(int argc, char *argv[]);
 #endif

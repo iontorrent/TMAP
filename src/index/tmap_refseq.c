@@ -609,3 +609,51 @@ tmap_refseq_refinfo_main(int argc, char *argv[])
 
   return 0;
 }
+
+int
+tmap_refseq_pac2fasta_main(int argc, char *argv[])
+{
+  int c, help=0;
+  uint32_t i, j;
+  char *fn_fasta = NULL;
+  tmap_refseq_t *refseq = NULL;
+
+  while((c = getopt(argc, argv, "vh")) >= 0) {
+      switch(c) {
+        case 'v': tmap_progress_set_verbosity(1); break;
+        case 'h': help = 1; break;
+        default: return 1;
+      }
+  }
+  if(1 != argc - optind || 1 == help) {
+      tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [-vh] <in.fasta>\n", PACKAGE, argv[0]);
+      return 1;
+  }
+
+  fn_fasta = argv[optind];
+
+  // Note: 'tmap_file_stdout' should not have been previously modified
+  tmap_file_stdout = tmap_file_fdopen(fileno(stdout), "wb", TMAP_FILE_NO_COMPRESSION);
+
+  // read in the reference sequence
+  refseq = tmap_refseq_read(fn_fasta, 0);
+
+  for(i=0;i<refseq->num_annos;i++) {
+      tmap_file_fprintf(tmap_file_stdout, ">%s", refseq->annos[i].name->s); // new line handled later
+      for(j=0;j<refseq->annos[i].len;j++) {
+          if(0 == (j % TMAP_REFSEQ_FASTA_LINE_LENGTH)) {
+              tmap_file_fprintf(tmap_file_stdout, "\n");
+          }
+          tmap_file_fprintf(tmap_file_stdout, "%c", "ACGTN"[(int)tmap_refseq_seq_i(refseq, j)]);
+      }
+      tmap_file_fprintf(tmap_file_stdout, "\n");
+  }
+
+  // destroy
+  tmap_refseq_destroy(refseq);
+
+  // close the output
+  tmap_file_fclose(tmap_file_stdout);
+
+  return 0;
+}
