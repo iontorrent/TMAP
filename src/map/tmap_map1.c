@@ -22,14 +22,9 @@
 #include "../server/tmap_shm.h"
 #include "../sw/tmap_sw.h"
 #include "tmap_map_util.h"
+#include "tmap_map_driver.h"
 #include "tmap_map1_aux.h"
 #include "tmap_map1.h"
-
-#ifdef HAVE_LIBPTHREAD
-static pthread_mutex_t tmap_map1_read_lock = PTHREAD_MUTEX_INITIALIZER;
-static int32_t tmap_map1_read_lock_low = 0;
-#define TMAP_MAP1_THREAD_BLOCK_SIZE 512
-#endif
 
 static int32_t g_log_n[256];
 
@@ -151,359 +146,190 @@ tmap_map1_sams_mapq(tmap_map_sams_t *sams, tmap_map_opt_t *opt)
   }
 }
 
-static void
-tmap_map1_core_worker(tmap_seq_t **seq_buffer, int32_t seq_buffer_length, tmap_map_sams_t **sams,
-                      tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], 
-                      int32_t tid, tmap_map_opt_t *opt)
-{
-  int32_t low = 0, high;
-  tmap_bwt_match_width_t *width[2]={NULL,NULL}, *seed_width[2]={NULL,NULL};
-  int32_t width_length = 0, max_mm, max_gapo, max_gape;
-  tmap_map1_aux_stack_t *stack = NULL;
+// thread data
+typedef struct {
+    tmap_bwt_match_width_t *width[2];
+    tmap_bwt_match_width_t *seed_width[2];
+    int32_t width_length;
+    int32_t max_mm;
+    int32_t max_gapo;
+    int32_t max_gape;
+    tmap_map1_aux_stack_t *stack;
+} tmap_map1_thread_data_t;
 
+int32_t
+tmap_map1_init(tmap_refseq_t *refseq, tmap_map_opt_t *opt)
+{
+  tmap_map1_print_max_diff(opt, opt->algo_stage);
+  opt->score_thr *= opt->score_match;
   // for calculating mapping qualities
   tmap_map1_set_g_log_n();
 
-  seed_width[0] = tmap_calloc(1+opt->seed_length, sizeof(tmap_bwt_match_width_t), "seed_width[0]");
-  seed_width[1] = tmap_calloc(1+opt->seed_length, sizeof(tmap_bwt_match_width_t), "seed_width[1]");
+  return 0;
+}
 
-  stack = tmap_map1_aux_stack_init();
-          
+int32_t 
+tmap_map1_thread_init(void **data, tmap_map_opt_t *opt)
+{
+  tmap_map1_thread_data_t *d = NULL;
+  d = tmap_calloc(1, sizeof(tmap_map1_thread_data_t), "d");
+
+  d->width[0] = d->width[1] = NULL;
+  d->width_length = 0;
+  d->stack = NULL;
+
+  d->seed_width[0] = tmap_calloc(1+opt->seed_length, sizeof(tmap_bwt_match_width_t), "seed_width[0]");
+  d->seed_width[1] = tmap_calloc(1+opt->seed_length, sizeof(tmap_bwt_match_width_t), "seed_width[1]");
+
+  d->stack = tmap_map1_aux_stack_init();
+
   // remember to round up
-  max_mm = (opt->max_mm < 0) ? (int)(0.99 + opt->max_mm_frac * opt->seed2_length) : opt->max_mm; 
-  max_gapo = (opt->max_gapo < 0) ? (int)(0.99 + opt->max_gapo_frac * opt->seed2_length) : opt->max_gapo; 
-  max_gape = (opt->max_gape < 0) ? (int)(0.99 + opt->max_gape_frac * opt->seed2_length) : opt->max_gape; 
+  d->max_mm = (opt->max_mm < 0) ? (int)(0.99 + opt->max_mm_frac * opt->seed2_length) : opt->max_mm; 
+  d->max_gapo = (opt->max_gapo < 0) ? (int)(0.99 + opt->max_gapo_frac * opt->seed2_length) : opt->max_gapo; 
+  d->max_gape = (opt->max_gape < 0) ? (int)(0.99 + opt->max_gape_frac * opt->seed2_length) : opt->max_gape; 
 
-  while(low < seq_buffer_length) {
-#ifdef HAVE_LIBPTHREAD
-      if(1 < opt->num_threads) {
-          pthread_mutex_lock(&tmap_map1_read_lock);
+  (*data) = (void*)d;
 
-          // update bounds
-          low = tmap_map1_read_lock_low;
-          tmap_map1_read_lock_low += TMAP_MAP1_THREAD_BLOCK_SIZE;
-          high = low + TMAP_MAP1_THREAD_BLOCK_SIZE;
-          if(seq_buffer_length < high) {
-              high = seq_buffer_length; 
-          }
+  return 0;
+}
 
-          pthread_mutex_unlock(&tmap_map1_read_lock);
-      }
-      else {
-          high = seq_buffer_length; // process all
-      }
-#else 
-      high = seq_buffer_length; // process all
-#endif
-      while(low<high) {
-          int32_t seed2_len = 0, seq_len = 0;;
-          tmap_map_opt_t opt_local = (*opt); // copy over values
-          tmap_seq_t *seq[2]={NULL, NULL}, *orig_seq=NULL;
-          orig_seq = seq_buffer[low];
-          tmap_string_t *bases[2]={NULL, NULL};
+tmap_map_sams_t*
+tmap_map1_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt)
+{
+  tmap_map1_thread_data_t *d = (tmap_map1_thread_data_t*)(*data);
+  int32_t seed2_len = 0, seq_len = 0;;
+  tmap_map_opt_t opt_local = (*opt); // copy over values
+  tmap_seq_t *seqs[2]={NULL, NULL}, *orig_seq=NULL;
+  tmap_string_t *bases[2]={NULL, NULL};
+  tmap_map_sams_t *sams = NULL;
 
-          if((0 < opt->min_seq_len && tmap_seq_get_bases(orig_seq)->l < opt->min_seq_len)
-             || (0 < opt->max_seq_len && opt->max_seq_len < tmap_seq_get_bases(orig_seq)->l)) {
-              // go to the next loop
-              sams[low] = tmap_map_sams_init();
-              low++;
-              continue;
-          }
-          
-          seq_len = tmap_seq_get_bases(orig_seq)->l;
-          
-          // not enough bases, ignore
-          if(0 < opt->seed_length && seq_len < opt->seed_length){
-              sams[low] = tmap_map_sams_init();
-              low++;
-              continue;
-          }
-          
-          // clone the sequence 
-          seq[0] = tmap_seq_clone(orig_seq);
-          seq[1] = tmap_seq_clone(orig_seq);
+  orig_seq = seq;
 
-          // Adjust for SFF
-          tmap_seq_remove_key_sequence(seq[0]);
-          tmap_seq_remove_key_sequence(seq[1]);
+  if((0 < opt->min_seq_len && tmap_seq_get_bases(orig_seq)->l < opt->min_seq_len)
+     || (0 < opt->max_seq_len && opt->max_seq_len < tmap_seq_get_bases(orig_seq)->l)) {
+      // go to the next loop
+      return tmap_map_sams_init();
+  }
 
-          tmap_seq_reverse(seq[0]); // reverse
-          tmap_seq_reverse_compliment(seq[1]); // reverse compliment
+  seq_len = tmap_seq_get_bases(orig_seq)->l;
 
-          // convert to integers
-          tmap_seq_to_int(seq[0]);
-          tmap_seq_to_int(seq[1]);
+  // not enough bases, ignore
+  if(0 < opt->seed_length && seq_len < opt->seed_length){
+      return tmap_map_sams_init();
+  }
 
-          // get bases
-          bases[0] = tmap_seq_get_bases(seq[0]);
-          bases[1] = tmap_seq_get_bases(seq[1]);
+  // clone the sequence 
+  seqs[0] = tmap_seq_clone(orig_seq);
+  seqs[1] = tmap_seq_clone(orig_seq);
 
-          if(opt->seed2_length < 0 || bases[0]->l < opt->seed2_length) {
-              seed2_len = seq_len;
-              // remember to round up
-              opt_local.max_mm = (opt->max_mm < 0) ? (int)(0.99 + opt->max_mm_frac * seed2_len) : opt->max_mm; 
-              opt_local.max_gapo = (opt->max_gapo < 0) ? (int)(0.99 + opt->max_gapo_frac * seed2_len) : opt->max_gapo; 
-              opt_local.max_gape = (opt->max_gape < 0) ? (int)(0.99 + opt->max_gape_frac * seed2_len) : opt->max_gape; 
-          }
-          else {
-              seed2_len = opt->seed2_length;
-              opt_local.max_mm = max_mm;
-              opt_local.max_gapo = max_gapo;
-              opt_local.max_gape = max_gape;
-          }
+  // Adjust for SFF
+  tmap_seq_remove_key_sequence(seqs[0]);
+  tmap_seq_remove_key_sequence(seqs[1]);
 
-          // primary width
-          if(width_length < seq_len) {
-              width_length = seq_len;
-              width[0] = tmap_realloc(width[0], (1+width_length) * sizeof(tmap_bwt_match_width_t), "width[0]");
-              width[1] = tmap_realloc(width[1], (1+width_length) * sizeof(tmap_bwt_match_width_t), "width[1]");
-              memset(width[0], 0, (1+width_length) * sizeof(tmap_bwt_match_width_t));
-              memset(width[1], 0, (1+width_length) * sizeof(tmap_bwt_match_width_t));
-          }
-          tmap_bwt_match_cal_width_reverse(bwt[0], seq_len, bases[0]->s, width[0]);
-          tmap_bwt_match_cal_width_reverse(bwt[1], seq_len, bases[1]->s, width[1]);
+  tmap_seq_reverse(seqs[0]); // reverse
+  tmap_seq_reverse_compliment(seqs[1]); // reverse compliment
 
-          // seed width
-          if(0 < opt->seed_length) {
-              tmap_bwt_match_cal_width_reverse(bwt[0], opt->seed_length, bases[0]->s + (seq_len - opt->seed_length), seed_width[0]);
-              tmap_bwt_match_cal_width_reverse(bwt[1], opt->seed_length, bases[1]->s + (seq_len - opt->seed_length), seed_width[1]);
-          }
+  // convert to integers
+  tmap_seq_to_int(seqs[0]);
+  tmap_seq_to_int(seqs[1]);
 
-          // TOOD: seed2_length
-          sams[low] = tmap_map1_aux_core(seq, refseq, bwt, sa, width, (0 < opt_local.seed_length) ? seed_width : NULL, &opt_local, stack, seed2_len);
-      
-          // remove duplicates
-          tmap_map_util_remove_duplicates(sams[low], opt->dup_window);
+  // get bases
+  bases[0] = tmap_seq_get_bases(seqs[0]);
+  bases[1] = tmap_seq_get_bases(seqs[1]);
 
-          // mapping quality
-          tmap_map1_sams_mapq(sams[low], opt);
+  if(opt->seed2_length < 0 || bases[0]->l < opt->seed2_length) {
+      seed2_len = seq_len;
+      // remember to round up
+      opt_local.max_mm = (opt->max_mm < 0) ? (int)(0.99 + opt->max_mm_frac * seed2_len) : opt->max_mm; 
+      opt_local.max_gapo = (opt->max_gapo < 0) ? (int)(0.99 + opt->max_gapo_frac * seed2_len) : opt->max_gapo; 
+      opt_local.max_gape = (opt->max_gape < 0) ? (int)(0.99 + opt->max_gape_frac * seed2_len) : opt->max_gape; 
+  }
+  else {
+      seed2_len = opt->seed2_length;
+      opt_local.max_mm = d->max_mm;
+      opt_local.max_gapo = d->max_gapo;
+      opt_local.max_gape = d->max_gape;
+  }
 
-          // filter alignments
-          tmap_map_sams_filter(sams[low], opt->aln_output_mode);
+  // primary width
+  if(d->width_length < seq_len) {
+      d->width_length = seq_len;
+      d->width[0] = tmap_realloc(d->width[0], (1+d->width_length) * sizeof(tmap_bwt_match_width_t), "d->width[0]");
+      d->width[1] = tmap_realloc(d->width[1], (1+d->width_length) * sizeof(tmap_bwt_match_width_t), "d->width[1]");
+      memset(d->width[0], 0, (1+d->width_length) * sizeof(tmap_bwt_match_width_t));
+      memset(d->width[1], 0, (1+d->width_length) * sizeof(tmap_bwt_match_width_t));
+  }
+  tmap_bwt_match_cal_width_reverse(bwt[0], seq_len, bases[0]->s, d->width[0]);
+  tmap_bwt_match_cal_width_reverse(bwt[1], seq_len, bases[1]->s, d->width[1]);
 
-          // re-align the alignments in flow-space
-          if(NULL != opt->flow_order) {
-              tmap_map_util_fsw(seq_buffer[low],
-                                (1 == opt->flow_order_use_sff) ? NULL : opt->flow_order_int,
-                                (1 == opt->flow_order_use_sff) ? 0 : strlen(opt->flow_order),
-                                sams[low], refseq, 
-                                opt->bw, opt->softclip_type, opt->score_thr,
-                                opt->score_match, opt->pen_mm, opt->pen_gapo,
-                                opt->pen_gape, opt->fscore);
-          }
+  // seed width
+  if(0 < opt->seed_length) {
+      tmap_bwt_match_cal_width_reverse(bwt[0], opt->seed_length, bases[0]->s + (seq_len - opt->seed_length), d->seed_width[0]);
+      tmap_bwt_match_cal_width_reverse(bwt[1], opt->seed_length, bases[1]->s + (seq_len - opt->seed_length), d->seed_width[1]);
+  }
 
-          // destroy
-          tmap_seq_destroy(seq[0]);
-          tmap_seq_destroy(seq[1]);
+  // map
+  sams = tmap_map1_aux_core(seqs, refseq, bwt, sa, d->width, (0 < opt_local.seed_length) ? d->seed_width : NULL, &opt_local, d->stack, seed2_len);
 
-          // next
-          low++;
+  if(-1 == opt->algo_stage) { // not part of mapall
+      // remove duplicates
+      tmap_map_util_remove_duplicates(sams, opt->dup_window);
+
+      // mapping quality
+      tmap_map1_sams_mapq(sams, opt);
+
+      // filter alignments
+      tmap_map_sams_filter(sams, opt->aln_output_mode);
+
+      // re-align the alignments in flow-space
+      if(NULL != opt->flow_order) {
+          tmap_map_util_fsw(seq,
+                            (1 == opt->flow_order_use_sff) ? NULL : opt->flow_order_int,
+                            (1 == opt->flow_order_use_sff) ? 0 : strlen(opt->flow_order),
+                            sams, refseq, 
+                            opt->bw, opt->softclip_type, opt->score_thr,
+                            opt->score_match, opt->pen_mm, opt->pen_gapo,
+                            opt->pen_gape, opt->fscore);
       }
   }
 
-  tmap_map1_aux_stack_destroy(stack);
-  free(seed_width[0]);
-  free(seed_width[1]);
-  free(width[0]);
-  free(width[1]);
+  // destroy
+  tmap_seq_destroy(seqs[0]);
+  tmap_seq_destroy(seqs[1]);
+
+  return sams;
 }
 
-#ifdef HAVE_LIBPTHREAD
-static void *
-tmap_map1_core_thread_worker(void *arg)
+int32_t
+tmap_map1_thread_cleanup(void **data, tmap_map_opt_t *opt)
 {
-  tmap_map1_thread_data_t *thread_data = (tmap_map1_thread_data_t*)arg;
+  tmap_map1_thread_data_t *d = (tmap_map1_thread_data_t*)(*data);
 
-  tmap_map1_core_worker(thread_data->seq_buffer, thread_data->seq_buffer_length, thread_data->sams,
-                        thread_data->refseq, thread_data->bwt, thread_data->sa, 
-                        thread_data->tid, thread_data->opt);
-
-  return arg;
+  tmap_map1_aux_stack_destroy(d->stack);
+  free(d->seed_width[0]);
+  free(d->seed_width[1]);
+  free(d->width[0]);
+  free(d->width[1]);
+  free(d);
+  (*data) = NULL;
+  return 0;
 }
-#endif
 
 static void 
 tmap_map1_core(tmap_map_opt_t *opt)
 {
-  uint32_t i, n_reads_processed=0;
-  int32_t seq_buffer_length;
-  tmap_refseq_t *refseq=NULL;
-  tmap_bwt_t *bwt[2]={NULL,NULL};
-  tmap_sa_t *sa[2]={NULL,NULL};
-  tmap_seq_io_t *seqio = NULL;
-  tmap_seq_t **seq_buffer = NULL;
-  tmap_map_sams_t **sams = NULL;
-  tmap_shm_t *shm = NULL;
-  int32_t seq_type, reads_queue_size;
-
-  if(NULL == opt->fn_reads) {
-      tmap_progress_set_verbosity(0); 
-  }
-
-  // For suffix search we need the reverse bwt/sa and forward refseq
-  if(0 == opt->shm_key) {
-      tmap_progress_print("reading in reference data");
-      refseq = tmap_refseq_read(opt->fn_fasta, 0);
-      bwt[0] = tmap_bwt_read(opt->fn_fasta, 0);
-      bwt[1] = tmap_bwt_read(opt->fn_fasta, 1);
-      sa[0] = tmap_sa_read(opt->fn_fasta, 0);
-      sa[1] = tmap_sa_read(opt->fn_fasta, 1);
-      tmap_progress_print2("reference data read in");
-  }
-  else {
-      tmap_progress_print("retrieving reference data from shared memory");
-      shm = tmap_shm_init(opt->shm_key, 0, 0);
-      if(NULL == (refseq = tmap_refseq_shm_unpack(tmap_shm_get_buffer(shm, TMAP_SHM_LISTING_REFSEQ)))) {
-          tmap_error("the packed reference sequence was not found in shared memory", Exit, SharedMemoryListing);
-      }
-      if(NULL == (bwt[0] = tmap_bwt_shm_unpack(tmap_shm_get_buffer(shm, TMAP_SHM_LISTING_BWT)))) {
-          tmap_error("the BWT string was not found in shared memory", Exit, SharedMemoryListing);
-      }
-      if(NULL == (bwt[1] = tmap_bwt_shm_unpack(tmap_shm_get_buffer(shm, TMAP_SHM_LISTING_REV_BWT)))) {
-          tmap_error("the reverse BWT string was not found in shared memory", Exit, SharedMemoryListing);
-      }
-      if(NULL == (sa[0] = tmap_sa_shm_unpack(tmap_shm_get_buffer(shm, TMAP_SHM_LISTING_SA)))) {
-          tmap_error("the reverse SA was not found in shared memory", Exit, SharedMemoryListing);
-      }
-      if(NULL == (sa[1] = tmap_sa_shm_unpack(tmap_shm_get_buffer(shm, TMAP_SHM_LISTING_REV_SA)))) {
-          tmap_error("the reverse SA was not found in shared memory", Exit, SharedMemoryListing);
-      }
-      tmap_progress_print2("reference data retrieved from shared memory");
-  }
-  
-  tmap_map1_print_max_diff(opt, -1);
-          
-  opt->score_thr *= opt->score_match;
-
-  // allocate the buffer
-  if(-1 == opt->reads_queue_size) {
-      reads_queue_size = 1;
-  }
-  else {
-      reads_queue_size = opt->reads_queue_size;
-  }
-  seq_buffer = tmap_malloc(sizeof(tmap_seq_t*)*reads_queue_size, "seq_buffer");
-  sams = tmap_malloc(sizeof(tmap_map_sams_t*)*reads_queue_size, "sams");
-
-  // initialize the read buffer
-  seq_type = tmap_reads_format_to_seq_type(opt->reads_format); 
-  seqio = tmap_seq_io_init(opt->fn_reads, seq_type, 0, opt->input_compr);
-  for(i=0;i<reads_queue_size;i++) { // initialize the buffer
-      seq_buffer[i] = tmap_seq_init(seq_type);
-  }
-
-  // Note: 'tmap_file_stdout' should not have been previously modified
-  tmap_file_stdout = tmap_file_fdopen(fileno(stdout), "wb", opt->output_compr);
-
-  // SAM header
-  tmap_sam_print_header(tmap_file_stdout, refseq, seqio, opt->sam_rg, opt->sam_sff_tags, opt->argc, opt->argv);
-
-  tmap_progress_print("processing reads");
-  while(0 < (seq_buffer_length = tmap_seq_io_read_buffer(seqio, seq_buffer, reads_queue_size))) {
-
-      // do alignment
-#ifdef HAVE_LIBPTHREAD
-      int32_t num_threads = opt->num_threads;
-      tmap_map1_read_lock_low = 0; // ALWAYS set before running threads 
-      if(seq_buffer_length < num_threads * TMAP_MAP1_THREAD_BLOCK_SIZE) {
-          num_threads = 1 + (seq_buffer_length / TMAP_MAP1_THREAD_BLOCK_SIZE);
-      }
-      if(1 == num_threads) {
-          tmap_map1_core_worker(seq_buffer, seq_buffer_length, sams, refseq, bwt, sa, 0, opt);
-      }
-      else {
-          pthread_attr_t attr;
-          pthread_t *threads = NULL;
-          tmap_map1_thread_data_t *thread_data=NULL;
-
-          pthread_attr_init(&attr);
-          pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-
-          threads = tmap_calloc(num_threads, sizeof(pthread_t), "threads");
-          thread_data = tmap_calloc(num_threads, sizeof(tmap_map1_thread_data_t), "thread_data");
-
-          for(i=0;i<num_threads;i++) {
-              thread_data[i].seq_buffer = seq_buffer;
-              thread_data[i].seq_buffer_length = seq_buffer_length;
-              thread_data[i].sams = sams;
-              thread_data[i].refseq = refseq;
-              thread_data[i].bwt[0] = bwt[0];
-              thread_data[i].bwt[1] = bwt[1];
-              thread_data[i].sa[0] = sa[0];
-              thread_data[i].sa[1] = sa[1];
-              thread_data[i].tid = i;
-              thread_data[i].opt = opt; 
-              if(0 != pthread_create(&threads[i], &attr, tmap_map1_core_thread_worker, &thread_data[i])) {
-                  tmap_error("error creating threads", Exit, ThreadError);
-              }
-          }
-          for(i=0;i<num_threads;i++) {
-              if(0 != pthread_join(threads[i], NULL)) {
-                  tmap_error("error joining threads", Exit, ThreadError);
-              }
-          }
-
-          free(threads);
-          free(thread_data);
-      }
-#else 
-      tmap_map1_core_worker(seq_buffer, seq_buffer_length, sams, refseq, bwt, sa, 0, opt);
-#endif
-
-      if(-1 != opt->reads_queue_size) {
-          tmap_progress_print("writing alignments");
-      }
-      for(i=0;i<seq_buffer_length;i++) {
-          // write
-          tmap_map_sams_print(seq_buffer[i], refseq, sams[i], opt->sam_sff_tags);
-
-          // free alignments
-          tmap_map_sams_destroy(sams[i]);
-          sams[i] = NULL;
-      }
-      if(-1 == opt->reads_queue_size) {
-          tmap_file_fflush(tmap_file_stdout, 1);
-      }
-      else {
-          tmap_file_fflush(tmap_file_stdout, 0); // flush
-      }
-
-      n_reads_processed += seq_buffer_length;
-      if(-1 != opt->reads_queue_size) {
-          tmap_progress_print2("processed %d reads", n_reads_processed);
-      }
-  }
-  if(-1 == opt->reads_queue_size) {
-      tmap_progress_print2("processed %d reads", n_reads_processed);
-  }
-
-  // close the output
-  tmap_file_fclose(tmap_file_stdout);
-
-  // free memory
-  for(i=0;i<reads_queue_size;i++) {
-      tmap_seq_destroy(seq_buffer[i]);
-  }
-  free(seq_buffer);
-  free(sams);
-  tmap_refseq_destroy(refseq);
-  tmap_bwt_destroy(bwt[0]);
-  tmap_bwt_destroy(bwt[1]);
-  tmap_sa_destroy(sa[0]);
-  tmap_sa_destroy(sa[1]);
-  tmap_seq_io_destroy(seqio);
-  if(0 < opt->shm_key) {
-      tmap_shm_destroy(shm, 0);
-  }
+  // run the driver
+  tmap_map_driver_core(tmap_map1_init, 
+                       tmap_map1_thread_init, 
+                       tmap_map1_thread_map, 
+                       tmap_map1_thread_cleanup,
+                       opt);
 }
 
 int 
 tmap_map1_main(int argc, char *argv[])
 {
   tmap_map_opt_t *opt = NULL;
-
-  // random seed
-  srand48(0); 
 
   // init opt
   opt = tmap_map_opt_init(TMAP_MAP_ALGO_MAP1);

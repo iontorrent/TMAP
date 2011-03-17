@@ -48,6 +48,7 @@ tmap_SOURCES = \
 			   src/map/tmap_map3.h src/map/tmap_map3.c \
 			   src/map/tmap_map3_aux.h src/map/tmap_map3_aux.c \
 			   src/map/tmap_map_all.h src/map/tmap_map_all.c \
+			   src/map/tmap_map_driver.h src/map/tmap_map_driver.c \
 			   src/tmap_main.h src/tmap_main.c
 
 tmap_LDADD = 

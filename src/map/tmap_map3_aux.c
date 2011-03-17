@@ -241,7 +241,8 @@ tmap_map3_aux_core_seed(uint8_t *query,
 // TODO: memory pools?
 tmap_map_sams_t *
 tmap_map3_aux_core(tmap_seq_t *seq[2], 
-                   uint8_t *flow[2],
+                   uint8_t *flow_order,
+                   int32_t flow_order_len,
                    tmap_refseq_t *refseq,
                    tmap_bwt_t *bwt,
                    tmap_sa_t *sa,
@@ -251,6 +252,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
   int32_t seq_len[2];
   tmap_string_t *bases;
   uint8_t *query;
+  uint8_t *flow[2];
 
   uint32_t k, pacpos;
   uint32_t ref_start, ref_end;
@@ -269,6 +271,33 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
   int32_t m_hits[2], n_hits[2];
 
   tmap_map_sams_t *sams = NULL;
+
+  if(0 < opt->hp_diff) {
+      // set up the flow order to be used
+      if(NULL == flow_order) {
+          // try to use the sff
+          if(TMAP_SEQ_TYPE_SFF != seq[0]->type) {
+              tmap_error("bug encountered", Exit, OutOfRange);
+          }
+          else {
+              flow_order_len = seq[0]->data.sff->gheader->flow->l;
+              flow[0] = tmap_malloc(sizeof(uint8_t)*flow_order_len, "flow[0]");
+              flow[1] = tmap_malloc(sizeof(uint8_t)*flow_order_len, "flow[0]");
+              for(i=0;i<flow_order_len;i++) {
+                  flow[0][i] = tmap_nt_char_to_int[(int)seq[0]->data.sff->gheader->flow->s[i]]; // forward
+                  flow[0][flow_order_len-1-i] = 3 - tmap_nt_char_to_int[(int)seq[0]->data.sff->gheader->flow->s[i]]; // reverse compliment
+              }
+          }
+      }
+      else {
+          flow[0] = tmap_malloc(sizeof(uint8_t)*flow_order_len, "flow[0]");
+          flow[1] = tmap_malloc(sizeof(uint8_t)*flow_order_len, "flow[0]");
+          for(i=0;i<flow_order_len;i++) {
+              flow[0][i] = flow_order[i]; // forward
+              flow[1][flow_order_len-1-i] = 3 - flow_order[i]; // reverse complimenmt
+          }
+      }
+  }
 
   // scoring matrix
   par.matrix = matrix;
@@ -473,6 +502,10 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
 
   // free
   free(path);
+  if(0 < opt->hp_diff) {
+      free(flow[0]);
+      free(flow[1]);
+  }
 
   return sams;
 }

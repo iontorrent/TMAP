@@ -19,7 +19,6 @@
 #define STATE_I 1
 #define STATE_D 2
 
-// TODO redefine
 #define aln_score(m,o,e,p) ((m)*((p)->pen_mm) + (o)*((p)->pen_gapo + (p)->pen_gape) + (e)*((p)->pen_gape))
 
 #define tmap_map1_aux_reverse_query(_query, _ql, _i) \
