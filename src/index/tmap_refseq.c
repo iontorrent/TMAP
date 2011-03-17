@@ -71,7 +71,8 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   tmap_refseq_t *refseq = NULL;
   char *fn_pac = NULL, *fn_anno = NULL;
   uint8_t buffer[TMAP_REFSEQ_BUFFER_SIZE];
-  int32_t i, j, l, buffer_length, found_IUPAC = 0;
+  int32_t i, j, l, buffer_length;
+  uint32_t num_IUPAC_found= 0;
   uint8_t x = 0;
   uint64_t ref_len;
 
@@ -113,10 +114,10 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
       for(i=0;i<l;i++) {
           int c = tmap_nt_char_to_int[(int)seq->data.fq->seq->s[i]];
           if(4 <= c) {
-              if(0 == found_IUPAC) { // warn users about IUPAC codes
+              if(0 == num_IUPAC_found) { // warn users about IUPAC codes
                   tmap_error("IUPAC codes were found and will be converted to random DNA bases", Warn, OutOfRange);
               }
-              found_IUPAC = 1;
+              num_IUPAC_found++;
               c = lrand48() & 0x3; // random base
           }
           if(buffer_length == (TMAP_REFSEQ_BUFFER_SIZE << 2)) { // 2-bit
@@ -149,6 +150,14 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   ref_len = refseq->len; // save for return
       
   tmap_progress_print2("total genome length [%u]", refseq->len);
+  if(0 < num_IUPAC_found) {
+      if(1 == num_IUPAC_found) {
+          tmap_progress_print("%u IUPAC base was found and converted to random DNA base", num_IUPAC_found);
+      }
+      else {
+          tmap_progress_print("%u IUPAC bases were found and converted to random DNA bases", num_IUPAC_found);
+      }
+  }
 
   // write annotation file
   fn_anno = tmap_get_file_name(fn_fasta, TMAP_ANNO_FILE);
