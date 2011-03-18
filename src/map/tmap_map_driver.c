@@ -39,7 +39,10 @@ int32_t tmap_map_driver_read_lock_low = 0;
 void
 tmap_map_driver_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_t seq_buffer_length, 
                          tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2],
-                         tmap_driver_func_thread_init func_thread_init, tmap_driver_func_thread_map func_thread_map, tmap_driver_func_thread_cleanup func_thread_cleanup,
+                         tmap_driver_func_thread_init func_thread_init, 
+                         tmap_driver_func_thread_map func_thread_map, 
+                         tmap_driver_func_mapq func_mapq,
+                         tmap_driver_func_thread_cleanup func_thread_cleanup,
                          int32_t thread_block_size, int32_t tid, tmap_map_opt_t *opt)
 {
   int32_t low = 0, high;
@@ -77,6 +80,32 @@ tmap_map_driver_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int
           if(sams[low] == NULL) {
               tmap_error("the thread function did not return a mapping", Exit, OutOfRange);
           }
+
+          if(0 < sams[low]->n) {
+              // mapall should have already done this!
+              if(TMAP_MAP_ALGO_MAPALL != opt->algo_id) {
+                  // remove duplicates
+                  tmap_map_util_remove_duplicates(sams[low], opt->dup_window);
+
+                  if(NULL != func_mapq) {
+                      // mapping quality
+                      func_mapq(sams[low], tmap_seq_get_bases(seq_buffer[low])->l, opt);
+                  }
+
+                  // filter alignments
+                  tmap_map_sams_filter(sams[low], opt->aln_output_mode);
+              }
+
+              // re-align the alignments in flow-space
+              if(TMAP_SEQ_TYPE_SFF == seq_buffer[low]->type) {
+                  tmap_map_util_fsw(seq_buffer[low]->data.sff,
+                                    sams[low], refseq, 
+                                    opt->bw, opt->softclip_type, opt->score_thr,
+                                    opt->score_match, opt->pen_mm, opt->pen_gapo,
+                                    opt->pen_gape, opt->fscore);
+              }
+          }
+
           // next
           low++;
       }
@@ -95,7 +124,10 @@ tmap_map_driver_core_thread_worker(void *arg)
 
   tmap_map_driver_core_worker(thread_data->seq_buffer, thread_data->sams, thread_data->seq_buffer_length, 
                            thread_data->refseq, thread_data->bwt, thread_data->sa, 
-                           thread_data->func_thread_init, thread_data->func_thread_map, thread_data->func_thread_cleanup,
+                           thread_data->func_thread_init, 
+                           thread_data->func_thread_map, 
+                           thread_data->func_mapq, 
+                           thread_data->func_thread_cleanup,
                            thread_data->thread_block_size, thread_data->tid, thread_data->opt);
 
   return arg;
@@ -105,6 +137,7 @@ void
 tmap_map_driver_core(tmap_driver_func_init func_init,
                   tmap_driver_func_thread_init func_thread_init, 
                   tmap_driver_func_thread_map func_thread_map, 
+                  tmap_driver_func_mapq func_mapq,
                   tmap_driver_func_thread_cleanup func_thread_cleanup,
                   tmap_map_opt_t *opt)
 {
@@ -118,6 +151,8 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
   tmap_map_sams_t **sams = NULL;
   tmap_shm_t *shm = NULL;
   int32_t seq_type, reads_queue_size;
+
+  // TODO: check input functions ?
   
   if(NULL == opt->fn_reads) {
       tmap_progress_set_verbosity(0); 
@@ -194,7 +229,7 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
       tmap_map_driver_read_lock_low = 0; // ALWAYS set before running threads 
       if(1 == opt->num_threads) {
           tmap_map_driver_core_worker(seq_buffer, sams, seq_buffer_length, refseq, bwt, sa, 
-                                   func_thread_init, func_thread_map, func_thread_cleanup, 
+                                   func_thread_init, func_thread_map, func_mapq, func_thread_cleanup, 
                                    seq_buffer_length, 0, opt);
       }
       else {
@@ -238,8 +273,8 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
       }
 #else 
       tmap_map_driver_core_worker(seq_buffer, sams, seq_buffer_length, refseq, bwt, sa, 
-                               func_thread_init, func_thread_map, func_thread_cleanup, 
-                               seq_buffer_length, 0, opt);
+                                  func_thread_init, func_thread_map, func_mapq, func_thread_cleanup, 
+                                  seq_buffer_length, 0, opt);
 #endif
 
       if(-1 != opt->reads_queue_size) {

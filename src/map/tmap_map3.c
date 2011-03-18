@@ -39,14 +39,18 @@ tmap_map3_get_seed_length(uint64_t ref_len)
   return k;
 }
 
-static inline void
-tmap_map3_mapq(tmap_map_sams_t *sams, int32_t score_thr, int32_t score_match, int32_t aln_output_mode)
+static inline int32_t 
+tmap_map3_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
 {
   int32_t i;
   int32_t n_best = 0;
   int32_t best_score, cur_score, best_subo;
   int32_t n_seeds = 0, tot_seeds = 0;
   int32_t mapq;
+  int32_t score_thr, score_match;
+
+  score_thr = opt->score_thr;
+  score_match = opt->score_match;
 
   // estimate mapping quality TODO: this needs to be refined
   best_score = INT32_MIN;
@@ -94,6 +98,8 @@ tmap_map3_mapq(tmap_map_sams_t *sams, int32_t score_thr, int32_t score_match, in
           sams->sams[i].mapq = 0;
       }
   }
+
+  return 0;
 }
 
 // thread data
@@ -131,21 +137,25 @@ tmap_map3_thread_init(void **data, tmap_map_opt_t *opt)
 }
 
 tmap_map_sams_t*
-tmap_map3_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt)
+tmap_map3_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt)
 {
   int32_t i;
-  tmap_seq_t *seqs[2] = {NULL, NULL};
   tmap_map_sams_t *sams = NULL;
   tmap_map3_thread_data_t *d = (tmap_map3_thread_data_t*)(*data);
+  
+  if((0 < opt->min_seq_len && seq_len < opt->min_seq_len)
+     || (0 < opt->max_seq_len && opt->max_seq_len < seq_len)) {
+      return tmap_map_sams_init();
+  }
 
   // set up the flow order
   if(0 < opt->hp_diff && NULL == d->flow_order[0]) {
-      if(TMAP_SEQ_TYPE_SFF == seq->type) {
+      if(TMAP_SEQ_TYPE_SFF == seqs[0]->type) {
           d->flow_order[0] = tmap_malloc(sizeof(uint8_t) * 4, "d->flow_order[0]");
           d->flow_order[1] = tmap_malloc(sizeof(uint8_t) * 4, "d->flow_order[1]");
-          for(i=0;i<4;i++) {
-              d->flow_order[0][i] = tmap_nt_char_to_int[(int)seq->data.sff->gheader->flow->s[i]];
-              d->flow_order[1][i] = 3 - tmap_nt_char_to_int[(int)seq->data.sff->gheader->flow->s[i]];
+          for(i=0;i<4;i++) { // assumes a four-base flow order (yikes)
+              d->flow_order[0][i] = tmap_nt_char_to_int[(int)seqs[0]->data.sff->gheader->flow->s[i]];
+              d->flow_order[1][i] = 3 - tmap_nt_char_to_int[(int)seqs[0]->data.sff->gheader->flow->s[i]];
           }
       }
       else {
@@ -153,18 +163,29 @@ tmap_map3_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_b
       }
   }
 
-  if((0 < opt->min_seq_len && tmap_seq_get_bases(seq)->l < opt->min_seq_len)
-     || (0 < opt->max_seq_len && opt->max_seq_len < tmap_seq_get_bases(seq)->l)) {
+  // align
+  sams = tmap_map3_aux_core(seqs, d->flow_order, refseq, bwt[1], sa[1], opt);
+
+  return sams;
+}
+
+static tmap_map_sams_t *
+tmap_map3_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt)
+{
+  tmap_seq_t *seqs[2] = {NULL, NULL};
+  tmap_map_sams_t *sams = NULL;
+  int32_t seq_len;
+
+  seq_len = tmap_seq_get_bases(seq)->l;
+  
+  if((0 < opt->min_seq_len && seq_len < opt->min_seq_len)
+     || (0 < opt->max_seq_len && opt->max_seq_len < seq_len)) {
       return tmap_map_sams_init();
   }
 
   // clone the sequence 
   seqs[0] = tmap_seq_clone(seq);
   seqs[1] = tmap_seq_clone(seq);
-
-  // Adjust for SFF
-  tmap_seq_remove_key_sequence(seqs[0]);
-  tmap_seq_remove_key_sequence(seqs[1]);
 
   // Adjust for SFF
   tmap_seq_remove_key_sequence(seqs[0]);
@@ -178,27 +199,7 @@ tmap_map3_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_b
   tmap_seq_to_int(seqs[1]);
 
   // align
-  sams = tmap_map3_aux_core(seqs, d->flow_order, refseq, bwt[1], sa[1], opt);
-
-  if(-1 == opt->algo_stage) { // not part of mapall
-      // remove duplicates
-      tmap_map_util_remove_duplicates(sams, opt->dup_window);
-
-      // mapping quality
-      tmap_map3_mapq(sams, opt->score_thr, opt->score_match, opt->aln_output_mode);
-
-      // filter the alignments
-      tmap_map_sams_filter(sams, opt->aln_output_mode);
-
-      // re-align the alignments in flow-space
-      if(TMAP_SEQ_TYPE_SFF == seq->type) {
-          tmap_map_util_fsw(seq->data.sff,
-                            sams, refseq, 
-                            opt->bw, opt->softclip_type, opt->score_thr,
-                            opt->score_match, opt->pen_mm, opt->pen_gapo,
-                            opt->pen_gape, opt->fscore);
-      }
-  }
+  sams = tmap_map3_thread_map_core(data, seqs, seq_len, refseq, bwt, sa, opt);
 
   // destroy
   tmap_seq_destroy(seqs[0]);
@@ -226,6 +227,7 @@ tmap_map3_core(tmap_map_opt_t *opt)
   tmap_map_driver_core(tmap_map3_init,
                        tmap_map3_thread_init,
                        tmap_map3_thread_map,
+                       tmap_map3_mapq,
                        tmap_map3_thread_cleanup,
                        opt);
 }

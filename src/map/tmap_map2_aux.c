@@ -681,7 +681,6 @@ tmap_map2_aux_aln(tmap_map_opt_t *opt, tmap_refseq_t *refseq,
   tmap_map2_aln_t *b[2], **bb[2];
   int32_t k, softclip_type;
 
-
   for(k = 0; k < 2; ++k) {
       tmap_bwtl_t *query = tmap_bwtl_seq2bwtl(seq[k]->l, (uint8_t*)seq[k]->s);
       bb[k] = tmap_map2_core_aln(opt, query, target_bwt, target_sa, pool);
@@ -689,11 +688,14 @@ tmap_map2_aux_aln(tmap_map_opt_t *opt, tmap_refseq_t *refseq,
   }
   b[0] = bb[0][1]; b[1] = bb[1][1]; // bb[*][1] are "narrow SA hits"
   tmap_map2_chain_filter(opt, seq[0]->l, b);
+  // TODO: could we skip all of this extension and just generate the alignments
+  // directly?
   for(k = 0; k < 2; ++k) {
       softclip_type = opt->softclip_type;
       if(k ^ is_rev) { // one or the other, but not both
           softclip_type = __tmap_map_util_reverse_soft_clipping(softclip_type);
       }
+      // This causes problems with soft-clipping
       /*
       tmap_map2_aux_extend_left(opt, bb[k][1], (uint8_t*)seq[k]->s, seq[k]->l, refseq, is_rev, k, pool->aln_mem, softclip_type);
       tmap_map2_aux_merge_hits(bb[k], seq[k]->l, 0, TMAP_MAP_UTIL_SOFT_CLIP_ALL); // bb[k][1] and bb[k][0] are merged into bb[k][0]
@@ -913,25 +915,26 @@ tmap_map1_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
 
 tmap_map_sams_t *
 tmap_map2_aux_core(tmap_map_opt_t *_opt,
-                   tmap_seq_t *query,
+                   tmap_seq_t *seqs[4],
                    tmap_refseq_t *refseq,
                    tmap_bwt_t *bwt[2],
                    tmap_sa_t *sa[2],
                    tmap_map2_global_mempool_t *pool)
 {
   tmap_map_opt_t opt;
+  tmap_seq_t *orig_seq = NULL;
   tmap_string_t *seq[2]={NULL, NULL};
   tmap_string_t *rseq[2]={NULL, NULL};
   tmap_map_sams_t *sams = NULL;
   tmap_map2_aln_t *b[2]={NULL,NULL};
   tmap_string_t *bases = NULL;
   uint8_t *_seq[2];
-  int32_t i, k, l;
+  int32_t i, k, l, num_n;
 
   opt = (*_opt);
 
   // sequence length
-  bases = tmap_seq_get_bases(query);
+  bases = tmap_seq_get_bases(seqs[0]);
   l = bases->l;
 
   // set opt->score_thr
@@ -951,30 +954,39 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
   if(k < 1) k = 1; // I do not know if k==0 causes troubles
   opt.bw = _opt->bw < k ? _opt->bw: k;
 
-  // set seq[2] and rseq[2]
-  seq[0] = tmap_string_init(l);
-  seq[1] = tmap_string_init(l);
-  rseq[0] = tmap_string_init(l);
-  rseq[1] = tmap_string_init(l);
-
-  // convert sequences to 2-bit representation
-  for(i=k=0;i<l;i++) {
+  // get the number of Ns
+  for(i=num_n=0;i<l;i++) {
       uint8_t c = (uint8_t)tmap_nt_char_to_int[(int)bases->s[i]];
-      if(c >= 4) { c = (int)(drand48() * 4); ++k; } // FIXME: ambiguous bases are not properly handled
-      seq[0]->s[i] = c; // original
-      seq[1]->s[l-1-i] = 3 - c; // reverse compliment
-      rseq[0]->s[l-1-i] = c; // reverse 
-      rseq[1]->s[i] = 3 - c; // compliment
+      if(c >= 4) num_n++; // FIXME: ambiguous bases are not properly handled
   }
-  seq[0]->l = seq[1]->l = rseq[0]->l = rseq[1]->l = l;
 
   // will we always be lower than the score threshold
-  if((l*opt.score_match) + (k*opt.pen_mm) < opt.score_thr) {
-      tmap_string_destroy(seq[0]);
-      tmap_string_destroy(seq[1]);
-      tmap_string_destroy(rseq[0]);
-      tmap_string_destroy(rseq[1]);
+  if((l*opt.score_match) + (num_n*opt.pen_mm) < opt.score_thr) {
       return tmap_map_sams_init(0);
+  }
+  
+  // save sequences
+  seq[0] = tmap_seq_get_bases(seqs[0]); 
+  seq[1] = tmap_seq_get_bases(seqs[1]);
+  rseq[0] = tmap_seq_get_bases(seqs[2]); 
+  rseq[1] = tmap_seq_get_bases(seqs[3]);
+
+  // handle ambiguous bases
+  if(0 < num_n) {
+      // save original to de-randomize later
+      orig_seq = tmap_seq_clone(seqs[0]);
+
+      // randomize
+      for(i=0;i<l;i++) {
+          uint8_t c = (uint8_t)bases->s[i];
+          if(c >= 4) {
+              c = (int)(drand48() * 4); // FIXME: ambiguous bases are not properly handled
+              seq[0]->s[i] = c; // original
+              seq[1]->s[l-1-i] = 3 - c; // reverse compliment
+              rseq[0]->s[l-1-i] = c; // reverse 
+              rseq[1]->s[i] = 3 - c; // compliment
+          }
+      }
   }
 
   // alignment
@@ -1017,11 +1029,23 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
   tmap_map_util_remove_duplicates(sams, opt.dup_window);
 
   // free
-  tmap_string_destroy(seq[0]);
-  tmap_string_destroy(seq[1]);
-  tmap_string_destroy(rseq[0]);
-  tmap_string_destroy(rseq[1]);
   tmap_map2_aln_destroy(b[0]);
+
+  // revert ambiguous bases 
+  if(0 < num_n) {
+      // de-randomize
+      bases = tmap_seq_get_bases(orig_seq);
+      for(i=0;i<l;i++) {
+          uint8_t c = (uint8_t)bases->s[i];
+          if(c >= 4) { 
+              seq[0]->s[i] = c; // original
+              seq[1]->s[l-1-i] = 3 - c; // reverse compliment
+              rseq[0]->s[l-1-i] = c; // reverse 
+              rseq[1]->s[i] = 3 - c; // compliment
+          }
+      }
+      tmap_seq_destroy(orig_seq);
+  }
 
   return sams;
 }

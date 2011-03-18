@@ -112,14 +112,14 @@ tmap_map1_sam_mapq(int32_t num_best_sa, int32_t num_all_sa, int32_t max_mm, int3
   return (23 < g_log_n[n])? 0 : 23 - g_log_n[n];
 }
 
-static inline void
-tmap_map1_sams_mapq(tmap_map_sams_t *sams, tmap_map_opt_t *opt)
+static int32_t
+tmap_map1_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
 {
   int32_t i;
   int32_t num_best_sa, num_best, num_all_sa;
 
   if(0 == sams->n) {
-      return;
+      return 0;
   }
 
   // sort by decreasing score
@@ -144,17 +144,19 @@ tmap_map1_sams_mapq(tmap_map_sams_t *sams, tmap_map_opt_t *opt)
   for(i=num_best;i<sams->n;i++) {
       sams->sams[i].mapq = 0;
   }
+
+  return 0;
 }
 
 // thread data
 typedef struct {
-  tmap_bwt_match_width_t *width[2];
-  tmap_bwt_match_width_t *seed_width[2];
-  int32_t width_length;
-  int32_t max_mm;
-  int32_t max_gapo;
-  int32_t max_gape;
-  tmap_map1_aux_stack_t *stack;
+    tmap_bwt_match_width_t *width[2];
+    tmap_bwt_match_width_t *seed_width[2];
+    int32_t width_length;
+    int32_t max_mm;
+    int32_t max_gapo;
+    int32_t max_gape;
+    tmap_map1_aux_stack_t *stack;
 } tmap_map1_thread_data_t;
 
 int32_t
@@ -182,60 +184,38 @@ tmap_map1_thread_init(void **data, tmap_map_opt_t *opt)
   d->seed_width[1] = tmap_calloc(1+opt->seed_length, sizeof(tmap_bwt_match_width_t), "seed_width[1]");
 
   d->stack = tmap_map1_aux_stack_init();
-          
+
   // remember to round up
   d->max_mm = (opt->max_mm < 0) ? (int)(0.99 + opt->max_mm_frac * opt->seed2_length) : opt->max_mm; 
   d->max_gapo = (opt->max_gapo < 0) ? (int)(0.99 + opt->max_gapo_frac * opt->seed2_length) : opt->max_gapo; 
   d->max_gape = (opt->max_gape < 0) ? (int)(0.99 + opt->max_gape_frac * opt->seed2_length) : opt->max_gape; 
-  
+
   (*data) = (void*)d;
 
   return 0;
 }
 
+// reverse and reverse compliment
 tmap_map_sams_t*
-tmap_map1_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt)
+tmap_map1_thread_map_core(void **data, tmap_seq_t *seqs[2], tmap_string_t *bases[2], int32_t seq_len,
+                          tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt)
 {
   tmap_map1_thread_data_t *d = (tmap_map1_thread_data_t*)(*data);
-  int32_t seed2_len = 0, seq_len = 0;;
+  int32_t seed2_len = 0;
   tmap_map_opt_t opt_local = (*opt); // copy over values
-  tmap_seq_t *seqs[2]={NULL, NULL}, *orig_seq=NULL;
-  tmap_string_t *bases[2]={NULL, NULL};
   tmap_map_sams_t *sams = NULL;
-  
-  orig_seq = seq;
 
-  if((0 < opt->min_seq_len && tmap_seq_get_bases(orig_seq)->l < opt->min_seq_len)
-     || (0 < opt->max_seq_len && opt->max_seq_len < tmap_seq_get_bases(orig_seq)->l)) {
+
+  if((0 < opt->min_seq_len && seq_len < opt->min_seq_len)
+     || (0 < opt->max_seq_len && opt->max_seq_len < seq_len)) {
       // go to the next loop
       return tmap_map_sams_init();
   }
-
-  seq_len = tmap_seq_get_bases(orig_seq)->l;
 
   // not enough bases, ignore
   if(0 < opt->seed_length && seq_len < opt->seed_length){
       return tmap_map_sams_init();
   }
-
-  // clone the sequence 
-  seqs[0] = tmap_seq_clone(orig_seq);
-  seqs[1] = tmap_seq_clone(orig_seq);
-
-  // Adjust for SFF
-  tmap_seq_remove_key_sequence(seqs[0]);
-  tmap_seq_remove_key_sequence(seqs[1]);
-
-  tmap_seq_reverse(seqs[0]); // reverse
-  tmap_seq_reverse_compliment(seqs[1]); // reverse compliment
-
-  // convert to integers
-  tmap_seq_to_int(seqs[0]);
-  tmap_seq_to_int(seqs[1]);
-
-  // get bases
-  bases[0] = tmap_seq_get_bases(seqs[0]);
-  bases[1] = tmap_seq_get_bases(seqs[1]);
 
   if(opt->seed2_length < 0 || bases[0]->l < opt->seed2_length) {
       seed2_len = seq_len;
@@ -271,25 +251,52 @@ tmap_map1_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_b
   // map
   sams = tmap_map1_aux_core(seqs, refseq, bwt, sa, d->width, (0 < opt_local.seed_length) ? d->seed_width : NULL, &opt_local, d->stack, seed2_len);
 
-  if(-1 == opt->algo_stage) { // not part of mapall
-      // remove duplicates
-      tmap_map_util_remove_duplicates(sams, opt->dup_window);
+  return sams;
+}
 
-      // mapping quality
-      tmap_map1_sams_mapq(sams, opt);
+static tmap_map_sams_t*
+tmap_map1_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt)
+{
+  int32_t seq_len = 0;;
+  tmap_seq_t *seqs[2]={NULL, NULL};
+  tmap_string_t *bases[2]={NULL, NULL};
+  tmap_map_sams_t *sams = NULL;
 
-      // filter alignments
-      tmap_map_sams_filter(sams, opt->aln_output_mode);
+  // sequence length
+  seq_len = tmap_seq_get_bases(seq)->l;
 
-      // re-align the alignments in flow-space
-      if(TMAP_SEQ_TYPE_SFF == orig_seq->type) {
-          tmap_map_util_fsw(orig_seq->data.sff,
-                            sams, refseq, 
-                            opt->bw, opt->softclip_type, opt->score_thr,
-                            opt->score_match, opt->pen_mm, opt->pen_gapo,
-                            opt->pen_gape, opt->fscore);
-      }
+  // sequence length not in range
+  if((0 < opt->min_seq_len && seq_len < opt->min_seq_len)
+     || (0 < opt->max_seq_len && opt->max_seq_len < seq_len)) {
+      return tmap_map_sams_init();
   }
+
+  // not enough bases, ignore
+  if(0 < opt->seed_length && seq_len < opt->seed_length){
+      return tmap_map_sams_init();
+  }
+
+  // clone the sequence 
+  seqs[0] = tmap_seq_clone(seq);
+  seqs[1] = tmap_seq_clone(seq);
+
+  // Adjust for SFF
+  tmap_seq_remove_key_sequence(seqs[0]);
+  tmap_seq_remove_key_sequence(seqs[1]);
+
+  tmap_seq_reverse(seqs[0]); // reverse
+  tmap_seq_reverse_compliment(seqs[1]); // reverse compliment
+
+  // convert to integers
+  tmap_seq_to_int(seqs[0]);
+  tmap_seq_to_int(seqs[1]);
+
+  // get bases
+  bases[0] = tmap_seq_get_bases(seqs[0]);
+  bases[1] = tmap_seq_get_bases(seqs[1]);
+  
+  // core algorithm
+  sams = tmap_map1_thread_map_core(data, seqs, bases, seq_len, refseq, bwt, sa, opt);
 
   // destroy
   tmap_seq_destroy(seqs[0]);
@@ -320,6 +327,7 @@ tmap_map1_core(tmap_map_opt_t *opt)
   tmap_map_driver_core(tmap_map1_init, 
                        tmap_map1_thread_init, 
                        tmap_map1_thread_map, 
+                       tmap_map1_mapq,
                        tmap_map1_thread_cleanup,
                        opt);
 }

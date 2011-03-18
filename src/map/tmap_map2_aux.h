@@ -79,7 +79,7 @@ tmap_map2_aux_resolve_duphits(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_m
 /*! 
   performs the  BWA-like (long-read) algorithm 
   @param  _opt    pointer to the program parameters
-  @param  query   pointer to the query sequence 
+  @param  seqs    pointer to the query sequences (forward, reverse compliment, reverse, compliment) 
   @param  refseq  pointer to the reference sequence structure
   @param  bwt     pointer to the bwt structure
   @param  sa      pointer to the SA structure
@@ -88,10 +88,9 @@ tmap_map2_aux_resolve_duphits(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_m
   */
 tmap_map_sams_t *
 tmap_map2_aux_core(tmap_map_opt_t *_opt,
-                   tmap_seq_t *query,
+                   tmap_seq_t *seqs[4],
                    tmap_refseq_t *refseq,
                    tmap_bwt_t *bwt[2],
                    tmap_sa_t *sa[2],
                    tmap_map2_global_mempool_t *pool);
-
 #endif

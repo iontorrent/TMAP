@@ -59,44 +59,59 @@ tmap_map2_thread_init(void **data, tmap_map_opt_t *opt)
 }
 
 tmap_map_sams_t*
-tmap_map2_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt)
+tmap_map2_thread_map_core(void **data, tmap_seq_t *seqs[4], int32_t seq_len, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt)
 {
-  tmap_seq_t *curseq = NULL;
   tmap_map_sams_t *sams = NULL;
   tmap_map2_thread_data_t *d = (tmap_map2_thread_data_t*)(*data);
 
-  if((0 < opt->min_seq_len && tmap_seq_get_bases(seq)->l < opt->min_seq_len)
-     || (0 < opt->max_seq_len && opt->max_seq_len < tmap_seq_get_bases(seq)->l)) {
+  if((0 < opt->min_seq_len && seq_len < opt->min_seq_len)
+     || (0 < opt->max_seq_len && opt->max_seq_len < seq_len)) {
       return tmap_map_sams_init();
   }
 
-  // Clone the buffer
-  curseq = tmap_seq_clone(seq);
-  // Adjust for SFF
-  tmap_seq_remove_key_sequence(curseq);
-
   // process
-  sams = tmap_map2_aux_core(opt, curseq, refseq, bwt, sa, d->pool);
+  sams = tmap_map2_aux_core(opt, seqs, refseq, bwt, sa, d->pool);
 
-  if(-1 == opt->algo_stage) { // not part of mapall
-      // remove duplicates
-      tmap_map_util_remove_duplicates(sams, opt->dup_window);
+  return sams;
+}
 
-      // filter
-      tmap_map_sams_filter(sams, opt->aln_output_mode);
+static tmap_map_sams_t*
+tmap_map2_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt)
+{
+  tmap_map_sams_t *sams = NULL;
+  tmap_seq_t *seqs[4]={NULL,NULL,NULL,NULL};
+  int32_t i, seq_len;
 
-      // re-align the alignments in flow-space
-      if(TMAP_SEQ_TYPE_SFF == seq->type) {
-          tmap_map_util_fsw(seq->data.sff,
-                            sams, refseq,
-                            opt->bw, opt->softclip_type, opt->score_thr,
-                            opt->score_match, opt->pen_mm, opt->pen_gapo,
-                            opt->pen_gape, opt->fscore);
-      }
+  seq_len = tmap_seq_get_bases(seq)->l;
+  
+  if((0 < opt->min_seq_len && seq_len < opt->min_seq_len)
+     || (0 < opt->max_seq_len && opt->max_seq_len < seq_len)) {
+      return tmap_map_sams_init();
   }
 
+  for(i=0;i<4;i++) {
+      seqs[i]= tmap_seq_clone(seq); // clone the sequence 
+      tmap_seq_remove_key_sequence(seqs[i]); // adjust for SFF
+      switch(i) {
+        case 0: // forward
+          break;
+        case 1: // reverse compliment
+          tmap_seq_reverse_compliment(seqs[i]); break;
+        case 2: // reverse
+          tmap_seq_reverse(seqs[i]); break;
+        case 3: // compliment
+          tmap_seq_compliment(seqs[i]); break;
+      }
+      tmap_seq_to_int(seqs[i]); // convert to integers
+  }
+
+  // get the sams
+  sams = tmap_map2_thread_map_core(data, seqs, seq_len, refseq, bwt, sa, opt);
+
   // destroy
-  tmap_seq_destroy(curseq);
+  for(i=0;i<4;i++) {
+      tmap_seq_destroy(seqs[i]);
+  }
 
   return sams;
 }
@@ -119,6 +134,7 @@ tmap_map2_core(tmap_map_opt_t *opt)
   tmap_map_driver_core(tmap_map2_init,
                        tmap_map2_thread_init,
                        tmap_map2_thread_map,
+                       NULL,
                        tmap_map2_thread_cleanup,
                        opt);
 }
