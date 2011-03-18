@@ -232,6 +232,9 @@ A hash into this index accelerates this lookups of DNA sequences in this index.
 In fact, a second additional index of the reference genome is created that indexes the reverse (but not complimented) reference genome.
 This second index further speeds up the search time.
 
+Note that that ambiguous IUPAC codes will be randomly converted to a DNA base that does not match any of the bases represented by the IUPAC code.
+Furthermore, any non-IUPAC character will be treated as an N.
+
 See \autoref{sec:commonoptions} for common options that are in use in this command.
 
 \subsection{Usage}

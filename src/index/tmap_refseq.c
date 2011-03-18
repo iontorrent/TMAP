@@ -112,13 +112,40 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
 
       // fill the buffer
       for(i=0;i<l;i++) {
-          int c = tmap_nt_char_to_int[(int)seq->data.fq->seq->s[i]];
+          uint8_t c = tmap_nt_char_to_int[(int)seq->data.fq->seq->s[i]];
+          // handle IUPAC codes 
           if(4 <= c) {
               if(0 == num_IUPAC_found) { // warn users about IUPAC codes
                   tmap_error("IUPAC codes were found and will be converted to random DNA bases", Warn, OutOfRange);
               }
               num_IUPAC_found++;
-              c = lrand48() & 0x3; // random base
+              // change it to a mismatched base than the IUPAC code
+              c = tmap_iupac_char_to_int[(int)seq->data.fq->seq->s[i]];
+              // TODO: store this information for later
+              if(c < 15) { // not an N
+                  int32_t k;
+                  // how many bases does this not represent?
+                  for(j=k=0;j<4;j++) {
+                      if(!(c & (0x1 << j))) k++;
+                  }
+                  if(0 == k) {
+                      tmap_error("bug encountered", Exit, OutOfRange);
+                  }
+                  // choose a random non-mismatch base
+                  k = (uint8_t)(drand48() * k); // get the ith base
+                  for(j=0;j<4 && 0 <= k;j++) {
+                      if(!(c & (0x1 << j))) {
+                          c = j;
+                          k--;
+                      }
+                  }
+              }
+              else {
+                  c = lrand48() & 0x3; // random base
+              }
+          }
+          if(3 < c) {
+              tmap_error("bug encountered", Exit, OutOfRange);
           }
           if(buffer_length == (TMAP_REFSEQ_BUFFER_SIZE << 2)) { // 2-bit
               if(tmap_refseq_seq_memory(buffer_length) != tmap_file_fwrite(buffer, sizeof(uint8_t), tmap_refseq_seq_memory(buffer_length), fp_pac)) {
@@ -679,7 +706,7 @@ tmap_refseq_pac2fasta_main(int argc, char *argv[])
           if(0 == (j % TMAP_REFSEQ_FASTA_LINE_LENGTH)) {
               tmap_file_fprintf(tmap_file_stdout, "\n");
           }
-          tmap_file_fprintf(tmap_file_stdout, "%c", "ACGTN"[(int)tmap_refseq_seq_i(refseq, j)]);
+          tmap_file_fprintf(tmap_file_stdout, "%c", "ACGTN"[(int)tmap_refseq_seq_i(refseq, j + refseq->annos[i].offset)]);
       }
       tmap_file_fprintf(tmap_file_stdout, "\n");
   }
