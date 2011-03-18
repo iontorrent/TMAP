@@ -353,15 +353,22 @@ tmap_map2_aux_extend_left(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
           p->G = TMAP_MAP2_MINUS_INF; 
           continue;
       }
-      if(lt > p->k) lt = p->k;
+      if(p->k < lt) lt = p->k; // so we do not go off the beginning of refseq
       if(is_rev) {
-          for(k = p->k - 1, j = 0; 0 <= k && j < lt; --k) 
-            target[j++] = tmap_refseq_seq_i(refseq, refseq->len-k-1);
-      } else {
-          for(k = p->k - 1, j = 0; 0 <= k && j < lt; --k) 
-            target[j++] = tmap_refseq_seq_i(refseq, k);
+          k = refseq->len - p->k + 1;
+          lt = tmap_refseq_subseq(refseq, k, lt, target);
       }
-      lt = j;
+      else {
+          k = p->k;
+          if(0 < lt) k = (k < lt) ? 1 : (k - lt + 1);
+          lt = tmap_refseq_subseq(refseq, k, lt, target);
+          // reverse it
+          for(j=0;j<lt>>1;j++) {
+              k = target[j]; 
+              target[j] = target[lt-j-1];
+              target[lt-j-1] = k;
+          }
+      }
 
       /*
       fprintf(stderr, "\nIn %s is_rev=%d strand=%d to_fit=%d p->beg=%d query_length=%d\n", 
@@ -441,13 +448,28 @@ tmap_map2_aux_extend_right(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
       if(p->l) continue;
       if(query_length == p->end) continue; // no more base to extend
       if(is_rev) {
-          for(k = p->k, j = 0; k < p->k + lt && k < refseq->len; ++k)
-            target[j++] = tmap_refseq_seq_i(refseq, refseq->len-k-1);
-      } else {
-          for(k = p->k, j = 0; k < p->k + lt && k < refseq->len; ++k)
-            target[j++] = tmap_refseq_seq_i(refseq, k);
+          k = refseq->len - p->k; // one-based
+          if(0 < lt) { 
+              if(k < lt) {
+                  lt = k;
+                  k = 1;
+              }
+              else {
+                  k = k - lt + 1;
+              }
+          }
+          lt = tmap_refseq_subseq(refseq, k, lt, target);
+          // reverse it
+          for(j=0;j<lt>>1;j++) {
+              k = target[j]; 
+              target[j] = target[lt-j-1];
+              target[lt-j-1] = k;
+          }
       }
-      lt = j;
+      else {
+          k = p->k + 1; // one-based
+          lt = tmap_refseq_subseq(refseq, k, lt, target);
+      }
 
       /*
       fprintf(stderr, "\nIn %s is_rev=%d strand=%d to_fit=%d p->beg=%d query_length=%d\n", 
@@ -460,8 +482,7 @@ tmap_map2_aux_extend_right(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
           fputc("ACGTN"[target[j]], stderr);
       }
       fputc('\n', stderr);
-              */
-
+      */
       if(0 == to_fit) {
           score = tmap_sw_extend_core(target, lt, query + p->beg, query_length - p->beg, &par, &path, NULL, 1, _mem);
       }
@@ -505,7 +526,7 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
       tmap_map2_hit_t *p = b->hits + i;
       tmap_map2_hit_t *q = b->hits + n;
       uint8_t *query;
-      uint32_t k, seqid, coor;
+      uint32_t seqid, coor;
       int32_t path_len, beg, end, added;
       int8_t strand;
 
@@ -548,8 +569,8 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
       }
 
       query = queries[strand] + beg;
-      for(k = p->k; k < p->k + p->len; ++k) { // in principle, no out-of-boundary here
-          target[k - p->k] = tmap_refseq_seq_i(refseq, k-1);
+      if(p->len != tmap_refseq_subseq(refseq, p->k, p->len, target)) {
+          tmap_error("bug encountered", Exit, OutOfRange);
       }
 
       added = tmap_map_util_sw(&tmp_sam,

@@ -1383,7 +1383,7 @@ tmap_map_util_fsw(tmap_sff_t *sff,
   // go through each hit
   for(i=0;i<sams->n;i++) {
       tmap_map_sam_t *s = &sams->sams[i];
-      uint32_t ref_start, ref_end, pacpos;
+      uint32_t ref_start, ref_end;
 
       // get flow sequence if necessary
       if(NULL == fseq[s->strand]) {
@@ -1440,11 +1440,7 @@ tmap_map_util_fsw(tmap_sff_t *sff,
           tmap_roundup32(target_mem);
           target = tmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
       }
-      for(pacpos=ref_start;pacpos<=ref_end;pacpos++) {
-          // add contig offset and make zero-based
-          target[pacpos-ref_start] =
-            tmap_refseq_seq_i(refseq, pacpos + refseq->annos[s->seqid].offset-1);
-      }
+      target_len = tmap_refseq_subseq(refseq, ref_start + refseq->annos[s->seqid].offset, target_len, target);
 
       // add to the band width
       param.band_width += 2 * bw;
@@ -1453,7 +1449,7 @@ tmap_map_util_fsw(tmap_sff_t *sff,
       while(path_mem <= target_len + fseq[s->strand]->num_flows) { // lengthen the path
           path_mem = target_len + fseq[s->strand]->num_flows + 1;
           tmap_roundup32(path_mem);
-          target = tmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
+          path = tmap_realloc(path, sizeof(tmap_fsw_path_t)*path_mem, "path");
       }
 
       // re-align

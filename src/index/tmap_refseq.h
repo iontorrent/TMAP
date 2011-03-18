@@ -151,6 +151,17 @@ inline uint32_t
 tmap_refseq_pac2real(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos);
 
 /*! 
+  Retrieves a subsequence of the reference in 2-bit format
+  @param  refseq  pointer to the structure in which the data is stored
+  @param  pacpos  the packed FASTA position (one-based)
+  @param  length  the subsequence length retrieve
+  @param  target  the target in which to store the data (must be allocated with enough memory)
+  @return         the length retrieved
+  */
+inline int32_t
+tmap_refseq_subseq(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t length, uint8_t *target);
+
+/*! 
   main-like function for 'tmap fasta2pac'
   @param  argc  the number of arguments
   @param  argv  the argument list

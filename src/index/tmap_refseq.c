@@ -550,6 +550,26 @@ tmap_refseq_pac2real(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_
   return (*pos);
 }
 
+inline int32_t
+tmap_refseq_subseq(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t length, uint8_t *target)
+{
+  uint32_t k, l, pacpos_upper;
+  if(0 == length) {
+      return 0;
+  }
+  else if(pacpos + length - 1 < refseq->len) {
+      pacpos_upper = pacpos + length - 1;
+  }
+  else {
+      pacpos_upper = refseq->len;
+  }
+  for(k=pacpos,l=0;k<=pacpos_upper;k++,l++) {
+      // k-1 since pacpos is one-based
+      target[l] = tmap_refseq_seq_i(refseq, k-1);
+  }
+  return l;
+}
+
 int
 tmap_refseq_fasta2pac_main(int argc, char *argv[])
 {

@@ -417,10 +417,8 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
               tmap_roundup32(target_mem);
               target = tmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
           }
-          for(pacpos=ref_start;pacpos<=ref_end;pacpos++) {
-
-              // add contig offset and make zero based
-              target[pacpos-ref_start] = tmap_refseq_seq_i(refseq, pacpos + refseq->annos[hits[i][end].seqid].offset-1);
+          if(target_len != tmap_refseq_subseq(refseq, ref_start + refseq->annos[hits[i][end].seqid].offset, target_len, target)) {
+              tmap_error("bug encountered", Exit, OutOfRange);
           }
 
           // get the band width
