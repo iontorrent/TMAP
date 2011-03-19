@@ -232,9 +232,6 @@ A hash into this index accelerates this lookups of DNA sequences in this index.
 In fact, a second additional index of the reference genome is created that indexes the reverse (but not complimented) reference genome.
 This second index further speeds up the search time.
 
-Note that that ambiguous IUPAC codes will be randomly converted to a DNA base that does not match any of the bases represented by the IUPAC code.
-Furthermore, any non-IUPAC character will be treated as an N.
-
 See \autoref{sec:commonoptions} for common options that are in use in this command.
 
 \subsection{Usage}
@@ -260,6 +257,12 @@ This must be one, or a multiple of two.
 Specifies the BWT construction algorithm (\TT{bwtsw} or \TT{is}).
 The \TT{bwtsw} algorithm is for genomes larger than or equal to $10$Mb, and the \TT{is} algorithm is for genomes smaller than $10$Mb.
 This will be auto-recognized during index creation if this option is omitted.
+
+\subsection{IUPAC Ambiguity Codes}
+Note that that ambiguous IUPAC codes will be randomly converted to a DNA base that does not match any of the bases represented by the IUPAC code to ensure minimum reference bias.
+All Ns in the reference will be converted to As.
+Furthermore, any non-IUPAC character will be treated as an N.
+The ambiguity codes will only be re-considered when calculating the NM and MD SAM record optional tags.
 
 \section{tmap map1}
 \label{sec:map1}
@@ -447,6 +450,7 @@ Specifies to load the forward suffix array.
 \subsubsection{\TT{-S}}
 Specifies to load the reverse suffix array.
 
+
 \chapter{File Formats}
 
 \section{SAM Alignment Format}
@@ -473,11 +477,25 @@ The ID tag should always be \TT{tmap}.
 
 \subsection{SAM Record Optional Tags}
 
-\subsubsection{AS}
-This stores the alignment score.
+\subsubsection{RG}
+This stores the read group identifier corresponding to the RG SAM header field.
+
+\subsubsection{PG}
+This stores the program group identifier corresponding to the PG SAM header field.
+
+\subsubsection{MD}
+This stores the MD array.
+The goal of this array is to follow the conventions in SAMtools (\cite{SAM-format}).
+Any IUPAC reference code will be present in this field.
 
 \subsubsection{NM}
 This stores the edit distance from the reference sequence.
+Matches to any non-DNA and non-N IUPAC ambiguity code (B,D, H, K, M, R, S, V, W, Y) will be counted as a mismatch.
+Since all Ns are mutated to As in the packed reference, A-N mismatches will not be counted.
+
+\subsubsection{AS}
+This stores the alignment score.
+If the alignment contains an N in the reference but an A in the read, this score will be slightly reduced.
 
 \subsubsection{XM}
 This stores the number of mismatches in the mapping, or in the secondary seed if used.

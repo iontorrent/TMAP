@@ -253,4 +253,15 @@ tmap_compliment(char *seq, int32_t len);
 int32_t
 tmap_chomp(char *str);
 
+/*!
+  checks if there is any overlap between the two regions [low1,high1] and [low2,high2]
+  @param  low1   the lower interval start
+  @param  high1  the lower interval end
+  @param  low2   the higher interval start
+  @param  high2  the higher interval end
+  @return        -1 if high1 < low2, 1 if high2 < low1, 0 otherwise
+ */
+inline int32_t
+tmap_interval_overlap(uint32_t low1, uint32_t high1, uint32_t low2, uint32_t high2);
+
 #endif

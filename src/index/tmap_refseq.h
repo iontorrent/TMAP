@@ -57,7 +57,8 @@ typedef struct {
     tmap_string_t *name;  /*!< the name of the contig */
     uint64_t len;  /*!< the length of the current contig  */
     uint64_t offset;  /*!< the offset from the start of the reference (zero-based) */
-    uint32_t *amb_positions;  /*!< positions of ambiguous bases (one-based) */
+    uint32_t *amb_positions_start;  /*!< start positions of ambiguous bases (one-based) */
+    uint32_t *amb_positions_end;  /*!< end positions of ambiguous bases (one-based) */
     uint8_t *amb_bases;  /*!< the ambiguous bases (IUPAC code) */
     uint32_t num_amb;  /*!< the number of ambiguous bases */
 } tmap_anno_t;

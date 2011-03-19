@@ -96,7 +96,8 @@ tmap_refseq_write_annos(tmap_file_t *fp, tmap_anno_t *anno)
       tmap_error(NULL, Exit, WriteFileError);
   }
   if(0 < anno->num_amb) {
-      if(anno->num_amb != tmap_file_fwrite(anno->amb_positions, sizeof(uint32_t), anno->num_amb, fp)
+      if(anno->num_amb != tmap_file_fwrite(anno->amb_positions_start, sizeof(uint32_t), anno->num_amb, fp)
+         || anno->num_amb != tmap_file_fwrite(anno->amb_positions_end, sizeof(uint32_t), anno->num_amb, fp)
          || anno->num_amb != tmap_file_fwrite(anno->amb_bases, sizeof(uint8_t), anno->num_amb, fp)) {
           tmap_error(NULL, Exit, WriteFileError);
       }
@@ -156,16 +157,20 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
 
   // read in sequences
   while(0 <= (l = tmap_seq_io_read(seqio, seq))) {
+      tmap_anno_t *anno = NULL;
       tmap_progress_print2("packing contig [%s:1-%d]", seq->data.fq->name->s, l);
 
       refseq->num_annos++;
       refseq->annos = tmap_realloc(refseq->annos, sizeof(tmap_anno_t)*refseq->num_annos, "refseq->annos");
-      refseq->annos[refseq->num_annos-1].name = tmap_string_clone(seq->data.fq->name); 
-      refseq->annos[refseq->num_annos-1].len = l;
-      refseq->annos[refseq->num_annos-1].offset = (1 == refseq->num_annos) ? 0 : refseq->annos[refseq->num_annos-2].offset + refseq->annos[refseq->num_annos-2].len;
-      refseq->annos[refseq->num_annos-1].amb_positions = NULL;
-      refseq->annos[refseq->num_annos-1].amb_bases = NULL;
-      refseq->annos[refseq->num_annos-1].num_amb = 0;
+      anno = &refseq->annos[refseq->num_annos-1];
+      
+      anno->name = tmap_string_clone(seq->data.fq->name); 
+      anno->len = l;
+      anno->offset = (1 == refseq->num_annos) ? 0 : refseq->annos[refseq->num_annos-2].offset + refseq->annos[refseq->num_annos-2].len;
+      anno->amb_positions_start = NULL;
+      anno->amb_positions_end = NULL;
+      anno->amb_bases = NULL;
+      anno->num_amb = 0;
       amb_bases_mem = 0;
 
       // fill the buffer
@@ -183,15 +188,26 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
               num_IUPAC_found++;
 
               // store IUPAC bases
-              refseq->annos[refseq->num_annos-1].num_amb++;
-              if(amb_bases_mem < refseq->annos[refseq->num_annos-1].num_amb) { // allocate more memory if necessary
-                  amb_bases_mem = refseq->annos[refseq->num_annos-1].num_amb;
+              if(amb_bases_mem <= anno->num_amb) { // allocate more memory if necessary
+                  amb_bases_mem = anno->num_amb + 1;
                   tmap_roundup32(amb_bases_mem);
-                  refseq->annos[refseq->num_annos-1].amb_positions = tmap_realloc(refseq->annos[refseq->num_annos-1].amb_positions, sizeof(uint32_t) * amb_bases_mem, "refseq->annos[refseq->num_annos-1].amb_positions");
-                  refseq->annos[refseq->num_annos-1].amb_bases = tmap_realloc(refseq->annos[refseq->num_annos-1].amb_bases, sizeof(uint8_t) * amb_bases_mem, "refseq->annos[refseq->num_annos-1].amb_bases");
+                  anno->amb_positions_start = tmap_realloc(anno->amb_positions_start, sizeof(uint32_t) * amb_bases_mem, "anno->amb_positions_start");
+                  anno->amb_positions_end = tmap_realloc(anno->amb_positions_end, sizeof(uint32_t) * amb_bases_mem, "anno->amb_positions_end");
+                  anno->amb_bases = tmap_realloc(anno->amb_bases, sizeof(uint8_t) * amb_bases_mem, "anno->amb_bases");
               }
-              refseq->annos[refseq->num_annos-1].amb_positions[refseq->annos[refseq->num_annos-1].num_amb-1] = i+1; // one-based
-              refseq->annos[refseq->num_annos-1].amb_bases[refseq->annos[refseq->num_annos-1].num_amb-1] = tmap_iupac_char_to_int[(int)seq->data.fq->seq->s[i]];
+              // encode stretches of the same base
+              if(0 < anno->num_amb
+                 && anno->amb_positions_end[anno->num_amb-1] == i
+                 && anno->amb_bases[anno->num_amb-1] == tmap_iupac_char_to_int[(int)seq->data.fq->seq->s[i]]) {
+                 anno->amb_positions_end[anno->num_amb-1]++; // expand the range 
+              }
+              else {
+                  // new ambiguous base and range
+                  anno->num_amb++;
+                  anno->amb_positions_start[anno->num_amb-1] = i+1; // one-based
+                  anno->amb_positions_end[anno->num_amb-1] = i+1; // one-based
+                  anno->amb_bases[anno->num_amb-1] = tmap_iupac_char_to_int[(int)seq->data.fq->seq->s[i]];
+              }
               
               // randomize 
               if(c < 15) { // not an N
@@ -214,7 +230,7 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
                   c = bases[k];
               }
               else {
-                  c = lrand48() & 0x3; // random base
+                  c = 0; // convert an N to an A.
               }
           }
           if(3 < c) {
@@ -232,10 +248,11 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
       }
       refseq->len += l;
       // re-size the amibiguous bases
-      if(refseq->annos[refseq->num_annos-1].num_amb < amb_bases_mem) {
-          amb_bases_mem = refseq->annos[refseq->num_annos-1].num_amb;
-          refseq->annos[refseq->num_annos-1].amb_positions = tmap_realloc(refseq->annos[refseq->num_annos-1].amb_positions, sizeof(uint32_t) * amb_bases_mem, "refseq->annos[refseq->num_annos-1].amb_positions");
-          refseq->annos[refseq->num_annos-1].amb_bases = tmap_realloc(refseq->annos[refseq->num_annos-1].amb_bases, sizeof(uint8_t) * amb_bases_mem, "refseq->annos[refseq->num_annos-1].amb_bases");
+      if(anno->num_amb < amb_bases_mem) {
+          amb_bases_mem = anno->num_amb;
+          anno->amb_positions_start = tmap_realloc(anno->amb_positions_start, sizeof(uint32_t) * amb_bases_mem, "anno->amb_positions_start");
+          anno->amb_positions_end = tmap_realloc(anno->amb_positions_end, sizeof(uint32_t) * amb_bases_mem, "anno->amb_positions_end");
+          anno->amb_bases = tmap_realloc(anno->amb_bases, sizeof(uint8_t) * amb_bases_mem, "anno->amb_bases");
       }
   }
   // write out the buffer
@@ -416,16 +433,18 @@ tmap_refseq_read_annos(tmap_file_t *fp, tmap_anno_t *anno)
       tmap_error(NULL, Exit, ReadFileError);
   }
   if(0 < anno->num_amb) {
-      anno->amb_positions = tmap_malloc(sizeof(uint32_t) * anno->num_amb, "anno->amb_positions");
+      anno->amb_positions_start = tmap_malloc(sizeof(uint32_t) * anno->num_amb, "anno->amb_positions_start");
+      anno->amb_positions_end = tmap_malloc(sizeof(uint32_t) * anno->num_amb, "anno->amb_positions_end");
       anno->amb_bases = tmap_malloc(sizeof(uint8_t) * anno->num_amb, "anno->amb_bases");
-      fprintf(stderr, "anno->num_amb=%d\n", anno->num_amb);
-      if(anno->num_amb != tmap_file_fread(anno->amb_positions, sizeof(uint32_t), anno->num_amb, fp)
+      if(anno->num_amb != tmap_file_fread(anno->amb_positions_start, sizeof(uint32_t), anno->num_amb, fp)
+         || anno->num_amb != tmap_file_fread(anno->amb_positions_end, sizeof(uint32_t), anno->num_amb, fp)
          || anno->num_amb != tmap_file_fread(anno->amb_bases, sizeof(uint8_t), anno->num_amb, fp)) {
           tmap_error(NULL, Exit, WriteFileError);
       }
   }
   else {
-      anno->amb_positions = NULL;
+      anno->amb_positions_start = NULL;
+      anno->amb_positions_end = NULL;
       anno->amb_bases = NULL;
   }
   // set name length
@@ -499,7 +518,8 @@ tmap_refseq_shm_num_bytes(tmap_refseq_t *refseq)
       n += sizeof(size_t); // annos[i].name->l
       n += sizeof(uint32_t); // annos[i].num_amb
       n += sizeof(char)*(refseq->annos[i].name->l+1); // annos[i].name->s
-      n += sizeof(uint32_t)*refseq->annos[i].num_amb; // amb_positions
+      n += sizeof(uint32_t)*refseq->annos[i].num_amb; // amb_positions_start
+      n += sizeof(uint32_t)*refseq->annos[i].num_amb; // amb_positions_end
       n += sizeof(uint8_t)*refseq->annos[i].num_amb; // amb_bases
   }
 
@@ -566,7 +586,9 @@ tmap_refseq_shm_pack(tmap_refseq_t *refseq, uint8_t *buf)
       memcpy(buf, refseq->annos[i].name->s, sizeof(char)*(refseq->annos[i].name->l+1));
       buf += sizeof(char)*(refseq->annos[i].name->l+1);
       if(0 < refseq->annos[i].num_amb) {
-          memcpy(buf, refseq->annos[i].amb_positions, sizeof(uint32_t)*refseq->annos[i].num_amb);
+          memcpy(buf, refseq->annos[i].amb_positions_start, sizeof(uint32_t)*refseq->annos[i].num_amb);
+          buf += sizeof(uint32_t)*refseq->annos[i].num_amb;
+          memcpy(buf, refseq->annos[i].amb_positions_end, sizeof(uint32_t)*refseq->annos[i].num_amb);
           buf += sizeof(uint32_t)*refseq->annos[i].num_amb;
           memcpy(buf, refseq->annos[i].amb_bases, sizeof(uint8_t)*refseq->annos[i].num_amb);
           buf += sizeof(uint8_t)*refseq->annos[i].num_amb;
@@ -621,13 +643,16 @@ tmap_refseq_shm_unpack(uint8_t *buf)
       refseq->annos[i].name->s = (char*)buf;
       buf += sizeof(char)*refseq->annos[i].name->l+1;
       if(0 < refseq->annos[i].num_amb) {
-          refseq->annos[i].amb_positions = (uint32_t*)buf;
+          refseq->annos[i].amb_positions_start = (uint32_t*)buf;
+          buf += sizeof(uint32_t)*refseq->annos[i].num_amb;
+          refseq->annos[i].amb_positions_end = (uint32_t*)buf;
           buf += sizeof(uint32_t)*refseq->annos[i].num_amb;
           refseq->annos[i].amb_bases = (uint8_t*)buf;
           buf += sizeof(uint8_t)*refseq->annos[i].num_amb;
       }
       else {
-          refseq->annos[i].amb_positions = NULL;
+          refseq->annos[i].amb_positions_start = NULL;
+          refseq->annos[i].amb_positions_end = NULL;
           refseq->annos[i].amb_bases = NULL;
       }
   }
@@ -654,7 +679,8 @@ tmap_refseq_destroy(tmap_refseq_t *refseq)
       tmap_string_destroy(refseq->package_version);
       for(i=0;i<refseq->num_annos;i++) {
           tmap_string_destroy(refseq->annos[i].name);
-          free(refseq->annos[i].amb_positions);
+          free(refseq->annos[i].amb_positions_start);
+          free(refseq->annos[i].amb_positions_end);
           free(refseq->annos[i].amb_bases);
       }
       free(refseq->annos);
@@ -750,12 +776,16 @@ inline int32_t
 tmap_refseq_amb_bases(const tmap_refseq_t *refseq, uint32_t seqid, uint32_t start, uint32_t end)
 {
   int64_t low, high, mid;
-  if(0 == refseq->annos[seqid-1].num_amb) {
+  int32_t c;
+  tmap_anno_t *anno;
+
+  anno = &refseq->annos[seqid-1];
+
+  if(0 == anno->num_amb) {
       return 0;
   }
-  else if(1 == refseq->annos[seqid-1].num_amb) {
-      if(start <= refseq->annos[seqid-1].amb_positions[0] &&
-         refseq->annos[seqid-1].amb_positions[0] <= end) {
+  else if(1 == anno->num_amb) {
+      if(0 == tmap_interval_overlap(start, end, anno->amb_positions_start[0], anno->amb_positions_end[0])) {
           return 1;
       }
       else {
@@ -764,25 +794,21 @@ tmap_refseq_amb_bases(const tmap_refseq_t *refseq, uint32_t seqid, uint32_t star
   }
 
   low = 0; 
-  high = refseq->annos[seqid-1].num_amb - 1;
+  high = anno->num_amb - 1;
   while(low <= high) {
       mid = (low + high) / 2;
-      if(refseq->annos[seqid-1].amb_positions[mid] == start) {
+      c = tmap_interval_overlap(start, end, anno->amb_positions_start[mid], anno->amb_positions_end[mid]);
+      if(0 == c) {
           return mid+1;
       }
-      else if(refseq->annos[seqid-1].amb_positions[mid] < start) {
-          if(end <= refseq->annos[seqid-1].amb_positions[mid]) {
-              return mid+1;
-          }
+      else if(0 < c) {
           low = mid + 1;
       }
-      else if(start < refseq->annos[seqid-1].amb_positions[mid]) {
-          if(refseq->annos[seqid-1].amb_positions[mid] <= end) {
-              return mid+1;
-          }
+      else {
           high = mid - 1;
       }
   }
+
   return 0;
 }
 
@@ -864,20 +890,21 @@ tmap_refseq_refinfo_main(int argc, char *argv[])
 int
 tmap_refseq_pac2fasta_main(int argc, char *argv[])
 {
-  int c, help=0;
-  uint32_t i, j;
+  int c, help=0, amb=0;
+  uint32_t i, j, k;
   char *fn_fasta = NULL;
   tmap_refseq_t *refseq = NULL;
 
-  while((c = getopt(argc, argv, "vh")) >= 0) {
+  while((c = getopt(argc, argv, "avh")) >= 0) {
       switch(c) {
+        case 'a': amb = 1; break;
         case 'v': tmap_progress_set_verbosity(1); break;
         case 'h': help = 1; break;
         default: return 1;
       }
   }
   if(1 != argc - optind || 1 == help) {
-      tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [-vh] <in.fasta>\n", PACKAGE, argv[0]);
+      tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [-avh] <in.fasta>\n", PACKAGE, argv[0]);
       return 1;
   }
 
@@ -891,11 +918,27 @@ tmap_refseq_pac2fasta_main(int argc, char *argv[])
 
   for(i=0;i<refseq->num_annos;i++) {
       tmap_file_fprintf(tmap_file_stdout, ">%s", refseq->annos[i].name->s); // new line handled later
-      for(j=0;j<refseq->annos[i].len;j++) {
+      for(j=k=0;j<refseq->annos[i].len;j++) {
           if(0 == (j % TMAP_REFSEQ_FASTA_LINE_LENGTH)) {
               tmap_file_fprintf(tmap_file_stdout, "\n");
           }
-          tmap_file_fprintf(tmap_file_stdout, "%c", "ACGTN"[(int)tmap_refseq_seq_i(refseq, j + refseq->annos[i].offset)]);
+          if(1 == amb && 0 < refseq->annos[i].num_amb) {
+              // move the next ambiguous region
+              while(k < refseq->annos[i].num_amb && refseq->annos[i].amb_positions_end[k] < j+1) {
+                  k++;
+              }
+              // check for the ambiguous region
+              if(k < refseq->annos[i].num_amb
+                 && 0 == tmap_interval_overlap(j+1, j+1, refseq->annos[i].amb_positions_start[k], refseq->annos[i].amb_positions_end[k])) {
+                  tmap_file_fprintf(tmap_file_stdout, "%c", tmap_iupac_int_to_char[refseq->annos[i].amb_bases[k]]);
+              }
+              else {
+                  tmap_file_fprintf(tmap_file_stdout, "%c", "ACGTN"[(int)tmap_refseq_seq_i(refseq, j + refseq->annos[i].offset)]);
+              }
+          }
+          else {
+              tmap_file_fprintf(tmap_file_stdout, "%c", "ACGTN"[(int)tmap_refseq_seq_i(refseq, j + refseq->annos[i].offset)]);
+          }
       }
       tmap_file_fprintf(tmap_file_stdout, "\n");
   }
