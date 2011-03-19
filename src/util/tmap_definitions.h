@@ -12,7 +12,13 @@
 /*! d TMAP_VERSION_ID
   the magic id for tmap
   */
-#define TMAP_VERSION_ID ('f' + 'm' + 'a' + 'p')
+#define TMAP_VERSION_ID ('t' + 'm' + 'a' + 'p')
+
+/*! d TMAP_VERSION_ID
+  the earliest version number (inclusive) of the index 
+  supported by this version of TMAP
+  */
+#define TMAP_REFSEQ_MIN_VERSION "0.0.17"
 
 /* 
  * File extensions

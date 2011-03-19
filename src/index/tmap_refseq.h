@@ -57,12 +57,16 @@ typedef struct {
     tmap_string_t *name;  /*!< the name of the contig */
     uint64_t len;  /*!< the length of the current contig  */
     uint64_t offset;  /*!< the offset from the start of the reference (zero-based) */
+    uint32_t *amb_positions;  /*!< positions of ambiguous bases (one-based) */
+    uint8_t *amb_bases;  /*!< the ambiguous bases (IUPAC code) */
+    uint32_t num_amb;  /*!< the number of ambiguous bases */
 } tmap_anno_t;
 
 /*! 
   */
 typedef struct {
     uint64_t version_id;  /*!< the version id of this file */
+    tmap_string_t *package_version;  /*!< the package version */
     uint32_t seed;  /*!< the random base generator seed */
     uint8_t *seq;  /*!< the packed nucleotide sequence, with contigs concatenated */
     tmap_anno_t *annos;  /*!< the annotations about the contigs */

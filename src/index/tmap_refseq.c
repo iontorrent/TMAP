@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
+#include <config.h>
 #include <unistd.h>
 
 #include "../util/tmap_error.h"
@@ -15,10 +16,53 @@
 #include "../io/tmap_seq_io.h"
 #include "tmap_refseq.h"
 
+static inline int32_t
+tmap_refseq_supported(tmap_refseq_t *refseq)
+{
+  int32_t i, j, k;
+  int32_t refseq_n, tmap_n;
+  char *refseq_v = refseq->package_version->s;
+  char *tmap_v = TMAP_REFSEQ_MIN_VERSION;
+
+  // sanity check on version names
+  for(i=j=0;i<strlen(refseq_v);i++) {
+      if('.' == refseq_v[i]) j++;
+  }
+  if(2 != j) {
+      tmap_error("did not find three version numbers", Exit, OutOfRange);
+  }
+  for(i=j=0;i<strlen(tmap_v);i++) {
+      if('.' == tmap_v[i]) j++;
+  }
+  if(2 != j) {
+      tmap_error("did not find three version numbers", Exit, OutOfRange);
+  }
+
+  for(i=j=k=0;i<3;i++) { // three version numbers
+      refseq_n = atoi(refseq_v + j);
+      tmap_n = atoi(tmap_v + k);
+      if(refseq_n < tmap_n) {
+          return 0;
+      }
+      if(i < 2) {
+          while(refseq_v[j] != '.') {
+              j++;
+          }
+          while(tmap_v[k] != '.') {
+              k++;
+          }
+      }
+  } 
+
+  return 1;
+}
+
 static inline void 
 tmap_refseq_write_header(tmap_file_t *fp, tmap_refseq_t *refseq)
 {
   if(1 != tmap_file_fwrite(&refseq->version_id, sizeof(uint64_t), 1, fp) 
+     || 1 != tmap_file_fwrite(&refseq->package_version->l, sizeof(size_t), 1, fp)
+     || refseq->package_version->l+1 != tmap_file_fwrite(refseq->package_version->s, sizeof(char), refseq->package_version->l+1, fp)
      || 1 != tmap_file_fwrite(&refseq->seed, sizeof(uint32_t), 1, fp) 
      || 1 != tmap_file_fwrite(&refseq->num_annos, sizeof(uint32_t), 1, fp)
      || 1 != tmap_file_fwrite(&refseq->len, sizeof(uint64_t), 1, fp)) {
@@ -31,6 +75,7 @@ tmap_refseq_print_header(tmap_file_t *fp, tmap_refseq_t *refseq)
 {
   uint32_t i;
   tmap_file_fprintf(fp, "version_id:\t%llu\n", (unsigned long long int)refseq->version_id);
+  tmap_file_fprintf(fp, "package version:\t%s\n", refseq->package_version->s);
   tmap_file_fprintf(fp, "seed:\t%u\n", refseq->seed);
   for(i=0;i<refseq->num_annos;i++) {
       tmap_file_fprintf(fp, "contig-%d:\t%s\t%u\n", i+1, refseq->annos[i].name->s, refseq->annos[i].len);
@@ -46,8 +91,15 @@ tmap_refseq_write_annos(tmap_file_t *fp, tmap_anno_t *anno)
   if(1 != tmap_file_fwrite(&len, sizeof(uint32_t), 1, fp) 
      || len != tmap_file_fwrite(anno->name->s, sizeof(char), len, fp)
      || 1 != tmap_file_fwrite(&anno->len, sizeof(uint64_t), 1, fp)
-     || 1 != tmap_file_fwrite(&anno->offset, sizeof(uint64_t), 1, fp)) {
+     || 1 != tmap_file_fwrite(&anno->offset, sizeof(uint64_t), 1, fp)
+     || 1 != tmap_file_fwrite(&anno->num_amb, sizeof(uint32_t), 1, fp)) {
       tmap_error(NULL, Exit, WriteFileError);
+  }
+  if(0 < anno->num_amb) {
+      if(1 != tmap_file_fwrite(anno->amb_positions, sizeof(uint32_t), anno->num_amb, fp)
+         || 1 != tmap_file_fwrite(anno->amb_bases, sizeof(uint8_t), anno->num_amb, fp)) {
+          tmap_error(NULL, Exit, WriteFileError);
+      }
   }
 }
 
@@ -55,6 +107,7 @@ static inline void
 tmap_refseq_write_anno(tmap_file_t *fp, tmap_refseq_t *refseq)
 {
   uint32_t i;
+
   // write annotation file
   tmap_refseq_write_header(fp, refseq); // write the header
   for(i=0;i<refseq->num_annos;i++) { // write the annotations
@@ -72,7 +125,7 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   char *fn_pac = NULL, *fn_anno = NULL;
   uint8_t buffer[TMAP_REFSEQ_BUFFER_SIZE];
   int32_t i, j, l, buffer_length;
-  uint32_t num_IUPAC_found= 0;
+  uint32_t num_IUPAC_found= 0, amb_bases_mem = 0;
   uint8_t x = 0;
   uint64_t ref_len;
 
@@ -81,6 +134,7 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   refseq = tmap_calloc(1, sizeof(tmap_refseq_t), "refseq");
 
   refseq->version_id = TMAP_VERSION_ID; 
+  refseq->package_version = tmap_string_clone2(PACKAGE_VERSION);
   refseq->seed = TMAP_REFSEQ_SEED;
   srand48(refseq->seed);
   refseq->seq = buffer; // IMPORTANT: must nullify later
@@ -109,36 +163,55 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
       refseq->annos[refseq->num_annos-1].name = tmap_string_clone(seq->data.fq->name); 
       refseq->annos[refseq->num_annos-1].len = l;
       refseq->annos[refseq->num_annos-1].offset = (1 == refseq->num_annos) ? 0 : refseq->annos[refseq->num_annos-2].offset + refseq->annos[refseq->num_annos-2].len;
+      refseq->annos[refseq->num_annos-1].amb_positions = NULL;
+      refseq->annos[refseq->num_annos-1].amb_bases = NULL;
+      refseq->annos[refseq->num_annos-1].num_amb = 0;
+      amb_bases_mem = 0;
 
       // fill the buffer
       for(i=0;i<l;i++) {
           uint8_t c = tmap_nt_char_to_int[(int)seq->data.fq->seq->s[i]];
           // handle IUPAC codes 
           if(4 <= c) {
-              if(0 == num_IUPAC_found) { // warn users about IUPAC codes
+              // change it to a mismatched base than the IUPAC code
+              c = tmap_iupac_char_to_int[(int)seq->data.fq->seq->s[i]];
+
+              // warn users about IUPAC codes
+              if(0 == num_IUPAC_found) { 
                   tmap_error("IUPAC codes were found and will be converted to random DNA bases", Warn, OutOfRange);
               }
               num_IUPAC_found++;
-              // change it to a mismatched base than the IUPAC code
-              c = tmap_iupac_char_to_int[(int)seq->data.fq->seq->s[i]];
-              // TODO: store this information for later
+
+              // store IUPAC bases
+              refseq->annos[refseq->num_annos-1].num_amb++;
+              if(amb_bases_mem < refseq->annos[refseq->num_annos-1].num_amb) { // allocate more memory if necessary
+                  amb_bases_mem = refseq->annos[refseq->num_annos-1].num_amb;
+                  tmap_roundup32(amb_bases_mem);
+                  refseq->annos[refseq->num_annos-1].amb_positions = tmap_realloc(refseq->annos[refseq->num_annos-1].amb_positions, sizeof(uint32_t) * amb_bases_mem, "refseq->annos[refseq->num_annos-1].amb_positions");
+                  refseq->annos[refseq->num_annos-1].amb_bases = tmap_realloc(refseq->annos[refseq->num_annos-1].amb_bases, sizeof(uint8_t) * amb_bases_mem, "refseq->annos[refseq->num_annos-1].amb_bases");
+              }
+              refseq->annos[refseq->num_annos-1].amb_positions[refseq->annos[refseq->num_annos-1].num_amb-1] = i+1; // one-based
+              refseq->annos[refseq->num_annos-1].amb_bases[refseq->annos[refseq->num_annos-1].num_amb-1] = c;
+              
+              // randomize 
               if(c < 15) { // not an N
-                  int32_t k;
+                  int32_t k, bases[4];
                   // how many bases does this not represent?
                   for(j=k=0;j<4;j++) {
-                      if(!(c & (0x1 << j))) k++;
-                  }
+                      if(!(c & (0x1 << j))) {
+                          bases[k] = j;
+                          k++;
+                      }
+                  } 
                   if(0 == k) {
                       tmap_error("bug encountered", Exit, OutOfRange);
                   }
                   // choose a random non-mismatch base
                   k = (uint8_t)(drand48() * k); // get the ith base
-                  for(j=0;j<4 && 0 <= k;j++) {
-                      if(!(c & (0x1 << j))) {
-                          c = j;
-                          k--;
-                      }
+                  if(c & (0x1 << bases[k])) {
+                      tmap_error("bug encountered", Exit, OutOfRange);
                   }
+                  c = bases[k];
               }
               else {
                   c = lrand48() & 0x3; // random base
@@ -158,6 +231,12 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
           buffer_length++;
       }
       refseq->len += l;
+      // re-size the amibiguous bases
+      if(refseq->annos[refseq->num_annos-1].num_amb < amb_bases_mem) {
+          amb_bases_mem = refseq->annos[refseq->num_annos-1].num_amb;
+          refseq->annos[refseq->num_annos-1].amb_positions = tmap_realloc(refseq->annos[refseq->num_annos-1].amb_positions, sizeof(uint32_t) * amb_bases_mem, "refseq->annos[refseq->num_annos-1].amb_positions");
+          refseq->annos[refseq->num_annos-1].amb_bases = tmap_realloc(refseq->annos[refseq->num_annos-1].amb_bases, sizeof(uint8_t) * amb_bases_mem, "refseq->annos[refseq->num_annos-1].amb_bases");
+      }
   }
   // write out the buffer
   if(tmap_refseq_seq_memory(buffer_length) != tmap_file_fwrite(buffer, sizeof(uint8_t), tmap_refseq_seq_memory(buffer_length), fp_pac)) {
@@ -293,23 +372,37 @@ tmap_refseq_write(tmap_refseq_t *refseq, const char *fn_fasta, uint32_t is_rev)
 static inline void 
 tmap_refseq_read_header(tmap_file_t *fp, tmap_refseq_t *refseq)
 {
+  size_t package_version_l;
   if(1 != tmap_file_fread(&refseq->version_id, sizeof(uint64_t), 1, fp) 
-     || 1 != tmap_file_fread(&refseq->seed, sizeof(uint32_t), 1, fp) 
+     || 1 != tmap_file_fread(&package_version_l, sizeof(size_t), 1, fp)) {
+      tmap_error(NULL, Exit, ReadFileError);
+  }
+  if(refseq->version_id != TMAP_VERSION_ID) {
+      tmap_error("version id did not match", Exit, ReadFileError);
+  }
+
+  refseq->package_version = tmap_string_init(package_version_l+1); // add one for the null terminator
+  refseq->package_version->l = package_version_l;
+  if(refseq->package_version->l+1 != tmap_file_fread(refseq->package_version->s, sizeof(char), refseq->package_version->l+1, fp)) {
+      tmap_error(NULL, Exit, ReadFileError);
+  }
+  if(0 == tmap_refseq_supported(refseq)) {
+      tmap_error("the reference index is not supported", Exit, ReadFileError);
+  }
+     
+  if(1 != tmap_file_fread(&refseq->seed, sizeof(uint32_t), 1, fp) 
      || 1 != tmap_file_fread(&refseq->num_annos, sizeof(uint32_t), 1, fp)
      || 1 != tmap_file_fread(&refseq->len, sizeof(uint64_t), 1, fp)) {
       tmap_error(NULL, Exit, ReadFileError);
   }
 
-  if(refseq->version_id != TMAP_VERSION_ID) {
-      tmap_error("version id did not match", Exit, ReadFileError);
-  }
 }
 
 static inline void
 tmap_refseq_read_annos(tmap_file_t *fp, tmap_anno_t *anno) 
 {
   uint32_t len = 0; // includes the null-terminator
-
+  
   if(1 != tmap_file_fread(&len, sizeof(uint32_t), 1, fp)) {
       tmap_error(NULL, Exit, ReadFileError);
   }
@@ -318,8 +411,21 @@ tmap_refseq_read_annos(tmap_file_t *fp, tmap_anno_t *anno)
 
   if(len != tmap_file_fread(anno->name->s, sizeof(char), len, fp)
      || 1 != tmap_file_fread(&anno->len, sizeof(uint64_t), 1, fp)
-     || 1 != tmap_file_fread(&anno->offset, sizeof(uint64_t), 1, fp)) {
+     || 1 != tmap_file_fread(&anno->offset, sizeof(uint64_t), 1, fp)
+     || 1 != tmap_file_fread(&anno->num_amb, sizeof(uint32_t), 1, fp)) {
       tmap_error(NULL, Exit, ReadFileError);
+  }
+  if(0 < anno->num_amb) {
+      anno->amb_positions = tmap_malloc(sizeof(uint32_t) * anno->num_amb, "anno->amb_positions");
+      anno->amb_bases = tmap_malloc(sizeof(uint32_t) * anno->num_amb, "anno->amb_bases");
+      if(1 != tmap_file_fread(anno->amb_positions, sizeof(uint32_t), anno->num_amb, fp)
+         || 1 != tmap_file_fread(anno->amb_bases, sizeof(uint8_t), anno->num_amb, fp)) {
+          tmap_error(NULL, Exit, WriteFileError);
+      }
+  }
+  else {
+      anno->amb_positions = NULL;
+      anno->amb_bases = NULL;
   }
   // set name length
   anno->name->l = len-1;
@@ -379,16 +485,21 @@ tmap_refseq_shm_num_bytes(tmap_refseq_t *refseq)
   size_t n = 0;
 
   n += sizeof(uint64_t); // version_id
+  n += sizeof(size_t); // package_version->l
   n += sizeof(uint32_t); // seed
   n += sizeof(uint32_t); // annos
   n += sizeof(uint64_t); // len
   n += sizeof(uint32_t); // is_rev
+  n += sizeof(char)*(refseq->package_version->l+1); // package_version->s
   n += sizeof(uint8_t)*tmap_refseq_seq_memory(refseq->len); // seq 
   for(i=0;i<refseq->num_annos;i++) {
       n += sizeof(uint64_t); // len
       n += sizeof(uint64_t); // offset
       n += sizeof(size_t); // annos[i].name->l
+      n += sizeof(uint32_t); // annos[i].num_amb
       n += sizeof(char)*(refseq->annos[i].name->l+1); // annos[i].name->s
+      n += sizeof(uint32_t)*refseq->annos[i].num_amb; // amb_positions
+      n += sizeof(uint8_t)*refseq->annos[i].num_amb; // amb_bases
   }
 
   return n;
@@ -432,12 +543,15 @@ tmap_refseq_shm_pack(tmap_refseq_t *refseq, uint8_t *buf)
   int32_t i;
 
   // fixed length data
-  memcpy(buf, &refseq->version_id, sizeof(uint64_t)) ; buf += sizeof(uint64_t);
-  memcpy(buf, &refseq->seed, sizeof(uint32_t)) ; buf += sizeof(uint32_t);
-  memcpy(buf, &refseq->num_annos, sizeof(uint32_t)) ; buf += sizeof(uint32_t);
-  memcpy(buf, &refseq->len, sizeof(uint64_t)) ; buf += sizeof(uint64_t);
-  memcpy(buf, &refseq->is_rev, sizeof(uint32_t)) ; buf += sizeof(uint32_t);
+  memcpy(buf, &refseq->version_id, sizeof(uint64_t)); buf += sizeof(uint64_t);
+  memcpy(buf, &refseq->package_version->l, sizeof(size_t)); buf += sizeof(size_t);
+  memcpy(buf, &refseq->seed, sizeof(uint32_t)); buf += sizeof(uint32_t);
+  memcpy(buf, &refseq->num_annos, sizeof(uint32_t)); buf += sizeof(uint32_t);
+  memcpy(buf, &refseq->len, sizeof(uint64_t)); buf += sizeof(uint64_t);
+  memcpy(buf, &refseq->is_rev, sizeof(uint32_t)); buf += sizeof(uint32_t);
   // variable length data
+  memcpy(buf, refseq->package_version->s, sizeof(char)*(refseq->package_version->l+1));
+  buf += sizeof(char)*(refseq->package_version->l+1); 
   memcpy(buf, refseq->seq, tmap_refseq_seq_memory(refseq->len)*sizeof(uint8_t)); 
   buf += tmap_refseq_seq_memory(refseq->len)*sizeof(uint8_t);
 
@@ -446,9 +560,16 @@ tmap_refseq_shm_pack(tmap_refseq_t *refseq, uint8_t *buf)
       memcpy(buf, &refseq->annos[i].len, sizeof(uint64_t)); buf += sizeof(uint64_t); 
       memcpy(buf, &refseq->annos[i].offset, sizeof(uint64_t)); buf += sizeof(uint64_t); 
       memcpy(buf, &refseq->annos[i].name->l, sizeof(size_t)); buf += sizeof(size_t);
+      memcpy(buf, &refseq->annos[i].num_amb, sizeof(uint32_t)); buf += sizeof(uint32_t);
       // variable length data
       memcpy(buf, refseq->annos[i].name->s, sizeof(char)*(refseq->annos[i].name->l+1));
       buf += sizeof(char)*(refseq->annos[i].name->l+1);
+      if(0 < refseq->annos[i].num_amb) {
+          memcpy(buf, refseq->annos[i].amb_positions, sizeof(uint32_t)*refseq->annos[i].num_amb);
+          buf += sizeof(uint32_t)*refseq->annos[i].num_amb;
+          memcpy(buf, refseq->annos[i].amb_bases, sizeof(uint8_t)*refseq->annos[i].num_amb);
+          buf += sizeof(uint8_t)*refseq->annos[i].num_amb;
+      }
   }
 
   return buf;
@@ -466,12 +587,24 @@ tmap_refseq_shm_unpack(uint8_t *buf)
 
   // fixed length data
   memcpy(&refseq->version_id, buf, sizeof(uint64_t)) ; buf += sizeof(uint64_t);
+  if(refseq->version_id != TMAP_VERSION_ID) {
+      tmap_error("version id did not match", Exit, ReadFileError);
+  }
+      
+  refseq->package_version = tmap_string_init(0);
+  memcpy(&refseq->package_version->l, buf, sizeof(size_t)); buf += sizeof(size_t);
   memcpy(&refseq->seed, buf, sizeof(uint32_t)) ; buf += sizeof(uint32_t);
   memcpy(&refseq->num_annos, buf, sizeof(uint32_t)) ; buf += sizeof(uint32_t);
   memcpy(&refseq->len, buf, sizeof(uint64_t)) ; buf += sizeof(uint64_t);
   memcpy(&refseq->is_rev, buf, sizeof(uint32_t)) ; buf += sizeof(uint32_t);
 
   // variable length data
+  refseq->package_version->s = (char*)buf;
+  refseq->package_version->m = refseq->package_version->l+1;
+  buf += sizeof(char)*(refseq->package_version->l+1); 
+  if(0 == tmap_refseq_supported(refseq)) {
+      tmap_error("the reference index is not supported", Exit, ReadFileError);
+  }
   refseq->seq = (uint8_t*)buf;
   buf += tmap_refseq_seq_memory(refseq->len)*sizeof(uint8_t);
   refseq->annos = tmap_calloc(refseq->num_annos, sizeof(tmap_anno_t), "refseq->annos");
@@ -482,9 +615,20 @@ tmap_refseq_shm_unpack(uint8_t *buf)
       refseq->annos[i].name = tmap_string_init(0);
       memcpy(&refseq->annos[i].name->l, buf, sizeof(size_t)); buf += sizeof(size_t);
       refseq->annos[i].name->m = refseq->annos[i].name->l+1;
+      memcpy(&refseq->annos[i].num_amb, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
       // variable length data
       refseq->annos[i].name->s = (char*)buf;
       buf += sizeof(char)*refseq->annos[i].name->l+1;
+      if(0 < refseq->annos[i].num_amb) {
+          refseq->annos[i].amb_positions = (uint32_t*)buf;
+          buf += sizeof(uint32_t)*refseq->annos[i].num_amb;
+          refseq->annos[i].amb_bases = (uint8_t*)buf;
+          buf += sizeof(uint8_t)*refseq->annos[i].num_amb;
+      }
+      else {
+          refseq->annos[i].amb_positions = NULL;
+          refseq->annos[i].amb_bases = NULL;
+      }
   }
 
   refseq->is_shm = 1;
@@ -498,6 +642,7 @@ tmap_refseq_destroy(tmap_refseq_t *refseq)
   uint32_t i;
 
   if(1 == refseq->is_shm) {
+      free(refseq->package_version);
       for(i=0;i<refseq->num_annos;i++) {
           free(refseq->annos[i].name);
       }
@@ -505,8 +650,11 @@ tmap_refseq_destroy(tmap_refseq_t *refseq)
       free(refseq);
   }
   else {
+      tmap_string_destroy(refseq->package_version);
       for(i=0;i<refseq->num_annos;i++) {
           tmap_string_destroy(refseq->annos[i].name);
+          free(refseq->annos[i].amb_positions);
+          free(refseq->annos[i].amb_bases);
       }
       free(refseq->annos);
       free(refseq->seq);
