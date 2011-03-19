@@ -166,6 +166,17 @@ inline int32_t
 tmap_refseq_subseq(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t length, uint8_t *target);
 
 /*! 
+  Checks if the given reference range has ambiguous bases
+  @param  refseq  pointer to the structure in which the data is stored
+  @param  seqid   the sequence index (one-based)
+  @param  start   the start position (one-based and inclusive)
+  @param  end     the end position (one-based and inclusive)
+  @return         zero if none were found, otherwise the one-based index into "amb_bases" array
+  */
+inline int32_t
+tmap_refseq_amb_bases(const tmap_refseq_t *refseq, uint32_t seqid, uint32_t start, uint32_t end);
+
+/*! 
   main-like function for 'tmap fasta2pac'
   @param  argc  the number of arguments
   @param  argv  the argument list

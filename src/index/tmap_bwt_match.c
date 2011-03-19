@@ -174,7 +174,11 @@ tmap_bwt_match_exact(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bw
 
   for(i=0;i<len;i++) {
       c = str[i];
-      if(3 < c) break;
+      if(3 < c) { 
+          prev.offset++;
+          prev.k = prev.l + 1;
+          break;
+      }
       tmap_bwt_match_2occ(bwt, &prev, c, &next);
       prev = next;
       if(next.k > next.l) break; // no match
@@ -199,7 +203,11 @@ tmap_bwt_match_exact_reverse(const tmap_bwt_t *bwt, int len, const uint8_t *str,
 
   for(i=len-1;0<=i;i--) {
       c = str[i];
-      if(3 < c) break; // no match
+      if(3 < c) { 
+          prev.offset++; 
+          prev.k = prev.l + 1;
+          break;
+      }
       tmap_bwt_match_2occ(bwt, &prev, c, &next);
       prev = next;
       if(next.k > next.l) break; // no match

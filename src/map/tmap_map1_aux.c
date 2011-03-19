@@ -567,7 +567,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
       }
   }
   if(max_mm < num_n || max_diff < num_n) {
-      return NULL;
+      return tmap_map_sams_init();
   }
 
   /*

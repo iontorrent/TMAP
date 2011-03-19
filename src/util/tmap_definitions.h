@@ -120,11 +120,20 @@ extern uint8_t tmap_nt_char_to_int[256];
 extern uint8_t tmap_nt_char_to_rc_char[256];
 
 /*! tmap_iupac_char_to_int
-  @details  converts a IUPAC base in ASCII format to a 4-bit string, with each bit corresponding
+  @details  converts a IUPAC base in ASCII format to a one-based 4-bit string, with each bit corresponding
   to the DNA base (1=A, 2=C, 4=G, 8=T).
   */
 extern uint8_t tmap_iupac_char_to_int[256];
 
+/*! tmap_iupac_char_to_int
+  @details  converts a IUPAC base in ASCII format to an integer format.
+  */
+extern uint8_t tmap_iupac_char_to_bit_string[256];
+
+/*! tmap_int_to_iupac_char
+  @details  converts a IUPAC base in a zero-based 4-bit string to its ASCII format
+  */
+extern char tmap_iupac_int_to_char[16];
 
 /*! 
   @param  c  the quality value in ASCII format
