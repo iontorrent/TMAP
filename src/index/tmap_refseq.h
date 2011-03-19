@@ -10,8 +10,6 @@
   DNA Reference Sequence Library
   */
 
-// seed for our random number generator
-#define TMAP_REFSEQ_SEED 13
 // buffer size for reading in from a FASTA file
 #define TMAP_REFSEQ_BUFFER_SIZE 0x10000
 
@@ -68,7 +66,6 @@ typedef struct {
 typedef struct {
     uint64_t version_id;  /*!< the version id of this file */
     tmap_string_t *package_version;  /*!< the package version */
-    uint32_t seed;  /*!< the random base generator seed */
     uint8_t *seq;  /*!< the packed nucleotide sequence, with contigs concatenated */
     tmap_anno_t *annos;  /*!< the annotations about the contigs */
     uint32_t num_annos;  /*!< the number of contigs (and annotations) */

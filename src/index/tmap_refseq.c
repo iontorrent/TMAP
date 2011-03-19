@@ -63,7 +63,6 @@ tmap_refseq_write_header(tmap_file_t *fp, tmap_refseq_t *refseq)
   if(1 != tmap_file_fwrite(&refseq->version_id, sizeof(uint64_t), 1, fp) 
      || 1 != tmap_file_fwrite(&refseq->package_version->l, sizeof(size_t), 1, fp)
      || refseq->package_version->l+1 != tmap_file_fwrite(refseq->package_version->s, sizeof(char), refseq->package_version->l+1, fp)
-     || 1 != tmap_file_fwrite(&refseq->seed, sizeof(uint32_t), 1, fp) 
      || 1 != tmap_file_fwrite(&refseq->num_annos, sizeof(uint32_t), 1, fp)
      || 1 != tmap_file_fwrite(&refseq->len, sizeof(uint64_t), 1, fp)) {
       tmap_error(NULL, Exit, WriteFileError);
@@ -76,7 +75,6 @@ tmap_refseq_print_header(tmap_file_t *fp, tmap_refseq_t *refseq)
   uint32_t i;
   tmap_file_fprintf(fp, "version_id:\t%llu\n", (unsigned long long int)refseq->version_id);
   tmap_file_fprintf(fp, "package version:\t%s\n", refseq->package_version->s);
-  tmap_file_fprintf(fp, "seed:\t%u\n", refseq->seed);
   for(i=0;i<refseq->num_annos;i++) {
       tmap_file_fprintf(fp, "contig-%d:\t%s\t%u\n", i+1, refseq->annos[i].name->s, refseq->annos[i].len);
   }
@@ -136,8 +134,6 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
 
   refseq->version_id = TMAP_VERSION_ID; 
   refseq->package_version = tmap_string_clone2(PACKAGE_VERSION);
-  refseq->seed = TMAP_REFSEQ_SEED;
-  srand48(refseq->seed);
   refseq->seq = buffer; // IMPORTANT: must nullify later
   refseq->annos = NULL;
   refseq->num_annos = 0;
@@ -271,10 +267,10 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   tmap_progress_print2("total genome length [%u]", refseq->len);
   if(0 < num_IUPAC_found) {
       if(1 == num_IUPAC_found) {
-          tmap_progress_print("%u IUPAC base was found and converted to random DNA base", num_IUPAC_found);
+          tmap_progress_print("%u IUPAC base was found and converted to a DNA base", num_IUPAC_found);
       }
       else {
-          tmap_progress_print("%u IUPAC bases were found and converted to random DNA bases", num_IUPAC_found);
+          tmap_progress_print("%u IUPAC bases were found and converted to DNA bases", num_IUPAC_found);
       }
   }
 
@@ -403,8 +399,7 @@ tmap_refseq_read_header(tmap_file_t *fp, tmap_refseq_t *refseq)
       tmap_error("the reference index is not supported", Exit, ReadFileError);
   }
      
-  if(1 != tmap_file_fread(&refseq->seed, sizeof(uint32_t), 1, fp) 
-     || 1 != tmap_file_fread(&refseq->num_annos, sizeof(uint32_t), 1, fp)
+  if(1 != tmap_file_fread(&refseq->num_annos, sizeof(uint32_t), 1, fp)
      || 1 != tmap_file_fread(&refseq->len, sizeof(uint64_t), 1, fp)) {
       tmap_error(NULL, Exit, ReadFileError);
   }
@@ -502,7 +497,6 @@ tmap_refseq_shm_num_bytes(tmap_refseq_t *refseq)
 
   n += sizeof(uint64_t); // version_id
   n += sizeof(size_t); // package_version->l
-  n += sizeof(uint32_t); // seed
   n += sizeof(uint32_t); // annos
   n += sizeof(uint64_t); // len
   n += sizeof(uint32_t); // is_rev
@@ -562,7 +556,6 @@ tmap_refseq_shm_pack(tmap_refseq_t *refseq, uint8_t *buf)
   // fixed length data
   memcpy(buf, &refseq->version_id, sizeof(uint64_t)); buf += sizeof(uint64_t);
   memcpy(buf, &refseq->package_version->l, sizeof(size_t)); buf += sizeof(size_t);
-  memcpy(buf, &refseq->seed, sizeof(uint32_t)); buf += sizeof(uint32_t);
   memcpy(buf, &refseq->num_annos, sizeof(uint32_t)); buf += sizeof(uint32_t);
   memcpy(buf, &refseq->len, sizeof(uint64_t)); buf += sizeof(uint64_t);
   memcpy(buf, &refseq->is_rev, sizeof(uint32_t)); buf += sizeof(uint32_t);
@@ -612,7 +605,6 @@ tmap_refseq_shm_unpack(uint8_t *buf)
       
   refseq->package_version = tmap_string_init(0);
   memcpy(&refseq->package_version->l, buf, sizeof(size_t)); buf += sizeof(size_t);
-  memcpy(&refseq->seed, buf, sizeof(uint32_t)) ; buf += sizeof(uint32_t);
   memcpy(&refseq->num_annos, buf, sizeof(uint32_t)) ; buf += sizeof(uint32_t);
   memcpy(&refseq->len, buf, sizeof(uint64_t)) ; buf += sizeof(uint64_t);
   memcpy(&refseq->is_rev, buf, sizeof(uint32_t)) ; buf += sizeof(uint32_t);
