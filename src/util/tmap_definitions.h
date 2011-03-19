@@ -133,7 +133,7 @@ extern uint8_t tmap_iupac_char_to_bit_string[256];
 /*! tmap_int_to_iupac_char
   @details  converts a IUPAC base in a zero-based 4-bit string to its ASCII format
   */
-extern char tmap_iupac_int_to_char[16];
+extern char tmap_iupac_int_to_char[17];
 
 /*! 
   @param  c  the quality value in ASCII format

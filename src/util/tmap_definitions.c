@@ -137,7 +137,7 @@ uint8_t tmap_iupac_char_to_bit_string[256] = {
     15, 15, 15, 15,  15, 15, 15, 15,  15, 15, 15, 15,  15, 15, 15, 15
 };
 
-char tmap_iupac_int_to_char[16] = "ACGTNBDHKMRSVWYN";
+char tmap_iupac_int_to_char[17] = "ACGTNBDHKMRSVWYN";
 
 int32_t 
 tmap_reads_format_to_seq_type(int32_t reads_format)

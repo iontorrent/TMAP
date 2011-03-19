@@ -178,14 +178,25 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
           uint8_t c = tmap_nt_char_to_int[(int)seq->data.fq->seq->s[i]];
           // handle IUPAC codes 
           if(4 <= c) {
-              // change it to a mismatched base than the IUPAC code
-              c = tmap_iupac_char_to_bit_string[(int)seq->data.fq->seq->s[i]];
-
+              int32_t k;
               // warn users about IUPAC codes
               if(0 == num_IUPAC_found) { 
-                  tmap_error("IUPAC codes were found and will be converted to non-matching random DNA bases", Warn, OutOfRange);
+                  tmap_error("IUPAC codes were found and will be converted to non-matching DNA bases", Warn, OutOfRange);
+                  for(j=4;j<15;j++) {
+                      c = tmap_iupac_char_to_bit_string[(int)tmap_iupac_int_to_char[j]];
+                      // get the lexicographically smallest base not compatible with this code
+                      for(k=0;k<4;k++) {
+                          if(!(c & (0x1 << k))) {
+                              break;
+                          }
+                      } 
+                      tmap_progress_print2("IUPAC code %c will be converted to %c", tmap_iupac_int_to_char[j], "ACGTN"[k & 3]);
+                  }
               }
               num_IUPAC_found++;
+              
+              // change it to a mismatched base than the IUPAC code
+              c = tmap_iupac_char_to_bit_string[(int)seq->data.fq->seq->s[i]];
 
               // store IUPAC bases
               if(amb_bases_mem <= anno->num_amb) { // allocate more memory if necessary
@@ -209,29 +220,14 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
                   anno->amb_bases[anno->num_amb-1] = tmap_iupac_char_to_int[(int)seq->data.fq->seq->s[i]];
               }
               
-              // randomize 
-              if(c < 15) { // not an N
-                  int32_t k, bases[4];
-                  // how many bases does this not represent?
-                  for(j=k=0;j<4;j++) {
-                      if(!(c & (0x1 << j))) {
-                          bases[k] = j;
-                          k++;
-                      }
-                  } 
-                  if(0 == k) {
-                      tmap_error("bug encountered", Exit, OutOfRange);
+              // get the lexicographically smallest base not compatible with
+              // this code
+              for(j=0;j<4;j++) {
+                  if(!(c & (0x1 << j))) {
+                      break;
                   }
-                  // choose a random non-mismatch base
-                  k = (uint8_t)(drand48() * k); // get the ith base
-                  if(c & (0x1 << bases[k])) {
-                      tmap_error("bug encountered", Exit, OutOfRange);
-                  }
-                  c = bases[k];
-              }
-              else {
-                  c = 0; // convert an N to an A.
-              }
+              } 
+              c = j & 3; // Note: Ns will go to As
           }
           if(3 < c) {
               tmap_error("bug encountered", Exit, OutOfRange);
