@@ -96,8 +96,8 @@ tmap_refseq_write_annos(tmap_file_t *fp, tmap_anno_t *anno)
       tmap_error(NULL, Exit, WriteFileError);
   }
   if(0 < anno->num_amb) {
-      if(1 != tmap_file_fwrite(anno->amb_positions, sizeof(uint32_t), anno->num_amb, fp)
-         || 1 != tmap_file_fwrite(anno->amb_bases, sizeof(uint8_t), anno->num_amb, fp)) {
+      if(anno->num_amb != tmap_file_fwrite(anno->amb_positions, sizeof(uint32_t), anno->num_amb, fp)
+         || anno->num_amb != tmap_file_fwrite(anno->amb_bases, sizeof(uint8_t), anno->num_amb, fp)) {
           tmap_error(NULL, Exit, WriteFileError);
       }
   }
@@ -178,7 +178,7 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
 
               // warn users about IUPAC codes
               if(0 == num_IUPAC_found) { 
-                  tmap_error("IUPAC codes were found and will be converted to random DNA bases", Warn, OutOfRange);
+                  tmap_error("IUPAC codes were found and will be converted to non-matching random DNA bases", Warn, OutOfRange);
               }
               num_IUPAC_found++;
 
@@ -417,9 +417,10 @@ tmap_refseq_read_annos(tmap_file_t *fp, tmap_anno_t *anno)
   }
   if(0 < anno->num_amb) {
       anno->amb_positions = tmap_malloc(sizeof(uint32_t) * anno->num_amb, "anno->amb_positions");
-      anno->amb_bases = tmap_malloc(sizeof(uint32_t) * anno->num_amb, "anno->amb_bases");
-      if(1 != tmap_file_fread(anno->amb_positions, sizeof(uint32_t), anno->num_amb, fp)
-         || 1 != tmap_file_fread(anno->amb_bases, sizeof(uint8_t), anno->num_amb, fp)) {
+      anno->amb_bases = tmap_malloc(sizeof(uint8_t) * anno->num_amb, "anno->amb_bases");
+      fprintf(stderr, "anno->num_amb=%d\n", anno->num_amb);
+      if(anno->num_amb != tmap_file_fread(anno->amb_positions, sizeof(uint32_t), anno->num_amb, fp)
+         || anno->num_amb != tmap_file_fread(anno->amb_bases, sizeof(uint8_t), anno->num_amb, fp)) {
           tmap_error(NULL, Exit, WriteFileError);
       }
   }
