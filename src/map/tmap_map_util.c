@@ -23,10 +23,11 @@
       _query[_ql-_i-1] = _tmp; \
   }
 
-// sort by min-seqid, min-position, max-score
-#define __tmap_map_sam_sort_coord_lt(a, b) ( ((a).seqid < (b).seqid \
-                                              || ( (a).seqid == (b).seqid && (a).pos < (b).pos ) \
-                                              || ( (a).seqid == (b).seqid && (a).pos == (b).pos && (a).score < (b).score )) \
+// sort by strand min-seqid, min-position, max-score
+#define __tmap_map_sam_sort_coord_lt(a, b) (  ((a).strand < (b).strand) \
+                                            || ( (a).strand == (b).strand && (a).seqid < (b).seqid) \
+                                            || ( (a).strand == (b).strand && (a).seqid == (b).seqid && (a).pos < (b).pos ) \
+                                            || ( (a).strand == (b).strand && (a).seqid == (b).seqid && (a).pos == (b).pos && (a).score < (b).score ) \
                                             ? 1 : 0 )
 
 // sort by max-score
@@ -1132,6 +1133,7 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
       best_score_n = 0;
       while(end+1 < sams->n) {
           if(sams->sams[end].seqid == sams->sams[end+1].seqid
+             && sams->sams[end].strand == sams->sams[end+1].strand
              && fabs(sams->sams[end].pos - sams->sams[end+1].pos) <= dup_window) {
               // track the best scoring
               if(sams->sams[best_score_i].score == sams->sams[end+1].score) {
