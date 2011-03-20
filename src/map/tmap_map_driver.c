@@ -36,6 +36,26 @@ pthread_mutex_t tmap_map_driver_read_lock = PTHREAD_MUTEX_INITIALIZER;
 int32_t tmap_map_driver_read_lock_low = 0;
 #endif
 
+#define __tmap_map_driver_check_func(_func_init, _func_thread_init, _func_thread_map, _func_mapq, _func_thread_cleanup, _opt) do { \
+  if(NULL == _func_init) { \
+      tmap_error("func_init == NULL", Exit, OutOfRange); \
+  } \
+  if(NULL == _func_thread_init) { \
+      tmap_error("func_thread_init == NULL", Exit, OutOfRange); \
+  } \
+  if(NULL == _func_thread_map) { \
+      tmap_error("func_thread_map == NULL", Exit, OutOfRange); \
+  } \
+  if(TMAP_MAP_ALGO_MAPALL != _opt->algo_id) { \
+      if(NULL == _func_mapq) { \
+          tmap_error("func_mapq == NULL", Exit, OutOfRange); \
+      } \
+  } \
+  if(NULL == _func_thread_cleanup) { \
+      tmap_error("func_thread_cleanup == NULL", Exit, OutOfRange); \
+  } \
+} while(0)
+
 void
 tmap_map_driver_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_t seq_buffer_length, 
                          tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2],
@@ -152,7 +172,8 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
   tmap_shm_t *shm = NULL;
   int32_t seq_type, reads_queue_size;
 
-  // TODO: check input functions ?
+  // check input functions
+  __tmap_map_driver_check_func(func_init, func_thread_init, func_thread_map, func_mapq, func_thread_cleanup, opt);
   
   if(NULL == opt->fn_reads) {
       tmap_progress_set_verbosity(0); 
@@ -254,6 +275,7 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
               thread_data[i].sa[1] = sa[1];
               thread_data[i].func_thread_init = func_thread_init;
               thread_data[i].func_thread_map = func_thread_map;
+              thread_data[i].func_mapq = func_mapq;
               thread_data[i].func_thread_cleanup = func_thread_cleanup;
               thread_data[i].thread_block_size = thread_block_size;
               thread_data[i].tid = i;

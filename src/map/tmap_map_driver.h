@@ -114,7 +114,7 @@ tmap_map_driver_core_thread_worker(void *arg);
   @param  func_init            the mapping algorithm initialization function
   @param  func_thread_init     the thread initialization function
   @param  func_thread_map      the thread map function
-  @param  func_mapq            the mapq function
+  @param  func_mapq            the mapq function (optional for mapall)
   @param  func_thread_cleanup  the thread cleanup function
   @param  opt                  the program parameters 
   */
