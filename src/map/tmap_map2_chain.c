@@ -60,7 +60,7 @@ tmap_map2_chain_filter(const tmap_map_opt_t *opt, int len, tmap_map2_aln_t *b[2]
           tmap_map2_hit_t *p = b[k]->hits + i;
           tmap_map2_chain_t *q = z[k] + i;
           q->flag = k; q->idx = i;
-          q->tbeg = p->k; q->tend = p->k + p->len;
+          q->tbeg = p->k; q->tend = p->k + p->tlen;
           q->chain = -1;
           q->qbeg = p->beg; q->qend = p->end;
       }

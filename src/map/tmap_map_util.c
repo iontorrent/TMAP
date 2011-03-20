@@ -1293,6 +1293,15 @@ tmap_map_util_sw(tmap_map_sam_t *sam,
       softclip_type = __tmap_map_util_reverse_soft_clipping(softclip_type);
   }
 
+  /*
+  for(i=0;i<query_length;i++)
+    fputc("ACGTN"[query[i]], stderr);
+  fputc('\n', stderr);
+  for(i=0;i<target_length;i++)
+    fputc("ACGTN"[target[i]], stderr);
+  fputc('\n', stderr);
+  */
+
   switch(softclip_type) {
     case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
       //fprintf(stderr, "TMAP_MAP_UTIL_SOFT_CLIP_ALL\n");
@@ -1315,6 +1324,7 @@ tmap_map_util_sw(tmap_map_sam_t *sam,
       break;
   }
   score_subo = INT32_MIN;
+
 
   if(0 < (*path_len) && score_thr < score) {
       sam->strand = strand;

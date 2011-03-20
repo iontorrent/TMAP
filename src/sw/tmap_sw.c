@@ -914,20 +914,6 @@ tmap_sw_extend_aux(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, con
 }
 */
 
-int32_t 
-tmap_sw_extend_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
-                    tmap_sw_path_t *path, int32_t *path_len, int32_t prev_score, uint8_t *_mem)
-{
-  return tmap_sw_clipping_core(seq1, len1, seq2, len2, ap, 0, 1, path, path_len);
-}
-
-int32_t 
-tmap_sw_extend_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
-                    tmap_sw_path_t *path, int32_t *path_len, int32_t prev_score, uint8_t *_mem)
-{
-  return tmap_sw_clipping_core(seq1, len1, seq2, len2, ap, 0, 0, path, path_len);
-}
-
 static void
 tmap_sw_kmp_create_table(uint8_t *seq, int32_t len, int32_t *table)
 {
@@ -991,9 +977,9 @@ tmap_sw_kmp_search(uint8_t *seq1, int32_t len1, uint8_t *seq2, uint32_t len2)
 //#define TMAP_SW_CLIPPING_CORE_DEBUG 1
 // TODO: optimize similar to tmap_sw_local
 // - local align within a band
-int32_t 
-tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
-             int32_t seq2_start_clip, int32_t seq2_end_clip,
+static int32_t 
+tmap_sw_clipping_core2(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
+             int32_t seq1_start_skip, int32_t seq2_start_clip, int32_t seq2_end_clip,
              tmap_sw_path_t *path, int32_t *path_len)
 {
   register int32_t i, j;
@@ -1043,10 +1029,15 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
           }
       }
       if(i < 0 && 1 < len1 && 1 < len2) { // try the Knuth Morris Pratt algorithm
-          // Here we use the Knuth-Morris-Pratt algorithms, but we could use
-          // others, such as Boyer-Moore (small alphabet 2007).  KMP is easy
-          // to implement
-          i = tmap_sw_kmp_search(seq1, len1, seq2, len2);
+          if(1 == seq1_start_skip) {
+              // Here we use the Knuth-Morris-Pratt algorithms, but we could use
+              // others, such as Boyer-Moore (small alphabet 2007).  KMP is easy
+              // to implement
+              i = tmap_sw_kmp_search(seq1, len1, seq2, len2);
+          }
+          else {
+              i = -1;
+          }
       }
       if(0 <= i) {
           best_i = i + len2; best_j = len2;
@@ -1114,8 +1105,10 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
   for(i=1;i<=len1;i++) { // for each row (seq1)
       // set first column
       TMAP_SW_SET_INF(curr[0]); 
-      TMAP_SW_SET_FROM(dpcell[i][0], TMAP_SW_FROM_S);
-      curr[0].match_score = 0; // start anywhere in seq 1
+      if(1 == seq1_start_skip) { // start anywhere in seq 1
+          TMAP_SW_SET_FROM(dpcell[i][0], TMAP_SW_FROM_S);
+          curr[0].match_score = 0; 
+      }
 
       mat = score_matrix + seq1[i-1] * N_MATRIX_ROW;
 
@@ -1269,10 +1262,32 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
 }
 
 int32_t 
+tmap_sw_extend_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
+                    tmap_sw_path_t *path, int32_t *path_len, int32_t prev_score, uint8_t *_mem)
+{
+  return tmap_sw_clipping_core2(seq1, len1, seq2, len2, ap, 0, 0, 1, path, path_len);
+}
+
+int32_t 
+tmap_sw_extend_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
+                    tmap_sw_path_t *path, int32_t *path_len, int32_t prev_score, uint8_t *_mem)
+{
+  return tmap_sw_clipping_core2(seq1, len1, seq2, len2, ap, 0, 0, 0, path, path_len);
+}
+
+int32_t 
 tmap_sw_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
                      tmap_sw_path_t *path, int32_t *path_len)
 {
-  return tmap_sw_clipping_core(seq1, len1, seq2, len2, ap, 0, 0, path, path_len);
+  return tmap_sw_clipping_core2(seq1, len1, seq2, len2, ap, 1, 0, 0, path, path_len);
+}
+
+int32_t 
+tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
+             int32_t seq2_start_clip, int32_t seq2_end_clip,
+             tmap_sw_path_t *path, int32_t *path_len)
+{
+  return tmap_sw_clipping_core2(seq1, len1, seq2, len2, ap, 1, seq2_start_clip, seq2_end_clip, path, path_len);
 }
 
 uint32_t *
