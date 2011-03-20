@@ -211,7 +211,7 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
   md = tmap_string_init(32);
   (*nm) = 0;
 
-  ref_start = ref_end = refseq->annos[seqid].offset + pos + 1;
+  ref_start = ref_end = pos + 1; // make one-based
   for(i=0;i<n_cigar;i++) { // go through each cigar operator
       int32_t op_len;
       op_len = cigar[i] >> 4;
