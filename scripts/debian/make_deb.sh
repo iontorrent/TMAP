@@ -1,6 +1,6 @@
 #!/bin/sh
 
-rm -vr tmap-0*;
+rm -vr tmap-0* tmap_0*;
 
 sh autogen.sh && ./configure && make dist;
 
