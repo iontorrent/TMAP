@@ -46,6 +46,7 @@ tmap_refseq_supported(tmap_refseq_t *refseq)
   char *refseq_v = refseq->package_version->s;
   char *tmap_v = PACKAGE_VERSION;
 
+
   // sanity check on version names
   for(i=j=0;i<strlen(refseq_v);i++) {
       if('.' == refseq_v[i]) j++;
@@ -59,12 +60,12 @@ tmap_refseq_supported(tmap_refseq_t *refseq)
   if(2 != j) {
       tmap_error("did not find three version numbers", Exit, OutOfRange);
   }
-
+  
   // get the format ids
   if(0 == strcmp(tmap_refseq_get_version_format(refseq_v), tmap_refseq_get_version_format(tmap_v))) {
-      return 0;
+      return 1;
   }
-  return 1;
+  return 0;
 }
 
 static inline void 
