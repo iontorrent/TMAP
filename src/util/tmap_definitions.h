@@ -14,12 +14,6 @@
   */
 #define TMAP_VERSION_ID ('t' + 'm' + 'a' + 'p')
 
-/*! d TMAP_VERSION_ID
-  the earliest version number (inclusive) of the index 
-  supported by this version of TMAP
-  */
-#define TMAP_REFSEQ_MIN_VERSION "0.0.17"
-
 /* 
  * File extensions
  */
@@ -263,5 +257,14 @@ tmap_chomp(char *str);
  */
 inline int32_t
 tmap_interval_overlap(uint32_t low1, uint32_t high1, uint32_t low2, uint32_t high2);
+
+/*!
+ compares the two version strings
+ @param  v1  the first version string
+ @param  v2  the second version string
+ @return     -1 if v1 < v2, 0 if v1 == v2, 1 otherwise
+ */
+int32_t
+tmap_compare_versions(const char *v1, const char *v2);
 
 #endif

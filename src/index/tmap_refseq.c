@@ -16,13 +16,35 @@
 #include "../io/tmap_seq_io.h"
 #include "tmap_refseq.h"
 
+const char * 
+tmap_refseq_get_version_format(const char *v)
+{
+  static const int32_t tmap_index_versions_num = 4;
+  static const char *tmap_index_versions[34] = {
+      "0.0.1", "tmap-f1",
+      "0.0.17", "tmap-f2"
+  };
+  int32_t i, cmp;
+  for(i=tmap_index_versions_num-2;0<=i;i-=2) {
+      cmp = tmap_compare_versions(tmap_index_versions[i], v);
+      if(cmp <= 0) {
+          i++;
+          break;
+      }
+  }
+  if(i < 0) {
+      tmap_error("bug encountered", Exit, OutOfRange);
+  }
+
+  return tmap_index_versions[i];
+}
+
 static inline int32_t
 tmap_refseq_supported(tmap_refseq_t *refseq)
 {
-  int32_t i, j, k;
-  int32_t refseq_n, tmap_n;
+  int32_t i, j;
   char *refseq_v = refseq->package_version->s;
-  char *tmap_v = TMAP_REFSEQ_MIN_VERSION;
+  char *tmap_v = PACKAGE_VERSION;
 
   // sanity check on version names
   for(i=j=0;i<strlen(refseq_v);i++) {
@@ -38,22 +60,10 @@ tmap_refseq_supported(tmap_refseq_t *refseq)
       tmap_error("did not find three version numbers", Exit, OutOfRange);
   }
 
-  for(i=j=k=0;i<3;i++) { // three version numbers
-      refseq_n = atoi(refseq_v + j);
-      tmap_n = atoi(tmap_v + k);
-      if(refseq_n < tmap_n) {
-          return 0;
-      }
-      if(i < 2) {
-          while(refseq_v[j] != '.') {
-              j++;
-          }
-          while(tmap_v[k] != '.') {
-              k++;
-          }
-      }
-  } 
-
+  // get the format ids
+  if(0 == strcmp(tmap_refseq_get_version_format(refseq_v), tmap_refseq_get_version_format(tmap_v))) {
+      return 0;
+  }
   return 1;
 }
 
@@ -73,7 +83,8 @@ static inline void
 tmap_refseq_print_header(tmap_file_t *fp, tmap_refseq_t *refseq)
 {
   uint32_t i;
-  tmap_file_fprintf(fp, "version_id:\t%llu\n", (unsigned long long int)refseq->version_id);
+  tmap_file_fprintf(fp, "version id:\t%llu\n", (unsigned long long int)refseq->version_id);
+  tmap_file_fprintf(fp, "format:\t%s\n", tmap_refseq_get_version_format(refseq->package_version->s));
   tmap_file_fprintf(fp, "package version:\t%s\n", refseq->package_version->s);
   for(i=0;i<refseq->num_annos;i++) {
       tmap_file_fprintf(fp, "contig-%d:\t%s\t%u\n", i+1, refseq->annos[i].name->s, refseq->annos[i].len);
@@ -842,7 +853,6 @@ tmap_refseq_refinfo_main(int argc, char *argv[])
       tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [-vh] <in.fasta>\n", PACKAGE, argv[0]);
       return 1;
   }
-
   fn_fasta = argv[optind];
 
   // Note: 'tmap_file_stdout' should not have been previously modified
@@ -859,7 +869,7 @@ tmap_refseq_refinfo_main(int argc, char *argv[])
   tmap_refseq_read_anno(fp_anno, refseq);
   tmap_file_fclose(fp_anno);
   free(fn_anno);
-  
+
   // no need to read in the pac
   refseq->seq = NULL;
 

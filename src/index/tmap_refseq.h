@@ -74,6 +74,14 @@ typedef struct {
     uint32_t is_shm;  /*!< 1 if loaded from shared memory, 0 otherwise */
 } tmap_refseq_t;
 
+/*!
+  returns the index version format given a package version
+  @param  v  the package version string
+  @return    the index version format string
+  */
+const char * 
+tmap_refseq_get_version_format(const char *v);
+
 /*! 
   @param  fn_fasta     the file name of the fasta file
   @param  compression  the type of compression, if any to be used

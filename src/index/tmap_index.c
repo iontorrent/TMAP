@@ -61,6 +61,7 @@ static int usage(tmap_index_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "         -a STRING   override BWT construction algorithm:\n");
   tmap_file_fprintf(tmap_file_stderr, "                     \t\"bwtsw\" (large genomes)\n");
   tmap_file_fprintf(tmap_file_stderr, "                     \t\"is\" (short genomes)\n");
+  tmap_file_fprintf(tmap_file_stderr, "         --version   print the index format that will be created and exit\n");
   tmap_file_fprintf(tmap_file_stderr, "         -v          print verbose progress information\n");
   tmap_file_fprintf(tmap_file_stderr, "         -h          print this message\n");
   tmap_file_fprintf(tmap_file_stderr, "\n");
@@ -77,6 +78,13 @@ int tmap_index(int argc, char *argv[])
   opt.hash_width = TMAP_BWT_HASH_WIDTH;
   opt.sa_interval = TMAP_SA_INTERVAL; 
   opt.is_large = -1;
+      
+  if(2 == argc && 0 == strcmp("--version", argv[1])) {
+      tmap_file_stdout = tmap_file_fdopen(fileno(stdout), "wb", TMAP_FILE_NO_COMPRESSION);
+      tmap_file_fprintf(tmap_file_stdout, "%s\n", tmap_refseq_get_version_format(PACKAGE_VERSION));
+      tmap_file_fclose(tmap_file_stdout);
+      return 0;
+  }
 
   while((c = getopt(argc, argv, "f:o:i:w:a:hv")) >= 0) {
       switch(c) {
