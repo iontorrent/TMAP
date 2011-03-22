@@ -47,6 +47,13 @@ inline tmap_string_t *
 tmap_string_clone(tmap_string_t *str);
 
 /*! 
+  @param  str  a pointer to the string to clone
+  @return      a pointer to the cloned string
+ */
+inline tmap_string_t *
+tmap_string_clone2(char *str);
+
+/*! 
   @param  dest    pointer to the destination string
   @param  l       the number of leading characters to skip
   @param  format  the format for the string

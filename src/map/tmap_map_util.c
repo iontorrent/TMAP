@@ -23,10 +23,11 @@
       _query[_ql-_i-1] = _tmp; \
   }
 
-// sort by min-seqid, min-position, max-score
-#define __tmap_map_sam_sort_coord_lt(a, b) ( ((a).seqid < (b).seqid \
-                                              || ( (a).seqid == (b).seqid && (a).pos < (b).pos ) \
-                                              || ( (a).seqid == (b).seqid && (a).pos == (b).pos && (a).score < (b).score )) \
+// sort by strand min-seqid, min-position, max-score
+#define __tmap_map_sam_sort_coord_lt(a, b) (  ((a).strand < (b).strand) \
+                                            || ( (a).strand == (b).strand && (a).seqid < (b).seqid) \
+                                            || ( (a).strand == (b).strand && (a).seqid == (b).seqid && (a).pos < (b).pos ) \
+                                            || ( (a).strand == (b).strand && (a).seqid == (b).seqid && (a).pos == (b).pos && (a).score < (b).score ) \
                                             ? 1 : 0 )
 
 // sort by max-score
@@ -97,7 +98,7 @@ tmap_map_opt_init(int32_t algo_id)
       //opt->mask_level = 0.50; 
       opt->length_coef = 5.5f;
       opt->max_seed_intv = 3; 
-      opt->z_best = 2; 
+      opt->z_best = 1; 
       opt->seeds_rev = 5;
       break;
     case TMAP_MAP_ALGO_MAP3:
@@ -178,7 +179,7 @@ tmap_map_opt_destroy(tmap_map_opt_t *opt)
     tmap_file_fprintf(tmap_file_stderr, "         -l INT      the k-mer length to seed CALs (-1 to disable) [%d]\n", (_opt)->seed_length); \
     tmap_file_fprintf(tmap_file_stderr, "         -s INT      maximum number of edits in the seed [%d]\n", (_opt)->seed_max_diff); \
     tmap_file_fprintf(tmap_file_stderr, "         -L INT      the secondary seed length (-1 to disable) [%d]\n", (_opt)->seed2_length); \
-    tmap_file_fprintf(tmap_file_stderr, "         -p NUM      maximum number of edits or false-negative probability assuming the maximum error rate"); \
+    tmap_file_fprintf(tmap_file_stderr, "         -p NUM      maximum number of edits or false-negative probability assuming the maximum error rate "); \
     if((_opt)->max_diff < 0) tmap_file_fprintf(tmap_file_stderr, "[number: %d]\n", (_opt)->max_diff); \
     else tmap_file_fprintf(tmap_file_stderr, "[probability: %d]\n", (_opt)->max_diff_fnr); \
     tmap_file_fprintf(tmap_file_stderr, "         -P NUM      the assumed per-base maximum error rate [%lf]\n", (_opt)->max_err_rate); \
@@ -1163,6 +1164,7 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
       best_score_n = 0;
       while(end+1 < sams->n) {
           if(sams->sams[end].seqid == sams->sams[end+1].seqid
+             && sams->sams[end].strand == sams->sams[end+1].strand
              && fabs(sams->sams[end].pos - sams->sams[end+1].pos) <= dup_window) {
               // track the best scoring
               if(sams->sams[best_score_i].score == sams->sams[end+1].score) {
@@ -1292,8 +1294,9 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
       double sf = 0.4; // initial scaling factor.  Note: 250 * sf is the maximum mapping quality.
       sf *= 250.0 / ((double)opt->score_match * seq_len); // scale based on the best possible alignment score
       sf *= (n_best / (1.0 * n_best_subo)); // scale based on number of sub-optimal mappings
-      sf *= (best_score - best_subo) / (1.0 * opt->score_match); // scale based on distance to the sub-optimal mapping
-      mapq = (int32_t)(sf + 1.0);
+      sf *= (double)(best_score - best_subo + 1 ); // scale based on distance to the sub-optimal mapping
+      //sf *= (seq_len < 10) ? 1.0 : log10(seq_len); // scale based on longer reads having more information content
+      mapq = (int32_t)(sf + 0.99999);
       if(mapq > 250) mapq = 250;
       if(mapq <= 0) mapq = 1;
   }
@@ -1322,6 +1325,15 @@ tmap_map_util_sw(tmap_map_sam_t *sam,
       softclip_type = __tmap_map_util_reverse_soft_clipping(softclip_type);
   }
 
+  /*
+  for(i=0;i<query_length;i++)
+    fputc("ACGTN"[query[i]], stderr);
+  fputc('\n', stderr);
+  for(i=0;i<target_length;i++)
+    fputc("ACGTN"[target[i]], stderr);
+  fputc('\n', stderr);
+  */
+
   switch(softclip_type) {
     case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
       //fprintf(stderr, "TMAP_MAP_UTIL_SOFT_CLIP_ALL\n");
@@ -1344,6 +1356,7 @@ tmap_map_util_sw(tmap_map_sam_t *sam,
       break;
   }
   score_subo = INT32_MIN;
+
 
   if(0 < (*path_len) && score_thr < score) {
       sam->strand = strand;
@@ -1414,7 +1427,7 @@ tmap_map_util_fsw(tmap_seq_t *seq,
   // go through each hit
   for(i=0;i<sams->n;i++) {
       tmap_map_sam_t *s = &sams->sams[i];
-      uint32_t ref_start, ref_end, pacpos;
+      uint32_t ref_start, ref_end;
 
       // get flow sequence if necessary
       if(NULL == fseq[s->strand]) {
@@ -1479,11 +1492,7 @@ tmap_map_util_fsw(tmap_seq_t *seq,
           tmap_roundup32(target_mem);
           target = tmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
       }
-      for(pacpos=ref_start;pacpos<=ref_end;pacpos++) {
-          // add contig offset and make zero-based
-          target[pacpos-ref_start] =
-            tmap_refseq_seq_i(refseq, pacpos + refseq->annos[s->seqid].offset-1);
-      }
+      target_len = tmap_refseq_subseq(refseq, ref_start + refseq->annos[s->seqid].offset, target_len, target);
 
       // add to the band width
       param.band_width += 2 * bw;

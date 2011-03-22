@@ -10,10 +10,11 @@
   DNA Reference Sequence Library
   */
 
-// seed for our random number generator
-#define TMAP_REFSEQ_SEED 13
 // buffer size for reading in from a FASTA file
 #define TMAP_REFSEQ_BUFFER_SIZE 0x10000
+
+// the number of bases on a given line for "tmap pac2refseq"
+#define TMAP_REFSEQ_FASTA_LINE_LENGTH 72
 
 /*! 
   @param  _len  the number of bases stored 
@@ -54,13 +55,17 @@ typedef struct {
     tmap_string_t *name;  /*!< the name of the contig */
     uint64_t len;  /*!< the length of the current contig  */
     uint64_t offset;  /*!< the offset from the start of the reference (zero-based) */
+    uint32_t *amb_positions_start;  /*!< start positions of ambiguous bases (one-based) */
+    uint32_t *amb_positions_end;  /*!< end positions of ambiguous bases (one-based) */
+    uint8_t *amb_bases;  /*!< the ambiguous bases (IUPAC code) */
+    uint32_t num_amb;  /*!< the number of ambiguous bases */
 } tmap_anno_t;
 
 /*! 
   */
 typedef struct {
     uint64_t version_id;  /*!< the version id of this file */
-    uint32_t seed;  /*!< the random base generator seed */
+    tmap_string_t *package_version;  /*!< the package version */
     uint8_t *seq;  /*!< the packed nucleotide sequence, with contigs concatenated */
     tmap_anno_t *annos;  /*!< the annotations about the contigs */
     uint32_t num_annos;  /*!< the number of contigs (and annotations) */
@@ -148,6 +153,28 @@ inline uint32_t
 tmap_refseq_pac2real(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos);
 
 /*! 
+  Retrieves a subsequence of the reference in 2-bit format
+  @param  refseq  pointer to the structure in which the data is stored
+  @param  pacpos  the packed FASTA position (one-based)
+  @param  length  the subsequence length retrieve
+  @param  target  the target in which to store the data (must be allocated with enough memory)
+  @return         the length retrieved
+  */
+inline int32_t
+tmap_refseq_subseq(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t length, uint8_t *target);
+
+/*! 
+  Checks if the given reference range has ambiguous bases
+  @param  refseq  pointer to the structure in which the data is stored
+  @param  seqid   the sequence index (one-based)
+  @param  start   the start position (one-based and inclusive)
+  @param  end     the end position (one-based and inclusive)
+  @return         zero if none were found, otherwise the one-based index into "amb_bases" array
+  */
+inline int32_t
+tmap_refseq_amb_bases(const tmap_refseq_t *refseq, uint32_t seqid, uint32_t start, uint32_t end);
+
+/*! 
   main-like function for 'tmap fasta2pac'
   @param  argc  the number of arguments
   @param  argv  the argument list
@@ -155,4 +182,22 @@ tmap_refseq_pac2real(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_
   */
 int
 tmap_refseq_fasta2pac_main(int argc, char *argv[]);
+
+/*! 
+  main-like function for 'tmap refinfo'
+  @param  argc  the number of arguments
+  @param  argv  the argument list
+  @return       0 if executed successful
+  */
+int
+tmap_refseq_refinfo_main(int argc, char *argv[]);
+
+/*! 
+  main-like function for 'tmap pac2fasta'
+  @param  argc  the number of arguments
+  @param  argv  the argument list
+  @return       0 if executed successful
+  */
+int
+tmap_refseq_pac2fasta_main(int argc, char *argv[]);
 #endif

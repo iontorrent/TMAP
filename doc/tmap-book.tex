@@ -29,7 +29,7 @@ urlcolor=myurlcolor     % color of external links
 \usepackage{courier}
 
 % Version number
-\newcommand{\Version}{0.0.17}
+\newcommand{\Version}{0.0.18}
 
 % layout
 \setlength\topmargin{0in}
@@ -258,6 +258,13 @@ Specifies the BWT construction algorithm (\TT{bwtsw} or \TT{is}).
 The \TT{bwtsw} algorithm is for genomes larger than or equal to $10$Mb, and the \TT{is} algorithm is for genomes smaller than $10$Mb.
 This will be auto-recognized during index creation if this option is omitted.
 
+\subsection{IUPAC Ambiguity Codes}
+Note that ambiguous IUPAC codes will be converted to the lexicographically smallest DNA base that is not compatible to the IUPAC code to ensure minimum reference bias.
+For example, an IUPAC base \TT{R}, which represents an \TT{A} or a \TT{G}, will be converted to a C.
+All Ns in the reference will be converted to As.
+Furthermore, any non-IUPAC character will be treated as an N.
+The ambiguity codes will only be re-considered when calculating the NM and MD SAM record optional tags.
+
 \section{tmap map1}
 \label{sec:map1}
 The \BF{map1} is a command to quickly map short sequences to a reference genome by intelligently enumerating errors.
@@ -444,6 +451,7 @@ Specifies to load the forward suffix array.
 \subsubsection{\TT{-S}}
 Specifies to load the reverse suffix array.
 
+
 \chapter{File Formats}
 
 \section{SAM Alignment Format}
@@ -470,42 +478,56 @@ The ID tag should always be \TT{tmap}.
 
 \subsection{SAM Record Optional Tags}
 
-\subsubsection{AS}
-This stores the alignment score.
+\subsubsection{RG}
+This tag stores the read group identifier corresponding to the RG SAM header field.
+
+\subsubsection{PG}
+This tag stores the program group identifier corresponding to the PG SAM header field.
+
+\subsubsection{MD}
+This tag stores the MD array.
+The goal of this array is to follow the conventions in SAMtools (\cite{SAM-format}).
+Any IUPAC code originally in the reference will be present in this field.
 
 \subsubsection{NM}
-This stores the edit distance from the reference sequence.
+This tag stores the edit distance from the reference sequence.
+Matches to any non-DNA IUPAC ambiguity code (B, D, H, K, M, N, R, S, V, W, Y) will be counted as a mismatch.
+
+\subsubsection{AS}
+This tag stores the alignment score.
+All IUPAC code positions are treated as mismatches.
+If the alignment contains an N in the reference but an A in the read, this score will be incorrect (overestimated) as the N was converted to an A in the reference.
 
 \subsubsection{XM}
-This stores the number of mismatches in the mapping, or in the secondary seed if used.
+This tag stores the number of mismatches in the mapping, or in the secondary seed if used.
 
 \subsubsection{XO}
-This stores the number of indels (gap opens) in the mapping, or in the secondary seed if used.
+This tag stores the number of indels (gap opens) in the mapping, or in the secondary seed if used.
 
 \subsubsection{XG}
-This stores the number of indel extensions (gap extensions) in the mapping, or in the secondary seed if used.
+This tag stores the number of indel extensions (gap extensions) in the mapping, or in the secondary seed if used.
 
 \subsubsection{XS}
-This stores the alignment score of next-best sub-optimal mapping.
+This tag stores the alignment score of next-best sub-optimal mapping.
 
 \subsubsection{XF}
-This stores from where the mappings originated: one indicates from the forward search, two indicates from the reverse search, and three indicates from both the forward and reverse search.
+This tag stores from where the mappings originated: one indicates from the forward search, two indicates from the reverse search, and three indicates from both the forward and reverse search.
 
 \subsubsection{XE}
-This stores the number of seeds supporting this mapping.
+This tag stores the number of seeds supporting this mapping.
 
 \subsubsection{XI}
-This stores the size of the suffix interval for this mapping.
+This tag stores the size of the suffix interval for this mapping.
 
 \subsubsection{XA}
-This stores the algorithm that produced this mapping and from what stage.
+This tag stores the algorithm that produced this mapping and from what stage.
 The format is the algorithm name, and then the zero-based stage, separated by a dash.
 
 \subsubsection{XZ}
-This stores the original alignment score, if an SFF was inputted.
+This tag stores the original alignment score, if an SFF was inputted.
 
 \subsubsection{FZ}
-This stores the flow signals when an SFF is inputted and the \TT{-Y} option is used.
+This tag stores the flow signals when an SFF is inputted and the \TT{-Y} option is used.
 The flowgram values are stored as a string of hexidecimal values, with each group of four hexidecimal values corresponding to one flow signal.
 
 \chapter{Appendix}

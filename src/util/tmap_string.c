@@ -61,6 +61,22 @@ tmap_string_clone(tmap_string_t *str)
   return ret;
 }
 
+inline tmap_string_t *
+tmap_string_clone2(char *str)
+{
+  int32_t i, len;
+  tmap_string_t *ret = NULL;
+  
+  len = strlen(str);
+  ret = tmap_string_init(len + 1);
+  for(i=0;i<=len;i++) { // copy over all memory
+      ret->s[i] = str[i];
+  }
+  ret->l = len;
+
+  return ret;
+}
+
 inline void
 tmap_string_lsprintf(tmap_string_t *dest, int32_t l, const char *format, ...) 
 {

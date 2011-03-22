@@ -176,19 +176,50 @@ tmap_map_all_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tma
   tmap_map_sams_t *sams_map2 = NULL;
   tmap_map_sams_t *sams_map3 = NULL;
   tmap_map_all_thread_data_t *d = (tmap_map_all_thread_data_t*)(*data);
+  
+  // for mapall optimization
+  int32_t seq_len;
+  tmap_seq_t *seqs[4]={NULL,NULL,NULL,NULL};
+  tmap_seq_t *seqs_tmp[2]={NULL,NULL};
+  tmap_string_t *bases[4]={NULL,NULL,NULL,NULL};
+  tmap_string_t *bases_tmp[2]={NULL,NULL};
+
+  seq_len = tmap_seq_get_bases(seq)->l; 
+
+  for(i=0;i<4;i++) {
+      // TODO: only if necessary
+      seqs[i]= tmap_seq_clone(seq); // clone the sequence 
+      tmap_seq_remove_key_sequence(seqs[i]); // adjust for SFF
+      switch(i) {
+        case 0: // forward
+          break;
+        case 1: // reverse compliment
+          tmap_seq_reverse_compliment(seqs[i]); break;
+        case 2: // reverse
+          tmap_seq_reverse(seqs[i]); break;
+        case 3: // compliment
+          tmap_seq_compliment(seqs[i]); break;
+      }
+      tmap_seq_to_int(seqs[i]); // convert to integers
+      bases[i] = tmap_seq_get_bases(seqs[i]); // get bases
+  }
 
   for(i=0;i<opt->num_stages;i++) {
       // map1
       if(opt->algos[i] & TMAP_MAP_ALGO_MAP1) {
-          sams_map1 = tmap_map1_thread_map(&d->data_map1[i], seq, refseq, bwt, sa, opt->opt_map1[i]);
+          seqs_tmp[0] = seqs[2]; seqs_tmp[1] = seqs[1];
+          bases_tmp[0] = bases[2]; bases_tmp[1] = bases[1];
+          sams_map1 = tmap_map1_thread_map_core(&d->data_map1[i], seqs_tmp, bases_tmp, seq_len, refseq, bwt, sa, opt->opt_map1[i]);
       }
       // map2
       if(opt->algos[i] & TMAP_MAP_ALGO_MAP2) {
-          sams_map2 = tmap_map2_thread_map(&d->data_map2[i], seq, refseq, bwt, sa, opt->opt_map2[i]);
+          sams_map2 = tmap_map2_thread_map_core(&d->data_map2[i], seqs, seq_len, refseq, bwt, sa, opt->opt_map2[i]);
       }
       // map3
       if(opt->algos[i] & TMAP_MAP_ALGO_MAP3) {
-          sams_map3 = tmap_map3_thread_map(&d->data_map3[i], seq, refseq, bwt, sa, opt->opt_map3[i]);
+          seqs_tmp[0] = seqs[0];
+          seqs_tmp[1] = seqs[1];
+          sams_map3 = tmap_map3_thread_map_core(&d->data_map3[i], seqs, seq_len, refseq, bwt, sa, opt->opt_map3[i]);
       }
 
       // merge all the mappings
@@ -196,16 +227,6 @@ tmap_map_all_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tma
                                      sams_map1, sams_map2, sams_map3,
                                      i+1, opt);
 
-      // re-align in flow space
-      if(TMAP_SEQ_TYPE_SFF == seq->type) {
-          tmap_map_util_fsw(seq,
-                            (1 == opt->flow_order_use_sff) ? NULL : opt->flow_order_int,
-                            (1 == opt->flow_order_use_sff) ? 0 : strlen(opt->flow_order),
-                            sams, refseq,
-                            opt->bw, opt->softclip_type, opt->score_thr,
-                            opt->score_match, opt->pen_mm, opt->pen_gapo,
-                            opt->pen_gape, opt->fscore);
-      }
       tmap_map_sams_destroy(sams_map1);
       tmap_map_sams_destroy(sams_map2);
       tmap_map_sams_destroy(sams_map3);
@@ -220,6 +241,11 @@ tmap_map_all_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tma
           tmap_map_sams_destroy(sams);
           sams = NULL;
       }
+  }
+  
+  // destroy
+  for(i=0;i<4;i++) {
+      tmap_seq_destroy(seqs[i]);
   }
 
   return sams;
@@ -257,6 +283,7 @@ tmap_map_all_core(tmap_map_opt_t *opt)
   tmap_map_driver_core(tmap_map_all_init,
                        tmap_map_all_thread_init,
                        tmap_map_all_thread_map,
+                       NULL,
                        tmap_map_all_thread_cleanup,
                        opt);
 }

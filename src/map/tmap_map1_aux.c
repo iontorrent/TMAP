@@ -325,7 +325,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
 {
   tmap_map_sams_t *sams_tmp = NULL;
   tmap_map_sam_t *sam_cur = NULL;
-  uint32_t i, j, k, l, m, n;
+  uint32_t i, j, k, l, n;
   int32_t matrix[25];
   uint8_t *target = NULL;
   int32_t target_length;
@@ -380,16 +380,13 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
               pacpos = bwt[1-strand]->seq_len - tmap_sa_pac_pos(sa[1-strand], bwt[1-strand], k);
           }
           else { // reverse
-              pacpos = tmap_sa_pac_pos(sa[1-strand], bwt[1-strand], k) + 1; // since we used the reverse index
+              pacpos = tmap_sa_pac_pos(sa[1-strand], bwt[1-strand], k); // since we used the reverse index
           }
           pacpos = (pacpos < sam->aux.map1_aux->aln_ref) ? 0 : (pacpos - sam->aux.map1_aux->aln_ref); 
           pacpos = (pacpos < bw) ? 0 : (pacpos - bw); 
           lt = target_length;
 
-          for(l = pacpos, m = 0; l < pacpos + lt && l < refseq->len; l++) {
-              target[m++] = tmap_refseq_seq_i(refseq, l); 
-          }
-          lt = m;
+          lt = tmap_refseq_subseq(refseq, pacpos+1, lt, target);
 
           /*
           fprintf(stderr, "Q=");
@@ -570,7 +567,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
       }
   }
   if(max_mm < num_n || max_diff < num_n) {
-      return NULL;
+      return tmap_map_sams_init();
   }
 
   /*

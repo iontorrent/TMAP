@@ -12,7 +12,13 @@
 /*! d TMAP_VERSION_ID
   the magic id for tmap
   */
-#define TMAP_VERSION_ID ('f' + 'm' + 'a' + 'p')
+#define TMAP_VERSION_ID ('t' + 'm' + 'a' + 'p')
+
+/*! d TMAP_VERSION_ID
+  the earliest version number (inclusive) of the index 
+  supported by this version of TMAP
+  */
+#define TMAP_REFSEQ_MIN_VERSION "0.0.17"
 
 /* 
  * File extensions
@@ -103,15 +109,31 @@ enum {
 char *
 tmap_algo_id_to_name(uint16_t algo_id);
 
-/*! nt_char_to_int
+/*! tmap_nt_char_to_int
   @details  converts a DNA base in ASCII format to its 2-bit format [0-4]. 
   */
 extern uint8_t tmap_nt_char_to_int[256];
 
-/*! nt_char_to_rc_char
+/*! tmap_nt_char_to_rc_char
   @details  converts a DNA base in ASCII format to reverse compliment in ASCII format.
   */
 extern uint8_t tmap_nt_char_to_rc_char[256];
+
+/*! tmap_iupac_char_to_int
+  @details  converts a IUPAC base in ASCII format to a one-based 4-bit string, with each bit corresponding
+  to the DNA base (1=A, 2=C, 4=G, 8=T).
+  */
+extern uint8_t tmap_iupac_char_to_int[256];
+
+/*! tmap_iupac_char_to_int
+  @details  converts a IUPAC base in ASCII format to an integer format.
+  */
+extern uint8_t tmap_iupac_char_to_bit_string[256];
+
+/*! tmap_int_to_iupac_char
+  @details  converts a IUPAC base in a zero-based 4-bit string to its ASCII format
+  */
+extern char tmap_iupac_int_to_char[17];
 
 /*! 
   @param  c  the quality value in ASCII format
@@ -230,5 +252,16 @@ tmap_compliment(char *seq, int32_t len);
  */
 int32_t
 tmap_chomp(char *str);
+
+/*!
+  checks if there is any overlap between the two regions [low1,high1] and [low2,high2]
+  @param  low1   the lower interval start
+  @param  high1  the lower interval end
+  @param  low2   the higher interval start
+  @param  high2  the higher interval end
+  @return        -1 if high1 < low2, 1 if high2 < low1, 0 otherwise
+ */
+inline int32_t
+tmap_interval_overlap(uint32_t low1, uint32_t high1, uint32_t low2, uint32_t high2);
 
 #endif

@@ -167,13 +167,13 @@ tmap_map2_core_save_hits(const tmap_bwtl_t *bwtl, int32_t thres, tmap_map2_hit_t
       for(k = u->tk; k <= u->tl; ++k) {
           int32_t beg, end;
           tmap_map2_hit_t *q = NULL;
-          beg = bwtl->sa[k]; end = beg + p->tlen;
+          beg = bwtl->sa[k]; end = beg + p->tlen - 1;
           if(p->G > hits[beg*2].G) {
               hits[beg*2+1] = hits[beg*2];
               q = hits + beg * 2;
           } else if(p->G > hits[beg*2+1].G) q = hits + beg * 2 + 1;
           if(q) {
-              q->k = p->match_sa.k; q->l = p->match_sa.l; q->len = p->qlen; q->G = p->G;
+              q->k = p->match_sa.k; q->l = p->match_sa.l; q->qlen = p->qlen; q->tlen = p->tlen; q->G = p->G;
               q->beg = beg; q->end = end; q->G2 = q->k == q->l? 0 : q->G;
               q->flag = q->n_seeds = 0;
           }
@@ -198,9 +198,10 @@ tmap_map2_save_narrow_hits(const tmap_bwtl_t *bwtl, tmap_map2_entry_t *u, tmap_m
           }
           q = &b1->hits[b1->n++];
           q->k = p->match_sa.k; q->l = p->match_sa.l;
-          q->len = p->qlen;
+          q->qlen = p->qlen;
+          q->tlen = p->tlen;
           q->G = p->G; q->G2 = 0;
-          q->beg = bwtl->sa[u->tk]; q->end = q->beg + p->tlen;
+          q->beg = bwtl->sa[u->tk]; q->end = q->beg + p->tlen - 1;
           q->flag = 0;
           // delete p
           p->match_sa.k = p->match_sa.l = 0; p->G = TMAP_MAP2_MINUS_INF;
@@ -273,6 +274,9 @@ tmap_map2_core_aln(const tmap_map_opt_t *opt, const tmap_bwtl_t *target,
   b1 = tmap_map2_aln_init();
   tmap_map2_aln_realloc(b, target->seq_len * 2);
   b->n = target->seq_len * 2; // why?
+  for(i=0;i<b->n;i++) { // set the default score to -inf
+      b->hits[i].G = TMAP_MAP2_MINUS_INF;
+  }
   b_ret = tmap_calloc(2, sizeof(tmap_map2_aln_t*), "b_ret");
   b_ret[0] = b; b_ret[1] = b1;
   // the main loop: traversal of the DAG
@@ -406,8 +410,6 @@ tmap_map2_core_aln(const tmap_map_opt_t *opt, const tmap_bwtl_t *target,
       } // ~for(tj)
       tmap_map2_mempool_push(stack->pool, v);
   } // while(top)
-  tmap_map2_aux_resolve_duphits(query_bwt, query_sa, b, opt->max_seed_intv, 0); 
-  tmap_map2_aux_resolve_duphits(query_bwt, query_sa, b1, opt->max_seed_intv, 0); 
   // free
   free(heap);
   tmap_hash_destroy(64, rhash);

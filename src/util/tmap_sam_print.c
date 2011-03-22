@@ -202,21 +202,51 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
             uint32_t *cigar, int32_t n_cigar, int32_t *nm)
 {
   int32_t i, j;
-  uint32_t ref_i, read_i;
+  uint32_t ref_i, read_i, ref_start, ref_end;
   int32_t l = 0; // the length of the last md op
   uint8_t read_base, ref_base;
   tmap_string_t *md=NULL;
+  uint8_t *target = NULL;;
 
   md = tmap_string_init(32);
   (*nm) = 0;
 
-  read_i = 0;
-  ref_i = refseq->annos[seqid].offset + pos;
+  ref_start = ref_end = pos + 1; // make one-based
+  for(i=0;i<n_cigar;i++) { // go through each cigar operator
+      int32_t op_len;
+      op_len = cigar[i] >> 4;
+      switch(cigar[i]&0xf) {
+        case BAM_CMATCH:
+        case BAM_CDEL:
+        case BAM_CREF_SKIP:
+          ref_end += op_len; break;
+        default:
+          break;
+      }
+  }
+  ref_end--;
+      
+  target = tmap_malloc(sizeof(char) * (ref_end - ref_start + 1), "target");
+  if(ref_end - ref_start + 1 != tmap_refseq_subseq(refseq, ref_start + refseq->annos[seqid].offset, ref_end - ref_start + 1, target)) {
+      tmap_error("bug encountered", Exit, OutOfRange);
+  }
+
+  // check if any IUPAC bases fall within the range
+  if(1 == tmap_refseq_amb_bases(refseq, seqid+1, ref_start, ref_end)) {
+      // modify them
+      for(ref_i=ref_start;ref_i<=ref_end;ref_i++) {
+          j = tmap_refseq_amb_bases(refseq, seqid+1, ref_i, ref_i); // Note: j is one-based
+          if(0 < j) {
+              target[ref_i-ref_start] = refseq->annos[seqid].amb_bases[j-1];
+          }
+      }
+  }
 
   if(0 == n_cigar) {
       tmap_error("bug encountered", Exit, OutOfRange);
   }
 
+  read_i = ref_i = 0;
   for(i=0;i<n_cigar;i++) { // go through each cigar operator
       int32_t op_len, op;
 
@@ -225,16 +255,16 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
 
       if(BAM_CMATCH == op) {
           for(j=0;j<op_len;j++) {
-              if(refseq->len <= ref_i) break; // out of boundary
+              if(refseq->len <= refseq->annos[seqid].offset + pos + ref_i) break; // out of boundary
 
               read_base = tmap_nt_char_to_int[(int)read_bases[read_i]]; 
-              ref_base = tmap_refseq_seq_i(refseq, ref_i);
+              ref_base = target[ref_i];
 
               if(read_base == ref_base) { // a match
                   l++;
               }
               else {
-                  tmap_string_lsprintf(md, md->l, "%d%c", l, "ACGTN"[ref_base]);
+                  tmap_string_lsprintf(md, md->l, "%d%c", l, tmap_iupac_int_to_char[ref_base]);
                   l = 0;
                   (*nm)++;
               }
@@ -250,9 +280,9 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
       else if(BAM_CDEL == op) {
           tmap_string_lsprintf(md, md->l, "%d^", l);
           for(j=0;j<op_len;j++) {
-              if(refseq->len <= ref_i) break; // out of boundary
-              ref_base = tmap_refseq_seq_i(refseq, ref_i);
-              tmap_string_lsprintf(md, md->l, "%c", "ACGTN"[ref_base]);
+              if(refseq->len <= refseq->annos[seqid].offset + pos + ref_i) break; // out of boundary
+              ref_base = target[ref_i];
+              tmap_string_lsprintf(md, md->l, "%c", tmap_iupac_int_to_char[ref_base]);
               ref_i++;
           }
           if(j < op_len) break;
@@ -276,6 +306,8 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
       }
   }
   tmap_string_lsprintf(md, md->l, "%d", l);
+
+  free(target);
 
   return md;
 }

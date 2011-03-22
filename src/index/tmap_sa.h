@@ -84,6 +84,7 @@ tmap_sa_destroy(tmap_sa_t *sa);
 */
 uint32_t 
 tmap_sa_pac_pos(const tmap_sa_t *sa, const tmap_bwt_t *bwt, uint32_t k);
+
 /*! 
   @param  fn_fasta  the FASTA file name
   @param  intv      the suffix array interval

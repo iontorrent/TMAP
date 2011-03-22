@@ -31,6 +31,15 @@ TMAP_SORT_INIT(hitG, tmap_map2_hit_t, __hitG_lt)
 
 #define TMAP_MAP2_AUX_IS 0
 
+#define __print_cigar(_cigar, _n_cigar) do { \
+    int32_t j; \
+    tmap_file_fprintf(tmap_file_stderr, "cigar:"); \
+    for(j=0;j<q->n_cigar;j++) { \
+        tmap_file_fprintf(tmap_file_stderr, "%d%c", q->cigar[j]>>4, "MIDNSHP"[q->cigar[j]&0xf]); \
+    } \
+    tmap_file_fprintf(tmap_file_stderr, "\n"); \
+} while (0)
+
 #define __check_softclip(_softclip_type, _strand, _cigar, _n_cigar) do { \
     int32_t _type = _softclip_type; \
     if(1 == _strand) { \
@@ -47,22 +56,27 @@ TMAP_SORT_INIT(hitG, tmap_map2_hit_t, __hitG_lt)
       case TMAP_MAP_UTIL_SOFT_CLIP_LEFT: \
         if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(_cigar[_n_cigar-1])) { \
             tmap_file_fprintf(tmap_file_stderr, "the strand is %d\n", strand); \
+            __print_cigar(_cigar, _n_cigar); \
             tmap_error("found right soft clip", Warn, OutOfRange); \
         } \
         break; \
       case TMAP_MAP_UTIL_SOFT_CLIP_RIGHT: \
         if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(_cigar[0])) { \
             tmap_file_fprintf(tmap_file_stderr, "the strand is %d\n", strand); \
+            __print_cigar(_cigar, _n_cigar); \
             tmap_error("found left soft clip", Warn, OutOfRange); \
         } \
         break; \
       case TMAP_MAP_UTIL_SOFT_CLIP_NONE: \
         if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(_cigar[_n_cigar-1])) { \
+            fprintf(stderr, "_n_cigar=%d\n", _n_cigar); \
             tmap_file_fprintf(tmap_file_stderr, "the strand is %d\n", strand); \
+            __print_cigar(_cigar, _n_cigar); \
             tmap_error("found right soft clip", Warn, OutOfRange); \
         } \
         if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(_cigar[0])) { \
             tmap_file_fprintf(tmap_file_stderr, "the strand is %d\n", strand); \
+            __print_cigar(_cigar, _n_cigar); \
             tmap_error("found left soft clip", Warn, OutOfRange); \
         } \
         break; \
@@ -91,12 +105,6 @@ tmap_map2_aux_resolve_duphits(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_m
       // go through tmp hits
       for(i = n = 0; i < tmp_b->n; ++i) {
           tmap_map2_hit_t *p = tmp_b->hits + i;
-          if(0 != p->n_cigar) {
-              tmap_error("bug encountered", Exit, OutOfRange);
-          }
-          if(NULL != p->cigar) {
-              tmap_error("bug encountered", Exit, OutOfRange);
-          }
           if(p->l - p->k + 1 <= IS) n += p->l - p->k + 1;
           else if(p->G > min_as) ++n;
       }
@@ -106,7 +114,7 @@ tmap_map2_aux_resolve_duphits(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_m
       // copy over
       for(i = j = 0; i < tmp_b->n; ++i) {
           tmap_map2_hit_t *p = tmp_b->hits + i;
-          if(p->l - p->k + 1 <= IS) {
+          if(p->l - p->k + 1 <= IS && TMAP_MAP2_MINUS_INF < p->G) {
               uint32_t k;
               for(k = p->k; k <= p->l; ++k) {
                   b->hits[j] = *p;
@@ -144,9 +152,9 @@ tmap_map2_aux_resolve_duphits(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_m
               if(qol < 0) qol = 0;
               if((double)qol / (p->end - p->beg) > TMAP_MAP2_MASK_LEVEL 
                  || (double)qol / (q->end - q->beg) > TMAP_MAP2_MASK_LEVEL) {
-                  int64_t tol = (int64_t)(p->k + p->len < q->k + q->len? p->k + p->len : q->k + q->len)
+                  int64_t tol = (int64_t)(p->k + p->tlen < q->k + q->tlen? p->k + p->tlen : q->k + q->tlen)
                     - (int64_t)(p->k > q->k? p->k : q->k);
-                  if((double)tol / p->len > TMAP_MAP2_MASK_LEVEL || (double)tol / q->len > TMAP_MAP2_MASK_LEVEL)
+                  if((double)tol / p->tlen > TMAP_MAP2_MASK_LEVEL || (double)tol / q->tlen > TMAP_MAP2_MASK_LEVEL)
                     compatible = 0;
               }
           }
@@ -196,7 +204,7 @@ tmap_map2_aux_resolve_duphits(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_m
    qol = (p->end < q->end? p->end : q->end) - (p->beg > q->beg? p->beg : q->beg);
    if(qol < 0) qol = 0;
    if(p->l == 0 && q->l == 0) {
-   tol = (int64_t)(p->k + p->len < q->k + q->len? p->k + p->len : q->k + q->len)
+   tol = (int64_t)(p->k + p->tlen < q->k + q->tlen? p->k + p->tlen : q->k + q->tlen)
    - (p->k > q->k? p->k : q->k);
    if(tol < 0) tol = 0;
    }
@@ -224,7 +232,7 @@ static void
 tmap_map2_hit_nullify(tmap_map2_hit_t * hit)
 {
   hit->k = hit->l = hit->flag = hit->n_seeds = 0;
-  hit->len = hit->G = hit->G2 = hit->beg = hit->end = 0;
+  hit->qlen = hit->tlen = hit->G = hit->G2 = hit->beg = hit->end = 0;
   hit->n_cigar = 0;
   hit->cigar = NULL;
 }
@@ -328,9 +336,9 @@ tmap_map2_aux_extend_left(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
       int32_t score, j;
       tmap_sw_path_t path;
       /*
-      fprintf(stderr, "%s before p->G=%d p->len=%d p->beg=%d p->end=%d p->k=%u p->l=%u score=%d strand=%d is_rev=%d\n",
-              __func__, p->G, p->len, p->beg, p->end, p->k, p->l, score, strand, is_rev);
-              */
+      fprintf(stderr, "%s before p->G=%d p->qlen=%d p->tlen=%d p->beg=%d p->end=%d p->k=%u strand=%d is_rev=%d\n",
+              __func__, p->G, p->qlen, p->tlen, p->beg, p->end, p->k, strand, is_rev);
+      */
       if(target_length < lt) tmap_error("target_length < lt", Exit, OutOfRange);
       p->n_seeds = 1;
       if(p->l || p->k == 0) {
@@ -344,7 +352,7 @@ tmap_map2_aux_extend_left(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
       if(0 == p->beg) continue; // no more base to extend
       for(j = score = 0; j < i; ++j) {
           tmap_map2_hit_t *q = b->hits + j;
-          if(q->beg <= p->beg && q->k <= p->k && q->k + q->len >= p->k + p->len) {
+          if(q->beg <= p->beg && q->k <= p->k && q->k + q->tlen >= p->k + p->tlen) {
               if(q->n_seeds < (1<<14) - 2) ++q->n_seeds;
               ++score;
           }
@@ -353,19 +361,33 @@ tmap_map2_aux_extend_left(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
           p->G = TMAP_MAP2_MINUS_INF; 
           continue;
       }
-      if(lt > p->k) lt = p->k;
+      if(p->k < lt) lt = p->k; // so we do not go off the beginning of refseq
+      if(0 == lt) continue; // no need to extend
       if(is_rev) {
-          for(k = p->k - 1, j = 0; 0 <= k && j < lt; --k) 
-            target[j++] = tmap_refseq_seq_i(refseq, refseq->len-k-1);
-      } else {
-          for(k = p->k - 1, j = 0; 0 <= k && j < lt; --k) 
-            target[j++] = tmap_refseq_seq_i(refseq, k);
+          k = refseq->len - p->k; // one-based, but the previous base
+          lt = tmap_refseq_subseq(refseq, k, lt, target);
       }
-      lt = j;
+      else {
+          k = p->k ; // one-based, but the previous base
+          if(k < lt) {
+              lt = k + 1;
+              k = 1;
+          }
+          else {
+              k = k - lt + 1;
+          }
+          lt = tmap_refseq_subseq(refseq, k, lt, target);
+          // reverse it
+          for(j=0;j<lt>>1;j++) {
+              k = target[j]; 
+              target[j] = target[lt-j-1];
+              target[lt-j-1] = k;
+          }
+      }
 
       /*
-      fprintf(stderr, "\nIn %s is_rev=%d strand=%d to_fit=%d p->beg=%d query_length=%d\n", 
-              __func__, is_rev, strand, to_fit, p->beg, query_length);
+      fprintf(stderr, "In %s is_rev=%d strand=%d to_fit=%d p->beg=%d p->k=%u p->qlen=%u p->tlen=%u query_length=%d refseq->len=%u\n", 
+              __func__, is_rev, strand, to_fit, p->beg, p->k, p->qlen, p->tlen, query_length, (uint32_t)refseq->len);
       for(j=0;j<p->beg;j++) {
           fputc("ACGTN"[query[query_length-p->beg+j]], stderr);
       }
@@ -385,14 +407,15 @@ tmap_map2_aux_extend_left(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
 
       if(1 == to_fit || (opt->score_thr < score && p->G <= score)) {
           p->G = score;
-          p->len += path.i;
+          p->qlen += path.j;
+          p->tlen += path.i;
           p->beg -= path.j;
-          p->k -= path.i;
+          p->k -= path.i; 
       }
       /*
-      fprintf(stderr, "%s after p->G=%d p->len=%d p->beg=%d p->end=%d p->k=%u\n",
-              __func__, p->G, p->len, p->beg, p->end, p->k);
-              */
+      fprintf(stderr, "%s after p->G=%d p->qlen=%d p->tlen=%d p->beg=%d p->end=%d p->k=%u strand=%d is_rev=%d\n",
+              __func__, p->G, p->qlen, p->tlen, p->beg, p->end, p->k, strand, is_rev);
+      */
   }
   tmap_map2_aux_reverse_query(query, query_length); // reverse back the query
   free(target);
@@ -435,32 +458,49 @@ tmap_map2_aux_extend_right(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
       int32_t j, score;
       tmap_sw_path_t path;
       /*
-      fprintf(stderr, "%s before p->G=%d p->len=%d p->beg=%d p->end=%d p->k=%u score=%d strand=%d is_rev=%d\n",
-              __func__, p->G, p->len, p->beg, p->end, p->k, score, strand, is_rev);
+      fprintf(stderr, "%s before p->G=%d p->qlen=%d p->tlen=%d p->beg=%d p->end=%d p->k=%u strand=%d is_rev=%d\n",
+              __func__, p->G, p->qlen, p->tlen, p->beg, p->end, p->k, strand, is_rev);
               */
       if(p->l) continue;
       if(query_length == p->end) continue; // no more base to extend
       if(is_rev) {
-          for(k = p->k, j = 0; k < p->k + lt && k < refseq->len; ++k)
-            target[j++] = tmap_refseq_seq_i(refseq, refseq->len-k-1);
-      } else {
-          for(k = p->k, j = 0; k < p->k + lt && k < refseq->len; ++k)
-            target[j++] = tmap_refseq_seq_i(refseq, k);
+          k = refseq->len - p->k; // one-based
+          if(0 < lt) { 
+              if(k < lt) {
+                  lt = k;
+                  k = 1;
+              }
+              else {
+                  k = k - lt + 1;
+              }
+          }
+          lt = tmap_refseq_subseq(refseq, k, lt, target);
+          // reverse it
+          for(j=0;j<lt>>1;j++) {
+              k = target[j]; 
+              target[j] = target[lt-j-1];
+              target[lt-j-1] = k;
+          }
       }
-      lt = j;
+      else {
+          k = p->k + 1; // one-based
+          lt = tmap_refseq_subseq(refseq, k, lt, target);
+      }
 
       /*
-      fprintf(stderr, "\nIn %s is_rev=%d strand=%d to_fit=%d p->beg=%d query_length=%d\n", 
-              __func__, is_rev, strand, to_fit, p->beg, query_length);
-      for(j=0;j<query_length - p->beg;j++) {
-          fputc("ACGTN"[query[p->beg+j]], stderr);
+      fprintf(stderr, "\nIn %s is_rev=%d strand=%d to_fit=%d p->beg=%d p->k=%u p->qlen=%u p->tlen=%u query_length=%d refseq->len=%u\n", 
+              __func__, is_rev, strand, to_fit, p->beg, p->k, p->qlen, p->tlen, query_length, (uint32_t)refseq->len);
+      fprintf(stderr, "query_length-p->beg=%d\n", query_length - p->beg);
+      fprintf(stderr, "p->beg=%d\n", p->beg);
+      for(j=p->beg;j<query_length;j++) {
+          fputc("ACGTN"[query[j]], stderr);
       }
       fputc('\n', stderr);
       for(j=0;j<lt;j++) {
           fputc("ACGTN"[target[j]], stderr);
       }
       fputc('\n', stderr);
-              */
+      */
 
       if(0 == to_fit) {
           score = tmap_sw_extend_core(target, lt, query + p->beg, query_length - p->beg, &par, &path, NULL, 1, _mem);
@@ -471,13 +511,14 @@ tmap_map2_aux_extend_right(tmap_map_opt_t *opt, tmap_map2_aln_t *b,
 
       if(1 == to_fit || (opt->score_thr < score && p->G <= score)) {
           p->G = score;
-          p->len = path.i;
+          p->qlen += path.j;
+          p->tlen = path.i;
           p->end = path.j + p->beg;
       }
       /*
-      fprintf(stderr, "%s after p->G=%d p->len=%d p->beg=%d p->end=%d p->k=%u\n",
-              __func__, p->G, p->len, p->beg, p->end, p->k);
-              */
+      fprintf(stderr, "%s after p->G=%d p->qlen=%d p->tlen=%d p->beg=%d p->end=%d p->k=%u strand=%d is_rev=%d\n",
+              __func__, p->G, p->qlen, p->tlen, p->beg, p->end, p->k, strand, is_rev);
+      */
   }
   free(target);
 }
@@ -505,24 +546,25 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
       tmap_map2_hit_t *p = b->hits + i;
       tmap_map2_hit_t *q = b->hits + n;
       uint8_t *query;
-      uint32_t k, seqid, coor;
+      uint32_t seqid, coor;
       int32_t path_len, beg, end, added;
       int8_t strand;
-
+      
       if(p->l) continue;
 
-      strand = (p->flag & 0x10) ? 1 : 0;
 
+      strand = (p->flag & 0x10) ? 1 : 0;
+      
       // adjust for contig boundaries
-      if(tmap_refseq_pac2real(refseq, p->k, p->len, &seqid, &coor) <= 0) {
+      if(tmap_refseq_pac2real(refseq, p->k, p->tlen, &seqid, &coor) <= 0) {
           if(1 == strand) { // reverse
-              if(tmap_refseq_pac2real(refseq, p->k + p->len - 1, 1, &seqid, &coor) <= 0) {
+              if(tmap_refseq_pac2real(refseq, p->k + p->tlen - 1, 1, &seqid, &coor) <= 0) {
                   // do nothing, this should fail later
               }
               else {
                   // move to the contig and position
                   p->k = refseq->annos[seqid].offset+1;
-                  p->len = (target_len < refseq->annos[seqid].len) ? target_len : refseq->annos[seqid].len;
+                  p->tlen = (target_len < refseq->annos[seqid].len) ? target_len : refseq->annos[seqid].len;
               }
           }
           else {
@@ -532,7 +574,7 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
               else {
                   // move to the contig and position
                   p->k = refseq->annos[seqid].offset+1;
-                  p->len = (target_len < refseq->annos[seqid].len) ? target_len : refseq->annos[seqid].len;
+                  p->tlen = (target_len < refseq->annos[seqid].len) ? target_len : refseq->annos[seqid].len;
               }
           }
       }
@@ -540,52 +582,46 @@ tmap_map2_aux_gen_cigar(tmap_map_opt_t *opt, uint8_t *queries[2],
       beg = (1 == strand) ? (query_length - p->end) : p->beg;
       end = (1 == strand) ? (query_length - p->beg) : p->end;
 
+      //fprintf(stderr, "p->beg=%d p->end=%d beg=%d end=%d query_length=%d\n", p->beg, p->end, beg, end, query_length);
+
       // get more reference
-      if(target_len < p->len) {
-          target_len = p->len;
+      if(target_len < p->tlen) {
+          target_len = p->tlen;
           target = tmap_realloc(target, target_len * sizeof(uint8_t), "target");
           path = tmap_realloc(path, (target_len + query_length) * sizeof(tmap_sw_path_t), "path");
       }
 
       query = queries[strand] + beg;
-      for(k = p->k; k < p->k + p->len; ++k) { // in principle, no out-of-boundary here
-          target[k - p->k] = tmap_refseq_seq_i(refseq, k-1);
+
+      if(p->tlen != tmap_refseq_subseq(refseq, p->k, p->tlen, target)) {
+          tmap_error("bug encountered", Exit, OutOfRange);
       }
 
       added = tmap_map_util_sw(&tmp_sam,
-                               target, p->len,
+                               target, p->tlen,
                                query, end-beg,
                                0, 0,
                                &par, path, &path_len,
                                opt->score_thr, opt->softclip_type, strand);
 
       if(1 == added) {
-          if(0 == path_len) {
-              tmap_error("0 == path_len", Exit, OutOfRange);
-          }
-          if(0 == tmp_sam.n_cigar) {
-              tmap_error("bug encountered", Exit, OutOfRange);
-          }
-
-
           // copy over
           if(n < i) {
               (*q) = (*p);
           }
 
           // adjust the alignment length
-          q->len = path[0].i - path[path_len-1].i + 1;
+          q->tlen = path[0].i - path[path_len-1].i + 1;
+          if(path[path_len-1].ctype == TMAP_SW_FROM_I) {
+              q->tlen--;
+          }
+          q->qlen = path[0].j - path[path_len-1].j + 1;
           q->k += tmp_sam.pos; // adjust the alignment start
           q->cigar = tmp_sam.cigar;
           q->n_cigar = tmp_sam.n_cigar;
           q->G = tmp_sam.score;
-          
-          __check_softclip(opt->softclip_type, strand, q->cigar, q->n_cigar);
 
-          /*
-          fprintf(stderr, "strand=%d beg=%d end=%d p->beg=%d p->end=%d query_length=%d\n", 
-                  strand, beg, end, p->beg, p->end, query_length);
-                  */
+          __check_softclip(opt->softclip_type, strand, q->cigar, q->n_cigar);
 
           // add latent soft clipping at the front
           if(0 < beg){
@@ -660,31 +696,28 @@ tmap_map2_aux_aln(tmap_map_opt_t *opt, tmap_refseq_t *refseq,
   tmap_map2_aln_t *b[2], **bb[2];
   int32_t k, softclip_type;
 
-
   for(k = 0; k < 2; ++k) {
       tmap_bwtl_t *query = tmap_bwtl_seq2bwtl(seq[k]->l, (uint8_t*)seq[k]->s);
       bb[k] = tmap_map2_core_aln(opt, query, target_bwt, target_sa, pool);
+      tmap_map2_aux_resolve_duphits(target_bwt, target_sa, bb[k][0], opt->max_seed_intv, 0);
+      tmap_map2_aux_resolve_duphits(target_bwt, target_sa, bb[k][1], opt->max_seed_intv, 0);
       tmap_bwtl_destroy(query);
   }
   b[0] = bb[0][1]; b[1] = bb[1][1]; // bb[*][1] are "narrow SA hits"
   tmap_map2_chain_filter(opt, seq[0]->l, b);
+  // TODO: could we skip all of this extension and just generate the alignments
+  // directly?
   for(k = 0; k < 2; ++k) {
       softclip_type = opt->softclip_type;
       if(k ^ is_rev) { // one or the other, but not both
           softclip_type = __tmap_map_util_reverse_soft_clipping(softclip_type);
       }
-      /*
+      // Extend left both narrow and repetitive hits, for soft-clipping purposes
+      tmap_map2_aux_extend_left(opt, bb[k][0], (uint8_t*)seq[k]->s, seq[k]->l, refseq, is_rev, k, pool->aln_mem, softclip_type);
       tmap_map2_aux_extend_left(opt, bb[k][1], (uint8_t*)seq[k]->s, seq[k]->l, refseq, is_rev, k, pool->aln_mem, softclip_type);
       tmap_map2_aux_merge_hits(bb[k], seq[k]->l, 0, TMAP_MAP_UTIL_SOFT_CLIP_ALL); // bb[k][1] and bb[k][0] are merged into bb[k][0]
       tmap_map2_aux_resolve_duphits(NULL, NULL, bb[k][0], TMAP_MAP2_AUX_IS, (TMAP_MAP_UTIL_SOFT_CLIP_NONE == softclip_type) ? TMAP_MAP2_MINUS_INF : 0);
       tmap_map2_aux_extend_right(opt, bb[k][0], (uint8_t*)seq[k]->s, seq[k]->l, refseq, is_rev, k, pool->aln_mem, softclip_type);
-      */
-      // Note, we are examining all hits, not just extending left on narrow, and
-      // right on all...
-      tmap_map2_aux_extend_left(opt, bb[k][0], (uint8_t*)seq[k]->s, seq[k]->l, refseq, is_rev, k, pool->aln_mem, softclip_type);
-      tmap_map2_aux_resolve_duphits(NULL, NULL, bb[k][0], TMAP_MAP2_AUX_IS, (TMAP_MAP_UTIL_SOFT_CLIP_NONE == softclip_type) ? TMAP_MAP2_MINUS_INF : 0);
-      tmap_map2_aux_extend_right(opt, bb[k][0], (uint8_t*)seq[k]->s, seq[k]->l, refseq, is_rev, k, pool->aln_mem, softclip_type);
-      tmap_map2_aln_destroy(bb[k][1]); // ignore not so repetitive hits, since we want all hits
       b[k] = bb[k][0];
       free(bb[k]);		
   }
@@ -717,7 +750,7 @@ tmap_map2_aux_flag_fr(tmap_map2_aln_t *b[2])
           tmap_map2_hit_t *p = b[0]->hits + i;
           for(j = 0; j < b[1]->n; ++j) {
               tmap_map2_hit_t *q = b[1]->hits + j;
-              if(q->beg == p->beg && q->end == p->end && q->k == p->k && q->len == p->len && q->G == p->G) {
+              if(q->beg == p->beg && q->end == p->end && q->k == p->k && q->tlen == p->tlen && q->G == p->G) {
                   q->flag |= 0x30000; p->flag |= 0x30000;
                   break;
               }
@@ -734,7 +767,7 @@ tmap_map2_aux_fix_cigar(tmap_refseq_t *refseq, tmap_map2_hit_t *p, int32_t n_cig
   int32_t x, y, i;
   uint32_t coor, seqid, refl;
 
-  if(0 == tmap_refseq_pac2real(refseq, p->k, p->len, &seqid, &coor)) {
+  if(0 == tmap_refseq_pac2real(refseq, p->k, p->tlen, &seqid, &coor)) {
       return -1;
   }
   if(n_cigar == 0) {
@@ -771,7 +804,7 @@ tmap_map2_aux_fix_cigar(tmap_refseq_t *refseq, tmap_map2_hit_t *p, int32_t n_cig
                   TMAP_SW_CIGAR_STORE(cn[j++], BAM_CSOFT_CLIP, (uint32_t)y);
                   kk = p->k + (x + ln - refl);
                   nlen[0] = x - (coor-1);
-                  nlen[1] = p->len - nlen[0] - ln;
+                  nlen[1] = p->tlen - nlen[0] - ln;
               } else cn[j++] = cigar[i];
               x += ln;
           } else if(op == BAM_CMATCH) { // match
@@ -786,7 +819,7 @@ tmap_map2_aux_fix_cigar(tmap_refseq_t *refseq, tmap_map2_hit_t *p, int32_t n_cig
                   mq[1] += x + ln - refl;
                   kk = refseq->annos[seqid].offset + refl;
                   nlen[0] = refl - (coor-1);
-                  nlen[1] = p->len - nlen[0];
+                  nlen[1] = p->tlen - nlen[0];
               } else {
                   cn[j++] = cigar[i];
                   mq[nc?1:0] += ln;
@@ -797,9 +830,9 @@ tmap_map2_aux_fix_cigar(tmap_refseq_t *refseq, tmap_map2_hit_t *p, int32_t n_cig
       if(mq[0] > mq[1]) { // then take the first alignment
           n_cigar = nc;
           memcpy(cigar, cn, 4 * nc);
-          p->len = nlen[0];
+          p->tlen = nlen[0];
       } else {
-          p->k = kk; p->len = nlen[1];
+          p->k = kk; p->tlen = nlen[1];
           n_cigar = j - nc;
           memcpy(cigar, cn + nc, 4 * (j - nc));
       }
@@ -810,7 +843,7 @@ tmap_map2_aux_fix_cigar(tmap_refseq_t *refseq, tmap_map2_hit_t *p, int32_t n_cig
 */
 
 static tmap_map_sams_t *
-tmap_map1_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt, 
+tmap_map2_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt, 
                          tmap_map2_aln_t *aln)
 {
   int32_t i, j;
@@ -834,7 +867,7 @@ tmap_map1_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
           if(aln->hits[i].n_cigar <= 0) {
               continue; // no cigar
           }
-          if(tmap_refseq_pac2real(refseq, p->k, p->len, &seqid, &coor) <= 0) {
+          if(tmap_refseq_pac2real(refseq, p->k, p->tlen, &seqid, &coor) <= 0) {
               continue; // spanning two or more chromosomes
           }
       }
@@ -892,25 +925,26 @@ tmap_map1_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
 
 tmap_map_sams_t *
 tmap_map2_aux_core(tmap_map_opt_t *_opt,
-                   tmap_seq_t *query,
+                   tmap_seq_t *seqs[4],
                    tmap_refseq_t *refseq,
                    tmap_bwt_t *bwt[2],
                    tmap_sa_t *sa[2],
                    tmap_map2_global_mempool_t *pool)
 {
   tmap_map_opt_t opt;
+  tmap_seq_t *orig_seq = NULL;
   tmap_string_t *seq[2]={NULL, NULL};
   tmap_string_t *rseq[2]={NULL, NULL};
   tmap_map_sams_t *sams = NULL;
   tmap_map2_aln_t *b[2]={NULL,NULL};
   tmap_string_t *bases = NULL;
   uint8_t *_seq[2];
-  int32_t i, k, l;
+  int32_t i, k, l, num_n;
 
   opt = (*_opt);
 
   // sequence length
-  bases = tmap_seq_get_bases(query);
+  bases = tmap_seq_get_bases(seqs[0]);
   l = bases->l;
 
   // set opt->score_thr
@@ -930,30 +964,39 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
   if(k < 1) k = 1; // I do not know if k==0 causes troubles
   opt.bw = _opt->bw < k ? _opt->bw: k;
 
-  // set seq[2] and rseq[2]
-  seq[0] = tmap_string_init(l);
-  seq[1] = tmap_string_init(l);
-  rseq[0] = tmap_string_init(l);
-  rseq[1] = tmap_string_init(l);
-
-  // convert sequences to 2-bit representation
-  for(i=k=0;i<l;i++) {
+  // get the number of Ns
+  for(i=num_n=0;i<l;i++) {
       uint8_t c = (uint8_t)tmap_nt_char_to_int[(int)bases->s[i]];
-      if(c >= 4) { c = (int)(drand48() * 4); ++k; } // FIXME: ambiguous bases are not properly handled
-      seq[0]->s[i] = c; // original
-      seq[1]->s[l-1-i] = 3 - c; // reverse compliment
-      rseq[0]->s[l-1-i] = c; // reverse 
-      rseq[1]->s[i] = 3 - c; // compliment
+      if(c >= 4) num_n++; // FIXME: ambiguous bases are not properly handled
   }
-  seq[0]->l = seq[1]->l = rseq[0]->l = rseq[1]->l = l;
 
   // will we always be lower than the score threshold
-  if((l*opt.score_match) + (k*opt.pen_mm) < opt.score_thr) {
-      tmap_string_destroy(seq[0]);
-      tmap_string_destroy(seq[1]);
-      tmap_string_destroy(rseq[0]);
-      tmap_string_destroy(rseq[1]);
+  if((l*opt.score_match) + (num_n*opt.pen_mm) < opt.score_thr) {
       return tmap_map_sams_init(0);
+  }
+  
+  // save sequences
+  seq[0] = tmap_seq_get_bases(seqs[0]); 
+  seq[1] = tmap_seq_get_bases(seqs[1]);
+  rseq[0] = tmap_seq_get_bases(seqs[2]); 
+  rseq[1] = tmap_seq_get_bases(seqs[3]);
+
+  // handle ambiguous bases
+  if(0 < num_n) {
+      // save original to de-randomize later
+      orig_seq = tmap_seq_clone(seqs[0]);
+
+      // randomize
+      for(i=0;i<l;i++) {
+          uint8_t c = (uint8_t)bases->s[i];
+          if(c >= 4) {
+              c = (int)(drand48() * 4); // FIXME: ambiguous bases are not properly handled
+              seq[0]->s[i] = c; // original
+              seq[1]->s[l-1-i] = 3 - c; // reverse compliment
+              rseq[0]->s[l-1-i] = c; // reverse 
+              rseq[1]->s[i] = 3 - c; // compliment
+          }
+      }
   }
 
   // alignment
@@ -969,7 +1012,7 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
           p->beg = l - p->end;
           p->end = l - x;
           if(p->l == 0) {
-              p->k = refseq->len - (p->k + p->len);
+              p->k = refseq->len - (p->k + p->tlen);
           }
       }
       tmap_map2_aux_merge_hits(b, l, 0, opt.softclip_type);
@@ -990,17 +1033,29 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
   _seq[0] = (uint8_t*)seq[0]->s;
   _seq[1] = (uint8_t*)seq[1]->s;
   tmap_map2_aux_gen_cigar(&opt, _seq, l, refseq, b[0]);
-  sams = tmap_map1_aux_store_hits(refseq, &opt, b[0]);
+  sams = tmap_map2_aux_store_hits(refseq, &opt, b[0]);
 
   // remove duplicate alignments
   tmap_map_util_remove_duplicates(sams, opt.dup_window);
 
   // free
-  tmap_string_destroy(seq[0]);
-  tmap_string_destroy(seq[1]);
-  tmap_string_destroy(rseq[0]);
-  tmap_string_destroy(rseq[1]);
   tmap_map2_aln_destroy(b[0]);
+
+  // revert ambiguous bases 
+  if(0 < num_n) {
+      // de-randomize
+      bases = tmap_seq_get_bases(orig_seq);
+      for(i=0;i<l;i++) {
+          uint8_t c = (uint8_t)bases->s[i];
+          if(c >= 4) { 
+              seq[0]->s[i] = c; // original
+              seq[1]->s[l-1-i] = 3 - c; // reverse compliment
+              rseq[0]->s[l-1-i] = c; // reverse 
+              rseq[1]->s[i] = 3 - c; // compliment
+          }
+      }
+      tmap_seq_destroy(orig_seq);
+  }
 
   return sams;
 }
