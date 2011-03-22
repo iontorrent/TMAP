@@ -623,13 +623,13 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t score_match, int32_t pen_
   }
 
   // free memory
-  tmap_fsw_flowseq_destroy(flowseq);
-  free(path);
+  tmap_fsw_flowseq_destroy_shallow(flowseq);
   free(base_calls);
   free(flowgram);
+  free(flow_order_tmp);
+  free(path);
   free(read_bases);
   free(ref_bases);
-  free(flow_order_tmp);
 
   return bam;
 }

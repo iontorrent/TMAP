@@ -750,6 +750,12 @@ tmap_fsw_flowseq_init(uint8_t *flow_order, int32_t flow_order_len, uint8_t *base
 }
 
 void
+tmap_fsw_flowseq_destroy_shallow(tmap_fsw_flowseq_t *flowseq)
+{
+  free(flowseq);
+}
+
+void
 tmap_fsw_flowseq_destroy(tmap_fsw_flowseq_t *flowseq)
 {
   free(flowseq->base_calls);
@@ -1577,7 +1583,7 @@ int tmap_fsw_main(int argc, char *argv[])
   free(base_calls);
   free(path);
   free(flow_order);
-  tmap_fsw_flowseq_destroy(flowseq);
+  tmap_fsw_flowseq_destroy_shallow(flowseq);
 
   return 0;
 }

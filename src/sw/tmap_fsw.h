@@ -126,6 +126,12 @@ tmap_fsw_flowseq_init(uint8_t *flow_order, int32_t flow_order_len, uint8_t *base
   @details        this does a shallow-destroy
   */
 void
+tmap_fsw_flowseq_destroy_shallow(tmap_fsw_flowseq_t *flowseq);
+
+/*!
+  @param  flowseq  pointer to the flow sequence to destroy
+  */
+void
 tmap_fsw_flowseq_destroy(tmap_fsw_flowseq_t *flowseq);
 
 /*!
