@@ -83,7 +83,7 @@ int tmap_index(int argc, char *argv[])
       tmap_file_stdout = tmap_file_fdopen(fileno(stdout), "wb", TMAP_FILE_NO_COMPRESSION);
       tmap_file_fprintf(tmap_file_stdout, "%s\n", tmap_refseq_get_version_format(PACKAGE_VERSION));
       tmap_file_fclose(tmap_file_stdout);
-      return 1;
+      return 0;
   }
 
   while((c = getopt(argc, argv, "f:o:i:w:a:hv")) >= 0) {
