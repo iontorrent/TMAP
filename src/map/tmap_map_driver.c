@@ -60,12 +60,22 @@ tmap_map_driver_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int
                          tmap_driver_func_thread_cleanup func_thread_cleanup,
                          int32_t thread_block_size, int32_t tid, tmap_map_opt_t *opt)
 {
-  int32_t low = 0, high;
+  int32_t i, low = 0, high;
   void *data = NULL;
+  int32_t flow_order_len = 0;
+  uint8_t *flow_order = NULL;
 
   // initialize thread data
   if(0 != func_thread_init(&data, opt)) {
       tmap_error("the thread function could not be initialized", Exit, OutOfRange);
+  }
+              
+  if(NULL != opt->flow_order && 0 == opt->flow_order_use_sff) {
+      flow_order_len = strlen(opt->flow_order);
+      flow_order = tmap_malloc(sizeof(uint8_t) * flow_order_len, "flow_order");
+      for(i=0;i<flow_order_len;i++) {
+          flow_order[i] = tmap_nt_char_to_int[(int)opt->flow_order[i]];
+      }
   }
 
   while(low < seq_buffer_length) {
@@ -112,9 +122,16 @@ tmap_map_driver_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int
               }
 
               // re-align the alignments in flow-space
-              if(TMAP_SEQ_TYPE_SFF == seq_buffer[low]->type) {
+              if(0 < flow_order_len || 1 == opt->flow_order_use_sff) {
+                  if(0 == flow_order_len && 1 == opt->flow_order_use_sff) { // initialize the flow order from the SFF header
+                      flow_order_len = seq_buffer[low]->data.sff->gheader->flow->l;
+                      flow_order = tmap_malloc(sizeof(uint8_t) * flow_order_len, "flow_order");
+                      for(i=0;i<flow_order_len;i++) {
+                          flow_order[i] = tmap_nt_char_to_int[(int)seq_buffer[low]->data.sff->gheader->flow->s[i]];
+                      }
+                  }
                   tmap_map_util_fsw(seq_buffer[low],
-                                    opt->flow_order_int, strlen(opt->flow_order),
+                                    flow_order, flow_order_len,
                                     sams[low], refseq, 
                                     opt->bw, opt->softclip_type, opt->score_thr,
                                     opt->score_match, opt->pen_mm, opt->pen_gapo,
@@ -126,6 +143,9 @@ tmap_map_driver_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int
           low++;
       }
   }
+                  
+  // free thread variables
+  free(flow_order);
 
   // cleanup
   if(0 != func_thread_cleanup(&data, opt)) {

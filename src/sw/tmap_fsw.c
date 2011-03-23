@@ -750,6 +750,27 @@ tmap_fsw_flowseq_init(uint8_t *flow_order, int32_t flow_order_len, uint8_t *base
 }
 
 void
+tmap_fsw_flowseq_print(tmap_file_t *fp, tmap_fsw_flowseq_t *flowseq)
+{
+  int32_t i;
+
+  for(i=0;i<flowseq->flow_order_len;i++) {
+      tmap_file_fprintf(fp, "%c", "ACGTN"[flowseq->flow_order[i]]);
+  }
+  tmap_file_fprintf(fp, "\n");
+  for(i=0;i<flowseq->num_flows;i++) {
+      tmap_file_fprintf(fp, "%c", "ACGTN"[flowseq->base_calls[i]]);
+  }
+  tmap_file_fprintf(fp, "\n");
+  for(i=0;i<flowseq->num_flows;i++) {
+      if(0 < i) tmap_file_fprintf(fp, ",");
+      tmap_file_fprintf(fp, "%d", flowseq->flowgram[i]);
+  }
+  tmap_file_fprintf(fp, "\n");
+  tmap_file_fprintf(fp, "key_index=%d\tkey_bases=%d\n", flowseq->key_index, flowseq->key_bases);
+}
+
+void
 tmap_fsw_flowseq_destroy_shallow(tmap_fsw_flowseq_t *flowseq)
 {
   free(flowseq);

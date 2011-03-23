@@ -80,7 +80,6 @@ typedef struct __tmap_map_opt_t {
     int32_t pen_gape;  /*!< the indel extension penalty (-E) */
     int32_t fscore;  /*!< the flow score penalty (-X) */
     char *flow_order; /*!< the flow order (-x) */
-    uint8_t *flow_order_int; /*!< the flow order in integer format (-x) */
     int32_t flow_order_use_sff; /*!< the flow order should be from the sff (-x) */
     int32_t bw; /*!< the extra bases to add before and after the target during Smith-Waterman (-w) */
     int32_t softclip_type; /*!< soft clip type (-g) */

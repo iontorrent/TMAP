@@ -122,6 +122,13 @@ tmap_fsw_flowseq_init(uint8_t *flow_order, int32_t flow_order_len, uint8_t *base
                       int32_t num_flows, int32_t key_index, int32_t key_bases);
 
 /*!
+  @param  fp      the file stream in which to print
+  @param  flowseq  the flow sequence to print
+  */
+void
+tmap_fsw_flowseq_print(tmap_file_t *fp, tmap_fsw_flowseq_t *flowseq);
+
+/*!
   @param  flowseq  pointer to the flow sequence to destroy
   @details        this does a shallow-destroy
   */

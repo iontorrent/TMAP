@@ -61,6 +61,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->pen_gape = TMAP_MAP_UTIL_PEN_GAPE;
   opt->fscore = TMAP_MAP_UTIL_FSCORE;
   opt->flow_order = NULL;
+  opt->flow_order_use_sff = 0;
   opt->bw = 50; 
   opt->softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_RIGHT;
   opt->dup_window = 128;
@@ -135,7 +136,6 @@ tmap_map_opt_destroy(tmap_map_opt_t *opt)
   free(opt->fn_reads); 
   free(opt->sam_rg);
   free(opt->flow_order);
-  free(opt->flow_order_int);
 
   switch(opt->algo_id) {
     case TMAP_MAP_ALGO_MAP1:
@@ -336,6 +336,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   }
 
   // global options
+  // Note: possible memory leaks if the same option (besides -R) are specified twice
   while((c = getopt(argc, argv, getopt_format)) >= 0) {
       switch(c) { 
         case 'f': 
@@ -362,10 +363,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
               opt->flow_order_use_sff = 1;
           }
           else {
-              opt->flow_order_int = tmap_malloc(sizeof(uint8_t)*strlen(opt->flow_order), "flow_order");
-              for(c=0;c<strlen(opt->flow_order);c++) {
-                  opt->flow_order_int[c] = tmap_nt_char_to_int[(int)opt->flow_order[c]];
-              }
+              opt->flow_order_use_sff = 0;
           }
           break;
         case 'w':
@@ -567,6 +565,9 @@ tmap_map_opt_file_check_with_null(char *fn1, char *fn2)
         tmap_error("option -X was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if(0 != tmap_map_opt_file_check_with_null((opt_map_other)->flow_order, (opt_map_all)->flow_order)) { \
+        tmap_error("option -x was specified outside of the common options", Exit, CommandLineArgument); \
+    } \
+    if((opt_map_other)->flow_order_use_sff != (opt_map_all)->flow_order_use_sff) { \
         tmap_error("option -x was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->bw != (opt_map_all)->bw) { \
@@ -1418,6 +1419,8 @@ tmap_map_util_fsw(tmap_seq_t *seq,
   tmap_fsw_param_t param;
   int32_t matrix[25];
 
+  fprintf(stderr, "FLOW SW\n");
+
   // generate the alignment parameters
   param.matrix = matrix;
   param.band_width = 0;
@@ -1433,6 +1436,9 @@ tmap_map_util_fsw(tmap_seq_t *seq,
       if(NULL == fseq[s->strand]) {
           fseq[s->strand] = tmap_fsw_seq_to_flowseq(seq, flow_order, flow_order_len);
           if(1 == s->strand) tmap_fsw_flowseq_reverse_compliment(fseq[s->strand]);
+          // HERE
+          tmap_fsw_flowseq_print(tmap_file_stderr, fseq[0]);
+          tmap_fsw_flowseq_print(tmap_file_stderr, fseq[1]);
       }
 
       // HERE

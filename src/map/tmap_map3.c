@@ -104,7 +104,8 @@ tmap_map3_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
 
 // thread data
 typedef struct {
-    int32_t *null;
+    uint8_t *flow_order;
+    int32_t flow_order_len;
 } tmap_map3_thread_data_t;
 
 int32_t
@@ -125,9 +126,18 @@ tmap_map3_init(tmap_refseq_t *refseq, tmap_map_opt_t *opt)
 int32_t
 tmap_map3_thread_init(void **data, tmap_map_opt_t *opt)
 {
+  int32_t i;
   tmap_map3_thread_data_t *d = NULL;
 
   d = tmap_calloc(1, sizeof(tmap_map3_thread_data_t), "d");
+
+  if(0 == opt->flow_order_use_sff && NULL != opt->flow_order) { // copy input flow order
+      d->flow_order_len = strlen(opt->flow_order);
+      d->flow_order = tmap_malloc(sizeof(uint8_t) * d->flow_order_len, "d->flow_order");
+      for(i=0;i<d->flow_order_len;i++) {
+          d->flow_order[i] = tmap_nt_char_to_int[(int)opt->flow_order[i]];
+      }
+  }
 
   (*data) = (void*)d;
 
@@ -138,7 +148,7 @@ tmap_map_sams_t*
 tmap_map3_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt)
 {
   tmap_map_sams_t *sams = NULL;
-  //tmap_map3_thread_data_t *d = (tmap_map3_thread_data_t*)(*data);
+  tmap_map3_thread_data_t *d = (tmap_map3_thread_data_t*)(*data);
   
   if((0 < opt->min_seq_len && seq_len < opt->min_seq_len)
      || (0 < opt->max_seq_len && opt->max_seq_len < seq_len)) {
@@ -146,7 +156,7 @@ tmap_map3_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len, tma
   }
 
   // align
-  sams = tmap_map3_aux_core(seqs, opt->flow_order_int, (NULL == opt->flow_order) ? 0 : strlen(opt->flow_order), refseq, bwt[1], sa[1], opt);
+  sams = tmap_map3_aux_core(seqs, d->flow_order, d->flow_order_len, refseq, bwt[1], sa[1], opt);
 
   return sams;
 }
@@ -156,7 +166,16 @@ tmap_map3_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_b
 {
   tmap_seq_t *seqs[2] = {NULL, NULL};
   tmap_map_sams_t *sams = NULL;
-  int32_t seq_len;
+  int32_t i, seq_len;
+  tmap_map3_thread_data_t *d = (tmap_map3_thread_data_t*)(*data);
+
+  if(0 == d->flow_order_len && 1 == opt->flow_order_use_sff) { // copy the SFF's flow order
+      d->flow_order_len = seq->data.sff->gheader->flow->l;
+      d->flow_order = tmap_malloc(sizeof(uint8_t) * d->flow_order_len, "d->flow_order");
+      for(i=0;i<d->flow_order_len;i++) {
+          d->flow_order[i] = tmap_nt_char_to_int[(int)seq->data.sff->gheader->flow->s[i]];
+      }
+  }
 
   seq_len = tmap_seq_get_bases(seq)->l;
   
@@ -181,8 +200,7 @@ tmap_map3_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_b
   tmap_seq_to_int(seqs[1]);
 
   // align
-  sams = tmap_map3_aux_core(seqs, opt->flow_order_int, (NULL == opt->flow_order) ? 0 : strlen(opt->flow_order), refseq, bwt[1], sa[1], opt);
-
+  sams = tmap_map3_aux_core(seqs, d->flow_order, d->flow_order_len, refseq, bwt[1], sa[1], opt);
 
   // destroy
   tmap_seq_destroy(seqs[0]);
@@ -196,6 +214,7 @@ tmap_map3_thread_cleanup(void **data, tmap_map_opt_t *opt)
 {
   tmap_map3_thread_data_t *d = (tmap_map3_thread_data_t*)(*data);
 
+  free(d->flow_order);
   free(d);
   (*data) = NULL;
   return 0;
