@@ -1063,14 +1063,14 @@ tmap_fsw_get_aln(tmap_fsw_path_t *path, int32_t path_len,
 
 void 
 tmap_fsw_print_aln(tmap_file_t *fp, int64_t score, tmap_fsw_path_t *path, int32_t path_len,
-                   uint8_t *flow_order, int32_t flow_order_len, uint8_t *target, uint8_t strand, int32_t j_type)
+                   uint8_t *flow_order, int32_t flow_order_len, uint8_t *target, uint8_t strand, int32_t j_type, char sep)
 {
   char *ref=NULL, *read=NULL, *aln=NULL;
 
   tmap_fsw_get_aln(path, path_len, flow_order, flow_order_len, target, strand, &ref, &read, &aln, j_type);
 
-  tmap_file_fprintf(fp, "%lld\t%s\t%s\t%s",
-                    (long long int)score, read, aln, ref);
+  tmap_file_fprintf(fp, "%lld%c%s%c%s%c%s",
+                    (long long int)score, sep, read, sep, aln, sep, ref);
 
   free(ref);
   free(read);
@@ -1572,7 +1572,7 @@ int tmap_fsw_main(int argc, char *argv[])
 
   // print
   tmap_fsw_print_aln(tmap_file_stdout, score, path, path_len,
-                     flow_order, flow_order_len, (uint8_t*)opt->target, 0, opt->j_type);
+                     flow_order, flow_order_len, (uint8_t*)opt->target, 0, opt->j_type, '\t');
   tmap_file_fprintf(tmap_file_stdout, "\n");
 
   tmap_file_fclose(tmap_file_stdout);

@@ -22,7 +22,8 @@ typedef struct {
     int32_t fscore;  /*!< the flow score penalty (-X) */
     int32_t flow_offset; /*!< search for homopolymer errors +- offset during re-alignment (-o) */
     int32_t softclip_type; /*!< the soft clip type (-g) */
-    int32_t output_type; /*!< the output type: 0-flow space alignment 1-base space alignment 2-SAM (-z) */
+    int32_t output_type; /*!< the output type: 0-flow space alignment 1-base space alignment 2-SAM (-t) */
+    int32_t output_newlines; /*!< use newline separators when outputting the alignments (-t 0 only) (-N) */
     int32_t j_type; /*!< how indels are justified in alignment (-l) */
     int32_t reads_queue_size;  /*!< the reads queue size (-q) */
     int32_t num_threads;  /*!< the number of threads (-n) */

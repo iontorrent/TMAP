@@ -268,10 +268,11 @@ tmap_fsw_get_aln(tmap_fsw_path_t *path, int32_t path_len,
   @param  target         the 2-bit DNA reference sequence 
   @param  strand         0 for the forward strand, 1 for the reverse
   @param  j_type         the indel justification method 
+  @param  sep            the field separator
   */
 void 
 tmap_fsw_print_aln(tmap_file_t *fp, int64_t score, tmap_fsw_path_t *path, int32_t path_len,
-                   uint8_t *flow_order, int32_t flow_order_len, uint8_t *target, uint8_t strand, int32_t j_type);
+                   uint8_t *flow_order, int32_t flow_order_len, uint8_t *target, uint8_t strand, int32_t j_type, char sep);
 
 /*!
   Create a structure for flow-space Smith Waterman from an sequence structure

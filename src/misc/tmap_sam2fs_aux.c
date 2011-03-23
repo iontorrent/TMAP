@@ -217,7 +217,7 @@ tmap_sam2fs_aux_flow_destroy(tmap_sam2fs_aux_flow_t *a)
 // query - read
 // target - reference
 void
-tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uint8_t *tseq, int32_t tseq_len, uint8_t *flow_order, int32_t flow_order_len, int8_t strand)
+tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uint8_t *tseq, int32_t tseq_len, uint8_t *flow_order, int32_t flow_order_len, int8_t strand, char sep)
 {
   int32_t i, j, k;
   int32_t ctype;
@@ -569,13 +569,13 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, uin
       if(0 < i) tmap_file_fprintf(fp, ","); 
   }
   // match string
-  tmap_file_fprintf(fp, "\t"); 
+  tmap_file_fprintf(fp, "%c", sep); 
   for(i=aln->len-1;0<=i;i--) {
       tmap_file_fprintf(fp, "%c", aln->aln[i]);
       if(0 < i) tmap_file_fprintf(fp, ","); 
   }
   // ref - target
-  tmap_file_fprintf(fp, "\t"); 
+  tmap_file_fprintf(fp, "%c", sep); 
   for(i=aln->len-1;0<=i;i--) {
       if(0 <= aln->tseq[i]) tmap_file_fprintf(fp, "%d", aln->tseq[i]);
       else tmap_file_fprintf(fp, "-");

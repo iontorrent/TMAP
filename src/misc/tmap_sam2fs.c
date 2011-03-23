@@ -274,7 +274,7 @@ tmap_sam2fs_copy_to_sam(bam1_t *bam_old, tmap_fsw_path_t *path, int32_t path_len
 static bam1_t *
 tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t score_match, int32_t pen_mm, int32_t pen_gapo, int32_t pen_gape,
                 int32_t fscore, int32_t flow_offset, 
-                int32_t softclip_type, int32_t output_type, int32_t j_type)
+                int32_t softclip_type, int32_t output_type, int32_t output_newlines, int32_t j_type)
 {
   int32_t i, j, k, l;
 
@@ -308,6 +308,10 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t score_match, int32_t pen_
   tmap_fsw_flowseq_t *flowseq = NULL;
   uint8_t strand;
   int32_t matrix[25];
+
+  char separator;
+
+  separator = (0 == output_newlines) ? '\t' : '\n';
 
   // set the alignment parameters
   param.matrix = matrix;
@@ -564,12 +568,13 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t score_match, int32_t pen_
 
   switch(output_type) {
     case TMAP_SAM2FS_OUTPUT_ALN:
-      tmap_file_fprintf(tmap_file_stdout, "%s\t%c\t", bam1_qname(bam), (1==strand) ? '-' : '+');
+      tmap_file_fprintf(tmap_file_stdout, "%s%c%c%c", bam1_qname(bam), separator, (1==strand) ? '-' : '+', separator);
       tmap_fsw_print_aln(tmap_file_stdout, score, path, path_len, flow_order_tmp, flow_order_len, 
                          (uint8_t*)ref_bases,
                          strand,
-                         j_type);
-      tmap_file_fprintf(tmap_file_stdout, "\t");
+                         j_type,
+                         separator);
+      tmap_file_fprintf(tmap_file_stdout, "%c", separator);
       // TODO
       // what about clipping within a flow and ref?
       // TODO:
@@ -582,7 +587,8 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t score_match, int32_t pen_
                                  tmp_ref_bases_len,
                                  flow_order_tmp,
                                  flow_order_len,
-                                 strand);
+                                 strand,
+                                 separator);
       tmap_file_fprintf(tmap_file_stdout, "\n");
       break;
     case TMAP_SAM2FS_OUTPUT_SAM:
@@ -664,7 +670,8 @@ tmap_sam2fs_aux_worker(bam1_t **bams, int32_t buffer_length, tmap_sam2fs_opt_t *
           bams[low] = tmap_sam2fs_aux(bams[low], opt->flow_order, 
                                       opt->score_match, opt->pen_mm, opt->pen_gapo, opt->pen_gape,
                                       opt->fscore, opt->flow_offset, 
-                                      opt->softclip_type, opt->output_type, opt->j_type);
+                                      opt->softclip_type, opt->output_type, opt->output_newlines,
+                                      opt->j_type);
           low++;
       }
   }
@@ -804,14 +811,8 @@ tmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, tmap_sam2fs_opt_
                               opt->score_match, opt->pen_mm,
                               opt->pen_gapo, opt->pen_gape,
                               opt->fscore, opt->flow_offset, 
-                              opt->softclip_type, opt->output_type, opt->j_type);
-          // write to SAM/BAM if necessary
-          if(TMAP_SAM2FS_OUTPUT_SAM == opt->output_type
-             || TMAP_SAM2FS_OUTPUT_BAM == opt->output_type) {
-              if(samwrite(fp_out, b) < 0) {
-                  tmap_error(NULL, Exit, WriteFileError);
-              }
-          }
+                              opt->softclip_type, opt->output_type, opt->output_newlines,
+                              opt->j_type);
           // destroy the bam
           bam_destroy1(b);
           // reinitialize
@@ -849,10 +850,10 @@ tmap_sam2fs_opt_init()
   opt->flow_offset = 1;
   opt->softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_ALL;
   opt->output_type = TMAP_SAM2FS_OUTPUT_ALN;
+  opt->output_newlines = 0;
   opt->j_type = TMAP_FSW_NO_JUSTIFY;
   opt->reads_queue_size = 65536; 
   opt->num_threads = 1;
-
 
   return opt;
 }
@@ -886,6 +887,7 @@ usage(tmap_sam2fs_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "                             2 - allow on the right portion of the read\n");
   tmap_file_fprintf(tmap_file_stderr, "                             3 - do not allow soft-clipping\n");
   tmap_file_fprintf(tmap_file_stderr, "         -t          the output type: 0-alignment 1-SAM 2-BAM [%d]\n", opt->output_type);
+  tmap_file_fprintf(tmap_file_stderr, "         -N          use newline separators when outputting the alignments (-t 0 only)\n");
   tmap_file_fprintf(tmap_file_stderr, "         -l INT      indel justification type: 0 - none, 1 - 5' strand of the reference, 2 - 5' strand of the read [%d]\n", opt->j_type);
   tmap_file_fprintf(tmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
   tmap_file_fprintf(tmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
@@ -905,7 +907,7 @@ tmap_sam2fs_main(int argc, char *argv[])
 
   opt = tmap_sam2fs_opt_init();
 
-  while((c = getopt(argc, argv, "f:A:M:O:E:X:o:Sg:t:l:q:n:vh")) >= 0) {
+  while((c = getopt(argc, argv, "f:A:M:O:E:X:o:Sg:t:Nl:q:n:vh")) >= 0) {
       switch(c) {
         case 'f':
           strncpy(opt->flow_order, optarg, 4); break;
@@ -927,6 +929,8 @@ tmap_sam2fs_main(int argc, char *argv[])
           opt->softclip_type = atoi(optarg); break;
         case 't':
           opt->output_type = atoi(optarg); break;
+        case 'N':
+          opt->output_newlines = 1; break;
         case 'l':
           opt->j_type = atoi(optarg); break;
         case 'q':
