@@ -485,7 +485,8 @@ tmap_version_to_int(const char *v, int32_t v_n[3])
 {
   int32_t i, j, len;
   len = strlen(v);
-  for(i=j=0;i<len;i++) {
+  v_n[0] = atoi(v);
+  for(i=0,j=1;i<len;i++) {
       if('.' == v[i]) {
           i++; // skip the dot
           if(i == len) {
@@ -495,7 +496,7 @@ tmap_version_to_int(const char *v, int32_t v_n[3])
           j++;
       }
   }
-  if(2 != j) {
+  if(3 != j) {
       tmap_error("malformed version string", Exit, OutOfRange);
   }
 }
@@ -508,7 +509,7 @@ tmap_compare_versions(const char *v1, const char *v2)
 
   tmap_version_to_int(v1, v1_n);
   tmap_version_to_int(v2, v2_n);
-
+  
   for(i=0;i<3;i++) {
       if(v1_n[i] < v2_n[i]) return -1;
       else if(v1_n[i] > v2_n[i]) return 1;
