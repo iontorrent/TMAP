@@ -1418,12 +1418,18 @@ tmap_map_util_fsw(tmap_seq_t *seq,
   int32_t path_mem = 0, path_len = 0;
   tmap_fsw_param_t param;
   int32_t matrix[25];
+  tmap_seq_t *seq_rc = NULL;
+  uint8_t *flow_order_rc=NULL;
+  int32_t softclip_types[2];
 
   // generate the alignment parameters
   param.matrix = matrix;
   param.band_width = 0;
   param.offset = TMAP_MAP_UTIL_FSW_OFFSET; // this sets the hp difference
   __tmap_fsw_gen_ap1(param, score_match, pen_mm, pen_gapo, pen_gape, fscore);
+
+  softclip_types[0] = softclip_type;
+  softclip_types[1] = __tmap_map_util_reverse_soft_clipping(softclip_type);
 
   // go through each hit
   for(i=0;i<sams->n;i++) {
@@ -1432,23 +1438,34 @@ tmap_map_util_fsw(tmap_seq_t *seq,
 
       // get flow sequence if necessary
       if(NULL == fseq[s->strand]) {
-          fseq[s->strand] = tmap_fsw_seq_to_flowseq(seq, flow_order, flow_order_len);
-          if(1 == s->strand) tmap_fsw_flowseq_reverse_compliment(fseq[s->strand]);
+          if(0 == s->strand) {
+              fseq[s->strand] = tmap_fsw_seq_to_flowseq(seq, flow_order, flow_order_len);
+          }
+          else {
+              flow_order_rc = tmap_malloc(sizeof(uint8_t) * flow_order_len, "flow_order_rc");
+              for(j=0;j<flow_order_len;j++) {
+                  flow_order_rc[j] = 3 - flow_order[flow_order_len-j-1];
+              }
+              seq_rc = tmap_seq_clone(seq);
+              tmap_seq_reverse_compliment(seq_rc);
+              fseq[s->strand] = tmap_fsw_seq_to_flowseq(seq_rc, flow_order_rc, flow_order_len);
+          }
           // HERE
-          //tmap_fsw_flowseq_print(tmap_file_stderr, fseq[0]);
-          //tmap_fsw_flowseq_print(tmap_file_stderr, fseq[1]);
+          //tmap_fsw_flowseq_print(tmap_file_stderr, fseq[s->strand]);
       }
 
       // HERE
+      /*
       uint32_t *old_cigar, old_n_cigar;
       old_n_cigar = s->n_cigar;
       old_cigar = tmap_malloc(sizeof(uint32_t)*old_n_cigar, "old_cigar");
       for(j=0;j<s->n_cigar;j++) {
           old_cigar[j] = s->cigar[j];
       }
+      */
 
       param.band_width = 0;
-      ref_start = ref_end = s->pos;
+      ref_start = ref_end = s->pos + 1;
       for(j=0;j<s->n_cigar;j++) {
           int32_t op, op_len;
 
@@ -1509,6 +1526,7 @@ tmap_map_util_fsw(tmap_seq_t *seq,
       }
 
       /*
+      fprintf(stderr, "ref_start=%d ref_end=%d\n", ref_start, ref_end);
       fprintf(stderr, "base_calls:\n");
       for(j=0;j<fseq[s->strand]->num_flows;j++) {
           for(k=0;k<fseq[s->strand]->base_calls[j];k++) {
@@ -1530,7 +1548,7 @@ tmap_map_util_fsw(tmap_seq_t *seq,
       // re-align
       s->ascore = s->score;
       //fprintf(stderr, "old score=%d\n", s->score);
-      switch(softclip_type) {
+      switch(softclip_types[s->strand]) {
         case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
           s->score = tmap_fsw_clipping_core(target, target_len, fseq[s->strand], &param, 
                                             1, 1, path, &path_len);
@@ -1555,6 +1573,7 @@ tmap_map_util_fsw(tmap_seq_t *seq,
       //fprintf(stderr, "new score=%d path_len=%d\n", s->score, path_len);
 
       if(0 < path_len) { // update
+          s->score = (int32_t)((s->score + 99.99)/100.0); 
           s->pos = (ref_start-1) + (path[path_len-1].j);
           if(refseq->len < s->pos) {
               tmap_error("bug encountered", Exit, OutOfRange);
@@ -1578,9 +1597,9 @@ tmap_map_util_fsw(tmap_seq_t *seq,
               }
           }
 
-          if(path[0].i < fseq[s->strand]->num_flows-1) { // skipped ending flows
+          if(path[0].i+1 < fseq[s->strand]->num_flows) { // skipped ending flows
               // get the number of bases to clip 
-              for(j=path[0].i,k=0;j<fseq[s->strand]->num_flows;j++) {
+              for(j=path[0].i+1,k=0;j<fseq[s->strand]->num_flows;j++) {
                   k += fseq[s->strand]->base_calls[j];
               }
               if(0 < k) { // bases should be soft-clipped
@@ -1620,11 +1639,17 @@ tmap_map_util_fsw(tmap_seq_t *seq,
       }
 
       // HERE
-      free(old_cigar);
+      //free(old_cigar);
   }
   // free
-  if(NULL != fseq[0]) tmap_fsw_flowseq_destroy(fseq[0]);
-  if(NULL != fseq[1]) tmap_fsw_flowseq_destroy(fseq[1]);
+  if(NULL != fseq[0]) {
+      tmap_fsw_flowseq_destroy(fseq[0]);
+  }
+  if(NULL != fseq[1]) {
+      free(flow_order_rc);
+      tmap_fsw_flowseq_destroy(fseq[1]);
+      tmap_seq_destroy(seq_rc);
+  }
   free(target);
   free(path);
 }

@@ -753,14 +753,16 @@ tmap_fsw_flowseq_init(uint8_t *flow_order, int32_t flow_order_len, uint8_t *base
 void
 tmap_fsw_flowseq_print(tmap_file_t *fp, tmap_fsw_flowseq_t *flowseq)
 {
-  int32_t i;
+  int32_t i, j;
 
   for(i=0;i<flowseq->flow_order_len;i++) {
       tmap_file_fprintf(fp, "%c", "ACGTN"[flowseq->flow_order[i]]);
   }
   tmap_file_fprintf(fp, "\n");
   for(i=0;i<flowseq->num_flows;i++) {
-      tmap_file_fprintf(fp, "%c", "ACGTN"[flowseq->base_calls[i]]);
+      for(j=0;j<flowseq->base_calls[i];j++) {
+          tmap_file_fprintf(fp, "%c", "ACGTN"[flowseq->flow_order[i % flowseq->flow_order_len]]);
+      }
   }
   tmap_file_fprintf(fp, "\n");
   for(i=0;i<flowseq->num_flows;i++) {
@@ -1292,39 +1294,6 @@ tmap_fsw_seq_to_flowseq(tmap_seq_t *seq, uint8_t *flow_order, int32_t flow_order
 
   // Note: we assume there is no key
   return tmap_fsw_flowseq_init(tmp_flow_order, flow_order_len, base_calls, flowgram, num_flows, -1, 0);
-}
-
-void
-tmap_fsw_flowseq_reverse_compliment(tmap_fsw_flowseq_t *flowseq)
-{
-  int32_t i;
-
-  // reverse compliment the flow order
-  for(i=0;i<flowseq->flow_order_len>>1;i++) {
-      uint8_t c;
-      c = flowseq->flow_order[i];
-      flowseq->flow_order[i] = 3 - flowseq->flow_order[flowseq->flow_order_len-i-1];
-      flowseq->flow_order[flowseq->flow_order_len-i-1] = 3 - c;
-  }
-
-  // reverse the base_calls and flowgram
-  for(i=0;i<flowseq->num_flows>>1;i++) {
-      uint8_t c;
-      uint16_t f;
-      // swap base_calls
-      c = flowseq->base_calls[i];
-      flowseq->base_calls[i] = flowseq->base_calls[flowseq->num_flows-i-1];
-      flowseq->base_calls[flowseq->num_flows-i-1] = c;
-      // swap flowgram
-      f = flowseq->flowgram[i];
-      flowseq->flowgram[i] = flowseq->flowgram[flowseq->num_flows-i-1];
-      flowseq->flowgram[flowseq->num_flows-i-1] = f;
-  }
-
-  // switch where the key base flow aligns
-  if(0 < flowseq->key_bases) {
-      flowseq->key_index = flowseq->num_flows-1;
-  }
 }
 
 typedef struct {

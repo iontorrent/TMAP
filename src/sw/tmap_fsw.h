@@ -292,13 +292,6 @@ tmap_fsw_flowseq_t *
 tmap_fsw_seq_to_flowseq(tmap_seq_t *seq, uint8_t *flow_order, int32_t flow_order_len);
 
 /*!
-  Reverse compliments this flow sequence
-  @param  flowseq  pointer the flow sequence
-  */
-void
-tmap_fsw_flowseq_reverse_compliment(tmap_fsw_flowseq_t *flowseq);
-
-/*!
   Frees the memory associated with this structure
   @param  flowseq  pointer the flow sequence to free
   */
