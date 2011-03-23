@@ -46,7 +46,6 @@ tmap_refseq_supported(tmap_refseq_t *refseq)
   char *refseq_v = refseq->package_version->s;
   char *tmap_v = PACKAGE_VERSION;
 
-
   // sanity check on version names
   for(i=j=0;i<strlen(refseq_v);i++) {
       if('.' == refseq_v[i]) j++;
@@ -408,6 +407,7 @@ tmap_refseq_read_header(tmap_file_t *fp, tmap_refseq_t *refseq)
       tmap_error(NULL, Exit, ReadFileError);
   }
   if(0 == tmap_refseq_supported(refseq)) {
+      fprintf(stderr, "version: %s\n", refseq->package_version->s);
       tmap_error("the reference index is not supported", Exit, ReadFileError);
   }
      
