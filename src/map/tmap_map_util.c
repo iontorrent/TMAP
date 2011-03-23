@@ -1610,7 +1610,7 @@ tmap_map_util_fsw(tmap_seq_t *seq,
           }
 
           // HERE
-          /*
+              /*
           int32_t differs = 0;
           if(s->n_cigar != old_n_cigar) {
               differs = 1;
@@ -1624,6 +1624,9 @@ tmap_map_util_fsw(tmap_seq_t *seq,
               }
           }
           if(1 == differs) {
+              for(j=0;j<path_len;j++) {
+                  fprintf(stderr, "j=%d path[j].i=%d path[j].j=%d\n", j, path[j].i, path[j].j);
+              }
               fprintf(stderr, "NEW: [");
               for(j=0;j<s->n_cigar;j++) {
                   fprintf(stderr, "%d%c", s->cigar[j]>>4, "MIDNSHP"[s->cigar[j]&0xf]);
@@ -1635,7 +1638,7 @@ tmap_map_util_fsw(tmap_seq_t *seq,
               }
               fprintf(stderr, "]\n\n");
           }
-          */
+              */
       }
 
       // HERE

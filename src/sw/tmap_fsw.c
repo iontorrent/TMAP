@@ -859,8 +859,8 @@ tmap_fsw_path2cigar(const tmap_fsw_path_t *path, int32_t path_len, int32_t *n_ci
   }
   else {
       // get the # of cigar operators
-      dpscore_last_type = path->ctype;
-      for (i = n = 1; i < path_len; ++i) {
+      dpscore_last_type = tmap_fsw_path2cigar_get_type(path[path_len-1].ctype);
+      for(i = path_len - 2, n = 1;0 <= i; i--) {
           // get the current type
           dpscore_cur_type = tmap_fsw_path2cigar_get_type(path[i].ctype);
           if (dpscore_last_type != dpscore_cur_type) ++n;
@@ -873,7 +873,7 @@ tmap_fsw_path2cigar(const tmap_fsw_path_t *path, int32_t path_len, int32_t *n_ci
       dpscore_last_type = tmap_fsw_path2cigar_get_type(path[path_len-1].ctype);
       cigar[0] = 1u << 4 | dpscore_last_type;
       TMAP_SW_CIGAR_STORE(cigar[0], dpscore_last_type, 1u);
-      for (i = path_len - 2, n = 0; i >= 0; --i) {
+      for(i = path_len - 2, n = 0;0 <= i; i--) {
           // get the current type
           dpscore_cur_type = tmap_fsw_path2cigar_get_type(path[i].ctype);
           if (dpscore_cur_type == dpscore_last_type) TMAP_SW_CIGAR_ADD_LENGTH(cigar[n], 1u);
@@ -881,6 +881,9 @@ tmap_fsw_path2cigar(const tmap_fsw_path_t *path, int32_t path_len, int32_t *n_ci
               TMAP_SW_CIGAR_STORE(cigar[++n], dpscore_cur_type, 1u);
               dpscore_last_type = dpscore_cur_type;
           }
+      }
+      if(n+1 != (*n_cigar)) {
+          tmap_error("bug encountered", Exit, OutOfRange);
       }
   }
 
