@@ -957,8 +957,9 @@ tmap_sam2fs_main(int argc, char *argv[])
       tmap_error_cmd_check_int(opt->flow_offset, 0, INT32_MAX, "-o");
       tmap_error_cmd_check_int((int)strlen(opt->flow_order), 4, 4, "-f");
       tmap_error_cmd_check_int(opt->output_type, 0, 2, "-t");
+      if(TMAP_SAM2FS_OUTPUT_ALN != opt->output_type) tmap_error_cmd_check_int(opt->output_newlines, 0, 0, "-N");
       if(-1 != opt->reads_queue_size) tmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
-      tmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
+      tmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n"); 
   }
 
   tmap_sam2fs_core(argv[optind], sam_open_flags, opt);
