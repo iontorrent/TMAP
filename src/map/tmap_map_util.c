@@ -1556,6 +1556,9 @@ tmap_map_util_fsw(tmap_seq_t *seq,
 
       if(0 < path_len) { // update
           s->pos = (ref_start-1) + (path[path_len-1].j);
+          if(refseq->len < s->pos) {
+              tmap_error("bug encountered", Exit, OutOfRange);
+          }
           free(s->cigar);
           s->cigar = tmap_fsw_path2cigar(path, path_len, &s->n_cigar, 1);
           //fprintf(stderr, "path[path_len-1].i=%d path[0].i=%d num_flows=%d\n", path[path_len-1].i, path[0].i, fseq[s->strand]->num_flows);
@@ -1602,16 +1605,16 @@ tmap_map_util_fsw(tmap_seq_t *seq,
               }
           }
           if(1 == differs) {
-              fprintf(stderr, "OLD: [");
-              for(j=0;j<old_n_cigar;j++) {
-                  fprintf(stderr, "%d%c", old_cigar[j]>>4, "MIDNSHP"[old_cigar[j]&0xf]);
-              }
-              fprintf(stderr, "]\n");
               fprintf(stderr, "NEW: [");
               for(j=0;j<s->n_cigar;j++) {
                   fprintf(stderr, "%d%c", s->cigar[j]>>4, "MIDNSHP"[s->cigar[j]&0xf]);
               }
               fprintf(stderr, "]\n");
+              fprintf(stderr, "OLD: [");
+              for(j=0;j<old_n_cigar;j++) {
+                  fprintf(stderr, "%d%c", old_cigar[j]>>4, "MIDNSHP"[old_cigar[j]&0xf]);
+              }
+              fprintf(stderr, "]\n\n");
           }
           */
       }

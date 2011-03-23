@@ -228,6 +228,7 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
       
   target = tmap_malloc(sizeof(char) * (ref_end - ref_start + 1), "target");
   if(ref_end - ref_start + 1 != tmap_refseq_subseq(refseq, ref_start + refseq->annos[seqid].offset, ref_end - ref_start + 1, target)) {
+      fprintf(stderr, "ref_start=%u ref_end=%u refseq->len=%u\n", ref_start, ref_end, (uint32_t)refseq->len);
       tmap_error("bug encountered", Exit, OutOfRange);
   }
 

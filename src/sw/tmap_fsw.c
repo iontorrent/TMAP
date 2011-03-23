@@ -472,8 +472,8 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
                             0, 0);
 
           base_call_diff = base_call - base_calls[i-1];
-          // if base_call_diff > 0, add insertions
-          // if base_call_diff < 0, add deletions
+          // if base_call_diff > 0, add insertions (more read bases than reference bases)
+          // if base_call_diff < 0, add deletions (fewer read bases than reference bases)
 
           k = j - 1; // for base_call_diff < 0
           //fprintf(stderr, "sub_path_len=%d base_call_diff=%d\n", sub_path_len, base_call_diff);
@@ -494,6 +494,7 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
           while(base_call_diff < 0) { // there are bases left that were deleted
               p->ctype = TMAP_FSW_FROM_HP_MINUS; // add an insertion
               p->i = i - 1;
+              p->j = j - 1; // is this correct ? 
               p++;
               base_call_diff++;
           }
