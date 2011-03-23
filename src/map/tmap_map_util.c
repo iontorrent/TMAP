@@ -1419,8 +1419,6 @@ tmap_map_util_fsw(tmap_seq_t *seq,
   tmap_fsw_param_t param;
   int32_t matrix[25];
 
-  fprintf(stderr, "FLOW SW\n");
-
   // generate the alignment parameters
   param.matrix = matrix;
   param.band_width = 0;
@@ -1437,8 +1435,8 @@ tmap_map_util_fsw(tmap_seq_t *seq,
           fseq[s->strand] = tmap_fsw_seq_to_flowseq(seq, flow_order, flow_order_len);
           if(1 == s->strand) tmap_fsw_flowseq_reverse_compliment(fseq[s->strand]);
           // HERE
-          tmap_fsw_flowseq_print(tmap_file_stderr, fseq[0]);
-          tmap_fsw_flowseq_print(tmap_file_stderr, fseq[1]);
+          //tmap_fsw_flowseq_print(tmap_file_stderr, fseq[0]);
+          //tmap_fsw_flowseq_print(tmap_file_stderr, fseq[1]);
       }
 
       // HERE
@@ -1590,6 +1588,7 @@ tmap_map_util_fsw(tmap_seq_t *seq,
           }
 
           // HERE
+          /*
           int32_t differs = 0;
           if(s->n_cigar != old_n_cigar) {
               differs = 1;
@@ -1614,6 +1613,7 @@ tmap_map_util_fsw(tmap_seq_t *seq,
               }
               fprintf(stderr, "]\n");
           }
+          */
       }
 
       // HERE
