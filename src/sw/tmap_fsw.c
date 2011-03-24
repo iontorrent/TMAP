@@ -645,9 +645,9 @@ tmap_fsw_clipping_core(uint8_t *seq, int32_t len,
 
       // deal with start clipping
       if(1 == flowseq_start_clip) {
-          for(j=1;j<=len;j++) {
+          for(j=0;j<=len;j++) {
               if(dpscore[i][j].match_score < 0) {
-                  //fprintf(stderr, "%s HERE 1 i=%d j=%d\n", __func__, i, j);
+                  //fprintf(stderr, "%s HERE 1 i=%d j=%d base_calls[i-1]=%d\n", __func__, i, j, flowseq->base_calls[i-1]);
                   dpcell[i][j].match_from = TMAP_FSW_FROM_S;
                   dpscore[i][j].match_score = 0; 
               }
