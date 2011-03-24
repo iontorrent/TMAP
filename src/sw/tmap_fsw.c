@@ -413,12 +413,16 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
       }
 
       /*
-         fprintf(stderr, "base_call=%d col_offset=%d ctype_next=%d\n",
-         base_call, col_offset, ctype_next);
-         fprintf(stderr, "base_calls[%d]=%d\n", i-1, (0 < i) ? base_calls[i-1] : 0);
-         */
+      fprintf(stderr, "i=%d j=%d base_call=%d col_offset=%d ctype=%d ctype_next=%d base_calls[%d]=%d\n",
+              i, j, base_call, col_offset, ctype, ctype_next,
+              i-1,
+              (0 < i) ? base_calls[i-1] : 0);
+      */
 
       if(j <= 0) {
+          // if base_call_diff > 0, add insertions (more read bases than reference bases)
+          // if base_call_diff < 0, add deletions (fewer read bases than reference bases)
+          base_call_diff = base_call - base_calls[i-1];
           // starts with an insertion?
           // TODO
           for(k=0;k<base_call;k++) {
@@ -427,6 +431,13 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
               p->ctype = TMAP_FSW_FROM_I;
               p++;
           }
+          for(k=base_call_diff;k<0;k++) {
+              p->i = i-1;
+              p->j = j-1;
+              p->ctype = TMAP_FSW_FROM_I;
+              p++;
+          }
+          //fprintf(stderr, "base_call=%d base_calls[%d]=%d base_call_diff=%d\n", base_call, i-1, base_calls[i-1], base_call_diff);
           i--;
       }
       else if(i <= 0) {
@@ -471,12 +482,20 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
                             ((key_index+1) == i) ? key_bases : 0,
                             0, 0);
 
-          base_call_diff = base_call - base_calls[i-1];
           // if base_call_diff > 0, add insertions (more read bases than reference bases)
           // if base_call_diff < 0, add deletions (fewer read bases than reference bases)
+          base_call_diff = base_call - base_calls[i-1];
+          /*
+          fprintf(stderr, "base_call=%d base_calls[i-1]=%d sub_path_len=%d base_call_diff=%d\n", 
+                  base_call, base_calls[i-1],
+                  sub_path_len, base_call_diff);
+          for(l=0;l<sub_path_len;l++) {
+              fprintf(stderr, "l=%d sub_path[l].i=%d sub_path[l].j=%d sub_path[l].ctype=%d\n",
+                      l, sub_path[l].i, sub_path[l].j, sub_path[l].ctype);
+          }
+                  */
 
           k = j - 1; // for base_call_diff < 0
-          //fprintf(stderr, "sub_path_len=%d base_call_diff=%d\n", sub_path_len, base_call_diff);
           for(l=0;l<sub_path_len;l++) {
               (*p) = sub_path[l]; // store p->j and p->ctype
               p->i = i - 1; // same flow index
@@ -510,6 +529,13 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
       //fprintf(stderr, "HERE i=%d j=%d ctype=%d\n", i, j, ctype);
   }
   (*path_len) = p - path;
+
+  /*
+  for(i=0;i<(*path_len);i++) {
+      fprintf(stderr, "i=%d path[i].i=%d path[i].j=%d\n",
+              i, path[i].i, path[i].j);
+  }
+  */
 
   free(sub_path);
 }
