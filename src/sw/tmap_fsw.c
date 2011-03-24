@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
+#include <config.h>
 
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_progress.h"
@@ -1325,6 +1326,7 @@ tmap_fsw_seq_to_flowseq(tmap_seq_t *seq, uint8_t *flow_order, int32_t flow_order
   return tmap_fsw_flowseq_init(tmp_flow_order, flow_order_len, base_calls, flowgram, num_flows, -1, 0);
 }
 
+#ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
 typedef struct {
     char *flow_order;
     char *base_calls;
@@ -1607,3 +1609,4 @@ int tmap_fsw_main(int argc, char *argv[])
 
   return 0;
 }
+#endif

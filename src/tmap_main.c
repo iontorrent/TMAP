@@ -59,10 +59,12 @@ static int usage()
 #ifdef HAVE_SAMTOOLS
   fprintf(stderr, "         sam2fs         pretty print SAM records in flow space\n");
 #endif
+#ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
   fprintf(stderr, "\n");
   fprintf(stderr, "Debugging:\n");
   fprintf(stderr, "         exact          perform simple exact matching\n");
   fprintf(stderr, "         fsw            perform flow Smith-Waterman\n");
+#endif
   return 1;
 }
 
@@ -95,8 +97,10 @@ int main(int argc, char *argv[])
 #ifdef HAVE_SAMTOOLS
       else if (0 == strcmp("sam2fs", argv[1])) ret = tmap_sam2fs_main(argc-1, argv+1);
 #endif
+#ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
       else if (0 == strcmp("exact", argv[1])) ret = tmap_debug_exact(argc-1, argv+1);
       else if (0 == strcmp("fsw", argv[1])) ret = tmap_fsw_main(argc-1, argv+1);
+#endif
       else if (0 == strcmp("--version", argv[1]) || 0 == strcmp("-v", argv[1])) ret = version();
       else if (0 == strcmp("--help", argv[1]) || 0 == strcmp("-h", argv[1])) ret = usage();
       else {

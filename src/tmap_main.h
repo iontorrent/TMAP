@@ -34,9 +34,11 @@ tmap_refseq_pac2fasta_main(int argc, char *argv[]);
 extern int
 tmap_sam2fs_main(int argc, char *argv[]);
 #endif
+#ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
 extern int 
 tmap_debug_exact(int argc, char *argv[]);
 extern int
 tmap_fsw_main(int argc, char *argv[]);
+#endif
 
 #endif

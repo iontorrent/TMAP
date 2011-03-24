@@ -2,6 +2,8 @@
 #ifndef TMAP_DEBUG_EXACT_H
 #define TMAP_DEBUG_EXACT_H
 
+#ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
+
 /*! 
   Debugging Functions
   */ 
@@ -23,4 +25,5 @@ typedef struct {
   @return       0 if executed successful
   */
 int tmap_debug_exact(int argc, char *argv[]);
+#endif
 #endif

@@ -298,6 +298,7 @@ tmap_fsw_seq_to_flowseq(tmap_seq_t *seq, uint8_t *flow_order, int32_t flow_order
 void
 tmap_fsw_flowseq_destroy(tmap_fsw_flowseq_t *flowseq);
 
+#ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
 /*! 
   main-like function for 'tmap fsw'
   @param  argc  the number of arguments
@@ -307,5 +308,6 @@ tmap_fsw_flowseq_destroy(tmap_fsw_flowseq_t *flowseq);
 
 int
 tmap_fsw_main(int argc, char *argv[]);
+#endif
 
 #endif

@@ -1,6 +1,7 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
 #include <stdlib.h>
 #include <unistd.h>
+#include <config.h>
 #include "../util/tmap_error.h"
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_definitions.h"
@@ -16,6 +17,7 @@
 #include "../io/tmap_seq_io.h"
 #include "tmap_debug_exact.h"
 
+#ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
 static int32_t 
 tmap_debug_exact_print_sam(tmap_refseq_t *refseq, tmap_fq_t *seq, uint32_t pacpos, uint8_t strand)
 {
@@ -192,3 +194,4 @@ tmap_debug_exact(int argc, char *argv[])
 
   return 0;
 }
+#endif
