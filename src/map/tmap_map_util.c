@@ -1547,6 +1547,7 @@ tmap_map_util_fsw(tmap_seq_t *seq,
 
       // re-align
       s->ascore = s->score;
+      path_len = path_mem;
       //fprintf(stderr, "old score=%d\n", s->score);
       switch(softclip_types[s->strand]) {
         case TMAP_MAP_UTIL_SOFT_CLIP_ALL:

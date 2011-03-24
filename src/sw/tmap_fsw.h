@@ -54,11 +54,11 @@ enum {
   */
 typedef struct {
     uint8_t match_bc; /*!< the base call for a match */
-    uint8_t match_from; /*!< the from cell in the lower 2 bits, and the column offset in the upper 6 bits */
+    uint16_t match_from; /*!< the from cell in the lower 2 bits, and the column offset in the upper 14 bits */
     uint8_t ins_bc; /*!< the base call for a insertion */
-    uint8_t ins_from; /*!< the from cell in the lower 2 bits, and the column offset in the upper 6 bits */
+    uint16_t ins_from; /*!< the from cell in the lower 2 bits, and the column offset in the upper 14 bits */
     uint8_t del_bc; /*!< the base call for a deletion */
-    uint8_t del_from; /*!< the from cell in the lower 2 bits, and the column offset in the upper 6 bits */
+    uint16_t del_from; /*!< the from cell in the lower 2 bits, and the column offset in the upper 14 bits */
 } tmap_fsw_dpcell_t;
 
 /*!

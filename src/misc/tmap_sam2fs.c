@@ -501,7 +501,8 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t score_match, int32_t pen_
   }
 
   // allocate the alignment path
-  path = tmap_calloc(TMAP_FSW_MAX_PATH_LENGTH(ref_bases_len, flow_len, param.offset), sizeof(tmap_fsw_path_t), "path"); 
+  path_len = TMAP_FSW_MAX_PATH_LENGTH(ref_bases_len, flow_len, param.offset);
+  path = tmap_calloc(path_len, sizeof(tmap_fsw_path_t), "path"); 
 
   // re-align 
   flowseq = tmap_fsw_flowseq_init(flow_order_tmp, flow_order_len, base_calls, flowgram, flow_len, -1, 0);
