@@ -203,7 +203,7 @@ tmap_fsw_sub_core(uint8_t *seq, int32_t len,
           */
       }
   }
-
+  
   // add flow scores
   for(i=low_offset;i<=high_offset;i++) { // for each possible base call within +-offset
       // get flow score for "(i-low_offset)" bases
@@ -213,6 +213,7 @@ tmap_fsw_sub_core(uint8_t *seq, int32_t len,
       // factor out extra match scores for over calls.  Is this correct?
       //if(base_call < i) flow_score += mat[flow_base] * (i - base_call);
       //fprintf(stderr, "flow_score=%d i=%d\n", flow_score, i);
+      if(flow_score < 0) tmap_error("bug encountered", Exit, OutOfRange); // we will subtract it
       for(j=0;j<=len;j++) { // for each col
           TMAP_FSW_ADD_FSCORE(sub_dpscore[i][j], flow_score);
           /*
