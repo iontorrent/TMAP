@@ -247,7 +247,7 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
   }
 
   // check if any IUPAC bases fall within the range
-  if(1 == tmap_refseq_amb_bases(refseq, seqid+1, ref_start, ref_end)) {
+  if(0 < tmap_refseq_amb_bases(refseq, seqid+1, ref_start, ref_end)) {
       // modify them
       for(ref_i=ref_start;ref_i<=ref_end;ref_i++) {
           j = tmap_refseq_amb_bases(refseq, seqid+1, ref_i, ref_i); // Note: j is one-based
