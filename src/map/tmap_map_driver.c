@@ -194,7 +194,12 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
   if(NULL == opt->fn_reads) {
       tmap_progress_set_verbosity(0); 
   }
+  
+  // open the reads file for reading
+  seq_type = tmap_reads_format_to_seq_type(opt->reads_format); 
+  seqio = tmap_seq_io_init(opt->fn_reads, seq_type, 0, opt->input_compr);
 
+  // get the reference information
   if(0 == opt->shm_key) {
       tmap_progress_print("reading in reference data");
       refseq = tmap_refseq_read(opt->fn_fasta, 0);
@@ -240,10 +245,6 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
   }
   seq_buffer = tmap_malloc(sizeof(tmap_seq_t*)*reads_queue_size, "seq_buffer");
   sams = tmap_malloc(sizeof(tmap_map_sams_t*)*reads_queue_size, "sams");
-
-  // initialize the read buffer
-  seq_type = tmap_reads_format_to_seq_type(opt->reads_format); 
-  seqio = tmap_seq_io_init(opt->fn_reads, seq_type, 0, opt->input_compr);
   for(i=0;i<reads_queue_size;i++) { // initialize the buffer
       seq_buffer[i] = tmap_seq_init(seq_type);
   }
