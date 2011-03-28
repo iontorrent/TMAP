@@ -343,6 +343,7 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt);
 
 /*!
   perform local alignment
+  @param  sam            the sam record in which to store the results
   @param  target         the target sequence (forward strand)
   @param  target_length  the target sequence length
   @param  query          the query sequence (forward strand)

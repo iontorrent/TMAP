@@ -30,7 +30,7 @@ tmap_map2_thread_init(void **data, tmap_map_opt_t *opt);
 /*!
  runs the mapping routine for a given thread
  @param  data     pointer to the mapping data pointer
- @param  seq      the sequence to map (forward, reverse compliment, reverse, compliment)
+ @param  seqs     the sequence to map (forward, reverse compliment, reverse, compliment)
  @param  seq_len  the sequence length
  @param  refseq   the reference sequence
  @param  bwt      the bwt structure

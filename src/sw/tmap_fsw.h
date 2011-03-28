@@ -109,13 +109,14 @@ typedef struct {
 
 /*!
   Stores parameters for flow-space Smith-Waterman
-  @param  flow         for each of the four flows, the 2-bit DNA base flowed 
-  @param  base_calls  for each flow, the number of bases called [0-255] 
-  @param  flowgram     for each flow, the flowgram signal (100*signal)  
-  @param  num_flows    the number of flows 
-  @param  key_index   the 0-based index of the key base if the key is part of the first or last flow (should be -1, 0, or num_flow-1). 
-  @param  key_bases   the number of bases part of the key_index flow that are explained by the key sequence 
-  @return             pointer to the initialized memory
+  @param  flow_order      for each of the four flows, the 2-bit DNA base flowed 
+  @param  flow_order_len  the flow order length
+  @param  base_calls     for each flow, the number of bases called [0-255] 
+  @param  flowgram        for each flow, the flowgram signal (100*signal)  
+  @param  num_flows       the number of flows 
+  @param  key_index      the 0-based index of the key base if the key is part of the first or last flow (should be -1, 0, or num_flow-1). 
+  @param  key_bases      the number of bases part of the key_index flow that are explained by the key sequence 
+  @return                pointer to the initialized memory
   */
 tmap_fsw_flowseq_t *
 tmap_fsw_flowseq_init(uint8_t *flow_order, int32_t flow_order_len, uint8_t *base_calls, uint16_t *flowgram,
@@ -283,7 +284,7 @@ tmap_fsw_print_aln(tmap_file_t *fp, int64_t score, tmap_fsw_path_t *path, int32_
 
 /*!
   Create a structure for flow-space Smith Waterman from an sequence structure
-  @param  fq             the sequence structure
+  @param  seq            the sequence structure
   @param  flow_order      the flow order (in integer format); not used for an SFF
   @param  flow_order_len  the flow order length; not used for an SFF
   @return                pointer to the flowseq structure

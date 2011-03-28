@@ -119,7 +119,7 @@ tmap_map_driver_core_thread_worker(void *arg);
   @param  opt                  the program parameters 
   */
 void
-tmap_map_driver_core(tmap_driver_func_init fund_init,
+tmap_map_driver_core(tmap_driver_func_init func_init,
                   tmap_driver_func_thread_init func_thread_init, 
                   tmap_driver_func_thread_map func_thread_map, 
                   tmap_driver_func_mapq func_mapq,
