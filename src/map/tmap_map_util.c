@@ -1547,6 +1547,7 @@ tmap_map_util_fsw(tmap_seq_t *seq,
 
       // re-align
       s->ascore = s->score;
+      path_len = path_mem;
       //fprintf(stderr, "old score=%d\n", s->score);
       switch(softclip_types[s->strand]) {
         case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
@@ -1573,14 +1574,25 @@ tmap_map_util_fsw(tmap_seq_t *seq,
       //fprintf(stderr, "new score=%d path_len=%d\n", s->score, path_len);
 
       if(0 < path_len) { // update
+
+          /*
+          for(j=0;j<path_len;j++) {
+              fprintf(stderr, "j=%d path[j].i=%d path[j].j=%d\n", j, path[j].i, path[j].j);
+          }
+          */
+
           s->score = (int32_t)((s->score + 99.99)/100.0); 
-          s->pos = (ref_start-1) + (path[path_len-1].j);
+          s->pos = (ref_start-1);
+          if(0 <= path[path_len-1].j) { // does not begin with an insertion
+              s->pos += (path[path_len-1].j);
+          }
           if(refseq->len < s->pos) {
+              //fprintf(stderr, "ref_start=%d path[path_len-1].j=%d\n", ref_start, path[path_len-1].j);
               tmap_error("bug encountered", Exit, OutOfRange);
           }
+          //fprintf(stderr, "path[path_len-1].i=%d path[0].i=%d num_flows=%d\n", path[path_len-1].i, path[0].i, fseq[s->strand]->num_flows);
           free(s->cigar);
           s->cigar = tmap_fsw_path2cigar(path, path_len, &s->n_cigar, 1);
-          //fprintf(stderr, "path[path_len-1].i=%d path[0].i=%d num_flows=%d\n", path[path_len-1].i, path[0].i, fseq[s->strand]->num_flows);
 
           if(0 < path[path_len-1].i) { // skipped beginning flows
               // get the number of bases to clip

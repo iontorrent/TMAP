@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
+#include <config.h>
 
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_progress.h"
@@ -202,7 +203,7 @@ tmap_fsw_sub_core(uint8_t *seq, int32_t len,
           */
       }
   }
-
+  
   // add flow scores
   for(i=low_offset;i<=high_offset;i++) { // for each possible base call within +-offset
       // get flow score for "(i-low_offset)" bases
@@ -212,6 +213,7 @@ tmap_fsw_sub_core(uint8_t *seq, int32_t len,
       // factor out extra match scores for over calls.  Is this correct?
       //if(base_call < i) flow_score += mat[flow_base] * (i - base_call);
       //fprintf(stderr, "flow_score=%d i=%d\n", flow_score, i);
+      if(flow_score < 0) tmap_error("bug encountered", Exit, OutOfRange); // we will subtract it
       for(j=0;j<=len;j++) { // for each col
           TMAP_FSW_ADD_FSCORE(sub_dpscore[i][j], flow_score);
           /*
@@ -289,6 +291,8 @@ tmap_fsw_sub_core(uint8_t *seq, int32_t len,
       while(TMAP_FSW_FROM_S != ctype && 0 < i) {
           //fprintf(stderr, "  sub_core i=%d j=%d ctype=%d\n", i, j, ctype);
           if(i < 0 || j < 0) tmap_error("bug encountered", Exit, OutOfRange);
+          // is there enough path
+          if(*path_len < p - path) tmap_error("bug encountered", Exit, OutOfRange);
 
           switch(ctype) { 
             case TMAP_FSW_FROM_M: 
@@ -307,6 +311,7 @@ tmap_fsw_sub_core(uint8_t *seq, int32_t len,
           p->i = i-1;
           p->j = j-1;
           p++;
+
 
           // move the row and column (as necessary)
           switch(ctype) {
@@ -413,12 +418,16 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
       }
 
       /*
-         fprintf(stderr, "base_call=%d col_offset=%d ctype_next=%d\n",
-         base_call, col_offset, ctype_next);
-         fprintf(stderr, "base_calls[%d]=%d\n", i-1, (0 < i) ? base_calls[i-1] : 0);
-         */
+      fprintf(stderr, "i=%d j=%d base_call=%d col_offset=%d ctype=%d ctype_next=%d base_calls[%d]=%d\n",
+              i, j, base_call, col_offset, ctype, ctype_next,
+              i-1,
+              (0 < i) ? base_calls[i-1] : 0);
+              */
 
       if(j <= 0) {
+          // if base_call_diff > 0, add insertions (more read bases than reference bases)
+          // if base_call_diff < 0, add deletions (fewer read bases than reference bases)
+          base_call_diff = base_call - base_calls[i-1];
           // starts with an insertion?
           // TODO
           for(k=0;k<base_call;k++) {
@@ -426,7 +435,16 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
               p->j = j-1;
               p->ctype = TMAP_FSW_FROM_I;
               p++;
+              if(*path_len <= p - path) tmap_error("bug encountered", Exit, OutOfRange);
           }
+          for(k=base_call_diff;k<0;k++) {
+              p->i = i-1;
+              p->j = j-1;
+              p->ctype = TMAP_FSW_FROM_I;
+              p++;
+              if(*path_len <= p - path) tmap_error("bug encountered", Exit, OutOfRange);
+          }
+          //fprintf(stderr, "base_call=%d base_calls[%d]=%d base_call_diff=%d\n", base_call, i-1, base_calls[i-1], base_call_diff);
           i--;
       }
       else if(i <= 0) {
@@ -435,6 +453,7 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
           p->j = j-1;
           p->ctype = TMAP_FSW_FROM_D;
           p++;
+          if(*path_len <= p - path) tmap_error("bug encountered", Exit, OutOfRange);
           j--;
       }
       else if(0 == base_call) {
@@ -444,6 +463,7 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
                   p->i = i - 1;
                   p->ctype = TMAP_FSW_FROM_HP_MINUS;
                   p++;
+                  if(*path_len <= p - path) tmap_error("bug encountered", Exit, OutOfRange);
               }
           }
           i--;
@@ -454,6 +474,7 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
               sub_path_mem = (0 == sub_path_mem) ? 4 : (sub_path_mem << 1);
               sub_path = tmap_realloc(sub_path, sizeof(tmap_fsw_path_t) * sub_path_mem, "sub_path"); 
           } 
+          sub_path_len = sub_path_mem;
 
           tmap_fsw_param_t ap_tmp;
           ap_tmp = (*ap);
@@ -471,12 +492,20 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
                             ((key_index+1) == i) ? key_bases : 0,
                             0, 0);
 
-          base_call_diff = base_call - base_calls[i-1];
           // if base_call_diff > 0, add insertions (more read bases than reference bases)
           // if base_call_diff < 0, add deletions (fewer read bases than reference bases)
+          base_call_diff = base_call - base_calls[i-1];
+          /*
+          fprintf(stderr, "base_call=%d base_calls[i-1]=%d sub_path_len=%d base_call_diff=%d\n", 
+                  base_call, base_calls[i-1],
+                  sub_path_len, base_call_diff);
+          for(l=0;l<sub_path_len;l++) {
+              fprintf(stderr, "l=%d sub_path[l].i=%d sub_path[l].j=%d sub_path[l].ctype=%d\n",
+                      l, sub_path[l].i, sub_path[l].j, sub_path[l].ctype);
+          }
+          */
 
           k = j - 1; // for base_call_diff < 0
-          //fprintf(stderr, "sub_path_len=%d base_call_diff=%d\n", sub_path_len, base_call_diff);
           for(l=0;l<sub_path_len;l++) {
               (*p) = sub_path[l]; // store p->j and p->ctype
               p->i = i - 1; // same flow index
@@ -490,12 +519,14 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
               }
 
               p++;
+              if(*path_len <= p - path) tmap_error("bug encountered", Exit, OutOfRange);
           }
           while(base_call_diff < 0) { // there are bases left that were deleted
               p->ctype = TMAP_FSW_FROM_HP_MINUS; // add an insertion
               p->i = i - 1;
               p->j = j - 1; // is this correct ? 
               p++;
+              if(*path_len <= p - path) tmap_error("bug encountered", Exit, OutOfRange);
               base_call_diff++;
           }
 
@@ -510,6 +541,13 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
       //fprintf(stderr, "HERE i=%d j=%d ctype=%d\n", i, j, ctype);
   }
   (*path_len) = p - path;
+
+  /*
+  for(i=0;i<(*path_len);i++) {
+      fprintf(stderr, "i=%d path[i].i=%d path[i].j=%d\n",
+              i, path[i].i, path[i].j);
+  }
+  */
 
   free(sub_path);
 }
@@ -575,8 +613,10 @@ tmap_fsw_clipping_core(uint8_t *seq, int32_t len,
       fputc("ACGTN"[flowseq->flow_order[i]], stderr);
   }
   fputc('\n', stderr);
+  fprintf(stderr, "max_bc=%d offset=%d len=%d\n", max_bc, offset, len);
+  fprintf(stderr, "flowseq->num_flows=%d len=%d\n", flowseq->num_flows, len);
+  fprintf(stderr, "max i=%d max j=%d\n", max_bc+offset, len);
   */
-  //fprintf(stderr, "max_bc=%d offset=%d len=%d\n", max_bc, offset, len);
 
   // allocate memory for the sub-cells
   sub_dpcell = tmap_malloc(sizeof(tmap_fsw_dpcell_t*) * (max_bc + offset + 1), "sub_dpcell");
@@ -645,9 +685,9 @@ tmap_fsw_clipping_core(uint8_t *seq, int32_t len,
 
       // deal with start clipping
       if(1 == flowseq_start_clip) {
-          for(j=1;j<=len;j++) {
+          for(j=0;j<=len;j++) {
               if(dpscore[i][j].match_score < 0) {
-                  //fprintf(stderr, "%s HERE 1 i=%d j=%d\n", __func__, i, j);
+                  //fprintf(stderr, "%s HERE 1 i=%d j=%d base_calls[i-1]=%d\n", __func__, i, j, flowseq->base_calls[i-1]);
                   dpcell[i][j].match_from = TMAP_FSW_FROM_S;
                   dpscore[i][j].match_score = 0; 
               }
@@ -690,10 +730,9 @@ tmap_fsw_clipping_core(uint8_t *seq, int32_t len,
 
   if(best_i < 0 || best_j < 0) { // was not updated
       (*path_len) = 0;
-      return 0;
+      // go to the end and free
   }
-
-  if(NULL == path) { 
+  else if(NULL == path) { 
       // do nothing
   }
   else if(NULL == path_len) {
@@ -1299,6 +1338,7 @@ tmap_fsw_seq_to_flowseq(tmap_seq_t *seq, uint8_t *flow_order, int32_t flow_order
   return tmap_fsw_flowseq_init(tmp_flow_order, flow_order_len, base_calls, flowgram, num_flows, -1, 0);
 }
 
+#ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
 typedef struct {
     char *flow_order;
     char *base_calls;
@@ -1581,3 +1621,4 @@ int tmap_fsw_main(int argc, char *argv[])
 
   return 0;
 }
+#endif

@@ -455,10 +455,8 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t score_match, int32_t pen_
       tmap_reverse_compliment(read_bases, read_bases_len);
   }
 
-  /*
-  fprintf(stderr, "ref_bases_len=%d\nref_bases=%s\n", ref_bases_len, ref_bases);
-  fprintf(stderr, "read_bases_len=%d\nread_bases=%s\n", read_bases_len, read_bases);
-  */
+  //fprintf(stderr, "ref_bases_len=%d\nref_bases=%s\n", ref_bases_len, ref_bases);
+  //fprintf(stderr, "read_bases_len=%d\nread_bases=%s\n", read_bases_len, read_bases);
 
   // DNA to integer
   for(i=0;i<read_bases_len;i++) {
@@ -503,7 +501,8 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t score_match, int32_t pen_
   }
 
   // allocate the alignment path
-  path = tmap_calloc(TMAP_FSW_MAX_PATH_LENGTH(ref_bases_len, flow_len, param.offset), sizeof(tmap_fsw_path_t), "path"); 
+  path_len = TMAP_FSW_MAX_PATH_LENGTH(ref_bases_len, flow_len, param.offset);
+  path = tmap_calloc(path_len, sizeof(tmap_fsw_path_t), "path"); 
 
   // re-align 
   flowseq = tmap_fsw_flowseq_init(flow_order_tmp, flow_order_len, base_calls, flowgram, flow_len, -1, 0);
@@ -872,7 +871,7 @@ usage(tmap_sam2fs_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "Usage: %s sam2fs [options] <in.sam/in.bam>", PACKAGE);
   tmap_file_fprintf(tmap_file_stderr, "\n");
   tmap_file_fprintf(tmap_file_stderr, "Options (optional):\n");
-  tmap_file_fprintf(tmap_file_stderr, "         -f          the flow order [%s]\n", opt->flow_order);
+  tmap_file_fprintf(tmap_file_stderr, "         -x          the flow order [%s]\n", opt->flow_order);
   tmap_file_fprintf(tmap_file_stderr, "         -A INT      score for a match [%d]\n", opt->score_match);
   tmap_file_fprintf(tmap_file_stderr, "         -M INT      the mismatch penalty [%d]\n", opt->pen_mm);
   tmap_file_fprintf(tmap_file_stderr, "         -O INT      the indel start penalty [%d]\n", opt->pen_gapo);
@@ -907,9 +906,9 @@ tmap_sam2fs_main(int argc, char *argv[])
 
   opt = tmap_sam2fs_opt_init();
 
-  while((c = getopt(argc, argv, "f:A:M:O:E:X:o:Sg:t:Nl:q:n:vh")) >= 0) {
+  while((c = getopt(argc, argv, "x:A:M:O:E:X:o:Sg:t:Nl:q:n:vh")) >= 0) {
       switch(c) {
-        case 'f':
+        case 'x':
           strncpy(opt->flow_order, optarg, 4); break;
         case 'A':
           opt->score_match = atoi(optarg); break;
@@ -955,7 +954,7 @@ tmap_sam2fs_main(int argc, char *argv[])
       tmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
       tmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
       tmap_error_cmd_check_int(opt->flow_offset, 0, INT32_MAX, "-o");
-      tmap_error_cmd_check_int((int)strlen(opt->flow_order), 4, 4, "-f");
+      tmap_error_cmd_check_int((int)strlen(opt->flow_order), 4, 4, "-x");
       tmap_error_cmd_check_int(opt->output_type, 0, 2, "-t");
       if(TMAP_SAM2FS_OUTPUT_ALN != opt->output_type) tmap_error_cmd_check_int(opt->output_newlines, 0, 0, "-N");
       if(-1 != opt->reads_queue_size) tmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
