@@ -240,10 +240,10 @@ inline void
 tmap_compliment(char *seq, int32_t len); 
 
 /*!
- removes trailing whitespaces from a given string
- @param  str  the string to chomp
- @return      the number of characters removed
- */
+  removes trailing whitespaces from a given string
+  @param  str  the string to chomp
+  @return      the number of characters removed
+  */
 int32_t
 tmap_chomp(char *str);
 
@@ -254,17 +254,25 @@ tmap_chomp(char *str);
   @param  low2   the higher interval start
   @param  high2  the higher interval end
   @return        -1 if high1 < low2, 1 if high2 < low1, 0 otherwise
- */
+  */
 inline int32_t
 tmap_interval_overlap(uint32_t low1, uint32_t high1, uint32_t low2, uint32_t high2);
 
 /*!
- compares the two version strings
- @param  v1  the first version string
- @param  v2  the second version string
- @return     -1 if v1 < v2, 0 if v1 == v2, 1 otherwise
- */
+  compares the two version strings
+  @param  v1  the first version string
+  @param  v2  the second version string
+  @return     -1 if v1 < v2, 0 if v1 == v2, 1 otherwise
+  */
 int32_t
 tmap_compare_versions(const char *v1, const char *v2);
+
+/*!
+  validates the flow order
+  @param  flow_order  the flow order to validate
+  @return            1 if all four bases are present in the flow order, 0 otherwise
+  */
+int32_t
+tmap_validate_flow_order(const char *flow_order);
 
 #endif

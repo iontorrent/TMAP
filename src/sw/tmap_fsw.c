@@ -1505,9 +1505,9 @@ usage(tmap_fsw_main_opt_t *opt)
                     opt->target);
   tmap_file_fprintf(tmap_file_stderr, "\n");
   tmap_file_fprintf(tmap_file_stderr, "Options (optional):\n");
-  tmap_file_fprintf(tmap_file_stderr, "         -k STRING   the flow order ([ACGT]+) [%s]\n",
+  tmap_file_fprintf(tmap_file_stderr, "         -x STRING   the flow order ([ACGT]+) [%s]\n",
                     opt->flow_order);
-  tmap_file_fprintf(tmap_file_stderr, "         -F INT      flow penalty [%d]\n", opt->param.fscore);
+  tmap_file_fprintf(tmap_file_stderr, "         -X INT      flow penalty [%d]\n", opt->param.fscore);
   tmap_file_fprintf(tmap_file_stderr, "         -o INT      search for homopolymer errors +- offset [%d]\n", opt->param.offset);
   tmap_file_fprintf(tmap_file_stderr, "         -l INT      indel justification type: 0 - none, 1 - 5' strand of the reference, 2 - 5' strand of the read [%d]\n", opt->j_type);
   tmap_file_fprintf(tmap_file_stderr, "         -v          print verbose progress information\n");
@@ -1532,7 +1532,7 @@ int tmap_fsw_main(int argc, char *argv[])
 
   opt = tmap_fsw_main_opt_init();
 
-  while((c = getopt(argc, argv, "b:f:t:k:F:o:l:vh")) >= 0) {
+  while((c = getopt(argc, argv, "b:f:t:x:X:o:l:vh")) >= 0) {
       switch(c) {
         case 'b':
           opt->base_calls = tmap_strdup(optarg); break;
@@ -1540,10 +1540,10 @@ int tmap_fsw_main(int argc, char *argv[])
           opt->flowgram = tmap_strdup(optarg); break;
         case 't':
           opt->target = tmap_strdup(optarg); opt->target_length = strlen(opt->target); break;
-        case 'k':
+        case 'x':
           free(opt->flow_order);
           opt->flow_order = tmap_strdup(optarg); break;
-        case 'F':
+        case 'X':
           opt->param.fscore = 100*atoi(optarg); break;
         case 'o':
           opt->param.offset = atoi(optarg); break;
@@ -1570,10 +1570,8 @@ int tmap_fsw_main(int argc, char *argv[])
       if(NULL == opt->target) {
           tmap_error("option -t must be specified", Exit, CommandLineArgument);
       }
-      if(NULL == opt->flow_order) {
-          tmap_error("option -k must be specified", Exit, CommandLineArgument);
-      }
-      tmap_error_cmd_check_int(opt->param.fscore, 0, INT32_MAX, "-F");
+      tmap_validate_flow_order(opt->flow_order);
+      tmap_error_cmd_check_int(opt->param.fscore, 0, INT32_MAX, "-X");
       tmap_error_cmd_check_int(opt->param.offset, 0, INT32_MAX, "-o");
       tmap_error_cmd_check_int(opt->param.offset, TMAP_FSW_NO_JUSTIFY, TMAP_FSW_NO_JUSTIFY, "-l");
   }

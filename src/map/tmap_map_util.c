@@ -610,7 +610,7 @@ tmap_map_opt_file_check_with_null(char *fn1, char *fn2)
 void
 tmap_map_opt_check(tmap_map_opt_t *opt)
 {
-  int32_t i, j;
+  int32_t i;
   // global options
   if(NULL == opt->fn_fasta && 0 == opt->shm_key) {
       tmap_error("option -f or option -s must be specified", Exit, CommandLineArgument);
@@ -636,19 +636,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
           }
       }
       else {
-          tmap_error_cmd_check_int(strlen(opt->flow_order), 4, INT32_MAX, "-x");
-          for(i=j=0;i<strlen(opt->flow_order);i++) { // each base must be used
-              switch(tolower(opt->flow_order[i])) {
-                case 'a': j |= 0x1; break;
-                case 'c': j |= 0x2; break;
-                case 'g': j |= 0x4; break;
-                case 't': j |= 0x8; break;
-                default: tmap_error("unrecognized DNA base (-x)", Exit, CommandLineArgument); break;
-              }
-          }
-          if(0xf != j) {
-              tmap_error("all DNA bases must be present at least once (-x)", Exit, CommandLineArgument); 
-          }
+          tmap_validate_flow_order(opt->flow_order);
       }
   }
   tmap_error_cmd_check_int(opt->bw, 0, INT32_MAX, "-w");

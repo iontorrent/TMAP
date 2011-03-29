@@ -465,6 +465,7 @@ tmap_sam2fs_aux(bam1_t *bam, char *flow_order, int32_t score_match, int32_t pen_
   for(i=0;i<ref_bases_len;i++) {
       ref_bases[i] = tmap_nt_char_to_int[(int)ref_bases[i]];
   }
+  fprintf(stderr, "flow_order=%s\n", flow_order);
   flow_order_len = strlen(flow_order);
   flow_order_tmp = tmap_malloc(sizeof(uint8_t) * flow_order_len, "flow_order_tmp");
   for(i=0;i<flow_order_len;i++) {
@@ -909,7 +910,7 @@ tmap_sam2fs_main(int argc, char *argv[])
   while((c = getopt(argc, argv, "x:A:M:O:E:X:o:Sg:t:Nl:q:n:vh")) >= 0) {
       switch(c) {
         case 'x':
-          strncpy(opt->flow_order, optarg, 4); break;
+          opt->flow_order = tmap_strdup(optarg); break;
         case 'A':
           opt->score_match = atoi(optarg); break;
         case 'M':
@@ -954,7 +955,7 @@ tmap_sam2fs_main(int argc, char *argv[])
       tmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
       tmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
       tmap_error_cmd_check_int(opt->flow_offset, 0, INT32_MAX, "-o");
-      tmap_error_cmd_check_int((int)strlen(opt->flow_order), 4, 4, "-x");
+      tmap_validate_flow_order(opt->flow_order);
       tmap_error_cmd_check_int(opt->output_type, 0, 2, "-t");
       if(TMAP_SAM2FS_OUTPUT_ALN != opt->output_type) tmap_error_cmd_check_int(opt->output_newlines, 0, 0, "-N");
       if(-1 != opt->reads_queue_size) tmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
