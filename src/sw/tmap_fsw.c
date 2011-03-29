@@ -14,6 +14,7 @@
 #include "../seq/tmap_seq.h"
 #include "../io/tmap_file.h"
 #include "tmap_sw.h"
+#include "../map/tmap_map_util.h"
 #include "tmap_fsw.h"
 
 /* TODO/IDEAS
@@ -21,14 +22,14 @@
    - TODO: optimize memory usage by pre-allocating the cells/scores
    */
 
-#define TMAP_FSW_ADD_FSCORE(s, f) (s).match_score -= f, (s).ins_score -= f, (s).del_score -= f
+#define TMAP_FSW_ADD_FSCORE(s, f) ((s).match_score -= f, (s).ins_score -= f, (s).del_score -= f)
 
 int32_t tmap_fsw_sm_short[] = {
-    11*100, -19*100, -19*100, -19*100, -13*100,
-    -19*100, 11*100, -19*100, -19*100, -13*100,
-    -19*100, -19*100, 11*100, -19*100, -13*100,
-    -19*100, -19*100, -19*100, 11*100, -13*100,
-    -13*100, -13*100, -13*100, -13*100, -13*100
+    TMAP_MAP_UTIL_SCORE_MATCH*-100, TMAP_MAP_UTIL_PEN_MM*-100, TMAP_MAP_UTIL_PEN_MM*-100, TMAP_MAP_UTIL_PEN_MM*-100, TMAP_MAP_UTIL_PEN_MM*-100,
+    TMAP_MAP_UTIL_PEN_MM*-100, TMAP_MAP_UTIL_SCORE_MATCH*-100, TMAP_MAP_UTIL_PEN_MM*-100, TMAP_MAP_UTIL_PEN_MM*-100, TMAP_MAP_UTIL_PEN_MM*-100, 
+    TMAP_MAP_UTIL_PEN_MM*-100, TMAP_MAP_UTIL_PEN_MM*-100, TMAP_MAP_UTIL_SCORE_MATCH*-100, TMAP_MAP_UTIL_PEN_MM*-100, TMAP_MAP_UTIL_PEN_MM*-100, 
+    TMAP_MAP_UTIL_PEN_MM*-100, TMAP_MAP_UTIL_PEN_MM*-100, TMAP_MAP_UTIL_PEN_MM*-100, TMAP_MAP_UTIL_SCORE_MATCH*-100, TMAP_MAP_UTIL_PEN_MM*-100, 
+    TMAP_MAP_UTIL_PEN_MM*-100, TMAP_MAP_UTIL_PEN_MM*-100, TMAP_MAP_UTIL_PEN_MM*-100, TMAP_MAP_UTIL_PEN_MM*-100, TMAP_MAP_UTIL_SCORE_MATCH*-100, 
 };
 
 static inline void
@@ -256,24 +257,27 @@ tmap_fsw_sub_core(uint8_t *seq, int32_t len,
 
       // get the best cells within [low_offset+1,high_offset][0,len]
       for(i=low_offset;i<=high_offset;i++) {
-          for(j=0;j<=len;j++) { // for each col
-              // match
-              if(dpscore_curr[j].match_score < sub_dpscore[i][j].match_score) {
-                  dpcell_curr[j].match_from = sub_dpcell[i][j].match_from;
-                  dpcell_curr[j].match_bc = sub_dpcell[i][j].match_bc;
-                  dpscore_curr[j].match_score = sub_dpscore[i][j].match_score;
-              }
-              // ins
-              if(dpscore_curr[j].ins_score < sub_dpscore[i][j].ins_score) {
-                  dpcell_curr[j].ins_from = sub_dpcell[i][j].ins_from;
-                  dpcell_curr[j].ins_bc = sub_dpcell[i][j].ins_bc;
-                  dpscore_curr[j].ins_score = sub_dpscore[i][j].ins_score;
-              }
-              // del
-              if(dpscore_curr[j].del_score < sub_dpscore[i][j].del_score) {
-                  dpcell_curr[j].del_from = sub_dpcell[i][j].del_from;
-                  dpcell_curr[j].del_bc = sub_dpcell[i][j].del_bc;
-                  dpscore_curr[j].del_score = sub_dpscore[i][j].del_score;
+          if(base_call != i) { 
+              // break ties by preferring hp errors, hence "<=" below
+              for(j=0;j<=len;j++) { // for each col
+                  // match
+                  if(dpscore_curr[j].match_score <= sub_dpscore[i][j].match_score) {
+                      dpcell_curr[j].match_from = sub_dpcell[i][j].match_from;
+                      dpcell_curr[j].match_bc = sub_dpcell[i][j].match_bc;
+                      dpscore_curr[j].match_score = sub_dpscore[i][j].match_score;
+                  }
+                  // ins
+                  if(dpscore_curr[j].ins_score <= sub_dpscore[i][j].ins_score) {
+                      dpcell_curr[j].ins_from = sub_dpcell[i][j].ins_from;
+                      dpcell_curr[j].ins_bc = sub_dpcell[i][j].ins_bc;
+                      dpscore_curr[j].ins_score = sub_dpscore[i][j].ins_score;
+                  }
+                  // del
+                  if(dpscore_curr[j].del_score <= sub_dpscore[i][j].del_score) {
+                      dpcell_curr[j].del_from = sub_dpcell[i][j].del_from;
+                      dpcell_curr[j].del_bc = sub_dpcell[i][j].del_bc;
+                      dpscore_curr[j].del_score = sub_dpscore[i][j].del_score;
+                  }
               }
           }
       }
@@ -1364,11 +1368,11 @@ tmap_fsw_main_opt_init()
   opt->j_type = TMAP_FSW_NO_JUSTIFY;
 
   // param
-  opt->param.gap_open = 13*100;
-  opt->param.gap_ext = 2*100;
-  opt->param.gap_end = 2*100;
+  opt->param.gap_open = TMAP_MAP_UTIL_PEN_GAPO*100;
+  opt->param.gap_ext = TMAP_MAP_UTIL_PEN_GAPE*100;
+  opt->param.gap_end = TMAP_MAP_UTIL_PEN_GAPE*100;
   opt->param.matrix = tmap_fsw_sm_short; // 11*100 - match, -19*100 - mismatch
-  opt->param.fscore = 26*100; // set this to score_match + gap_open + gap_ext
+  opt->param.fscore = TMAP_MAP_UTIL_FSCORE*100; // set this to score_match + gap_open + gap_ext
   opt->param.offset = 0;
   opt->param.row = 5;
   opt->param.band_width = 50;
