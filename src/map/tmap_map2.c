@@ -83,7 +83,7 @@ static int32_t
 tmap_map2_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
 {
   int32_t i;
-  int32_t num_best;
+  int32_t best_score, best_score_subo, num_best;
 
   if(0 == sams->n) {
       return 0;
@@ -93,6 +93,7 @@ tmap_map2_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
   tmap_sort_introsort(tmap_map2_sam_sort_score, sams->n, sams->sams);
 
   //Note: assumes that the alignments are sorted by decreasing score
+  best_score = sams->sams[0].score;
   num_best = 0;
   for(i=0;i<sams->n;i++) {
       if(0 < i && sams->sams[i-1].score < sams->sams[i].score) { // check assumption
@@ -106,21 +107,38 @@ tmap_map2_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
           num_best++; // artificially increase
       }
   }
+  // get the best sub-optimal score
+  best_score_subo = opt->score_thr;
+  for(i=0;i<sams->n;i++) {
+      if(best_score_subo < sams->sams[i].score_subo) {
+          best_score_subo = sams->sams[i].score_subo;
+      }
+      if(num_best <= i && best_score_subo < sams->sams[i].score) {
+          best_score_subo = sams->sams[i].score;
+      }
+  }
 
   if(1 < num_best) {
       for(i=0;i<sams->n;i++) {
           sams->sams[i].mapq = 0;
       }
   }
+  else if(best_score <= best_score_subo) {
+      for(i=0;i<num_best;i++) {
+          sams->sams[i].mapq = 1;
+      }
+      for(;i<sams->n;i++) {
+          sams->sams[i].mapq = 0;
+      }
+  }
   else {
       for(i=0;i<num_best;i++) {
-          int32_t subo, qual;
+          int32_t qual;
           double c = 1.0;
-          
-          subo = (sams->sams[i].score_subo > opt->score_thr) ? sams->sams[i].score_subo : opt->score_thr;
+
           if(3 != sams->sams[i].aux.map2_aux->XF) c *= .5;
           if(sams->sams[i].aux.map2_aux->XE < 2) c *= .2;
-          qual = (int)(c * (sams->sams[i].score - subo) * (250.0 / sams->sams[i].score + 0.03 / opt->score_match) + .499);
+          qual = (int)(c * (sams->sams[i].score - best_score_subo) * (250.0 / sams->sams[i].score + 0.03 / opt->score_match) + .499);
           if(qual > 250) qual = 250;
           if(sams->sams[i].score == sams->sams[i].score_subo) qual = 0;
           sams->sams[i].mapq = qual;

@@ -1220,7 +1220,7 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
   // estimate mapping quality TODO: this needs to be refined
   best_i = 0;
   best_score = INT32_MIN;
-  best_subo = INT32_MIN+1;
+  best_subo = opt->score_thr;
   best_score_sum = best_subo_sum = 0;
   n_best = n_best_subo = 0;
   for(i=0;i<sams->n;i++) {

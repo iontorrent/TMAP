@@ -347,6 +347,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
                   s->seqid = seqid;
                   s->pos = pos;
                   s->target_len = seq_len[i]; 
+                  s->score_subo = INT32_MIN;
 
                   // map3 aux data
                   tmap_map_sam_malloc_aux(s, TMAP_MAP_ALGO_MAP3);
