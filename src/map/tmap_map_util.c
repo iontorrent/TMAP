@@ -1192,7 +1192,6 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
       // copy over the best
       if(j != best_score_i) {
           // destroy
-          fprintf(stderr, "destroy j=%d\n", j);
           tmap_map_sam_destroy(&sams->sams[j]);
           // nullify
           tmap_map_sam_copy_and_nullify(&sams->sams[j], &sams->sams[best_score_i]);
