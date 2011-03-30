@@ -357,6 +357,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
           }
           else { // reverse
               pacpos = tmap_sa_pac_pos(sa[1-strand], bwt[1-strand], k); // since we used the reverse index
+              pacpos += sam->aux.map1_aux->aln_ref;
           }
           pacpos = (pacpos < sam->aux.map1_aux->aln_ref) ? 0 : (pacpos - sam->aux.map1_aux->aln_ref); 
 
@@ -371,8 +372,6 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
               sam_cur->seqid = seqid;
               sam_cur->pos = pos-1; // adjust to zero-based
               sam_cur->target_len = sam->aux.map1_aux->aln_ref;
-              tmap_file_fprintf(tmap_file_stdout, "sam_cur->seqid=%u sam_cur->pos=%u\n",
-                      sam_cur->seqid, sam_cur->pos);
 
               // aux
               tmap_map_sam_malloc_aux(sam_cur, TMAP_MAP_ALGO_MAP1);
