@@ -346,11 +346,10 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
                   s->strand = i;
                   s->seqid = seqid;
                   s->pos = pos;
+                  s->target_len = seq_len[i]; 
 
                   // map3 aux data
                   tmap_map_sam_malloc_aux(s, TMAP_MAP_ALGO_MAP3);
-                  s->aux.map3_aux->n_seeds = 1; // this is no longer informative
-                  //s->aux.map3_aux->n_seeds = ((1 << 15) < end - start + 1) ? (1 << 15) : (end - start + 1);
 
                   n++;
               }

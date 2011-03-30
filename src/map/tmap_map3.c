@@ -58,12 +58,12 @@ tmap_map3_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
   n_best = 0;
   for(i=0;i<sams->n;i++) {
       cur_score = sams->sams[i].score;
-      tot_seeds += sams->sams[i].aux.map3_aux->n_seeds;
+      tot_seeds += sams->sams[i].n_seeds;
       if(best_score < cur_score) {
           best_subo = best_score;
           best_score = cur_score;
           n_best = 1;
-          n_seeds = sams->sams[i].aux.map3_aux->n_seeds;
+          n_seeds = sams->sams[i].n_seeds;
       }
       else if(cur_score == best_score) { // qual
           n_best++;

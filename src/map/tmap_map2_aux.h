@@ -30,8 +30,6 @@ typedef struct {
     int32_t G2;  /*!< the sub-optimal alignment score */
     int32_t beg;  /*!< the beginning of the alignment in the query (0-based) */
     int32_t end;  /*!< the end of the alignment in the query (0-based) */
-    int32_t n_cigar;  /*!< the number of cigar operations per hit */
-    uint32_t *cigar;  /*!< the cigar operations per hit */
 } tmap_map2_hit_t;
 
 /*! 

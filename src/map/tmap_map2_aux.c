@@ -31,62 +31,6 @@ TMAP_SORT_INIT(hitG, tmap_map2_hit_t, __hitG_lt)
 
 #define TMAP_MAP2_AUX_IS 0
 
-#define __print_cigar(_cigar, _n_cigar) do { \
-    int32_t j; \
-    tmap_file_fprintf(tmap_file_stderr, "cigar:"); \
-    for(j=0;j<q->n_cigar;j++) { \
-        tmap_file_fprintf(tmap_file_stderr, "%d%c", q->cigar[j]>>4, "MIDNSHP"[q->cigar[j]&0xf]); \
-    } \
-    tmap_file_fprintf(tmap_file_stderr, "\n"); \
-} while (0)
-
-#define __check_softclip(_softclip_type, _strand, _cigar, _n_cigar) do { \
-    int32_t _type = _softclip_type; \
-    if(1 == _strand) { \
-        if(_type == TMAP_MAP_UTIL_SOFT_CLIP_LEFT) { \
-            _type = TMAP_MAP_UTIL_SOFT_CLIP_RIGHT; \
-        } \
-        else if(_type == TMAP_MAP_UTIL_SOFT_CLIP_RIGHT) { \
-            _type = TMAP_MAP_UTIL_SOFT_CLIP_LEFT; \
-        } \
-    } \
-    switch(_type) { \
-      case TMAP_MAP_UTIL_SOFT_CLIP_ALL: \
-        break; \
-      case TMAP_MAP_UTIL_SOFT_CLIP_LEFT: \
-        if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(_cigar[_n_cigar-1])) { \
-            tmap_file_fprintf(tmap_file_stderr, "the strand is %d\n", strand); \
-            __print_cigar(_cigar, _n_cigar); \
-            tmap_error("found right soft clip", Warn, OutOfRange); \
-        } \
-        break; \
-      case TMAP_MAP_UTIL_SOFT_CLIP_RIGHT: \
-        if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(_cigar[0])) { \
-            tmap_file_fprintf(tmap_file_stderr, "the strand is %d\n", strand); \
-            __print_cigar(_cigar, _n_cigar); \
-            tmap_error("found left soft clip", Warn, OutOfRange); \
-        } \
-        break; \
-      case TMAP_MAP_UTIL_SOFT_CLIP_NONE: \
-        if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(_cigar[_n_cigar-1])) { \
-            fprintf(stderr, "_n_cigar=%d\n", _n_cigar); \
-            tmap_file_fprintf(tmap_file_stderr, "the strand is %d\n", strand); \
-            __print_cigar(_cigar, _n_cigar); \
-            tmap_error("found right soft clip", Warn, OutOfRange); \
-        } \
-        if(BAM_CSOFT_CLIP == TMAP_SW_CIGAR_OP(_cigar[0])) { \
-            tmap_file_fprintf(tmap_file_stderr, "the strand is %d\n", strand); \
-            __print_cigar(_cigar, _n_cigar); \
-            tmap_error("found left soft clip", Warn, OutOfRange); \
-        } \
-        break; \
-      default: \
-        tmap_error("soft clipping type was not recognized", Warn, OutOfRange); \
-        break; \
-    } \
-} while(0)
-
-
 int32_t
 tmap_map2_aux_resolve_duphits(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_map2_aln_t *b, int32_t IS, int32_t min_as)
 {
@@ -120,20 +64,13 @@ tmap_map2_aux_resolve_duphits(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_m
                   b->hits[j] = *p;
                   b->hits[j].k = tmap_sa_pac_pos(sa, bwt, k);
                   b->hits[j].l = 0;
-                  // do not copy over cigar
-                  b->hits[j].cigar = NULL;
-                  b->hits[j].n_cigar = 0;
                   ++j;
               }
           } else if(p->G > min_as) {
               b->hits[j] = *p;
-              p->cigar = NULL; // nullify
               b->hits[j].k = tmap_sa_pac_pos(sa, bwt, p->k);
               b->hits[j].l = 0;
               b->hits[j].flag |= 1;
-              // do not copy over cigar
-              b->hits[j].cigar = NULL;
-              b->hits[j].n_cigar = 0;
               ++j;
           }
       }
@@ -233,8 +170,6 @@ tmap_map2_hit_nullify(tmap_map2_hit_t * hit)
 {
   hit->k = hit->l = hit->flag = hit->n_seeds = 0;
   hit->qlen = hit->tlen = hit->G = hit->G2 = hit->beg = hit->end = 0;
-  hit->n_cigar = 0;
-  hit->cigar = NULL;
 }
 
 tmap_map2_aln_t*
@@ -248,10 +183,8 @@ tmap_map2_aln_realloc(tmap_map2_aln_t *a, int32_t n)
 {
   int32_t i;
   if(NULL == a) return;
-  // free old cigars
   if(n < a->n) {
       for(i=n;i<a->n;i++) {
-          free(a->hits[i].cigar);
           tmap_map2_hit_nullify(&a->hits[i]);
       }
       a->n = n;
@@ -272,11 +205,7 @@ tmap_map2_aln_realloc(tmap_map2_aln_t *a, int32_t n)
 void 
 tmap_map2_aln_destroy(tmap_map2_aln_t *a)
 {
-  int32_t i;
   if(NULL == a) return;
-  for(i=0;i<a->n;i++) {
-      free(a->hits[i].cigar);
-  }
   free(a->hits);
   free(a);
 }
@@ -371,89 +300,6 @@ tmap_map2_aux_flag_fr(tmap_map2_aln_t *b[2])
   }
 }
 
-/*
-static int32_t 
-tmap_map2_aux_fix_cigar(tmap_refseq_t *refseq, tmap_map2_hit_t *p, int32_t n_cigar, uint32_t *cigar)
-{
-  int32_t lq;
-  int32_t x, y, i;
-  uint32_t coor, seqid, refl;
-
-  if(0 == tmap_refseq_pac2real(refseq, p->k, p->tlen, &seqid, &coor)) {
-      return -1;
-  }
-  if(n_cigar == 0) {
-      tmap_error("bug encountered", Exit, OutOfRange);
-  }
-
-  refl = refseq->annos[seqid].len;
-  x = coor-1; y = 0;
-  // test if the alignment goes beyond the boundary
-  for(i = 0; i < n_cigar; ++i) {
-      int32_t op = TMAP_SW_CIGAR_OP(cigar[i]);
-      int32_t ln = TMAP_SW_CIGAR_LENGTH(cigar[i]);
-      if(op == 1 || op == 4 || op == 5) y += ln;
-      else if(op == 2) x += ln;
-      else x += ln, y += ln;
-  }
-  lq = y; // length of the query sequence
-  if(x > refl) { // then fix it
-      int32_t j, nc, mq[2], nlen[2];
-      uint32_t *cn, kk = 0;
-      nc = mq[0] = mq[1] = nlen[0] = nlen[1] = 0;
-      cn = tmap_calloc(n_cigar + 3, sizeof(uint32_t), "cn");
-      x = coor-1; y = 0;
-      for(i = j = 0; i < n_cigar; ++i) {
-          int32_t op = TMAP_SW_CIGAR_OP(cigar[i]);
-          int32_t ln = TMAP_SW_CIGAR_LENGTH(cigar[i]);
-          if(BAM_CINS == op || BAM_CSOFT_CLIP == op || BAM_CHARD_CLIP == op) { // ins or clipping
-              y += ln;
-              cn[j++] = cigar[i];
-          } else if(BAM_CDEL == op) { // del
-              if(x + ln >= refl && nc == 0) {
-                  TMAP_SW_CIGAR_STORE(cn[j++], BAM_CSOFT_CLIP, (uint32_t)(lq-y));
-                  nc = j;
-                  TMAP_SW_CIGAR_STORE(cn[j++], BAM_CSOFT_CLIP, (uint32_t)y);
-                  kk = p->k + (x + ln - refl);
-                  nlen[0] = x - (coor-1);
-                  nlen[1] = p->tlen - nlen[0] - ln;
-              } else cn[j++] = cigar[i];
-              x += ln;
-          } else if(op == BAM_CMATCH) { // match
-              if(x + ln >= refl && nc == 0) {
-                  // FIXME: not consider a special case where a split right between M and I
-                  TMAP_SW_CIGAR_STORE(cn[j++], BAM_CMATCH, (uint32_t)(refl-x)); // write M
-                  TMAP_SW_CIGAR_STORE(cn[j++], BAM_CSOFT_CLIP, (uint32_t)(lq-y-(refl-x))); // write S
-                  nc = j;
-                  mq[0] += refl - x;
-                  TMAP_SW_CIGAR_STORE(cn[j++], BAM_CSOFT_CLIP, (uint32_t)(y+(refl-x))); // write S
-                  if(x + ln - refl) TMAP_SW_CIGAR_STORE(cn[j++], BAM_CMATCH, (uint32_t)(x+ln-refl)); // write M
-                  mq[1] += x + ln - refl;
-                  kk = refseq->annos[seqid].offset + refl;
-                  nlen[0] = refl - (coor-1);
-                  nlen[1] = p->tlen - nlen[0];
-              } else {
-                  cn[j++] = cigar[i];
-                  mq[nc?1:0] += ln;
-              }
-              x += ln; y += ln;
-          }
-      }
-      if(mq[0] > mq[1]) { // then take the first alignment
-          n_cigar = nc;
-          memcpy(cigar, cn, 4 * nc);
-          p->tlen = nlen[0];
-      } else {
-          p->k = kk; p->tlen = nlen[1];
-          n_cigar = j - nc;
-          memcpy(cigar, cn + nc, 4 * (j - nc));
-      }
-      free(cn);
-  }
-  return n_cigar;
-}
-*/
-
 static tmap_map_sams_t *
 tmap_map2_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt, 
                          tmap_map2_aln_t *aln)
@@ -472,9 +318,6 @@ tmap_map2_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
       tmap_map_sam_t *sam = &sams->sams[j];
 
       if(p->l == 0) {
-          if(aln->hits[i].n_cigar <= 0) {
-              continue; // no cigar
-          }
           if(tmap_refseq_pac2real(refseq, p->k, p->tlen, &seqid, &coor) <= 0) {
               continue; // spanning two or more chromosomes
           }
@@ -490,6 +333,7 @@ tmap_map2_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
       sam->algo_stage = 0;
       sam->score = p->G;
       sam->score_subo = p->G2;
+      sam->target_len = p->tlen;
       // auxiliary data
       tmap_map_sam_malloc_aux(sam, TMAP_MAP_ALGO_MAP2);
       sam->aux.map2_aux->XE = p->n_seeds;

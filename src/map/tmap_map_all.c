@@ -59,9 +59,10 @@ tmap_map_all_sams_merge_helper(tmap_map_sams_t *dest, tmap_map_sams_t *src, int3
 
 static tmap_map_sams_t *
 tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2],
-                       tmap_map_sams_t *sams_map1, tmap_map_sams_t *sams_map2, tmap_map_sams_t *sams_map3,
+                        tmap_map_sams_t **sams_in, int32_t *algo_ids, int32_t n_algos,
                        int32_t stage, tmap_map_opt_t *opt)
 {
+  int32_t i;
   tmap_map_sams_t *sams = NULL;
 
   // init
@@ -70,20 +71,20 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
   // remove duplicates before merging
   if(1 == opt->aln_output_mode_ind) {
       // smith waterman
-      tmap_map_util_sw(refseq, sams_map1, seq, opt);
-      tmap_map_util_sw(refseq, sams_map2, seq, opt);
-      tmap_map_util_sw(refseq, sams_map3, seq, opt);
+      for(i=0;i<n_algos;i++) {
+          tmap_map_util_sw(refseq, sams_in[i], seq, opt);
+      }
 
       // duplicate removal
-      tmap_map_util_remove_duplicates(sams_map1, opt->dup_window);
-      tmap_map_util_remove_duplicates(sams_map2, opt->dup_window);
-      tmap_map_util_remove_duplicates(sams_map3, opt->dup_window);
+      for(i=0;i<n_algos;i++) {
+          tmap_map_util_remove_duplicates(sams_in[i], opt->dup_window);
+      }
   }
 
   // merge
-  tmap_map_all_sams_merge_helper(sams, sams_map1, stage);
-  tmap_map_all_sams_merge_helper(sams, sams_map2, stage);
-  tmap_map_all_sams_merge_helper(sams, sams_map3, stage);
+  for(i=0;i<n_algos;i++) {
+      tmap_map_all_sams_merge_helper(sams, sams_in[i], stage);
+  }
 
   // no alignments
   if(0 == sams->n) return sams;
@@ -91,7 +92,7 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
   // remove duplicates after merging
   if(0 == opt->aln_output_mode_ind) {
       // smith waterman
-      tmap_map_util_sw(refseq, sams, seq, opt);
+      sams = tmap_map_util_sw(refseq, sams, seq, opt);
 
       // duplicate removal
       tmap_map_util_remove_duplicates(sams, opt->dup_window);
@@ -107,9 +108,9 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
   }
   else {
       // consider all algos independently
-      tmap_map_sams_filter1(sams, opt->aln_output_mode, TMAP_MAP_ALGO_MAP1);
-      tmap_map_sams_filter1(sams, opt->aln_output_mode, TMAP_MAP_ALGO_MAP2);
-      tmap_map_sams_filter1(sams, opt->aln_output_mode, TMAP_MAP_ALGO_MAP3);
+      for(i=0;i<n_algos;i++) {
+          tmap_map_sams_filter1(sams, opt->aln_output_mode, algo_ids[i]);
+      }
   }
 
   return sams;
@@ -180,11 +181,10 @@ tmap_map_all_thread_init(void **data, tmap_map_opt_t *opt)
 static tmap_map_sams_t*
 tmap_map_all_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt)
 {
-  int32_t i;
+  int32_t i, n_algos=3;
   tmap_map_sams_t *sams = NULL;
-  tmap_map_sams_t *sams_map1 = NULL;
-  tmap_map_sams_t *sams_map2 = NULL;
-  tmap_map_sams_t *sams_map3 = NULL;
+  tmap_map_sams_t *sams_in[3] = {NULL,NULL,NULL};
+  int32_t algo_ids[3] = {TMAP_MAP_ALGO_MAP1,TMAP_MAP_ALGO_MAP2,TMAP_MAP_ALGO_MAP3};
   tmap_map_all_thread_data_t *d = (tmap_map_all_thread_data_t*)(*data);
   
   // for mapall optimization
@@ -219,28 +219,36 @@ tmap_map_all_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tma
       if(opt->algos[i] & TMAP_MAP_ALGO_MAP1) {
           seqs_tmp[0] = seqs[2]; seqs_tmp[1] = seqs[1];
           bases_tmp[0] = bases[2]; bases_tmp[1] = bases[1];
-          sams_map1 = tmap_map1_thread_map_core(&d->data_map1[i], seqs_tmp, bases_tmp, seq_len, refseq, bwt, sa, opt->opt_map1[i]);
+          sams_in[0] = tmap_map1_thread_map_core(&d->data_map1[i], seqs_tmp, bases_tmp, seq_len, refseq, bwt, sa, opt->opt_map1[i]);
+      }
+      else {
+          sams_in[0] = tmap_map_sams_init();
       }
       // map2
       if(opt->algos[i] & TMAP_MAP_ALGO_MAP2) {
-          sams_map2 = tmap_map2_thread_map_core(&d->data_map2[i], seqs, seq_len, refseq, bwt, sa, opt->opt_map2[i]);
+          sams_in[1] = tmap_map2_thread_map_core(&d->data_map2[i], seqs, seq_len, refseq, bwt, sa, opt->opt_map2[i]);
+      }
+      else {
+          sams_in[1] = tmap_map_sams_init();
       }
       // map3
       if(opt->algos[i] & TMAP_MAP_ALGO_MAP3) {
           seqs_tmp[0] = seqs[0];
           seqs_tmp[1] = seqs[1];
-          sams_map3 = tmap_map3_thread_map_core(&d->data_map3[i], seqs, seq_len, refseq, bwt, sa, opt->opt_map3[i]);
+          sams_in[2] = tmap_map3_thread_map_core(&d->data_map3[i], seqs, seq_len, refseq, bwt, sa, opt->opt_map3[i]);
+      }
+      else {
+          sams_in[2] = tmap_map_sams_init();
       }
 
       // merge all the mappings
       sams = tmap_map_all_sams_merge(seq, refseq, bwt, sa,
-                                     sams_map1, sams_map2, sams_map3,
+                                     sams_in, algo_ids, n_algos, 
                                      i+1, opt);
-
-      tmap_map_sams_destroy(sams_map1);
-      tmap_map_sams_destroy(sams_map2);
-      tmap_map_sams_destroy(sams_map3);
-      sams_map1 = sams_map2 = sams_map3 = NULL;
+      for(i=0;i<n_algos;i++) {
+          tmap_map_sams_destroy(sams_in[i]);
+          sams_in[i] = NULL;
+      }
 
       // did we find any mappings?
       if(0 < sams->n) {
@@ -312,7 +320,8 @@ tmap_map_all_core(tmap_map_opt_t *opt)
     (opt_map_other)->flow_order_use_sff = (opt_map_all)->flow_order_use_sff; \
     (opt_map_other)->bw = (opt_map_all)->bw; \
     (opt_map_other)->softclip_type = (opt_map_all)->softclip_type; \
-    (opt_map_other)->dup_window = -1; \
+    (opt_map_other)->dup_window = (opt_map_all)->dup_window; \
+    (opt_map_other)->max_seed_band = (opt_map_all)->max_seed_band; \
     (opt_map_other)->score_thr = (opt_map_all)->score_thr; \
     (opt_map_other)->reads_queue_size = (opt_map_all)->reads_queue_size; \
     (opt_map_other)->num_threads = (opt_map_all)->num_threads; \

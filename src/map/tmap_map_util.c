@@ -903,8 +903,9 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
                                     sam->strand, sam->seqid, sam->pos,
                                     sam->mapq, sam->cigar, sam->n_cigar,
                                     sam->score, sam->ascore, sam->algo_id, sam->algo_stage, 
-                                    "\tXS:i:%d\tXF:i:%d\tXE:i:%d\tXI:i:%d",
+                                    "\tXS:i:%d\tXT:i:%d\t\tXF:i:%d\tXE:i:%d\tXI:i:%d",
                                     sam->score_subo,
+                                    sam->n_seeds,
                                     sam->aux.map2_aux->XF, sam->aux.map2_aux->XE, 
                                     sam->aux.map2_aux->XI);
           }
@@ -913,8 +914,9 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
                                     sam->strand, sam->seqid, sam->pos,
                                     sam->mapq, sam->cigar, sam->n_cigar,
                                     sam->score, sam->ascore, sam->algo_id, sam->algo_stage, 
-                                    "\tXS:i:%d\tXF:i:%d\tXE:i:%d",
+                                    "\tXS:i:%d\tXT:i:%d\tXF:i:%d\tXE:i:%d",
                                     sam->score_subo,
+                                    sam->n_seeds,
                                     sam->aux.map2_aux->XF, sam->aux.map2_aux->XE);
           }
           break;
@@ -923,9 +925,9 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
                                 sam->strand, sam->seqid, sam->pos,
                                 sam->mapq, sam->cigar, sam->n_cigar,
                                 sam->score, sam->ascore, sam->algo_id, sam->algo_stage, 
-                                "\tXS:i:%d\tXE:i:%d",
+                                "\tXS:i:%d\tXT:i:%d",
                                 sam->score_subo,
-                                sam->aux.map3_aux->n_seeds);
+                                sam->n_seeds);
           break;
       }
   }
@@ -1139,7 +1141,7 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
 {
   int32_t i, next_i, j, k, end, best_score_i, best_score_n;
 
-  if(dup_window < 0) {
+  if(dup_window < 0 || sams->n <= 0) {
       return;
   }
 
@@ -1190,6 +1192,7 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
       // copy over the best
       if(j != best_score_i) {
           // destroy
+          fprintf(stderr, "destroy j=%d\n", j);
           tmap_map_sam_destroy(&sams->sams[j]);
           // nullify
           tmap_map_sam_copy_and_nullify(&sams->sams[j], &sams->sams[best_score_i]);
@@ -1360,12 +1363,12 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
           if(1 == strand) { // reverse compliment
               tmap_seq_reverse_compliment(seqs[strand]);
           }
-          tmap_seq_to_int(seq);
+          tmap_seq_to_int(seqs[strand]);
       }
       query = (uint8_t*)tmap_seq_get_bases(seqs[strand])->s;
 
       // check if the hits can be banded
-      tmp_sam.score_subo = sams->sams[end].score_subo;
+      tmp_sam = sams->sams[end]; // shallow copy data 
       if(end + 1 < sams->n) {
           if(sams->sams[end].strand == sams->sams[end+1].strand 
              && sams->sams[end].seqid == sams->sams[end+1].seqid
@@ -1382,6 +1385,7 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
       }
 
       // one-based
+      //fprintf(stderr, "1 start_pos=%d\tend_pos=%d\n", start_pos, end_pos);
       if(start_pos < opt->bw) {
           start_pos = 1;
       }
@@ -1392,6 +1396,7 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
       if(refseq->annos[sams->sams[end].seqid].len < end_pos) {
           end_pos = refseq->annos[sams->sams[end].seqid].len; // one-based
       }
+      //fprintf(stderr, "2 start_pos=%d\tend_pos=%d\n", start_pos, end_pos);
 
       // get the target sequence
       target_len = end_pos - start_pos + 1;
@@ -1415,6 +1420,18 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
       par.band_width = end_pos - start_pos + 1;
       par.band_width += 2 * opt->bw; // add bases to the window
 
+      /*
+      int j;
+      for(j=0;j<target_len;j++) {
+          fputc("ACGTN"[target[j]], stderr);
+      }
+      fputc('\n', stderr);
+      for(j=0;j<seq_len;j++) {
+          fputc("ACGTN"[query[j]], stderr);
+      }
+      fputc('\n', stderr);
+      */
+
       if(0 < tmap_map_util_sw_aux(&tmp_sam,
                               target, target_len,
                               query, seq_len,
@@ -1425,6 +1442,8 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
 
           // shallow copy previous data 
           (*s) = tmp_sam; 
+
+          s->n_seeds = (end - start + 1);
 
           // update aux data
           tmap_map_sam_malloc_aux(s, s->algo_id);
@@ -1439,6 +1458,7 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
               (*s->aux.map3_aux) = (*tmp_sam.aux.map3_aux);
               break;
             default:
+              tmap_error("bug encountered", Exit, OutOfRange);
               break;
           }
 
@@ -1450,6 +1470,7 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
       start = end;
   }
       
+  // realloc
   tmap_map_sams_realloc(sams_tmp, i);
 
   // free memory

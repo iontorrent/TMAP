@@ -113,7 +113,7 @@ tmap_map_driver_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int
               // mapall should have already done this!
               if(TMAP_MAP_ALGO_MAPALL != opt->algo_id) {
                   // smith waterman
-                  tmap_map_util_sw(refseq, sams[low], seq_buffer[low], opt);
+                  sams[low] = tmap_map_util_sw(refseq, sams[low], seq_buffer[low], opt);
 
                   // remove duplicates
                   tmap_map_util_remove_duplicates(sams[low], opt->dup_window);

@@ -171,6 +171,9 @@ Specifies that the type of soft-clipping to perform.
 \subsubsection{\TT{-W INT}}
 Specifies to remove duplicate mappings that occur within this bp window.
 
+\subsubsection{-B INT}
+Specifies the window in bases in which to group seeds.
+
 \subsubsection{\TT{-q INT}}
 Specifies the number of reads to cache or load into memory at one time.
 
@@ -367,9 +370,6 @@ With a value of $-1$ will set the seed length to $\left(ceiling(log_4(R)) + 2\ri
 \subsubsection{-S INT}
 Specifies the maximum number of CALs allowed to be returned by a seed before it is ignored.
 
-\subsubsection{-b INT}
-Specifies the window in bases in which to group seeds.
-
 \subsubsection{-w INT}
 Specifies the band width in the banded local alignment.
 
@@ -514,11 +514,13 @@ This tag stores the number of indel extensions (gap extensions) in the mapping, 
 \subsubsection{XS}
 This tag stores the alignment score of next-best sub-optimal mapping.
 
+\subsubsection{XT}
+This tag stores the number of seeds supporting this mapping.
 \subsubsection{XF}
 This tag stores from where the mappings originated: one indicates from the forward search, two indicates from the reverse search, and three indicates from both the forward and reverse search.
 
 \subsubsection{XE}
-This tag stores the number of seeds supporting this mapping.
+This tag stores the number of seeds supporting this mapping specifically for \TT{map2}.
 
 \subsubsection{XI}
 This tag stores the size of the suffix interval for this mapping.

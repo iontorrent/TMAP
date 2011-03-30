@@ -360,6 +360,8 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
           }
           pacpos = (pacpos < sam->aux.map1_aux->aln_ref) ? 0 : (pacpos - sam->aux.map1_aux->aln_ref); 
 
+          pacpos++; // make one-based
+
           // save the hit
           if(0 < tmap_refseq_pac2real(refseq, pacpos, sam->aux.map1_aux->aln_ref, &seqid, &pos)) {
               // copy over previous parameters
@@ -368,12 +370,14 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
               sam_cur->strand = strand;
               sam_cur->seqid = seqid;
               sam_cur->pos = pos-1; // adjust to zero-based
+              sam_cur->target_len = sam->aux.map1_aux->aln_ref;
 
               // aux
               tmap_map_sam_malloc_aux(sam_cur, TMAP_MAP_ALGO_MAP1);
               sam_cur->aux.map1_aux->n_mm = sam->aux.map1_aux->n_mm;
               sam_cur->aux.map1_aux->n_gapo = sam->aux.map1_aux->n_gapo;
               sam_cur->aux.map1_aux->n_gape = sam->aux.map1_aux->n_gape;
+              sam_cur->aux.map1_aux->aln_ref = 0;
               j++;
           }
       }
@@ -659,6 +663,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
               if(STATE_M == op || STATE_D == op) {
                   sam->aux.map1_aux->aln_ref += op_len;
               }
+              /*
               if(1 == strand) { // since it was reverse complimented
                   if(len < sam->aux.map1_aux->aln_ref + 1) {
                       sam->aux.map1_aux->aln_ref = 0;
@@ -667,6 +672,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
                       sam->aux.map1_aux->aln_ref = len - sam->aux.map1_aux->aln_ref - 1;
                   }
               }
+              */
 
               /*
               fprintf(stderr, "shadow 2 strand=%d k=%u l=%u len=%d offset=%d last_diff_offset=%d\n",

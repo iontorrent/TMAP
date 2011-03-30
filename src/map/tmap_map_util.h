@@ -211,7 +211,7 @@ typedef struct {
   Auxiliary data for map3
   */
 typedef struct {
-    uint16_t n_seeds:15; /*!< the number seeds in this hit */
+    void *ptr; // NULL
 } tmap_map_map3_aux_t;
 
 /*!
@@ -230,6 +230,7 @@ typedef struct {
     int32_t n_cigar; /*!< the number of cigar operators */
     uint32_t *cigar; /*!< the cigar operator array */
     uint16_t target_len; /*!< internal variable, the target length estimated by the seeding step */ 
+    uint16_t n_seeds; /*!< the number seeds in this hit */
     union {
         tmap_map_map1_aux_t *map1_aux; /*!< auxiliary data for map1 */
         tmap_map_map2_aux_t *map2_aux; /*!< auxiliary data for map2 */
