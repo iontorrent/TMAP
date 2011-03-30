@@ -65,7 +65,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->bw = 50; 
   opt->softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_RIGHT;
   opt->dup_window = 128;
-  opt->max_seed_band = 25;
+  opt->max_seed_band = 15;
   opt->score_thr = 1;
   opt->reads_queue_size = 262144;
   opt->num_threads = 1;
@@ -1365,6 +1365,12 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
              && sams->sams[end].seqid == sams->sams[end+1].seqid
              && sams->sams[end+1].pos - sams->sams[end].pos <= opt->max_seed_band) {
               end++;
+              /*
+              fprintf(stderr, "pos1=%u pos2=%u diff=%d\n",
+                      sams->sams[end].pos,
+                      sams->sams[end+1].pos,
+                      sams->sams[end+1].pos-sams->sams[end].pos);
+                      */
               if(end_pos < sams->sams[end].pos + sams->sams[end].target_len) {
                   end_pos = sams->sams[end].pos + sams->sams[end].target_len; // one-based
               }

@@ -70,7 +70,7 @@ tmap_map2_aux_resolve_duphits(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_m
               b->hits[j] = *p;
               b->hits[j].k = tmap_sa_pac_pos(sa, bwt, p->k);
               b->hits[j].l = 0;
-              b->hits[j].flag |= 1;
+              b->hits[j].flag |= 0x1;
               ++j;
           }
       }
@@ -315,18 +315,44 @@ tmap_map2_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
   for(i=j=0;i<aln->n;i++) {
       tmap_map2_hit_t *p = aln->hits + i;
       uint32_t seqid = 0, coor = 0;
+      int32_t beg, strand;
       tmap_map_sam_t *sam = &sams->sams[j];
 
-      if(p->l == 0) {
-          if(tmap_refseq_pac2real(refseq, p->k, p->tlen, &seqid, &coor) <= 0) {
-              continue; // spanning two or more chromosomes
+      strand = (p->flag & 0x10) ? 1 : 0;
+
+      // adjust for contig boundaries
+      if(tmap_refseq_pac2real(refseq, p->k, p->tlen, &seqid, &coor) <= 0) {
+          if(1 == strand) { // reverse
+              if(tmap_refseq_pac2real(refseq, p->k + p->tlen - 1, 1, &seqid, &coor) <= 0) {
+                  continue;
+              }
+              else {
+                  // move to the contig and position
+                  p->k = refseq->annos[seqid].offset+1;
+                  p->tlen = (p->tlen < refseq->annos[seqid].len) ? p->tlen : refseq->annos[seqid].len;
+              }
+          }
+          else {
+              if(tmap_refseq_pac2real(refseq, p->k, 1, &seqid, &coor) <= 0) {
+                  continue;
+              }
+              else {
+                  // move to the contig and position
+                  p->k = refseq->annos[seqid].offset+1;
+                  p->tlen = (p->tlen < refseq->annos[seqid].len) ? p->tlen : refseq->annos[seqid].len;
+              }
           }
       }
+
+      // adjust based on where the hit was in the read
+      beg = (1 == strand) ? (seq_len - p->end) : p->beg;
+      coor = (coor < beg) ? 1 : (coor - beg);
+
       if((p->flag & 0x1)) {
           p->G2 = p->G; // Note: the flag indicates a repetitive match, so we need to update the sub-optimal score
       }
 
-      sam->strand = (p->flag & 0x10) ? 1 : 0; // strand
+      sam->strand = strand;
       sam->seqid = seqid;
       sam->pos = coor-1; // make it zero-based
       sam->algo_id = TMAP_MAP_ALGO_MAP2;
