@@ -1,7 +1,6 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
 #include <stdlib.h>
 #include "../util/tmap_alloc.h"
-#include "../util/tmap_sort.h"
 #include "../seq/tmap_seq.h"
 #include "../index/tmap_refseq.h"
 #include "../index/tmap_bwt.h"
@@ -11,32 +10,6 @@
 #include "tmap_map_util.h"
 #include "tmap_map3.h"
 #include "tmap_map3_aux.h"
-
-/*
-#define __tmap_map3_hit_sort_lt(a, b) ( ((a).seqid < (b).seqid \
-                                         || ( (a).seqid == (b).seqid && (a).pos < (b).pos ) \
-                                         || ( (a).seqid == (b).seqid && (a).pos == (b).pos && (a).start < (b).start )) \
-                                       ? 1 : 0)
-                                       */
-#define __tmap_map3_hit_sort_lt(a, b) ( ((a).seqid < (b).seqid \
-                                         || ( (a).seqid == (b).seqid && (a).pos < (b).pos )) \
-                                       ? 1 : 0)
-
-TMAP_SORT_INIT(tmap_map3_aux_hit_t, tmap_map3_aux_hit_t, __tmap_map3_hit_sort_lt)
-
-     // Note: this does not set the band width
-#define __map3_gen_ap(par, opt) do { \
-    int32_t i; \
-    for(i=0;i<25;i++) { \
-        (par).matrix[i] = -(opt)->pen_mm; \
-    } \
-    for(i=0;i<4;i++) { \
-        (par).matrix[i*5+i] = (opt)->score_match; \
-    } \
-    (par).gap_open = (opt)->pen_gapo; (par).gap_ext = (opt)->pen_gape; \
-    (par).gap_end = (opt)->pen_gape; \
-    (par).row = 5; \
-} while(0)
 
 static inline void 
 tmap_map3_aux_seed_add(tmap_map3_aux_seed_t **seeds,
@@ -248,27 +221,14 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
                    tmap_sa_t *sa,
                    tmap_map_opt_t *opt)
 {
-  int32_t i, j, seed_length;
+  int32_t i, j, n, seed_length;
   int32_t seq_len[2];
   tmap_string_t *bases;
   uint8_t *query;
   uint8_t *flow[2];
 
-  uint32_t k, pacpos;
-  uint32_t ref_start, ref_end;
-  uint8_t *target = NULL;
-  int32_t target_mem = 0, target_len;
-  int32_t matrix[25];
-  tmap_sw_param_t par;
-  tmap_sw_path_t *path = NULL;
-  int32_t path_len, path_mem=0;
-  int32_t bw = 0;
-
   tmap_map3_aux_seed_t *seeds[2];
   int32_t m_seeds[2], n_seeds[2];
-
-  tmap_map3_aux_hit_t *hits[2];
-  int32_t m_hits[2], n_hits[2];
 
   tmap_map_sams_t *sams = NULL;
 
@@ -299,15 +259,8 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
       }
   }
 
-  // scoring matrix
-  par.matrix = matrix;
-  __map3_gen_ap(par, opt);
-
   // init
   sams = tmap_map_sams_init();
-
-  // band width
-  bw = (opt->bw + 1) / 2;
 
   // update the seed length
   seed_length = opt->seed_length;
@@ -329,7 +282,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
   }
 
   // seeds
-  for(i=0;i<2;i++) { // forward/reverse-compliment
+  for(i=n=0;i<2;i++) { // forward/reverse-compliment
       bases = tmap_seq_get_bases(seq[i]);
       seq_len[i] = bases->l;
       query = (uint8_t*)bases->s;
@@ -343,20 +296,23 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
       tmap_map3_aux_core_seed(query, seq_len[i], flow[i],
                               refseq, bwt, sa, opt, &seeds[i], &n_seeds[i], &m_seeds[i],
                               seed_length);
+
+      // for SAM storage
+      for(j=0;j<n_seeds[i];j++) {
+          n += seeds[i][j].l - seeds[i][j].k + 1;
+      }
   }
 
+  // make enough room
+  tmap_map_sams_realloc(sams, n);
+  
   // convert seeds to chr/pos
-  for(i=0;i<2;i++) { // forward/reverse-compliment
-      // allocate mmemory
-      m_hits[i] = 0; // store the number of hits that are needed
-      for(j=0;j<n_seeds[i];j++) {
-          m_hits[i] += seeds[i][j].l - seeds[i][j].k + 1;
-      }
-      hits[i] = tmap_malloc(m_hits[i]*sizeof(tmap_map3_aux_hit_t), "hits[i]");
-      n_hits[i] = 0;
-
+  for(i=n=0;i<2;i++) { // forward/reverse-compliment
       for(j=0;j<n_seeds[i];j++) { // go through all seeds
+          uint32_t seqid, pos;
+          uint32_t k, pacpos;
           for(k=seeds[i][j].k;k<=seeds[i][j].l;k++) { // through all occurrences
+              tmap_map_sam_t *s = NULL;
               pacpos = tmap_sa_pac_pos(sa, bwt, k);
               if(bwt->seq_len < pacpos + seeds[i][j].start + 1) { // before the beginning of the reference sequence
                   pacpos = 0;
@@ -364,30 +320,46 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
               else {
                   pacpos = bwt->seq_len - pacpos - seeds[i][j].start - 1;
               }
-              if(0 < tmap_refseq_pac2real(refseq, pacpos, 1,
-                                          &hits[i][n_hits[i]].seqid, &hits[i][n_hits[i]].pos)) {
+              if(0 < tmap_refseq_pac2real(refseq, pacpos, 1, &seqid, &pos)) {
                   uint32_t tmp_seqid, tmp_pos;
                   // we need to check if we crossed contig boundaries
                   if(0 < tmap_refseq_pac2real(refseq, pacpos + seeds[i][j].start, 1, &tmp_seqid, &tmp_pos) &&
-                     hits[i][n_hits[i]].seqid < tmp_seqid) {
-                      hits[i][n_hits[i]].seqid = tmp_seqid;
-                      hits[i][n_hits[i]].pos = 0;
-                      //hits[i][n_hits[i]].start = seeds[i][j].start;
+                     seqid < tmp_seqid) {
+                      seqid = tmp_seqid;
+                      pos = 0;
                   }
                   else {
-                      if(hits[i][n_hits[i]].pos < seed_length + seeds[i][j].offset - 1 ) {
-                          hits[i][n_hits[i]].pos = 0;
+                      if(pos < seed_length + seeds[i][j].offset - 1 ) {
+                          pos = 0;
                       }
                       else {
-                          hits[i][n_hits[i]].pos -= seed_length + seeds[i][j].offset - 1;
+                          pos -= seed_length + seeds[i][j].offset - 1;
                       }
-                      //hits[i][n_hits[i]].start = seeds[i][j].start;
                   }
-                  n_hits[i]++;
+
+                  // save
+                  s = &sams->sams[n];
+
+                  // save the hit
+                  s->algo_id = TMAP_MAP_ALGO_MAP3;
+                  s->algo_stage = 0;
+                  s->strand = i;
+                  s->seqid = seqid;
+                  s->pos = pos;
+
+                  // map3 aux data
+                  tmap_map_sam_malloc_aux(s, TMAP_MAP_ALGO_MAP3);
+                  s->aux.map3_aux->n_seeds = 1; // this is no longer informative
+                  //s->aux.map3_aux->n_seeds = ((1 << 15) < end - start + 1) ? (1 << 15) : (end - start + 1);
+
+                  n++;
               }
           }
       }
   }
+
+  // resize
+  tmap_map_sams_realloc(sams, n);
 
   // free the seeds
   for(i=0;i<2;i++) {
@@ -395,111 +367,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
       seeds[i]=NULL;
   }
 
-  // sort hits
-  for(i=0;i<2;i++) {
-      tmap_sort_introsort(tmap_map3_aux_hit_t, n_hits[i], hits[i]);
-  } 
-
-  // band hits
-  for(i=0;i<2;i++) {
-      int32_t start, end;
-
-      bases = tmap_seq_get_bases(seq[i]);
-      seq_len[i] = bases->l;
-      query = (uint8_t*)bases->s;
-
-      start = end = 0;
-      while(end < n_hits[i]) {
-          tmap_map_sam_t tmp_sam;
-
-          if(end+1 < n_hits[i]) { 
-              // check if the next interval can be banded
-              if(hits[i][end].seqid == hits[i][end+1].seqid
-                 && hits[i][end+1].pos - hits[i][end].pos <= opt->max_seed_band) {
-                  end++;
-                  continue; // there may be more to add
-              }
-          }
-
-          // get the start of the target range
-          if(hits[i][start].pos < bw) {
-              ref_start = 1;
-          }
-          else {
-              ref_start = hits[i][start].pos - bw + 1;
-              // check bounds
-              if(ref_start < 1) {
-                  ref_start = 1;
-              }
-          }
-          // get the end of the target range
-          ref_end = hits[i][end].pos + seq_len[i] + bw;
-          if(refseq->annos[hits[i][end].seqid].len < ref_end) {
-              // this assumes that the seed matched correctly (do not run
-              // off the end)
-              ref_end = refseq->annos[hits[i][end].seqid].len;
-          }
-          // get the target sequence
-          target_len = ref_end - ref_start + 1;
-          if(target_mem < target_len) { // more memory?
-              target_mem = target_len;
-              tmap_roundup32(target_mem);
-              target = tmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
-          }
-          if(target_len != tmap_refseq_subseq(refseq, ref_start + refseq->annos[hits[i][end].seqid].offset, target_len, target)) {
-              tmap_error("bug encountered", Exit, OutOfRange);
-          }
-
-          // get the band width
-          par.band_width = hits[i][end].pos - hits[i][start].pos;
-          par.band_width += 2 * bw; // add bases to the window
-
-          if(path_mem <= target_len + seq_len[i]) { // lengthen the path
-              path_mem = target_len + seq_len[i];
-              tmap_roundup32(path_mem);
-              path = tmap_realloc(path, sizeof(tmap_sw_path_t)*path_mem, "path");
-          }
-
-          // threshold the score by assuming that one seed's worth of
-          // matches occurs in the alignment
-          if(0 < tmap_map_util_sw(&tmp_sam,
-                                  target, target_len, 
-                                  query, seq_len[i], 
-                                  hits[i][start].seqid, ref_start-1,
-                                  &par, path, &path_len, 
-                                  opt->score_thr, opt->softclip_type, i)) {
-              tmap_map_sam_t *s = NULL;
-
-              // realloc
-              tmap_map_sams_realloc(sams, sams->n+1);
-              s = &sams->sams[sams->n-1];
-
-              // copy over (shallow copy) 
-              (*s) = tmp_sam;
-
-              // save the hit
-              s->algo_id = TMAP_MAP_ALGO_MAP3;
-              s->algo_stage = 0;
-
-              // map3 aux data
-              tmap_map_sam_malloc_aux(s, TMAP_MAP_ALGO_MAP3);
-              s->aux.map3_aux->n_seeds = ((1 << 15) < end - start + 1) ? (1 << 15) : (end - start + 1);
-          }
-
-          // update start/end
-          end++;
-          start = end;
-      }
-  }
-
-  // free the hits
-  for(i=0;i<2;i++) {
-      free(hits[i]);
-  }
-  free(target);
-
   // free
-  free(path);
   if(0 < opt->hp_diff) {
       free(flow[0]);
       free(flow[1]);

@@ -16,6 +16,7 @@
 #include "../util/tmap_definitions.h"
 #include "../util/tmap_progress.h"
 #include "../util/tmap_sam_print.h"
+#include "../util/tmap_sort.h"
 #include "../seq/tmap_seq.h"
 #include "../index/tmap_refseq.h"
 #include "../index/tmap_bwt.h"
@@ -30,6 +31,10 @@
 #include "tmap_map2_aux.h"
 #include "tmap_map2_core.h"
 #include "tmap_map2.h"
+
+// sort by max-score
+#define __tmap_map2_sam_sort_score_lt(a, b) ((a).score > (b).score)
+TMAP_SORT_INIT(tmap_map2_sam_sort_score, tmap_map_sam_t, __tmap_map2_sam_sort_score_lt)
 
 // thread data
 typedef struct {
@@ -72,6 +77,60 @@ tmap_map2_thread_map_core(void **data, tmap_seq_t *seqs[4], int32_t seq_len, tma
   sams = tmap_map2_aux_core(opt, seqs, refseq, bwt, sa, d->pool);
 
   return sams;
+}
+
+static int32_t
+tmap_map2_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
+{
+  int32_t i;
+  int32_t num_best;
+
+  if(0 == sams->n) {
+      return 0;
+  }
+
+  // sort by decreasing score
+  tmap_sort_introsort(tmap_map2_sam_sort_score, sams->n, sams->sams);
+
+  //Note: assumes that the alignments are sorted by decreasing score
+  num_best = 0;
+  for(i=0;i<sams->n;i++) {
+      if(0 < i && sams->sams[i-1].score < sams->sams[i].score) { // check assumption
+          tmap_error("bug encountered", Exit, OutOfRange);
+      }
+      if(sams->sams[i].score < sams->sams[0].score) {
+          break;
+      }
+      num_best++;
+      if(0 < sams->sams[i].aux.map2_aux->XI) {
+          num_best++; // artificially increase
+      }
+  }
+
+  if(1 < num_best) {
+      for(i=0;i<sams->n;i++) {
+          sams->sams[i].mapq = 0;
+      }
+  }
+  else {
+      for(i=0;i<num_best;i++) {
+          int32_t subo, qual;
+          double c = 1.0;
+          
+          subo = (sams->sams[i].score_subo > opt->score_thr) ? sams->sams[i].score_subo : opt->score_thr;
+          if(3 != sams->sams[i].aux.map2_aux->XF) c *= .5;
+          if(sams->sams[i].aux.map2_aux->XE < 2) c *= .2;
+          qual = (int)(c * (sams->sams[i].score - subo) * (250.0 / sams->sams[i].score + 0.03 / opt->score_match) + .499);
+          if(qual > 250) qual = 250;
+          if(sams->sams[i].score == sams->sams[i].score_subo) qual = 0;
+          sams->sams[i].mapq = qual;
+      }
+      for(;i<sams->n;i++) {
+          sams->sams[i].mapq = 0;
+      }
+  }
+
+  return 0;
 }
 
 static tmap_map_sams_t*
@@ -133,7 +192,7 @@ tmap_map2_core(tmap_map_opt_t *opt)
   tmap_map_driver_core(tmap_map2_init,
                        tmap_map2_thread_init,
                        tmap_map2_thread_map,
-                       NULL,
+                       tmap_map2_mapq,
                        tmap_map2_thread_cleanup,
                        opt);
 }

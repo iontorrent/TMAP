@@ -69,6 +69,12 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
 
   // remove duplicates before merging
   if(1 == opt->aln_output_mode_ind) {
+      // smith waterman
+      tmap_map_util_sw(refseq, sams_map1, seq, opt);
+      tmap_map_util_sw(refseq, sams_map2, seq, opt);
+      tmap_map_util_sw(refseq, sams_map3, seq, opt);
+
+      // duplicate removal
       tmap_map_util_remove_duplicates(sams_map1, opt->dup_window);
       tmap_map_util_remove_duplicates(sams_map2, opt->dup_window);
       tmap_map_util_remove_duplicates(sams_map3, opt->dup_window);
@@ -84,6 +90,10 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
 
   // remove duplicates after merging
   if(0 == opt->aln_output_mode_ind) {
+      // smith waterman
+      tmap_map_util_sw(refseq, sams, seq, opt);
+
+      // duplicate removal
       tmap_map_util_remove_duplicates(sams, opt->dup_window);
   }
 

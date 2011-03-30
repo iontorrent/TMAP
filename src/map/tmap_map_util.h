@@ -84,6 +84,7 @@ typedef struct __tmap_map_opt_t {
     int32_t bw; /*!< the extra bases to add before and after the target during Smith-Waterman (-w) */
     int32_t softclip_type; /*!< soft clip type (-g) */
     int32_t dup_window; /*!< remove duplicate alignments from different algorithms within this bp window (-W) */
+    int32_t max_seed_band; /*!< the band to group seeds (-B)*/
     int32_t score_thr;  /*!< the score threshold (match-score-scaled) (-T) */
     int32_t reads_queue_size;  /*!< the reads queue size (-q) */
     int32_t num_threads;  /*!< the number of threads (-n) */
@@ -130,7 +131,6 @@ typedef struct __tmap_map_opt_t {
 
     // map3 options
     int32_t max_seed_hits; /*!< the maximum number of hits returned by a seed (-S) */
-    int32_t max_seed_band; /*!< the band to group seeds (-b)*/
     int32_t hp_diff; /*!< single homopolymer error difference for enumeration (-H) */
 
     // mapall options
@@ -229,6 +229,7 @@ typedef struct {
     int32_t score_subo; /*!< the alignment score of the sub-optimal hit */
     int32_t n_cigar; /*!< the number of cigar operators */
     uint32_t *cigar; /*!< the cigar operator array */
+    uint16_t target_len; /*!< internal variable, the target length estimated by the seeding step */ 
     union {
         tmap_map_map1_aux_t *map1_aux; /*!< auxiliary data for map1 */
         tmap_map_map2_aux_t *map2_aux; /*!< auxiliary data for map2 */
@@ -343,6 +344,19 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt);
 
 /*!
   perform local alignment
+  @param  refseq  the reference sequence
+  @param  sams    the seeded sams
+  @param  seq     the query sequence
+  @param  opt     the program parameters
+  @return         the locally aligned sams
+  */
+tmap_map_sams_t *
+tmap_map_util_sw(tmap_refseq_t *refseq,
+                 tmap_map_sams_t *sams,
+                 tmap_seq_t *seq,
+                 tmap_map_opt_t *opt);
+
+/*!
   @param  sam            the sam record in which to store the results
   @param  target         the target sequence (forward strand)
   @param  target_length  the target sequence length
@@ -358,7 +372,7 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt);
   @param  strand         the strand of the hit
   */
 int32_t
-tmap_map_util_sw(tmap_map_sam_t *sam,
+tmap_map_util_sw_aux(tmap_map_sam_t *sam,
                  uint8_t *target, int32_t target_length,
                  uint8_t *query, int32_t query_length,
                  uint32_t seqid, uint32_t pos,
