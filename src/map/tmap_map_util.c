@@ -1211,8 +1211,7 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
 {
   int32_t i, best_i;
   int32_t n_best = 0, n_best_subo = 0;
-  int32_t best_score, cur_score, best_subo;
-  int32_t best_score_sum, best_subo_sum;
+  int32_t best_score, cur_score, best_subo, best_subo2;
   int32_t mapq;
   int32_t stage = -1;
   int32_t algo_id = TMAP_MAP_ALGO_NONE; 
@@ -1220,34 +1219,30 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
   // estimate mapping quality TODO: this needs to be refined
   best_i = 0;
   best_score = INT32_MIN;
-  best_subo = opt->score_thr;
-  best_score_sum = best_subo_sum = 0;
+  best_subo = best_subo2 = opt->score_thr;
   n_best = n_best_subo = 0;
   for(i=0;i<sams->n;i++) {
       cur_score = sams->sams[i].score;
       if(best_score < cur_score) {
           // save sub-optimal
           best_subo = best_score;
-          best_subo_sum = best_score_sum;
           n_best_subo = n_best;
           // update
-          best_score = best_score_sum = cur_score;
+          best_score = cur_score;
           n_best = 1;
           best_i = i;
           stage = (algo_id == TMAP_MAP_ALGO_NONE) ? sams->sams[i].algo_stage-1 : -1;
           algo_id = (algo_id == TMAP_MAP_ALGO_NONE) ? sams->sams[i].algo_id : -1;
       }
       else if(cur_score == best_score) { // qual
-          best_score_sum += cur_score;
           n_best++;
       }
       else {
           if(best_subo < cur_score) {
-              best_subo = best_subo_sum = cur_score;
+              best_subo = cur_score;
               n_best_subo = 1;
           }
           else if(best_subo == cur_score) {
-              best_subo_sum += cur_score;
               n_best_subo++;
           }
       }
@@ -1258,14 +1253,11 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
               // ignore
           }
           else if(best_subo < cur_score) {
-              best_subo = cur_score;
-              n_best_subo=1;
-          }
-          else if(best_subo == cur_score) {
-              n_best_subo++;
+              best_subo2 = cur_score;
           }
       }
   }
+  if(best_subo < best_subo2) best_subo = best_subo2;
   if(1 < n_best || best_score <= best_subo) {
       mapq = 0;
   }

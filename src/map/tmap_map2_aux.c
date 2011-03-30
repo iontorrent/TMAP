@@ -302,7 +302,7 @@ tmap_map2_aux_flag_fr(tmap_map2_aln_t *b[2])
 
 static tmap_map_sams_t *
 tmap_map2_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt, 
-                         tmap_map2_aln_t *aln)
+                         tmap_map2_aln_t *aln, int32_t seq_len)
 {
   int32_t i, j;
   tmap_map_sams_t *sams = NULL;
@@ -333,7 +333,7 @@ tmap_map2_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
       sam->algo_stage = 0;
       sam->score = p->G;
       sam->score_subo = p->G2;
-      sam->target_len = p->tlen;
+      sam->target_len = (seq_len < p->tlen) ? p->tlen : seq_len;
       // auxiliary data
       tmap_map_sam_malloc_aux(sam, TMAP_MAP_ALGO_MAP2);
       sam->aux.map2_aux->XE = p->n_seeds;
@@ -456,7 +456,7 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
   }
 
   // generate CIGAR and print SAM
-  sams = tmap_map2_aux_store_hits(refseq, &opt, b[0]);
+  sams = tmap_map2_aux_store_hits(refseq, &opt, b[0], l);
 
   // free
   tmap_map2_aln_destroy(b[0]);
