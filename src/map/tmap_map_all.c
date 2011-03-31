@@ -327,6 +327,7 @@ tmap_map_all_core(tmap_map_opt_t *opt)
     (opt_map_other)->num_threads = (opt_map_all)->num_threads; \
     (opt_map_other)->aln_output_mode = TMAP_MAP_UTIL_ALN_MODE_ALL; \
     (opt_map_other)->sam_rg = tmap_strdup((opt_map_all)->sam_rg); \
+    (opt_map_other)->sam_sff_tags = (opt_map_all)->sam_sff_tags; \
     (opt_map_other)->input_compr = (opt_map_all)->input_compr; \
     (opt_map_other)->output_compr = (opt_map_all)->output_compr; \
     (opt_map_other)->shm_key = (opt_map_all)->shm_key; \
