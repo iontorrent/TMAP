@@ -423,9 +423,9 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
       tmap_file_fprintf(fp, "\tXA:Z:%s-%d", tmap_algo_id_to_name(algo_id), algo_stage);
   }
   
-  // FI
+  // FZ
   if(TMAP_SEQ_TYPE_SFF == seq->type && 1 == sam_sff_tags) {
-      tmap_file_fprintf(fp, "\tFI:H:");
+      tmap_file_fprintf(fp, "\tFZ:H:");
       for(i=0;i<seq->data.sff->gheader->flow_length;i++) {
           tmap_file_fprintf(fp, "%X%X%X%X", 
                             ((seq->data.sff->read->flowgram[i] >> 12) & 0xF),
