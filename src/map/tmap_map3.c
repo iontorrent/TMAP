@@ -117,7 +117,7 @@ tmap_map3_init(tmap_refseq_t *refseq, tmap_map_opt_t *opt)
   // set the seed length
   if(-1 == opt->seed_length) {
       opt->seed_length = tmap_map3_get_seed_length(refseq->len);
-      tmap_progress_print("setting the seed length to %d", opt->seed_length);
+      tmap_progress_print("setting the seed length to %d in map3", opt->seed_length);
   }
 
   return 0;
