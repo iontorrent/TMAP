@@ -23,7 +23,7 @@
       _query[_ql-_i-1] = _tmp; \
   }
 
-// sort by strand min-seqid, min-position, max-score
+// sort by strand, min-seqid, min-position, max-score
 #define __tmap_map_sam_sort_coord_lt(a, b) (  ((a).strand < (b).strand) \
                                             || ( (a).strand == (b).strand && (a).seqid < (b).seqid) \
                                             || ( (a).strand == (b).strand && (a).seqid == (b).seqid && (a).pos < (b).pos ) \
@@ -65,6 +65,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->bw = 50; 
   opt->softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_RIGHT;
   opt->dup_window = 128;
+  opt->max_seed_band = 15;
   opt->score_thr = 1;
   opt->reads_queue_size = 262144;
   opt->num_threads = 1;
@@ -107,7 +108,6 @@ tmap_map_opt_init(int32_t algo_id)
       opt->seed_length = -1;
       opt->seed_length_set = 0;
       opt->max_seed_hits = 12;
-      opt->max_seed_band = 25;
       opt->hp_diff = 0;
       break;
     case TMAP_MAP_ALGO_MAPALL:
@@ -218,7 +218,6 @@ tmap_map_opt_destroy(tmap_map_opt_t *opt)
     else tmap_file_fprintf(tmap_file_stderr, "%s stage %d options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAP3), _stage); \
     tmap_file_fprintf(tmap_file_stderr, "         -l INT      the k-mer length to seed CALs (-1 tunes to the genome size) [%d]\n", (_opt)->seed_length); \
     tmap_file_fprintf(tmap_file_stderr, "         -S INT      the maximum number of hits returned by a seed [%d]\n", (_opt)->max_seed_hits); \
-    tmap_file_fprintf(tmap_file_stderr, "         -b INT      the window of bases in which to group seeds [%d]\n", (_opt)->max_seed_band); \
     tmap_file_fprintf(tmap_file_stderr, "         -H INT      single homopolymer error difference for enumeration [%d]\n", (_opt)->hp_diff); \
     tmap_file_fprintf(tmap_file_stderr, "         -u INT      the minimum sequence length to examine [%d]\n", (_opt)->min_seq_len); \
     tmap_file_fprintf(tmap_file_stderr, "         -U INT      the maximum sequence length to examine [%d]\n", (_opt)->max_seq_len); \
@@ -259,6 +258,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "                             3 - do not allow soft-clipping\n");
   tmap_file_fprintf(tmap_file_stderr, "         -W INT      remove duplicate alignments within this bp window (-1 to disable) [%d]\n",
                     opt->dup_window);
+  tmap_file_fprintf(tmap_file_stderr, "         -B INT      the window of bases in which to group seeds [%d]\n", opt->max_seed_band); 
   tmap_file_fprintf(tmap_file_stderr, "         -T INT      score threshold divided by the match score [%d]\n", opt->score_thr);
   tmap_file_fprintf(tmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
   tmap_file_fprintf(tmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
@@ -320,16 +320,16 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   opt->argc = argc; opt->argv = argv;
   switch(opt->algo_id) {
     case TMAP_MAP_ALGO_MAP1:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:T:q:n:a:R:YjzJZk:vhl:s:L:p:P:m:o:e:d:i:b:Q:u:U:");
+      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YjzJZk:vhl:s:L:p:P:m:o:e:d:i:b:Q:u:U:");
       break;
     case TMAP_MAP_ALGO_MAP2:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:T:q:n:a:R:YjzJZk:vhc:S:b:N:u:U:");
+      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YjzJZk:vhc:S:b:N:u:U:");
       break;
     case TMAP_MAP_ALGO_MAP3:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:T:q:n:a:R:YjzJZk:vhl:S:b:H:u:U:");
+      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YjzJZk:vhl:S:H:u:U:");
       break;
     case TMAP_MAP_ALGO_MAPALL:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:T:q:n:a:R:YjzJZk:vhW:Iu:U:");
+      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YjzJZk:vhIu:U:");
       break;
     default:
       break;
@@ -372,6 +372,8 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           opt->softclip_type = atoi(optarg); break;
         case 'W':
           opt->dup_window = atoi(optarg); break;
+        case 'b':
+          opt->max_seed_band = atoi(optarg); break;
         case 'T':
           opt->score_thr = atoi(optarg); break;
         case 'q':
@@ -493,8 +495,6 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
                   opt->seed_length = atoi(optarg); opt->seed_length_set = 1; break;
                 case 'S':
                   opt->max_seed_hits = atoi(optarg); break;
-                case 'b':
-                  opt->max_seed_band = atoi(optarg); break;
                 case 'H':
                   opt->hp_diff = atoi(optarg); break;
                   break;
@@ -576,11 +576,12 @@ tmap_map_opt_file_check_with_null(char *fn1, char *fn2)
     if((opt_map_other)->softclip_type != (opt_map_all)->softclip_type) { \
         tmap_error("option -g was specified outside of the common options", Exit, CommandLineArgument); \
     } \
-    /* \
-       if((opt_map_other)->dup_window != (opt_map_all)->dup_window) { \
-       tmap_error("option -W was specified outside of the common options", Exit, CommandLineArgument); \
-       } \
-       */ \
+    if((opt_map_other)->dup_window != (opt_map_all)->dup_window) { \
+        tmap_error("option -W was specified outside of the common options", Exit, CommandLineArgument); \
+    } \
+    if((opt_map_other)->max_seed_band != (opt_map_all)->max_seed_band) { \
+        tmap_error("option -B was specified outside of the common options", Exit, CommandLineArgument); \
+    } \
     if((opt_map_other)->score_thr != (opt_map_all)->score_thr) { \
         tmap_error("option -T was specified outside of the common options", Exit, CommandLineArgument); \
     } \
@@ -642,6 +643,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->bw, 0, INT32_MAX, "-w");
   tmap_error_cmd_check_int(opt->softclip_type, 0, 3, "-g");
   tmap_error_cmd_check_int(opt->dup_window, -1, INT32_MAX, "-W");
+  tmap_error_cmd_check_int(opt->max_seed_band, 1, INT32_MAX, "-B");
   tmap_error_cmd_check_int(opt->score_thr, 0, INT32_MAX, "-T");
   if(-1 != opt->reads_queue_size) tmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
   tmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
@@ -689,7 +691,6 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
     case TMAP_MAP_ALGO_MAP3:
       if(-1 != opt->seed_length) tmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "-l");
       tmap_error_cmd_check_int(opt->max_seed_hits, 1, INT32_MAX, "-S");
-      tmap_error_cmd_check_int(opt->max_seed_hits, 1, INT32_MAX, "-b");
       tmap_error_cmd_check_int(opt->hp_diff, 0, INT32_MAX, "-H");
       if(0 < opt->hp_diff && TMAP_SEQ_TYPE_SFF != opt->reads_format) tmap_error("-H option must be used with SFF only", Exit, OutOfRange); 
       break;
@@ -732,6 +733,7 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "bw=%d\n", opt->bw);
   fprintf(stderr, "softclip_type=%d\n", opt->softclip_type);
   fprintf(stderr, "dup_window=%d\n", opt->dup_window);
+  fprintf(stderr, "max_seed_band=%d\n", opt->max_seed_band);
   fprintf(stderr, "score_thr=%d\n", opt->score_thr);
   fprintf(stderr, "reads_queue_size=%d\n", opt->reads_queue_size);
   fprintf(stderr, "num_threads=%d\n", opt->num_threads);
@@ -766,7 +768,6 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "z_best=%d\n", opt->z_best);
   fprintf(stderr, "seeds_rev=%d\n", opt->seeds_rev);
   fprintf(stderr, "max_seed_hits=%d\n", opt->max_seed_hits);
-  fprintf(stderr, "max_seed_band=%d\n", opt->max_seed_band);
   fprintf(stderr, "hp_diff=%d\n", opt->hp_diff);
   fprintf(stderr, "aln_output_mode_ind=%d\n", opt->aln_output_mode_ind);
 }
@@ -902,8 +903,9 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
                                     sam->strand, sam->seqid, sam->pos,
                                     sam->mapq, sam->cigar, sam->n_cigar,
                                     sam->score, sam->ascore, sam->algo_id, sam->algo_stage, 
-                                    "\tXS:i:%d\tXF:i:%d\tXE:i:%d\tXI:i:%d",
+                                    "\tXS:i:%d\tXT:i:%d\t\tXF:i:%d\tXE:i:%d\tXI:i:%d",
                                     sam->score_subo,
+                                    sam->n_seeds,
                                     sam->aux.map2_aux->XF, sam->aux.map2_aux->XE, 
                                     sam->aux.map2_aux->XI);
           }
@@ -912,8 +914,9 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
                                     sam->strand, sam->seqid, sam->pos,
                                     sam->mapq, sam->cigar, sam->n_cigar,
                                     sam->score, sam->ascore, sam->algo_id, sam->algo_stage, 
-                                    "\tXS:i:%d\tXF:i:%d\tXE:i:%d",
+                                    "\tXS:i:%d\tXT:i:%d\tXF:i:%d\tXE:i:%d",
                                     sam->score_subo,
+                                    sam->n_seeds,
                                     sam->aux.map2_aux->XF, sam->aux.map2_aux->XE);
           }
           break;
@@ -922,9 +925,9 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
                                 sam->strand, sam->seqid, sam->pos,
                                 sam->mapq, sam->cigar, sam->n_cigar,
                                 sam->score, sam->ascore, sam->algo_id, sam->algo_stage, 
-                                "\tXS:i:%d\tXE:i:%d",
+                                "\tXS:i:%d\tXT:i:%d",
                                 sam->score_subo,
-                                sam->aux.map3_aux->n_seeds);
+                                sam->n_seeds);
           break;
       }
   }
@@ -1138,7 +1141,7 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
 {
   int32_t i, next_i, j, k, end, best_score_i, best_score_n;
 
-  if(dup_window < 0) {
+  if(dup_window < 0 || sams->n <= 0) {
       return;
   }
 
@@ -1208,8 +1211,7 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
 {
   int32_t i, best_i;
   int32_t n_best = 0, n_best_subo = 0;
-  int32_t best_score, cur_score, best_subo;
-  int32_t best_score_sum, best_subo_sum;
+  int32_t best_score, cur_score, best_subo, best_subo2;
   int32_t mapq;
   int32_t stage = -1;
   int32_t algo_id = TMAP_MAP_ALGO_NONE; 
@@ -1217,34 +1219,30 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
   // estimate mapping quality TODO: this needs to be refined
   best_i = 0;
   best_score = INT32_MIN;
-  best_subo = INT32_MIN+1;
-  best_score_sum = best_subo_sum = 0;
+  best_subo = best_subo2 = opt->score_thr;
   n_best = n_best_subo = 0;
   for(i=0;i<sams->n;i++) {
       cur_score = sams->sams[i].score;
       if(best_score < cur_score) {
           // save sub-optimal
           best_subo = best_score;
-          best_subo_sum = best_score_sum;
           n_best_subo = n_best;
           // update
-          best_score = best_score_sum = cur_score;
+          best_score = cur_score;
           n_best = 1;
           best_i = i;
           stage = (algo_id == TMAP_MAP_ALGO_NONE) ? sams->sams[i].algo_stage-1 : -1;
           algo_id = (algo_id == TMAP_MAP_ALGO_NONE) ? sams->sams[i].algo_id : -1;
       }
       else if(cur_score == best_score) { // qual
-          best_score_sum += cur_score;
           n_best++;
       }
       else {
           if(best_subo < cur_score) {
-              best_subo = best_subo_sum = cur_score;
+              best_subo = cur_score;
               n_best_subo = 1;
           }
           else if(best_subo == cur_score) {
-              best_subo_sum += cur_score;
               n_best_subo++;
           }
       }
@@ -1255,14 +1253,11 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
               // ignore
           }
           else if(best_subo < cur_score) {
-              best_subo = cur_score;
-              n_best_subo=1;
-          }
-          else if(best_subo == cur_score) {
-              n_best_subo++;
+              best_subo2 = cur_score;
           }
       }
   }
+  if(best_subo < best_subo2) best_subo = best_subo2;
   if(1 < n_best || best_score <= best_subo) {
       mapq = 0;
   }
@@ -1300,8 +1295,196 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
   }
 }
 
+#define __map_util_gen_ap(par, opt) do { \
+    int32_t i; \
+    for(i=0;i<25;i++) { \
+        (par).matrix[i] = -(opt)->pen_mm; \
+    } \
+    for(i=0;i<4;i++) { \
+        (par).matrix[i*5+i] = (opt)->score_match; \
+    } \
+    (par).gap_open = (opt)->pen_gapo; (par).gap_ext = (opt)->pen_gape; \
+    (par).gap_end = (opt)->pen_gape; \
+    (par).row = 5; \
+} while(0)
+
+
+tmap_map_sams_t *
+tmap_map_util_sw(tmap_refseq_t *refseq,
+                 tmap_map_sams_t *sams, 
+                 tmap_seq_t *seq,
+                 tmap_map_opt_t *opt)
+{
+  int32_t i, matrix[25];
+  int32_t start, end;
+  tmap_map_sams_t *sams_tmp = NULL;
+  tmap_sw_param_t par;
+  tmap_sw_path_t *path = NULL;
+  int32_t path_len, path_mem=0;
+  tmap_seq_t *seqs[2] = {NULL, NULL};
+  int32_t seq_len=0, target_len, target_mem=0;
+  uint8_t *target=NULL;
+
+  // the final mappings will go here 
+  sams_tmp = tmap_map_sams_init();
+  tmap_map_sams_realloc(sams_tmp, sams->n);
+
+  // scoring matrix
+  par.matrix = matrix;
+  __map_util_gen_ap(par, opt); // TODO
+
+  // sort by strand/chr/pos
+  tmap_sort_introsort(tmap_map_sam_sort_coord, sams->n, sams->sams);
+
+  i = start = end = 0;
+  while(end < sams->n) {
+      uint8_t strand, *query=NULL;
+      uint32_t start_pos, end_pos;
+      tmap_map_sam_t tmp_sam;
+
+      // get the strand/start/end positions
+      strand = sams->sams[end].strand;
+      start_pos = sams->sams[end].pos + 1; // one-based
+      end_pos = sams->sams[end].pos + sams->sams[end].target_len; // one-based
+
+      // update the query sequence
+      if(NULL == seqs[strand]) {
+          seq_len = tmap_seq_get_bases(seq)->l;
+          seqs[strand] = tmap_seq_clone(seq); // clone
+          if(1 == strand) { // reverse compliment
+              tmap_seq_reverse_compliment(seqs[strand]);
+          }
+          tmap_seq_to_int(seqs[strand]);
+      }
+      query = (uint8_t*)tmap_seq_get_bases(seqs[strand])->s;
+
+      // check if the hits can be banded
+      tmp_sam = sams->sams[end]; // shallow copy data 
+      if(end + 1 < sams->n) {
+          if(sams->sams[end].strand == sams->sams[end+1].strand 
+             && sams->sams[end].seqid == sams->sams[end+1].seqid
+             && sams->sams[end+1].pos - sams->sams[end].pos <= opt->max_seed_band) {
+              end++;
+              /*
+              fprintf(stderr, "pos1=%u pos2=%u diff=%d\n",
+                      sams->sams[end].pos,
+                      sams->sams[end+1].pos,
+                      sams->sams[end+1].pos-sams->sams[end].pos);
+                      */
+              if(end_pos < sams->sams[end].pos + sams->sams[end].target_len) {
+                  end_pos = sams->sams[end].pos + sams->sams[end].target_len; // one-based
+              }
+              if(tmp_sam.score_subo < sams->sams[end].score_subo) {
+                  tmp_sam.score_subo = sams->sams[end].score_subo;
+              }
+              continue; // there may be more to add
+          }
+      }
+
+      // one-based
+      //fprintf(stderr, "1 start_pos=%d\tend_pos=%d\n", start_pos, end_pos);
+      if(start_pos < opt->bw) {
+          start_pos = 1;
+      }
+      else {
+          start_pos -= opt->bw - 1;
+      }
+      end_pos += opt->bw - 1;
+      if(refseq->annos[sams->sams[end].seqid].len < end_pos) {
+          end_pos = refseq->annos[sams->sams[end].seqid].len; // one-based
+      }
+      //fprintf(stderr, "2 start_pos=%d\tend_pos=%d\n", start_pos, end_pos);
+
+      // get the target sequence
+      target_len = end_pos - start_pos + 1;
+      if(target_mem < target_len) { // more memory?
+          target_mem = target_len;
+          tmap_roundup32(target_mem);
+          target = tmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
+      }
+      if(target_len != tmap_refseq_subseq(refseq, refseq->annos[sams->sams[end].seqid].offset + start_pos, target_len, target)) {
+          tmap_error("bug encountered", Exit, OutOfRange);
+      }
+
+      // path memory
+      if(path_mem <= target_len + seq_len) { // lengthen the path
+          path_mem = target_len + seq_len;
+          tmap_roundup32(path_mem);
+          path = tmap_realloc(path, sizeof(tmap_sw_path_t)*path_mem, "path");
+      }
+
+      // get the band width
+      par.band_width = end_pos - start_pos + 1;
+      par.band_width += 2 * opt->bw; // add bases to the window
+
+      /*
+      int j;
+      for(j=0;j<target_len;j++) {
+          fputc("ACGTN"[target[j]], stderr);
+      }
+      fputc('\n', stderr);
+      for(j=0;j<seq_len;j++) {
+          fputc("ACGTN"[query[j]], stderr);
+      }
+      fputc('\n', stderr);
+      */
+
+      if(0 < tmap_map_util_sw_aux(&tmp_sam,
+                              target, target_len,
+                              query, seq_len,
+                              sams->sams[end].seqid, start_pos-1,
+                              &par, path, &path_len,
+                              opt->score_thr, opt->softclip_type, strand)) {
+          tmap_map_sam_t *s = &sams_tmp->sams[i];
+
+          // shallow copy previous data 
+          (*s) = tmp_sam; 
+
+          s->n_seeds = (end - start + 1);
+
+          // update aux data
+          tmap_map_sam_malloc_aux(s, s->algo_id);
+          switch(s->algo_id) {
+            case TMAP_MAP_ALGO_MAP1:
+              (*s->aux.map1_aux) = (*tmp_sam.aux.map1_aux);
+              break;
+            case TMAP_MAP_ALGO_MAP2:
+              (*s->aux.map2_aux) = (*tmp_sam.aux.map2_aux);
+              break;
+            case TMAP_MAP_ALGO_MAP3:
+              (*s->aux.map3_aux) = (*tmp_sam.aux.map3_aux);
+              break;
+            default:
+              tmap_error("bug encountered", Exit, OutOfRange);
+              break;
+          }
+
+          i++;
+      }
+
+      // update start/end
+      end++;
+      start = end;
+  }
+      
+  // realloc
+  tmap_map_sams_realloc(sams_tmp, i);
+
+  // free memory
+  for(i=0;i<2;i++) {
+      if(NULL != seqs[i]) {
+          tmap_seq_destroy(seqs[i]);
+      }
+  }
+  tmap_map_sams_destroy(sams);
+  free(path);
+  free(target);
+
+  return sams_tmp;
+}
+
 int32_t 
-tmap_map_util_sw(tmap_map_sam_t *sam,
+tmap_map_util_sw_aux(tmap_map_sam_t *sam,
                  uint8_t *target, int32_t target_length,
                  uint8_t *query, int32_t query_length,
                  uint32_t seqid, uint32_t pos,
@@ -1344,7 +1527,7 @@ tmap_map_util_sw(tmap_map_sam_t *sam,
       score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 0, 0, path, path_len);
       break;
   }
-  score_subo = INT32_MIN;
+  score_subo = sam->score_subo;
 
 
   if(0 < (*path_len) && score_thr < score) {

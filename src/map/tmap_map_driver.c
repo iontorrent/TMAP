@@ -36,7 +36,7 @@ pthread_mutex_t tmap_map_driver_read_lock = PTHREAD_MUTEX_INITIALIZER;
 int32_t tmap_map_driver_read_lock_low = 0;
 #endif
 
-#define __tmap_map_driver_check_func(_func_init, _func_thread_init, _func_thread_map, _func_thread_cleanup, _opt) do { \
+#define __tmap_map_driver_check_func(_func_init, _func_thread_init, _func_thread_map, _func_thread_cleanup, _func_mapq, _opt) do { \
   if(NULL == _func_init) { \
       tmap_error("func_init == NULL", Exit, OutOfRange); \
   } \
@@ -48,6 +48,9 @@ int32_t tmap_map_driver_read_lock_low = 0;
   } \
   if(NULL == _func_thread_cleanup) { \
       tmap_error("func_thread_cleanup == NULL", Exit, OutOfRange); \
+  } \
+  if(NULL == _func_mapq && _opt->algo_id != TMAP_MAP_ALGO_MAPALL) { \
+      tmap_error("func_mapq == NULL", Exit, OutOfRange); \
   } \
 } while(0)
 
@@ -130,13 +133,14 @@ tmap_map_driver_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int
           if(0 < sams[low]->n) {
               // mapall should have already done this!
               if(TMAP_MAP_ALGO_MAPALL != opt->algo_id) {
+                  // smith waterman
+                  sams[low] = tmap_map_util_sw(refseq, sams[low], seq_buffer[low], opt);
+
                   // remove duplicates
                   tmap_map_util_remove_duplicates(sams[low], opt->dup_window);
 
-                  if(NULL != func_mapq) {
-                      // mapping quality
-                      func_mapq(sams[low], tmap_seq_get_bases(seq)->l, opt);
-                  }
+                  // mapping quality
+                  func_mapq(sams[low], tmap_seq_get_bases(seq)->l, opt);
 
                   // filter alignments
                   tmap_map_sams_filter(sams[low], opt->aln_output_mode);
@@ -206,8 +210,8 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
   tmap_shm_t *shm = NULL;
   int32_t seq_type, reads_queue_size;
 
-  // check input functions, except func_mapq
-  __tmap_map_driver_check_func(func_init, func_thread_init, func_thread_map, func_thread_cleanup, opt);
+  // check input functions
+  __tmap_map_driver_check_func(func_init, func_thread_init, func_thread_map, func_thread_cleanup, func_mapq, opt);
   
   if(NULL == opt->fn_reads) {
       tmap_progress_set_verbosity(0); 

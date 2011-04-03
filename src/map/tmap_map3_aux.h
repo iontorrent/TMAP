@@ -14,16 +14,6 @@ typedef struct {
     int16_t offset; /*!< the # of bases inserted or deleted from the read */
 } tmap_map3_aux_seed_t;
 
-/*! 
-  Holds the reference co-ordinate seed matches
- */
-typedef struct {
-    uint32_t seqid; /*!< the sequence index (0-based) */
-    uint32_t pos; /*!< the position (0-based) */
-    //uint16_t start; /*!< the # of bases from the start of the read (0-based) */
-    // int16_t offset; /*!< the # of bases inserted (+) or deleted (-) from the seed */
-} tmap_map3_aux_hit_t;
-
 /*!
   Core mapping routine
   @param  seq            the sequence to align (forward/reverse-compliment)
