@@ -100,6 +100,9 @@ tmap_map_driver_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int
       high = seq_buffer_length; // process all
 #endif
       while(low<high) {
+          // remove key sequence, do not output the key sequence part
+          tmap_seq_remove_key_sequence(seq_buffer[low]);
+
           // map thread data,
           sams[low] = func_thread_map(&data, seq_buffer[low], refseq, bwt, sa, opt);
           if(sams[low] == NULL) {
