@@ -70,7 +70,14 @@ tmap_map_driver_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int
       tmap_error("the thread function could not be initialized", Exit, OutOfRange);
   }
               
-  if(NULL != opt->flow_order && 0 == opt->flow_order_use_sff) {
+  if(1 == opt->flow_order_use_sff) { // initialize the flow order from the SFF header
+      flow_order_len = seq_buffer[low]->data.sff->gheader->flow->l;
+      flow_order = tmap_malloc(sizeof(uint8_t) * flow_order_len, "flow_order");
+      for(i=0;i<flow_order_len;i++) {
+          flow_order[i] = tmap_nt_char_to_int[(int)seq_buffer[low]->data.sff->gheader->flow->s[i]];
+      }
+  }
+  else if(NULL != opt->flow_order) {
       flow_order_len = strlen(opt->flow_order);
       flow_order = tmap_malloc(sizeof(uint8_t) * flow_order_len, "flow_order");
       for(i=0;i<flow_order_len;i++) {
@@ -100,11 +107,22 @@ tmap_map_driver_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int
       high = seq_buffer_length; // process all
 #endif
       while(low<high) {
-          // remove key sequence, do not output the key sequence part
-          tmap_seq_remove_key_sequence(seq_buffer[low]);
+          tmap_seq_t *seq = NULL;;
+
+          // Note: for fsw re-alignment, we need the key bases, so do not get
+          // rid of them just yet
+          if(0 < flow_order_len) {
+              seq = tmap_seq_clone(seq_buffer[low]);
+          }
+          else {
+              seq = seq_buffer[low];
+          }
+
+          // remove key sequence for seeding
+          tmap_seq_remove_key_sequence(seq);
 
           // map thread data,
-          sams[low] = func_thread_map(&data, seq_buffer[low], refseq, bwt, sa, opt);
+          sams[low] = func_thread_map(&data, seq, refseq, bwt, sa, opt);
           if(sams[low] == NULL) {
               tmap_error("the thread function did not return a mapping", Exit, OutOfRange);
           }
@@ -117,7 +135,7 @@ tmap_map_driver_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int
 
                   if(NULL != func_mapq) {
                       // mapping quality
-                      func_mapq(sams[low], tmap_seq_get_bases(seq_buffer[low])->l, opt);
+                      func_mapq(sams[low], tmap_seq_get_bases(seq)->l, opt);
                   }
 
                   // filter alignments
@@ -125,22 +143,19 @@ tmap_map_driver_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int
               }
 
               // re-align the alignments in flow-space
-              if(0 < flow_order_len || 1 == opt->flow_order_use_sff) {
-                  if(0 == flow_order_len && 1 == opt->flow_order_use_sff) { // initialize the flow order from the SFF header
-                      flow_order_len = seq_buffer[low]->data.sff->gheader->flow->l;
-                      flow_order = tmap_malloc(sizeof(uint8_t) * flow_order_len, "flow_order");
-                      for(i=0;i<flow_order_len;i++) {
-                          flow_order[i] = tmap_nt_char_to_int[(int)seq_buffer[low]->data.sff->gheader->flow->s[i]];
-                      }
-                  }
+              if(0 < flow_order_len) {
+                  // Note: seq_buffer should have its key sequence
                   tmap_map_util_fsw(seq_buffer[low],
                                     flow_order, flow_order_len,
                                     sams[low], refseq, 
                                     opt->bw, opt->softclip_type, opt->score_thr,
                                     opt->score_match, opt->pen_mm, opt->pen_gapo,
                                     opt->pen_gape, opt->fscore);
+                  // remove key sequence, do not output the key sequence part
+                  tmap_seq_remove_key_sequence(seq_buffer[low]);
               }
           }
+
 
           // next
           low++;
@@ -256,7 +271,7 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
   tmap_file_stdout = tmap_file_fdopen(fileno(stdout), "wb", opt->output_compr);
 
   // SAM header
-  tmap_sam_print_header(tmap_file_stdout, refseq, seqio, opt->sam_rg, opt->sam_sff_tags, opt->argc, opt->argv);
+  tmap_sam_print_header(tmap_file_stdout, refseq, seqio, opt->sam_rg, opt->flow_order, opt->sam_sff_tags, opt->argc, opt->argv);
 
   tmap_progress_print("processing reads");
   while(0 < (seq_buffer_length = tmap_seq_io_read_buffer(seqio, seq_buffer, reads_queue_size))) {

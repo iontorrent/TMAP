@@ -132,7 +132,7 @@ tmap_sam_parse_rg(char *rg, const char *fo, const char *ks, const char *pg)
 }
 
 void
-tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, tmap_seq_io_t *seqio, char *sam_rg, int32_t sam_sff_tags, int argc, char *argv[])
+tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, tmap_seq_io_t *seqio, char *sam_rg, char *flow_order, int32_t sam_sff_tags, int argc, char *argv[])
 {
   int32_t i;
   // SAM header
@@ -144,7 +144,10 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, tmap_seq_io_t *seq
   }
   // RG
   if(NULL != seqio && TMAP_SEQ_TYPE_SFF == seqio->type && 1 == sam_sff_tags) {
-      if(NULL != sam_rg) {
+      if(NULL != flow_order) { // this should not happen, since it should be checked upstream
+          tmap_error("flow order was specified when using an SFF", Exit, OutOfRange);
+      }
+      if(NULL != sam_rg) { // SAM RG is user-specified
           tmap_sam_parse_rg(sam_rg, 
                             seqio->io.sffio->gheader->flow->s,
                             seqio->io.sffio->gheader->key->s,
@@ -161,8 +164,14 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, tmap_seq_io_t *seq
   }
   else {
       if(NULL != sam_rg) {
-          tmap_sam_parse_rg(sam_rg, NULL, NULL, PACKAGE_NAME);
+          tmap_sam_parse_rg(sam_rg, NULL, flow_order, PACKAGE_NAME);
           tmap_file_fprintf(fp, "%s\n", sam_rg);
+      }
+      else if(NULL != flow_order) {
+          tmap_file_fprintf(fp, "@RG\tID:%s\tFO:%s\tPG:%s\n",
+                            tmap_sam_rg_id,
+                            flow_order,
+                            PACKAGE_NAME);
       }
       else {
           tmap_file_fprintf(fp, "@RG\tID:%s\tPG:%s\n",
