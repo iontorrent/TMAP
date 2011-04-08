@@ -199,7 +199,6 @@ tmap_map_all_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tma
   for(i=0;i<4;i++) {
       // TODO: only if necessary
       seqs[i]= tmap_seq_clone(seq); // clone the sequence 
-      tmap_seq_remove_key_sequence(seqs[i]); // adjust for SFF
       switch(i) {
         case 0: // forward
           break;
