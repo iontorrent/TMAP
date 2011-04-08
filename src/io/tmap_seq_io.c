@@ -157,8 +157,8 @@ tmap_seq_io_read_buffer(tmap_seq_io_t *io, tmap_seq_t **seq_buffer, int32_t buff
   return n;
 }
 
-static int
-tmap_seq_io_print(tmap_file_t *fp, tmap_seq_t *seq)
+static inline int
+tmap_seq_io_print2(tmap_file_t *fp, tmap_seq_t *seq)
 {
   switch(seq->type) {
     case TMAP_SEQ_TYPE_FQ:
@@ -182,6 +182,12 @@ tmap_seq_io_print(tmap_file_t *fp, tmap_seq_t *seq)
       break;
   }
   return 0;
+}
+
+static int
+tmap_seq_io_print(tmap_seq_io_t *io, tmap_seq_t *seq)
+{
+  return tmap_seq_io_print2(io->fp, seq);
 }
 
 int
@@ -212,7 +218,7 @@ tmap_seq_io_sff2fq_main(int argc, char *argv[])
 
   while(0 < tmap_seq_io_read(io_in, seq_in)) {
       seq_out = tmap_seq_sff2fq(seq_in);
-      tmap_seq_io_print(tmap_file_stdout, seq_out);
+      tmap_seq_io_print(io_out, seq_out);
       tmap_seq_destroy(seq_out);
   }
   tmap_seq_destroy(seq_in);
