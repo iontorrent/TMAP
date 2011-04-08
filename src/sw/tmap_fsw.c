@@ -1283,7 +1283,6 @@ tmap_fsw_seq_to_flowseq(tmap_seq_t *seq, uint8_t *flow_order, int32_t flow_order
   bases = tmap_seq_get_bases(seq);
   if(0 == bases->l) tmap_error("bug encountered", Exit, OutOfRange);
 
-
   // convert bases to integers
   was_int = tmap_seq_is_int(seq);
   if(0 == tmap_seq_is_int(seq)) {

@@ -188,10 +188,6 @@ tmap_map3_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_b
   seqs[0] = tmap_seq_clone(seq);
   seqs[1] = tmap_seq_clone(seq);
 
-  // Adjust for SFF
-  tmap_seq_remove_key_sequence(seqs[0]);
-  tmap_seq_remove_key_sequence(seqs[1]);
-
   // reverse compliment
   tmap_seq_reverse_compliment(seqs[1]);
 

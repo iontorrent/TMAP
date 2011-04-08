@@ -20,14 +20,17 @@
 
 static char tmap_sam_rg_id[1024]="ID";
 
+#define TMAP_SAM_PRINT_RG_HEADER_TAGS 12
+
+// Notes: we could add all the tags as input
 static void
-tmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
+tmap_sam_parse_rg(char *rg, const char *fo, const char *ks, const char *pg)
 {
   int32_t i, j, len;
   // ID, CN, DS, DT, LB, PG, PI, PL, PU, SM
-  int32_t tags_found[10] = {0,0,0,0,0,0,0,0,0,0};
-  char *tags_name[10] = {"ID","CN","DS","DT","LB","PG","PI","PL","PU","SM"};
-  char *tags_value[10] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+  int32_t tags_found[TMAP_SAM_PRINT_RG_HEADER_TAGS] = {0,0,0,0,0,0,0,0,0,0,0,0};
+  char *tags_name[TMAP_SAM_PRINT_RG_HEADER_TAGS] = {"ID","CN","DS","DT","FO","KS","LB","PG","PI","PL","PU","SM"};
+  char *tags_value[TMAP_SAM_PRINT_RG_HEADER_TAGS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
 
   len = strlen(rg);
 
@@ -71,15 +74,29 @@ tmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
           else if('C' == rg[i] && 'N' == rg[i+1]) tag_i=1;
           else if('D' == rg[i] && 'S' == rg[i+1]) tag_i=2;
           else if('D' == rg[i] && 'T' == rg[i+1]) tag_i=3;
-          else if('L' == rg[i] && 'B' == rg[i+1]) tag_i=4;
-          else if('P' == rg[i] && 'G' == rg[i+1]) {
-              tag_i=5;
-              tmap_error("PG tag not allowed in the RG line", Exit, OutOfRange);
+          else if('F' == rg[i] && 'O' == rg[i+1]) {
+              tag_i=4;
+              if(NULL != fo) {
+                  tmap_error("FO tag not allowed in the RG line", Exit, OutOfRange);
+              }
           }
-          else if('P' == rg[i] && 'I' == rg[i+1]) tag_i=6;
-          else if('P' == rg[i] && 'L' == rg[i+1]) tag_i=7;
-          else if('P' == rg[i] && 'U' == rg[i+1]) tag_i=8;
-          else if('S' == rg[i] && 'M' == rg[i+1]) tag_i=9;
+          else if('K' != rg[i] && 'S' == rg[i+1]) {
+              tag_i=5;
+              if(NULL == ks) {
+                  tmap_error("KS tag not allowed in the RG line", Exit, OutOfRange);
+              }
+          }
+          else if('L' == rg[i] && 'B' == rg[i+1]) tag_i=6;
+          else if('P' == rg[i] && 'G' == rg[i+1]) {
+              tag_i=7;
+              if(NULL != pg) {
+                  tmap_error("PG tag not allowed in the RG line", Exit, OutOfRange);
+              }
+          }
+          else if('P' == rg[i] && 'I' == rg[i+1]) tag_i=8;
+          else if('P' == rg[i] && 'L' == rg[i+1]) tag_i=9;
+          else if('P' == rg[i] && 'U' == rg[i+1]) tag_i=10;
+          else if('S' == rg[i] && 'M' == rg[i+1]) tag_i=11;
           else {
               tmap_error("Improper tag in the RG line", Exit, OutOfRange);
           }
@@ -100,7 +117,7 @@ tmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
   }
 
   strcpy(rg, "@RG");
-  for(i=0;i<10;i++) {
+  for(i=0;i<TMAP_SAM_PRINT_RG_HEADER_TAGS;i++) {
       if(1 < tags_found[i]) {
           tmap_file_fprintf(tmap_file_stderr, "\nFound multiple %s tags for the RG SAM header\n", tags_name[i]);
           tmap_error(NULL, Exit, OutOfRange);
@@ -115,7 +132,7 @@ tmap_sam_parse_rg(char *rg, int32_t fs_data_ok)
 }
 
 void
-tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, tmap_seq_io_t *seqio, char *sam_rg, int32_t sam_sff_tags, int argc, char *argv[])
+tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, tmap_seq_io_t *seqio, char *sam_rg, char *flow_order, int32_t sam_sff_tags, int argc, char *argv[])
 {
   int32_t i;
   // SAM header
@@ -127,28 +144,34 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, tmap_seq_io_t *seq
   }
   // RG
   if(NULL != seqio && TMAP_SEQ_TYPE_SFF == seqio->type && 1 == sam_sff_tags) {
-      if(NULL != sam_rg) {
-          tmap_sam_parse_rg(sam_rg, 0);
-          tmap_file_fprintf(fp, "%s\tPG:%s\n@CO\tRG:%s\tFO:%s\tKS:%s\n",
-                            sam_rg,
-                            PACKAGE_NAME, 
-                            tmap_sam_rg_id,
+      if(NULL != flow_order) { // this should not happen, since it should be checked upstream
+          tmap_error("flow order was specified when using an SFF", Exit, OutOfRange);
+      }
+      if(NULL != sam_rg) { // SAM RG is user-specified
+          tmap_sam_parse_rg(sam_rg, 
                             seqio->io.sffio->gheader->flow->s,
-                            seqio->io.sffio->gheader->key->s);
+                            seqio->io.sffio->gheader->key->s,
+                            PACKAGE_NAME);
+          tmap_file_fprintf(fp, "%s\n", sam_rg);
       }
       else {
-          tmap_file_fprintf(fp, "@RG\tID:%s\tPG:s\n@CO\tRG:%s\tFO:%s\tKS:%s\n",
-                            tmap_sam_rg_id,
-                            PACKAGE_NAME, 
+          tmap_file_fprintf(fp, "@RG\tID:%s\tFO:%s\tKS:%s\tPG:%s\n",
                             tmap_sam_rg_id,
                             seqio->io.sffio->gheader->flow->s,
-                            seqio->io.sffio->gheader->key->s);
+                            seqio->io.sffio->gheader->key->s,
+                            PACKAGE_NAME);
       }
   }
   else {
       if(NULL != sam_rg) {
-          tmap_sam_parse_rg(sam_rg, 1);
-          tmap_file_fprintf(fp, "%s\tPG:%s\n", sam_rg, PACKAGE_NAME);
+          tmap_sam_parse_rg(sam_rg, NULL, flow_order, PACKAGE_NAME);
+          tmap_file_fprintf(fp, "%s\n", sam_rg);
+      }
+      else if(NULL != flow_order) {
+          tmap_file_fprintf(fp, "@RG\tID:%s\tFO:%s\tPG:%s\n",
+                            tmap_sam_rg_id,
+                            flow_order,
+                            PACKAGE_NAME);
       }
       else {
           tmap_file_fprintf(fp, "@RG\tID:%s\tPG:%s\n",

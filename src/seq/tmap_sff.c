@@ -454,7 +454,7 @@ tmap_sff_remove_key_sequence(tmap_sff_t *sff)
 {
   int32_t i;
   // remove the key sequence
-  for(i=0;i<sff->rheader->n_bases - sff->gheader->key_length;i++) { 
+  for(i=0;i<=sff->rheader->n_bases - sff->gheader->key_length;i++) { 
       sff->read->bases->s[i] = sff->read->bases->s[i+sff->gheader->key_length];
       sff->read->quality->s[i] = sff->read->quality->s[i+sff->gheader->key_length];
   }
