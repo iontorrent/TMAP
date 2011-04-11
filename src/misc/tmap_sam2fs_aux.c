@@ -300,6 +300,8 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
   tmap_sam2fs_aux_flow_convert(f_tseq, tseq, tseq_len, flow_order->flow_order, flow_order->flow_order_len, qseq, qseq_len);
 
   /*
+  // DEBUGGING
+  fputc('\n', stderr);
   // flow order
   for(i=0;i<flow_order->flow_order_len;i++) {
       fputc("ACGT"[flow_order->flow_order[i]], stderr);
@@ -335,6 +337,7 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
       fprintf(stderr, "%d", f_tseq->flow[i]);
   }
   fputc('\n', stderr);
+  fputc('\n', stderr);
   */
 
   // init gap sums
@@ -352,12 +355,28 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
   for(i=0;i<f_tseq->l;i++) {
       k = i % flow_order->flow_order_len;
       j = (i < flow_order->jump_rev[k]) ? 0 : (i - flow_order->jump_rev[k]);
-      gap_sums_i[i] = 0;
+      gap_sums_j[i] = 0;
       while(j <= i) {
-          gap_sums_i[i] += f_tseq->flow[i];
+          gap_sums_j[i] += f_tseq->flow[i];
           j++;
       }
   }
+
+  /*
+  // DEBUGGING
+  fputc('\n', stderr);
+  for(i=0;i<f_qseq->l;i++) {
+      if(0 < i) fputc(',', stderr);
+      fprintf(stderr, "%d", gap_sums_i[i]);
+  }
+  fputc('\n', stderr);
+  for(i=0;i<f_tseq->l;i++) {
+      if(0 < i) fputc(',', stderr);
+      fprintf(stderr, "%d", gap_sums_j[i]);
+  }
+  fputc('\n', stderr);
+  fputc('\n', stderr);
+  */
 
   // init dp matrix
   dp = tmap_malloc(sizeof(tmap_sam2fs_aux_dpcell_t*)*(1+f_qseq->l), "dp");
@@ -391,10 +410,11 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
   }
   // align
   for(i=1;i<=f_qseq->l;i++) { // query
-      int32_t i_from = ((i<flow_order->flow_order_len) ? 0 : (i-flow_order->flow_order_len)); // don't go before the first row
+      //int32_t i_from = ((i<flow_order->flow_order_len) ? 0 : (i-flow_order->flow_order_len)); // don't go before the first row
+      int32_t i_from = ((i<flow_order->jump_rev[i-1]) ? 0 : (i-flow_order->jump_rev[i-1])); // don't go before the first row
 
       for(j=1;j<=f_tseq->l;j++) { // target
-          int32_t j_from = ((j<flow_order->flow_order_len) ? 0 : (j-flow_order->flow_order_len)); // don't go before the first column
+          int32_t j_from = ((j<flow_order->jump_rev[j-1]) ? 0 : (j-flow_order->jump_rev[j-1])); // don't go before the first column
 
           // horizontal
           /*
@@ -551,6 +571,11 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
       best_score = dp[f_qseq->l][f_tseq->l].match_score;
       best_ctype = TMAP_SAM2FS_AUX_FROM_M;
   }
+
+  /*
+  fprintf(stderr, "best_i=%d best_j=%d best_score=%d best_ctype=%d\n",
+          best_i, best_j, best_score, best_ctype);
+          */
 
   i = best_i;
   j = best_j;
