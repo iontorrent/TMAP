@@ -238,6 +238,7 @@ tmap_sam2fs_aux_flow_order_init(char *flow_order)
       j = (i + 1) % f->flow_order_len;
       while(f->flow_order[i] != f->flow_order[j] && i != j) {
           j = (j + 1) % f->flow_order_len;
+          k++;
       }
       f->jump_fwd[i] = f->jump_rev[j] = k;
   }
@@ -265,10 +266,10 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
   int32_t i, j, k;
   int32_t ctype;
   int32_t best_i, best_j, best_score, best_ctype;
-  int32_t gap_sum_i, gap_sum_j;
   tmap_sam2fs_aux_flow_t *f_qseq=NULL, *f_tseq=NULL;
   tmap_sam2fs_aux_dpcell_t **dp=NULL;
   tmap_sam2fs_aux_aln_t *aln=NULL;
+  int32_t *gap_sums_i=NULL, *gap_sums_j=NULL;
 
   // init
   f_qseq = tmap_sam2fs_aux_flow_init();
@@ -336,6 +337,28 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
   fputc('\n', stderr);
   */
 
+  // init gap sums
+  gap_sums_i = tmap_malloc(sizeof(int32_t)*f_qseq->l, "gap_sums_i");
+  for(i=0;i<f_qseq->l;i++) {
+      k = i % flow_order->flow_order_len;
+      j = (i < flow_order->jump_rev[k]) ? 0 : (i - flow_order->jump_rev[k]);
+      gap_sums_i[i] = 0;
+      while(j <= i) {
+          gap_sums_i[i] += f_qseq->flow[i];
+          j++;
+      }
+  }
+  gap_sums_j = tmap_malloc(sizeof(int32_t)*f_tseq->l, "gap_sums_j");
+  for(i=0;i<f_tseq->l;i++) {
+      k = i % flow_order->flow_order_len;
+      j = (i < flow_order->jump_rev[k]) ? 0 : (i - flow_order->jump_rev[k]);
+      gap_sums_i[i] = 0;
+      while(j <= i) {
+          gap_sums_i[i] += f_tseq->flow[i];
+          j++;
+      }
+  }
+
   // init dp matrix
   dp = tmap_malloc(sizeof(tmap_sam2fs_aux_dpcell_t*)*(1+f_qseq->l), "dp");
   for(i=0;i<=f_qseq->l;i++) {
@@ -350,20 +373,16 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
 
   // init start cells
   dp[0][0].match_score = 0; // global
-  for(i=k=1,gap_sum_i=TMAP_SAM2FS_AUX_GAP;i<=f_qseq->l;i++) {
-      if(flow_order->flow_order_len < i) gap_sum_i -= f_qseq->flow[i-flow_order->flow_order_len-1]; // substract off
-      gap_sum_i += f_qseq->flow[i-1]; // add current flow
-      dp[i][0].ins_score = 0 - gap_sum_i;
+  for(i=k=1;i<=f_qseq->l;i++) {
+      dp[i][0].ins_score = 0 - gap_sums_i[i-1];
       //dp[i][0].ins_score = 0 - TMAP_SAM2FS_AUX_GAP_O - (k-1)*TMAP_SAM2FS_AUX_GAP_E;
       dp[i][0].ins_from = ((k==1) ? TMAP_SAM2FS_AUX_FROM_M : TMAP_SAM2FS_AUX_FROM_I);
       if(0 == (i%flow_order->flow_order_len)) {
           k++;
       }
   }
-  for(j=k=1,gap_sum_j=TMAP_SAM2FS_AUX_GAP;j<=f_tseq->l;j++) {
-      if(flow_order->flow_order_len < j) gap_sum_j -= f_tseq->flow[j-flow_order->flow_order_len-1]; // subtract off
-      gap_sum_j += f_tseq->flow[j-1];
-      dp[0][j].del_score = 0 - gap_sum_j;
+  for(j=k=1;j<=f_tseq->l;j++) {
+      dp[0][j].del_score = 0 - gap_sums_j[j-1];
       //dp[0][j].del_score = 0 - TMAP_SAM2FS_AUX_GAP_O - (k-1)*TMAP_SAM2FS_AUX_GAP_E;
       dp[0][j].del_from = ((1 == k) ? TMAP_SAM2FS_AUX_FROM_M : TMAP_SAM2FS_AUX_FROM_D);
       if(0 == (j%flow_order->flow_order_len)) {
@@ -371,20 +390,11 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
       }
   }
   // align
-  gap_sum_i = gap_sum_j = TMAP_SAM2FS_AUX_GAP;
   for(i=1;i<=f_qseq->l;i++) { // query
       int32_t i_from = ((i<flow_order->flow_order_len) ? 0 : (i-flow_order->flow_order_len)); // don't go before the first row
 
-      if(flow_order->flow_order_len < i) gap_sum_i -= f_qseq->flow[i-flow_order->flow_order_len-1]; // substract off
-      gap_sum_i += f_qseq->flow[i-1]; // add current flow
-
-      gap_sum_j = TMAP_SAM2FS_AUX_GAP;
       for(j=1;j<=f_tseq->l;j++) { // target
           int32_t j_from = ((j<flow_order->flow_order_len) ? 0 : (j-flow_order->flow_order_len)); // don't go before the first column
-
-          // gap sum
-          if(flow_order->flow_order_len < j) gap_sum_j -= f_tseq->flow[j-flow_order->flow_order_len-1]; // subtract off
-          gap_sum_j += f_tseq->flow[j-1];
 
           // horizontal
           /*
@@ -397,12 +407,12 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
              dp[i][j].del_from = TMAP_SAM2FS_AUX_FROM_D;
              }
              */
-          if(dp[i][j_from].del_score - gap_sum_j < dp[i][j_from].match_score - gap_sum_j) {
-              dp[i][j].del_score = dp[i][j_from].match_score - gap_sum_j;
+          if(dp[i][j_from].del_score - gap_sums_j[j-1] < dp[i][j_from].match_score - gap_sums_j[j-1]) {
+              dp[i][j].del_score = dp[i][j_from].match_score - gap_sums_j[j-1];
               dp[i][j].del_from = TMAP_SAM2FS_AUX_FROM_M;
           }
           else {
-              dp[i][j].del_score = dp[i][j_from].del_score - gap_sum_j;
+              dp[i][j].del_score = dp[i][j_from].del_score - gap_sums_j[j-1];
               dp[i][j].del_from = TMAP_SAM2FS_AUX_FROM_D;
           } 
 
@@ -417,12 +427,12 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
              dp[i][j].ins_from = TMAP_SAM2FS_AUX_FROM_I;
              }
              */
-          if(dp[i_from][j].ins_score - gap_sum_i < dp[i_from][j].match_score - gap_sum_i) {
-              dp[i][j].ins_score = dp[i_from][j].match_score - gap_sum_i;
+          if(dp[i_from][j].ins_score - gap_sums_i[i-1] < dp[i_from][j].match_score - gap_sums_i[i-1]) {
+              dp[i][j].ins_score = dp[i_from][j].match_score - gap_sums_i[i-1];
               dp[i][j].ins_from = TMAP_SAM2FS_AUX_FROM_M;
           }
           else {
-              dp[i][j].ins_score = dp[i_from][j].ins_score - gap_sum_i;
+              dp[i][j].ins_score = dp[i_from][j].ins_score - gap_sums_i[i-1];
               dp[i][j].ins_from = TMAP_SAM2FS_AUX_FROM_I;
           }
 
@@ -584,6 +594,7 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
           }
           break;
         default:
+          //fprintf(stderr, "i=%d j=%d ctype=%d\n", i, j, ctype);
           tmap_error(NULL, Exit, OutOfRange);
       }
 
@@ -661,4 +672,6 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
   tmap_sam2fs_aux_flow_destroy(f_qseq);
   tmap_sam2fs_aux_flow_destroy(f_tseq);
   tmap_sam2fs_aux_aln_destroy(aln);
+  free(gap_sums_i);
+  free(gap_sums_j);
 }
