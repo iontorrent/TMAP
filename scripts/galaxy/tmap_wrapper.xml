@@ -32,6 +32,8 @@
 				--mismatchPenalty=$params.mapall.mismatchPenalty
 				--gapOpenPenalty=$params.mapall.gapOpenPenalty
 				--gapExtensPenalty=$params.mapall.gapExtensPenalty
+				--flowPenalty=$params.mapall.flowPenalty
+				--flowOrder=$params.mappll.flowOrder
 				--bandWidth=$params.mapall.bandWidth
 				--globalMap=$params.mapall.globalMap
 				--duplicateWindow=$params.mapall.duplicateWindow
@@ -56,6 +58,9 @@
 			#if $params.map1.source_select == "true":
 				--map1SeedLength=$params.map1.map1SeedLength
 				--map1SeedMismatches=$params.map1.map1SeedMismatches
+				--map1SecondarySeedLength=$params.map1.map1SecondarySeedLength
+				--map1NumEdits=$params.map1.map1NumEdits
+				--map1BaseError=$params.map1.map1BaseError
 				--map1Mismatches=$params.map1.map1Mismatches
 				--map1GapOpens=$params.map1.map1GapOpens
 				--map1GapExtensions=$params.map1.map1GapExtensions
@@ -82,6 +87,9 @@
 			#if $params.MAP1.source_select == "true":
 				--MAP1SeedLength=$params.MAP1.MAP1SeedLength
 				--MAP1SeedMismatches=$params.MAP1.MAP1SeedMismatches
+				--MAP1SecondarySeedLength=$params.MAP1.MAP1SecondarySeedLength
+				--MAP1NumEdits=$params.MAP1.MAP1NumEdits
+				--MAP1BaseError=$params.MAP1.MAP1BaseError
 				--MAP1Mismatches=$params.MAP1.MAP1Mismatches
 				--MAP1GapOpens=$params.MAP1.MAP1GapOpens
 				--MAP1GapExtensions=$params.MAP1.MAP1GapExtensions
@@ -154,15 +162,17 @@
 				  <when value="false" />
 				  <when value="true">
 					  <param name="threads" type="integer" value="4" label="The number of threads (-n)" />
-					  <param name="matchScore" type="integer" value="5" label="Match score (-A)" />
-					  <param name="mismatchPenalty" type="integer" value="3" label="Mismatch penalty (-M)" />
-					  <param name="gapOpenPenalty" type="integer" value="3" label="Gap open penalty (-O)" />
-					  <param name="gapExtensPenalty" type="integer" value="1" label="Gap extension penalty (-E)" />
+					  <param name="matchScore" type="integer" value="3" label="Match score (-A)" />
+					  <param name="mismatchPenalty" type="integer" value="5" label="Mismatch penalty (-M)" />
+					  <param name="gapOpenPenalty" type="integer" value="2" label="Gap open penalty (-O)" />
+					  <param name="gapExtensPenalty" type="integer" value="2" label="Gap extension penalty (-E)" />
+					  <param name="flowPenalty" type="integer" value="2" label="The score penalty (-X)" />
+					  <param name="flowOrder" type="text" value="" label="The flow order ([ACGT]{4+} or sff" />
 					  <param name="bandWidth" type="integer" value="50" label="The band width (-w)" />
-					  <param name="globalMap" type="boolean" truevalue="true" falsevalue="false" checked="no" label="Map globally (-g)" help="Map the full read with no soft-clipping" />
+					  <param name="globalMap" type="integer" value="2" label="The soft clipping type (-g)" help="The soft-clipping type (0 - allow on the right and left, 1 - allow on the left, 2 - allow on the right, 3 - do not allow soft-clipping)" />
 					  <param name="duplicateWindow" type="integer" value="128" label="The duplicate window (-W)" help="Remove duplicate alignments from different algorithms within this bp window (-1 to disable)"/>
-					  <param name="scoringThreshold" type="integer" value="30" label="The scoring threshold (-T)" help="The score threshold divided by the match score" />
-					  <param name="queueSize" type="integer" value="65536" label="The queue size (-q)" help="The queue size for the reads" />
+					  <param name="scoringThreshold" type="integer" value="1" label="The scoring threshold (-T)" help="The score threshold divided by the match score" />
+					  <param name="queueSize" type="integer" value="262144" label="The queue size (-q)" help="The queue size for the reads" />
 					  <param name="outputFilter" type="integer" value="1" label="The output filter (-a)" help="The output filter (0 - unique best hits, 1 - random best hit, 2 - all best htis, 3 - all alignments)" />
 					  <conditional name="rgTag">
 						  <param name="source_select" type="select" label="Include Custom Read Group Tags">
@@ -192,8 +202,11 @@
 				  </param>
 				  <when value="true">
 					  <param name="map1SeedLength" type="integer" value="32" label="The k-mer length to seed CALs (-1 to disable) (-l)" />
-					  <param name="map1SeedMismatches" type="integer" value="3" label="The maximum number of mismatches in the seed (-s) " />
-					  <param name="map1Mismatches" type="float" value="2" label="The maximum number of or (read length) fraction of mismatches (-m) " />
+					  <param name="map1SeedMismatches" type="integer" value="2" label="The maximum number of mismatches in the seed (-s)" />
+					  <param name="map1SecondarySeedLength" type="integer" value="64" label="The secondary seed length (-1 to disable) (-L)" />
+					  <param name="map1NumEdits" type="float" value="-1" label="The maximum number of edits or false-negative probability assuming the maximum error rate (-1 to auto-tune) (-p)" />
+					  <param name="map1BaseError" type="float" value="0.02" label="The the assumed per-base maximum error rate (-P)" />
+					  <param name="map1Mismatches" type="float" value="3" label="The maximum number of or (read length) fraction of mismatches (-m)" />
 					  <param name="map1GapOpens" type="float" value="1" label="The maximum number of or (read length) fraction of indel starts (-o)" />
 					  <param name="map1GapExtensions" type="float" value="6" label="The maximum number of or (read length) fraction of indel extensions (-e)" />
 					  <param name="map1MaxCALsDeletion" type="integer" value="10" label="The maximum number of CALs to extend a deletion (-d)" />
@@ -223,8 +236,8 @@
 				  </param>
 				  <when value="true">
 					  <param name="map3SeedLength" type="integer" value="-1" label="The k-mer length to seed CALs (-1 tunes to the genome size) (-l)" />
-					  <param name="map3SeedMaxHits" type="integer" value="8" label="The maximum number of hits returned by a seed (-S)" />
-					  <param name="map3SeedWindow" type="integer" value="50" label="The window of bases in which to group seeds (-b)" />
+					  <param name="map3SeedMaxHits" type="integer" value="12" label="The maximum number of hits returned by a seed (-S)" />
+					  <param name="map3SeedWindow" type="integer" value="25" label="The window of bases in which to group seeds (-b)" />
 					  <param name="map3HPEnumeration" type="integer" value="0" label="The single homopolymer error difference for enumeration (-H)" />
 				  </when>
 				  <when value="false" />
@@ -236,8 +249,11 @@
 				  </param>
 				  <when value="true">
 					  <param name="MAP1SeedLength" type="integer" value="32" label="The k-mer length to seed CALs (-1 to disable) (-l)" />
-					  <param name="MAP1SeedMismatches" type="integer" value="3" label="The maximum number of mismatches in the seed (-s) " />
-					  <param name="MAP1Mismatches" type="float" value="2" label="The maximum number of or (read length) fraction of mismatches (-m) " />
+					  <param name="MAP1SeedMismatches" type="integer" value="2" label="The maximum number of mismatches in the seed (-s)" />
+					  <param name="MAP1SecondarySeedLength" type="integer" value="64" label="The secondary seed length (-1 to disable) (-L)" />
+					  <param name="MAP1NumEdits" type="float" value="-1" label="The maximum number of edits or false-negative probability assuming the maximum error rate (-1 to auto-tune) (-p)" />
+					  <param name="MAP1BaseError" type="float" value="0.02" label="The the assumed per-base maximum error rate (-P)" />
+					  <param name="MAP1Mismatches" type="float" value="3" label="The maximum number of or (read length) fraction of mismatches (-m)" />
 					  <param name="MAP1GapOpens" type="float" value="1" label="The maximum number of or (read length) fraction of indel starts (-o)" />
 					  <param name="MAP1GapExtensions" type="float" value="6" label="The maximum number of or (read length) fraction of indel extensions (-e)" />
 					  <param name="MAP1MaxCALsDeletion" type="integer" value="10" label="The maximum number of CALs to extend a deletion (-d)" />
@@ -267,8 +283,8 @@
 				  </param>
 				  <when value="true">
 					  <param name="MAP3SeedLength" type="integer" value="-1" label="The k-mer length to seed CALs (-1 tunes to the genome size) (-l)" />
-					  <param name="MAP3SeedMaxHits" type="integer" value="8" label="The maximum number of hits returned by a seed (-S)" />
-					  <param name="MAP3SeedWindow" type="integer" value="50" label="The window of bases in which to group seeds (-b)" />
+					  <param name="MAP3SeedMaxHits" type="integer" value="12" label="The maximum number of hits returned by a seed (-S)" />
+					  <param name="MAP3SeedWindow" type="integer" value="25" label="The window of bases in which to group seeds (-b)" />
 					  <param name="MAP3HPEnumeration" type="integer" value="0" label="The single homopolymer error difference for enumeration (-H)" />
 				  </when>
 				  <when value="false" />

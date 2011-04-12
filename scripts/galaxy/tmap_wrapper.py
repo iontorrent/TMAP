@@ -16,11 +16,13 @@ usage: tmap_wrapper.py [options]
     --params: Parameter setting to use (pre_set or full)
     --fileSource: Whether to use a previously indexed reference sequence or one from history (indexed or history)
     --matchScore: The match score
-    --mismatchPenalty: Mismatch penalty
-    --gapOpenPenalty: Gap open penalty
-    --gapExtensPenalty: Gap extension penalty
+    --mismatchPenalty: The ismatch penalty
+    --gapOpenPenalty: The gap open penalty
+    --gapExtensPenalty: The gap extension penalty
+    --flowPenalty: The flow score penalty
+    --flowOrder: The flow order ([ACGT]{4+} or "sff")
     --bandWidth: The band width
-    --globalMap: Map the full read (no soft-clipping)
+    --globalMap: The soft-clipping type (0 - allow on the right and left, 1 - allow on the left, 2 - allow on the right, 3 - do not allow soft-clipping)
     --duplicateWindow: Remove duplicate alignments from different algorithms within this bp window (-1 to disable)
     --scoringThreshold: The score threshold divided by the match score 
     --queueSize: The queue size for the reads
@@ -40,6 +42,9 @@ usage: tmap_wrapper.py [options]
     --map1: Flag to run map1 in the first stage
     --map1SeedLength: The k-mer length to seed CALs (-1 to disable)
     --map1SeedMismatches: The maximum number of mismatches in the seed 
+    --map1SecondarySeedLength: The secondary seed length (-1 to disable)
+    --map1NumEdits: The maximum number of edits or false-negative probability assuming the maximum error rate
+    --map1BaseError: The assumed per-base maximum error rate
     --map1Mismatches: The maximum number of or (read length) fraction of mismatches 
     --map1GapOpens: The maximum number of or (read length) fraction of indel starts 
     --map1GapExtensions: The maximum number of or (read length) fraction of indel extensions 
@@ -63,6 +68,9 @@ usage: tmap_wrapper.py [options]
     --MAP1: Flag to run MAP1 in the second stage
     --MAP1SeedLength: The k-mer length to seed CALs (-1 to disable)
     --MAP1SeedMismatches: The maximum number of mismatches in the seed 
+    --MAP1SecondarySeedLength: The secondary seed length (-1 to disable)
+    --MAP1NumEdits: The maximum number of edits or false-negative probability assuming the maximum error rate
+    --MAP1BaseError: The assumed per-base maximum error rate
     --MAP1Mismatches: The maximum number of or (read length) fraction of mismatches 
     --MAP1GapOpens: The maximum number of or (read length) fraction of indel starts 
     --MAP1GapExtensions: The maximum number of or (read length) fraction of indel extensions 
@@ -94,11 +102,15 @@ def stop_err( msg ):
     sys.stderr.write( '%s\n' % msg )
     sys.exit()
 
-def map1_parse( map1SeedLength, map1SeedMismatches, map1Mismatches, \
+def map1_parse( map1SeedLength, map1SeedMismatches, \
+        map1SecondarySeedLength, map1NumEdits, \
+        map1BaseError, map1Mismatches, \
         map1GapOpens, map1GapExtensions, map1MaxCALsDeletion, \
         map1EndIndels, map1MaxOptimalCALs, map1MaxNodes ):
-    return '-l %s -s %s -m %s -o %s -e %s -d %s -i %s -b %s -Q %s' % \
-            ( map1SeedLength, map1SeedMismatches, map1Mismatches, \
+    return '-l %s -s %s -L %s -p %s -P %s -m %s -o %s -e %s -d %s -i %s -b %s -Q %s' % \
+            (map1SeedLength, map1SeedMismatches, \
+            map1SecondarySeedLength, map1NumEdits, \
+            map1BaseError, map1Mismatches, \
             map1GapOpens, map1GapExtensions, map1MaxCALsDeletion, \
             map1EndIndels, map1MaxOptimalCALs, map1MaxNodes )
 
@@ -123,6 +135,8 @@ def __main__():
     parser.add_option( '--mismatchPenalty', dest='mismatchPenalty', help='Mismatch penalty' )
     parser.add_option( '--gapOpenPenalty', dest='gapOpenPenalty', help='Gap open penalty' )
     parser.add_option( '--gapExtensPenalty', dest='gapExtensPenalty', help='Gap extension penalty' )
+    parser.add_option( '--flowPenalty', dest='flowPenalty', help='Flow score penalty' )
+    parser.add_option( '--flowOrder', dest='flowOrder', help='Flow order' )
     parser.add_option( '--bandWidth', dest='bandWidth', help='The band width' )
     parser.add_option( '--globalMap', dest='globalMap', help='Map the full read (no soft-clipping)' )
     parser.add_option( '--duplicateWindow', dest='duplicateWindow', help='Remove duplicate alignments from different algorithms within this bp window (-1 to disable)' )
@@ -147,6 +161,9 @@ def __main__():
     parser.add_option( '--map1', dest='map1', help='True if map1 should be run in the first stage' )
     parser.add_option( '--map1SeedLength', dest='map1SeedLength', help='The k-mer length to seed CALs (-1 to disable)' )
     parser.add_option( '--map1SeedMismatches', dest='map1SeedMismatches', help='The maximum number of mismatches in the seed ' )
+    parser.add_option( '--map1SecondarySeedLength', dest='map1SecondarySeedLength', help='The secondary seed length (-1 to disable)' )
+    parser.add_option( '--map1NumEdits', dest='map1NumEdits', help='The maximum number of edits or false-negative probability assuming the maximum error rate' )
+    parser.add_option( '--map1BaseError', dest='map1BaseError', help='The assumed per-base maximum error rate' )
     parser.add_option( '--map1Mismatches', dest='map1Mismatches', help='The maximum number of or (read length) fraction of mismatches ' )
     parser.add_option( '--map1GapOpens', dest='map1GapOpens', help='The maximum number of or (read length) fraction of indel starts ' )
     parser.add_option( '--map1GapExtensions', dest='map1GapExtensions', help='The maximum number of or (read length) fraction of indel extensions ' )
@@ -170,6 +187,9 @@ def __main__():
     parser.add_option( '--MAP1', dest='MAP1', help='True if map1 should be run in the second stage' )
     parser.add_option( '--MAP1SeedLength', dest='MAP1SeedLength', help='The k-mer length to seed CALs (-1 to disable)' )
     parser.add_option( '--MAP1SeedMismatches', dest='MAP1SeedMismatches', help='The maximum number of mismatches in the seed ' )
+    parser.add_option( '--MAP1SecondarySeedLength', dest='MAP1SecondarySeedLength', help='The secondary seed length (-1 to disable)' )
+    parser.add_option( '--MAP1NumEdits', dest='MAP1NumEdits', help='The maximum number of edits or false-negative probability assuming the maximum error rate' )
+    parser.add_option( '--MAP1BaseError', dest='MAP1BaseError', help='The assumed per-base maximum error rate' )
     parser.add_option( '--MAP1Mismatches', dest='MAP1Mismatches', help='The maximum number of or (read length) fraction of mismatches ' )
     parser.add_option( '--MAP1GapOpens', dest='MAP1GapOpens', help='The maximum number of or (read length) fraction of indel starts ' )
     parser.add_option( '--MAP1GapExtensions', dest='MAP1GapExtensions', help='The maximum number of or (read length) fraction of indel extensions ' )
@@ -196,7 +216,7 @@ def __main__():
     try:
         tmp = tempfile.NamedTemporaryFile().name
         tmp_stdout = open( tmp, 'wb' )
-        proc = subprocess.Popen( args='tmap 2>&1', shell=True, stdout=tmp_stdout )
+        proc = subprocess.Popen( args='tmap --version 2>&1', shell=True, stdout=tmp_stdout )
         tmp_stdout.close()
         returncode = proc.wait()
         stdout = None
@@ -265,10 +285,6 @@ def __main__():
         MAP3_options = ''
     else:
         # mapall options
-        if options.globalMap == 'true':
-            globalMap = '-g'
-        else:
-            globalMap = ''
         if options.rgTag == 'true':
             rgTag = ''
             if options.rgTagID != '':
@@ -292,14 +308,19 @@ def __main__():
             rgTag.rstrip(' ')
         else:
             rgTag = ''
+        if None != options.flowOrder and '' != options.flowOrder:
+            flowOrder = '-x ' + options.flowOrder
+        else:
+            flowOrder = ''
         if options.filterIndependently == 'true':
             filterIndependently = '-I'
         else:
             filterIndependently = ''
         if options.mapall == 'true':
-            mapall_options = '-A %s -M %s -O %s -E %s %s -W %s -T %s -q %s -n %s -a %s %s %s' % \
+            mapall_options = '-A %s -M %s -O %s -E %s -X %s %s %s -W %s -T %s -q %s -n %s -a %s %s %s' % \
                     ( options.matchScore, options.mismatchPenalty, options.gapOpenPenalty, options.gapExtensPenalty,
-                            globalMap, options.duplicateWindow, options.scoringThreshold, options.queueSize,
+                            options.flowPenalty, flowOrder,
+                            options.globalMap, options.duplicateWindow, options.scoringThreshold, options.queueSize,
                             options.threads, options.outputFilter, rgTag, filterIndependently )
         else:
             mapall_options = ''
@@ -307,7 +328,9 @@ def __main__():
         # map1 - stage one
         if options.map1 == 'true':
             map1_options = 'map1 %s' % \
-                    map1_parse( options.map1SeedLength, options.map1SeedMismatches, options.map1Mismatches, \
+                    map1_parse( options.map1SeedLength, options.map1SeedMismatches, \
+                    options.map1SecondarySeedLength, options.map1NumEdits, \
+                    options.map1BaseError, options.map1Mismatches, \
                     options.map1GapOpens, options.map1GapExtensions, options.map1MaxCALsDeletion, \
                     options.map1EndIndels, options.map1MaxOptimalCALs, options.map1MaxNodes )
         else:
@@ -329,7 +352,9 @@ def __main__():
         # map1 - stage two
         if options.MAP1== 'true':
             MAP1_options = 'MAP1 %s' % \
-                    map1_parse( options.MAP1SeedLength, options.MAP1SeedMismatches, options.MAP1Mismatches, \
+                    map1_parse( options.MAP1SeedLength, options.MAP1SeedMismatches, \
+                    options.MAP1SecondarySeedLength, options.MAP1NumEdits, \
+                    options.MAP1BaseError, options.MAP1Mismatches, \
                     options.MAP1GapOpens, options.MAP1GapExtensions, options.MAP1MaxCALsDeletion, \
                     options.MAP1EndIndels, options.MAP1MaxOptimalCALs, options.MAP1MaxNodes )
         else:
