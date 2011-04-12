@@ -358,7 +358,7 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
                       const char *format, ...)
 {
   va_list ap;
-  int32_t i, sff_soft_clip = 0;
+  int32_t i;
   tmap_string_t *name=NULL, *bases=NULL, *qualities=NULL;
   uint32_t *cigar_tmp = NULL, cigar_tmp_allocated = 0;
   tmap_string_t *md;
@@ -381,11 +381,11 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
                     name->s, (1 == strand) ? 0x10 : 0, refseq->annos[seqid].name->s,
                     pos + 1,
                     mapq);
-
-  // add the soft clipping of from an SFF
   cigar_tmp = cigar;
+  // add the soft clipping of from an SFF
+  /*
   if(TMAP_SEQ_TYPE_SFF == seq->type) {
-      sff_soft_clip = seq->data.sff->gheader->key_length; // soft clip the key sequence
+      int32_t sff_soft_clip = seq->data.sff->gheader->key_length; // soft clip the key sequence
       if(0 < sff_soft_clip && 0 < n_cigar) {
           if(0 == strand) {  // forward strand sff soft clip
               if(4 == cigar[0]) { // add to an existing soft clip
@@ -417,6 +417,7 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
           }
       }
   }
+  */
 
   // print out the cigar
   for(i=0;i<n_cigar;i++) {
