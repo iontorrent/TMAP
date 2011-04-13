@@ -188,10 +188,19 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, tmap_seq_io_t *seq
   tmap_file_fprintf(fp, "\n");
 }
 
+static inline void
+tmap_sam_print_flowgram(tmap_file_t *fp, uint16_t *flowgram, int32_t length)
+{
+  int32_t i;
+  tmap_file_fprintf(fp, "\tFZ:H:S");
+  for(i=0;i<length;i++) {
+      tmap_file_fprintf(fp, ",%u", flowgram[i]);
+  }
+}
+
 inline void
 tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags)
 {
-  int32_t i;
   uint16_t flag = 0x0004;
   tmap_string_t *name=NULL, *bases=NULL, *qualities=NULL;
 
@@ -207,14 +216,7 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags)
                     tmap_sam_rg_id,
                     PACKAGE_NAME);
   if(TMAP_SEQ_TYPE_SFF == seq->type && 1 == sam_sff_tags) {
-      tmap_file_fprintf(fp, "\tFZ:H:");
-      for(i=0;i<seq->data.sff->gheader->flow_length;i++) {
-          tmap_file_fprintf(fp, "%X%X%X%X", 
-                            ((seq->data.sff->read->flowgram[i] >> 12) & 0xF),
-                            ((seq->data.sff->read->flowgram[i] >> 8) & 0xF),
-                            ((seq->data.sff->read->flowgram[i] >> 4) & 0xF),
-                            seq->data.sff->read->flowgram[i] & 0xF);
-      }
+      tmap_sam_print_flowgram(fp, seq->data.sff->read->flowgram, seq->data.sff->gheader->flow_length);
   }
   tmap_file_fprintf(fp, "\n");
 }
@@ -444,14 +446,7 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
   
   // FZ
   if(TMAP_SEQ_TYPE_SFF == seq->type && 1 == sam_sff_tags) {
-      tmap_file_fprintf(fp, "\tFZ:H:");
-      for(i=0;i<seq->data.sff->gheader->flow_length;i++) {
-          tmap_file_fprintf(fp, "%X%X%X%X", 
-                            ((seq->data.sff->read->flowgram[i] >> 12) & 0xF),
-                            ((seq->data.sff->read->flowgram[i] >> 8) & 0xF),
-                            ((seq->data.sff->read->flowgram[i] >> 4) & 0xF),
-                            seq->data.sff->read->flowgram[i] & 0xF);
-      }
+      tmap_sam_print_flowgram(fp, seq->data.sff->read->flowgram, seq->data.sff->gheader->flow_length);
   }
 
   // XA
