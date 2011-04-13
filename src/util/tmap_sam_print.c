@@ -192,7 +192,7 @@ static inline void
 tmap_sam_print_flowgram(tmap_file_t *fp, uint16_t *flowgram, int32_t length)
 {
   int32_t i;
-  tmap_file_fprintf(fp, "\tFZ:H:S");
+  tmap_file_fprintf(fp, "\tFZ:B:S");
   for(i=0;i<length;i++) {
       tmap_file_fprintf(fp, ",%u", flowgram[i]);
   }
