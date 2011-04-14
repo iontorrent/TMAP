@@ -325,12 +325,13 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
 {
   tmap_map_sams_t *sams_tmp = NULL;
   tmap_map_sam_t *sam_cur = NULL;
-  uint32_t i, j, k, n;
+  uint32_t i, j, k, n, num_all_sa;
 
   // max # of entries
   for(i=n=0;i<sams->n;i++) {
       n += sams->sams[i].pos - sams->sams[i].seqid + 1; // l - k + 1
   }
+  num_all_sa = n;
 
   // bound the # of returned hits
   if(opt->max_best_cals < n) {
@@ -384,6 +385,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
               sam_cur->aux.map1_aux->n_gapo = sam->aux.map1_aux->n_gapo;
               sam_cur->aux.map1_aux->n_gape = sam->aux.map1_aux->n_gape;
               sam_cur->aux.map1_aux->aln_ref = 0;
+              sam_cur->aux.map1_aux->num_all_sa = num_all_sa;
               j++;
 
               // only save the top n hits
