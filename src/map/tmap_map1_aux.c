@@ -332,12 +332,17 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
       n += sams->sams[i].pos - sams->sams[i].seqid + 1; // l - k + 1
   }
 
+  // bound the # of returned hits
+  if(opt->max_best_cals < n) {
+      n = opt->max_best_cals;
+  }
+
   // alloc
   sams_tmp = tmap_map_sams_init();
   tmap_map_sams_realloc(sams_tmp, n);
             
   // copy over
-  for(i=j=0;i<sams->n;i++) {
+  for(i=j=0;i<sams->n && j<n;i++) {
       tmap_map_sam_t *sam;
 
       sam = &sams->sams[i];
@@ -380,6 +385,11 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
               sam_cur->aux.map1_aux->n_gape = sam->aux.map1_aux->n_gape;
               sam_cur->aux.map1_aux->aln_ref = 0;
               j++;
+
+              // only save the top n hits
+              if(n <= j) {  // equivalent to opt->max_bset_cals <= j
+                  break;
+              }
           }
       }
   }
@@ -389,7 +399,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
 
   // realloc
   tmap_map_sams_realloc(sams_tmp, j);
-
+  
   return sams_tmp;
 }
 
