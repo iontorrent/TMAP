@@ -196,6 +196,7 @@ typedef struct {
     uint16_t n_gapo;  /*!< the current number of gap opens */
     uint16_t n_gape;  /*!< the current number of gap extensions */
     uint16_t aln_ref;  /*!< the number of reference bases in the alignment */
+    uint32_t num_all_sa;  /*!< the number of hits produced by map1 (though fewer may be reported due to -b) */
 } tmap_map_map1_aux_t;
 
 /*! 

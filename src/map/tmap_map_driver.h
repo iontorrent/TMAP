@@ -71,7 +71,6 @@ typedef struct {
     tmap_driver_func_thread_map func_thread_map; /* this function will be run once per thread per input sequence to map the sequence */
     tmap_driver_func_mapq func_mapq; /* this function will be run to calculate the mapping quality */
     tmap_driver_func_thread_cleanup func_thread_cleanup; /* this function will be run once per thread to cleanup/destroy any persistent data across that thread */
-    int32_t thread_block_size; /*!< the number of reads per thread to process */
     int32_t tid;  /*!< the zero-based thread id */
     tmap_map_opt_t *opt;  /*!< the options to this program */    
 } tmap_map_driver_thread_data_t;
@@ -88,7 +87,6 @@ typedef struct {
   @param  func_thread_map      the thread map function
   @param  func_mapq            the mapping quality function
   @param  func_thread_cleanup  the thread cleanup function
-  @param  thread_block_size    the number of reads to batch per thread
   @param  tid                  the thread ids
   @param  opt                  the program parameters 
  */
@@ -99,7 +97,7 @@ tmap_map_driver_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int
                          tmap_driver_func_thread_map func_thread_map, 
                          tmap_driver_func_mapq func_mapq,
                          tmap_driver_func_thread_cleanup func_thread_cleanup,
-                         int32_t thread_block_size, int32_t tid, tmap_map_opt_t *opt);
+                         int32_t tid, tmap_map_opt_t *opt);
 
 /*!
  A wrapper around the core function of mapall

@@ -116,7 +116,7 @@ static int32_t
 tmap_map1_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
 {
   int32_t i;
-  int32_t num_best_sa, num_best, num_all_sa;
+  int32_t num_best_sa, num_best;
 
   if(0 == sams->n) {
       return 0;
@@ -126,7 +126,7 @@ tmap_map1_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
   tmap_sort_introsort(tmap_map1_sam_sort_score, sams->n, sams->sams);
 
   //Note: assumes that the alignments are sorted by decreasing score
-  num_best = num_best_sa = num_all_sa = 0;
+  num_best = num_best_sa = 0;
   for(i=0;i<sams->n;i++) {
       if(0 < i && sams->sams[i-1].score < sams->sams[i].score) { // check assumption
           tmap_error("bug encountered", Exit, OutOfRange);
@@ -137,9 +137,11 @@ tmap_map1_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
       num_best++;
       num_best_sa++;
   }
-  num_all_sa += sams->n;
   for(i=0;i<num_best;i++) {
-      sams->sams[i].mapq = tmap_map1_sam_mapq(num_best_sa, num_all_sa, opt->max_mm, sams->sams[i].aux.map1_aux->n_mm);
+      sams->sams[i].mapq = tmap_map1_sam_mapq(num_best_sa, 
+                                              sams->sams[i].aux.map1_aux->num_all_sa, 
+                                              opt->max_mm, 
+                                              sams->sams[i].aux.map1_aux->n_mm);
   }
   for(i=num_best;i<sams->n;i++) {
       sams->sams[i].mapq = 0;
