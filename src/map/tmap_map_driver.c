@@ -31,11 +31,6 @@
 #include "tmap_map3_aux.h"
 #include "tmap_map_driver.h"
 
-#ifdef HAVE_LIBPTHREAD
-pthread_mutex_t tmap_map_driver_read_lock = PTHREAD_MUTEX_INITIALIZER;
-int32_t tmap_map_driver_read_lock_low = 0;
-#endif
-
 #define __tmap_map_driver_check_func(_func_init, _func_thread_init, _func_thread_map, _func_thread_cleanup, _func_mapq, _opt) do { \
   if(NULL == _func_init) { \
       tmap_error("func_init == NULL", Exit, OutOfRange); \
@@ -61,9 +56,9 @@ tmap_map_driver_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int
                          tmap_driver_func_thread_map func_thread_map, 
                          tmap_driver_func_mapq func_mapq,
                          tmap_driver_func_thread_cleanup func_thread_cleanup,
-                         int32_t thread_block_size, int32_t tid, tmap_map_opt_t *opt)
+                         int32_t tid, tmap_map_opt_t *opt)
 {
-  int32_t i, low = 0, high;
+  int32_t i, low = 0;
   void *data = NULL;
   int32_t flow_order_len = 0;
   uint8_t *flow_order = NULL;
@@ -89,28 +84,8 @@ tmap_map_driver_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int
   }
 
   while(low < seq_buffer_length) {
-#ifdef HAVE_LIBPTHREAD
-      if(1 < opt->num_threads) {
-          pthread_mutex_lock(&tmap_map_driver_read_lock);
-
-          // update bounds
-          low = tmap_map_driver_read_lock_low;
-          tmap_map_driver_read_lock_low += thread_block_size;
-          high = low + thread_block_size;
-          if(seq_buffer_length < high) {
-              high = seq_buffer_length; 
-          }
-
-          pthread_mutex_unlock(&tmap_map_driver_read_lock);
-      }
-      else {
-          high = seq_buffer_length; // process all
-      }
-#else 
-      high = seq_buffer_length; // process all
-#endif
-      while(low<high) {
-          tmap_seq_t *seq = NULL;;
+      if(tid == (low % opt->num_threads)) {
+          tmap_seq_t *seq = NULL;
 
           // Note: for fsw re-alignment, we need the key bases, so do not get
           // rid of them just yet
@@ -159,11 +134,9 @@ tmap_map_driver_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int
                   tmap_seq_remove_key_sequence(seq_buffer[low]);
               }
           }
-
-
-          // next
-          low++;
       }
+      // next
+      low++;
   }
                   
   // free thread variables
@@ -186,7 +159,7 @@ tmap_map_driver_core_thread_worker(void *arg)
                            thread_data->func_thread_map, 
                            thread_data->func_mapq, 
                            thread_data->func_thread_cleanup,
-                           thread_data->thread_block_size, thread_data->tid, thread_data->opt);
+                           thread_data->tid, thread_data->opt);
 
   return arg;
 }
@@ -282,15 +255,10 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
 
       // do alignment
 #ifdef HAVE_LIBPTHREAD
-      int32_t thread_block_size = TMAP_MAP_DRIVER_THREAD_BLOCK_SIZE;
-      if(seq_buffer_length < opt->num_threads * thread_block_size) {
-          thread_block_size = (int32_t)(1 + (seq_buffer_length / opt->num_threads));
-      }
-      tmap_map_driver_read_lock_low = 0; // ALWAYS set before running threads 
       if(1 == opt->num_threads) {
           tmap_map_driver_core_worker(seq_buffer, sams, seq_buffer_length, refseq, bwt, sa, 
                                    func_thread_init, func_thread_map, func_mapq, func_thread_cleanup, 
-                                   seq_buffer_length, 0, opt);
+                                   0, opt);
       }
       else {
           pthread_attr_t attr;
@@ -316,7 +284,6 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
               thread_data[i].func_thread_map = func_thread_map;
               thread_data[i].func_mapq = func_mapq;
               thread_data[i].func_thread_cleanup = func_thread_cleanup;
-              thread_data[i].thread_block_size = thread_block_size;
               thread_data[i].tid = i;
               thread_data[i].opt = opt; 
               if(0 != pthread_create(&threads[i], &attr, tmap_map_driver_core_thread_worker, &thread_data[i])) {
@@ -335,7 +302,7 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
 #else 
       tmap_map_driver_core_worker(seq_buffer, sams, seq_buffer_length, refseq, bwt, sa, 
                                   func_thread_init, func_thread_map, func_mapq, func_thread_cleanup, 
-                                  seq_buffer_length, 0, opt);
+                                  0, opt);
 #endif
 
       if(-1 != opt->reads_queue_size) {
