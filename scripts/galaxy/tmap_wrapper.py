@@ -6,7 +6,7 @@
 """
 Runs TMAP on Ion Torrent data.
 Produces a SAM file containing the mappings.
-Works with TMAP version 0.0.8 or higher.
+Works with TMAP version 0.0.19 or higher.
 
 usage: tmap_wrapper.py [options]
     --threads: The number of threads to use

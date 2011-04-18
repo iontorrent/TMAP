@@ -1,4 +1,4 @@
-<tool id="tmap_wrapper" name="Map with TMAP" version="0.0.1">
+<tool id="tmap_wrapper" name="Map with TMAP" version="0.0.19">
 	<description>for Ion Torrent</description>
 	<parallelism method="basic"></parallelism>
 	<command interpreter="python">
