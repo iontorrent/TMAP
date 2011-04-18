@@ -295,7 +295,7 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
   tmap_sam2fs_aux_flow_t *f_qseq=NULL, *f_tseq=NULL;
   tmap_sam2fs_aux_dpcell_t **dp=NULL;
   tmap_sam2fs_aux_aln_t *aln=NULL;
-  int32_t *gap_sums_i=NULL, *gap_sums_j=NULL;
+  int32_t *gap_sums_i=NULL;
   tmap_sam2fs_aux_flow_order_t *tseq_flow_order=NULL;
   char *flow_order=NULL;
   
@@ -403,16 +403,6 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
           j++;
       }
   }
-  gap_sums_j = tmap_malloc(sizeof(int32_t)*f_tseq->l, "gap_sums_j");
-  for(i=0;i<f_tseq->l;i++) {
-      k = i % tseq_flow_order->flow_order_len;
-      j = (i < tseq_flow_order->jump_rev[k]) ? 0 : (i - tseq_flow_order->jump_rev[k]);
-      gap_sums_j[i] = 0;
-      while(j <= i) {
-          gap_sums_j[i] += f_tseq->flow[i];
-          j++;
-      }
-  }
 
   // DEBUGGING
   /*
@@ -420,11 +410,6 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
   for(i=0;i<f_qseq->l;i++) {
   if(0 < i) fputc(',', stderr);
   fprintf(stderr, "%d", gap_sums_i[i]);
-  }
-  fputc('\n', stderr);
-  for(i=0;i<f_tseq->l;i++) {
-  if(0 < i) fputc(',', stderr);
-  fprintf(stderr, "%d", gap_sums_j[i]);
   }
   fputc('\n', stderr);
   fputc('\n', stderr);
@@ -659,8 +644,8 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
         case TMAP_SAM2FS_AUX_FROM_D:
           next_ctype = dp[i][j].del_from;
           tmap_sam2fs_aux_aln_add(aln, -1, f_tseq->flow[j-1]); // the inserted flow
+          flow_order[k] = "acgtn"[tseq_flow_order->flow_order[(j-1) % tseq_flow_order->flow_order_len]];
           j--;
-          flow_order[k] = "acgtn"[qseq_flow_order->flow_order[(i-1) % qseq_flow_order->flow_order_len]];
           k++;
           break;
         default:
@@ -769,6 +754,5 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
   tmap_sam2fs_aux_aln_destroy(aln);
   tmap_sam2fs_aux_flow_order_destroy(tseq_flow_order);
   free(gap_sums_i);
-  free(gap_sums_j);
   free(flow_order);
 }
