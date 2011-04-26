@@ -289,8 +289,8 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
                            tmap_sam2fs_aux_flow_order_t *qseq_flow_order,
                            int8_t strand, char sep)
 {
-  int32_t i, j, k;
-  int32_t ctype;
+  int32_t i, j, k, l;
+  int32_t ctype, i_from;
   int32_t best_i, best_j, best_score, best_ctype;
   tmap_sam2fs_aux_flow_t *f_qseq=NULL, *f_tseq=NULL;
   tmap_sam2fs_aux_dpcell_t **dp=NULL;
@@ -430,7 +430,8 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
   // init start cells
   dp[0][0].match_score = 0; // global
   for(i=1;i<=f_qseq->l;i++) { // vertical
-      int32_t i_from = ((i<qseq_flow_order->jump_rev[i-1]) ? 0 : (i-qseq_flow_order->jump_rev[i-1])); // don't go before the first row
+      k = (i-1) % qseq_flow_order->flow_order_len;
+      i_from = ((i<qseq_flow_order->jump_rev[k]) ? 0 : (i-qseq_flow_order->jump_rev[k])); // don't go before the first row
       if(0 == i_from) {
           dp[i][0].ins_score = 0 - gap_sums_i[i-1];
       }
@@ -448,7 +449,8 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
   }
   // align
   for(i=1;i<=f_qseq->l;i++) { // query
-      int32_t i_from = ((i<qseq_flow_order->jump_rev[i-1]) ? 0 : (i-qseq_flow_order->jump_rev[i-1])); // don't go before the first row
+      k = (i-1) % qseq_flow_order->flow_order_len;
+      i_from = ((i<qseq_flow_order->jump_rev[k]) ? 0 : (i-qseq_flow_order->jump_rev[k])); // don't go before the first row
 
       for(j=1;j<=f_tseq->l;j++) { // target
 
@@ -597,7 +599,6 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
   k = 0;
   while(0 < i || 0 < j) {
       int32_t next_ctype = -1;
-      int32_t i_from;
 
       switch(ctype) {
         case TMAP_SAM2FS_AUX_FROM_M:
@@ -620,10 +621,12 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
               break;
             case TMAP_SAM2FS_AUX_FROM_MP:
             case TMAP_SAM2FS_AUX_FROM_IP:
-              i_from = ((i<qseq_flow_order->jump_rev[i-1]) ? 0 : (i-qseq_flow_order->jump_rev[i-1])); // don't go before the first row
+              l = (i-1) % qseq_flow_order->flow_order_len;
+              i_from = ((i<qseq_flow_order->jump_rev[l]) ? 0 : (i-qseq_flow_order->jump_rev[l])); // don't go before the first row
               while(i_from < i) {
                   tmap_sam2fs_aux_aln_add(aln, f_qseq->flow[i-1], -1);
-                  flow_order[k] = "ACGTN"[qseq_flow_order->flow_order[(i-1) % qseq_flow_order->flow_order_len]];
+                  l = (i-1) % qseq_flow_order->flow_order_len;
+                  flow_order[k] = "ACGTN"[l];
                   i--;
                   k++;
               }
