@@ -1125,23 +1125,23 @@ tmap_sw_clipping_core2(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2,
 
           if(1 == seq2_end_clip // end anywhere in seq 2
              || j == len2) { 
-              if(best_score < curr[j].match_score) {
+              if(best_score < curr[j].del_score || (best_score == curr[j].del_score && best_j < j)) {
                   best_i = i;
                   best_j = j; 
-                  best_score = curr[j].match_score;
-                  best_ctype = TMAP_SW_FROM_M;
+                  best_score = curr[j].del_score;
+                  best_ctype = TMAP_SW_FROM_D;
               }
-              if(best_score < curr[j].ins_score) {
+              if(best_score < curr[j].ins_score || (best_score == curr[j].ins_score && best_j < j)) {
                   best_i = i;
                   best_j = j; 
                   best_score = curr[j].ins_score;
                   best_ctype = TMAP_SW_FROM_I;
               }
-              if(best_score < curr[j].del_score) {
+              if(best_score < curr[j].match_score || (best_score == curr[j].match_score && best_j < j)) {
                   best_i = i;
                   best_j = j; 
-                  best_score = curr[j].del_score;
-                  best_ctype = TMAP_SW_FROM_D;
+                  best_score = curr[j].match_score;
+                  best_ctype = TMAP_SW_FROM_M;
               }
           }
       }
