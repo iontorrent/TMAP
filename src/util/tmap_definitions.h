@@ -232,6 +232,14 @@ inline void
 tmap_reverse_compliment(char *seq, int32_t len); 
 
 /*!
+  reverse compliments a given string
+  @param  seq  the integer DNA sequence
+  @param  len  the length of the DNA sequence
+  */
+inline void
+tmap_reverse_compliment_int(uint8_t *seq, int32_t len);
+
+/*!
   compliments a given string
   @param  seq  the character DNA sequence
   @param  len  the length of the DNA sequence

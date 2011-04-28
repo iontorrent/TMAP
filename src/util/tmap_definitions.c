@@ -441,6 +441,20 @@ tmap_reverse_compliment(char *seq, int32_t len)
 }
 
 inline void
+tmap_reverse_compliment_int(uint8_t *seq, int32_t len) 
+{
+  int32_t i;
+  for(i=0;i<(len>>1);i++) {
+      char tmp = seq[len-i-1];
+      seq[len-i-1] = (4 <= seq[i]) ? seq[i] : (3 - seq[i]);
+      seq[i] = (4 <= tmp) ? tmp : (3 - tmp);
+  }
+  if(1 == (len & 1)) { // mod 2
+      seq[i] = (4 <= seq[i]) ? seq[i] : (4 - seq[i]);
+  }
+}
+
+inline void
 tmap_compliment(char *seq, int32_t len) 
 {
   int32_t i;

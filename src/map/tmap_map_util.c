@@ -1483,6 +1483,11 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
   return sams_tmp;
 }
 
+#define _tmap_map_util_sw_aux_path_adjust(_p, _ql, _tl) do { \
+    (_p).i = _tl - (_p).i + 1; \
+    (_p).j = _ql - (_p).j + 1; \
+} while(0) \
+
 int32_t 
 tmap_map_util_sw_aux(tmap_map_sam_t *sam,
                  uint8_t *target, int32_t target_length,
@@ -1493,8 +1498,9 @@ tmap_map_util_sw_aux(tmap_map_sam_t *sam,
 {
   int32_t i, score, score_subo;
 
-  if(1 == strand) { // reverse soft clipping
-      softclip_type = __tmap_map_util_reverse_soft_clipping(softclip_type);
+  if(1 == strand) { // reverse compliment 
+      tmap_reverse_compliment_int(query, query_length);
+      tmap_reverse_compliment_int(target, target_length);
   }
 
   /*
@@ -1509,28 +1515,40 @@ tmap_map_util_sw_aux(tmap_map_sam_t *sam,
   switch(softclip_type) {
     case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
       //fprintf(stderr, "TMAP_MAP_UTIL_SOFT_CLIP_ALL\n");
-      //score = tmap_sw_local_core(target, target_length, query, query_length, par, path, path_len, score_thr, &score_subo);
-      score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 1, 1, path, path_len);
+      score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 1, 1, path, path_len, strand);
       break;
     case TMAP_MAP_UTIL_SOFT_CLIP_LEFT:
-      //fprintf(stderr, "TMAP_MAP_UTIL_SOFT_CLIP_LEFT\n");
-      score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 1, 0, path, path_len);
+      score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 1, 0, path, path_len, strand);
       break;
     case TMAP_MAP_UTIL_SOFT_CLIP_RIGHT:
-      //fprintf(stderr, "TMAP_MAP_UTIL_SOFT_CLIP_RIGHT\n");
-      score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 0, 1, path, path_len);
+      score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 0, 1, path, path_len, strand);
       break;
     case TMAP_MAP_UTIL_SOFT_CLIP_NONE:
     default:
-      //fprintf(stderr, "TMAP_MAP_UTIL_SOFT_CLIP_NONE\n");
-      //score = tmap_sw_fitting_core(target, target_length, query, query_length, par, path, path_len);
-      score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 0, 0, path, path_len);
+      score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 0, 0, path, path_len, strand);
       break;
   }
   score_subo = sam->score_subo;
 
 
   if(0 < (*path_len) && score_thr < score) {
+
+      if(1 == strand) { // reverse compliment 
+          // adjust path
+          // TODO
+
+          // reverse the path and adjust its values
+          for(i=0;i<(*path_len)>>1;i++) {
+              // reverse
+              tmap_sw_path_t tmp= path[i];
+              path[i] = path[(*path_len)-i-1];
+              path[(*path_len)-i-1] = tmp;
+              // adjust 
+              _tmap_map_util_sw_aux_path_adjust(path[i], query_length, target_length);
+              _tmap_map_util_sw_aux_path_adjust(path[(*path_len)-i-1], query_length, target_length);
+          }
+      }
+
       sam->strand = strand;
       sam->seqid = seqid;
       sam->pos = pos + (path[(*path_len)-1].i-1); // zero-based 
@@ -1568,10 +1586,15 @@ tmap_map_util_sw_aux(tmap_map_sam_t *sam,
       sam->cigar = NULL;
       sam->n_cigar = 0;
       (*path_len) = 0;
-      return 0;
   }
+  if(1 == strand) { // reverse compliment 
+      tmap_reverse_compliment_int(query, query_length);
+      tmap_reverse_compliment_int(target, target_length);
+  }
+  return (0 == sam->n_cigar) ? 0 : 1;
 }
 
+// TODO: make sure the "longest" read alignment is found
 void
 tmap_map_util_fsw(tmap_seq_t *seq, 
                   uint8_t *flow_order, int32_t flow_order_len,

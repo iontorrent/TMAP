@@ -261,10 +261,12 @@ tmap_sw_aln_destroy(tmap_sw_aln_t *aa)
 #define TMAP_SW_NT_LOCAL_SHIFT 16
 #define TMAP_SW_NT_LOCAL_MASK 0xffff
 
-#define tmap_sw_set_match(MM, cur, p, sc) \
+#define tmap_sw_set_match(MM, cur, p, sc, right_j) \
 { \
-  if((p)->match_score >= (p)->ins_score) { \
-      if((p)->match_score >= (p)->del_score) { \
+  if((p)->match_score > (p)->ins_score \
+     || (0 == right_j && (p)->match_score == (p)->ins_score)) { \
+      if((p)->match_score > (p)->del_score \
+          || (0 == right_j && (p)->match_score == (p)->del_score)) { \
           (MM) = (p)->match_score + (sc); (cur)->match_from = TMAP_SW_FROM_M; \
       } else { \
           (MM) = (p)->del_score + (sc); (cur)->match_from = TMAP_SW_FROM_D; \
@@ -278,9 +280,10 @@ tmap_sw_aln_destroy(tmap_sw_aln_t *aa)
   } \
 }
 
-#define tmap_sw_set_ins(II, cur, p) \
+#define tmap_sw_set_ins(II, cur, p, right_j) \
 { \
-  if((p)->match_score - gap_open > (p)->ins_score) { \
+  if((p)->match_score - gap_open > (p)->ins_score \
+     || (1 == right_j && (p)->match_score - gap_open == (p)->ins_score)) { \
       (cur)->ins_from = TMAP_SW_FROM_M; \
       (II) = (p)->match_score - gap_open - gap_ext; \
   } else { \
@@ -289,22 +292,24 @@ tmap_sw_aln_destroy(tmap_sw_aln_t *aa)
   } \
 }
 
-#define tmap_sw_set_end_ins(II, cur, p) \
+#define tmap_sw_set_end_ins(II, cur, p, right_j) \
 { \
   if(gap_end >= 0) { \
-      if((p)->match_score - gap_open > (p)->ins_score) { \
+      if((p)->match_score - gap_open > (p)->ins_score \
+         || (1 == right_j && (p)->match_score - gap_open == (p)->ins_score)) { \
           (cur)->ins_from = TMAP_SW_FROM_M; \
           (II) = (p)->match_score - gap_open - gap_end; \
       } else { \
           (cur)->ins_from = TMAP_SW_FROM_I; \
           (II) = (p)->ins_score - gap_end; \
       } \
-  } else tmap_sw_set_ins(II, cur, p); \
+  } else tmap_sw_set_ins(II, cur, p, right_j); \
 }
 
-#define tmap_sw_set_del(DD, cur, p) \
+#define tmap_sw_set_del(DD, cur, p, right_j) \
 { \
-  if((p)->match_score - gap_open > (p)->del_score) { \
+  if((p)->match_score - gap_open > (p)->del_score \
+     || (1 == right_j && (p)->match_score - gap_open == (p)->del_score)) { \
       (cur)->del_from = TMAP_SW_FROM_M; \
       (DD) = (p)->match_score - gap_open - gap_ext; \
   } else { \
@@ -313,17 +318,18 @@ tmap_sw_aln_destroy(tmap_sw_aln_t *aa)
   } \
 }
 
-#define tmap_sw_set_end_del(DD, cur, p) \
+#define tmap_sw_set_end_del(DD, cur, p, right_j) \
 { \
   if(gap_end >= 0) { \
-      if((p)->match_score - gap_open > (p)->del_score) { \
+      if((p)->match_score - gap_open > (p)->del_score \
+         || (1 == right_j && (p)->match_score - gap_open == (p)->del_score)) { \
           (cur)->del_from = TMAP_SW_FROM_M; \
           (DD) = (p)->match_score - gap_open - gap_end; \
       } else { \
           (cur)->del_from = TMAP_SW_FROM_D; \
           (DD) = (p)->del_score - gap_end; \
       } \
-  } else tmap_sw_set_del(DD, cur, p); \
+  } else tmap_sw_set_del(DD, cur, p, right_j); \
 }
 
 /* build score profile for accelerating alignment, in theory */
@@ -395,7 +401,7 @@ tmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
   TMAP_SW_SET_INF(*curr); curr->match_score = 0;
   for(i = 1, s = curr + 1; i < b1; ++i, ++s) {
       TMAP_SW_SET_INF(*s);
-      tmap_sw_set_end_del(s->del_score, dpcell[0] + i, s - 1);
+      tmap_sw_set_end_del(s->del_score, dpcell[0] + i, s - 1, 0);
   }
   s = curr; curr = last; last = s;
 
@@ -403,38 +409,38 @@ tmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
   tmp_end = (b2 < len2)? b2 : len2 - 1;
   for(j = 1; j <= tmp_end; ++j) {
       q = dpcell[j]; s = curr; TMAP_SW_SET_INF(*s);
-      tmap_sw_set_end_ins(s->ins_score, q, last);
+      tmap_sw_set_end_ins(s->ins_score, q, last, 0);
       end = (j + b1 <= len1 + 1)? (j + b1 - 1) : len1;
       mat = score_matrix + seq2[j] * N_MATRIX_ROW;
       ++s; ++q;
       for(i = 1; i != end; ++i, ++s, ++q) {
-          tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]]); /* this will change s->match_score ! */
-          tmap_sw_set_ins(s->ins_score, q, last + i);
-          tmap_sw_set_del(s->del_score, q, s - 1);
+          tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]], 0); /* this will change s->match_score ! */
+          tmap_sw_set_ins(s->ins_score, q, last + i, 0);
+          tmap_sw_set_del(s->del_score, q, s - 1, 0);
       }
-      tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]]);
-      tmap_sw_set_del(s->del_score, q, s - 1);
+      tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]], 0);
+      tmap_sw_set_del(s->del_score, q, s - 1, 0);
       if(j + b1 - 1 > len1) { /* bug fixed, 040227 */
-          tmap_sw_set_end_ins(s->ins_score, q, last + i);
+          tmap_sw_set_end_ins(s->ins_score, q, last + i, 0);
       } else s->ins_score = TMAP_SW_MINOR_INF;
       s = curr; curr = last; last = s;
   }
   /* last row for part 1, use tmap_sw_set_end_del() instead of tmap_sw_set_del() */
   if(j == len2 && b2 != len2 - 1) {
       q = dpcell[j]; s = curr; TMAP_SW_SET_INF(*s);
-      tmap_sw_set_end_ins(s->ins_score, q, last);
+      tmap_sw_set_end_ins(s->ins_score, q, last, 0);
       end = (j + b1 <= len1 + 1)? (j + b1 - 1) : len1;
       mat = score_matrix + seq2[j] * N_MATRIX_ROW;
       ++s; ++q;
       for(i = 1; i != end; ++i, ++s, ++q) {
-          tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]]); /* this will change s->match_score ! */
-          tmap_sw_set_ins(s->ins_score, q, last + i);
-          tmap_sw_set_end_del(s->del_score, q, s - 1);
+          tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]], 0); /* this will change s->match_score ! */
+          tmap_sw_set_ins(s->ins_score, q, last + i, 0);
+          tmap_sw_set_end_del(s->del_score, q, s - 1, 0);
       }
-      tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]]);
-      tmap_sw_set_end_del(s->del_score, q, s - 1);
+      tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]], 0);
+      tmap_sw_set_end_del(s->del_score, q, s - 1, 0);
       if(j + b1 - 1 > len1) { /* bug fixed, 040227 */
-          tmap_sw_set_end_ins(s->ins_score, q, last + i);
+          tmap_sw_set_end_ins(s->ins_score, q, last + i, 0);
       } else s->ins_score = TMAP_SW_MINOR_INF;
       s = curr; curr = last; last = s;
       ++j;
@@ -446,12 +452,12 @@ tmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
       mat = score_matrix + seq2[j] * N_MATRIX_ROW;
       end = j + b1 - 1;
       for(i = j - b2 + 1, q = dpcell[j] + i, s = curr + i; i != end; ++i, ++s, ++q) {
-          tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]]);
-          tmap_sw_set_ins(s->ins_score, q, last + i);
-          tmap_sw_set_del(s->del_score, q, s - 1);
+          tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]], 0);
+          tmap_sw_set_ins(s->ins_score, q, last + i, 0);
+          tmap_sw_set_del(s->del_score, q, s - 1, 0);
       }
-      tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]]);
-      tmap_sw_set_del(s->del_score, q, s - 1);
+      tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]], 0);
+      tmap_sw_set_del(s->del_score, q, s - 1, 0);
       s->ins_score = TMAP_SW_MINOR_INF;
       s = curr; curr = last; last = s;
   }
@@ -461,13 +467,13 @@ tmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
       TMAP_SW_SET_INF(curr[j - b2]);
       mat = score_matrix + seq2[j] * N_MATRIX_ROW;
       for(i = j - b2 + 1, q = dpcell[j] + i, s = curr + i; i < len1; ++i, ++s, ++q) {
-          tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]]);
-          tmap_sw_set_ins(s->ins_score, q, last + i);
-          tmap_sw_set_del(s->del_score, q, s - 1);
+          tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]], 0);
+          tmap_sw_set_ins(s->ins_score, q, last + i, 0);
+          tmap_sw_set_del(s->del_score, q, s - 1, 0 );
       }
-      tmap_sw_set_match(s->match_score, q, last + len1 - 1, mat[seq1[i]]);
-      tmap_sw_set_end_ins(s->ins_score, q, last + i);
-      tmap_sw_set_del(s->del_score, q, s - 1);
+      tmap_sw_set_match(s->match_score, q, last + len1 - 1, mat[seq1[i]], 0);
+      tmap_sw_set_end_ins(s->ins_score, q, last + i, 0);
+      tmap_sw_set_del(s->del_score, q, s - 1, 0);
       s = curr; curr = last; last = s;
   }
   /* last row */
@@ -475,13 +481,13 @@ tmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
       TMAP_SW_SET_INF(curr[j - b2]);
       mat = score_matrix + seq2[j] * N_MATRIX_ROW;
       for(i = j - b2 + 1, q = dpcell[j] + i, s = curr + i; i < len1; ++i, ++s, ++q) {
-          tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]]);
-          tmap_sw_set_ins(s->ins_score, q, last + i);
-          tmap_sw_set_end_del(s->del_score, q, s - 1);
+          tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]], 0);
+          tmap_sw_set_ins(s->ins_score, q, last + i, 0);
+          tmap_sw_set_end_del(s->del_score, q, s - 1, 0);
       }
-      tmap_sw_set_match(s->match_score, q, last + len1 - 1, mat[seq1[i]]);
-      tmap_sw_set_end_ins(s->ins_score, q, last + i);
-      tmap_sw_set_end_del(s->del_score, q, s - 1);
+      tmap_sw_set_match(s->match_score, q, last + len1 - 1, mat[seq1[i]], 0);
+      tmap_sw_set_end_ins(s->ins_score, q, last + i, 0);
+      tmap_sw_set_end_del(s->del_score, q, s - 1, 0);
       s = curr; curr = last; last = s;
   }
 
@@ -980,7 +986,7 @@ tmap_sw_kmp_search(uint8_t *seq1, int32_t len1, uint8_t *seq2, uint32_t len2)
 static int32_t 
 tmap_sw_clipping_core2(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
              int32_t seq1_start_skip, int32_t seq2_start_clip, int32_t seq2_end_clip,
-             tmap_sw_path_t *path, int32_t *path_len)
+             tmap_sw_path_t *path, int32_t *path_len, int32_t right_justify)
 {
   register int32_t i, j;
 
@@ -1096,7 +1102,7 @@ tmap_sw_clipping_core2(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2,
   else { // start at the first base in seq2
       for(j=1;j<=len2;j++) { // for each col
           TMAP_SW_SET_INF(curr[j]);
-          tmap_sw_set_end_ins(curr[j].ins_score, dpcell[0]+j, curr+j-1);
+          tmap_sw_set_end_ins(curr[j].ins_score, dpcell[0]+j, curr+j-1, right_justify);
       }
   }
   // swap curr and last
@@ -1114,9 +1120,9 @@ tmap_sw_clipping_core2(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2,
 
       for(j=1;j<=len2;j++) { // for each col (seq2)
           tmap_sw_set_match(curr[j].match_score, dpcell[i] + j,
-                            last + j - 1, mat[seq2[j-1]]);
-          tmap_sw_set_del(curr[j].del_score, dpcell[i] + j, last + j);
-          tmap_sw_set_ins(curr[j].ins_score, dpcell[i] + j, curr + j - 1);
+                            last + j - 1, mat[seq2[j-1]], right_justify);
+          tmap_sw_set_del(curr[j].del_score, dpcell[i] + j, last + j, right_justify);
+          tmap_sw_set_ins(curr[j].ins_score, dpcell[i] + j, curr + j - 1, right_justify);
           // deal with starting anywhere in seq2
           if(1 == seq2_start_clip && curr[j].match_score < 0) {
               curr[j].match_score = 0;
@@ -1264,31 +1270,31 @@ tmap_sw_clipping_core2(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2,
 
 int32_t 
 tmap_sw_extend_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
-                    tmap_sw_path_t *path, int32_t *path_len, int32_t prev_score, uint8_t *_mem)
+                    tmap_sw_path_t *path, int32_t *path_len, int32_t prev_score, uint8_t *_mem, int32_t right_justify)
 {
-  return tmap_sw_clipping_core2(seq1, len1, seq2, len2, ap, 0, 0, 1, path, path_len);
+  return tmap_sw_clipping_core2(seq1, len1, seq2, len2, ap, 0, 0, 1, path, path_len, right_justify);
 }
 
 int32_t 
 tmap_sw_extend_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
-                    tmap_sw_path_t *path, int32_t *path_len, int32_t prev_score, uint8_t *_mem)
+                            tmap_sw_path_t *path, int32_t *path_len, int32_t prev_score, uint8_t *_mem, int32_t right_justify)
 {
-  return tmap_sw_clipping_core2(seq1, len1, seq2, len2, ap, 0, 0, 0, path, path_len);
+  return tmap_sw_clipping_core2(seq1, len1, seq2, len2, ap, 0, 0, 0, path, path_len, right_justify);
 }
 
 int32_t 
 tmap_sw_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
-                     tmap_sw_path_t *path, int32_t *path_len)
+                     tmap_sw_path_t *path, int32_t *path_len, int32_t right_justify)
 {
-  return tmap_sw_clipping_core2(seq1, len1, seq2, len2, ap, 1, 0, 0, path, path_len);
+  return tmap_sw_clipping_core2(seq1, len1, seq2, len2, ap, 1, 0, 0, path, path_len, right_justify);
 }
 
 int32_t 
 tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
              int32_t seq2_start_clip, int32_t seq2_end_clip,
-             tmap_sw_path_t *path, int32_t *path_len)
+             tmap_sw_path_t *path, int32_t *path_len, int32_t right_justify)
 {
-  return tmap_sw_clipping_core2(seq1, len1, seq2, len2, ap, 1, seq2_start_clip, seq2_end_clip, path, path_len);
+  return tmap_sw_clipping_core2(seq1, len1, seq2, len2, ap, 1, seq2_start_clip, seq2_end_clip, path, path_len, right_justify);
 }
 
 uint32_t *

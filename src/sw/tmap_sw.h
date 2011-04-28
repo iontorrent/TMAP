@@ -187,6 +187,7 @@ tmap_sw_local_core(uint8_t *seq1, int32_t len1,
   @param  path_len    the Smith-Waterman alignment path length
   @param  prev_score  the initial alignment score
   @param  _mem        allocated memory with size of (len1+2)*(ap->row+1)*4
+  @param  right_j     0 if we are to left-justify indels, 1 otherwise
   @return             the alignment score, 0 if none was found
   */
 int32_t 
@@ -194,7 +195,8 @@ tmap_sw_extend_core(uint8_t *seq1, int32_t len1,
                     uint8_t *seq2, int32_t len2, 
                     const tmap_sw_param_t *ap,
                     tmap_sw_path_t *path, int32_t *path_len, 
-                    int32_t prev_score, uint8_t *_mem);
+                    int32_t prev_score, uint8_t *_mem, 
+                    int32_t right_j);
 
 /*!
   Extens an alignment with the local Smith-Waterman and aligns the entire seq2.
@@ -207,6 +209,7 @@ tmap_sw_extend_core(uint8_t *seq1, int32_t len1,
   @param  path_len    the Smith-Waterman alignment path length
   @param  prev_score  the initial alignment score
   @param  _mem        allocated memory with size of (len1+2)*(ap->row+1)*4
+  @param  right_j     0 if we are to left-justify indels, 1 otherwise
   @return             the alignment score, 0 if none was found
   @details            actually, it performs it with banding.
   */
@@ -215,7 +218,8 @@ tmap_sw_extend_fitting_core(uint8_t *seq1, int32_t len1,
                     uint8_t *seq2, int32_t len2, 
                     const tmap_sw_param_t *ap,
                     tmap_sw_path_t *path, int32_t *path_len, 
-                    int32_t prev_score, uint8_t *_mem);
+                    int32_t prev_score, uint8_t *_mem,
+                    int32_t right_j);
 
 /*!
   Performs a fitting aligment, whereby seq2 is fit into seq1
@@ -228,12 +232,14 @@ tmap_sw_extend_fitting_core(uint8_t *seq1, int32_t len1,
   @param  seq2_end_clip    1 to allow clipping at the end of seq2, 0 otherwise
   @param  path             the Smith-Waterman alignment path
   @param  path_len         the Smith-Waterman alignment path length
+  @param  right_j          0 if we are to left-justify indels, 1 otherwise
   @return                  the alignment score, 0 if none was found
   */
 int32_t
 tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
                       int32_t seq2_start_clip, int32_t seq2_end_clip,
-                      tmap_sw_path_t *path, int32_t *path_len);
+                      tmap_sw_path_t *path, int32_t *path_len,
+                      int32_t right_j);
 
 /*!
   Performs a fitting aligment, whereby seq2 is fit into seq1
@@ -244,11 +250,12 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
   @param  ap        the alignment parameters
   @param  path      the Smith-Waterman alignment path
   @param  path_len  the Smith-Waterman alignment path length
+  @param  right_j   0 if we are to left-justify indels, 1 otherwise
   @return           the alignment score, 0 if none was found
   */
 int32_t
 tmap_sw_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
-                                tmap_sw_path_t *path, int32_t *path_len);
+                                tmap_sw_path_t *path, int32_t *path_len, int32_t right_j);
 
 /*!
   Creates a cigar array from an alignment path
