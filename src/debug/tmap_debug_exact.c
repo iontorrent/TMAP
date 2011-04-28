@@ -115,7 +115,7 @@ tmap_debug_exact_core(tmap_debug_exact_opt_t *opt)
   if(0 == opt->n_only) {
       refseq = tmap_refseq_read(opt->fn_fasta, 0);
       sa = tmap_sa_read(opt->fn_fasta, 1);
-      tmap_sam_print_header(tmap_file_stdout, refseq, seqio, NULL, 0, opt->argc, opt->argv);
+      tmap_sam_print_header(tmap_file_stdout, refseq, seqio, NULL, NULL, 0, opt->argc, opt->argv);
   }
 
   while(0 <= tmap_seq_io_read(seqio, seq)) {
