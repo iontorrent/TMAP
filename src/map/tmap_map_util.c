@@ -1147,7 +1147,7 @@ tmap_map_sams_filter(tmap_map_sams_t *sams, int32_t aln_output_mode)
 void
 tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
 {
-  int32_t i, next_i, j, k, end, best_score_i, best_score_n;
+  int32_t i, next_i, j, k, end, best_score_i, best_score_n, best_score_subo;
 
   if(dup_window < 0 || sams->n <= 0) {
       return;
@@ -1162,6 +1162,7 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
       // get the change
       end = best_score_i = i;
       best_score_n = 0;
+      best_score_subo = INT32_MIN;
       while(end+1 < sams->n) {
           if(sams->sams[end].seqid == sams->sams[end+1].seqid
              && sams->sams[end].strand == sams->sams[end+1].strand
@@ -1174,6 +1175,9 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
               else if(sams->sams[best_score_i].score < sams->sams[end+1].score) {
                   best_score_i = end+1;
                   best_score_n = 1;
+              }
+              if(best_score_subo < sams->sams[end+1].score_subo) {
+                  best_score_subo = sams->sams[end+1].score_subo;
               }
               end++;
           }
@@ -1204,6 +1208,9 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
           // nullify
           tmap_map_sam_copy_and_nullify(&sams->sams[j], &sams->sams[best_score_i]);
       }
+
+      // copy over sub-optimal score
+      sams->sams[j].score_subo = best_score_subo;
 
       // next
       i = next_i;
@@ -1254,15 +1261,13 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
               n_best_subo++;
           }
       }
-      if(TMAP_MAP_ALGO_MAP2 == sams->sams[i].algo_id
-         || TMAP_MAP_ALGO_MAP3 == sams->sams[i].algo_id) {
-          cur_score = sams->sams[i].score_subo;
-          if(INT32_MIN == cur_score) {
-              // ignore
-          }
-          else if(best_subo < cur_score) {
-              best_subo2 = cur_score;
-          }
+      // get the best subo-optimal score
+      cur_score = sams->sams[i].score_subo;
+      if(INT32_MIN == cur_score) {
+          // ignore
+      }
+      else if(best_subo < cur_score) {
+          best_subo2 = cur_score;
       }
   }
   if(best_subo < best_subo2) best_subo = best_subo2;
@@ -1397,6 +1402,9 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
           r += start;
           tmp_sam = sams->sams[r];
       }
+
+      // update the best sub-optimal score
+      tmp_sam.score_subo = best_subo;
 
       // one-based
       //fprintf(stderr, "1 start_pos=%d\tend_pos=%d\n", start_pos, end_pos);
