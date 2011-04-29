@@ -224,6 +224,14 @@ inline void
 tmap_reverse(char *seq, int32_t len);
 
 /*!
+  reverses a given integer string
+  @param  seq  the string to reverse
+  @param  len  the length of the string
+  */
+inline void
+tmap_reverse_int(uint8_t *seq, int32_t len);
+
+/*!
   reverse compliments a given string
   @param  seq  the character DNA sequence
   @param  len  the length of the DNA sequence

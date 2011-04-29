@@ -108,11 +108,11 @@ tmap_map_driver_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int
           if(0 < sams[low]->n) {
               // mapall should have already done this!
               if(TMAP_MAP_ALGO_MAPALL != opt->algo_id) {
-                  // smith waterman
-                  sams[low] = tmap_map_util_sw(refseq, sams[low], seq_buffer[low], opt);
-
                   // remove duplicates
                   tmap_map_util_remove_duplicates(sams[low], opt->dup_window);
+                  
+                  // smith waterman
+                  sams[low] = tmap_map_util_sw(refseq, sams[low], seq_buffer[low], opt);
 
                   // mapping quality
                   func_mapq(sams[low], tmap_seq_get_bases(seq)->l, opt);

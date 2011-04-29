@@ -23,20 +23,17 @@
       _query[_ql-_i-1] = _tmp; \
   }
 
-// sort by strand, min-seqid, min-position, max-score
+// sort by strand, min-seqid, min-position
 #define __tmap_map_sam_sort_coord_lt(a, b) (  ((a).strand < (b).strand) \
                                             || ( (a).strand == (b).strand && (a).seqid < (b).seqid) \
                                             || ( (a).strand == (b).strand && (a).seqid == (b).seqid && (a).pos < (b).pos ) \
-                                            || ( (a).strand == (b).strand && (a).seqid == (b).seqid && (a).pos == (b).pos && (a).score < (b).score ) \
                                             ? 1 : 0 )
 
 // sort by max-score
 #define __tmap_map_sam_sort_score_lt(a, b) ((a).score > (b).score)
 
 TMAP_SORT_INIT(tmap_map_sam_sort_coord, tmap_map_sam_t, __tmap_map_sam_sort_coord_lt)
-
 TMAP_SORT_INIT(tmap_map_sam_sort_score, tmap_map_sam_t, __tmap_map_sam_sort_score_lt)
-
 
 tmap_map_opt_t *
 tmap_map_opt_init(int32_t algo_id)
@@ -66,7 +63,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_RIGHT;
   opt->dup_window = 128;
   opt->max_seed_band = 15;
-  opt->score_thr = 12;
+  opt->score_thr = 1;
   opt->reads_queue_size = 262144;
   opt->num_threads = 1;
   opt->aln_output_mode = TMAP_MAP_UTIL_ALN_MODE_RAND_BEST;
@@ -823,7 +820,10 @@ tmap_map_sam_destroy(tmap_map_sam_t *s)
 tmap_map_sams_t *
 tmap_map_sams_init()
 {
-  return tmap_calloc(1, sizeof(tmap_map_sams_t), "return");
+  tmap_map_sams_t *sams = tmap_calloc(1, sizeof(tmap_map_sams_t), "sams");
+  sams->sams = NULL;
+  sams->n = 0;
+  return sams;
 }
 
 void
@@ -1139,9 +1139,10 @@ tmap_map_sams_filter(tmap_map_sams_t *sams, int32_t aln_output_mode)
 void
 tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
 {
-  int32_t i, next_i, j, k, end, best_score_i, best_score_n;
+  int32_t i, next_i, j, end, r;
+  uint32_t pos_start, pos_end;
 
-  if(dup_window < 0 || sams->n <= 0) {
+  if(dup_window < 0 || sams->n <= 1) {
       return;
   }
 
@@ -1152,22 +1153,20 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
   for(i=j=0;i<sams->n;) {
 
       // get the change
-      end = best_score_i = i;
-      best_score_n = 0;
+      end = i;
+      pos_start = sams->sams[end].pos;
+      pos_end = sams->sams[end].pos + sams->sams[end].target_len;
       while(end+1 < sams->n) {
           if(sams->sams[end].seqid == sams->sams[end+1].seqid
              && sams->sams[end].strand == sams->sams[end+1].strand
-             && fabs(sams->sams[end].pos - sams->sams[end+1].pos) <= dup_window) {
-              // track the best scoring
-              if(sams->sams[best_score_i].score == sams->sams[end+1].score) {
-                  best_score_i = end+1;
-                  best_score_n++;
-              }
-              else if(sams->sams[best_score_i].score < sams->sams[end+1].score) {
-                  best_score_i = end+1;
-                  best_score_n = 1;
-              }
+             && (sams->sams[end+1].pos - sams->sams[end].pos) <= dup_window) {
               end++;
+              if(sams->sams[end].pos < pos_start) { // should not be possible
+                  pos_start = sams->sams[end].pos;
+              }
+              if(pos_end < sams->sams[end].pos + sams->sams[end].target_len) {
+                  pos_end = sams->sams[end].pos + sams->sams[end].target_len;
+              }
           }
           else {
               break;
@@ -1175,27 +1174,26 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
       }
       next_i = end+1;
 
-      // randomize the best scoring
-      if(1 < best_score_n) {
-          k = (int32_t)(best_score_n * drand48()); // make this zero-based 
-          best_score_n = 0; // make this one-based
-          end = i;
-          while(best_score_n <= k) { // this assumes we know there are at least "best_score_n+1" best scores
-              if(sams->sams[best_score_i].score == sams->sams[end].score) {
-                  best_score_i = end;
-                  best_score_n++;
-              }
-              end++;
-          }
+      // randomize
+      if(end == i) {
+          r = i;
+      }
+      else {
+          r = (int32_t)(drand48() * (end - i + 1));
+          r += i;
       }
 
       // copy over the best
-      if(j != best_score_i) {
+      if(j != r) {
           // destroy
           tmap_map_sam_destroy(&sams->sams[j]);
           // nullify
-          tmap_map_sam_copy_and_nullify(&sams->sams[j], &sams->sams[best_score_i]);
+          tmap_map_sam_copy_and_nullify(&sams->sams[j], &sams->sams[r]);
       }
+
+      // adjust start/end position
+      sams->sams[j].pos = pos_start;
+      sams->sams[j].target_len = (pos_end - pos_start + 1);
 
       // next
       i = next_i;
@@ -1324,6 +1322,11 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
   tmap_seq_t *seqs[2] = {NULL, NULL};
   int32_t seq_len=0, target_len, target_mem=0;
   uint8_t *target=NULL;
+  int32_t best_subo;
+
+  if(0 == sams->n) {
+      return sams;
+  }
 
   // the final mappings will go here 
   sams_tmp = tmap_map_sams_init();
@@ -1337,6 +1340,7 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
   tmap_sort_introsort(tmap_map_sam_sort_coord, sams->n, sams->sams);
 
   i = start = end = 0;
+  best_subo = INT32_MIN;
   while(end < sams->n) {
       uint8_t strand, *query=NULL;
       uint32_t start_pos, end_pos;
@@ -1359,26 +1363,29 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
       query = (uint8_t*)tmap_seq_get_bases(seqs[strand])->s;
 
       // check if the hits can be banded
-      tmp_sam = sams->sams[end]; // shallow copy data 
       if(end + 1 < sams->n) {
           if(sams->sams[end].strand == sams->sams[end+1].strand 
              && sams->sams[end].seqid == sams->sams[end+1].seqid
              && sams->sams[end+1].pos - sams->sams[end].pos <= opt->max_seed_band) {
               end++;
-              /*
-              fprintf(stderr, "pos1=%u pos2=%u diff=%d\n",
-                      sams->sams[end].pos,
-                      sams->sams[end+1].pos,
-                      sams->sams[end+1].pos-sams->sams[end].pos);
-                      */
               if(end_pos < sams->sams[end].pos + sams->sams[end].target_len) {
                   end_pos = sams->sams[end].pos + sams->sams[end].target_len; // one-based
               }
-              if(tmp_sam.score_subo < sams->sams[end].score_subo) {
-                  tmp_sam.score_subo = sams->sams[end].score_subo;
+              if(best_subo < sams->sams[end].score_subo) {
+                  best_subo = sams->sams[end].score_subo;
               }
               continue; // there may be more to add
           }
+      }
+
+      // choose a random one within the window
+      if(start == end) {
+          tmp_sam = sams->sams[start];
+      }
+      else {
+          int32_t r = (int32_t)(drand48() * (end - start + 1));
+          r += start;
+          tmp_sam = sams->sams[r];
       }
 
       // one-based
@@ -1429,6 +1436,7 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
       fputc('\n', stderr);
       */
 
+      // TODO: we could hash previous SWs, to avoid duplicates
       if(0 < tmap_map_util_sw_aux(&tmp_sam,
                               target, target_len,
                               query, seq_len,
@@ -1436,7 +1444,7 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
                               &par, path, &path_len,
                               opt->score_thr, opt->softclip_type, strand)) {
           tmap_map_sam_t *s = &sams_tmp->sams[i];
-
+      
           // shallow copy previous data 
           (*s) = tmp_sam; 
 
@@ -1465,6 +1473,7 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
       // update start/end
       end++;
       start = end;
+      best_subo = INT32_MIN;
   }
       
   // realloc
@@ -1498,12 +1507,13 @@ tmap_map_util_sw_aux(tmap_map_sam_t *sam,
 {
   int32_t i, score, score_subo;
 
-  if(1 == strand) { // reverse compliment 
-      tmap_reverse_compliment_int(query, query_length);
-      tmap_reverse_compliment_int(target, target_length);
+  if(1 == strand) { // reverse, but do not compliment, since we want consistent behavior on the nucleotides
+      tmap_reverse_int(query, query_length);
+      tmap_reverse_int(target, target_length);
   }
 
   /*
+  fprintf(stderr, "strand=%d\n", strand);
   for(i=0;i<query_length;i++)
     fputc("ACGTN"[query[i]], stderr);
   fputc('\n', stderr);
@@ -1530,7 +1540,6 @@ tmap_map_util_sw_aux(tmap_map_sam_t *sam,
   }
   score_subo = sam->score_subo;
 
-
   if(0 < (*path_len) && score_thr < score) {
 
       if(1 == strand) { // reverse compliment 
@@ -1546,6 +1555,9 @@ tmap_map_util_sw_aux(tmap_map_sam_t *sam,
               // adjust 
               _tmap_map_util_sw_aux_path_adjust(path[i], query_length, target_length);
               _tmap_map_util_sw_aux_path_adjust(path[(*path_len)-i-1], query_length, target_length);
+          }
+          if(1 == ((*path_len) & 1)) {
+              _tmap_map_util_sw_aux_path_adjust(path[i], query_length, target_length);
           }
       }
 
@@ -1579,7 +1591,6 @@ tmap_map_util_sw_aux(tmap_map_sam_t *sam,
           TMAP_SW_CIGAR_STORE(sam->cigar[sam->n_cigar], BAM_CSOFT_CLIP, query_length - path[0].j);
           sam->n_cigar++;
       }
-      return 1;
   }
   else {
       sam->score = INT32_MIN;
@@ -1587,9 +1598,9 @@ tmap_map_util_sw_aux(tmap_map_sam_t *sam,
       sam->n_cigar = 0;
       (*path_len) = 0;
   }
-  if(1 == strand) { // reverse compliment 
-      tmap_reverse_compliment_int(query, query_length);
-      tmap_reverse_compliment_int(target, target_length);
+  if(1 == strand) { // reverse back
+      tmap_reverse_int(query, query_length);
+      tmap_reverse_int(target, target_length);
   }
   return (0 == sam->n_cigar) ? 0 : 1;
 }
