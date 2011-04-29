@@ -1436,6 +1436,7 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
       fputc('\n', stderr);
       */
 
+      // TODO: we could hash previous SWs, to avoid duplicates
       if(0 < tmap_map_util_sw_aux(&tmp_sam,
                               target, target_len,
                               query, seq_len,
