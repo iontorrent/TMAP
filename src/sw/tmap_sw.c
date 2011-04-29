@@ -29,6 +29,7 @@
 #include <string.h>
 #include <stdint.h>
 #include "../util/tmap_alloc.h"
+#include "../util/tmap_definitions.h"
 #include "tmap_sw.h"
 
 /* char -> 17 (=16+1) nucleotides */
@@ -1028,10 +1029,20 @@ tmap_sw_clipping_core2(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2,
 
   // check if seq2 is a sub-sequence of seq1
   if(len2 <= len1) {
-      for(i=j=0;j<len2;j++) { // exact from the start
-          if(seq1[j] != seq2[j]) {
-              i = -1;
-              break;
+      if(0 == right_justify) {
+          for(i=j=0;j<len2;j++) { // exact from the start
+              if(seq1[j] != seq2[j]) {
+                  i = -1;
+                  break;
+              }
+          }
+      }
+      else {
+          for(i=len1-len2,j=0;j<len2;j++) { // exact from the end
+              if(seq1[j+i] != seq2[j]) {
+                  i = -1;
+                  break;
+              }
           }
       }
       if(i < 0 && 1 < len1 && 1 < len2) { // try the Knuth Morris Pratt algorithm
@@ -1039,7 +1050,19 @@ tmap_sw_clipping_core2(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2,
               // Here we use the Knuth-Morris-Pratt algorithms, but we could use
               // others, such as Boyer-Moore (small alphabet 2007).  KMP is easy
               // to implement
-              i = tmap_sw_kmp_search(seq1, len1, seq2, len2);
+              if(0 == right_justify) {
+                  i = tmap_sw_kmp_search(seq1, len1, seq2, len2);
+              }
+              else {
+                  tmap_reverse_int(seq1, len1);
+                  tmap_reverse_int(seq2, len2);
+                  i = tmap_sw_kmp_search(seq1, len1, seq2, len2);
+                  if(0 <= i) {
+                      i = len1 - len2 - i; // zero-based
+                  }
+                  tmap_reverse_int(seq1, len1);
+                  tmap_reverse_int(seq2, len2);
+              }
           }
           else {
               i = -1;
@@ -1131,19 +1154,22 @@ tmap_sw_clipping_core2(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2,
 
           if(1 == seq2_end_clip // end anywhere in seq 2
              || j == len2) { 
-              if(best_score < curr[j].del_score || (best_score == curr[j].del_score && best_j < j)) {
+              if(best_score < curr[j].del_score
+                 || (1 == right_justify && best_score == curr[j].del_score)) {
                   best_i = i;
                   best_j = j; 
                   best_score = curr[j].del_score;
                   best_ctype = TMAP_SW_FROM_D;
               }
-              if(best_score < curr[j].ins_score || (best_score == curr[j].ins_score && best_j < j)) {
+              if(best_score < curr[j].ins_score
+                 || (1 == right_justify && best_score == curr[j].ins_score)) {
                   best_i = i;
                   best_j = j; 
                   best_score = curr[j].ins_score;
                   best_ctype = TMAP_SW_FROM_I;
               }
-              if(best_score < curr[j].match_score || (best_score == curr[j].match_score && best_j < j)) {
+              if(best_score < curr[j].match_score
+                 || (1 == right_justify && best_score == curr[j].match_score)) {
                   best_i = i;
                   best_j = j; 
                   best_score = curr[j].match_score;
