@@ -378,6 +378,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
               sam_cur->seqid = seqid;
               sam_cur->pos = pos-1; // adjust to zero-based
               sam_cur->target_len = sam->aux.map1_aux->aln_ref;
+              sam_cur->score_subo = INT32_MIN;
               if(0 < opt->seed_length && seed2_len < bases[strand]->l) { // adjust if we used a secondary seed
                   sam_cur->target_len = bases[strand]->l;
               }

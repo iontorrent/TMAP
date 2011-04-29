@@ -108,6 +108,9 @@ tmap_map_driver_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int
           if(0 < sams[low]->n) {
               // mapall should have already done this!
               if(TMAP_MAP_ALGO_MAPALL != opt->algo_id) {
+                  // TODO: we could intelligently remove duplicates before smith
+                  // waterman, or hash the smith waterman results!
+                  
                   // smith waterman
                   sams[low] = tmap_map_util_sw(refseq, sams[low], seq_buffer[low], opt);
 

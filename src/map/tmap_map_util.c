@@ -23,8 +23,13 @@
       _query[_ql-_i-1] = _tmp; \
   }
 
-// sort by strand, min-seqid, min-position, max-score
+// sort by strand, min-seqid, min-position
 #define __tmap_map_sam_sort_coord_lt(a, b) (  ((a).strand < (b).strand) \
+                                            || ( (a).strand == (b).strand && (a).seqid < (b).seqid) \
+                                            || ( (a).strand == (b).strand && (a).seqid == (b).seqid && (a).pos < (b).pos ) \
+                                            ? 1 : 0 )
+// sort by strand, min-seqid, min-position, max-score
+#define __tmap_map_sam_sort_coord_score_lt(a, b) (  ((a).strand < (b).strand) \
                                             || ( (a).strand == (b).strand && (a).seqid < (b).seqid) \
                                             || ( (a).strand == (b).strand && (a).seqid == (b).seqid && (a).pos < (b).pos ) \
                                             || ( (a).strand == (b).strand && (a).seqid == (b).seqid && (a).pos == (b).pos && (a).score < (b).score ) \
@@ -34,9 +39,8 @@
 #define __tmap_map_sam_sort_score_lt(a, b) ((a).score > (b).score)
 
 TMAP_SORT_INIT(tmap_map_sam_sort_coord, tmap_map_sam_t, __tmap_map_sam_sort_coord_lt)
-
+TMAP_SORT_INIT(tmap_map_sam_sort_coord_score, tmap_map_sam_t, __tmap_map_sam_sort_coord_score_lt)
 TMAP_SORT_INIT(tmap_map_sam_sort_score, tmap_map_sam_t, __tmap_map_sam_sort_score_lt)
-
 
 tmap_map_opt_t *
 tmap_map_opt_init(int32_t algo_id)
@@ -823,7 +827,10 @@ tmap_map_sam_destroy(tmap_map_sam_t *s)
 tmap_map_sams_t *
 tmap_map_sams_init()
 {
-  return tmap_calloc(1, sizeof(tmap_map_sams_t), "return");
+  tmap_map_sams_t *sams = tmap_calloc(1, sizeof(tmap_map_sams_t), "sams");
+  sams->sams = NULL;
+  sams->n = 0;
+  return sams;
 }
 
 void
@@ -1141,12 +1148,12 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
 {
   int32_t i, next_i, j, k, end, best_score_i, best_score_n;
 
-  if(dup_window < 0 || sams->n <= 0) {
+  if(dup_window < 0 || sams->n <= 1) {
       return;
   }
 
   // sort
-  tmap_sort_introsort(tmap_map_sam_sort_coord, sams->n, sams->sams);
+  tmap_sort_introsort(tmap_map_sam_sort_coord_score, sams->n, sams->sams);
 
   // remove duplicates within a window
   for(i=j=0;i<sams->n;) {
@@ -1324,6 +1331,11 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
   tmap_seq_t *seqs[2] = {NULL, NULL};
   int32_t seq_len=0, target_len, target_mem=0;
   uint8_t *target=NULL;
+  int32_t best_subo;
+
+  if(0 == sams->n) {
+      return sams;
+  }
 
   // the final mappings will go here 
   sams_tmp = tmap_map_sams_init();
@@ -1337,6 +1349,7 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
   tmap_sort_introsort(tmap_map_sam_sort_coord, sams->n, sams->sams);
 
   i = start = end = 0;
+  best_subo = INT32_MIN;
   while(end < sams->n) {
       uint8_t strand, *query=NULL;
       uint32_t start_pos, end_pos;
@@ -1359,26 +1372,29 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
       query = (uint8_t*)tmap_seq_get_bases(seqs[strand])->s;
 
       // check if the hits can be banded
-      tmp_sam = sams->sams[end]; // shallow copy data 
       if(end + 1 < sams->n) {
           if(sams->sams[end].strand == sams->sams[end+1].strand 
              && sams->sams[end].seqid == sams->sams[end+1].seqid
              && sams->sams[end+1].pos - sams->sams[end].pos <= opt->max_seed_band) {
               end++;
-              /*
-              fprintf(stderr, "pos1=%u pos2=%u diff=%d\n",
-                      sams->sams[end].pos,
-                      sams->sams[end+1].pos,
-                      sams->sams[end+1].pos-sams->sams[end].pos);
-                      */
               if(end_pos < sams->sams[end].pos + sams->sams[end].target_len) {
                   end_pos = sams->sams[end].pos + sams->sams[end].target_len; // one-based
               }
-              if(tmp_sam.score_subo < sams->sams[end].score_subo) {
-                  tmp_sam.score_subo = sams->sams[end].score_subo;
+              if(best_subo < sams->sams[end].score_subo) {
+                  best_subo = sams->sams[end].score_subo;
               }
               continue; // there may be more to add
           }
+      }
+
+      // choose a random one within the window
+      if(start == end) {
+          tmp_sam = sams->sams[start];
+      }
+      else {
+          int32_t r = (int32_t)(drand48() * (end - start + 1));
+          r += start;
+          tmp_sam = sams->sams[r];
       }
 
       // one-based
@@ -1465,6 +1481,7 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
       // update start/end
       end++;
       start = end;
+      best_subo = INT32_MIN;
   }
       
   // realloc
