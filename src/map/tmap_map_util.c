@@ -377,7 +377,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           opt->softclip_type = atoi(optarg); break;
         case 'W':
           opt->dup_window = atoi(optarg); break;
-        case 'b':
+        case 'B':
           opt->max_seed_band = atoi(optarg); break;
         case 'T':
           opt->score_thr = atoi(optarg); break;
