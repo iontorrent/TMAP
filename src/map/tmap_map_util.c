@@ -1159,7 +1159,7 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
       while(end+1 < sams->n) {
           if(sams->sams[end].seqid == sams->sams[end+1].seqid
              && sams->sams[end].strand == sams->sams[end+1].strand
-             && fabs(sams->sams[end].pos - sams->sams[end+1].pos) <= dup_window) {
+             && (sams->sams[end+1].pos - sams->sams[end].pos) <= dup_window) {
               end++;
               if(sams->sams[end].pos < pos_start) { // should not be possible
                   pos_start = sams->sams[end].pos;
@@ -1193,7 +1193,7 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
 
       // adjust start/end position
       sams->sams[j].pos = pos_start;
-      sams->sams[j].target_len = (pos_end - pos_start);
+      sams->sams[j].target_len = (pos_end - pos_start + 1);
 
       // next
       i = next_i;
@@ -1444,7 +1444,7 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
                               &par, path, &path_len,
                               opt->score_thr, opt->softclip_type, strand)) {
           tmap_map_sam_t *s = &sams_tmp->sams[i];
-
+      
           // shallow copy previous data 
           (*s) = tmp_sam; 
 
@@ -1540,7 +1540,6 @@ tmap_map_util_sw_aux(tmap_map_sam_t *sam,
   }
   score_subo = sam->score_subo;
 
-
   if(0 < (*path_len) && score_thr < score) {
 
       if(1 == strand) { // reverse compliment 
@@ -1592,7 +1591,6 @@ tmap_map_util_sw_aux(tmap_map_sam_t *sam,
           TMAP_SW_CIGAR_STORE(sam->cigar[sam->n_cigar], BAM_CSOFT_CLIP, query_length - path[0].j);
           sam->n_cigar++;
       }
-      return 1;
   }
   else {
       sam->score = INT32_MIN;
