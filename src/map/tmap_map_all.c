@@ -70,13 +70,11 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
 
   // remove duplicates before merging
   if(1 == opt->aln_output_mode_ind) {
-      // duplicate removal
       for(i=0;i<n_algos;i++) {
+          // duplicate removal
           tmap_map_util_remove_duplicates(sams_in[i], opt->dup_window);
-      }
-
-      // smith waterman
-      for(i=0;i<n_algos;i++) {
+          
+          // smith waterman
           sams_in[i] = tmap_map_util_sw(refseq, sams_in[i], seq, opt);
       }
   }
