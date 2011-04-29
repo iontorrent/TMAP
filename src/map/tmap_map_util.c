@@ -1498,12 +1498,13 @@ tmap_map_util_sw_aux(tmap_map_sam_t *sam,
 {
   int32_t i, score, score_subo;
 
-  if(1 == strand) { // reverse compliment 
-      tmap_reverse_compliment_int(query, query_length);
-      tmap_reverse_compliment_int(target, target_length);
+  if(1 == strand) { // reverse, but do not compliment, since we want consistent behavior on the nucleotides
+      tmap_reverse_int(query, query_length);
+      tmap_reverse_int(target, target_length);
   }
 
   /*
+  fprintf(stderr, "strand=%d\n", strand);
   for(i=0;i<query_length;i++)
     fputc("ACGTN"[query[i]], stderr);
   fputc('\n', stderr);
@@ -1547,6 +1548,9 @@ tmap_map_util_sw_aux(tmap_map_sam_t *sam,
               _tmap_map_util_sw_aux_path_adjust(path[i], query_length, target_length);
               _tmap_map_util_sw_aux_path_adjust(path[(*path_len)-i-1], query_length, target_length);
           }
+          if(1 == ((*path_len) & 1)) {
+              _tmap_map_util_sw_aux_path_adjust(path[i], query_length, target_length);
+          }
       }
 
       sam->strand = strand;
@@ -1587,9 +1591,9 @@ tmap_map_util_sw_aux(tmap_map_sam_t *sam,
       sam->n_cigar = 0;
       (*path_len) = 0;
   }
-  if(1 == strand) { // reverse compliment 
-      tmap_reverse_compliment_int(query, query_length);
-      tmap_reverse_compliment_int(target, target_length);
+  if(1 == strand) { // reverse back
+      tmap_reverse_int(query, query_length);
+      tmap_reverse_int(target, target_length);
   }
   return (0 == sam->n_cigar) ? 0 : 1;
 }
