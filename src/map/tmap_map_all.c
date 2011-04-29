@@ -70,17 +70,14 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
 
   // remove duplicates before merging
   if(1 == opt->aln_output_mode_ind) {
-      // TODO: we could intelligently remove duplicates before smith
-      // waterman, or hash the smith waterman results!
+      // duplicate removal
+      for(i=0;i<n_algos;i++) {
+          tmap_map_util_remove_duplicates(sams_in[i], opt->dup_window);
+      }
 
       // smith waterman
       for(i=0;i<n_algos;i++) {
           sams_in[i] = tmap_map_util_sw(refseq, sams_in[i], seq, opt);
-      }
-
-      // duplicate removal
-      for(i=0;i<n_algos;i++) {
-          tmap_map_util_remove_duplicates(sams_in[i], opt->dup_window);
       }
   }
 
@@ -94,11 +91,11 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
 
   // remove duplicates after merging
   if(0 == opt->aln_output_mode_ind) {
-      // smith waterman
-      sams = tmap_map_util_sw(refseq, sams, seq, opt);
-
       // duplicate removal
       tmap_map_util_remove_duplicates(sams, opt->dup_window);
+
+      // smith waterman
+      sams = tmap_map_util_sw(refseq, sams, seq, opt);
   }
 
   // mapping quality
