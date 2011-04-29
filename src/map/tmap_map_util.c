@@ -29,10 +29,18 @@
                                             || ( (a).strand == (b).strand && (a).seqid == (b).seqid && (a).pos < (b).pos ) \
                                             ? 1 : 0 )
 
+// sort by strand, min-seqid, min-position, max score
+#define __tmap_map_sam_sort_coord_score_lt(a, b) (  ((a).strand < (b).strand) \
+                                            || ( (a).strand == (b).strand && (a).seqid < (b).seqid) \
+                                            || ( (a).strand == (b).strand && (a).seqid == (b).seqid && (a).pos < (b).pos ) \
+                                            || ( (a).strand == (b).strand && (a).seqid == (b).seqid && (a).pos == (b).pos && (a).score > (b).score) \
+                                            ? 1 : 0 )
+
 // sort by max-score
 #define __tmap_map_sam_sort_score_lt(a, b) ((a).score > (b).score)
 
 TMAP_SORT_INIT(tmap_map_sam_sort_coord, tmap_map_sam_t, __tmap_map_sam_sort_coord_lt)
+TMAP_SORT_INIT(tmap_map_sam_sort_coord_score, tmap_map_sam_t, __tmap_map_sam_sort_coord_score_lt)
 TMAP_SORT_INIT(tmap_map_sam_sort_score, tmap_map_sam_t, __tmap_map_sam_sort_score_lt)
 
 tmap_map_opt_t *
@@ -1139,10 +1147,9 @@ tmap_map_sams_filter(tmap_map_sams_t *sams, int32_t aln_output_mode)
 void
 tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
 {
-  int32_t i, next_i, j, end, r;
-  uint32_t pos_start, pos_end;
+  int32_t i, next_i, j, k, end, best_score_i, best_score_n;
 
-  if(dup_window < 0 || sams->n <= 1) {
+  if(dup_window < 0 || sams->n <= 0) {
       return;
   }
 
@@ -1153,20 +1160,22 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
   for(i=j=0;i<sams->n;) {
 
       // get the change
-      end = i;
-      pos_start = sams->sams[end].pos;
-      pos_end = sams->sams[end].pos + sams->sams[end].target_len;
+      end = best_score_i = i;
+      best_score_n = 0;
       while(end+1 < sams->n) {
           if(sams->sams[end].seqid == sams->sams[end+1].seqid
              && sams->sams[end].strand == sams->sams[end+1].strand
-             && (sams->sams[end+1].pos - sams->sams[end].pos) <= dup_window) {
+             && fabs(sams->sams[end].pos - sams->sams[end+1].pos) <= dup_window) {
+              // track the best scoring
+              if(sams->sams[best_score_i].score == sams->sams[end+1].score) {
+                  best_score_i = end+1;
+                  best_score_n++;
+              }
+              else if(sams->sams[best_score_i].score < sams->sams[end+1].score) {
+                  best_score_i = end+1;
+                  best_score_n = 1;
+              }
               end++;
-              if(sams->sams[end].pos < pos_start) { // should not be possible
-                  pos_start = sams->sams[end].pos;
-              }
-              if(pos_end < sams->sams[end].pos + sams->sams[end].target_len) {
-                  pos_end = sams->sams[end].pos + sams->sams[end].target_len;
-              }
           }
           else {
               break;
@@ -1174,26 +1183,27 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
       }
       next_i = end+1;
 
-      // randomize
-      if(end == i) {
-          r = i;
-      }
-      else {
-          r = (int32_t)(drand48() * (end - i + 1));
-          r += i;
+      // randomize the best scoring      
+      if(1 < best_score_n) {
+          k = (int32_t)(best_score_n * drand48()); // make this zero-based 
+          best_score_n = 0; // make this one-based
+          end = i;
+          while(best_score_n <= k) { // this assumes we know there are at least "best_score
+              if(sams->sams[best_score_i].score == sams->sams[end].score) {
+                  best_score_i = end;
+                  best_score_n++;
+              }
+              end++;
+          }
       }
 
       // copy over the best
-      if(j != r) {
+      if(j != best_score_i) {
           // destroy
           tmap_map_sam_destroy(&sams->sams[j]);
           // nullify
-          tmap_map_sam_copy_and_nullify(&sams->sams[j], &sams->sams[r]);
+          tmap_map_sam_copy_and_nullify(&sams->sams[j], &sams->sams[best_score_i]);
       }
-
-      // adjust start/end position
-      sams->sams[j].pos = pos_start;
-      sams->sams[j].target_len = (pos_end - pos_start + 1);
 
       // next
       i = next_i;
@@ -1336,7 +1346,7 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
   par.matrix = matrix;
   __map_util_gen_ap(par, opt); // TODO
 
-  // sort by strand/chr/pos
+  // sort by strand/chr/pos/score
   tmap_sort_introsort(tmap_map_sam_sort_coord, sams->n, sams->sams);
 
   i = start = end = 0;
