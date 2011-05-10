@@ -453,6 +453,10 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
       i_from = ((i<qseq_flow_order->jump_rev[k]) ? 0 : (i-qseq_flow_order->jump_rev[k])); // don't go before the first row
 
       for(j=1;j<=f_tseq->l;j++) { // target
+          int32_t flow_order_match = 0;
+          if(qseq_flow_order->flow_order[(i-1) % qseq_flow_order->flow_order_len] == tseq_flow_order->flow_order[(j-1) % tseq_flow_order->flow_order_len]) {
+              flow_order_match = 1;
+          }
 
           // horizontal
           if(dp[i][j-1].del_score < dp[i][j-1].match_score) { 
@@ -483,6 +487,7 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
           // 2. phased from ins
           // 3. empty from match
           // 4. empth from ins
+          if(1 == flow_order_match) {
           if(dp[i-1][j].ins_score < dp[i-1][j].match_score) {
               v_score_e = dp[i-1][j].match_score - f_qseq->flow[i-1];
               v_from_e = TMAP_SAM2FS_AUX_FROM_ME;
@@ -509,9 +514,14 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
               dp[i][j].ins_score = v_score_p;
               dp[i][j].ins_from = v_from_p;
           }
+          }
+          else {
+              dp[i][j].ins_score = TMAP_SW_MINOR_INF; 
+              dp[i][j].ins_from = TMAP_SAM2FS_AUX_FROM_S;
+          }
 
           // diagonal
-          if(qseq_flow_order->flow_order[(i-1) % qseq_flow_order->flow_order_len] != tseq_flow_order->flow_order[(j-1) % tseq_flow_order->flow_order_len]) {
+          if(0 == flow_order_match) {
               // out of phase, do not want
               dp[i][j].match_score = TMAP_SW_MINOR_INF; 
               dp[i][j].match_from = TMAP_SAM2FS_AUX_FROM_S;
