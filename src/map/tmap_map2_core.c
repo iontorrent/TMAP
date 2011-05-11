@@ -247,6 +247,7 @@ tmap_map2_core_init(const tmap_bwtl_t *target, const tmap_bwt_t *query_bwt, tmap
 /*
  On return, ret[1] keeps not-so-repetitive hits (narrow SA hits); ret[0]
  keeps all hits (right?) 
+Note: tlen may be over-estimated!
  */
 tmap_map2_aln_t **
 tmap_map2_core_aln(const tmap_map_opt_t *opt, const tmap_bwtl_t *target, 

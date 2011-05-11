@@ -257,7 +257,7 @@ tmap_map2_aux_aln(tmap_map_opt_t *opt, tmap_refseq_t *refseq,
   }
   b[0] = bb[0][1]; b[1] = bb[1][1]; // bb[*][1] are "narrow SA hits"
   tmap_map2_chain_filter(opt, seq[0]->l, b);
-
+  
   // merge all hits
   for(k = 0; k < 2; ++k) {
       tmap_map2_aux_merge_hits(bb[k], seq[k]->l, 0); // bb[k][1] and bb[k][0] are merged into bb[k][0]
@@ -477,11 +477,18 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
   // set the flag to forward/reverse
   tmap_map2_aux_flag_fr(b);
   
+  // tlen may overestimated due to not counting insertions properly, bound it!
+  for(i = 0; i < b[0]->n; ++i) {
+      if(refseq->len <= b[0]->hits[i].k + b[0]->hits[i].tlen) {
+          b[0]->hits[i].tlen = refseq->len - b[0]->hits[i].k;
+      }
+  }
+  
   // make one-based for pac2real
   for(i = 0; i < b[0]->n; ++i) {
       b[0]->hits[i].k++;
   }
-
+  
   // generate CIGAR and print SAM
   sams = tmap_map2_aux_store_hits(refseq, &opt, b[0], l);
 
