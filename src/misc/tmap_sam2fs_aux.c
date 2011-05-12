@@ -399,7 +399,7 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
       j = (i < qseq_flow_order->jump_rev[k]) ? 0 : (i - qseq_flow_order->jump_rev[k]);
       gap_sums_i[i] = 0;
       while(j <= i) {
-          gap_sums_i[i] += f_qseq->flow[i];
+          gap_sums_i[i] += f_qseq->flow[j];
           j++;
       }
   }
