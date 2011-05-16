@@ -71,7 +71,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_RIGHT;
   opt->dup_window = 128;
   opt->max_seed_band = 15;
-  opt->score_thr = 1;
+  opt->score_thr = 8;
   opt->reads_queue_size = 262144;
   opt->num_threads = 1;
   opt->aln_output_mode = TMAP_MAP_UTIL_ALN_MODE_RAND_BEST;

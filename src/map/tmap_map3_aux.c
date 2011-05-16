@@ -347,6 +347,9 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
                   s->seqid = seqid;
                   s->pos = pos;
                   s->target_len = seq_len[i]; 
+                  if(refseq->annos[seqid].len < s->target_len) {
+                      s->target_len = refseq->annos[seqid].len;
+                  }
                   s->score_subo = INT32_MIN;
 
                   // map3 aux data
