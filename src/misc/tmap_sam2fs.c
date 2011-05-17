@@ -28,10 +28,6 @@
 
 #ifdef HAVE_SAMTOOLS
 
-#ifdef HAVE_LIBPTHREAD
-#define TMAP_SAM2FS_THREAD_BLOCK_SIZE 1024
-#endif
-
 // from bam.h
 extern char *bam_nt16_rev_table;
 
@@ -73,7 +69,6 @@ typedef struct {
     int32_t buffer_length;
     tmap_sam2fs_aux_flow_order_t *flow_order;
     int32_t tid;
-    int32_t num_threads;
     tmap_sam2fs_opt_t *opt;
 } tmap_sam2fs_thread_data_t;
                   
@@ -367,6 +362,10 @@ tmap_sam2fs_aux(bam1_t *bam, tmap_sam2fs_aux_flow_order_t *flow_order, int32_t s
   int32_t matrix[25];
 
   char separator;
+
+  uint8_t *tmp_flow_order = NULL;
+  int32_t tmp_flow_order_len;
+
   separator = (0 == output_newlines) ? '\t' : '\n';
 
   // set the alignment parameters
@@ -402,6 +401,45 @@ tmap_sam2fs_aux(bam1_t *bam, tmap_sam2fs_aux_flow_order_t *flow_order, int32_t s
   }
   if(1 < bam->core.n_cigar && (BAM_CSOFT_CLIP & cigar[bam->core.n_cigar-1])) {
       soft_clip_end = (cigar[bam->core.n_cigar-1] >> 4);
+  }
+
+  // change the flow order based
+  tmp_flow_order_len = flow_order->flow_order_len;
+  tmp_flow_order = tmap_malloc(sizeof(uint8_t) * tmp_flow_order_len, "tmp_flow_order");
+  if(0 == strand && 0 < soft_clip_start) {
+      // Note: go from the start of the read to the end
+      for(i=j=0;i<soft_clip_start;i++) {
+          uint8_t base = tmap_nt_char_to_int[(int)bam_nt16_rev_table[bam1_seqi(bam_seq, i)]]; // get the read base
+          while(base != flow_order->flow_order[j]) {
+              j = (j + 1) % flow_order->flow_order_len;
+          }
+      }
+      // j is our index
+      for(i=0;i<tmp_flow_order_len;i++) {
+          tmp_flow_order[i] = flow_order->flow_order[j];
+          j = (j + 1) % flow_order->flow_order_len;
+      }
+  }
+  else if(1 == strand && 0 < soft_clip_end) {
+      // Note: go from the end of the read to the start
+      for(i=j=0;i<soft_clip_end;i++) {
+          uint8_t base = tmap_nt_char_to_int[(int)bam_nt16_rev_table[bam1_seqi(bam_seq, bam->core.l_qseq-i-1)]]; // get the read base
+          base = (4 <= base) ? base : (3 - base); // reverse compliment
+          while(base != flow_order->flow_order[j]) {
+              j = (j + 1) % flow_order->flow_order_len;
+          }
+      }
+      // j is our index
+      for(i=0;i<tmp_flow_order_len;i++) {
+          tmp_flow_order[i] = flow_order->flow_order[j];
+          j = (j + 1) % flow_order->flow_order_len;
+      }
+  }
+  else {
+      // no relevant soft-clipping
+      for(i=0;i<tmp_flow_order_len;i++) {
+          tmp_flow_order[i] = flow_order->flow_order[i];
+      }
   }
 
   /*
@@ -529,9 +567,9 @@ tmap_sam2fs_aux(bam1_t *bam, tmap_sam2fs_aux_flow_order_t *flow_order, int32_t s
   // get the flow length
   flow_len = 0;
   for(i=j=0;i<read_bases_len;i++) {
-      while(flow_order->flow_order[j] != read_bases[i]) {
+      while(tmp_flow_order[j] != read_bases[i]) {
           flow_len++;
-          j = (1+j) % flow_order->flow_order_len;
+          j = (1+j) % tmp_flow_order_len;
       }
   }
   flow_len++; // the last flow
@@ -540,7 +578,7 @@ tmap_sam2fs_aux(bam1_t *bam, tmap_sam2fs_aux_flow_order_t *flow_order, int32_t s
   flowgram = tmap_calloc(flow_len, sizeof(uint16_t), "base_calls");
   // copy the # of flows
   for(i=j=0;i<flow_len;i++) {
-      if(flow_order->flow_order[i % flow_order->flow_order_len] == read_bases[j]) {
+      if(tmp_flow_order[i % tmp_flow_order_len] == read_bases[j]) {
           k=j;
           while(j < read_bases_len 
                 && read_bases[j] == read_bases[k]) {
@@ -560,7 +598,7 @@ tmap_sam2fs_aux(bam1_t *bam, tmap_sam2fs_aux_flow_order_t *flow_order, int32_t s
   path = tmap_calloc(path_len, sizeof(tmap_fsw_path_t), "path"); 
 
   // re-align 
-  flowseq = tmap_fsw_flowseq_init(flow_order->flow_order, flow_order->flow_order_len, base_calls, flowgram, flow_len, -1, 0);
+  flowseq = tmap_fsw_flowseq_init(tmp_flow_order, tmp_flow_order_len, base_calls, flowgram, flow_len, -1, 0);
   score = INT32_MIN;
   switch(softclip_type) {
     case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
@@ -585,6 +623,19 @@ tmap_sam2fs_aux(bam1_t *bam, tmap_sam2fs_aux_flow_order_t *flow_order, int32_t s
   }
 
   if(0 == path_len) {
+      fprintf(stderr, "%s\n", bam1_qname(bam));
+      fprintf(stderr, "read_bases_len=%d\nref_bases_len=%d\n",
+              read_bases_len,
+              ref_bases_len);
+      fprintf(stderr, "flowseq->num_flows=%d\n", flowseq->num_flows);
+      for(i=0;i<read_bases_len;i++) {
+          fputc("ACGTN"[(int)read_bases[i]], stderr);
+      }
+      fputc('\n', stderr);
+      for(i=0;i<ref_bases_len;i++) {
+          fputc("ACGTN"[(int)ref_bases[i]], stderr);
+      }
+      fputc('\n', stderr);
       tmap_error("bug encountered", Exit, OutOfRange);
   }
 
@@ -623,7 +674,7 @@ tmap_sam2fs_aux(bam1_t *bam, tmap_sam2fs_aux_flow_order_t *flow_order, int32_t s
   switch(output_type) {
     case TMAP_SAM2FS_OUTPUT_ALN:
       tmap_fsw_get_aln(path, path_len, 
-                       flow_order->flow_order, flow_order->flow_order_len, 
+                       tmp_flow_order, tmp_flow_order_len, 
                        (uint8_t*)ref_bases,
                        strand,
                        &aln_ret->fsw_qseq,
@@ -664,7 +715,7 @@ tmap_sam2fs_aux(bam1_t *bam, tmap_sam2fs_aux_flow_order_t *flow_order, int32_t s
       bam = tmap_sam2fs_copy_to_sam(bam, path, path_len, score, soft_clip_start, soft_clip_end, strand);
 
       if(bam->core.n_cigar > 0) {
-          tmap_fsw_get_aln(path, path_len, flow_order->flow_order, flow_order->flow_order_len, (uint8_t*)ref_bases, 
+          tmap_fsw_get_aln(path, path_len, tmp_flow_order, tmp_flow_order_len, (uint8_t*)ref_bases, 
                            strand,
                            &ref, &read, &aln, j_type);
 
@@ -690,6 +741,7 @@ tmap_sam2fs_aux(bam1_t *bam, tmap_sam2fs_aux_flow_order_t *flow_order, int32_t s
   free(path);
   free(read_bases);
   free(ref_bases);
+  free(tmp_flow_order);
 
   return bam;
 }
@@ -700,13 +752,12 @@ tmap_sam2fs_aux_worker(bam1_t **bams,
                        int32_t buffer_length, 
                        tmap_sam2fs_aux_flow_order_t *flow_order, 
                        int32_t tid, 
-                       int32_t num_threads,
                        tmap_sam2fs_opt_t *opt)
 {
   int32_t low = 0;
 
   while(low < buffer_length) {
-      if(tid == (low % num_threads)) {
+      if(tid == (low % opt->num_threads)) {
           bams[low] = tmap_sam2fs_aux(bams[low], flow_order, 
                                       opt->score_match, opt->pen_mm, opt->pen_gapo, opt->pen_gape,
                                       opt->fscore, opt->flow_offset, 
@@ -726,7 +777,6 @@ tmap_sam2fs_aux_thread_worker(void *arg)
                          thread_data->buffer_length, 
                          thread_data->flow_order, 
                          thread_data->tid, 
-                         thread_data->num_threads,
                          thread_data->opt);
 
   return arg;
@@ -799,12 +849,8 @@ tmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, tmap_sam2fs_opt_
 
       // process
 #ifdef HAVE_LIBPTHREAD
-      int32_t num_threads = opt->num_threads;
-      if(buffer_length < num_threads * TMAP_SAM2FS_THREAD_BLOCK_SIZE) {
-          num_threads = 1 + (buffer_length / TMAP_SAM2FS_THREAD_BLOCK_SIZE);
-      }
-      if(1 == num_threads) {
-          tmap_sam2fs_aux_worker(bams, alns, buffer_length, flow_order, 0, num_threads, opt);
+      if(1 == opt->num_threads) {
+          tmap_sam2fs_aux_worker(bams, alns, buffer_length, flow_order, 0, opt);
       }
       else {
           pthread_attr_t attr;
@@ -814,22 +860,21 @@ tmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, tmap_sam2fs_opt_
           pthread_attr_init(&attr);
           pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
-          threads = tmap_calloc(num_threads, sizeof(pthread_t), "threads");
-          thread_data = tmap_calloc(num_threads, sizeof(tmap_sam2fs_thread_data_t), "thread_data");
+          threads = tmap_calloc(opt->num_threads, sizeof(pthread_t), "threads");
+          thread_data = tmap_calloc(opt->num_threads, sizeof(tmap_sam2fs_thread_data_t), "thread_data");
 
-          for(i=0;i<num_threads;i++) {
+          for(i=0;i<opt->num_threads;i++) {
               thread_data[i].bams = bams;
               thread_data[i].alns = alns;
               thread_data[i].buffer_length = buffer_length;
               thread_data[i].flow_order = flow_order;
               thread_data[i].tid = i;
-              thread_data[i].num_threads = num_threads;
               thread_data[i].opt = opt;
               if(0 != pthread_create(&threads[i], &attr, tmap_sam2fs_aux_thread_worker, &thread_data[i])) {
                   tmap_error("error creating threads", Exit, ThreadError);
               }
           }
-          for(i=0;i<num_threads;i++) {
+          for(i=0;i<opt->num_threads;i++) {
               if(0 != pthread_join(threads[i], NULL)) {
                   tmap_error("error joining threads", Exit, ThreadError);
               }

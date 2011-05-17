@@ -221,7 +221,7 @@ tmap_sam2fs_aux_flow_destroy(tmap_sam2fs_aux_flow_t *a)
   free(a);
 }
 
-static tmap_sam2fs_aux_flow_order_t *
+tmap_sam2fs_aux_flow_order_t *
 tmap_sam2fs_aux_flow_order_init1(uint8_t *flow_order, int32_t flow_order_len)
 {
   int32_t i, j, k;

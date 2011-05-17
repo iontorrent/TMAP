@@ -26,9 +26,16 @@ typedef struct {
 } tmap_sam2fs_aln_t;
 
 /*!
-  @param  flow_order      the flow order bases, in character format
+  @param  flow_order      the flow order bases, in integer format
   @param  flow_order_len  the number of bases in the flow order
   @return                the initialized flow order for sam2fs
+  */
+tmap_sam2fs_aux_flow_order_t *
+tmap_sam2fs_aux_flow_order_init1(uint8_t *flow_order, int32_t flow_order_len);
+
+/*!
+  @param  flow_order  the flow order, in character format
+  @return            the initialized flow order for sam2fs
   */
 tmap_sam2fs_aux_flow_order_t*
 tmap_sam2fs_aux_flow_order_init(char *flow_order);
