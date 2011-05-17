@@ -431,14 +431,18 @@ tmap_sam2fs_aux(bam1_t *bam, tmap_sam2fs_aux_flow_order_t *flow_order, int32_t s
           }
           // fill in
           for(j=0;j<l;j++) {
-              ref_bases[i+j] = md[md_i+j];
+			  if(tmap_nt_char_to_int[(int)md[md_i+j]] < 4) { // convert only non-IUPAC bases
+				  ref_bases[i+j] = md[md_i+j];
+			  }
           }
           md_i += l;
           i += l;
           ref_bases_len += l;
       }
       else if(1 == tmap_sam2fs_is_DNA(md[md_i])) { // SNP
-          ref_bases[i] = md[md_i];
+		  if(tmap_nt_char_to_int[(int)md[md_i]] < 4) { // convert only non-IUPAC bases
+			  ref_bases[i] = md[md_i];
+		  }
           i++;
           md_i++;
       }
