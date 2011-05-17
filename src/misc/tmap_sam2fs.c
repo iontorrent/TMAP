@@ -800,7 +800,9 @@ tmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, tmap_sam2fs_opt_
       free(bams);
   }
   else {
+	  n_reads_processed = 0;
       b = bam_init1();
+      tmap_progress_print("processing reads");
       while(0 < samread(fp_in, b)) { 
           // process 
           b = tmap_sam2fs_aux(b, flow_order, 
@@ -813,8 +815,13 @@ tmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, tmap_sam2fs_opt_
           bam_destroy1(b);
           // reinitialize
           b = bam_init1();
+		  n_reads_processed++;
+		  if(0 == (n_reads_processed % opt->reads_queue_size)) {
+			  tmap_progress_print2("processed %d reads", n_reads_processed);
+		  }
       }
       bam_destroy1(b);
+	  tmap_progress_print2("processed %d reads", n_reads_processed);
   }
 
   // close
