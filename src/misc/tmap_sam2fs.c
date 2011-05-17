@@ -73,6 +73,7 @@ typedef struct {
     int32_t buffer_length;
     tmap_sam2fs_aux_flow_order_t *flow_order;
     int32_t tid;
+    int32_t num_threads;
     tmap_sam2fs_opt_t *opt;
 } tmap_sam2fs_thread_data_t;
                   
@@ -694,12 +695,18 @@ tmap_sam2fs_aux(bam1_t *bam, tmap_sam2fs_aux_flow_order_t *flow_order, int32_t s
 }
 
 static void
-tmap_sam2fs_aux_worker(bam1_t **bams, tmap_sam2fs_aln_t **alns, int32_t buffer_length, tmap_sam2fs_aux_flow_order_t * flow_order, int32_t tid, tmap_sam2fs_opt_t *opt)
+tmap_sam2fs_aux_worker(bam1_t **bams, 
+                       tmap_sam2fs_aln_t **alns, 
+                       int32_t buffer_length, 
+                       tmap_sam2fs_aux_flow_order_t *flow_order, 
+                       int32_t tid, 
+                       int32_t num_threads,
+                       tmap_sam2fs_opt_t *opt)
 {
   int32_t low = 0;
 
   while(low < buffer_length) {
-      if(tid == (low % opt->num_threads)) {
+      if(tid == (low % num_threads)) {
           bams[low] = tmap_sam2fs_aux(bams[low], flow_order, 
                                       opt->score_match, opt->pen_mm, opt->pen_gapo, opt->pen_gape,
                                       opt->fscore, opt->flow_offset, 
@@ -719,6 +726,7 @@ tmap_sam2fs_aux_thread_worker(void *arg)
                          thread_data->buffer_length, 
                          thread_data->flow_order, 
                          thread_data->tid, 
+                         thread_data->num_threads,
                          thread_data->opt);
 
   return arg;
@@ -796,7 +804,7 @@ tmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, tmap_sam2fs_opt_
           num_threads = 1 + (buffer_length / TMAP_SAM2FS_THREAD_BLOCK_SIZE);
       }
       if(1 == num_threads) {
-          tmap_sam2fs_aux_worker(bams, alns, buffer_length, flow_order, 0, opt);
+          tmap_sam2fs_aux_worker(bams, alns, buffer_length, flow_order, 0, num_threads, opt);
       }
       else {
           pthread_attr_t attr;
@@ -815,6 +823,7 @@ tmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, tmap_sam2fs_opt_
               thread_data[i].buffer_length = buffer_length;
               thread_data[i].flow_order = flow_order;
               thread_data[i].tid = i;
+              thread_data[i].num_threads = num_threads;
               thread_data[i].opt = opt;
               if(0 != pthread_create(&threads[i], &attr, tmap_sam2fs_aux_thread_worker, &thread_data[i])) {
                   tmap_error("error creating threads", Exit, ThreadError);
@@ -831,7 +840,7 @@ tmap_sam2fs_core(const char *fn_in, const char *sam_open_flags, tmap_sam2fs_opt_
 
       }
 #else
-      tmap_sam2fs_aux_worker(bams, buffer_length, flow_order, opt);
+      tmap_sam2fs_aux_worker(bams, buffer_length, flow_order, 0, 1, opt);
 #endif
 
       tmap_progress_print("writing alignments");
