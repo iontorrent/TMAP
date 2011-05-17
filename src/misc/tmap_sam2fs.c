@@ -896,7 +896,7 @@ usage(tmap_sam2fs_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "         -N          use newline separators when outputting the alignments (-t 0 only)\n");
   tmap_file_fprintf(tmap_file_stderr, "         -l INT      indel justification type: 0 - none, 1 - 5' strand of the reference, 2 - 5' strand of the read [%d]\n", opt->j_type);
   tmap_file_fprintf(tmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
-  tmap_file_fprintf(tmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
+  tmap_file_fprintf(tmap_file_stderr, "         -n INT      the number of threads (does not work for -t 0) [%d]\n", opt->num_threads);
   tmap_file_fprintf(tmap_file_stderr, "         -v          print verbose progress information\n");
   tmap_file_fprintf(tmap_file_stderr, "         -h          print this message\n");
   tmap_file_fprintf(tmap_file_stderr, "\n");
