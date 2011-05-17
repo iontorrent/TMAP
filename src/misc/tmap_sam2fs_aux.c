@@ -607,8 +607,14 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
 
   // trace path back
   k = 0;
-  while(0 < i || 0 < j) {
+  while(TMAP_SAM2FS_AUX_FROM_S != ctype && 0 < i) {
       int32_t next_ctype = -1;
+      
+	  /*
+	  fprintf(stderr, "1 i=%d j=%d ctype=%d next=%d\n", 
+              i, j, 
+              ctype, next_ctype);
+			  */
 
       switch(ctype) {
         case TMAP_SAM2FS_AUX_FROM_M:
@@ -666,12 +672,11 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
           tmap_error(NULL, Exit, OutOfRange);
       }
 
-      /*
-      fprintf(stderr, "i=%d j=%d ctype=%d %c next=%d %c\n", 
+	  /*
+      fprintf(stderr, "2 i=%d j=%d ctype=%d next=%d\n", 
               i, j, 
-              ctype, "MIDS"[ctype], 
-              next_ctype, "MIDS"[next_ctype]);
-              */
+              ctype, next_ctype);
+			  */
 
       switch(next_ctype) {
         case TMAP_SAM2FS_AUX_FROM_M:
