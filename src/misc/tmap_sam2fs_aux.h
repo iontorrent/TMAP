@@ -11,6 +11,20 @@ typedef struct {
     uint16_t *jump_rev; /*!< the reverse jump table */
 } tmap_sam2fs_aux_flow_order_t;
 
+typedef struct {
+    // for flow space smith waterman
+    char *fsw_qseq; /*< query bases */
+    char *fsw_tseq; /*< target bases */
+    char *fsw_aln; /*< flow space smith waterman alignment string */
+    int32_t score; /*< flow space smith waterman score */
+    // for flow space alignment
+    char *sam2fs_flow_order; /*< flow order */
+    int8_t *sam2fs_qseq; /*< query flow signals */
+    int8_t *sam2fs_tseq; /*< target flow signals */
+    char *sam2fs_aln; /*< flow space alignment string */
+    int32_t sam2fs_len; /*< alignment length */
+} tmap_sam2fs_aln_t;
+
 /*!
   @param  flow_order      the flow order bases, in character format
   @param  flow_order_len  the number of bases in the flow order
@@ -30,6 +44,7 @@ void
 tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
                            uint8_t *tseq, int32_t tseq_len, 
                            tmap_sam2fs_aux_flow_order_t *flow_order, 
-                           int8_t strand, char sep);
+                           int8_t strand, char sep,
+                           tmap_sam2fs_aln_t *aln_ret);
 
 #endif

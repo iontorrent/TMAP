@@ -287,7 +287,8 @@ void
 tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len, 
                            uint8_t *tseq, int32_t tseq_len, 
                            tmap_sam2fs_aux_flow_order_t *qseq_flow_order,
-                           int8_t strand, char sep)
+                           int8_t strand, char sep,
+                           tmap_sam2fs_aln_t *aln_ret)
 {
   int32_t i, j, k, l;
   int32_t ctype, i_from;
@@ -642,7 +643,7 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
               while(i_from < i) {
                   tmap_sam2fs_aux_aln_add(aln, f_qseq->flow[i-1], -1);
                   l = (i-1) % qseq_flow_order->flow_order_len;
-                  flow_order[k] = "ACGTN"[l];
+                  flow_order[k] = "ACGTN"[qseq_flow_order->flow_order[l]];
                   i--;
                   k++;
               }
@@ -717,31 +718,59 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
       }
   }
 
-  // print
-  // flow order
-  for(i=strlen(flow_order)-1;0<=i;i--) {
-      tmap_file_fprintf(fp, "%c", flow_order[i]);
-      if(0 < i) tmap_file_fprintf(fp, ","); 
+  if(NULL == aln_ret) {
+      // print
+      // flow order
+      for(i=strlen(flow_order)-1;0<=i;i--) {
+          tmap_file_fprintf(fp, "%c", flow_order[i]);
+          if(0 < i) tmap_file_fprintf(fp, ","); 
+      }
+      // read - query
+      tmap_file_fprintf(fp, "%c", sep); 
+      for(i=aln->len-1;0<=i;i--) {
+          if(0 <= aln->qseq[i]) tmap_file_fprintf(fp, "%d", aln->qseq[i]);
+          else tmap_file_fprintf(fp, "-");
+          if(0 < i) tmap_file_fprintf(fp, ","); 
+      }
+      // match string
+      tmap_file_fprintf(fp, "%c", sep); 
+      for(i=aln->len-1;0<=i;i--) {
+          tmap_file_fprintf(fp, "%c", aln->aln[i]);
+          if(0 < i) tmap_file_fprintf(fp, ","); 
+      }
+      // ref - target
+      tmap_file_fprintf(fp, "%c", sep); 
+      for(i=aln->len-1;0<=i;i--) {
+          if(0 <= aln->tseq[i]) tmap_file_fprintf(fp, "%d", aln->tseq[i]);
+          else tmap_file_fprintf(fp, "-");
+          if(0 < i) tmap_file_fprintf(fp, ","); 
+      }
   }
-  // read - query
-  tmap_file_fprintf(fp, "%c", sep); 
-  for(i=aln->len-1;0<=i;i--) {
-      if(0 <= aln->qseq[i]) tmap_file_fprintf(fp, "%d", aln->qseq[i]);
-      else tmap_file_fprintf(fp, "-");
-      if(0 < i) tmap_file_fprintf(fp, ","); 
-  }
-  // match string
-  tmap_file_fprintf(fp, "%c", sep); 
-  for(i=aln->len-1;0<=i;i--) {
-      tmap_file_fprintf(fp, "%c", aln->aln[i]);
-      if(0 < i) tmap_file_fprintf(fp, ","); 
-  }
-  // ref - target
-  tmap_file_fprintf(fp, "%c", sep); 
-  for(i=aln->len-1;0<=i;i--) {
-      if(0 <= aln->tseq[i]) tmap_file_fprintf(fp, "%d", aln->tseq[i]);
-      else tmap_file_fprintf(fp, "-");
-      if(0 < i) tmap_file_fprintf(fp, ","); 
+  else {
+      // store
+      aln_ret->sam2fs_len = aln->len;
+      aln_ret->sam2fs_flow_order = tmap_malloc(sizeof(char) * aln->len, "aln_ret->sam2fs_flow_order");
+      aln_ret->sam2fs_qseq = tmap_malloc(sizeof(int8_t) * aln->len, "aln_ret->sam2fs_qseq");
+      aln_ret->sam2fs_tseq = tmap_malloc(sizeof(int8_t) * aln->len, "aln_ret->sam2fs_tseq");
+      aln_ret->sam2fs_aln = tmap_malloc(sizeof(char) * aln->len, "aln_ret->sam2fs_aln");
+      // flow order
+      for(i=aln->len-1;0<=i;i--) {
+          aln_ret->sam2fs_flow_order[aln->len-i-1] = flow_order[i];
+      }
+      // read - query
+      for(i=aln->len-1;0<=i;i--) {
+          if(0 <= aln->qseq[i]) aln_ret->sam2fs_qseq[aln->len-i-1] = aln->qseq[i];
+          else aln_ret->sam2fs_qseq[aln->len-i-1] = -1;
+      }
+      // match string
+      for(i=aln->len-1;0<=i;i--) {
+          aln_ret->sam2fs_aln[aln->len-i-1] = aln->aln[i];
+      }
+      // ref - target
+      for(i=aln->len-1;0<=i;i--) {
+          if(0 <= aln->tseq[i]) aln_ret->sam2fs_tseq[aln->len-i-1] = aln->tseq[i];
+          else aln_ret->sam2fs_tseq[aln->len-i-1] = -1;
+      }
   }
 
   if(1 == strand) { // reverse back
