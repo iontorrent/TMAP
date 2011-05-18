@@ -1082,13 +1082,14 @@ tmap_sam2fs_main(int argc, char *argv[])
       return usage(opt);
   }
   else { // check command line options
+      tmap_validate_flow_order(opt->flow_order);
+      if(NULL == opt->key_sequence) tmap_error("the key sequence was not specified (-k), the flow order is assumed to be cyclically shifted", Warn, CommandLineArgument);
       tmap_error_cmd_check_int(opt->score_match, 0, INT32_MAX, "-A");
       tmap_error_cmd_check_int(opt->pen_mm, 0, INT32_MAX, "-M");
       tmap_error_cmd_check_int(opt->pen_gapo, 0, INT32_MAX, "-O");
       tmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
       tmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
       tmap_error_cmd_check_int(opt->flow_offset, 0, INT32_MAX, "-o");
-      tmap_validate_flow_order(opt->flow_order);
       tmap_error_cmd_check_int(opt->output_type, 0, 2, "-t");
       if(TMAP_SAM2FS_OUTPUT_ALN != opt->output_type) tmap_error_cmd_check_int(opt->output_newlines, 0, 0, "-N");
       if(-1 != opt->reads_queue_size) tmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
