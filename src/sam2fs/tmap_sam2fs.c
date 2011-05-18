@@ -453,6 +453,8 @@ tmap_sam2fs_aux(bam1_t *bam, tmap_sam2fs_aux_flow_order_t *flow_order, int32_t f
       flow_order_start_index = j;
   }
   // copy over
+  // Note: do not skip to the first base in the read, since we may start with a
+  // SNP/indel
   j = flow_order_start_index;
   for(i=0;i<tmp_flow_order_len;i++) {
       tmp_flow_order[i] = flow_order->flow_order[j];
