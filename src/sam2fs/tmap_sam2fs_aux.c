@@ -454,12 +454,8 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
       i_from = ((i<qseq_flow_order->jump_rev[k]) ? 0 : (i-qseq_flow_order->jump_rev[k])); // don't go before the first row
 
       for(j=1;j<=f_tseq->l;j++) { // target
-          int32_t flow_order_match = 0;
-          if(qseq_flow_order->flow_order[(i-1) % qseq_flow_order->flow_order_len] == tseq_flow_order->flow_order[(j-1) % tseq_flow_order->flow_order_len]) {
-              flow_order_match = 1;
-          }
 
-          // horizontal
+          // horizontal (deletion)
           if(dp[i][j-1].del_score < dp[i][j-1].match_score) { 
               if(dp[i][j-1].ins_score < dp[i][j-1].match_score) {
                   dp[i][j].del_score = dp[i][j-1].match_score - f_tseq->flow[j-1];
@@ -481,14 +477,16 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
               }
           } 
 
-          // vertical
+          // vertical (insertion)
           int32_t v_score_p, v_score_e, v_from_p, v_from_e;
           // four moves:
           // 1. phased from match
           // 2. phased from ins
           // 3. empty from match
           // 4. empth from ins
-          if(1 == flow_order_match) {
+          // Note: use the NEXT reference base for flow order matching
+          if(j == f_tseq->l 
+             || qseq_flow_order->flow_order[(i-1) % qseq_flow_order->flow_order_len] == tseq_flow_order->flow_order[j % tseq_flow_order->flow_order_len]) {
               v_score_e = TMAP_SW_MINOR_INF; 
               v_from_e = TMAP_SAM2FS_AUX_FROM_S;
           }
@@ -522,7 +520,7 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
           }
 
           // diagonal
-          if(0 == flow_order_match) {
+          if(qseq_flow_order->flow_order[(i-1) % qseq_flow_order->flow_order_len] != tseq_flow_order->flow_order[(j-1) % tseq_flow_order->flow_order_len]) {
               // out of phase, do not want
               dp[i][j].match_score = TMAP_SW_MINOR_INF; 
               dp[i][j].match_from = TMAP_SAM2FS_AUX_FROM_S;
@@ -585,10 +583,9 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
       best_ctype = TMAP_SAM2FS_AUX_FROM_M;
   }
 
-  /*
+  // HERE
   fprintf(stderr, "best_i=%d best_j=%d best_score=%d best_ctype=%d\n",
           best_i, best_j, best_score, best_ctype);
-  */
 
   i = best_i;
   j = best_j;
