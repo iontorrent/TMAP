@@ -9,12 +9,8 @@
 #include "../sw/tmap_sw.h"
 #include "tmap_sam2fs_aux.h"
 
-// do not use
-#define TMAP_SAM2FS_AUX_GAP_O 4
-#define TMAP_SAM2FS_AUX_GAP_E 4
-
-// added gap penalty
-#define TMAP_SAM2FS_AUX_GAP 0
+// added phase penalty
+#define TMAP_SAM2FS_AUX_PHASE_PENALTY 1
 
 typedef struct {
     int32_t *qseq;
@@ -435,9 +431,11 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
       i_from = ((i<qseq_flow_order->jump_rev[k]) ? 0 : (i-qseq_flow_order->jump_rev[k])); // don't go before the first row
       if(0 == i_from) {
           dp[i][0].ins_score = 0 - gap_sums_i[i-1];
+          dp[i][0].ins_from = TMAP_SAM2FS_AUX_FROM_S;
       }
       else {
-          dp[i][0].ins_score = dp[i_from][0].ins_score - gap_sums_i[i-1];
+          dp[i][0].ins_score = dp[i_from][0].ins_score - gap_sums_i[i-1] - TMAP_SAM2FS_AUX_PHASE_PENALTY;
+          dp[i][0].ins_from = TMAP_SAM2FS_AUX_FROM_IP;
       }
   }
   for(j=1;j<=f_tseq->l;j++) { // horizontal
@@ -456,8 +454,8 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
       for(j=1;j<=f_tseq->l;j++) { // target
 
           // horizontal (deletion)
-          if(dp[i][j-1].del_score < dp[i][j-1].match_score) { 
-              if(dp[i][j-1].ins_score < dp[i][j-1].match_score) {
+          if(dp[i][j-1].del_score <= dp[i][j-1].match_score) { 
+              if(dp[i][j-1].ins_score <= dp[i][j-1].match_score) {
                   dp[i][j].del_score = dp[i][j-1].match_score - f_tseq->flow[j-1];
                   dp[i][j].del_from = TMAP_SAM2FS_AUX_FROM_M;
               }
@@ -491,7 +489,7 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
               v_from_e = TMAP_SAM2FS_AUX_FROM_S;
           }
           else {
-              if(dp[i-1][j].ins_score < dp[i-1][j].match_score) {
+              if(dp[i-1][j].ins_score <= dp[i-1][j].match_score) {
                   v_score_e = dp[i-1][j].match_score - f_qseq->flow[i-1];
                   v_from_e = TMAP_SAM2FS_AUX_FROM_ME;
               }
@@ -501,12 +499,12 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
               }
           }
           // phased from ...
-          if(dp[i_from][j].ins_score < dp[i_from][j].match_score) { 
-              v_score_p = dp[i_from][j].match_score - gap_sums_i[i-1];
+          if(dp[i_from][j].ins_score <= dp[i_from][j].match_score) { 
+              v_score_p = dp[i_from][j].match_score - gap_sums_i[i-1] - TMAP_SAM2FS_AUX_PHASE_PENALTY;
               v_from_p = TMAP_SAM2FS_AUX_FROM_MP;
           }
           else {
-              v_score_p = dp[i_from][j].match_score - gap_sums_i[i-1];
+              v_score_p = dp[i_from][j].match_score - gap_sums_i[i-1] - TMAP_SAM2FS_AUX_PHASE_PENALTY;
               v_from_p = TMAP_SAM2FS_AUX_FROM_IP;
           }
           // compare empty vs. phased
@@ -548,13 +546,14 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
                   }
               }
           }
-          /*
-          fprintf(stderr, "i=%d j=%d M[%d,%d] I[%d,%d] D[%d,%d]\n",
+          // HERE
+          fprintf(stderr, "i=%d j=%d M[%d,%d] I[%d,%d] D[%d,%d] [%d,%d]\n",
                   i, j,
                   dp[i][j].match_score, dp[i][j].match_from,
                   dp[i][j].ins_score, dp[i][j].ins_from,
-                  dp[i][j].del_score, dp[i][j].del_from);
-          */
+                  dp[i][j].del_score, dp[i][j].del_from,
+                  qseq_flow_order->flow_order[(i-1) % qseq_flow_order->flow_order_len],
+                  tseq_flow_order->flow_order[(j-1) % tseq_flow_order->flow_order_len]);
       }
   }
 
@@ -608,11 +607,9 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
   while(TMAP_SAM2FS_AUX_FROM_S != ctype && 0 < i) {
       int32_t next_ctype = -1;
       
-	  /*
-	  fprintf(stderr, "1 i=%d j=%d ctype=%d next=%d\n", 
+      fprintf(stderr, "1 i=%d j=%d ctype=%d next=%d\n", 
               i, j, 
               ctype, next_ctype);
-			  */
 
       switch(ctype) {
         case TMAP_SAM2FS_AUX_FROM_M:
@@ -670,11 +667,9 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
           tmap_error(NULL, Exit, OutOfRange);
       }
 
-	  /*
       fprintf(stderr, "2 i=%d j=%d ctype=%d next=%d\n", 
               i, j, 
               ctype, next_ctype);
-			  */
 
       switch(next_ctype) {
         case TMAP_SAM2FS_AUX_FROM_M:
