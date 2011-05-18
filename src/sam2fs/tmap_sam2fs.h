@@ -15,6 +15,7 @@ enum {
 
 typedef struct {
     char *flow_order; /*!< flow order (-x) */
+    char *key_sequence; /*!< key sequence (-k) */
     int32_t score_match;  /*!< the match score (-A) */
     int32_t pen_mm;  /*!< the mismatch penalty (-M) */
     int32_t pen_gapo;  /*!< the indel open penalty (-O) */
