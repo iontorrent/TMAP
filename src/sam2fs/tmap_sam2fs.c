@@ -978,7 +978,7 @@ tmap_sam2fs_opt_init()
   opt->pen_gape = TMAP_MAP_UTIL_PEN_GAPE;
   opt->fscore = TMAP_MAP_UTIL_FSCORE;
   opt->flow_offset = 1;
-  opt->softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_ALL;
+  opt->softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_RIGHT;
   opt->output_type = TMAP_SAM2FS_OUTPUT_ALN;
   opt->output_newlines = 0;
   opt->j_type = TMAP_FSW_NO_JUSTIFY;
