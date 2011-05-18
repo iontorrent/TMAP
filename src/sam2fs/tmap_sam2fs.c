@@ -102,7 +102,7 @@ tmap_sam2fs_aln_print(tmap_file_t *fp, bam1_t *bam, tmap_sam2fs_aln_t *aln, char
   tmap_file_fprintf(fp, "%s%c%c%c", bam1_qname(bam), sep, (BAM_FREVERSE & bam->core.flag) ? '-' : '+', sep);
 
   // fsw
-  tmap_file_fprintf(fp, "%s%c%s%c%s%c%d", aln->fsw_qseq, sep, aln->fsw_aln, sep, aln->fsw_tseq, sep, aln->score);
+  tmap_file_fprintf(fp, "%d%c%s%c%s%c%s%c%d", aln->score, sep, aln->fsw_qseq, sep, aln->fsw_aln, sep, aln->fsw_tseq);
 
   // sam2fs
   tmap_file_fprintf(fp, "%c", sep);
