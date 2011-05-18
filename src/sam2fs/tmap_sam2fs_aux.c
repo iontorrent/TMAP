@@ -546,7 +546,7 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
                   }
               }
           }
-          // HERE
+          /*
           fprintf(stderr, "i=%d j=%d M[%d,%d] I[%d,%d] D[%d,%d] [%d,%d]\n",
                   i, j,
                   dp[i][j].match_score, dp[i][j].match_from,
@@ -554,6 +554,7 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
                   dp[i][j].del_score, dp[i][j].del_from,
                   qseq_flow_order->flow_order[(i-1) % qseq_flow_order->flow_order_len],
                   tseq_flow_order->flow_order[(j-1) % tseq_flow_order->flow_order_len]);
+                  */
       }
   }
 
@@ -582,9 +583,10 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
       best_ctype = TMAP_SAM2FS_AUX_FROM_M;
   }
 
-  // HERE
+  /*
   fprintf(stderr, "best_i=%d best_j=%d best_score=%d best_ctype=%d\n",
           best_i, best_j, best_score, best_ctype);
+          */
 
   i = best_i;
   j = best_j;
@@ -607,9 +609,11 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
   while(TMAP_SAM2FS_AUX_FROM_S != ctype && 0 < i) {
       int32_t next_ctype = -1;
       
+      /*
       fprintf(stderr, "1 i=%d j=%d ctype=%d next=%d\n", 
               i, j, 
               ctype, next_ctype);
+              */
 
       switch(ctype) {
         case TMAP_SAM2FS_AUX_FROM_M:
@@ -667,9 +671,11 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
           tmap_error(NULL, Exit, OutOfRange);
       }
 
+      /*
       fprintf(stderr, "2 i=%d j=%d ctype=%d next=%d\n", 
               i, j, 
               ctype, next_ctype);
+      */
 
       switch(next_ctype) {
         case TMAP_SAM2FS_AUX_FROM_M:
