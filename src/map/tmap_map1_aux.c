@@ -428,8 +428,6 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
   int32_t max_diff, best_diff;
   uint32_t k, l;
       
-  sams = tmap_map_sams_init();
-
   max_edit_score = opt->pen_mm;
   //if(max_edit_score < opt->pen_gapo + opt->pen_gape) max_edit_score = opt->pen_gapo + opt->pen_gape;
   //if(max_edit_score < opt->pen_gape) max_edit_score = opt->pen_gape;
@@ -477,6 +475,10 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
               width[1][j].bid, width[1][j].w);
   }
   */
+  
+  // initialize
+  sams = tmap_map_sams_init();
+
 
   match_sa_start.offset = 0;
   match_sa_start.hi = 0;
