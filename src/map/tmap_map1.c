@@ -233,16 +233,16 @@ tmap_map1_thread_map_core(void **data, tmap_seq_t *seqs[2], tmap_string_t *bases
       opt_local.max_gape = d->max_gape;
   }
 
-  // primary width
-  if(d->width_length < seq_len) {
-      d->width_length = seq_len;
+  // primary width, use seed2 length
+  if(d->width_length < seed2_len) {
+      d->width_length = seed2_len;
       d->width[0] = tmap_realloc(d->width[0], (1+d->width_length) * sizeof(tmap_bwt_match_width_t), "d->width[0]");
       d->width[1] = tmap_realloc(d->width[1], (1+d->width_length) * sizeof(tmap_bwt_match_width_t), "d->width[1]");
       memset(d->width[0], 0, (1+d->width_length) * sizeof(tmap_bwt_match_width_t));
       memset(d->width[1], 0, (1+d->width_length) * sizeof(tmap_bwt_match_width_t));
   }
-  tmap_bwt_match_cal_width_reverse(bwt[0], seq_len, bases[0]->s, d->width[0]);
-  tmap_bwt_match_cal_width_reverse(bwt[1], seq_len, bases[1]->s, d->width[1]);
+  tmap_bwt_match_cal_width_reverse(bwt[0], seed2_len, bases[0]->s + (seq_len - seed2_len), d->width[0]);
+  tmap_bwt_match_cal_width_reverse(bwt[1], seed2_len, bases[1]->s + (seq_len - seed2_len), d->width[1]);
 
   // seed width
   if(0 < opt->seed_length) {

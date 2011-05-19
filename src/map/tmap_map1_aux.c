@@ -461,7 +461,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
   best_score = next_best_score = aln_score(max_mm+1, max_gapo+1, max_gape+1, opt);
 
   // check whether there are too many N
-  for(j=num_n=0;j<bases[0]->l;j++) {
+  for(j=bases[0]->l-seed2_len,num_n=0;j<bases[0]->l;j++) {
       if(3 < bases[0]->s[j]) {
           num_n++;
       }
