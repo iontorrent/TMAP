@@ -609,7 +609,7 @@ tmap_map_opt_file_check_with_null(char *fn1, char *fn2)
         tmap_error("option -J or -Z was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->shm_key != (opt_map_all)->shm_key) { \
-        tmap_error("option -s was specified outside of the common options", Exit, CommandLineArgument); \
+        tmap_error("option -k was specified outside of the common options", Exit, CommandLineArgument); \
     } \
 } while(0)
 
@@ -619,10 +619,10 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   int32_t i;
   // global options
   if(NULL == opt->fn_fasta && 0 == opt->shm_key) {
-      tmap_error("option -f or option -s must be specified", Exit, CommandLineArgument);
+      tmap_error("option -f or option -k must be specified", Exit, CommandLineArgument);
   }
   else if(NULL != opt->fn_fasta && 0 < opt->shm_key) {
-      tmap_error("option -f and option -s may not be specified together", Exit, CommandLineArgument);
+      tmap_error("option -f and option -k may not be specified together", Exit, CommandLineArgument);
   }
   if(NULL == opt->fn_reads && TMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
       tmap_error("option -F or option -r must be specified", Exit, CommandLineArgument);
