@@ -991,14 +991,14 @@ tmap_sw_clipping_core2(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2,
 {
   register int32_t i, j;
 
-  tmap_sw_path_t *p;
-  tmap_sw_dpcell_t **dpcell;
-  tmap_sw_dpscore_t *curr, *last, *s;
+  tmap_sw_path_t *p=NULL;
+  tmap_sw_dpcell_t **dpcell=NULL;
+  tmap_sw_dpscore_t *curr=NULL, *last=NULL, *s=NULL;
 
   uint8_t ctype, ctype_next = 0;
 
   int32_t gap_open, gap_ext, gap_end;
-  int32_t *mat, *score_matrix, N_MATRIX_ROW;
+  int32_t *mat=NULL, *score_matrix=NULL, N_MATRIX_ROW;
 
   int32_t best_i=-1, best_j=-1;
   uint8_t best_ctype=0;
@@ -1103,10 +1103,10 @@ tmap_sw_clipping_core2(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2,
   // allocate memory for the main cells
   dpcell = tmap_malloc(sizeof(tmap_sw_dpcell_t*) * (len1 + 1), "dpcell");
   for(i=0;i<=len1;i++) {
-      dpcell[i] = tmap_malloc(sizeof(tmap_sw_dpcell_t) * (len2 + 1), "dpcell");
+      dpcell[i] = tmap_malloc(sizeof(tmap_sw_dpcell_t) * (len2 + 1), "dpcell[i]");
   }
   curr = tmap_malloc(sizeof(tmap_sw_dpscore_t) * (len2 + 1), "curr");
-  last = tmap_malloc(sizeof(tmap_sw_dpscore_t) * (len2 + 1), "curr");
+  last = tmap_malloc(sizeof(tmap_sw_dpscore_t) * (len2 + 1), "last");
 
   best_score = TMAP_SW_MINOR_INF;
 
