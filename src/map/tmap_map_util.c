@@ -851,6 +851,7 @@ tmap_map_sams_realloc(tmap_map_sams_t *s, int32_t n)
       s->sams[i].aux.map1_aux = NULL;
       s->sams[i].aux.map2_aux = NULL;
       s->sams[i].aux.map3_aux = NULL;
+      s->sams[i].ascore = INT32_MIN;
   }
   s->n = n;
 }

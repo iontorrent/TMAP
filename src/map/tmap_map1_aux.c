@@ -258,14 +258,14 @@ tmap_map1_aux_stack_size(tmap_map1_aux_stack_t *stack)
 }
 
 static inline void 
-tmap_map1_aux_stack_shadow(uint32_t x, int32_t len, uint32_t max, 
+tmap_map1_aux_stack_shadow(uint32_t x, uint32_t max, 
                            int32_t last_diff_offset, tmap_bwt_match_width_t *w)
 {
   int32_t i, j;
   for(i=j=0;i<last_diff_offset;i++) {
       /*
-      fprintf(stderr, "B i=%d j=%d last_diff_offset=%d x=%u len=%d max=%u w[i].w=%u w[i].bid=%d\n",
-              i, j, last_diff_offset, x, len, max, w[i].w, w[i].bid);
+      fprintf(stderr, "B i=%d j=%d last_diff_offset=%d x=%u max=%u w[i].w=%u w[i].bid=%d\n",
+              i, j, last_diff_offset, x, max, w[i].w, w[i].bid);
               */
       if(x < w[i].w) { 
           w[i].w -= x;
@@ -275,8 +275,8 @@ tmap_map1_aux_stack_shadow(uint32_t x, int32_t len, uint32_t max,
           w[i].w = max - (++j);
       }
       /*
-      fprintf(stderr, "A i=%d j=%d last_diff_offset=%d x=%u len=%d max=%u w[i].w=%u w[i].bid=%d\n",
-              i, j, last_diff_offset, x, len, max, w[i].w, w[i].bid);
+      fprintf(stderr, "A i=%d j=%d last_diff_offset=%d x=%u max=%u w[i].w=%u w[i].bid=%d\n",
+              i, j, last_diff_offset, x, max, w[i].w, w[i].bid);
               */
   }
 }
@@ -490,7 +490,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
   while(0 < tmap_map1_aux_stack_size(stack) && tmap_map1_aux_stack_size(stack) < opt->max_entries) {
       tmap_map1_aux_stack_entry_t *e = NULL;
       int32_t strand, len=-1; 
-      int32_t n_seed_mm=0, offset;
+      int32_t n_seed_mm=0, offset, width_cur_i;
       const uint8_t *str=NULL;
       int32_t sam_found, m;
       tmap_bwt_match_width_t *width_cur = NULL;
@@ -533,6 +533,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
       str = (uint8_t*)bases[strand]->s;
       len = bases[strand]->l;
       width_cur = width[strand];
+      width_cur_i = seed2_len - (len - offset);
 
       if(NULL != seed_width) {
           seed_width_cur = seed_width[strand];
@@ -541,8 +542,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
       else {
           seed_width_cur = NULL;
       }
-      //fprintf(stderr, "max_diff=%d offset=%d m=%d width_cur[offset-1].bid=%d\n", max_diff, offset, m, width_cur[offset-1].bid);
-      if(0 < offset && m < width_cur[offset-1].bid) { // too many edits
+      if(0 < width_cur_i && m < width_cur[width_cur_i-1].bid) { // too many edits
           continue;
       }
 
@@ -601,7 +601,9 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
               if(i < sams->n) {
                   // shadow
                   if(0 < k) {
-                      tmap_map1_aux_stack_shadow(k, len, bwt[1-strand]->seq_len, e->last_diff_offset, width_cur);
+                      //tmap_map1_aux_stack_shadow(k, bwt[1-strand]->seq_len, e->last_diff_offset, width_cur);
+                      width_cur_i = seed2_len - (len - e->last_diff_offset);
+                      tmap_map1_aux_stack_shadow(k, seed2_len, width_cur_i, width_cur);
                   }
                   sam_found = 0;
                   continue;
@@ -700,7 +702,9 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
               fprintf(stderr, "e->n_mm=%d e->n_gapo=%d e->n_gape=%d\n",
                       e->n_mm, e->n_gapo, e->n_gape);
               */
-              tmap_map1_aux_stack_shadow(l - k + 1, len, bwt[1-strand]->seq_len, e->last_diff_offset, width_cur);
+              //tmap_map1_aux_stack_shadow(l - k + 1, bwt[1-strand]->seq_len, e->last_diff_offset, width_cur);
+              width_cur_i = seed2_len - (len - e->last_diff_offset);
+              tmap_map1_aux_stack_shadow(l - k + 1, seed2_len, width_cur_i, width_cur);
               if(opt->max_best_cals < best_cnt) {
                   // ignore if too many "best" have been found
                   sam->pos -= (best_cnt - opt->max_best_cals); // only save the maximum
@@ -716,24 +720,28 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
 
           // use a bound for mismatches
           if(0 < offset) {
-              i = offset;
-              int32_t ii = i - (len - opt->seed_length);
-              if(m-1 < width_cur[i-1].bid) { 
-                  allow_diff = 0;
-              }
-              else if(width_cur[i-1].bid == m-1
-                      && width_cur[i].bid == m-1
-                      && width_cur[i-1].w == width_cur[i].w) {
-                  allow_mm = 0;
-              }
-              if(NULL != seed_width_cur && 0 < ii) {
-                  if(n_seed_mm-1 < seed_width_cur[ii-1].bid) {
+              int32_t seed_width_cur_i = offset - (len - opt->seed_length);
+              width_cur_i = seed2_len - (len - offset);
+              if(0 < width_cur_i) {
+                  if(m-1 < width_cur[width_cur_i-1].bid) { 
                       allow_diff = 0;
                   }
-                  else if(seed_width_cur[ii-1].bid == n_seed_mm-1
-                     && seed_width_cur[ii].bid == n_seed_mm-1
-                     && seed_width_cur[ii-1].w == seed_width_cur[ii].w) {
+                  else if(width_cur[width_cur_i-1].bid == m-1
+                          && width_cur[width_cur_i].bid == m-1
+                          && width_cur[width_cur_i-1].w == width_cur[width_cur_i].w) {
                       allow_mm = 0;
+                  }
+              }
+              if(0 < seed_width_cur_i) {
+                  if(NULL != seed_width_cur && 0 < seed_width_cur_i) {
+                      if(n_seed_mm-1 < seed_width_cur[seed_width_cur_i-1].bid) {
+                          allow_diff = 0;
+                      }
+                      else if(seed_width_cur[seed_width_cur_i-1].bid == n_seed_mm-1
+                              && seed_width_cur[seed_width_cur_i].bid == n_seed_mm-1
+                              && seed_width_cur[seed_width_cur_i-1].w == seed_width_cur[seed_width_cur_i].w) {
+                          allow_mm = 0;
+                      }
                   }
               }
           }

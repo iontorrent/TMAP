@@ -455,7 +455,7 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
   }
   
   // XZ
-  if(TMAP_SEQ_TYPE_SFF == seq->type) {
+  if(TMAP_SEQ_TYPE_SFF == seq->type && INT32_MIN != ascore) {
       tmap_file_fprintf(fp, "\tXZ:i:%d", ascore);
   }
 
