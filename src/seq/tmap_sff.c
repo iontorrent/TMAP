@@ -207,9 +207,11 @@ tmap_sff_read_header_clone(tmap_sff_read_header_t *rh)
   ret->name_length = rh->name_length; 
   ret->n_bases = rh->n_bases; 
   ret->clip_qual_left = rh->clip_qual_left; 
-  ret->clip_qual_right = rh->clip_qual_left; 
+  ret->clip_qual_right = rh->clip_qual_right;
   ret->clip_adapter_left = rh->clip_adapter_left; 
-  ret->clip_adapter_right = rh->clip_adapter_left; 
+  ret->clip_adapter_right = rh->clip_adapter_right;
+  ret->clip_left = ret->clip_left;
+  ret->clip_right = ret->clip_right;
   ret->name = tmap_string_clone(rh->name);
 
   return ret;
@@ -434,6 +436,7 @@ tmap_sff_to_char(tmap_sff_t *sff)
   for(i=0;i<sff->read->bases->l;i++) {
       sff->read->bases->s[i] = "ACGTN"[(int)sff->read->bases->s[i]];
   }
+  sff->read->bases->s[sff->read->bases->l] = '\0';
   sff->is_int = 0;
 }
 
@@ -450,14 +453,65 @@ tmap_sff_get_qualities(tmap_sff_t *sff)
 }
 
 inline void
-tmap_sff_remove_key_sequence(tmap_sff_t *sff)
+tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping)
 {
   int32_t i;
-  // remove the key sequence
-  for(i=0;i<=sff->rheader->n_bases - sff->gheader->key_length;i++) { 
-      sff->read->bases->s[i] = sff->read->bases->s[i+sff->gheader->key_length];
-      sff->read->quality->s[i] = sff->read->quality->s[i+sff->gheader->key_length];
+
+  int32_t left, right; // zero-based
+
+  if(1 == remove_clipping) {
+      // left clipping
+      if(0 < sff->rheader->clip_adapter_left || 0 < sff->rheader->clip_qual_left) {
+          if(sff->rheader->clip_adapter_left < sff->rheader->clip_qual_left) { // choose the largest
+              sff->rheader->clip_left = sff->rheader->clip_qual_left - 1;
+          }
+          else {
+              sff->rheader->clip_left = sff->rheader->clip_adapter_left - 1;
+          }
+          // do not include the key sequence 
+          if(sff->gheader->key_length < sff->rheader->clip_qual_left) {
+              left = sff->rheader->clip_left;
+              sff->rheader->clip_left -= sff->gheader->key_length; 
+          }
+          else {
+              left = sff->gheader->key_length; 
+              sff->rheader->clip_left = 0;
+          }
+      }
+      else {
+          left = sff->gheader->key_length;
+      }
+
+      // right clipping
+      if(0 < sff->rheader->clip_adapter_right || 0 < sff->rheader->clip_qual_right) {
+          if(0 == sff->rheader->clip_qual_right 
+             || (0 < sff->rheader->clip_adapter_right && sff->rheader->clip_adapter_right < sff->rheader->clip_qual_right)) {
+              sff->rheader->clip_right = sff->rheader->n_bases - sff->rheader->clip_adapter_right;
+              right = sff->rheader->clip_adapter_right-1;
+          }
+          else {
+              sff->rheader->clip_right = sff->rheader->n_bases - sff->rheader->clip_qual_right;
+              right = sff->rheader->clip_qual_right-1;
+          }
+      }
+      else {
+          right = sff->rheader->n_bases-1;
+      }
   }
-  sff->read->bases->l -= sff->gheader->key_length;
-  sff->read->quality->l -= sff->gheader->key_length;
+  else {
+      left = sff->gheader->key_length;
+      right = sff->rheader->n_bases-1;
+  }
+
+  // extract the bases
+  for(i=0;i<right-left+1;i++) {
+      sff->read->bases->s[i] = sff->read->bases->s[i+left];
+      sff->read->quality->s[i] = sff->read->quality->s[i+left];
+  }
+  sff->read->bases->l = (right-left+1);
+  sff->read->quality->l = (right-left+1);
+  if(0 == sff->is_int) {
+      sff->read->bases->s[sff->read->bases->l] = '\0';
+      sff->read->quality->s[sff->read->quality->l] = '\0';
+  }
 }

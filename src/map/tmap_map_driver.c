@@ -97,7 +97,7 @@ tmap_map_driver_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int
           }
 
           // remove key sequence for seeding
-          tmap_seq_remove_key_sequence(seq);
+          tmap_seq_remove_key_sequence(seq, opt->remove_sff_clipping);
 
           // map thread data,
           sams[low] = func_thread_map(&data, seq, refseq, bwt, sa, opt);
@@ -131,7 +131,7 @@ tmap_map_driver_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int
                                     opt->score_match, opt->pen_mm, opt->pen_gapo,
                                     opt->pen_gape, opt->fscore);
                   // remove key sequence, do not output the key sequence part
-                  tmap_seq_remove_key_sequence(seq_buffer[low]);
+                  tmap_seq_remove_key_sequence(seq_buffer[low], opt->remove_sff_clipping);
               }
           }
       }

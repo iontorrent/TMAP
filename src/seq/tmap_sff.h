@@ -43,6 +43,8 @@ typedef struct {
     uint16_t clip_adapter_left;  /*!< the 1-based coordinate of the first base after the (adapter) left clipped region (zero if no clipping has been applied) */
     uint16_t clip_adapter_right;  /*!< the 1-based coordinate of the first base after the (adapter) right clipped region (zero if no clipping has been applied) */
     tmap_string_t *name;  /*!< the read name  */
+    uint16_t clip_left;  /*< the number of bases hard-clipped on the right of the sequence, not including the key sequence */
+    uint16_t clip_right;  /*< the number of bases hard-clipped on the right of the sequence */
 } tmap_sff_read_header_t;
 
 /*! 
@@ -60,7 +62,7 @@ typedef struct {
     tmap_sff_header_t *gheader;  /*!< pointer to the global header */
     tmap_sff_read_header_t *rheader;  /*!< pointer to the read header */
     tmap_sff_read_t *read;  /*!< pointer to the read */
-    int32_t is_int;  /*!< 1 if the bases are integer values, 0 otherwise */
+    uint8_t is_int;  /*!< 1 if the bases are integer values, 0 otherwise */
 } tmap_sff_t;
 
 /*! 
@@ -169,12 +171,12 @@ inline tmap_string_t *
 tmap_sff_get_qualities(tmap_sff_t *sff);
 
 /*! 
-  removes the key sequence from the read and quality fields
-  @param  sff  pointer to the structure to convert
-  @details     this will only remove the key sequence from the SFF
-  structure, and then only the read and quality (not the read header etc.)
+  removes the key sequence and clipped sequence from the read and quality fields
+  @param  sff              pointer to the structure to convert
+  @param  remove_clipping  1 if we are to remove clipped sequence, 0 otherwise
+  @details                 this will not modify the header
   */
 inline void
-tmap_sff_remove_key_sequence(tmap_sff_t *sff);
+tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping);
 
 #endif

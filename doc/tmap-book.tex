@@ -201,6 +201,9 @@ For example, \TT{-R CN:SEQUENCING\_CENTER -R PG:TMAP -R PL:IONTORRENT} will popu
 \subsubsection{\TT{-Y}}
 Specifies that SFF specific tags should be added to the output SAM file.
 
+\subsubsection{\TT{-G}}
+Specifies to not remove bases and qualities based on the adapter and quality clipping fields found in the an input SFF file.
+
 \subsubsection{\TT{-j}, \TT{-z}}
 Specifies that the input is bzip2 (\TT{-j}) or gzip (\TT{-z}) compressed.
 This is auto-recognized if the input file name has the extension \TT{.bz2} for bzip2 and \TT{.gz} for gzip.

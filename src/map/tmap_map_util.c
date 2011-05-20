@@ -69,6 +69,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->flow_order_use_sff = 0;
   opt->bw = 50; 
   opt->softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_RIGHT;
+  opt->remove_sff_clipping = 1;
   opt->dup_window = 128;
   opt->max_seed_band = 15;
   opt->score_thr = 8;
@@ -273,6 +274,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "                             2 - all best hits\n");
   tmap_file_fprintf(tmap_file_stderr, "                             3 - all alignments\n");
   tmap_file_fprintf(tmap_file_stderr, "         -R STRING   the RG tags to add to the SAM header [%s]\n", opt->sam_rg);
+  tmap_file_fprintf(tmap_file_stderr, "         -G          do not remove SFF clipping [%d]\n", opt->remove_sff_clipping);
   tmap_file_fprintf(tmap_file_stderr, "         -Y          include SFF specific SAM tags [%s]\n",
                     (1 == opt->sam_sff_tags) ? "true" : "false");
   tmap_file_fprintf(tmap_file_stderr, "         -z/-j       the input is gz/bz2 compressed (gzip/bzip2)");
@@ -325,16 +327,16 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   opt->argc = argc; opt->argv = argv;
   switch(opt->algo_id) {
     case TMAP_MAP_ALGO_MAP1:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YjzJZk:vhl:s:L:p:P:m:o:e:d:i:b:Q:u:U:");
+      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YGjzJZk:vhl:s:L:p:P:m:o:e:d:i:b:Q:u:U:");
       break;
     case TMAP_MAP_ALGO_MAP2:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YjzJZk:vhc:S:b:N:u:U:");
+      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YGjzJZk:vhc:S:b:N:u:U:");
       break;
     case TMAP_MAP_ALGO_MAP3:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YjzJZk:vhl:S:H:u:U:");
+      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YGjzJZk:vhl:S:H:u:U:");
       break;
     case TMAP_MAP_ALGO_MAPALL:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YjzJZk:vhIu:U:");
+      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YGjzJZk:vhIu:U:");
       break;
     default:
       break;
@@ -405,6 +407,8 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           break;
         case 'Y':
           opt->sam_sff_tags = 1; break;
+        case 'G':
+          opt->remove_sff_clipping = 0; break;
         case 'j':
           opt->input_compr = TMAP_FILE_BZ2_COMPRESSION;
           tmap_get_reads_file_format_from_fn_int(opt->fn_reads, &opt->reads_format, &opt->input_compr);
@@ -602,6 +606,9 @@ tmap_map_opt_file_check_with_null(char *fn1, char *fn2)
     if((opt_map_other)->sam_sff_tags != (opt_map_all)->sam_sff_tags) { \
         tmap_error("option -Y was specified outside of the common options", Exit, CommandLineArgument); \
     } \
+    if((opt_map_other)->remove_sff_clipping != (opt_map_all)->remove_sff_clipping) { \
+        tmap_error("option -G was specified outside of the common options", Exit, CommandLineArgument); \
+    } \
     if((opt_map_other)->input_compr != (opt_map_all)->input_compr) { \
         tmap_error("option -j or -z was specified outside of the common options", Exit, CommandLineArgument); \
     } \
@@ -745,6 +752,7 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "aln_output_mode=%d\n", opt->aln_output_mode);
   fprintf(stderr, "sam_rg=%s\n", opt->sam_rg);
   fprintf(stderr, "sam_sff_tags=%d\n", opt->sam_sff_tags);
+  fprintf(stderr, "remove_sff_clipping=%d\n", opt->remove_sff_clipping);
   fprintf(stderr, "input_compr=%d\n", opt->input_compr);
   fprintf(stderr, "output_compr=%d\n", opt->output_compr);
   fprintf(stderr, "shm_key=%d\n", (int)opt->shm_key);

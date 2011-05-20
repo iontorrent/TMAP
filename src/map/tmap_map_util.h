@@ -91,6 +91,7 @@ typedef struct __tmap_map_opt_t {
     int32_t aln_output_mode;  /*!< specifies how to choose alignments (-a)  */
     char *sam_rg;  /*!< specifies the RG line in the SAM header (-R) */
     int32_t sam_sff_tags;  /*!< specifies to output SFF specific SAM tags (-Y) */
+    int32_t remove_sff_clipping; /*!< removes sff cliping (-G) */
     int32_t input_compr;  /*!< the input compression type (-j and -z) */
     int32_t output_compr;  /*!< the output compression type (-J and -Z) */
     key_t shm_key;  /*!< the shared memory key (-k) */

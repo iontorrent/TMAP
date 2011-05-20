@@ -291,10 +291,10 @@ tmap_seq_get_qualities(tmap_seq_t *seq)
 }
 
 inline void
-tmap_seq_remove_key_sequence(tmap_seq_t *seq)
+tmap_seq_remove_key_sequence(tmap_seq_t *seq, int32_t remove_clipping)
 {
   if(TMAP_SEQ_TYPE_SFF != seq->type) return; // ignore
-  tmap_sff_remove_key_sequence(seq->data.sff);
+  tmap_sff_remove_key_sequence(seq->data.sff, remove_clipping);
 }
 
 tmap_seq_t *

@@ -121,12 +121,12 @@ inline tmap_string_t *
 tmap_seq_get_qualities(tmap_seq_t *seq);
 
 /*! 
-  @param  seq  pointer to the structure to convert
-  @details     this will only remove the key sequence from a SFF 
-  structure, and then only the read and quality (not the read header etc.)
+  @param                   seq  pointer to the structure to convert
+  @param  remove_clipping  1 if we are to remove clipped sequence, 0 otherwise
+  @details                 this will not modify the header
   */
 void
-tmap_seq_remove_key_sequence(tmap_seq_t *seq);
+tmap_seq_remove_key_sequence(tmap_seq_t *seq, int32_t remove_clipping);
 
 /*! 
   @param  seq  pointer to the structure to convert

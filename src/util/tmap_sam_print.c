@@ -208,8 +208,32 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags)
   bases = tmap_seq_get_bases(seq);
   qualities = tmap_seq_get_qualities(seq);
 
-  tmap_file_fprintf(fp, "%s\t%u\t%s\t%u\t%u\t*\t*\t0\t0\t%s\t%s",
-                    name->s, flag, "*",
+  tmap_file_fprintf(fp, "%s\t%u\t", name->s, flag);
+  // cigar
+  if(TMAP_SEQ_TYPE_SFF == seq->type 
+     && (0 < seq->data.sff->rheader->clip_left || 0 < seq->data.sff->rheader->clip_right)) {
+      // since bases were hard-clipped.
+      if(0 == strcmp(seq->data.sff->rheader->name->s, "IB8EW:4:291")) {
+          fprintf(stderr, "right_clipping=[%d,%d] sff->rheader->clip_left=%d sff->rheader->clip_right=%d\n",
+                  seq->data.sff->rheader->clip_adapter_right,
+                  seq->data.sff->rheader->clip_qual_right,
+                  seq->data.sff->rheader->clip_left,
+                  seq->data.sff->rheader->clip_right);
+      }
+
+
+     if(0 < seq->data.sff->rheader->clip_left) {
+         tmap_file_fprintf(fp, "%dH", seq->data.sff->rheader->clip_left);
+     }
+     tmap_file_fprintf(fp, "%dM", bases->l);
+     if(0 < seq->data.sff->rheader->clip_right) {
+         tmap_file_fprintf(fp, "%dH", seq->data.sff->rheader->clip_right);
+     }
+  }
+  else {
+      tmap_file_fprintf(fp, "*");
+  }
+  tmap_file_fprintf(fp, "\t%u\t%u\t*\t*\t0\t0\t%s\t%s",
                     0, 0, 
                     bases->s, (0 == qualities->l) ? "*" : qualities->s);
   tmap_file_fprintf(fp, "\tRG:Z:%s\tPG:Z:%s",
@@ -384,47 +408,27 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
                     pos + 1,
                     mapq);
   cigar_tmp = cigar;
-  // add the soft clipping of from an SFF
-  /*
-  if(TMAP_SEQ_TYPE_SFF == seq->type) {
-      int32_t sff_soft_clip = seq->data.sff->gheader->key_length; // soft clip the key sequence
-      if(0 < sff_soft_clip && 0 < n_cigar) {
-          if(0 == strand) {  // forward strand sff soft clip
-              if(4 == cigar[0]) { // add to an existing soft clip
-                  cigar[0] = (((cigar[0]>>4) + sff_soft_clip) << 4) | 4;
-              }
-              else { // add a new soft clip to the front
-                  cigar_tmp_allocated = 1;
-                  cigar_tmp = tmap_calloc(n_cigar+1, sizeof(uint32_t), "cigar_tmp");
-                  cigar_tmp[0] = (sff_soft_clip << 4) | 4; 
-                  for(i=0;i<n_cigar;i++) {
-                      cigar_tmp[i+1] = cigar[i];
-                  }
-                  n_cigar++;
-              }
-          }
-          else {  // reverse strand sff soft clip
-              if(4 == cigar[n_cigar-1]) { // add to an existing soft clip
-                  cigar[n_cigar-1] = (((cigar[n_cigar-1]>>4) + sff_soft_clip) << 4) | 4;
-              }
-              else { // add a new soft clip to the end
-                  cigar_tmp_allocated = 1;
-                  cigar_tmp = tmap_calloc(n_cigar+1, sizeof(uint32_t), "cigar_tmp");
-                  cigar_tmp[n_cigar] = (sff_soft_clip << 4) | 4; 
-                  for(i=0;i<n_cigar;i++) {
-                      cigar_tmp[i] = cigar[i];
-                  }
-                  n_cigar++;
-              }
-          }
-      }
-  }
-  */
 
   // print out the cigar
+  if(TMAP_SEQ_TYPE_SFF == seq->type) {
+      if(0 == strand && 0 < seq->data.sff->rheader->clip_left) {
+          tmap_file_fprintf(fp, "%dH", seq->data.sff->rheader->clip_left);
+      }
+      else if(1 == strand && 0 < seq->data.sff->rheader->clip_right) {
+          tmap_file_fprintf(fp, "%dH", seq->data.sff->rheader->clip_right);
+      }
+  }
   for(i=0;i<n_cigar;i++) {
       tmap_file_fprintf(fp, "%d%c",
                         cigar_tmp[i]>>4, "MIDNSHP"[cigar_tmp[i]&0xf]);
+  }
+  if(TMAP_SEQ_TYPE_SFF == seq->type) {
+      if(1 == strand && 0 < seq->data.sff->rheader->clip_left) {
+          tmap_file_fprintf(fp, "%dH", seq->data.sff->rheader->clip_left);
+      }
+      else if(0 == strand && 0 < seq->data.sff->rheader->clip_right) {
+          tmap_file_fprintf(fp, "%dH", seq->data.sff->rheader->clip_right);
+      }
   }
 
   // bases and qualities
