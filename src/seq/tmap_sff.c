@@ -160,9 +160,9 @@ tmap_sff_read_header_read(tmap_file_t *fp)
   rh->name_length = ntohs(rh->name_length);
   rh->n_bases = ntohl(rh->n_bases);
   rh->clip_qual_left = ntohs(rh->clip_qual_left);
-  rh->clip_qual_right = ntohs(rh->clip_qual_left);
+  rh->clip_qual_right = ntohs(rh->clip_qual_right);
   rh->clip_adapter_left = ntohs(rh->clip_adapter_left);
-  rh->clip_adapter_right = ntohs(rh->clip_adapter_left);
+  rh->clip_adapter_right = ntohs(rh->clip_adapter_right);
 
   rh->name = tmap_string_init(rh->name_length+1);
 
