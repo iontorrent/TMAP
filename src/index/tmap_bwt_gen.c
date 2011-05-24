@@ -1545,18 +1545,15 @@ BWTSaveBwtCodeAndOcc(tmap_bwt_t *bwt_out, const tmap_bwt_gen_t *bwt, const char 
   bwt_out->bwt = NULL;
 
   // update occurrence interval
-  if(0 < occ_interval && bwt_out->occ_interval != occ_interval) {
-      bwt_tmp = tmap_bwt_read(fn_fasta, is_rev);
-      tmap_bwt_update_occ_interval(bwt_tmp, occ_interval);
-      tmap_bwt_write(fn_fasta, bwt_tmp, is_rev);
-      tmap_bwt_destroy(bwt_tmp);
-  }
+  bwt_tmp = tmap_bwt_read(fn_fasta, is_rev);
+  tmap_bwt_update_occ_interval(bwt_tmp, occ_interval);
+  tmap_bwt_write(fn_fasta, bwt_tmp, is_rev);
+  tmap_bwt_destroy(bwt_tmp);
 }
 
 void 
 tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, uint32_t hash_width)
 {
-  // TODO: streamline occ_interval and hash creation
   tmap_bwt_gen_inc_t *bwtInc=NULL;
   tmap_bwt_t *bwt=NULL;
   uint8_t *buf=NULL;
@@ -1579,7 +1576,7 @@ tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, 
       // initialization
       bwt = tmap_calloc(1, sizeof(tmap_bwt_t), "bwt");
       bwt->seq_len = refseq->len;
-      bwt->bwt_size = (bwt->seq_len + 15) >> 4;
+      bwt->bwt_size = (bwt->seq_len + 15) >> 4; // 2-bit packed
       bwt->version_id = TMAP_VERSION_ID;
 
       if(1 == is_large) {
@@ -1605,22 +1602,21 @@ tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, 
               ++bwt->L2[1+buf[i]];
           }
           for(i=2;i<ALPHABET_SIZE+1;i++) {
-            bwt->L2[i] += bwt->L2[i-1];
+              bwt->L2[i] += bwt->L2[i-1];
           }
 
           // Burrows-Wheeler Transform
           bwt->primary = tmap_bwt_gen_short(buf, bwt->seq_len);
           bwt->bwt = tmap_calloc(bwt->bwt_size, sizeof(uint32_t), "bwt->bwt");
           for(i=0;i<bwt->seq_len;i++) {
+              // 2-bit packing for DNA
               bwt->bwt[i>>4] |= buf[i] << ((15 - (i&15)) << 1);
           }
           free(buf);
           bwt->occ_interval = 1; 
 
           // update occurrence interval
-          if(0 < occ_interval && bwt->occ_interval != occ_interval) {
-              tmap_bwt_update_occ_interval(bwt, occ_interval);
-          }
+          tmap_bwt_update_occ_interval(bwt, occ_interval);
 
           bwt->is_rev = is_rev;
           bwt->hash_width = 0; // none yet
@@ -1635,7 +1631,7 @@ tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, 
       else {
           tmap_progress_print2("constructed the reverse BWT string from the reversed packed FASTA");
       }
-      
+
       bwt = tmap_bwt_read(fn_fasta, is_rev);
       tmap_bwt_gen_hash(bwt, hash_width);
       tmap_bwt_write(fn_fasta, bwt, is_rev);

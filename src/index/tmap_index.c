@@ -11,12 +11,6 @@
 #include "tmap_sa.h"
 #include "tmap_index.h"
 
-// TODO
-// - first-level hashing
-// - BWT of the reverse sequence, if useful
-// - Timing data structure ?
-// - standard messaging ?
-
 static void tmap_index_core(tmap_index_opt_t *opt)
 {
   uint64_t ref_len = 0;
@@ -115,13 +109,13 @@ int tmap_index(int argc, char *argv[])
   if(NULL == opt.fn_fasta) {
       tmap_error("required option -f", Exit, CommandLineArgument);
   }
-  if(0 < opt.occ_interval && 0 != (opt.occ_interval % 16)) {
+  if(opt.occ_interval < 16 || 0 != (opt.occ_interval % 16)) {
       tmap_error("option -o out of range", Exit, CommandLineArgument);
   }
   if(opt.hash_width <= 0) {
       tmap_error("option -w out of range", Exit, CommandLineArgument);
   }
-  if(0 < opt.sa_interval && 0 != (opt.sa_interval % 2)) {
+  if(opt.sa_interval < 0 || (1 < opt.sa_interval && 0 != (opt.sa_interval % 2))) {
       tmap_error("option -i out of range", Exit, CommandLineArgument);
   }
 

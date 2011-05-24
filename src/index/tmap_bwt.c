@@ -320,18 +320,25 @@ tmap_bwt_update_occ_interval(tmap_bwt_t *bwt, uint32_t occ_interval)
   uint32_t i, k, c[4], n_occ;
   uint32_t *buf = NULL;
 
+  // 2-bit DNA packed
 #define bwt_B00(b, k) ((b)->bwt[(k)>>4]>>((~(k)&0xf)<<1)&3)
 
+  if(occ_interval < 16 || 0 != occ_interval % 16) {
+      tmap_error("bug encountered", Exit, OutOfRange);
+  }
+
+  n_occ = ((bwt->seq_len + occ_interval - 1) / occ_interval) + 1; // the number of occurences to store, on top of the bwt string
   bwt->occ_interval = occ_interval;
-  n_occ = (bwt->seq_len + occ_interval - 1) / occ_interval + 1;
   bwt->bwt_size += n_occ * 4; // the new size
   buf = tmap_calloc(bwt->bwt_size, sizeof(uint32_t), "buf"); // will be the new bwt
   c[0] = c[1] = c[2] = c[3] = 0;
   for (i = k = 0; i < bwt->seq_len; ++i) {
+      // store the occurrences
       if (i % occ_interval == 0) {
           memcpy(buf + k, c, sizeof(uint32_t) * 4);
           k += 4;
       }
+      // store the bwt string
       if (i % 16 == 0) buf[k++] = bwt->bwt[i>>4];
       ++c[bwt_B00(bwt, i)];
   }
@@ -565,7 +572,7 @@ tmap_bwt_occ4(const tmap_bwt_t *bwt, uint32_t k, uint32_t cnt[4])
   if(k >= bwt->primary) --k; // because $ is not in bwt
   p = tmap_bwt_occ_intv(bwt, k);
   memcpy(cnt, p, 16);
-  p += 4;
+  p += 4; // move to the first bwt cell
   j = k >> 4 << 4;
   for(l = k / bwt->occ_interval * bwt->occ_interval, x = 0; l < j; l += 16, ++p)
     x += __occ_aux4(bwt, *p);
@@ -621,7 +628,7 @@ tmap_bwt_pac2bwt_main(int argc, char *argv[])
 
   while((c = getopt(argc, argv, "o:lw:vh")) >= 0) {
       switch(c) {
-        case 'l': is_large= 1; break;
+        case 'l': is_large = 1; break;
         case 'o': occ_interval = atoi(optarg); break;
         case 'w': hash_width = atoi(optarg); break;
         case 'v': tmap_progress_set_verbosity(1); break;
@@ -633,7 +640,7 @@ tmap_bwt_pac2bwt_main(int argc, char *argv[])
       tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [-l -o INT -w INT -v -h] <in.fasta>\n", PACKAGE, argv[0]);
       return 1;
   }
-  if(0 < occ_interval && 0 != (occ_interval % 16)) {
+  if(occ_interval < 16 || 0 != (occ_interval % 16)) {
       tmap_error("option -o out of range", Exit, CommandLineArgument);
   }
 

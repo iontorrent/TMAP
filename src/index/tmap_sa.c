@@ -225,7 +225,7 @@ tmap_sa_bwt2sa(const char *fn_fasta, uint32_t intv)
       sa->seq_len = bwt->seq_len;
       sa->is_rev = is_rev;
       sa->n_sa = (bwt->seq_len + intv) / intv;
-
+      
       // calculate SA value
       sa->sa = tmap_calloc(sa->n_sa, sizeof(uint32_t), "sa->sa");
       isa = 0; s = bwt->seq_len;
@@ -950,7 +950,7 @@ tmap_sa_bwt2sa_main(int argc, char *argv[])
       tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [-i INT -vh] <in.fasta>\n", PACKAGE, argv[0]);
       return 1;
   }
-  if(0 < intv && 0 != (intv % 2)) {
+  if(intv <= 0 || (1 < intv && 0 != (intv % 2))) {
       tmap_error("option -i out of range", Exit, CommandLineArgument);
   }
 

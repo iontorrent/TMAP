@@ -181,7 +181,13 @@ inline void
 tmap_bwt_2occ4(const tmap_bwt_t *bwt, uint32_t k, uint32_t l, uint32_t cntk[4], uint32_t cntl[4]);
 
 // TODO: document
-#define tmap_bwt_bwt(b, k) ((b)->bwt[(k)/(b)->occ_interval*12 + 4 + (k)%(b)->occ_interval/16])
+// Returns the index of the occurence array at or before k
+#define tmap_bwt_get_occ_array_i(b, k) ((k)/(b)->occ_interval * ((b)->occ_interval/16 + 4))
+
+// TODO: document
+// Returns the array of 16 bases at [(k-(k%16),k+(16-(k%16))-1]
+#define tmap_bwt_get_bwt16(b, k) ((b)->bwt[tmap_bwt_get_occ_array_i(b, k) + 4 + ((k)%(b)->occ_interval)/16])
+//#define tmap_bwt_get_bwt16(b, k) ((b)->bwt[(k)/(b)->occ_interval*12 + 4 + (k)%(b)->occ_interval/16])
 
 /*! 
   @param  b   pointer to the bwt structure
@@ -190,10 +196,12 @@ tmap_bwt_2occ4(const tmap_bwt_t *bwt, uint32_t k, uint32_t l, uint32_t cntk[4], 
   @details    Note that tmap_bwt_t::bwt is not exactly the BWT string 
   and therefore this define is called tmap_bwt_B0 instead of tmap_bwt_B. 
   */
-#define tmap_bwt_B0(b, k) (tmap_bwt_bwt(b, k)>>((~(k)&0xf)<<1)&3)
+#define tmap_bwt_B0(b, k) (tmap_bwt_get_bwt16(b, k)>>((~(k)&0xf)<<1)&3)
 
 // TODO: document
-#define tmap_bwt_occ_intv(b, k) ((b)->bwt + (k)/(b)->occ_interval*12)
+// Returns the occurence array at or before k
+#define tmap_bwt_occ_intv(b, k) ((b)->bwt + tmap_bwt_get_occ_array_i(b, k))
+//#define tmap_bwt_occ_intv(b, k) ((b)->bwt + (k)/(b)->occ_interval*12)
 
 /*!  
   inverse Psi function
