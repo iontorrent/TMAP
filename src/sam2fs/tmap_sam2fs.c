@@ -1004,7 +1004,7 @@ usage(tmap_sam2fs_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "\n");
   tmap_file_fprintf(tmap_file_stderr, "Options (optional):\n");
   tmap_file_fprintf(tmap_file_stderr, "         -x STRING   the flow order [%s]\n", opt->flow_order);
-  tmap_file_fprintf(tmap_file_stderr, "         -k STRING   the key sequence [%s]", opt->key_sequence); 
+  tmap_file_fprintf(tmap_file_stderr, "         -k STRING   the key sequence [%s]\n", opt->key_sequence); 
   tmap_file_fprintf(tmap_file_stderr, "         -A INT      score for a match [%d]\n", opt->score_match);
   tmap_file_fprintf(tmap_file_stderr, "         -M INT      the mismatch penalty [%d]\n", opt->pen_mm);
   tmap_file_fprintf(tmap_file_stderr, "         -O INT      the indel start penalty [%d]\n", opt->pen_gapo);
