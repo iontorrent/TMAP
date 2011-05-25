@@ -481,7 +481,7 @@ tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width)
 }
 
 static inline int 
-__occ_aux(uint64_t y, int c)
+__occ_aux32(uint64_t y, int c)
 {
   // reduce nucleotide counting to bits counting
   y = ((c&2)? y : ~y) >> 1 & ((c&1)? y : ~y) & 0x5555555555555555ull;
@@ -490,10 +490,22 @@ __occ_aux(uint64_t y, int c)
   return ((y + (y >> 4)) & 0xf0f0f0f0f0f0f0full) * 0x101010101010101ull >> 56;
 }
 
+static inline int 
+__occ_aux16(uint32_t y, int c)
+{
+  // reduce nucleotide counting to bits counting
+  y = ((c&2)? y : ~y) >> 1 & ((c&1)? y : ~y) & 0x55555555;
+  // count the number of 1s in y
+  // from http://graphics.stanford.edu/~seander/bithacks.html
+  y = y - ((y >> 1) & 0x55555555);                    // reuse input as temporary
+  y = (y & 0x33333333) + ((y >> 2) & 0x33333333);     // temp
+  return (((y + (y >> 4)) & 0xF0F0F0F) * 0x1010101) >> 24; // count
+}
+
 inline uint32_t 
 tmap_bwt_occ(const tmap_bwt_t *bwt, uint32_t k, uint8_t c)
 {
-  uint32_t n, l, j;
+  uint32_t n, j, l;
   uint32_t *p;
 
   if(k == bwt->seq_len) return bwt->L2[c+1] - bwt->L2[c];
@@ -502,17 +514,28 @@ tmap_bwt_occ(const tmap_bwt_t *bwt, uint32_t k, uint8_t c)
 
   // retrieve Occ at k/bwt->occ_interval
   n = (p = tmap_bwt_occ_intv(bwt, k))[c];
-
   p += 4; // jump to the start of the first BWT cell
 
-  // calculate Occ up to the last k/32
-  j = k >> 5 << 5;
-  for(l = k/bwt->occ_interval*bwt->occ_interval; l < j; l += 32, p += 2)
-    n += __occ_aux((uint64_t)p[0]<<32 | p[1], c);
-
   // calculate Occ
-  n += __occ_aux(((uint64_t)p[0]<<32 | p[1]) & ~((1ull<<((~k&31)<<1)) - 1), c);
+  j = k >> 4 << 4; // divide by 16, then multiply by 16, to subtract k % 16.
+  for(l = (k/bwt->occ_interval)*bwt->occ_interval; l < j; l += 16, p++) {
+      n += __occ_aux16(p[0], c);
+  }
+  n += __occ_aux16(p[0] & ~((1ul<<((~k&15)<<1)) - 1), c);
+  if(c == 0) n -= ~k&15; // corrected for the masked bits
+
+  /*
+  // calculate Occ up to the last k/32
+  n = (p = tmap_bwt_occ_intv(bwt, k))[c];
+  p += 4; // jump to the start of the first BWT cell
+  j = k >> 5 << 5;
+  for(l = k/bwt->occ_interval*bwt->occ_interval; l < j; l += 32, p += 2) {
+      n += __occ_aux32((uint64_t)p[0]<<32 | p[1], c);
+  }
+  // calculate Occ
+  n += __occ_aux32(((uint64_t)p[0]<<32 | p[1]) & ~((1ull<<((~k&31)<<1)) - 1), c);
   if(c == 0) n -= ~k&31; // corrected for the masked bits
+  */
 
   return n;
 }
@@ -539,19 +562,21 @@ tmap_bwt_2occ(const tmap_bwt_t *bwt, uint32_t k, uint32_t l, uint8_t c, uint32_t
       n = (p = tmap_bwt_occ_intv(bwt, k))[c];
       p += 4;
       // calculate *ok
-      j = k >> 5 << 5;
-      for(i = k/bwt->occ_interval*bwt->occ_interval; i < j; i += 32, p += 2)
-        n += __occ_aux((uint64_t)p[0]<<32 | p[1], c);
-      m = n;
-      n += __occ_aux(((uint64_t)p[0]<<32 | p[1]) & ~((1ull<<((~k&31)<<1)) - 1), c);
-      if(c == 0) n -= ~k&31; // corrected for the masked bits
+      j = k >> 4 << 4; // divide by 16, then multiply by 16, to subtract k % 16.
+      for(i = (k/bwt->occ_interval)*bwt->occ_interval; i < j; i += 16, p++) {
+          n += __occ_aux16(p[0], c);
+      }
+      m = n; // save for ol
+      n += __occ_aux16(p[0] & ~((1ul<<((~k&15)<<1)) - 1), c);
+      if(c == 0) n -= ~k&15; // corrected for the masked bits
       *ok = n;
       // calculate *ol
-      j = l >> 5 << 5;
-      for(; i < j; i += 32, p += 2)
-        m += __occ_aux((uint64_t)p[0]<<32 | p[1], c);
-      m += __occ_aux(((uint64_t)p[0]<<32 | p[1]) & ~((1ull<<((~l&31)<<1)) - 1), c);
-      if(c == 0) m -= ~l&31; // corrected for the masked bits
+      j = l >> 4 << 4;
+      for(; i < j; i += 16, p += 1) {
+          m += __occ_aux16(p[0], c);
+      }
+      m += __occ_aux16(p[0] & ~((1ul<<((~l&15)<<1)) - 1), c);
+      if(c == 0) m -= ~l&15; // corrected for the masked bits
       *ol = m;
   }
 }

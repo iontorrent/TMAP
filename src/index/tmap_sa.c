@@ -190,6 +190,7 @@ uint32_t
 tmap_sa_pac_pos(const tmap_sa_t *sa, const tmap_bwt_t *bwt, uint32_t k)
 {
   uint32_t s = 0;
+
   while (k % sa->sa_intv != 0) {
       ++s;
       k = tmap_bwt_invPsi(bwt, k);
@@ -199,6 +200,8 @@ tmap_sa_pac_pos(const tmap_sa_t *sa, const tmap_bwt_t *bwt, uint32_t k)
      */
   return s + sa->sa[k/sa->sa_intv];
 }
+
+extern int32_t debug_on;
 
 void
 tmap_sa_bwt2sa(const char *fn_fasta, uint32_t intv)
@@ -400,8 +403,7 @@ static void QSufSortSortSplit(int* __restrict V, int* __restrict I, const int32_
 
 #ifdef DEBUG
     if (lowestPos > highestPos) {
-        fprintf(stderr, "QSufSortSortSplit(): lowestPos > highestPos!\n");
-        exit(1);
+        tmap_error("QSufSortSortSplit(): lowestPos > highestPos!\n", Exit, OutOfRange)
     }
 #endif
 
@@ -492,8 +494,7 @@ static int32_t QSufSortChoosePivot(int* __restrict V, int* __restrict I, const i
 
 #ifdef DEBUG
     if (lowestPos > highestPos) {
-        fprintf(stderr, "QSufSortChoosePivot(): lowestPos > highestPos!\n");
-        exit(1);
+        tmap_error("QSufSortChoosePivot(): lowestPos > highestPos!\n", Exit, OutOfRange)
     }
 #endif
 
@@ -501,8 +502,7 @@ static int32_t QSufSortChoosePivot(int* __restrict V, int* __restrict I, const i
 
 #ifdef DEBUG
     if (numItem <= INSERT_SORT_NUM_ITEM) {
-        fprintf(stderr, "QSufSortChoosePivot(): number of items <= INSERT_SORT_NUM_ITEM!\n");
-        exit(1);
+        tmap_error("QSufSortChoosePivot(): number of items <= INSERT_SORT_NUM_ITEM!\n", Exit, OutOfRange)
     }
 #endif
 
@@ -540,8 +540,7 @@ static void QSufSortInsertSortSplit(int* __restrict V, int* __restrict I, const 
 
 #ifdef DEBUG
     if (lowestPos > highestPos) {
-        fprintf(stderr, "QSufSortInsertSortSplit(): lowestPos > highestPos!\n");
-        exit(1);
+        tmap_error("QSufSortInsertSortSplit(): lowestPos > highestPos!\n", Exit, OutOfRange)
     }
 #endif
 
@@ -549,16 +548,14 @@ static void QSufSortInsertSortSplit(int* __restrict V, int* __restrict I, const 
 
 #ifdef DEBUG
     if (numItem > INSERT_SORT_NUM_ITEM) {
-        fprintf(stderr, "QSufSortInsertSortSplit(): number of items > INSERT_SORT_NUM_ITEM!\n");
-        exit(1);
+        tmap_error("QSufSortInsertSortSplit(): number of items > INSERT_SORT_NUM_ITEM!\n", Exit, OutOfRange)
     }
 #endif
 
     for (i=0; i<numItem; i++) {
 #ifdef DEBUG
         if (I[lowestPos + i] < 0) {
-            fprintf(stderr, "QSufSortInsertSortSplit(): I < 0 in unsorted region!\n");
-            exit(1);
+            tmap_error("QSufSortInsertSortSplit(): I < 0 in unsorted region!\n", Exit, OutOfRange)
         }
 #endif
         pos[i] = I[lowestPos + i];
@@ -698,8 +695,7 @@ static int32_t QSufSortTransform(int* __restrict V, int* __restrict I, const int
 #ifdef DEBUG
     // Section of code for maxSymbolInChunk > numChar removed!
     if (maxSymbolInChunk > numChar) {
-        fprintf(stderr, "QSufSortTransform(): maxSymbolInChunk > numChar!\n");
-        exit(1);
+        tmap_error("QSufSortTransform(): maxSymbolInChunk > numChar!\n", Exit, OutOfRange)
     }
 #endif
 

@@ -357,9 +357,11 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
 
           strand = sams->sams[i].strand;
 
+
           // query sequence
           if(0 == strand) { // forward
               pacpos = bwt[1-strand]->seq_len - tmap_sa_pac_pos(sa[1-strand], bwt[1-strand], k);
+              //fprintf(stderr, "k=%u tmap_sa_pac_pos=%u\n", k, tmap_sa_pac_pos(sa[1-strand], bwt[1-strand], k));
           }
           else { // reverse
               pacpos = tmap_sa_pac_pos(sa[1-strand], bwt[1-strand], k); // since we used the reverse index
@@ -368,6 +370,8 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
           pacpos = (pacpos < sam->aux.map1_aux->aln_ref) ? 0 : (pacpos - sam->aux.map1_aux->aln_ref); 
 
           pacpos++; // make one-based
+          
+          fprintf(stderr, "k=%u pacpos=%u strand=%u\n", k, pacpos, strand);
 
           // save the hit
           if(0 < tmap_refseq_pac2real(refseq, pacpos, sam->aux.map1_aux->aln_ref, &seqid, &pos)) {
@@ -427,6 +431,16 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
   tmap_map_sams_t *sams = NULL;
   int32_t max_diff, best_diff;
   uint32_t k, l;
+
+  fprintf(stderr, "STARTING\n");
+  /*
+  for(i=0;i<bwt[0]->seq_len;i++) {
+      for(j=0;j<4;j++) {
+          fprintf(stderr, "i=%u j=%u tmap_bwt_occ=%u\n",
+                  i, j, tmap_bwt_occ(bwt[0], i, j));
+      }
+  }
+  */
       
   max_edit_score = opt->pen_mm;
   //if(max_edit_score < opt->pen_gapo + opt->pen_gape) max_edit_score = opt->pen_gapo + opt->pen_gape;
@@ -478,7 +492,6 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
   
   // initialize
   sams = tmap_map_sams_init();
-
 
   match_sa_start.offset = 0;
   match_sa_start.hi = 0;
@@ -638,7 +651,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
               uint32_t op, op_len, cigar_i;
               tmap_map_sam_t *sam = NULL;
               tmap_map1_aux_stack_entry_t *cur = NULL;
-
+  
               tmap_map_sams_realloc(sams, sams->n+1);
               sam = &sams->sams[sams->n-1];
 
