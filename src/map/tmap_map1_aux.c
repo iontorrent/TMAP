@@ -361,7 +361,6 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
           // query sequence
           if(0 == strand) { // forward
               pacpos = bwt[1-strand]->seq_len - tmap_sa_pac_pos(sa[1-strand], bwt[1-strand], k);
-              //fprintf(stderr, "k=%u tmap_sa_pac_pos=%u\n", k, tmap_sa_pac_pos(sa[1-strand], bwt[1-strand], k));
           }
           else { // reverse
               pacpos = tmap_sa_pac_pos(sa[1-strand], bwt[1-strand], k); // since we used the reverse index
@@ -371,8 +370,6 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
 
           pacpos++; // make one-based
           
-          fprintf(stderr, "k=%u pacpos=%u strand=%u\n", k, pacpos, strand);
-
           // save the hit
           if(0 < tmap_refseq_pac2real(refseq, pacpos, sam->aux.map1_aux->aln_ref, &seqid, &pos)) {
               // copy over previous parameters
@@ -432,7 +429,6 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
   int32_t max_diff, best_diff;
   uint32_t k, l;
 
-  fprintf(stderr, "STARTING\n");
   /*
   for(i=0;i<bwt[0]->seq_len;i++) {
       for(j=0;j<4;j++) {
