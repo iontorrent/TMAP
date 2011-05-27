@@ -4,7 +4,7 @@
 #  Developers - the version number should *NEVER* be changed except by, 
 #  or with explicit permission from, Nils Homer.
 
-AC_PREREQ(2.59);
+AC_PREREQ(2.61);
 AC_INIT([tmap],[0.0.24],[nils.homer@lifetech.com],[tmap])
 AC_COPYRIGHT([See LICENSE for copyright information.])
 AC_CONFIG_AUX_DIR(config)
