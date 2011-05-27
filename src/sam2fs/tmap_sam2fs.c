@@ -399,6 +399,10 @@ tmap_sam2fs_aux(bam1_t *bam, tmap_sam2fs_aux_flow_order_t *flow_order, int32_t f
   tmap_sam2fs_gen_ap(&param, score_match, pen_mm, pen_gapo, pen_gape, fscore, flow_offset);
 
   if(BAM_FUNMAP & bam->core.flag) {
+      // just in case, nullify
+      if(output_type == TMAP_SAM2FS_OUTPUT_ALN) {
+          aln_ret->fsw_qseq = NULL;
+      }
       return bam;
   }
 
