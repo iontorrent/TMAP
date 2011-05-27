@@ -391,7 +391,8 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
       //fprintf(stderr, "CORE i=%d j=%d ctype=%d\n", i, j, ctype);
 
       // local
-      if(i <= 0 && 1 == flowseq_start_clip) {
+      //if(i <= 0 && 1 == flowseq_start_clip) {
+      if(i <= 0) { // do not add in leading deletion...
           break;
       }
 
