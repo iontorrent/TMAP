@@ -678,12 +678,14 @@ tmap_sam2fs_aux(bam1_t *bam, tmap_sam2fs_aux_flow_order_t *flow_order, int32_t f
       tmp_ref_bases_len = path[0].j - path[path_len-1].j + 1;
       tmp_ref_bases_offset = path[path_len-1].j;
   }
+
+  // HERE
   /*
-     fprintf(stderr, "tmp_read_bases_len=%d\ntmp_read_bases_offset=%d\n",
-     tmp_read_bases_len, tmp_read_bases_offset);
-     fprintf(stderr, "tmp_ref_bases_len=%d\ntmp_ref_bases_offset=%d\n",
-     tmp_ref_bases_len, tmp_ref_bases_offset);
-     */
+  fprintf(stderr, "tmp_read_bases_len=%d\ntmp_read_bases_offset=%d\n",
+          tmp_read_bases_len, tmp_read_bases_offset);
+  fprintf(stderr, "tmp_ref_bases_len=%d\ntmp_ref_bases_offset=%d\n",
+          tmp_ref_bases_len, tmp_ref_bases_offset);
+          */
 
   switch(output_type) {
     case TMAP_SAM2FS_OUTPUT_ALN:
@@ -708,7 +710,7 @@ tmap_sam2fs_aux(bam1_t *bam, tmap_sam2fs_aux_flow_order_t *flow_order, int32_t f
                                  (uint8_t*)(ref_bases + tmp_ref_bases_offset),
                                  tmp_ref_bases_len,
                                  flow_order,
-                                 strand,
+                                 0, // already reverse complimented!
                                  separator, aln_ret);
       break;
     case TMAP_SAM2FS_OUTPUT_SAM:
