@@ -1591,7 +1591,7 @@ tmap_map_util_sw_aux(tmap_map_sam_t *sam,
       sam->strand = strand;
       sam->seqid = seqid;
       sam->pos = pos + (path[(*path_len)-1].i-1); // zero-based 
-      if(path[(*path_len)-1].ctype == TMAP_SW_FROM_I) {
+      if(0 == strand && path[(*path_len)-1].ctype == TMAP_SW_FROM_I) {
           sam->pos++;
       }
       sam->score = score;
