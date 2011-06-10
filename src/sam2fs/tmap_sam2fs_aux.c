@@ -450,6 +450,7 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
   for(i=1;i<=f_qseq->l;i++) { // query
       k = (i-1) % qseq_flow_order->flow_order_len;
       i_from = ((i<qseq_flow_order->jump_rev[k]) ? 0 : (i-qseq_flow_order->jump_rev[k])); // don't go before the first row
+      i_from++; // we want the next base after
 
       for(j=1;j<=f_tseq->l;j++) { // target
 
@@ -638,6 +639,7 @@ tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
             case TMAP_SAM2FS_AUX_FROM_IP:
               l = (i-1) % qseq_flow_order->flow_order_len;
               i_from = ((i<qseq_flow_order->jump_rev[l]) ? 0 : (i-qseq_flow_order->jump_rev[l])); // don't go before the first row
+              i_from++; // we want the next base after
               while(i_from < i) {
                   tmap_sam2fs_aux_aln_add(aln, f_qseq->flow[i-1], -1);
                   l = (i-1) % qseq_flow_order->flow_order_len;
