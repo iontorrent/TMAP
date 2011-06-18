@@ -1355,6 +1355,7 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
   int32_t best_subo;
   tmap_vsw_query_t *vsw_query[2] = {NULL, NULL};
   tmap_vsw_opt_t *vsw_opt = NULL;
+  uint32_t start_pos, end_pos;
 
   if(0 == sams->n) {
       return sams;
@@ -1376,13 +1377,18 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
 
   i = start = end = 0;
   best_subo = INT32_MIN;
+  start_pos = end_pos = 0;
   while(end < sams->n) {
       uint8_t strand, *query=NULL;
-      uint32_t start_pos, end_pos, query_len;
+      uint32_t query_len;
       tmap_map_sam_t tmp_sam;
 
       // get the strand/start/end positions
       strand = sams->sams[end].strand;
+      if(start == end) {
+          start_pos = sams->sams[start].pos + 1; 
+          end_pos = sams->sams[start].pos + sams->sams[start].target_len; 
+      }
 
       // update the query sequence
       if(NULL == seqs[strand]) {
@@ -1397,9 +1403,6 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
       query = (uint8_t*)tmap_seq_get_bases(seqs[strand])->s;
 
       if(0 == update_cigar) { 
-          // start and end position
-          start_pos = sams->sams[end].pos + 1; // one-based
-          end_pos = sams->sams[end].pos + sams->sams[end].target_len; // one-based
           // query length
           query_len = seq_len;
           // check if the hits can be banded
@@ -1445,10 +1448,7 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
       }
       else {
           // do not band when generating the cigar
-          tmp_sam = sams->sams[start];
-          // start/end position
-          start_pos = sams->sams[end].pos + 1; // one-based
-          end_pos = sams->sams[end].pos + sams->sams[end].target_len; // one-based
+          tmp_sam = sams->sams[end];
           // update the best sub-optimal score
           tmp_sam.score_subo = best_subo;
           // adjust co-ordinates, and query
@@ -1488,8 +1488,16 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
 
           // adjust target length and position NB: query length is implicitly
           // stored in s->result (consider on the next pass
-          s->pos += s->result->query_start;
+          s->pos = start_pos + s->result->query_start + s->result->target_start - 1; // zero-based 
           s->target_len = s->result->target_end - s->result->target_start+ 1;
+          /*
+          fprintf(stderr, "%d-%d %d-%d %d\n",
+                  s->result->query_start,
+                  s->result->query_end,
+                  s->result->target_start,
+                  s->result->target_end,
+                  s->target_len);
+                  */
 
           // # of seeds
           s->n_seeds = (end - start + 1);
