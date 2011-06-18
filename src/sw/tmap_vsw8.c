@@ -43,14 +43,14 @@ tmap_vsw8_query_init_by_type(tmap_vsw8_query_t *prev, const uint8_t *query, int3
   tmap_vsw8_uint_t *t;
   int32_t hlen = 0, hlen_mem = 0;
 
-  // TODO: check type and prev_type match
-      
   // get the number of stripes
   slen = __tmap_vsw8_calc_slen(qlen); 
   if(1 == type) {
       hlen = qlen * tlen;
       hlen_mem = __tmap_vsw_calc_qlen_mem(hlen); // same calculation
+      if(NULL != prev && hlen == prev->hlen) return prev; // no need to carry on
   }
+  else if(NULL != prev && qlen == prev->qlen) return prev; // no need to carry on
 
   if(NULL == prev 
      || (0 == type && prev->qlen_max < qlen) 
@@ -85,6 +85,7 @@ tmap_vsw8_query_init_by_type(tmap_vsw8_query_t *prev, const uint8_t *query, int3
       // compute the min/max score and range
       prev->min_score = (opt->pen_gapo+opt->pen_gape < opt->pen_mm) ? -opt->pen_mm : -(opt->pen_gapo+opt->pen_gape); // minimum score
       prev->min_score = tmap_vsw8_max_value - prev->min_score; // NB: prev->min_score is tmap_vsw8_uint_t
+      prev->range_score = tmap_vsw8_max_value - opt->score_match;
       prev->range_score += prev->min_score; // this is the difference between the min and max scores
   }
 
@@ -214,7 +215,7 @@ tmap_vsw8_sse2_forward(tmap_vsw8_query_t *query, const uint8_t *target, int32_t 
   int32_t slen, i, sum, m_b, n_b, _thres = tmap_vsw8_max_value - query->range_score - 2;
   int32_t gmax = 0;
   __m128i zero, pen_gapoe, pen_gape, min_score, reduce, thres, *H0, *H1, *E, *H;
-
+      
   // initialization
   zero = _mm_set1_epi32(0); // mmz zeros
   m_b = n_b = 0; 
@@ -244,7 +245,7 @@ tmap_vsw8_sse2_forward(tmap_vsw8_query_t *query, const uint8_t *target, int32_t 
 
   // the core loop
   for(i = 0, sum = 0; i < tlen; i++) { // for each base in the target
-      int j, k, cmp, imax;
+      int j, k, cmp, imax = 0;
       // NB: f and max are initially zero
       __m128i e, h, f = zero, max = zero, *S = query->query_profile + target[i] * slen; // s is the 1st score vector
       h = __tmap_vsw_mm_load_si128(H0 + slen - 1); // the last stripe
@@ -387,7 +388,7 @@ tmap_vsw8_sse2_reverse(tmap_vsw8_query_t *query, const uint8_t *target, int32_t 
   // check byte # __tmap_vsw8_query_index_to_byte_number(0, slen)
   
   for(i = tlen-1, sum = 0; 0 <= i; i--) { // for each base in the target
-      int cmp, imax;
+      int cmp, imax = 0;
       // NB: f and max are initially zero
       __m128i e, h, f = zero, max = zero, *S = query->query_profile + target[i] * slen; // s is the 1st score vector
       h = __tmap_vsw_mm_load_si128(H0); // the first stripe
