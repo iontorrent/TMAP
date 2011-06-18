@@ -198,8 +198,9 @@ tmap_fq_io_read(tmap_fq_io_t *fqio, tmap_fq_t *fq)
   int c;
   tmap_stream_t *ks = fqio->f;
   if (fqio->last_char == 0) { /* then jump to the next header line */
-      while ((c = tmap_stream_getc(ks)) != -1 && c != '>' && c != '@') {
-          if(c == TMAP_FQ_IO_DELIMITER_NL) fqio->line_number++;
+      if ((c = tmap_stream_getc(ks)) != -1 && c != '>' && c != '@') {
+          tmap_file_fprintf(tmap_file_stderr, "\nAfter line number %d\n", fqio->line_number);
+          tmap_error("Was expecting a header line ('>' or '@').  Is there empty line or extra qualities?", Exit, OutOfRange);
       }
       if (c == -1) return -1; /* end of file */
       fqio->last_char = c;
