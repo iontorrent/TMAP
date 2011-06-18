@@ -3,6 +3,7 @@
 #define TMAP_MAP_UTIL_H
 
 #include <sys/types.h>
+#include "../sw/tmap_vsw.h"
 
 #define TMAP_MAP_UTIL_FSW_OFFSET 2
 #define TMAP_MAP_UTIL_SCORE_MATCH 1
@@ -233,6 +234,7 @@ typedef struct {
     uint32_t *cigar; /*!< the cigar operator array */
     uint16_t target_len; /*!< internal variable, the target length estimated by the seeding step */ 
     uint16_t n_seeds; /*!< the number seeds in this hit */
+    tmap_vsw_result_t *result; // TODO
     union {
         tmap_map_map1_aux_t *map1_aux; /*!< auxiliary data for map1 */
         tmap_map_map2_aux_t *map2_aux; /*!< auxiliary data for map2 */
@@ -347,17 +349,19 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt);
 
 /*!
   perform local alignment
-  @param  refseq  the reference sequence
-  @param  sams    the seeded sams
-  @param  seq     the query sequence
-  @param  opt     the program parameters
-  @return         the locally aligned sams
+  @param  refseq        the reference sequence
+  @param  sams          the seeded sams
+  @param  seq           the query sequence
+  @param  opt           the program parameters
+  @param  update_cigar  1 to update the cigar, false otherwise
+  @return               the locally aligned sams
   */
 tmap_map_sams_t *
 tmap_map_util_sw(tmap_refseq_t *refseq,
                  tmap_map_sams_t *sams,
                  tmap_seq_t *seq,
-                 tmap_map_opt_t *opt);
+                 tmap_map_opt_t *opt,
+                 int32_t update_cigar);
 
 /*!
   @param  sam            the sam record in which to store the results
