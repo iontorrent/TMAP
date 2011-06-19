@@ -24,7 +24,7 @@ AC_GNU_SOURCE
 #AC_PROG_RANLIB
 
 # set CFLAGS and CXXFLAGS
-default_CFLAGS="-Wall -g -O3 --pthread -msse4.1";# "-Wall -g -O2 -pthread";
+default_CFLAGS="-Wall -g -O3 -pthread -msse4.1";# "-Wall -g -O2 -pthread";
 extended_CFLAGS="";# "-m64 -D_FILE_OFFSET_BITS=64";
 
 AC_MSG_CHECKING(whether this is a git repository)
