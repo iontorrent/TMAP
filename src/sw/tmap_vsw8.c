@@ -536,7 +536,9 @@ tmap_vsw8_sse2_get_path(const uint8_t *query, int32_t qlen,
   int32_t ti, qi;
   int32_t pen_gapoe, pen_gape;
   int32_t score, overflow = 0;
+  uint32_t ctype;
   tmap_sw_path_t *p;
+  tmap_vsw8_uint_t h_cur;
   // Debugging
   //int32_t slen, i, j, k, l;
   //__m128i *H;
@@ -579,13 +581,14 @@ tmap_vsw8_sse2_get_path(const uint8_t *query, int32_t qlen,
   }
 
   // trackback
-  ti = tlen-1; qi = q->qlen-1;
   p = path;
+  ti = tlen-1; qi = q->qlen-1;
+  h_cur = __tmap_vsw8_get_matrix_cell(q, (ti < 0) ? 0 : ti, (qi < 0) ? 0 : qi);
+  ctype = TMAP_SW_FROM_M; 
   while(0 <= ti || 0 <= qi) {
-      tmap_vsw8_uint_t h_cur, h_prev, e_prev, f_prev;
+      tmap_vsw8_uint_t h_prev, e_prev, f_prev;
 
       // get the cells to compare
-      h_cur = __tmap_vsw8_get_matrix_cell(q, (ti < 0) ? 0 : ti, (qi < 0) ? 0 : qi);
       h_prev = __tmap_vsw8_get_matrix_cell(q, (ti-1 < 0) ? 0 : ti-1, (qi-1 < 0) ? 0 : qi-1);
       e_prev = __tmap_vsw8_get_matrix_cell(q, (ti-1 < 0) ? 0 : ti-1, (qi < 0) ? 0 : qi);
       f_prev = __tmap_vsw8_get_matrix_cell(q, (ti < 0) ? 0 : ti, (qi-1 < 0) ? 0 : qi-1);
@@ -594,31 +597,37 @@ tmap_vsw8_sse2_get_path(const uint8_t *query, int32_t qlen,
       score = __tmap_vsw8_get_query_profile_value(q, target[(ti < 0) ? 0 : ti], (qi < 0) ? 0 : qi) - q->min_score;
       
       /*
-      fprintf(stderr, "h_cur=%u h_prev=%u e_prev=%u f_prev=%u score=%d\n",
-              h_cur, h_prev, e_prev, f_prev, score);
-              */
+      fprintf(stderr, "ti=%d qi=%d ctype=%d h_cur=%u h_prev=%u e_prev=%u f_prev=%u score=%d\n",
+              ti, qi, ctype, h_cur, h_prev, e_prev, f_prev, score);
+      */
       
       // one-based
       p->i = ti+1; p->j = qi+1; 
 
       // compare
-      if(h_cur == h_prev + score) {
+      if(h_cur == h_prev + score) { // anyone can be from a match
           //fprintf(stderr, "M ti=%d qi=%d\n", ti, qi);
+          h_cur = h_prev;
           p->ctype = TMAP_SW_FROM_M;
           ti--;
           qi--;
       }
-      else if(h_cur == e_prev - pen_gapoe || h_cur == e_prev - pen_gape) {
+      else if((ctype == TMAP_SW_FROM_M || ctype == TMAP_SW_FROM_D)
+        && (h_cur == e_prev - pen_gapoe || h_cur == e_prev - pen_gape)) {
           //fprintf(stderr, "D ti=%d qi=%d\n", ti, qi);
+          h_cur = e_prev;
           p->ctype = TMAP_SW_FROM_D;
           ti--;
       }
-      else if(h_cur == f_prev - pen_gapoe || h_cur == f_prev - pen_gape) {
+      else if((ctype == TMAP_SW_FROM_M || ctype == TMAP_SW_FROM_I)
+              &&(h_cur == f_prev - pen_gapoe || h_cur == f_prev - pen_gape)) {
+          h_cur = f_prev;
           //fprintf(stderr, "I ti=%d qi=%d\n", ti, qi);
           p->ctype = TMAP_SW_FROM_M;
           qi--;
       }
       else if(0 == ti && 0 == qi) { // TODO: wrong for different initializations...
+          h_cur = 0; 
           p->ctype = TMAP_SW_FROM_M;
           ti--;
           qi--;
@@ -627,10 +636,13 @@ tmap_vsw8_sse2_get_path(const uint8_t *query, int32_t qlen,
           // TODO: gaps etc.
           fprintf(stderr, "ti=%d qi=%d\n", ti, qi);
           fprintf(stderr, "pen_gapoe=%d pen_gape=%d\n", pen_gapoe, pen_gape);
+          fprintf(stderr, "h_cur=%u h_prev=%u e_prev=%u f_prev=%u score=%d\n",
+                  h_cur, h_prev, e_prev, f_prev, score);
           tmap_error("bug encountered", Exit, OutOfRange);
       }
 
       // move to the next path etc.
+      ctype = p->ctype;
       p++;
   }
   *path_len = p - path;
