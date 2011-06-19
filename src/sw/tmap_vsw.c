@@ -32,7 +32,7 @@
 #include <stdio.h>
 #include "../util/tmap_alloc.h"
 #include "tmap_sw.h"
-#include "tmap_vsw8.h"
+#include "tmap_vsw16.h"
 #include "tmap_vsw.h"
 
 tmap_vsw_opt_t*
@@ -81,9 +81,7 @@ void
 tmap_vsw_query_destroy(tmap_vsw_query_t *query)
 {
   if(NULL == query) return;
-  if(NULL != query->query8) tmap_vsw8_query_destroy(query->query8);
-  // HERE!
-  //if(NULL != query->query16) tmap_vsw16_query_destroy(query->query16);
+  if(NULL != query->query16) tmap_vsw16_query_destroy(query->query16);
   free(query);
 }
 
@@ -91,35 +89,18 @@ int32_t
 tmap_vsw_sse2(tmap_vsw_query_t *q,
               const uint8_t *query, int32_t qlen, 
               const uint8_t *target, int32_t tlen, 
-              tmap_vsw_opt_t *opt, tmap_vsw_result_t *result)
+              tmap_vsw_opt_t *opt, tmap_vsw_result_t *result,
+              int32_t *overflow)
 {
-  int32_t overflow = 0;
+  // TODO: check potential overflow
+  // TODO: check that gap penalties will not result in an overflow
+  // TODO: check that the max/min alignment score do not result in an overflow
 
-  // 8-bit
-  q->query8 = tmap_vsw8_query_init_short(q->query8, query, qlen, opt); 
-  tmap_vsw8_sse2(q->query8, target, tlen, opt, result, &overflow);
-
-  // on overflow, do 16-bit
-  if(1 == overflow) { 
-      // 16-bit
-      tmap_error("not implemented", Exit, OutOfRange);
-      /*
-         q->query16 = tmap_vsw16_query_init_short(q->query16, query, qlen, opt); 
-         tmap_vsw16_sse2(q->query16, target, tlen, opt, result, &overflow);
-         if(1 == overflow) {
-         tmap_error("bug encountered", Exit, OutOfRange);
-         }
-         result->byte_type = 16;
-         */
+  q->query16 = tmap_vsw16_query_init_short(q->query16, query, qlen, 0, 0, opt); 
+  tmap_vsw16_sse2(q->query16, target, tlen, opt, result, overflow);
+  if(1 == *overflow) {
+      return INT32_MIN; 
   }
-  else {
-      result->byte_type = 8;
-  }
-  /*
-  if(result->score_fwd != result->score_rev) {
-      tmap_error("bug encountered", Exit, OutOfRange);
-  }
-  */
   return result->score_fwd;
 }
 
@@ -132,22 +113,10 @@ tmap_vsw_sse2_get_path(const uint8_t *query, int32_t qlen,
                         int32_t *path_len,
                         tmap_vsw_opt_t *opt)
 {
-  if(8 == result->byte_type) {
-      q->query8 = tmap_vsw8_query_init_full(q->query8, query, qlen, tlen, opt); 
-      tmap_vsw8_sse2_get_path(query, qlen, target, tlen,
-                              q->query8, result, 
-                              path, path_len,
-                              opt);
-  }
-  else { // 16-bit
-      tmap_error("not implemented", Exit, OutOfRange);
-      /*
-      q->query16 = tmap_vsw16_query_init_full(q->query16, query, qlen, tlen, opt); 
-      tmap_vsw16_sse2_get_path(query, qlen, target, tlen,
-                              q->query16, result, 
-                              path, path_len,
-                              opt);
-                              */
-  }
+  q->query16 = tmap_vsw16_query_init_full(q->query16, query, qlen, tlen, 0, 0, opt); 
+  tmap_vsw16_sse2_get_path(query, qlen, target, tlen,
+                           q->query16, result, 
+                           path, path_len,
+                           opt);
 }
 
