@@ -115,9 +115,11 @@ tmap_vsw_sse2(tmap_vsw_query_t *q,
   else {
       result->byte_type = 8;
   }
+  /*
   if(result->score_fwd != result->score_rev) {
       tmap_error("bug encountered", Exit, OutOfRange);
   }
+  */
   return result->score_fwd;
 }
 

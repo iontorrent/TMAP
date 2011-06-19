@@ -1467,6 +1467,19 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
           tmap_error("bug encountered", Exit, OutOfRange);
       }
 
+      // Debugging
+      /*
+      int j;
+      for(j=0;j<target_len;j++) {
+          fputc("ACGTN"[target[j]], stderr);
+      }
+      fputc('\n', stderr);
+      for(j=0;j<query_len;j++) {
+          fputc("ACGTN"[query[j]], stderr);
+      }
+      fputc('\n', stderr);
+      */
+
       if(0 == update_cigar) {
           tmap_map_sam_t *s = &sams_tmp->sams[i];
           
@@ -1488,9 +1501,10 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
 
           // adjust target length and position NB: query length is implicitly
           // stored in s->result (consider on the next pass
-          s->pos = start_pos + s->result->query_start + s->result->target_start - 1; // zero-based 
+          s->pos = start_pos + s->result->target_start - 1; // zero-based 
           s->target_len = s->result->target_end - s->result->target_start+ 1;
           /*
+          fprintf(stderr, "strand=%d\n", strand);
           fprintf(stderr, "%d-%d %d-%d %d\n",
                   s->result->query_start,
                   s->result->query_end,
@@ -1530,18 +1544,6 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
               tmap_roundup32(path_mem);
               path = tmap_realloc(path, sizeof(tmap_sw_path_t)*path_mem, "path");
           }
-
-          /*
-             int j;
-             for(j=0;j<target_len;j++) {
-             fputc("ACGTN"[target[j]], stderr);
-             }
-             fputc('\n', stderr);
-             for(j=0;j<query_len;j++) {
-             fputc("ACGTN"[query[j]], stderr);
-             }
-             fputc('\n', stderr);
-             */
 
           // TODO: left vs. right justification
           tmap_vsw_sse2_get_path(query, query_len,

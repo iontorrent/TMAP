@@ -408,12 +408,12 @@ tmap_vsw8_sse2_reverse(tmap_vsw8_query_t *query, const uint8_t *target, int32_t 
           max = __tmap_vsw8_mm_max_epu(max, h); // save the max values in this stripe versus the last
           __tmap_vsw_mm_store_si128(H1 + j, h); // save h to H'(i,j)
           // next, compute E'(i-1,j)
-          h = __tmap_vsw8_mm_subs_epu(h, pen_gapoe); // h=H'(i,j)-pen_gapo
+          h = __tmap_vsw8_mm_subs_epu(h, pen_gapoe); // h=H'(i,j)-pen_gapoe
           e = __tmap_vsw8_mm_subs_epu(e, pen_gape); // e=E'(i,j)-pen_gape
           e = __tmap_vsw8_mm_max_epu(e, h); // e=E'(i-1,j) = max{E'(i,j)-pen_gape, H'(i,j)-pen_gapo}
           __tmap_vsw_mm_store_si128(E + j, e); // save e to E'(i-1,j)
           // now compute F'(i,j-1)
-          //h = __tmap_vsw8_mm_subs_epu(h, pen_gapoe); // h=H'(i,j)-pen_gapo
+          //h = __tmap_vsw8_mm_subs_epu(h, pen_gapoe); // h=H'(i,j)-pen_gapoe
           f = __tmap_vsw8_mm_subs_epu(f, pen_gape); // f=F'(i,j)-pen_gape
           f = __tmap_vsw8_mm_max_epu(f, h); // f=F'(i,j-1) = max{F'(i,j)-pen_gape, H'(i,j)-pen_gapo}
           // get H'(i+1,j) and prepare for the next j
@@ -421,7 +421,7 @@ tmap_vsw8_sse2_reverse(tmap_vsw8_query_t *query, const uint8_t *target, int32_t 
       }
       // NB: we do not need to set E(i,j) as we disallow adjacent insertion and then deletion
       for(k=tmap_vsw8_values_per_128_bits-1; TMAP_VSW_LIKELY(0 <= k); k--) { // this block mimics SWPS3; NB: H(i,j) updated in the lazy-F loop cannot exceed max
-          f = __tmap_vsw_mm_slli_si128(f, tmap_vsw8_shift_bits);
+          f = __tmap_vsw_mm_srli_si128(f, tmap_vsw8_shift_bits);
           for(j = slen-1; TMAP_VSW_LIKELY(0 <= j); j--) {
               h = __tmap_vsw_mm_load_si128(H1 + j);
               h = __tmap_vsw8_mm_max_epu(h, f); // h=H'(i,j)
@@ -434,13 +434,25 @@ tmap_vsw8_sse2_reverse(tmap_vsw8_query_t *query, const uint8_t *target, int32_t 
       }
 end_loop:
       /*
-      fprintf(stderr, "i=%d b=%d", i, target[i]);
-      for(j = 0; j < tmap_vsw8_values_per_128_bits; j++) { // for each start position in the stripe
-          for(k = 0; k < query->slen; k++) {
-              fprintf(stderr, " %d", ((tmap_vsw8_uint_t*)(H1+k))[j]);
+      fprintf(stderr, "i=%3d b=%1d", i, target[i]);
+      for(j = tmap_vsw8_values_per_128_bits-1, l = 0; 0 <= j; j--) { // for each start position in the stripe
+          for(k = query->slen-1; 0 <= k; k--, l++) {
+              fprintf(stderr, " %2d", ((tmap_vsw8_uint_t*)(H1+k))[j]);
           }
       }
       fprintf(stderr, "\n");
+      */
+      /*
+      for(j = tmap_vsw8_values_per_128_bits-1, l = 0; 0 <= j; j--) { // for each start position in the stripe
+          for(k = query->slen-1; 0 <= k; k--, l++) {
+              fprintf(stderr, "i=%3d j=%3d tb=%1d qs=%1d %2d\n", 
+                      i, ((query->qlen + 15) >> 4 << 4)-l-1, target[i],
+                      ((tmap_vsw8_uint_t*)(query->query_profile+k))[j] - query->min_score,
+                      ((tmap_vsw8_uint_t*)(H1+k))[j]);
+          }
+      }
+      */
+      /*
       for(k=0;k<tmap_vsw8_values_per_128_bits;++k) {
           fprintf(stderr, "%d ", ((tmap_vsw8_uint_t*)&max)[k]);
       }
@@ -486,9 +498,30 @@ end_loop:
 void
 tmap_vsw8_sse2(tmap_vsw8_query_t *query, const uint8_t *target, int32_t tlen, tmap_vsw_opt_t *opt, tmap_vsw_result_t *result, int32_t *overflow)
 {
+  // forward
   tmap_vsw8_sse2_forward(query, target, tlen, opt, result, overflow);
+  /*
+  fprintf(stderr, "qlen=%d tlen=%d\n", query->qlen, tlen);
+  fprintf(stderr, "result = {%d-%d} {%d-%d} score=%d\n",
+          result->query_start, result->query_end,
+          result->target_start, result->target_end, result->score_fwd);
+          */
   if(NULL != overflow && 1 == *overflow) return;
+  // adjust lengths
+  query->qlen = result->query_end+1;
+  tlen = result->target_end+1;
+  // reverse
   tmap_vsw8_sse2_reverse(query, target, tlen, opt, result, overflow);
+  /*
+  fprintf(stderr, "qlen=%d tlen=%d\n", query->qlen, tlen);
+  fprintf(stderr, "result = {%d-%d} {%d-%d} score=%d\n",
+          result->query_start, result->query_end,
+          result->target_start, result->target_end, result->score_rev);
+  */
+  // check that they agree
+  if(result->score_fwd != result->score_rev) {
+      tmap_error("bug encountered", Exit, OutOfRange);
+  }
 }
 
 void
@@ -523,6 +556,13 @@ tmap_vsw8_sse2_get_path(const uint8_t *query, int32_t qlen,
 
   // initialize query
   q = tmap_vsw8_query_init_full(q, query, qlen, tlen, opt);
+      
+  /*
+  fprintf(stderr, "qlen=%d tlen=%d\n", qlen, tlen);
+  fprintf(stderr, "result = {%d-%d} {%d-%d}\n",
+          result->query_start, result->query_end,
+          result->target_start, result->target_end);
+          */
   
   // run the forward VSW
   score = result->score_fwd;
@@ -531,6 +571,9 @@ tmap_vsw8_sse2_get_path(const uint8_t *query, int32_t qlen,
       tmap_error("bug encountered", Exit, OutOfRange);
   }
   if(score != result->score_fwd) {
+      fprintf(stderr, "result = {%d-%d} {%d-%d}\n",
+              result->query_start, result->query_end,
+              result->target_start, result->target_end);
       fprintf(stderr, "score=%d result->score_fwd=%d result->score_rev=%d\n", score, result->score_fwd, result->score_rev);
       tmap_error("bug encountered", Exit, OutOfRange);
   }
