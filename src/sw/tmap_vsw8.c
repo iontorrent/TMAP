@@ -524,6 +524,7 @@ tmap_vsw8_sse2(tmap_vsw8_query_t *query, const uint8_t *target, int32_t tlen, tm
   }
 }
 
+// TODO: this must align globally!
 void
 tmap_vsw8_sse2_get_path(const uint8_t *query, int32_t qlen, 
                               const uint8_t *target, int32_t tlen, 
