@@ -392,9 +392,7 @@ For example, a set of algorithms to quickly align near-perfect reads may be used
 
 See \autoref{sec:commonoptions} for common options that are in use in this command.
 
-\subsection{Usage}
-
-\subsubsection{Overview}
+\subsection{Overview}
 First, a set of global options is specified that will be used for the algorithms to be applied at both stages.
 Global options should not be given in the options for a specific algorithm.
 Next, the algorithms and their associated options will be specified for each stage.
@@ -410,6 +408,7 @@ If no mapping is found for a read, the \TT{map2} algorithm with the options \TT{
 Notice how the global options \TT{-g -M 3} are applied to all the algorithms where applicable.
 It is possible to have a given algorithm run in both stages with different options.
 
+\subsection{Usage}
 \subsubsection{\TT{-I}}
 Specifies to apply the output filter (\TT{-a}) and duplicate removal (\TT{-W}) separately for each algorithm.
 This is useful for comparing the mappings across all the algorithms.
