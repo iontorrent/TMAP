@@ -1356,7 +1356,7 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
   tmap_vsw_query_t *vsw_query[2] = {NULL, NULL};
   tmap_vsw_opt_t *vsw_opt = NULL;
   uint32_t start_pos, end_pos;
-  int32_t overflow;
+  int32_t overflow, softclip_start, softclip_end;
 
   if(0 == sams->n) {
       return sams;
@@ -1372,16 +1372,32 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
 
   // sort by strand/chr/pos/score
   tmap_sort_introsort(tmap_map_sam_sort_coord, sams->n, sams->sams);
-
+  softclip_start = (TMAP_MAP_UTIL_SOFT_CLIP_LEFT == opt->softclip_type || TMAP_MAP_UTIL_SOFT_CLIP_ALL == opt->softclip_type) ? 1 : 0;
+  softclip_end = (TMAP_MAP_UTIL_SOFT_CLIP_RIGHT == opt->softclip_type || TMAP_MAP_UTIL_SOFT_CLIP_ALL == opt->softclip_type) ? 1 : 0;
+  
   // initialize opt
   vsw_opt = tmap_vsw_opt_init(opt->score_match, opt->pen_mm, opt->pen_gapo, opt->pen_gape, opt->score_thr);
+
+  // init seqs
+  seq_len = tmap_seq_get_bases(seq)->l;
+  seqs[0] = tmap_seq_clone(seq); // clone
+  seqs[1] = tmap_seq_clone(seq); // clone
+  tmap_seq_reverse_compliment(seqs[1]);
+  tmap_seq_to_int(seqs[0]);
+  tmap_seq_to_int(seqs[1]);
+  vsw_query[0] = tmap_vsw_query_init((uint8_t*)tmap_seq_get_bases(seqs[0])->s, seq_len, 
+                                     (uint8_t*)tmap_seq_get_bases(seqs[1])->s, seq_len, 
+                                     seq_len, softclip_start, softclip_end, update_cigar, vsw_opt);
+  vsw_query[1] = tmap_vsw_query_init((uint8_t*)tmap_seq_get_bases(seqs[1])->s, seq_len, 
+                                     (uint8_t*)tmap_seq_get_bases(seqs[0])->s, seq_len, 
+                                     seq_len, softclip_start, softclip_end, update_cigar, vsw_opt);
 
   i = start = end = 0;
   best_subo = INT32_MIN;
   start_pos = end_pos = 0;
   while(end < sams->n) {
-      uint8_t strand, *query=NULL;
-      uint32_t query_len;
+      uint8_t strand, *query_fwd=NULL, *query_rev;
+      uint32_t qlen_fwd, qlen_rev;
       tmap_map_sam_t tmp_sam;
 
       // get the strand/start/end positions
@@ -1392,20 +1408,12 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
       }
 
       // update the query sequence
-      if(NULL == seqs[strand]) {
-          seq_len = tmap_seq_get_bases(seq)->l;
-          seqs[strand] = tmap_seq_clone(seq); // clone
-          if(1 == strand) { // reverse compliment
-              tmap_seq_reverse_compliment(seqs[strand]);
-          }
-          tmap_seq_to_int(seqs[strand]);
-          vsw_query[strand] = tmap_vsw_query_init();
-      }
-      query = (uint8_t*)tmap_seq_get_bases(seqs[strand])->s;
+      query_fwd = (uint8_t*)tmap_seq_get_bases(seqs[strand])->s;
+      query_rev = (uint8_t*)tmap_seq_get_bases(seqs[1-strand])->s;
+      qlen_fwd = tmap_seq_get_bases(seqs[strand])->l;
+      qlen_rev = tmap_seq_get_bases(seqs[1-strand])->l;
 
       if(0 == update_cigar) { 
-          // query length
-          query_len = seq_len;
           // check if the hits can be banded
           if(end + 1 < sams->n) {
               if(sams->sams[end].strand == sams->sams[end+1].strand 
@@ -1453,8 +1461,9 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
           // update the best sub-optimal score
           tmp_sam.score_subo = best_subo;
           // adjust co-ordinates, and query
-          query += tmp_sam.result->query_start; // offset query
-          query_len = tmp_sam.result->query_end - tmp_sam.result->query_start + 1; // update query length
+          query_fwd += tmp_sam.result->query_start; // offset query
+          query_fwd += qlen_rev - tmp_sam.result->query_end - 1; // offset reverse query
+          qlen_fwd = qlen_rev = tmp_sam.result->query_end - tmp_sam.result->query_start + 1; // update query length
       }
 
       // get the target sequence
@@ -1475,8 +1484,8 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
           fputc("ACGTN"[target[j]], stderr);
       }
       fputc('\n', stderr);
-      for(j=0;j<query_len;j++) {
-          fputc("ACGTN"[query[j]], stderr);
+      for(j=0;j<qlen_fwd;j++) {
+          fputc("ACGTN"[query_fwd[j]], stderr);
       }
       fputc('\n', stderr);
       */
@@ -1490,10 +1499,9 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
           // room for result
           s->result = tmap_vsw_result_init();
 
-          // TODO: get the score
-          s->score = tmap_vsw_sse2(vsw_query[strand], query, query_len, target, target_len, 
-                                   (TMAP_MAP_UTIL_SOFT_CLIP_LEFT == opt->softclip_type || TMAP_MAP_UTIL_SOFT_CLIP_ALL == opt->softclip_type),
-                                   (TMAP_MAP_UTIL_SOFT_CLIP_RIGHT == opt->softclip_type || TMAP_MAP_UTIL_SOFT_CLIP_ALL == opt->softclip_type),
+          s->score = tmap_vsw_sse2(vsw_query[strand], query_fwd, qlen_fwd, query_rev, qlen_rev,
+                                   target, target_len, 
+                                   softclip_start, softclip_end,
                                    vsw_opt, s->result, &overflow);
           if(1 == overflow) {
               tmap_error("bug encountered", Exit, OutOfRange);
@@ -1546,14 +1554,14 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
           tmap_map_sam_t *s = &sams_tmp->sams[i];
           
           // path memory
-          if(path_mem <= target_len + query_len) { // lengthen the path
-              path_mem = target_len + query_len;
+          if(path_mem <= target_len + qlen_fwd) { // lengthen the path
+              path_mem = target_len + qlen_fwd;
               tmap_roundup32(path_mem);
               path = tmap_realloc(path, sizeof(tmap_sw_path_t)*path_mem, "path");
           }
 
           // TODO: left vs. right justification
-          tmap_vsw_sse2_get_path(query, query_len,
+          tmap_vsw_sse2_get_path(query_fwd, qlen_fwd,
                                  target, target_len,
                                  vsw_query[strand],
                                  tmp_sam.result,
@@ -1573,6 +1581,8 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
           if(0 == s->n_cigar) {
               tmap_error("bug encountered", Exit, OutOfRange);
           }
+
+          // TODO: soft clipping cigar!
 
           // update aux data
           tmap_map_sam_malloc_aux(s, s->algo_id);

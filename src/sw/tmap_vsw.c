@@ -70,10 +70,16 @@ tmap_vsw_result_destroy(tmap_vsw_result_t *result)
 }
 
 tmap_vsw_query_t*
-tmap_vsw_query_init()
+tmap_vsw_query_init(const uint8_t *query_fwd, int32_t qlen_fwd,
+                    const uint8_t *query_rev, int32_t qlen_rev,
+                    int32_t tlen,
+                    int32_t query_start_clip, int32_t query_end_clip,
+                    int32_t type, tmap_vsw_opt_t *opt)
 {
   tmap_vsw_query_t *query;
   query = tmap_calloc(1, sizeof(tmap_vsw_query_t), "query");
+  query->query16_fwd = tmap_vsw16_query_init(query->query16_fwd, query_fwd, qlen_fwd, tlen, query_start_clip, query_end_clip, type, opt);
+  query->query16_rev = tmap_vsw16_query_init(query->query16_rev, query_rev, qlen_rev, tlen, query_end_clip, query_start_clip, type, opt);
   return query;
 }
 
@@ -81,14 +87,16 @@ void
 tmap_vsw_query_destroy(tmap_vsw_query_t *query)
 {
   if(NULL == query) return;
-  if(NULL != query->query16) tmap_vsw16_query_destroy(query->query16);
+  if(NULL != query->query16_fwd) tmap_vsw16_query_destroy(query->query16_fwd);
+  if(NULL != query->query16_rev) tmap_vsw16_query_destroy(query->query16_rev);
   free(query);
 }
 
 int32_t
-tmap_vsw_sse2(tmap_vsw_query_t *q,
-              const uint8_t *query, int32_t qlen, 
-              const uint8_t *target, int32_t tlen, 
+tmap_vsw_sse2(tmap_vsw_query_t *query,
+              const uint8_t *query_fwd, int32_t qlen_fwd,
+              const uint8_t *query_rev, int32_t qlen_rev,
+              uint8_t *target, int32_t tlen, 
               int32_t query_start_clip, int32_t query_end_clip,
               tmap_vsw_opt_t *opt, tmap_vsw_result_t *result,
               int32_t *overflow)
@@ -97,8 +105,12 @@ tmap_vsw_sse2(tmap_vsw_query_t *q,
   // TODO: check that gap penalties will not result in an overflow
   // TODO: check that the max/min alignment score do not result in an overflow
 
-  q->query16 = tmap_vsw16_query_init_short(q->query16, query, qlen, 0, 0, opt); 
-  tmap_vsw16_sse2(q->query16, target, tlen, query_start_clip, query_end_clip, opt, result, overflow);
+  // init
+  query->query16_fwd = tmap_vsw16_query_init(query->query16_fwd, query_fwd, qlen_fwd, tlen, query_start_clip, query_end_clip, 0, opt);
+  query->query16_rev = tmap_vsw16_query_init(query->query16_rev, query_rev, qlen_rev, tlen, query_end_clip, query_start_clip, 0, opt);
+
+  // run sw
+  tmap_vsw16_sse2(query->query16_fwd, query->query16_rev, target, tlen, query_start_clip, query_end_clip, opt, result, overflow);
   if(1 == *overflow) {
       return INT32_MIN; 
   }
@@ -114,9 +126,10 @@ tmap_vsw_sse2_get_path(const uint8_t *query, int32_t qlen,
                         int32_t *path_len,
                         tmap_vsw_opt_t *opt)
 {
-  q->query16 = tmap_vsw16_query_init_full(q->query16, query, qlen, tlen, 0, 0, opt); 
+  // NB: only the forward is needed
+  q->query16_fwd = tmap_vsw16_query_init(q->query16_fwd, query, qlen, tlen, 0, 0, 1, opt);
   tmap_vsw16_sse2_get_path(query, qlen, target, tlen,
-                           q->query16, result, 
+                           q->query16_fwd, result, 
                            path, path_len,
                            opt);
 }
