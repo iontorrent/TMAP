@@ -60,31 +60,51 @@
 #define __tmap_vsw16_mm_srli_si128(_src, _imm) _mm_srli_si128(_src, _imm)
 #define __tmap_vsw16_mm_set1_epi16(_val) _mm_set1_epi16(_val)
 #define __tmap_vsw16_mm_set_epi16(_r0, _r1, _r2, _r3, _r4, _r5, _r6, _r7) _mm_set_epi16(_r0, _r1, _r2, _r3, _r4, _r5, _r6, _r7)
-#define __tmap_vsw16_mm_adds_epi16(_a, _b) _mm_adds_epu16(_a, _b)
-#define __tmap_vsw16_mm_subs_epi16(_a, _b) _mm_subs_epu16(_a, _b)
-#define __tmap_vsw16_mm_max_epi16(_a, _b) _mm_max_epu16(_a, _b)
-#define __tmap_vsw16_mm_movemask_epi16(_a) _mm_movemask_epi8(_a)
+#define __tmap_vsw16_mm_adds_epi16(_a, _b) _mm_adds_epi16(_a, _b)
+#define __tmap_vsw16_mm_subs_epi16(_a, _b) _mm_subs_epi16(_a, _b)
+#define __tmap_vsw16_mm_max_epi16(_a, _b) _mm_max_epi16(_a, _b)
+#define __tmap_vsw16_mm_min_epi16(_a, _b) _mm_min_epi16(_a, _b)
+#define __tmap_vsw16_mm_movemask_epi16(_a) _mm_movemask_epi8(_a) // NB: this should be 8-bit...
 #define __tmap_vsw16_mm_cmpeq_epi16(_a, _b) _mm_cmpeq_epi16(_a, _b)
+#define __tmap_vsw16_mm_insert_epi16(_a, _b, _imm) _mm_insert_epi16(_a, _b, _imm)
 #define tmap_vsw16_values_per_128_bits 8 
 #define tmap_vsw16_values_per_128_bits_log2 3 // should be log2(values_per_128_bits)
 #define tmap_vsw16_max_value INT16_MAX
 #define tmap_vsw16_mid_value ((tmap_vsw16_max_value >> 1)-1)
 #define tmap_vsw16_min_value INT16_MIN 
 #define tmap_vsw16_shift_bytes 2 
-typedef uint16_t tmap_vsw16_uint_t;
+//typedef uint16_t tmap_vsw16_uint_t;
 typedef int16_t tmap_vsw16_int_t;
 // returns the number of stripes required 
 #define __tmap_vsw16_calc_slen(_qlen) (((_qlen) + tmap_vsw16_values_per_128_bits - 1) >> tmap_vsw16_values_per_128_bits_log2)
 // ret is max in xx.
 #define __tmap_vsw16_max(ret, xx) do { \
-    (xx) = _mm_max_epu16((xx), _mm_srli_si128((xx), 8)); \
-    (xx) = _mm_max_epu16((xx), _mm_srli_si128((xx), 4)); \
-    (xx) = _mm_max_epu16((xx), _mm_srli_si128((xx), 2)); \
-    (ret) = _mm_extract_epi16((xx), 0) & 0xffff; \
+    (xx) = _mm_max_epi16((xx), _mm_srli_si128((xx), 8)); \
+    (xx) = _mm_max_epi16((xx), _mm_srli_si128((xx), 4)); \
+    (xx) = _mm_max_epi16((xx), _mm_srli_si128((xx), 2)); \
+    (ret) = (tmap_vsw16_int_t)(_mm_extract_epi16((xx), 0) & 0xffff); \
 } while (0) 
+// ret is min in xx.
+#define __tmap_vsw16_min(ret, xx) do { \
+    (xx) = _mm_min_epi16((xx), _mm_srli_si128((xx), 8)); \
+    (xx) = _mm_min_epi16((xx), _mm_srli_si128((xx), 4)); \
+    (xx) = _mm_min_epi16((xx), _mm_srli_si128((xx), 2)); \
+    (ret) = (tmap_vsw16_int_t)(_mm_extract_epi16((xx), 0) & 0xffff); \
+} while (0) 
+// overcomes the immediate problem
+#define __tmap_vsw16_mm_insert(_a, _val, _k) \
+  (0 == _k ? __tmap_vsw16_mm_insert_epi16(_a, _val, 0) : \
+   (1 == _k ? __tmap_vsw16_mm_insert_epi16(_a, _val, 1) : \
+    (2 == _k ? __tmap_vsw16_mm_insert_epi16(_a, _val, 2) : \
+     (3 == _k ? __tmap_vsw16_mm_insert_epi16(_a, _val, 3) : \
+      (4 == _k ? __tmap_vsw16_mm_insert_epi16(_a, _val, 4) : \
+       (5 == _k ? __tmap_vsw16_mm_insert_epi16(_a, _val, 5) : \
+        (6 == _k ? __tmap_vsw16_mm_insert_epi16(_a, _val, 6) : \
+         (7 == _k ? __tmap_vsw16_mm_insert_epi16(_a, _val, 7) : \
+          _a))))))))
 // returns cell (i,j) in the scoring matrix
 #define __tmap_vsw16_get_matrix_cell(_query, _i, _j) \
-  (((tmap_vsw16_unt_t*)((_query)->H + ((_i) * ((_query)->qlen_mem >> 4)) + ((_j) % (_query)->slen)))[(_j) / (_query)->slen])
+  (((tmap_vsw16_int_t*)((_query)->H + ((_i) * ((_query)->qlen_mem >> 4)) + ((_j) % (_query)->slen)))[(_j) / (_query)->slen])
 // returns the score in the query profile
 #define __tmap_vsw16_get_query_profile_value(_query, _base, _j) \
   (((tmap_vsw16_int_t*)((_query)->query_profile + (_base * (_query)->slen) + ((_j) % (_query)->slen)))[(_j) / (_query)->slen])
@@ -107,6 +127,7 @@ typedef struct {
     int32_t qlen_mem; // get the amount of memory the stripes will occupy
     tmap_vsw16_int_t min_edit_score; // the minimum edit score
     tmap_vsw16_int_t max_edit_score; // the minimum edit score
+    tmap_vsw16_int_t zero_aln_score; // the zero-scoring starting alignment value 
     tmap_vsw16_int_t min_aln_score; // the minimum possible alignment score
     tmap_vsw16_int_t max_aln_score; // the maximum global alignment score
     __m128i *query_profile; // the query scoring profile
@@ -171,6 +192,7 @@ int32_t
 tmap_vsw_sse2(tmap_vsw_query_t *q,
               const uint8_t *query, int32_t qlen,
               const uint8_t *target, int32_t tlen,
+              int32_t query_start_clip, int32_t query_end_clip,
               tmap_vsw_opt_t *opt, tmap_vsw_result_t *result,
               int32_t *overflow);
 

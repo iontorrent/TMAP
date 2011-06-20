@@ -1356,6 +1356,7 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
   tmap_vsw_query_t *vsw_query[2] = {NULL, NULL};
   tmap_vsw_opt_t *vsw_opt = NULL;
   uint32_t start_pos, end_pos;
+  int32_t overflow;
 
   if(0 == sams->n) {
       return sams;
@@ -1490,7 +1491,13 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
           s->result = tmap_vsw_result_init();
 
           // TODO: get the score
-          s->score = tmap_vsw_sse2(vsw_query[strand], query, query_len, target, target_len, vsw_opt, s->result);
+          s->score = tmap_vsw_sse2(vsw_query[strand], query, query_len, target, target_len, 
+                                   (TMAP_MAP_UTIL_SOFT_CLIP_LEFT == opt->softclip_type || TMAP_MAP_UTIL_SOFT_CLIP_ALL == opt->softclip_type),
+                                   (TMAP_MAP_UTIL_SOFT_CLIP_RIGHT == opt->softclip_type || TMAP_MAP_UTIL_SOFT_CLIP_ALL == opt->softclip_type),
+                                   vsw_opt, s->result, &overflow);
+          if(1 == overflow) {
+              tmap_error("bug encountered", Exit, OutOfRange);
+          }
           
           // TODO: check validity of the result (scoring threshold?)
           // NB: free s->result

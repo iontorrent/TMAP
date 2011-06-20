@@ -89,6 +89,7 @@ int32_t
 tmap_vsw_sse2(tmap_vsw_query_t *q,
               const uint8_t *query, int32_t qlen, 
               const uint8_t *target, int32_t tlen, 
+              int32_t query_start_clip, int32_t query_end_clip,
               tmap_vsw_opt_t *opt, tmap_vsw_result_t *result,
               int32_t *overflow)
 {
@@ -97,7 +98,7 @@ tmap_vsw_sse2(tmap_vsw_query_t *q,
   // TODO: check that the max/min alignment score do not result in an overflow
 
   q->query16 = tmap_vsw16_query_init_short(q->query16, query, qlen, 0, 0, opt); 
-  tmap_vsw16_sse2(q->query16, target, tlen, opt, result, overflow);
+  tmap_vsw16_sse2(q->query16, target, tlen, query_start_clip, query_end_clip, opt, result, overflow);
   if(1 == *overflow) {
       return INT32_MIN; 
   }
