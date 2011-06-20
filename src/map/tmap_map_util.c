@@ -1552,6 +1552,7 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
       }
       else {
           tmap_map_sam_t *s = &sams_tmp->sams[i];
+          int32_t query_start, query_end;
           
           // path memory
           if(path_mem <= target_len + qlen_fwd) { // lengthen the path
@@ -1559,6 +1560,9 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
               tmap_roundup32(path_mem);
               path = tmap_realloc(path, sizeof(tmap_sw_path_t)*path_mem, "path");
           }
+
+          query_start = tmp_sam.result->query_start;
+          query_end = tmp_sam.result->query_end;
 
           // TODO: left vs. right justification
           tmap_vsw_sse2_get_path(query_fwd, qlen_fwd,
@@ -1582,7 +1586,22 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
               tmap_error("bug encountered", Exit, OutOfRange);
           }
 
-          // TODO: soft clipping cigar!
+          // add soft clipping 
+          if(0 < query_start) {
+              // soft clip the front of the read
+              s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*(1+s->n_cigar), "s->cigar");
+              for(i=s->n_cigar-1;0<=i;i--) { // shift up
+                  s->cigar[i+1] = s->cigar[i];
+              }
+              TMAP_SW_CIGAR_STORE(s->cigar[0], BAM_CSOFT_CLIP, query_start);
+              s->n_cigar++;
+          }
+          if(query_end < seq_len-1) {
+              // soft clip the end of the read
+              s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*(1+s->n_cigar), "s->cigar");
+              TMAP_SW_CIGAR_STORE(s->cigar[s->n_cigar], BAM_CSOFT_CLIP, seq_len - query_end - 1);
+              s->n_cigar++;
+          }
 
           // update aux data
           tmap_map_sam_malloc_aux(s, s->algo_id);
