@@ -390,9 +390,6 @@ The algorithms follows a two-stage approach, with a set of algorithms and associ
 If there are no mappings for a read by applying the algorithms in the first stage, then the algorithms in the second stage are applied. 
 For example, a set of algorithms to quickly align near-perfect reads may be used in the first stage, while a set of sensitive algorithms may be used to map difficult reads in the second stage
 
-Note: for the \TT{map1} command used within \TT{mapall}, the alignment score is adjusted to agree with alignment scores from other algorithms.
-This may cause the alignment score reported by using \TT{map1} within the \TT{mapall} command to be different than using \TT{map1} by itself.
-
 See \autoref{sec:commonoptions} for common options that are in use in this command.
 
 \subsection{Usage}
