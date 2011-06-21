@@ -400,6 +400,7 @@ An algorithm to be applied in the first stage should be specified using its name
 The options specific to this algorithm should be specified directly thereafter.
 An algorithm to be applied in the second stage should be specified using its name in uppercase.
 The options specific to this algorithm should be specified directly thereafter.
+The order of the specified algorithms does not matter, only the case (upper versus lower) in determining which algorithm is applied at which stage.
 
 An example would be:\\
 \TT{tmap mapall -f ref.fasta -r reads.fastq -g -M 3 map1 -l 12 -s 4 MAP2 -b 5 MAP3 -S 10}.\\
