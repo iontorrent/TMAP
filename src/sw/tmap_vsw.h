@@ -104,7 +104,7 @@ typedef int16_t tmap_vsw16_int_t;
           _a))))))))
 // returns cell (i,j) in the scoring matrix
 #define __tmap_vsw16_get_matrix_cell(_query, _i, _j) \
-  (((tmap_vsw16_int_t*)((_query)->H + ((_i) * ((_query)->qlen_mem >> 4)) + ((_j) % (_query)->slen)))[(_j) / (_query)->slen])
+  (((tmap_vsw16_int_t*)((_query)->H + ((_i) * (_query)->slen) + ((_j) % (_query)->slen)))[(_j) / (_query)->slen])
 // returns the score in the query profile
 #define __tmap_vsw16_get_query_profile_value(_query, _base, _j) \
   (((tmap_vsw16_int_t*)((_query)->query_profile + (_base * (_query)->slen) + ((_j) % (_query)->slen)))[(_j) / (_query)->slen])
@@ -209,6 +209,7 @@ tmap_vsw_sse2_get_path(const uint8_t *query, int32_t qlen,
                        tmap_vsw_result_t *result,
                        tmap_sw_path_t *path,
                        int32_t *path_len,
+                       int32_t left_justify,
                        tmap_vsw_opt_t *opt);
 
 #endif

@@ -1336,6 +1336,7 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
 } while(0)
 
 
+// TODO: better banding...
 tmap_map_sams_t *
 tmap_map_util_sw(tmap_refseq_t *refseq,
                  tmap_map_sams_t *sams, 
@@ -1343,7 +1344,7 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
                  tmap_map_opt_t *opt,
                  int32_t update_cigar)
 {
-  int32_t i, matrix[25];
+  int32_t i, j, matrix[25];
   int32_t start, end;
   tmap_map_sams_t *sams_tmp = NULL;
   tmap_sw_param_t par;
@@ -1491,69 +1492,76 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
       */
 
       if(0 == update_cigar) {
-          tmap_map_sam_t *s = &sams_tmp->sams[i];
-          
-          // shallow copy previous data 
-          (*s) = tmp_sam; 
           
           // room for result
-          s->result = tmap_vsw_result_init();
+          tmp_sam.result = tmap_vsw_result_init();
 
-          s->score = tmap_vsw_sse2(vsw_query[strand], query_fwd, qlen_fwd, query_rev, qlen_rev,
+          tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query_fwd, qlen_fwd, query_rev, qlen_rev,
                                    target, target_len, 
                                    softclip_start, softclip_end,
-                                   vsw_opt, s->result, &overflow);
+                                   vsw_opt, tmp_sam.result, &overflow);
           if(1 == overflow) {
               tmap_error("bug encountered", Exit, OutOfRange);
           }
           
-          // TODO: check validity of the result (scoring threshold?)
-          // NB: free s->result
+          if(opt->score_thr <= tmp_sam.score) {
+              tmap_map_sam_t *s = &sams_tmp->sams[i];
+              // shallow copy previous data 
+              (*s) = tmp_sam; 
           
-          // nullify the cigar
-          s->n_cigar = 0;
-          s->cigar = NULL;
+              // TODO: check validity of the result (scoring threshold?)
+              // NB: free s->result
 
-          // adjust target length and position NB: query length is implicitly
-          // stored in s->result (consider on the next pass
-          s->pos = start_pos + s->result->target_start - 1; // zero-based 
-          s->target_len = s->result->target_end - s->result->target_start+ 1;
-          /*
-          fprintf(stderr, "strand=%d\n", strand);
-          fprintf(stderr, "%d-%d %d-%d %d\n",
-                  s->result->query_start,
-                  s->result->query_end,
-                  s->result->target_start,
-                  s->result->target_end,
-                  s->target_len);
-                  */
+              // nullify the cigar
+              s->n_cigar = 0;
+              s->cigar = NULL;
 
-          // # of seeds
-          s->n_seeds = (end - start + 1);
-          
-          // update aux data
-          tmap_map_sam_malloc_aux(s, s->algo_id);
-          switch(s->algo_id) {
-            case TMAP_MAP_ALGO_MAP1:
-              (*s->aux.map1_aux) = (*tmp_sam.aux.map1_aux);
-              break;
-            case TMAP_MAP_ALGO_MAP2:
-              (*s->aux.map2_aux) = (*tmp_sam.aux.map2_aux);
-              break;
-            case TMAP_MAP_ALGO_MAP3:
-              (*s->aux.map3_aux) = (*tmp_sam.aux.map3_aux);
-              break;
-            default:
-              tmap_error("bug encountered", Exit, OutOfRange);
-              break;
+              // adjust target length and position NB: query length is implicitly
+              // stored in s->result (consider on the next pass
+              s->pos = start_pos + s->result->target_start - 1; // zero-based 
+              s->target_len = s->result->target_end - s->result->target_start+ 1;
+              /*
+                 fprintf(stderr, "strand=%d\n", strand);
+                 fprintf(stderr, "%d-%d %d-%d %d\n",
+                 s->result->query_start,
+                 s->result->query_end,
+                 s->result->target_start,
+                 s->result->target_end,
+                 s->target_len);
+                 */
+
+              // # of seeds
+              s->n_seeds = (end - start + 1);
+
+              // update aux data
+              tmap_map_sam_malloc_aux(s, s->algo_id);
+              switch(s->algo_id) {
+                case TMAP_MAP_ALGO_MAP1:
+                  (*s->aux.map1_aux) = (*tmp_sam.aux.map1_aux);
+                  break;
+                case TMAP_MAP_ALGO_MAP2:
+                  (*s->aux.map2_aux) = (*tmp_sam.aux.map2_aux);
+                  break;
+                case TMAP_MAP_ALGO_MAP3:
+                  (*s->aux.map3_aux) = (*tmp_sam.aux.map3_aux);
+                  break;
+                default:
+                  tmap_error("bug encountered", Exit, OutOfRange);
+                  break;
+              }
+
+              i++;
           }
-
-          i++;
+          else {
+              tmap_vsw_result_destroy(tmp_sam.result);
+              tmp_sam.result = NULL;
+              tmp_sam.score = INT32_MIN;
+          }
       }
       else {
           tmap_map_sam_t *s = &sams_tmp->sams[i];
           int32_t query_start, query_end;
-          
+
           // path memory
           if(path_mem <= target_len + qlen_fwd) { // lengthen the path
               path_mem = target_len + qlen_fwd;
@@ -1571,6 +1579,7 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
                                  tmp_sam.result,
                                  path,
                                  &path_len,
+                                 1-strand,
                                  vsw_opt);
           // TODO: check validity of the result (scoring threshold?)
 
@@ -1590,8 +1599,8 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
           if(0 < query_start) {
               // soft clip the front of the read
               s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*(1+s->n_cigar), "s->cigar");
-              for(i=s->n_cigar-1;0<=i;i--) { // shift up
-                  s->cigar[i+1] = s->cigar[i];
+              for(j=s->n_cigar-1;0<=j;j--) { // shift up
+                  s->cigar[j+1] = s->cigar[j];
               }
               TMAP_SW_CIGAR_STORE(s->cigar[0], BAM_CSOFT_CLIP, query_start);
               s->n_cigar++;

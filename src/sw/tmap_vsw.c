@@ -124,6 +124,7 @@ tmap_vsw_sse2_get_path(const uint8_t *query, int32_t qlen,
                         tmap_vsw_result_t *result,
                         tmap_sw_path_t *path,
                         int32_t *path_len,
+                        int32_t left_justify,
                         tmap_vsw_opt_t *opt)
 {
   // NB: only the forward is needed
@@ -131,6 +132,7 @@ tmap_vsw_sse2_get_path(const uint8_t *query, int32_t qlen,
   tmap_vsw16_sse2_get_path(query, qlen, target, tlen,
                            q->query16_fwd, result, 
                            path, path_len,
+                           left_justify,
                            opt);
 }
 
