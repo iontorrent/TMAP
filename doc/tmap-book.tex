@@ -171,7 +171,7 @@ Specifies that the type of soft-clipping to perform.
 \subsubsection{\TT{-W INT}}
 Specifies to remove duplicate mappings that occur within this bp window.
 
-\subsubsection{-B INT}
+\subsubsection{\TT{-B INT}}
 Specifies the window in bases in which to group seeds.
 
 \subsubsection{\TT{-q INT}}
@@ -390,14 +390,9 @@ The algorithms follows a two-stage approach, with a set of algorithms and associ
 If there are no mappings for a read by applying the algorithms in the first stage, then the algorithms in the second stage are applied. 
 For example, a set of algorithms to quickly align near-perfect reads may be used in the first stage, while a set of sensitive algorithms may be used to map difficult reads in the second stage
 
-Note: for the \TT{map1} command used within \TT{mapall}, the alignment score is adjusted to agree with alignment scores from other algorithms.
-This may cause the alignment score reported by using \TT{map1} within the \TT{mapall} command to be different than using \TT{map1} by itself.
-
 See \autoref{sec:commonoptions} for common options that are in use in this command.
 
-\subsection{Usage}
-
-\subsubsection{Overview}
+\subsection{Overview}
 First, a set of global options is specified that will be used for the algorithms to be applied at both stages.
 Global options should not be given in the options for a specific algorithm.
 Next, the algorithms and their associated options will be specified for each stage.
@@ -405,6 +400,7 @@ An algorithm to be applied in the first stage should be specified using its name
 The options specific to this algorithm should be specified directly thereafter.
 An algorithm to be applied in the second stage should be specified using its name in uppercase.
 The options specific to this algorithm should be specified directly thereafter.
+The order of the specified algorithms does not matter, only the case (upper versus lower) in determining which algorithm is applied at which stage.
 
 An example would be:\\
 \TT{tmap mapall -f ref.fasta -r reads.fastq -g -M 3 map1 -l 12 -s 4 MAP2 -b 5 MAP3 -S 10}.\\
@@ -413,6 +409,7 @@ If no mapping is found for a read, the \TT{map2} algorithm with the options \TT{
 Notice how the global options \TT{-g -M 3} are applied to all the algorithms where applicable.
 It is possible to have a given algorithm run in both stages with different options.
 
+\subsection{Usage}
 \subsubsection{\TT{-I}}
 Specifies to apply the output filter (\TT{-a}) and duplicate removal (\TT{-W}) separately for each algorithm.
 This is useful for comparing the mappings across all the algorithms.
