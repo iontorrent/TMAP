@@ -30,6 +30,7 @@
 #include <smmintrin.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <config.h>
 #include "../util/tmap_alloc.h"
 #include "tmap_sw.h"
 #include "tmap_vsw16.h"
@@ -114,7 +115,7 @@ tmap_vsw_sse2(tmap_vsw_query_t *query,
   if(1 == *overflow) {
       return INT32_MIN; 
   }
-  return result->score_fwd;
+  return (result->score_fwd < result->score_rev) ? result->score_rev : result->score_fwd;
 }
 
 void
@@ -135,4 +136,3 @@ tmap_vsw_sse2_get_path(const uint8_t *query, int32_t qlen,
                            left_justify,
                            opt);
 }
-

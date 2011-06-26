@@ -16,6 +16,8 @@ extern int
 tmap_map2_main(int argc, char *argv[]);
 extern int
 tmap_map3_main(int argc, char *argv[]);
+extern int
+tmap_map_vsw_main(int argc, char *argv[]);
 extern int 
 tmap_map_all_main(int argc, char *argv[]);
 extern int 

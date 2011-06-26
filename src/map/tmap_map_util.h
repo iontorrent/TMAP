@@ -15,6 +15,21 @@
 #define TMAP_MAP_UTIL_FLOW_ORDER "TACG"
 #define TMAP_MAP_UTIL_MAX_DIFF_READ_LENGTH 250
 
+#define __tmap_map_print_compression(_type) switch(_type) { \
+  case TMAP_FILE_NO_COMPRESSION: \
+                                 tmap_file_fprintf(tmap_file_stderr, " [none]\n"); \
+    break; \
+  case TMAP_FILE_GZ_COMPRESSION: \
+                                 tmap_file_fprintf(tmap_file_stderr, " [gz]\n"); \
+    break; \
+  case TMAP_FILE_BZ2_COMPRESSION: \
+                                  tmap_file_fprintf(tmap_file_stderr, " [bz2]\n"); \
+    break; \
+  default: \
+           tmap_file_fprintf(tmap_file_stderr, " [?]\n"); \
+    break; \
+}
+
 #define __gen_ap(par, opt) do { \
     int32_t i; \
     for(i=0;i<25;i++) { \
@@ -42,6 +57,7 @@ enum {
     TMAP_MAP_ALGO_MAP1 = 0x1,  /*!< the map1 algorithm */
     TMAP_MAP_ALGO_MAP2 = 0x2,  /*!< the map2 algorithm */
     TMAP_MAP_ALGO_MAP3 = 0x4,  /*!< the map3 algorithm */
+    TMAP_MAP_ALGO_MAP_VSW = 0x4000,  /*!< the mapvsw algorithm */
     TMAP_MAP_ALGO_MAPALL = 0x8000, /*!< the mapall algorithm */
 };
 
@@ -135,6 +151,9 @@ typedef struct __tmap_map_opt_t {
     int32_t max_seed_hits; /*!< the maximum number of hits returned by a seed (-S) */
     int32_t hp_diff; /*!< single homopolymer error difference for enumeration (-H) */
 
+    // mapvsw options
+    // None
+
     // mapall options
     uint32_t algos[2];  /*!< the algorithms that should be run in stage 1 and stage 2, bit-packed */
     int32_t aln_output_mode_ind; /*!< apply the output filter for each algorithm separately (-I) */
@@ -143,6 +162,7 @@ typedef struct __tmap_map_opt_t {
     struct __tmap_map_opt_t *opt_map1[2]; /*!< map 1 options */
     struct __tmap_map_opt_t *opt_map2[2]; /*!< map 2 options */
     struct __tmap_map_opt_t *opt_map3[2]; /*!< map 3 options */
+    struct __tmap_map_opt_t *opt_map_vsw[2]; /*!< map vsw options */
 } tmap_map_opt_t;
 
 /*!
@@ -217,6 +237,13 @@ typedef struct {
     void *ptr; // NULL
 } tmap_map_map3_aux_t;
 
+/*! 
+  Auxiliary data for map3
+  */
+typedef struct {
+    void *ptr; // NULL
+} tmap_map_map_vsw_aux_t;
+
 /*!
   General data structure for holding a mapping; for easy outputting to the SAM format
   */
@@ -239,6 +266,7 @@ typedef struct {
         tmap_map_map1_aux_t *map1_aux; /*!< auxiliary data for map1 */
         tmap_map_map2_aux_t *map2_aux; /*!< auxiliary data for map2 */
         tmap_map_map3_aux_t *map3_aux; /*!< auxiliary data for map3 */
+        tmap_map_map_vsw_aux_t *map_vsw_aux; /*!< auxiliary data for map_vsw */
     } aux;
 } tmap_map_sam_t;
 
