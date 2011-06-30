@@ -73,7 +73,7 @@ AC_CHECK_SIZEOF([long int])
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([stdlib.h stdio.h stdint.h string.h sys/time.h unistd.h float.h zlib.h bzlib.h pthread.h limits.h netinet/in.h])
+AC_CHECK_HEADERS([stdlib.h stdio.h stdint.h string.h sys/time.h unistd.h float.h zlib.h bzlib.h pthread.h limits.h netinet/in.h emmintrin.h smmintrin.h])
 
 AC_C_INLINE
 

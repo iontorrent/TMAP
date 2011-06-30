@@ -1,7 +1,11 @@
 TMAP - flow mapper
 
 === Pre-requisites ===
-1. SAMtools:
+1. Compiler (required):
+  The compiler and system must support SSE4 instructions.  GCC 4.3 first 
+	privided support for SSE4.
+
+2. SAMtools (optional):
   The following commands rely on linking to samtools:
     tmap sam2fs
   They will will be unavailable if the samtools directory cannot be located.
