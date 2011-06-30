@@ -238,8 +238,13 @@ tmap_fq_io_read(tmap_fq_io_t *fqio, tmap_fq_t *fq)
   while ((c = tmap_stream_getc(ks)) != -1 && c != TMAP_FQ_IO_DELIMITER_NL); /* skip the rest of '+' line */
   fqio->line_number++;
   if (c == -1) return -2; /* we should not stop here */
-  while ((c = tmap_stream_getc(ks)) != -1 && fq->qual->l < fq->seq->l)
+  while ((c = tmap_stream_getc(ks)) != -1 && c != TMAP_FQ_IO_DELIMITER_NL) {
+      if(fq->qual->l == fq->seq->l) {
+          tmap_file_fprintf(tmap_file_stderr, "\nAfter line number %d\n", fqio->line_number);
+          tmap_error("The quality string was longer than the sequence string", Exit, OutOfRange);
+      }
     if (c >= 33 && c <= 127) fq->qual->s[fq->qual->l++] = (unsigned char)c;
+  }
   fq->qual->s[fq->qual->l] = 0; /* null terminated string */
   fqio->line_number++;
   fqio->last_char = 0;	/* we have not come to the next header line */
