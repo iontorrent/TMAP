@@ -1513,6 +1513,13 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
           }
       }
 
+      // path memory
+      if(path_mem <= target_len + seq_len) { // lengthen the path
+          path_mem = target_len + seq_len;
+          tmap_roundup32(path_mem);
+          path = tmap_realloc(path, sizeof(tmap_sw_path_t)*path_mem, "path");
+      }
+
       // Debugging
       /*
       for(j=0;j<qlen_fwd;j++) {
@@ -1927,6 +1934,20 @@ tmap_map_util_fsw(tmap_seq_t *seq,
           target = tmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
       }
       target_len = tmap_refseq_subseq(refseq, ref_start + refseq->annos[s->seqid].offset, target_len, target);
+
+      // check if any IUPAC bases fall within the range
+      /*
+      if(0 < tmap_refseq_amb_bases(refseq, s->seqid+1, ref_start, ref_end)) {
+          int32_t j, pos;
+          // modify them
+          for(pos=ref_start;pos<=ref_end;pos++) {
+              j = tmap_refseq_amb_bases(refseq, s->seqid+1, pos, pos); // Note: j is one-based
+              if(0 < j) {
+                  target[pos-ref_start] = 4; // mismatch!
+              }
+          }
+      }
+      */
 
       // add to the band width
       param.band_width += 2 * bw;
