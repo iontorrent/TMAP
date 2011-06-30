@@ -624,11 +624,12 @@ tmap_vsw16_sse2_get_path(const uint8_t *query, int32_t qlen,
 
   // trackback
   p = path;
-  ti = tlen-1; qi = q->qlen-1;
+  ti = tlen-1; qi = q->qlen-1; // zero-based
   h_cur = __tmap_vsw16_get_matrix_cell(q, (ti < 0) ? 0 : ti, (qi < 0) ? 0 : qi) - q->zero_aln_score;
   ctype = TMAP_SW_FROM_M; 
   while(0 <= ti || 0 <= qi) {
-      tmap_vsw16_int_t h_prev, e_prev, f_prev;
+      tmap_vsw16_int_t h_prev, e_prev, f_prev, h_cur_match, h_cur_indel;
+      uint32_t ctype_match, ctype_indel;
       // TODO: does not handle if there was overflow
 
       // get the cells to compare
@@ -641,9 +642,11 @@ tmap_vsw16_sse2_get_path(const uint8_t *query, int32_t qlen,
       score = __tmap_vsw16_get_query_profile_value(q, target[(ti < 0) ? 0 : ti], (qi < 0) ? 0 : qi);
       
       /*
-      fprintf(stderr, "ti=%d qi=%d ctype=%d h_cur=%d h_prev=%d e_prev=%d f_prev=%d score=%d\n",
+      fprintf(stderr, "ti=%d qi=%d ctype=%d h_cur=%d h_prev=%d e_prev=%d f_prev=%d score=%d tbase=%d qbase=%d\n",
               ti, qi, ctype, 
-              h_cur, h_prev, e_prev, f_prev, score);
+              h_cur, h_prev, e_prev, f_prev, score,
+              target[(ti < 0) ? 0 : ti],
+              query[(qi < 0) ? 0 : qi]);
       */
 
       // one-based
@@ -713,90 +716,94 @@ tmap_vsw16_sse2_get_path(const uint8_t *query, int32_t qlen,
        * SSSAAAAAA
        */
 
+      h_cur_match = h_cur_indel = tmap_vsw16_min_value;
+      ctype_match = ctype_indel = 0;
+
+      // compare matches
+      if(h_cur == h_prev + score) { // match
+          h_cur_match = h_prev;
+      }
+      else if(h_cur == e_prev + score) { // match
+          h_cur_match = e_prev;
+          ctype_match = TMAP_SW_FROM_M; 
+      }
+      else if(h_cur == f_prev + score) { // match
+          h_cur_match = f_prev;
+          ctype_match = TMAP_SW_FROM_M; 
+      }
+
+      // compare indels
+      if(ctype == TMAP_SW_FROM_D && h_cur == e_prev - pen_gapoe) { // deletion start
+          h_cur_indel = e_prev;
+          ctype_indel = TMAP_SW_FROM_D; 
+      }
+      else if((ctype == TMAP_SW_FROM_M || ctype == TMAP_SW_FROM_D) && h_cur == e_prev - pen_gape) { // deletion extension
+          h_cur_indel = e_prev;
+          ctype_indel = TMAP_SW_FROM_D; 
+      }
+      else if(ctype == TMAP_SW_FROM_I && h_cur == f_prev - pen_gapoe) { // insertion start
+          h_cur_indel = f_prev;
+          ctype_indel = TMAP_SW_FROM_I; 
+      }
+      else if((ctype == TMAP_SW_FROM_M || ctype == TMAP_SW_FROM_I) && h_cur == f_prev - pen_gape) { // insertion extension
+          h_cur_indel = f_prev;
+          ctype_indel = TMAP_SW_FROM_I; 
+      }
+
+      // check that we found a value
+      if(tmap_vsw16_min_value == h_cur_match && tmap_vsw16_min_value == h_cur_indel) {
+          /*
+             int i, j;
+             for(i=0;i<tlen;i++) {
+             fprintf(stderr, "i=%d", i);
+             for(j=0;j<qlen;j++) {
+             tmap_vsw16_int_t val;
+             val = __tmap_vsw16_get_matrix_cell(q, i, j) - q->zero_aln_score;
+             fprintf(stderr, " %d:%d", j, val);
+             }
+             fprintf(stderr, "\n");
+             }
+             */
+          tmap_error("bug encountered", Exit, OutOfRange);
+      }
+      
+      // justify
       if(0 == left_justify) { // right-justify, choose indels first  
-          if(ctype == TMAP_SW_FROM_M && h_cur == e_prev - pen_gapoe) {
-              h_cur = e_prev;
-              p->ctype = TMAP_SW_FROM_D; 
-              ti--; 
-          }
-          else if(ctype == TMAP_SW_FROM_D && h_cur == e_prev - pen_gape) {
-              h_cur = e_prev;
-              p->ctype = TMAP_SW_FROM_D; 
-              ti--; 
-          }
-          else if(ctype == TMAP_SW_FROM_M && h_cur == f_prev - pen_gapoe) {
-              h_cur = f_prev;
-              p->ctype = TMAP_SW_FROM_I; 
-              qi--;
-          }
-          else if(ctype == TMAP_SW_FROM_I && h_cur == f_prev - pen_gape) {
-              h_cur = f_prev;
-              p->ctype = TMAP_SW_FROM_I; 
-              qi--;
-          }
-          else if(h_cur == e_prev + score) {
-              h_cur = e_prev;
-              p->ctype = TMAP_SW_FROM_M; 
-              ti--; qi--;
-          }
-          else if(h_cur == f_prev + score) {
-              h_cur = f_prev;
-              p->ctype = TMAP_SW_FROM_M; 
-              ti--; qi--;
-          }
-          else if(h_cur == h_prev + score) {
-              h_cur = h_prev;
-              p->ctype = TMAP_SW_FROM_M; 
-              ti--; qi--;
+          if(h_cur_match <= h_cur_indel) {
+              h_cur = h_cur_indel;
+              ctype = ctype_indel;
           }
           else {
-              tmap_error("bug encountered", Exit, OutOfRange);
+              h_cur = h_cur_match;
+              ctype = ctype_match;
           }
       }
       else { // left-justify, choose matches first 
-          // compare
-          if(h_cur == h_prev + score) {
-              h_cur = h_prev;
-              p->ctype = TMAP_SW_FROM_M; 
-              ti--; qi--;
-          }
-          else if(h_cur == e_prev + score) {
-              h_cur = e_prev;
-              p->ctype = TMAP_SW_FROM_M; 
-              ti--; qi--;
-          }
-          else if(h_cur == f_prev + score) {
-              h_cur = f_prev;
-              p->ctype = TMAP_SW_FROM_M; 
-              ti--; qi--;
-          }
-          else if(ctype == TMAP_SW_FROM_M && h_cur == e_prev - pen_gapoe) {
-              h_cur = e_prev;
-              p->ctype = TMAP_SW_FROM_D; 
-              ti--; 
-          }
-          else if(ctype == TMAP_SW_FROM_D && h_cur == e_prev - pen_gape) {
-              h_cur = e_prev;
-              p->ctype = TMAP_SW_FROM_D; 
-              ti--; 
-          }
-          else if(ctype == TMAP_SW_FROM_M && h_cur == f_prev - pen_gapoe) {
-              h_cur = f_prev;
-              p->ctype = TMAP_SW_FROM_I; 
-              qi--;
-          }
-          else if(ctype == TMAP_SW_FROM_I && h_cur == f_prev - pen_gape) {
-              h_cur = f_prev;
-              p->ctype = TMAP_SW_FROM_I; 
-              qi--;
+          if(h_cur_indel <= h_cur_match) {
+              h_cur = h_cur_match;
+              ctype = ctype_match;
           }
           else {
-              tmap_error("bug encountered", Exit, OutOfRange);
+              h_cur = h_cur_indel;
+              ctype = ctype_indel;
           }
       }
 
-      // move to the next path etc.
-      ctype = p->ctype;
+      // update ti, qi
+      switch(ctype) {
+        case TMAP_SW_FROM_M:
+          ti--, qi--; break;
+        case TMAP_SW_FROM_D:
+          ti--; break;
+        case TMAP_SW_FROM_I:
+          qi--; break;
+        default:
+          tmap_error("bug encountered", Exit, OutOfRange);
+      }
+
+
+      // update p
+      p->ctype = ctype;
       p++;
   }
   *path_len = p - path;
