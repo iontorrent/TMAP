@@ -1486,7 +1486,7 @@ tmap_map_util_sw(tmap_refseq_t *refseq,
           tmp_sam = sams->sams[end];
           // adjust co-ordinates, and query
           query_fwd += tmp_sam.result->query_start; // offset query
-          query_fwd += qlen_rev - tmp_sam.result->query_end - 1; // offset reverse query
+          query_rev += qlen_rev - tmp_sam.result->query_end - 1; // offset reverse query
           qlen_fwd = qlen_rev = tmp_sam.result->query_end - tmp_sam.result->query_start + 1; // update query length
       }
 

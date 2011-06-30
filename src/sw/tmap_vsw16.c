@@ -592,6 +592,17 @@ tmap_vsw16_sse2_get_path(const uint8_t *query, int32_t qlen,
       return; // smallest value
   }
 
+  /*
+  for(qi=0;qi<qlen;qi++) {
+      fputc("ACGTN"[query[qi]], stderr);
+  }
+  fputc('\n', stderr);
+  for(ti=0;ti<tlen;ti++) {
+      fputc("ACGTN"[target[ti]], stderr);
+  }
+  fputc('\n', stderr);
+  */
+
   // store here
   pen_gapoe = opt->pen_gapo + opt->pen_gape; // gap open penalty
   pen_gape = opt->pen_gape; // gap extend penalty
@@ -620,17 +631,6 @@ tmap_vsw16_sse2_get_path(const uint8_t *query, int32_t qlen,
   if(tlen-1 != ti || qlen-1 != qi) {
       tmap_error("bug encountered", Exit, OutOfRange);
   }
-
-  /*
-  for(qi=0;qi<qlen;qi++) {
-      fputc("ACGTN"[query[qi]], stderr);
-  }
-  fputc('\n', stderr);
-  for(ti=0;ti<tlen;ti++) {
-      fputc("ACGTN"[target[ti]], stderr);
-  }
-  fputc('\n', stderr);
-  */
   
   // trackback
   p = path;
@@ -659,7 +659,7 @@ tmap_vsw16_sse2_get_path(const uint8_t *query, int32_t qlen,
               target[(ti < 0) ? 0 : ti],
               query[(qi < 0) ? 0 : qi],
               prev_indel_start);
-      */
+              */
 
       // one-based
       p->i = ti+1; p->j = qi+1; 
