@@ -9,6 +9,16 @@
   */
 
 /*! 
+  wrapper function for posix_memalign
+  @param  _alignment      the alignment value, a multiple of two
+  @param  _size           the size of the memory block, in bytes
+  @param  _variable_name  the variable name to be assigned this memory in the calling function
+  @return                 upon success, a pointer to the memory block allocated by the function; a null pointer otherwise.
+  */
+#define tmap_memalign(_alignment, _size, _variable_name) \
+  tmap_memalign1(_alignment, _size, __func__, _variable_name)
+
+/*! 
   wrapper function for malloc
   @param  _size           the size of the memory block, in bytes
   @param  _variable_name  the variable name to be assigned this memory in the calling function
@@ -45,6 +55,17 @@
   */
 #define tmap_strdup(_str) \
   tmap_strdup1(_str, __func__)
+
+/*! 
+  wrapper function for posix_memalign
+  @param  alignment      the alignment value, a multiple of two
+  @param  size           the size of the memory block, in bytes
+  @param  function_name  the calling function name 
+  @param  variable_name  the variable name to be assigned this memory in the calling function
+  @return                upon success, a pointer to the memory block allocated by the function; a null pointer otherwise.
+  */
+inline void *
+tmap_memalign1(size_t alignment, size_t size, const char *function_name, const char *variable_name);
 
 /*! 
   wrapper function for malloc

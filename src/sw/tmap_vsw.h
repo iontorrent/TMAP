@@ -32,7 +32,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <emmintrin.h>
-#include <smmintrin.h>
 #include <unistd.h>
 
 /* For branch prediction */
@@ -59,7 +58,7 @@
 #define __tmap_vsw16_mm_slli_si128(_src, _imm) _mm_slli_si128(_src, _imm)
 #define __tmap_vsw16_mm_srli_si128(_src, _imm) _mm_srli_si128(_src, _imm)
 #define __tmap_vsw16_mm_set1_epi16(_val) _mm_set1_epi16(_val)
-#define __tmap_vsw16_mm_set_epi16(_r0, _r1, _r2, _r3, _r4, _r5, _r6, _r7) _mm_set_epi16(_r0, _r1, _r2, _r3, _r4, _r5, _r6, _r7)
+#define __tmap_vsw16_mm_set_epi16(_r0, _r1, _r2, _r3, _r4, _r5, _r6, _r7) _mm_set_epi16(_r7, _r6, _r5, _r4, _r3, _r2, _r1, _r0)
 #define __tmap_vsw16_mm_adds_epi16(_a, _b) _mm_adds_epi16(_a, _b)
 #define __tmap_vsw16_mm_subs_epi16(_a, _b) _mm_subs_epi16(_a, _b)
 #define __tmap_vsw16_mm_max_epi16(_a, _b) _mm_max_epi16(_a, _b)
@@ -67,6 +66,7 @@
 #define __tmap_vsw16_mm_movemask_epi16(_a) _mm_movemask_epi8(_a) // NB: this should be 8-bit...
 #define __tmap_vsw16_mm_cmpeq_epi16(_a, _b) _mm_cmpeq_epi16(_a, _b)
 #define __tmap_vsw16_mm_insert_epi16(_a, _b, _imm) _mm_insert_epi16(_a, _b, _imm)
+#define __tmap_vsw16_mm_extract_epi16(_a, _imm) _mm_extract_epi16(_a, _imm)
 #define tmap_vsw16_values_per_128_bits 8 
 #define tmap_vsw16_values_per_128_bits_log2 3 // should be log2(values_per_128_bits)
 #define tmap_vsw16_max_value INT16_MAX
@@ -82,14 +82,14 @@ typedef int16_t tmap_vsw16_int_t;
     (xx) = _mm_max_epi16((xx), _mm_srli_si128((xx), 8)); \
     (xx) = _mm_max_epi16((xx), _mm_srli_si128((xx), 4)); \
     (xx) = _mm_max_epi16((xx), _mm_srli_si128((xx), 2)); \
-    (ret) = (tmap_vsw16_int_t)(_mm_extract_epi16((xx), 0) & 0xffff); \
+    (ret) = (tmap_vsw16_int_t)(__tmap_vsw16_mm_extract_epi16((xx), 0) & 0xffff); \
 } while (0) 
 // ret is min in xx.
 #define __tmap_vsw16_min(ret, xx) do { \
     (xx) = _mm_min_epi16((xx), _mm_srli_si128((xx), 8)); \
     (xx) = _mm_min_epi16((xx), _mm_srli_si128((xx), 4)); \
     (xx) = _mm_min_epi16((xx), _mm_srli_si128((xx), 2)); \
-    (ret) = (tmap_vsw16_int_t)(_mm_extract_epi16((xx), 0) & 0xffff); \
+    (ret) = (tmap_vsw16_int_t)(__tmap_vsw16_mm_extract_epi16((xx), 0) & 0xffff); \
 } while (0) 
 // overcomes the immediate problem
 #define __tmap_vsw16_mm_insert(_a, _val, _k) \
@@ -103,8 +103,10 @@ typedef int16_t tmap_vsw16_int_t;
          (7 == _k ? __tmap_vsw16_mm_insert_epi16(_a, _val, 7) : \
           _a))))))))
 // returns cell (i,j) in the scoring matrix
-#define __tmap_vsw16_get_matrix_cell(_query, _i, _j) \
-  (((tmap_vsw16_int_t*)((_query)->H + ((_i) * (_query)->slen) + ((_j) % (_query)->slen)))[(_j) / (_query)->slen])
+#define __tmap_vsw16_get_matrix_cell1(_Xs, _j, _slen) \
+  (((tmap_vsw16_int_t*)(_Xs + ((_j) % _slen)))[(_j) / _slen])
+#define __tmap_vsw16_get_matrix_cell(_Xs, _slen, _i, _j) \
+  __tmap_vsw16_get_matrix_cell1(_Xs + ((_i) * _slen), _j, _slen)
 // returns the score in the query profile
 #define __tmap_vsw16_get_query_profile_value(_query, _base, _j) \
   (((tmap_vsw16_int_t*)((_query)->query_profile + (_base * (_query)->slen) + ((_j) % (_query)->slen)))[(_j) / (_query)->slen])
@@ -134,14 +136,17 @@ typedef struct {
     /* -- For the score only VSW -- */
     __m128i *H0; // H/H'
     __m128i *H1; // H/H'
-    __m128i *E; // deletion from the query, insert into the target
+    __m128i *E; // deletion from the query, insertion into the target
+    __m128i *F; // insertion into the query, insertion from the target
     int32_t qlen_max; // the maximum query size
     /* -- End score VSW -- */
     /* -- For the full VSW --*/
     int32_t hlen; // the # of cells in the matrix (type == 1)
     int32_t hlen_mem; // the memory allocated for the matrix
     int32_t hlen_max; // the maximum matrix size
-    __m128i *H; // H
+    __m128i *Hs; // H for storing the full matrix
+    __m128i *Es; // E for storing the full matrix
+    __m128i *Fs; // F for storing the full matrix
     /* -- End full VSW -- */
 } tmap_vsw16_query_t;
 

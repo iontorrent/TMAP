@@ -33,7 +33,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <emmintrin.h>
-#include <smmintrin.h>
 #include <unistd.h>
 #include <stdio.h>
 #include "tmap_vsw.h"

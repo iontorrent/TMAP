@@ -27,7 +27,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <emmintrin.h>
-#include <smmintrin.h>
 #include <unistd.h>
 #include <stdio.h>
 #include "../util/tmap_error.h"
@@ -41,20 +40,37 @@
 static void
 tmap_vsw16_query_print_query_profile(tmap_vsw16_query_t *query)
 {
-  int32_t a, i, j;
+  int32_t a, i, j, k;
 
   for(a=0;a<TMAP_VSW_ALPHABET_SIZE;a++) {
       fprintf(stderr, "a=%d ", a);
       __m128i *S = query->query_profile + a * query->slen;
-      for(i = 0; i < tmap_vsw16_values_per_128_bits; i++) {
-          for(j = 0; j < query->slen; j++) {
-              fprintf(stderr, " %d", ((tmap_vsw16_int_t*)(S+j))[i]);
+      for(i = k = 0; i < tmap_vsw16_values_per_128_bits; i++) {
+          for(j = 0; j < query->slen; j++, k++) {
+              fprintf(stderr, " %d:%d", k, ((tmap_vsw16_int_t*)(S+j))[i]);
           }
       }
       fprintf(stderr, "\n");
   }
 }
 */
+
+static void
+tmap_vsw16_print_matrix(const uint8_t *query, int32_t qlen, const uint8_t *target, int32_t tlen, tmap_vsw16_query_t *q)
+{
+  int32_t i, j;
+  for(i=0;i<tlen;i++) {
+      fprintf(stderr, "i=%d", i);
+      for(j=0;j<qlen;j++) {
+          tmap_vsw16_int_t val_h, val_e, val_f;
+          val_h = __tmap_vsw16_get_matrix_cell(q->Hs, q->slen, i, j) - q->zero_aln_score;
+          val_e = __tmap_vsw16_get_matrix_cell(q->Es, q->slen, i, j) - q->zero_aln_score;
+          val_f = __tmap_vsw16_get_matrix_cell(q->Fs, q->slen, i, j) - q->zero_aln_score;
+          fprintf(stderr, " %d:[%d,%d,%d]", j, val_h, val_e, val_f);
+      }
+      fprintf(stderr, " t:%d\n", target[i]);
+  }
+}
 
 tmap_vsw16_query_t *
 tmap_vsw16_query_init(tmap_vsw16_query_t *prev, const uint8_t *query, int32_t qlen, int32_t tlen, 
@@ -86,6 +102,7 @@ tmap_vsw16_query_init(tmap_vsw16_query_t *prev, const uint8_t *query, int32_t ql
       // get the memory needed to hold the stripes for the query 
       qlen_mem = __tmap_vsw_calc_qlen_mem(slen);
       if(0 == type) {
+          //prev = tmap_memalign(16, sizeof(tmap_vsw16_query_t) + 15 + qlen_mem * (TMAP_VSW_ALPHABET_SIZE + 3), "prev"); // add three for H0, H1, and E
           prev = tmap_malloc(sizeof(tmap_vsw16_query_t) + 15 + qlen_mem * (TMAP_VSW_ALPHABET_SIZE + 3), "prev"); // add three for H0, H1, and E
           // update the type
           prev->type = 0;
@@ -93,8 +110,9 @@ tmap_vsw16_query_init(tmap_vsw16_query_t *prev, const uint8_t *query, int32_t ql
       }
       else if(1 == type) {
           // allocate a single block of memory (add 15 for 16-byte aligning the prev
-          // pointer): struct + (16-byte alignment) + query profile + scoring matrix 
-          prev = tmap_malloc(sizeof(tmap_vsw16_query_t) + 15 + (qlen_mem * TMAP_VSW_ALPHABET_SIZE + 3) + (hlen_mem), "prev"); 
+          // pointer): struct + (16-byte alignment) + query profile + scoring matrix  
+          //prev = tmap_memalign(16, sizeof(tmap_vsw16_query_t) + 15 + qlen_mem * (TMAP_VSW_ALPHABET_SIZE + 3) + (3 * hlen_mem), "prev"); 
+          prev = tmap_malloc(sizeof(tmap_vsw16_query_t) + 15 + (qlen_mem * TMAP_VSW_ALPHABET_SIZE + 3) + (3 * hlen_mem), "prev"); 
           // update the type
           prev->type = 1;
           prev->hlen_mem = hlen_mem;
@@ -158,7 +176,10 @@ tmap_vsw16_query_init(tmap_vsw16_query_t *prev, const uint8_t *query, int32_t ql
   prev->H1 = prev->H0 + prev->slen; // skip over H0
   prev->E = prev->H1 + prev->slen; // skip over H1
   if(1 == type) {
-      prev->H = prev->E + prev->slen; // skip over E
+      prev->F = prev->E + prev->slen; // skip over E
+      prev->Hs = prev->E + prev->slen; // skip over F
+      prev->Es = prev->Hs + prev->hlen; // skip over Hs
+      prev->Fs = prev->Es + prev->hlen; // skip over Es
   }
   
   // create the query profile
@@ -218,7 +239,10 @@ tmap_vsw16_query_reinit(tmap_vsw16_query_t *query, tmap_vsw_result_t *result)
       query->E = query->H1 + query->slen; // skip over H1
       if(1 == query->type) {
           // update H
-          query->H = query->E + query->slen; // skip over E
+          query->F = query->E + query->slen; // skip over E
+          query->Hs = query->E + query->slen; // skip over F
+          query->Es = query->Hs + query->hlen; // skip over Hs
+          query->Fs = query->Es + query->hlen; // skip over Es
       }
   }
 }
@@ -242,7 +266,7 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
   int32_t gmax, best, zero;
   int32_t query_start_skip_j = 0, query_start_skip_k = 0;
   __m128i zero_mm, negative_infinity_mm, positive_infinity_mm, reduce_mm;
-  __m128i pen_gapoe, pen_gape, *H0, *H1, *E, *H, init_gape;
+  __m128i pen_gapoe, pen_gape, *H0, *H1, *E, *Hs, *Es, *Fs,init_gape;
 
   // initialization
   // normalize these
@@ -261,7 +285,9 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
   H0 = query->H0; 
   H1 = query->H1; 
   E = query->E; 
-  H = query->H;
+  Hs = query->Hs;
+  Es = query->Es;
+  Fs = query->Fs;
   slen = query->slen;
   if(NULL != overflow) *overflow = 0;
 
@@ -275,7 +301,7 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
   // check byte # __tmap_vsw16_query_index_to_byte_number(query->qlen, slen)
 
   if(0 == query_start_clip) {
-      __m128i e, s, g, *S;
+      __m128i e, e2, s, g, *S;
       // Set start
       for(j = 0; j < slen; j++) {
           // initialize H0 to negative infinity 
@@ -288,18 +314,45 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
       S = query->query_profile + target[0] * slen; // s is the 1st score vector
       s = __tmap_vsw_mm_load_si128(S + slen - 1);
       s = __tmap_vsw_mm_slli_si128(s, tmap_vsw16_shift_bytes); // shift left since x64 is little endian
+      s = __tmap_vsw16_mm_insert_epi16(s, 0, 0); // since we shifted in zeros
+      // gap open and gap extension
+      e = __tmap_vsw16_mm_set_epi16(-opt->pen_gapo + opt->pen_gape + zero,
+                                    -opt->pen_gapo - (opt->pen_gape * slen * 1 - 2) + zero,
+                                    -opt->pen_gapo - (opt->pen_gape * slen * 2 - 2) + zero,
+                                    -opt->pen_gapo - (opt->pen_gape * slen * 3 - 2) + zero,
+                                    -opt->pen_gapo - (opt->pen_gape * slen * 4 - 2) + zero,
+                                    -opt->pen_gapo - (opt->pen_gape * slen * 5 - 2) + zero,
+                                    -opt->pen_gapo - (opt->pen_gape * slen * 6 - 2) + zero,
+                                    -opt->pen_gapo - (opt->pen_gape * slen * 7 - 2) + zero);
       for(j = 0; j < slen; j++) {
-          // gap open and gap extension
-          e = __tmap_vsw16_mm_subs_epi16(zero_mm, pen_gapoe);
-          // add the score vector
-          e = __tmap_vsw16_mm_adds_epi16(e, s); 
           // gap extensions
           g = pen_gape;
-          if(1 < j) g = __tmap_vsw_mm_slli_si128(g, tmap_vsw16_shift_bytes);
+          //if(1 < j) g = __tmap_vsw_mm_slli_si128(g, tmap_vsw16_shift_bytes);
           e = __tmap_vsw16_mm_subs_epi16(e, g); 
+          // add the score vector
+          e2 = __tmap_vsw16_mm_adds_epi16(e, s); 
           // store
-          __tmap_vsw_mm_store_si128(E + j, e);
+          __tmap_vsw_mm_store_si128(E + j, e2);
+          // load the next scoring vector
+          tmap_vsw16_int_t tmp = __tmap_vsw16_mm_extract_epi16(s, tmap_vsw16_values_per_128_bits-1);
+          s = __tmap_vsw_mm_load_si128(S + j);
+          s = __tmap_vsw_mm_slli_si128(s, tmap_vsw16_shift_bytes); // shift left since x64 is little endian
+          s = __tmap_vsw16_mm_insert_epi16(s, tmp, 0); // since we shifted in zeros
       }
+      // update first row/col
+      e = __tmap_vsw_mm_load_si128(E);
+      e = __tmap_vsw16_mm_insert_epi16(e, query->min_aln_score, 0); 
+      __tmap_vsw_mm_store_si128(E, e);
+      // Debugging
+      /*
+      fprintf(stderr, "i=-1");
+      for(j = 0; j < tmap_vsw16_values_per_128_bits; j++) { // for each start position in the stripe
+          for(k = 0; k < query->slen; k++) {
+              fprintf(stderr, " %d", ((tmap_vsw16_int_t*)(E+k))[j] - zero);
+          }
+      }
+      fprintf(stderr, "\n");
+      */
   }
   else {
       // Initialize all zeros
@@ -308,18 +361,18 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
           __tmap_vsw_mm_store_si128(H0 + i, zero_mm);
       }
   }
-
-  // Debugging
-  // H0
-  /*
-  fprintf(stderr, "i=-1");
-  for(j = 0; j < tmap_vsw16_values_per_128_bits; j++) { // for each start position in the stripe
-      for(k = 0; k < query->slen; k++) {
-          fprintf(stderr, " %d", ((tmap_vsw16_int_t*)(E+k))[j] - zero);
+  
+  if(1 == query->type) {
+      // initialize Fs
+      for(i = 0, sum = 0; i < tlen; i++) { // for each base in the target
+          for(j = 0; TMAP_VSW_LIKELY(j < slen); ++j) { // for each stripe in the query
+              __tmap_vsw_mm_store_si128(Fs, negative_infinity_mm);
+              Fs++;
+          }
       }
+      // reset the pointer
+      Fs = query->Fs;
   }
-  fprintf(stderr, "\n");
-  */
   
   query_start_skip_j = query_start_skip % slen; // stripe
   query_start_skip_k = query_start_skip / slen; // byte
@@ -329,8 +382,8 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
   for(i = 0, sum = 0; i < tlen; i++) { // for each base in the target
       __m128i e, h, f, max, min, *S;
 
-      max = negative_infinity_mm; // max is negative infinity
-      min = positive_infinity_mm; // min is positive infinity
+      max = __tmap_vsw16_mm_set1_epi16(query->min_aln_score); // max is negative infinity
+      min = __tmap_vsw16_mm_set1_epi16(query->max_aln_score); // min is positive infinity
       S = query->query_profile + target[i] * slen; // s is the 1st score vector
 
       // load H(i-1,-1)
@@ -344,11 +397,12 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
       }
 
       // we will do a lazy-F loop, so use negative infinity
-      f = negative_infinity_mm;
-
+      f = __tmap_vsw16_mm_set1_epi16(query->min_aln_score);
+      
       for(j = 0; TMAP_VSW_LIKELY(j < slen); ++j) { // for each stripe in the query
           // NB: at the beginning, 
           // h=H(i-1,j-1)
+          // e=H(i,j)
           // f=H(i,j)
           /* SW cells are computed in the following order:
            *   H(i,j)   = max{H(i-1,j-1)+S(i,j), E(i,j), F(i,j)}
@@ -377,14 +431,15 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
           fprintf(stderr, "\n");
           */
           h = __tmap_vsw16_mm_adds_epi16(h, __tmap_vsw_mm_load_si128(S + j)); // h=H(i-1,j-1)+S(i,j)
-          /*
-          fprintf(stderr, "h' i=%d j=%d", i, j);
-          for(k = 0; k < tmap_vsw16_values_per_128_bits; k++) { // for each start position in the stripe
-              fprintf(stderr, " %d", ((tmap_vsw16_int_t*)(&h))[k] - zero);
-          }
-          fprintf(stderr, "\n");
-          */
           e = __tmap_vsw_mm_load_si128(E + j); // e=E(i,j)
+          if(1 == query->type) {
+              // h=H(i,j)
+              __tmap_vsw_mm_store_si128(Hs + j, h);
+              // e=E(i,j)
+              __tmap_vsw_mm_store_si128(Es + j, e);
+              // f=F(i,j)
+              __tmap_vsw_mm_store_si128(Fs + j, f);
+          }
           h = __tmap_vsw16_mm_max_epi16(h, e); // h=H(i,j) = max{E(i,j), H(i-1,j-1)+S(i,j)}
           h = __tmap_vsw16_mm_max_epi16(h, f); // h=H(i,j) = max{max{E(i,j), H(i-1,j-1)+S(i,j)}, F(i,j)}
           h = __tmap_vsw16_mm_max_epi16(h, negative_infinity_mm); // bound with -inf
@@ -392,21 +447,22 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
           min = __tmap_vsw16_mm_min_epi16(min, h); // save the max values in this stripe versus the last
           __tmap_vsw_mm_store_si128(H1 + j, h); // save h to H(i,j)
           // next, compute E(i+1,j)
-          h = __tmap_vsw16_mm_subs_epi16(h, pen_gapoe); // h=H(i,j)-pen_gapo
+          h = __tmap_vsw16_mm_subs_epi16(h, pen_gapoe); // h=H(i,j)-pen_gapoe
           e = __tmap_vsw16_mm_subs_epi16(e, pen_gape); // e=E(i,j)-pen_gape
-          e = __tmap_vsw16_mm_max_epi16(e, h); // e=E(i+1,j) = max{E(i,j)-pen_gape, H(i,j)-pen_gapo}
+          e = __tmap_vsw16_mm_max_epi16(e, h); // e=E(i+1,j) = max{E(i,j)-pen_gape, H(i,j)-pen_gapoe}
           e = __tmap_vsw16_mm_max_epi16(e, negative_infinity_mm); // bound with -inf
           __tmap_vsw_mm_store_si128(E + j, e); // save e to E(i+1,j)
           // now compute F(i,j+1)
-          //h = __tmap_vsw16_mm_subs_epi16(h, pen_gapoe); // h=H(i,j)-pen_gapo
+          //h = __tmap_vsw16_mm_subs_epi16(h, pen_gapoe); // h=H(i,j)-pen_gapoe
           f = __tmap_vsw16_mm_subs_epi16(f, pen_gape); // f=F(i,j)-pen_gape
-          f = __tmap_vsw16_mm_max_epi16(f, h); // f=F(i,j+1) = max{F(i,j)-pen_gape, H(i,j)-pen_gapo}
+          f = __tmap_vsw16_mm_max_epi16(f, h); // f=F(i,j+1) = max{F(i,j)-pen_gape, H(i,j)-pen_gapoe}
           f = __tmap_vsw16_mm_max_epi16(f, negative_infinity_mm); // bound with -inf
           // get H(i-1,j) and prepare for the next j
           h = __tmap_vsw_mm_load_si128(H0 + j); // h=H(i-1,j)
       }
       // NB: we do not need to set E(i,j) as we disallow adjacent insertion and then deletion
       // iterate through each value stored in a stripe
+      //f = __tmap_vsw16_mm_set1_epi16(query->min_aln_score);
       for(k = 0; TMAP_VSW_LIKELY(k < tmap_vsw16_values_per_128_bits); ++k) { // this block mimics SWPS3; NB: H(i,j) updated in the lazy-F loop cannot exceed max
           f = __tmap_vsw_mm_slli_si128(f, tmap_vsw16_shift_bytes); // since x86 is little endian
           f = __tmap_vsw16_mm_insert_epi16(f, query->min_aln_score, 0); // set F(i-1,-1)[0] as negative infinity (normalized)
@@ -415,8 +471,13 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
               h = __tmap_vsw16_mm_max_epi16(h, f); // h=H(i,j) = max{H(i,j), F(i,j)}
               h = __tmap_vsw16_mm_max_epi16(h, negative_infinity_mm); // bound with -inf
               __tmap_vsw_mm_store_si128(H1 + j, h); // save h to H(i,j) 
+              if(1 == query->type) { 
+                  __tmap_vsw_mm_store_si128(Hs + j, h);
+                  __tmap_vsw_mm_store_si128(Fs + j, f);
+              }
               h = __tmap_vsw16_mm_subs_epi16(h, pen_gapoe); // h=H(i,j)-gapo
-              f = __tmap_vsw16_mm_subs_epi16(f, pen_gape); // f=max{F(i,j+)-pen_gape,H(i,j)-pen_gapo}
+              f = __tmap_vsw16_mm_subs_epi16(f, pen_gape); // f=F(i,j)-pen_gape
+              f = __tmap_vsw16_mm_max_epi16(f, h); // f=F(i,j+1) = max{F(i,j)-pen_gape, H(i,j)-pen_gapoe}
               f = __tmap_vsw16_mm_max_epi16(f, negative_infinity_mm); // bound with -inf
               // check to see if h could have been updated by f?
               // NB: the comparison below will have some false positives, in
@@ -428,10 +489,15 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
 end_loop:
       if(1 == query->type) { 
           // save the matrix
+          /*
           for(j = 0; TMAP_VSW_LIKELY(j < slen); ++j) { // for each stripe in the query
-              __tmap_vsw_mm_store_si128(H, __tmap_vsw_mm_load_si128(H1 + j));
-              H++;
+              __tmap_vsw_mm_store_si128(Hs, __tmap_vsw_mm_load_si128(H1 + j));
+              Hs++;
           }
+          */
+          Hs += slen;
+          Es += slen;
+          Fs += slen;
       }
       /*
       fprintf(stderr, "i=%d", i);
@@ -579,9 +645,9 @@ tmap_vsw16_sse2_get_path(const uint8_t *query, int32_t qlen,
   int32_t ti, qi;
   int32_t pen_gapoe, pen_gape;
   int32_t score, overflow = 0;
-  uint32_t ctype, prev_indel_start, next_indel_start;
+  uint32_t ctype;
   tmap_sw_path_t *p;
-  tmap_vsw16_int_t h_cur;
+  tmap_vsw16_int_t cur;
   
   if(1 != q->type) { // ignore
       tmap_error("bug encountered", Exit, OutOfRange);
@@ -592,7 +658,7 @@ tmap_vsw16_sse2_get_path(const uint8_t *query, int32_t qlen,
       return; // smallest value
   }
 
-  /*
+  //tmap_vsw16_query_print_query_profile(q);
   for(qi=0;qi<qlen;qi++) {
       fputc("ACGTN"[query[qi]], stderr);
   }
@@ -601,7 +667,6 @@ tmap_vsw16_sse2_get_path(const uint8_t *query, int32_t qlen,
       fputc("ACGTN"[target[ti]], stderr);
   }
   fputc('\n', stderr);
-  */
 
   // store here
   pen_gapoe = opt->pen_gapo + opt->pen_gape; // gap open penalty
@@ -632,41 +697,75 @@ tmap_vsw16_sse2_get_path(const uint8_t *query, int32_t qlen,
       tmap_error("bug encountered", Exit, OutOfRange);
   }
   
+  // print the matrix
+  tmap_vsw16_print_matrix(query, qlen, target, tlen, q);
+  
   // trackback
   p = path;
   ti = tlen-1; qi = q->qlen-1; // zero-based
-  h_cur = __tmap_vsw16_get_matrix_cell(q, (ti < 0) ? 0 : ti, (qi < 0) ? 0 : qi) - q->zero_aln_score;
+  // TODO: search over end cells?
+  cur = __tmap_vsw16_get_matrix_cell(q->Hs, q->slen, (ti < 0) ? 0 : ti, (qi < 0) ? 0 : qi) - q->zero_aln_score;
   ctype = TMAP_SW_FROM_M; 
-  prev_indel_start = 0;
   while(0 <= ti || 0 <= qi) {
-      tmap_vsw16_int_t h_prev, e_prev, f_prev, h_cur_match, h_cur_indel;
-      uint32_t ctype_match, ctype_indel;
+      uint32_t ctype_next;
       // TODO: does not handle if there was overflow
-
-      // get the cells to compare
-      h_prev = __tmap_vsw16_get_matrix_cell(q, (ti-1 < 0) ? 0 : ti-1, (qi-1 < 0) ? 0 : qi-1) - q->zero_aln_score;
-      e_prev = __tmap_vsw16_get_matrix_cell(q, (ti-1 < 0) ? 0 : ti-1, (qi < 0) ? 0 : qi) - q->zero_aln_score;
-      f_prev = __tmap_vsw16_get_matrix_cell(q, (ti < 0) ? 0 : ti, (qi-1 < 0) ? 0 : qi-1) - q->zero_aln_score;
+      tmap_vsw16_int_t cur_next;
+      tmap_vsw16_int_t h_prev[3];
+      tmap_vsw16_int_t e_prev[2];
+      tmap_vsw16_int_t f_prev[2];
 
       // get the match score
       // TODO: should we be retrieving the score for every one ?
       score = __tmap_vsw16_get_query_profile_value(q, target[(ti < 0) ? 0 : ti], (qi < 0) ? 0 : qi);
-      
-      /*
-      fprintf(stderr, "ti=%d qi=%d ctype=%d h_cur=%d h_prev=%d e_prev=%d f_prev=%d score=%d tbase=%d qbase=%d prev_indel_start=%d\n",
-              ti, qi, ctype, 
-              h_cur, h_prev, e_prev, f_prev, score,
+
+      // match cells
+      // from 
+      //     
+      if(ti == 0 && qi == 0) {
+          h_prev[0] = 0;
+          h_prev[1] = h_prev[2] = tmap_vsw16_min_value;
+      }
+      else if(ti <= 0 || qi <= 0) {
+          h_prev[0] = h_prev[1] = h_prev[2] = tmap_vsw16_min_value;
+      }
+      else {
+          h_prev[0] = __tmap_vsw16_get_matrix_cell(q->Hs, q->slen, ti-1, qi-1) - q->zero_aln_score;
+          h_prev[1] = __tmap_vsw16_get_matrix_cell(q->Es, q->slen, ti-1, qi-1) - q->zero_aln_score;
+          h_prev[2] = __tmap_vsw16_get_matrix_cell(q->Fs, q->slen, ti-1, qi-1) - q->zero_aln_score;
+      }
+      // deletion cells
+      if(ti <= 0 || qi < 0) {
+          e_prev[0] = e_prev[1] = tmap_vsw16_min_value;
+      }
+      else {
+          e_prev[0] = __tmap_vsw16_get_matrix_cell(q->Hs, q->slen, ti-1, qi) - q->zero_aln_score;
+          e_prev[1] = __tmap_vsw16_get_matrix_cell(q->Es, q->slen, ti-1, qi) - q->zero_aln_score;
+      }
+      // insertion cells
+      if(ti < 0 || qi <= 0) {
+          f_prev[0] = f_prev[1] = tmap_vsw16_min_value;
+      }
+      else {
+          f_prev[0] = __tmap_vsw16_get_matrix_cell(q->Hs, q->slen, ti, qi-1) - q->zero_aln_score;
+          f_prev[1] = __tmap_vsw16_get_matrix_cell(q->Fs, q->slen, ti, qi-1) - q->zero_aln_score;
+      }
+
+      // Debugging
+      fprintf(stderr, "ti=%d qi=%d ctype=%d cur=%d h_prev=[%d,%d,%d] e_prev=[%d,%d] f_prev=[%d,%d] score=%d tbase=%d qbase=%d\n",
+              ti, qi, ctype, cur, 
+              h_prev[0], h_prev[1], h_prev[2],
+              e_prev[0], e_prev[1], 
+              f_prev[0], f_prev[1], 
+              score,
               target[(ti < 0) ? 0 : ti],
-              query[(qi < 0) ? 0 : qi],
-              prev_indel_start);
-              */
+              query[(qi < 0) ? 0 : qi]);
 
       // one-based
       p->i = ti+1; p->j = qi+1; 
 
       // corner cases
       if(0 == ti && 0 == qi) { // at the start
-          h_cur = 0; 
+          cur = 0; 
           if(TMAP_SW_FROM_M == ctype) {
               if(-pen_gapoe < score) {
                   p->ctype = TMAP_SW_FROM_M;
@@ -728,86 +827,57 @@ tmap_vsw16_sse2_get_path(const uint8_t *query, int32_t qlen,
        * SSSAAAAAA
        */
 
-      h_cur_match = h_cur_indel = tmap_vsw16_min_value;
-      ctype_match = ctype_indel = 0;
-
-      // compare matches
-      if(h_cur == h_prev + score) { // match
-          h_cur_match = h_prev;
+      // get the previous cell
+      cur_next = tmap_vsw16_min_value;
+      ctype_next = TMAP_SW_FROM_S;
+      if(TMAP_SW_FROM_M == ctype) { // match
+          // compare matches
+          fprintf(stderr, "cur=%d [%d,%d,%d] score=%d\n",
+                  cur, h_prev[0], h_prev[1], h_prev[2], score);
+          fprintf(stderr, "cur=%d [%d,%d,%d] score=%d\n",
+                  cur, h_prev[0] + score, h_prev[1] + score, h_prev[2] + score, score);
+          if(cur == h_prev[0] + score) { // from match
+              cur_next = h_prev[0];
+              ctype_next = TMAP_SW_FROM_M; 
+          }
+          else if(cur == h_prev[1] + score) { // from deletion 
+              cur_next = h_prev[1];
+              ctype_next = TMAP_SW_FROM_D; 
+          }
+          else if(cur == h_prev[2] + score) { // from insertion
+              fprintf(stderr, "HERE I\n");
+              cur_next = h_prev[2];
+              ctype_next = TMAP_SW_FROM_I; 
+          }
       }
-      else if(h_cur == e_prev + score) { // match
-          h_cur_match = e_prev;
-          ctype_match = TMAP_SW_FROM_M; 
+      else if(TMAP_SW_FROM_D == ctype) {
+          if(cur == e_prev[0] - pen_gapoe) { // from match
+              cur_next = e_prev[0];
+              ctype_next = TMAP_SW_FROM_M;
+          }
+          else if(cur == e_prev[1] - pen_gape) { // from deletion
+              cur_next = e_prev[1];
+              ctype_next = TMAP_SW_FROM_D;
+          }
       }
-      else if(h_cur == f_prev + score) { // match
-          h_cur_match = f_prev;
-          ctype_match = TMAP_SW_FROM_M; 
+      else if(TMAP_SW_FROM_I == ctype) {
+          if(cur == f_prev[0] - pen_gapoe) { // from match
+              cur_next = f_prev[0];
+              ctype_next = TMAP_SW_FROM_M;
+          }
+          else if(cur == f_prev[1] - pen_gape) { // from insertion
+              cur_next = f_prev[1];
+              ctype_next = TMAP_SW_FROM_I;
+          }
       }
-
-      // compare indels
-      next_indel_start = 0;
-      if((ctype == TMAP_SW_FROM_M || ctype == TMAP_SW_FROM_D) && h_cur == e_prev - pen_gapoe) { // deletion start
-          h_cur_indel = e_prev;
-          ctype_indel = TMAP_SW_FROM_D; 
-          next_indel_start = 1;
-      }
-      else if(0 == prev_indel_start && (ctype == TMAP_SW_FROM_M || ctype == TMAP_SW_FROM_D) && h_cur == e_prev - pen_gape) { // deletion extension
-          h_cur_indel = e_prev;
-          ctype_indel = TMAP_SW_FROM_D; 
-          next_indel_start = 0;
-      }
-      else if((ctype == TMAP_SW_FROM_M || ctype == TMAP_SW_FROM_I) && h_cur == f_prev - pen_gapoe) { // insertion start
-          h_cur_indel = f_prev;
-          ctype_indel = TMAP_SW_FROM_I; 
-          next_indel_start = 1;
-      }
-      else if(0 == prev_indel_start && (ctype == TMAP_SW_FROM_M || ctype == TMAP_SW_FROM_I) && h_cur == f_prev - pen_gape) { // insertion extension
-          h_cur_indel = f_prev;
-          ctype_indel = TMAP_SW_FROM_I; 
-          next_indel_start = 0;
+      else {
+          tmap_error("bug encountered", Exit, OutOfRange);
       }
 
       // check that we found a value
-      if(tmap_vsw16_min_value == h_cur_match && tmap_vsw16_min_value == h_cur_indel) {
-          /*
-             int i, j;
-             for(i=0;i<tlen;i++) {
-             fprintf(stderr, "i=%d", i);
-             for(j=0;j<qlen;j++) {
-             tmap_vsw16_int_t val;
-             val = __tmap_vsw16_get_matrix_cell(q, i, j) - q->zero_aln_score;
-             fprintf(stderr, " %d:%d", j, val);
-             }
-             fprintf(stderr, "\n");
-             }
-             */
+      if(tmap_vsw16_min_value == cur_next) {
+          fprintf(stderr, "ti=%d qi=%d\n", ti, qi);
           tmap_error("bug encountered", Exit, OutOfRange);
-      }
-      
-      // justify
-      if(0 == left_justify) { // right-justify, choose indels first  
-          if(h_cur_match <= h_cur_indel) {
-              h_cur = h_cur_indel;
-              ctype = ctype_indel;
-              prev_indel_start = next_indel_start;
-          }
-          else {
-              h_cur = h_cur_match;
-              ctype = ctype_match;
-              prev_indel_start = 0;
-          }
-      }
-      else { // left-justify, choose matches first 
-          if(h_cur_indel <= h_cur_match) {
-              h_cur = h_cur_match;
-              ctype = ctype_match;
-              prev_indel_start = next_indel_start;
-          }
-          else {
-              h_cur = h_cur_indel;
-              ctype = ctype_indel;
-              prev_indel_start = 0;
-          }
       }
 
       // update ti, qi
@@ -825,6 +895,10 @@ tmap_vsw16_sse2_get_path(const uint8_t *query, int32_t qlen,
       // update p
       p->ctype = ctype;
       p++;
+
+      // update ctype
+      ctype = ctype_next;
+      cur = cur_next;
   }
   *path_len = p - path;
 }

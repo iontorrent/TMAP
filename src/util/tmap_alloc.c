@@ -6,6 +6,16 @@
 #include "tmap_alloc.h"
 
 inline void *
+tmap_memalign1(size_t alignment, size_t size, const char *function_name, const char *variable_name)
+{
+  void *ptr = NULL;
+  if(0 != posix_memalign(&ptr, alignment, size)) {
+      tmap_error1(function_name, variable_name, Exit, MallocMemory);
+  }
+  return ptr;
+}
+
+inline void *
 tmap_malloc1(size_t size, const char *function_name, const char *variable_name)
 {
   void *ptr = malloc(size);

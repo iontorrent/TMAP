@@ -193,7 +193,7 @@ tmap_map_all_thread_init(void **data, tmap_map_opt_t *opt)
 static tmap_map_sams_t*
 tmap_map_all_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt)
 {
-  int32_t i, n_algos=3;
+  int32_t i, n_algos=4;
   tmap_map_sams_t *sams = NULL;
   tmap_map_sams_t *sams_in[3] = {NULL,NULL,NULL};
   int32_t algo_ids[3] = {TMAP_MAP_ALGO_MAP1,TMAP_MAP_ALGO_MAP2,TMAP_MAP_ALGO_MAP3};
@@ -251,10 +251,10 @@ tmap_map_all_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tma
       }
       // mapvsw
       if(opt->algos[i] & TMAP_MAP_ALGO_MAP_VSW) {
-          sams_in[2] = tmap_map_vsw_thread_map_core(&d->data_map_vsw[i], seqs, seq_len, refseq, bwt, sa, opt->opt_map_vsw[i]);
+          sams_in[3] = tmap_map_vsw_thread_map_core(&d->data_map_vsw[i], seqs, seq_len, refseq, bwt, sa, opt->opt_map_vsw[i]);
       }
       else {
-          sams_in[2] = tmap_map_sams_init();
+          sams_in[3] = tmap_map_sams_init();
       }
 
       // merge all the mappings

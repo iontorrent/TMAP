@@ -24,7 +24,7 @@ AC_GNU_SOURCE
 #AC_PROG_RANLIB
 
 # set CFLAGS and CXXFLAGS
-default_CFLAGS="-Wall -g -O3 -pthread -msse4.1";# "-Wall -g -O2 -pthread";
+default_CFLAGS="-Wall -g -O3 -pthread -msse2";# "-Wall -g -O3 -pthread -msse2";
 extended_CFLAGS="";# "-m64 -D_FILE_OFFSET_BITS=64";
 
 AC_MSG_CHECKING(whether this is a git repository)
@@ -73,7 +73,7 @@ AC_CHECK_SIZEOF([long int])
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([stdlib.h stdio.h stdint.h string.h sys/time.h unistd.h float.h zlib.h bzlib.h pthread.h limits.h netinet/in.h emmintrin.h smmintrin.h])
+AC_CHECK_HEADERS([stdlib.h stdio.h stdint.h string.h sys/time.h unistd.h float.h zlib.h bzlib.h pthread.h limits.h netinet/in.h emmintrin.h])
 
 AC_C_INLINE
 
