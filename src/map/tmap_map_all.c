@@ -195,7 +195,7 @@ tmap_map_all_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tma
 {
   int32_t i, n_algos=4;
   tmap_map_sams_t *sams = NULL;
-  tmap_map_sams_t *sams_in[3] = {NULL,NULL,NULL};
+  tmap_map_sams_t *sams_in[4] = {NULL,NULL,NULL,NULL};
   int32_t algo_ids[3] = {TMAP_MAP_ALGO_MAP1,TMAP_MAP_ALGO_MAP2,TMAP_MAP_ALGO_MAP3};
   tmap_map_all_thread_data_t *d = (tmap_map_all_thread_data_t*)(*data);
   
