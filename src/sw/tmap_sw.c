@@ -1005,10 +1005,10 @@ tmap_sw_global_banded_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t l
   score_max = (len1 < len2) ? (len1 * score_max) : (len2 * score_max);
   score_max -= score;
   bw = 0;
-  if(ap->gap_open + ap->gap_ext <= score_max) {
+  if(ap->gap_open + ap->gap_ext <= score_max) { // gap open allowed
       bw++;
       score_max -= ap->gap_open + ap->gap_ext;
-      if(ap->gap_ext <= score_max) {
+      if(ap->gap_ext <= score_max) { // gap extension allowed
           bw += (score_max + ap->gap_ext - 1) / ap->gap_ext;
       }
   }
