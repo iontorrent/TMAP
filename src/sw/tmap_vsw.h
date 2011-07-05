@@ -120,7 +120,6 @@ typedef int16_t tmap_vsw16_int_t;
 #define __tmap_vsw_query_index_to_byte_number(_q, _slen) (((int32_t)(_q)) / _slen)
 
 typedef struct {
-    uint8_t type:4; // 0 = score only, 1 = full  
     uint8_t query_start_clip:2;
     uint8_t query_end_clip:2; 
     uint16_t qlen; // the query length
@@ -133,21 +132,10 @@ typedef struct {
     tmap_vsw16_int_t min_aln_score; // the minimum possible alignment score
     tmap_vsw16_int_t max_aln_score; // the maximum global alignment score
     __m128i *query_profile; // the query scoring profile
-    /* -- For the score only VSW -- */
     __m128i *H0; // H/H'
     __m128i *H1; // H/H'
     __m128i *E; // deletion from the query, insertion into the target
-    __m128i *F; // insertion into the query, insertion from the target
     int32_t qlen_max; // the maximum query size
-    /* -- End score VSW -- */
-    /* -- For the full VSW --*/
-    int32_t hlen; // the # of cells in the matrix (type == 1)
-    int32_t hlen_mem; // the memory allocated for the matrix
-    int32_t hlen_max; // the maximum matrix size
-    __m128i *Hs; // H for storing the full matrix
-    __m128i *Es; // E for storing the full matrix
-    __m128i *Fs; // F for storing the full matrix
-    /* -- End full VSW -- */
 } tmap_vsw16_query_t;
 
 typedef struct {
@@ -193,7 +181,7 @@ tmap_vsw_query_init(const uint8_t *query_fwd, int32_t qlen_fwd,
                     const uint8_t *query_rev, int32_t qlen_rev,
                     int32_t tlen,
                     int32_t query_start_clip, int32_t query_end_clip,
-                    int32_t type, tmap_vsw_opt_t *opt);
+                    tmap_vsw_opt_t *opt);
 
 void
 tmap_vsw_query_destroy(tmap_vsw_query_t *query);
@@ -206,15 +194,5 @@ tmap_vsw_sse2(tmap_vsw_query_t *query,
               int32_t query_start_clip, int32_t query_end_clip,
               tmap_vsw_opt_t *opt, tmap_vsw_result_t *result,
               int32_t *overflow);
-
-void
-tmap_vsw_sse2_get_path(const uint8_t *query, int32_t qlen,
-                       const uint8_t *target, int32_t tlen,
-                       tmap_vsw_query_t *q,
-                       tmap_vsw_result_t *result,
-                       tmap_sw_path_t *path,
-                       int32_t *path_len,
-                       int32_t left_justify,
-                       tmap_vsw_opt_t *opt);
 
 #endif

@@ -1406,10 +1406,10 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
 
   vsw_query[0] = tmap_vsw_query_init((uint8_t*)tmap_seq_get_bases(seqs[0])->s, seq_len, 
                                      (uint8_t*)tmap_seq_get_bases(seqs[1])->s, seq_len, 
-                                     seq_len, softclip_start, softclip_end, 0, vsw_opt);
+                                     seq_len, softclip_start, softclip_end, vsw_opt);
   vsw_query[1] = tmap_vsw_query_init((uint8_t*)tmap_seq_get_bases(seqs[1])->s, seq_len, 
                                      (uint8_t*)tmap_seq_get_bases(seqs[0])->s, seq_len, 
-                                     seq_len, softclip_start, softclip_end, 0, vsw_opt);
+                                     seq_len, softclip_start, softclip_end, vsw_opt);
 
   i = start = end = 0;
   best_subo = INT32_MIN;

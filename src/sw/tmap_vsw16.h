@@ -40,7 +40,7 @@
 tmap_vsw16_query_t *
 tmap_vsw16_query_init(tmap_vsw16_query_t *prev, const uint8_t *query, int32_t qlen, int32_t tlen, 
                               int32_t query_start_clip, int32_t query_end_clip,
-                              int32_t type, tmap_vsw_opt_t *opt);
+                              tmap_vsw_opt_t *opt);
 
 void
 tmap_vsw16_query_reinit(tmap_vsw16_query_t *query, tmap_vsw_result_t *result);
@@ -60,13 +60,4 @@ tmap_vsw16_sse2(tmap_vsw16_query_t *query_fwd, tmap_vsw16_query_t *query_rev,
                 uint8_t *target, int32_t tlen, 
                 int32_t query_start_clip, int32_t query_end_clip,
                 tmap_vsw_opt_t *opt, tmap_vsw_result_t *result, int32_t *overflow);
-
-void
-tmap_vsw16_sse2_trackback_test(tmap_vsw16_query_t *query, const uint8_t *target, int32_t tlen, tmap_vsw_opt_t *opt, tmap_vsw_result_t *result);
-
-void
-tmap_vsw16_sse2_get_path(const uint8_t *query, int32_t qlen, const uint8_t *target, int32_t tlen,
-                        tmap_vsw16_query_t *q, tmap_vsw_result_t *result, tmap_sw_path_t *path,
-                        int32_t *path_len, int32_t left_justify, tmap_vsw_opt_t *opt);
-
 #endif
