@@ -109,7 +109,7 @@ tmap_map_driver_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int
               // mapall should have already done this!
               if(TMAP_MAP_ALGO_MAPALL != opt->algo_id) {
                   // smith waterman (score only)
-                  sams[low] = tmap_map_util_sw(refseq, sams[low], seq_buffer[low], opt, 0);
+                  sams[low] = tmap_map_util_sw_gen_score(refseq, sams[low], seq_buffer[low], opt);
 
                   // remove duplicates
                   tmap_map_util_remove_duplicates(sams[low], opt->dup_window);
@@ -121,7 +121,7 @@ tmap_map_driver_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int
                   tmap_map_sams_filter(sams[low], opt->aln_output_mode);
                   
                   // smith waterman - generate cigars
-                  sams[low] = tmap_map_util_sw(refseq, sams[low], seq_buffer[low], opt, 1);
+                  sams[low] = tmap_map_util_sw_gen_cigar(refseq, sams[low], seq_buffer[low], opt);
               }
 
               // re-align the alignments in flow-space

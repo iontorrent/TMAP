@@ -377,19 +377,33 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt);
 
 /*!
   perform local alignment
+  @details              only fills in the score, start and end of the alignments
   @param  refseq        the reference sequence
   @param  sams          the seeded sams
   @param  seq           the query sequence
   @param  opt           the program parameters
-  @param  update_cigar  1 to update the cigar, false otherwise
   @return               the locally aligned sams
   */
 tmap_map_sams_t *
-tmap_map_util_sw(tmap_refseq_t *refseq,
+tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                  tmap_map_sams_t *sams,
                  tmap_seq_t *seq,
-                 tmap_map_opt_t *opt,
-                 int32_t update_cigar);
+                 tmap_map_opt_t *opt);
+
+/*!
+  perform local alignment
+  @details              generates the cigar after tmap_map_util_sw_gen_score has been called
+  @param  refseq        the reference sequence
+  @param  sams          the seeded sams
+  @param  seq           the query sequence
+  @param  opt           the program parameters
+  @return               the locally aligned sams
+  */
+tmap_map_sams_t *
+tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
+                 tmap_map_sams_t *sams, 
+                 tmap_seq_t *seq,
+                 tmap_map_opt_t *opt);
 
 /*!
   @param  sam            the sam record in which to store the results

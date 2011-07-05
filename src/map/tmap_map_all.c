@@ -73,7 +73,7 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
   if(1 == opt->aln_output_mode_ind) {
       for(i=0;i<n_algos;i++) {
           // smith waterman (score only)
-          sams_in[i] = tmap_map_util_sw(refseq, sams_in[i], seq, opt, 0);
+          sams_in[i] = tmap_map_util_sw_gen_score(refseq, sams_in[i], seq, opt);
           
           // duplicate removal
           tmap_map_util_remove_duplicates(sams_in[i], opt->dup_window);
@@ -91,7 +91,7 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
   // remove duplicates after merging
   if(0 == opt->aln_output_mode_ind) {
       // smith waterman (score only)
-      sams = tmap_map_util_sw(refseq, sams, seq, opt, 0);
+      sams = tmap_map_util_sw_gen_score(refseq, sams, seq, opt);
 
       // duplicate removal
       tmap_map_util_remove_duplicates(sams, opt->dup_window);
@@ -113,7 +113,7 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
   }
           
   // generate the cigars
-  sams = tmap_map_util_sw(refseq, sams, seq, opt, 1);
+  sams = tmap_map_util_sw_gen_cigar(refseq, sams, seq, opt);
 
   return sams;
 }

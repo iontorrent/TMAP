@@ -146,13 +146,15 @@ tmap_sw_aln_destroy(tmap_sw_aln_t *aa);
   @param  ap        the alignment parameters
   @param  path      the Smith-Waterman alignment path
   @param  path_len  the Smith-Waterman alignment path length
+  @param  right_j   0 if we are to left-justify indels, 1 otherwise
   @return           the alignment score, 0 if none was found
   */
 int32_t 
 tmap_sw_global_core(uint8_t *seq1, int32_t len1, 
                     uint8_t *seq2, int32_t len2, 
                     const tmap_sw_param_t *ap,
-                    tmap_sw_path_t *path, int32_t *path_len);
+                    tmap_sw_path_t *path, int32_t *path_len,
+                    int32_t right_j);
 
 /*!
   Performs the local Smith-Waterman alignment.
@@ -174,6 +176,23 @@ tmap_sw_local_core(uint8_t *seq1, int32_t len1,
                    const tmap_sw_param_t *ap,
                    tmap_sw_path_t *path, int32_t *path_len, 
                    int32_t _thres, int32_t *_subo);
+
+/*!
+  Performs banded global Smith-Waterman alignment.
+  @details          the band width is determined by the expected alignment score 
+  @param  seq1      the first DNA sequence (in 2-bit format)
+  @param  len1      the length of the first sequence
+  @param  seq2      the second DNA sequence (in 2-bit format)
+  @param  len2      the length of the second sequence
+  @param  ap        the alignment parameters
+  @param  path      the Smith-Waterman alignment path
+  @param  path_len  the Smith-Waterman alignment path length
+  @param  right_j   0 if we are to left-justify indels, 1 otherwise
+  @return           the alignment score, 0 if none was found
+  */
+int32_t
+tmap_sw_global_banded_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
+                           int32_t score, tmap_sw_path_t *path, int32_t *path_len, int32_t right_j);
 
 /*!
   Extens an alignment with the local Smith-Waterman.

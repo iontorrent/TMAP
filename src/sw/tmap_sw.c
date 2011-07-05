@@ -351,7 +351,7 @@ tmap_sw_score_array_init(uint8_t *seq, int32_t len, int32_t row, int32_t *score_
  ***************************/
 int32_t 
 tmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
-                    tmap_sw_path_t *path, int32_t *path_len)
+                    tmap_sw_path_t *path, int32_t *path_len, int32_t right_j)
 {
   register int32_t i, j;
   tmap_sw_dpcell_t **dpcell, *q;
@@ -402,7 +402,7 @@ tmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
   TMAP_SW_SET_INF(*curr); curr->match_score = 0;
   for(i = 1, s = curr + 1; i < b1; ++i, ++s) {
       TMAP_SW_SET_INF(*s);
-      tmap_sw_set_end_del(s->del_score, dpcell[0] + i, s - 1, 0);
+      tmap_sw_set_end_del(s->del_score, dpcell[0] + i, s - 1, right_j);
   }
   s = curr; curr = last; last = s;
 
@@ -410,38 +410,38 @@ tmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
   tmp_end = (b2 < len2)? b2 : len2 - 1;
   for(j = 1; j <= tmp_end; ++j) {
       q = dpcell[j]; s = curr; TMAP_SW_SET_INF(*s);
-      tmap_sw_set_end_ins(s->ins_score, q, last, 0);
+      tmap_sw_set_end_ins(s->ins_score, q, last, right_j);
       end = (j + b1 <= len1 + 1)? (j + b1 - 1) : len1;
       mat = score_matrix + seq2[j] * N_MATRIX_ROW;
       ++s; ++q;
       for(i = 1; i != end; ++i, ++s, ++q) {
-          tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]], 0); /* this will change s->match_score ! */
-          tmap_sw_set_ins(s->ins_score, q, last + i, 0);
-          tmap_sw_set_del(s->del_score, q, s - 1, 0);
+          tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]], right_j); /* this will change s->match_score ! */
+          tmap_sw_set_ins(s->ins_score, q, last + i, right_j);
+          tmap_sw_set_del(s->del_score, q, s - 1, right_j);
       }
-      tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]], 0);
-      tmap_sw_set_del(s->del_score, q, s - 1, 0);
+      tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]], right_j);
+      tmap_sw_set_del(s->del_score, q, s - 1, right_j);
       if(j + b1 - 1 > len1) { /* bug fixed, 040227 */
-          tmap_sw_set_end_ins(s->ins_score, q, last + i, 0);
+          tmap_sw_set_end_ins(s->ins_score, q, last + i, right_j);
       } else s->ins_score = TMAP_SW_MINOR_INF;
       s = curr; curr = last; last = s;
   }
   /* last row for part 1, use tmap_sw_set_end_del() instead of tmap_sw_set_del() */
   if(j == len2 && b2 != len2 - 1) {
       q = dpcell[j]; s = curr; TMAP_SW_SET_INF(*s);
-      tmap_sw_set_end_ins(s->ins_score, q, last, 0);
+      tmap_sw_set_end_ins(s->ins_score, q, last, right_j);
       end = (j + b1 <= len1 + 1)? (j + b1 - 1) : len1;
       mat = score_matrix + seq2[j] * N_MATRIX_ROW;
       ++s; ++q;
       for(i = 1; i != end; ++i, ++s, ++q) {
-          tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]], 0); /* this will change s->match_score ! */
-          tmap_sw_set_ins(s->ins_score, q, last + i, 0);
-          tmap_sw_set_end_del(s->del_score, q, s - 1, 0);
+          tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]], right_j); /* this will change s->match_score ! */
+          tmap_sw_set_ins(s->ins_score, q, last + i, right_j);
+          tmap_sw_set_end_del(s->del_score, q, s - 1, right_j);
       }
-      tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]], 0);
-      tmap_sw_set_end_del(s->del_score, q, s - 1, 0);
+      tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]], right_j);
+      tmap_sw_set_end_del(s->del_score, q, s - 1, right_j);
       if(j + b1 - 1 > len1) { /* bug fixed, 040227 */
-          tmap_sw_set_end_ins(s->ins_score, q, last + i, 0);
+          tmap_sw_set_end_ins(s->ins_score, q, last + i, right_j);
       } else s->ins_score = TMAP_SW_MINOR_INF;
       s = curr; curr = last; last = s;
       ++j;
@@ -453,12 +453,12 @@ tmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
       mat = score_matrix + seq2[j] * N_MATRIX_ROW;
       end = j + b1 - 1;
       for(i = j - b2 + 1, q = dpcell[j] + i, s = curr + i; i != end; ++i, ++s, ++q) {
-          tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]], 0);
-          tmap_sw_set_ins(s->ins_score, q, last + i, 0);
-          tmap_sw_set_del(s->del_score, q, s - 1, 0);
+          tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]], right_j);
+          tmap_sw_set_ins(s->ins_score, q, last + i, right_j);
+          tmap_sw_set_del(s->del_score, q, s - 1, right_j);
       }
-      tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]], 0);
-      tmap_sw_set_del(s->del_score, q, s - 1, 0);
+      tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]], right_j);
+      tmap_sw_set_del(s->del_score, q, s - 1, right_j);
       s->ins_score = TMAP_SW_MINOR_INF;
       s = curr; curr = last; last = s;
   }
@@ -468,13 +468,13 @@ tmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
       TMAP_SW_SET_INF(curr[j - b2]);
       mat = score_matrix + seq2[j] * N_MATRIX_ROW;
       for(i = j - b2 + 1, q = dpcell[j] + i, s = curr + i; i < len1; ++i, ++s, ++q) {
-          tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]], 0);
-          tmap_sw_set_ins(s->ins_score, q, last + i, 0);
+          tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]], right_j);
+          tmap_sw_set_ins(s->ins_score, q, last + i, right_j);
           tmap_sw_set_del(s->del_score, q, s - 1, 0 );
       }
-      tmap_sw_set_match(s->match_score, q, last + len1 - 1, mat[seq1[i]], 0);
-      tmap_sw_set_end_ins(s->ins_score, q, last + i, 0);
-      tmap_sw_set_del(s->del_score, q, s - 1, 0);
+      tmap_sw_set_match(s->match_score, q, last + len1 - 1, mat[seq1[i]], right_j);
+      tmap_sw_set_end_ins(s->ins_score, q, last + i, right_j);
+      tmap_sw_set_del(s->del_score, q, s - 1, right_j);
       s = curr; curr = last; last = s;
   }
   /* last row */
@@ -482,13 +482,13 @@ tmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
       TMAP_SW_SET_INF(curr[j - b2]);
       mat = score_matrix + seq2[j] * N_MATRIX_ROW;
       for(i = j - b2 + 1, q = dpcell[j] + i, s = curr + i; i < len1; ++i, ++s, ++q) {
-          tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]], 0);
-          tmap_sw_set_ins(s->ins_score, q, last + i, 0);
-          tmap_sw_set_end_del(s->del_score, q, s - 1, 0);
+          tmap_sw_set_match(s->match_score, q, last + i - 1, mat[seq1[i]], right_j);
+          tmap_sw_set_ins(s->ins_score, q, last + i, right_j);
+          tmap_sw_set_end_del(s->del_score, q, s - 1, right_j);
       }
-      tmap_sw_set_match(s->match_score, q, last + len1 - 1, mat[seq1[i]], 0);
-      tmap_sw_set_end_ins(s->ins_score, q, last + i, 0);
-      tmap_sw_set_end_del(s->del_score, q, s - 1, 0);
+      tmap_sw_set_match(s->match_score, q, last + len1 - 1, mat[seq1[i]], right_j);
+      tmap_sw_set_end_ins(s->ins_score, q, last + i, right_j);
+      tmap_sw_set_end_del(s->del_score, q, s - 1, right_j);
       s = curr; curr = last; last = s;
   }
 
@@ -738,7 +738,7 @@ tmap_sw_local_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, con
           ap_real.gap_end = -1;
           ap_real.band_width = i;
           score_g = tmap_sw_global_core(seq1 + start_i, end_i - start_i + 1, seq2 + start_j,
-                                        end_j - start_j + 1, &ap_real, path, path_len);
+                                        end_j - start_j + 1, &ap_real, path, path_len, 0);
           if(score_g == score_r || score_f == score_g) break;
           if(i > j) break;
       }
@@ -904,7 +904,7 @@ tmap_sw_extend_aux(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, con
           tmap_sw_param_t ap_real = *ap;
           ap_real.gap_end = -1;
           ap_real.band_width = i;
-          score_g = tmap_sw_global_core(seq1 + 1, end_i, seq2 + 1, end_j, &ap_real, path, path_len);
+          score_g = tmap_sw_global_core(seq1 + 1, end_i, seq2 + 1, end_j, &ap_real, path, path_len, 0);
           if(score - prev_score == score_g) break; // TODO: is this correct?
           //if(score == score_g) break;
           if(i > j) break;
@@ -979,6 +979,76 @@ tmap_sw_kmp_search(uint8_t *seq1, int32_t len1, uint8_t *seq2, uint32_t len2)
   free(table);
 
   return r;
+}
+
+int32_t 
+tmap_sw_global_banded_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
+                           int32_t score, tmap_sw_path_t *path, int32_t *path_len, int32_t right_j)
+{
+  int32_t i, j, bw, score_max;
+  int32_t *mat=NULL, *score_matrix=NULL, N_MATRIX_ROW;
+  tmap_sw_param_t ap_real;
+  tmap_sw_path_t *p=NULL;
+
+  score_matrix = ap->matrix;
+  N_MATRIX_ROW = ap->row;
+
+  // Step 1: calculate the band width
+  // get the maximum score
+  score_max = 0; 
+  for(i=0;i<4;i++) {
+      mat = score_matrix + 0 * N_MATRIX_ROW;
+      if(score_max < mat[i]) {
+          score_max = mat[i];
+      }
+  }
+  score_max = (len1 < len2) ? (len1 * score_max) : (len2 * score_max);
+  score_max = score - score_max;
+  bw = 0;
+  if(ap->gap_open + ap->gap_ext <= score_max) {
+      bw++;
+      score_max -= ap->gap_open + ap->gap_ext;
+      if(ap->gap_ext <= score_max) {
+          bw += (score_max + ap->gap_ext - 1) / ap->gap_ext;
+      }
+  }
+  
+  // Step 2: if we have a perfect match, run the perfect match algorithm
+  if(0 == bw) { 
+      int32_t best_i, best_j;
+      best_i = len2;
+      best_j = len1;
+      // retrieve the path if necessary
+      if(NULL == path) {
+          // do nothing
+      }
+      else if(NULL == path_len) {
+          path[0].i = best_i; path[0].j = best_j;
+      }
+      else {
+          i = best_i; j = best_j; p = path;
+          while(0 < i && 0 < j) {
+              // add to the path
+              p->ctype = TMAP_SW_FROM_M;
+              p->i = i; p->j = j;
+              ++p;
+              i--; j--;
+          }
+          (*path_len) = p - path;
+      }
+      return score;
+  }
+
+  // Step 3: run a banded alignment
+  bw = 0; /* j is the maximum band_width */
+  ap_real = *ap;
+  ap_real.gap_end = -1;
+  ap_real.band_width = bw;
+  if(score != tmap_sw_global_core(seq1, len1, seq2, len2, &ap_real, path, path_len, right_j)) {
+      tmap_error("bug encountered", Exit, OutOfRange);
+  }
+
+  return score;
 }
 
 //#define TMAP_SW_CLIPPING_CORE_DEBUG 1
