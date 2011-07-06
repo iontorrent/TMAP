@@ -505,7 +505,6 @@ tmap_vsw16_sse2(tmap_vsw16_query_t *query_fwd, tmap_vsw16_query_t *query_rev,
   */
   // check that they agree
   if(result->score_fwd != result->score_rev) {
-      tmap_error("bug encountered", Warn, OutOfRange);
-      //tmap_error("bug encountered", Exit, OutOfRange);
+      tmap_error("bug encountered", Exit, OutOfRange);
   }
 }
