@@ -233,11 +233,11 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
   for(j = 0; j < query_start_byte; ++j) { // nullify the start bases
       zero_start_mm = __tmap_vsw16_mm_insert(zero_start_mm, query->min_aln_score, j);
   }
-  /*
+#ifdef TMAP_VSW_DEBUG
   fprintf(stderr, "query_start_skip=%d query_start_stripe=%d query_start_byte=%d\n", 
           query_start_skip, query_start_stripe, query_start_byte);
   fprintf(stderr, "target_start_skip=%d\n", target_start_skip);
-  */
+#endif
 
   // select query end only
   // check stripe #: __tmap_vsw16_query_index_to_stripe_number(query->qlen, slen) 
@@ -297,9 +297,14 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
       g = __tmap_vsw16_mm_set1_epi16(query->min_aln_score);
       if(0 == query_start_clip) { 
           g = __tmap_vsw16_mm_set1_epi16(query->min_aln_score);
-          g = __tmap_vsw16_mm_insert(g, -opt->pen_gapo + -opt->pen_gape + zero, query_start_byte);
+          g = __tmap_vsw16_mm_insert(g, -opt->pen_gapo + opt->pen_gape + zero, query_start_byte);
+          for(j = query_start_byte + 1, l = 1; TMAP_VSW_LIKELY(j < tmap_vsw16_values_per_128_bits); j++, l++) {
+              // NB: do not include the gap extend, that will be added below
+              // BEFORE considering H
+              g = __tmap_vsw16_mm_insert(g, -opt->pen_gapo + (-opt->pen_gape * (l * slen - 1)) + zero, j);
+          }
       }
-      
+              
       for(j = 0, l = query_start_stripe; TMAP_VSW_LIKELY(j < slen); ++j, l = (l + 1) % slen) { // for each stripe in the query
           // NB: at the beginning, 
           // h=H(i-1,j-1)
@@ -315,12 +320,16 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
               h = __tmap_vsw16_mm_max_epi16(h, zero_start_mm);  
           }
           else {
-              g = __tmap_vsw16_mm_set1_epi16(query->min_aln_score);
-              if(0 == j) { 
+              g = __tmap_vsw16_mm_subs_epi16(g, pen_gape); // leading insertion
+#ifdef TMAP_VSW_DEBUG 
+              fprintf(stderr, "h i=%d j=%d", i, j);
+              for(k = 0; k < tmap_vsw16_values_per_128_bits; k++) { // for each start position in the stripe
+                  fprintf(stderr, " (%d,%d)", 
+                          ((tmap_vsw16_int_t*)(&h))[k] - zero,
+                          ((tmap_vsw16_int_t*)(&g))[k] - zero);
               }
-              else {
-                  g = __tmap_vsw16_mm_insert(g, -opt->pen_gapo + (-opt->pen_gape * j) + zero, query_start_byte);
-              }
+              fprintf(stderr, "\n");
+#endif
               h = __tmap_vsw16_mm_max_epi16(h, g);
           }
           // compute H(i,j); 
@@ -385,7 +394,7 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
           }
       }
 end_loop:
-      /*
+#ifdef TMAP_VSW_DEBUG 
       fprintf(stderr, "H1 i=%d target[i]=%d", i, target[i]);
       for(k = l = 0; k < tmap_vsw16_values_per_128_bits; k++) { // for each start position in the stripe
           for(j = 0; j < slen; j++, l++) {
@@ -393,7 +402,7 @@ end_loop:
           }
       }
       fprintf(stderr, "\n");
-      */
+#endif
       __tmap_vsw16_max(imax, max); // imax is the maximum number in max
       if(imax > gmax) { 
           gmax = imax; // global maximum score 
@@ -467,11 +476,11 @@ tmap_vsw16_sse2(tmap_vsw16_query_t *query_fwd, tmap_vsw16_query_t *query_rev,
                 tmap_vsw_opt_t *opt, tmap_vsw_result_t *result, int32_t *overflow)
 {
   // TODO: bounds check if we can fit into 16-byte values
-  /*
+#ifdef TMAP_VSW_DEBUG
   fprintf(stderr, "query_start_clip=%d query_end_clip=%d\n", 
           query_start_clip,
           query_end_clip);
-          */
+#endif
 
   // forward
   //tmap_vsw16_query_print_query_profile(query_fwd);
@@ -479,12 +488,12 @@ tmap_vsw16_sse2(tmap_vsw16_query_t *query_fwd, tmap_vsw16_query_t *query_rev,
                                               0, 0,
                                               query_start_clip, query_end_clip, 
                                               opt, &result->query_end, &result->target_end, 0, overflow);
-  /*
+#ifdef TMAP_VSW_DEBUG
   fprintf(stderr, "FWD\nresult = {%d-%d} {%d-%d} score=%d overflow=%d\n",
           result->query_start, result->query_end,
           result->target_start, result->target_end, 
           result->score_fwd, (*overflow));
-          */
+#endif
   if(NULL != overflow && 1 == *overflow) return;
   if(-1 == result->query_end) {
       tmap_error("bug encountered", Exit, OutOfRange);
@@ -505,8 +514,7 @@ tmap_vsw16_sse2(tmap_vsw16_query_t *query_fwd, tmap_vsw16_query_t *query_rev,
   result->query_start = query_rev->qlen - result->query_start - 1; // zero-based
   result->target_start = tlen - result->target_start - 1; // zero-based
   tmap_reverse_compliment_int(target, tlen); // reverse compliment back
-  // Debugging
-  /*
+#ifdef TMAP_VSW_DEBUG
   fprintf(stderr, "REV\nresult = {%d-%d} {%d-%d} score=%d overflow=%d\n",
           result->query_start, result->query_end,
           result->target_start, result->target_end, 
@@ -514,7 +522,7 @@ tmap_vsw16_sse2(tmap_vsw16_query_t *query_fwd, tmap_vsw16_query_t *query_rev,
   fprintf(stderr, "result->score_fwd=%d result->score_rev=%d\n",
           result->score_fwd,
           result->score_rev);
-          */
+#endif
   /*
    * NB: I am not sure why these sometimes disagree, but they do.  Ignore for
    * now.
