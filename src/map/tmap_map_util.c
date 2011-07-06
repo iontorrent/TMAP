@@ -1497,23 +1497,35 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
 
       // Debugging
       /*
-         for(j=0;j<qlen_fwd;j++) {
-         fputc("ACGTN"[query_fwd[j]], stderr);
-         }
-         fputc('\n', stderr);
-         for(j=0;j<tlen;j++) {
-         fputc("ACGTN"[target[j]], stderr);
-         }
-         fputc('\n', stderr);
-         */
+      int j;
+      fprintf(stderr, "start_pos=%u end_pos=%u strand=%d\n", start_pos, end_pos, strand);
+      for(j=0;j<qlen_fwd;j++) {
+          fputc("ACGTN"[query_fwd[j]], stderr);
+      }
+      fputc('\n', stderr);
+      for(j=0;j<tlen;j++) {
+          fputc("ACGTN"[target[j]], stderr);
+      }
+      fputc('\n', stderr);
+      */
 
       // room for result
       tmp_sam.result = tmap_vsw_result_init();
 
-      tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query_fwd, qlen_fwd, query_rev, qlen_rev,
-                                    target, tlen, 
-                                    softclip_start, softclip_end,
-                                    vsw_opt, tmp_sam.result, &overflow);
+      // NB: if match/mismatch penalties are on the opposite strands, we may
+      // have wrong scores
+      if(0 == strand) {
+          tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query_fwd, qlen_fwd, query_rev, qlen_rev,
+                                        target, tlen, 
+                                        softclip_start, softclip_end,
+                                        vsw_opt, tmp_sam.result, &overflow);
+      }
+      else {
+          tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query_fwd, qlen_fwd, query_rev, qlen_rev,
+                                        target, tlen, 
+                                        softclip_end, softclip_start,
+                                        vsw_opt, tmp_sam.result, &overflow);
+      }
       if(1 == overflow) {
           tmap_error("bug encountered", Exit, OutOfRange);
       }
