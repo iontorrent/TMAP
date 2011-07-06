@@ -333,8 +333,8 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
               h = __tmap_vsw16_mm_max_epi16(h, g);
           }
           // compute H(i,j); 
+#ifdef TMAP_VSW_DEBUG 
           /*
-          //__m128i s = __tmap_vsw_mm_load_si128(S + l);
           __m128i s = __tmap_vsw_mm_load_si128(S + j);
           fprintf(stderr, "s i=%d j=%d l=%d", i, j, l);
           for(k = 0; k < tmap_vsw16_values_per_128_bits; k++) { // for each start position in the stripe
@@ -346,8 +346,8 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
               fprintf(stderr, " %d", ((tmap_vsw16_int_t*)(&h))[k] - zero);
           }
           fprintf(stderr, "\n");
-          //h = __tmap_vsw16_mm_adds_epi16(h, __tmap_vsw_mm_load_si128(S + l)); // h=H(i-1,j-1)+S(i,j)
           */
+#endif
           h = __tmap_vsw16_mm_adds_epi16(h, __tmap_vsw_mm_load_si128(S + j)); // h=H(i-1,j-1)+S(i,j)
           e = __tmap_vsw_mm_load_si128(E + j); // e=E(i,j)
           h = __tmap_vsw16_mm_max_epi16(h, e); // h=H(i,j) = max{E(i,j), H(i-1,j-1)+S(i,j)}
