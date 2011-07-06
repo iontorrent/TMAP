@@ -233,26 +233,35 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
   for(j = 0; j < query_start_byte; ++j) { // nullify the start bases
       zero_start_mm = __tmap_vsw16_mm_insert(zero_start_mm, query->min_aln_score, j);
   }
-
   /*
   fprintf(stderr, "query_start_skip=%d query_start_stripe=%d query_start_byte=%d\n", 
           query_start_skip, query_start_stripe, query_start_byte);
-          */
+  fprintf(stderr, "target_start_skip=%d\n", target_start_skip);
+  */
 
   // select query end only
   // check stripe #: __tmap_vsw16_query_index_to_stripe_number(query->qlen, slen) 
   // check byte # __tmap_vsw16_query_index_to_byte_number(query->qlen, slen)
 
   if(0 == query_start_clip) {
-      //__m128i e, e2, s, g, *S;
+      __m128i f;
       // Set start
       for(j = 0; j < slen; j++) {
-          // initialize H0 to negative infinity 
-          __tmap_vsw_mm_store_si128(H0 + j, negative_infinity_mm); // H(0,j)
-          __tmap_vsw_mm_store_si128(E + j, negative_infinity_mm); // H(0,j)
+          // initialize E to negative infinity 
+          __tmap_vsw_mm_store_si128(E + j, negative_infinity_mm); // E(0,j)
       }
       // NB: setting the start == 0 will be done later
-      // NB: we will set the leading insertions later
+      // set the leading insertions 
+      f = __tmap_vsw16_mm_set1_epi16(query->min_aln_score);
+      f = __tmap_vsw16_mm_insert(f, zero, query_start_byte);
+      for(j = query_start_byte, l = 0; j < tmap_vsw16_values_per_128_bits; ++j, ++l) {
+          f = __tmap_vsw16_mm_insert(f , -opt->pen_gapo + opt->pen_gape + (-opt->pen_gape * slen * l) + zero, j);
+      }
+      for(j = 0; j < slen; j++) {
+          f = __tmap_vsw16_mm_subs_epi16(f, pen_gape); // f=F(i,j)-pen_gape
+          f = __tmap_vsw16_mm_max_epi16(f, negative_infinity_mm); // bound with -inf
+          __tmap_vsw_mm_store_si128(H0 + ((slen + j - 1) % slen), f); // H(0,j)
+      }
   }
   else {
       // Initialize all zeros
@@ -264,7 +273,7 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
 
   // the core loop
   for(i = target_start_skip, sum = 0; i < tlen; i++) { // for each base in the target
-      __m128i e, h, f, g, max, min, *S;
+      __m128i e, h, f, max, min, *S;
 
       max = __tmap_vsw16_mm_set1_epi16(query->min_aln_score); // max is negative infinity
       min = __tmap_vsw16_mm_set1_epi16(query->max_aln_score); // min is positive infinity
@@ -272,28 +281,13 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
   
       // load H(i-1,-1)
       h = __tmap_vsw_mm_load_si128(H0 + slen - 1); // the last stripe, which holds the j-1 
-      h = __tmap_vsw_mm_slli_si128(h, tmap_vsw16_shift_bytes); // shift left since x64 is little endian
-      for(j = 0; j < query_start_byte; ++j) { // nullify the start bases
-          h = __tmap_vsw16_mm_insert(h, query->min_aln_score, j);
+      if(target_start_skip < i) { // only if we have previous results
+          h = __tmap_vsw_mm_slli_si128(h, tmap_vsw16_shift_bytes); // shift left since x64 is little endian
+          for(j = 0; j < query_start_byte; ++j) { // nullify the start bases
+              h = __tmap_vsw16_mm_insert(h, query->min_aln_score, j);
+          }
       }
       h = __tmap_vsw16_mm_insert(h, zero, query_start_byte);
-      /*
-      if(1 == query_start_clip || target_start_skip == i) {
-          h = __tmap_vsw16_mm_insert(h, zero, query_start_byte);
-      }
-      else {
-          h = __tmap_vsw16_mm_insert(h, query->min_aln_score, query_start_byte); // since we shifted in zeros
-      }
-      */
-      // set h for leading insertions
-      if(0 == query_start_clip) { 
-          g = __tmap_vsw16_mm_set1_epi16(query->min_aln_score);
-          g = __tmap_vsw16_mm_insert(g, zero, query_start_byte);
-          for(j = query_start_byte, l = 0; j < tmap_vsw16_values_per_128_bits; ++j, ++l) {
-              g = __tmap_vsw16_mm_insert(g, -opt->pen_gapo - (opt->pen_gape * slen * l) + zero, j);
-          }
-          h = __tmap_vsw16_mm_max_epi16(h, g);  
-      }
 
       // e does not need to be set
 
@@ -316,8 +310,9 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
           }
           // compute H(i,j); 
           /*
-          __m128i s = __tmap_vsw_mm_load_si128(S + l);
-          fprintf(stderr, "s i=%d j=%d", i, j);
+          //__m128i s = __tmap_vsw_mm_load_si128(S + l);
+          __m128i s = __tmap_vsw_mm_load_si128(S + j);
+          fprintf(stderr, "s i=%d j=%d l=%d", i, j, l);
           for(k = 0; k < tmap_vsw16_values_per_128_bits; k++) { // for each start position in the stripe
               fprintf(stderr, " %d", ((tmap_vsw16_int_t*)(&s))[k]);
           }
@@ -328,7 +323,8 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
           }
           fprintf(stderr, "\n");
           */
-          h = __tmap_vsw16_mm_adds_epi16(h, __tmap_vsw_mm_load_si128(S + l)); // h=H(i-1,j-1)+S(i,j)
+          //h = __tmap_vsw16_mm_adds_epi16(h, __tmap_vsw_mm_load_si128(S + l)); // h=H(i-1,j-1)+S(i,j)
+          h = __tmap_vsw16_mm_adds_epi16(h, __tmap_vsw_mm_load_si128(S + j)); // h=H(i-1,j-1)+S(i,j)
           e = __tmap_vsw_mm_load_si128(E + j); // e=E(i,j)
           h = __tmap_vsw16_mm_max_epi16(h, e); // h=H(i,j) = max{E(i,j), H(i-1,j-1)+S(i,j)}
           h = __tmap_vsw16_mm_max_epi16(h, f); // h=H(i,j) = max{max{E(i,j), H(i-1,j-1)+S(i,j)}, F(i,j)}
@@ -509,6 +505,7 @@ tmap_vsw16_sse2(tmap_vsw16_query_t *query_fwd, tmap_vsw16_query_t *query_rev,
   */
   // check that they agree
   if(result->score_fwd != result->score_rev) {
-      tmap_error("bug encountered", Exit, OutOfRange);
+      tmap_error("bug encountered", Warn, OutOfRange);
+      //tmap_error("bug encountered", Exit, OutOfRange);
   }
 }

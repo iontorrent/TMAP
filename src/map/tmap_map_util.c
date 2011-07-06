@@ -662,7 +662,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->softclip_type, 0, 3, "-g");
   tmap_error_cmd_check_int(opt->dup_window, -1, INT32_MAX, "-W");
   tmap_error_cmd_check_int(opt->max_seed_band, 1, INT32_MAX, "-B");
-  tmap_error_cmd_check_int(opt->score_thr, 0, INT32_MAX, "-T");
+  tmap_error_cmd_check_int(opt->score_thr, INT32_MIN, INT32_MAX, "-T");
   if(-1 != opt->reads_queue_size) tmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
   tmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
   tmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
