@@ -255,7 +255,7 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
       f = __tmap_vsw16_mm_set1_epi16(query->min_aln_score);
       f = __tmap_vsw16_mm_insert(f, zero, query_start_byte);
       for(j = query_start_byte, l = 0; j < tmap_vsw16_values_per_128_bits; ++j, ++l) {
-          f = __tmap_vsw16_mm_insert(f , -opt->pen_gapo + opt->pen_gape + (-opt->pen_gape * slen * l) + zero, j);
+          f = __tmap_vsw16_mm_insert(f , -opt->pen_gapo + -opt->pen_gape + (-opt->pen_gape * slen * l) + zero, j);
       }
       for(j = 0; j < slen; j++) {
           f = __tmap_vsw16_mm_subs_epi16(f, pen_gape); // f=F(i,j)-pen_gape
@@ -273,7 +273,7 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
 
   // the core loop
   for(i = target_start_skip, sum = 0; i < tlen; i++) { // for each base in the target
-      __m128i e, h, f, max, min, *S;
+      __m128i e, h, f, g, max, min, *S;
 
       max = __tmap_vsw16_mm_set1_epi16(query->min_aln_score); // max is negative infinity
       min = __tmap_vsw16_mm_set1_epi16(query->max_aln_score); // min is positive infinity
@@ -288,11 +288,17 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
           }
       }
       h = __tmap_vsw16_mm_insert(h, zero, query_start_byte);
-
+      
       // e does not need to be set
 
       // set F to -inf
       f = __tmap_vsw16_mm_set1_epi16(query->min_aln_score);
+      // leading insertions
+      g = __tmap_vsw16_mm_set1_epi16(query->min_aln_score);
+      if(0 == query_start_clip) { 
+          g = __tmap_vsw16_mm_set1_epi16(query->min_aln_score);
+          g = __tmap_vsw16_mm_insert(g, -opt->pen_gapo + -opt->pen_gape + zero, query_start_byte);
+      }
       
       for(j = 0, l = query_start_stripe; TMAP_VSW_LIKELY(j < slen); ++j, l = (l + 1) % slen) { // for each stripe in the query
           // NB: at the beginning, 
@@ -308,6 +314,15 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
               // start anywhere within the query, though not before the start
               h = __tmap_vsw16_mm_max_epi16(h, zero_start_mm);  
           }
+          else {
+              g = __tmap_vsw16_mm_set1_epi16(query->min_aln_score);
+              if(0 == j) { 
+              }
+              else {
+                  g = __tmap_vsw16_mm_insert(g, -opt->pen_gapo + (-opt->pen_gape * j) + zero, query_start_byte);
+              }
+              h = __tmap_vsw16_mm_max_epi16(h, g);
+          }
           // compute H(i,j); 
           /*
           //__m128i s = __tmap_vsw_mm_load_si128(S + l);
@@ -322,8 +337,8 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
               fprintf(stderr, " %d", ((tmap_vsw16_int_t*)(&h))[k] - zero);
           }
           fprintf(stderr, "\n");
-          */
           //h = __tmap_vsw16_mm_adds_epi16(h, __tmap_vsw_mm_load_si128(S + l)); // h=H(i-1,j-1)+S(i,j)
+          */
           h = __tmap_vsw16_mm_adds_epi16(h, __tmap_vsw_mm_load_si128(S + j)); // h=H(i-1,j-1)+S(i,j)
           e = __tmap_vsw_mm_load_si128(E + j); // e=E(i,j)
           h = __tmap_vsw16_mm_max_epi16(h, e); // h=H(i,j) = max{E(i,j), H(i-1,j-1)+S(i,j)}
@@ -349,10 +364,11 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
       // NB: we do not need to set E(i,j) as we disallow adjacent insertion and then deletion
       // iterate through each value stored in a stripe
       f = __tmap_vsw16_mm_set1_epi16(query->min_aln_score);
+      // we require at most 'tmap_vsw16_values_per_128_bits' iterations to guarantee F propagation
       for(k = 0; TMAP_VSW_LIKELY(k < tmap_vsw16_values_per_128_bits); ++k) { // this block mimics SWPS3; NB: H(i,j) updated in the lazy-F loop cannot exceed max
           f = __tmap_vsw_mm_slli_si128(f, tmap_vsw16_shift_bytes); // since x86 is little endian
           f = __tmap_vsw16_mm_insert_epi16(f, query->min_aln_score, 0); // set F(i-1,-1)[0] as negative infinity (normalized)
-          for(j = 0; TMAP_VSW_LIKELY(j < slen); ++j) { // we require at most 'slen' iterations to guarantee F propagation
+          for(j = 0; TMAP_VSW_LIKELY(j < slen); ++j) { 
               h = __tmap_vsw_mm_load_si128(H1 + j); // h=H(i,j)
               h = __tmap_vsw16_mm_max_epi16(h, f); // h=H(i,j) = max{H(i,j), F(i,j)}
               h = __tmap_vsw16_mm_max_epi16(h, negative_infinity_mm); // bound with -inf
@@ -369,7 +385,6 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
           }
       }
 end_loop:
-      /*
       fprintf(stderr, "H1 i=%d target[i]=%d", i, target[i]);
       for(k = l = 0; k < tmap_vsw16_values_per_128_bits; k++) { // for each start position in the stripe
           for(j = 0; j < slen; j++, l++) {
@@ -377,7 +392,6 @@ end_loop:
           }
       }
       fprintf(stderr, "\n");
-      */
       __tmap_vsw16_max(imax, max); // imax is the maximum number in max
       if(imax > gmax) { 
           gmax = imax; // global maximum score 
@@ -451,11 +465,9 @@ tmap_vsw16_sse2(tmap_vsw16_query_t *query_fwd, tmap_vsw16_query_t *query_rev,
                 tmap_vsw_opt_t *opt, tmap_vsw_result_t *result, int32_t *overflow)
 {
   // TODO: bounds check if we can fit into 16-byte values
-  /*
   fprintf(stderr, "query_start_clip=%d query_end_clip=%d\n", 
           query_start_clip,
           query_end_clip);
-          */
 
   // forward
   //tmap_vsw16_query_print_query_profile(query_fwd);
@@ -463,12 +475,10 @@ tmap_vsw16_sse2(tmap_vsw16_query_t *query_fwd, tmap_vsw16_query_t *query_rev,
                                               0, 0,
                                               query_start_clip, query_end_clip, 
                                               opt, &result->query_end, &result->target_end, 0, overflow);
-  /*
   fprintf(stderr, "FWD\nresult = {%d-%d} {%d-%d} score=%d overflow=%d\n",
           result->query_start, result->query_end,
           result->target_start, result->target_end, 
           result->score_fwd, (*overflow));
-          */
   if(NULL != overflow && 1 == *overflow) return;
   if(-1 == result->query_end) {
       tmap_error("bug encountered", Exit, OutOfRange);
@@ -490,7 +500,6 @@ tmap_vsw16_sse2(tmap_vsw16_query_t *query_fwd, tmap_vsw16_query_t *query_rev,
   result->target_start = tlen - result->target_start - 1; // zero-based
   tmap_reverse_compliment_int(target, tlen); // reverse compliment back
   // Debugging
-  /*
   fprintf(stderr, "REV\nresult = {%d-%d} {%d-%d} score=%d overflow=%d\n",
           result->query_start, result->query_end,
           result->target_start, result->target_end, 
@@ -498,7 +507,6 @@ tmap_vsw16_sse2(tmap_vsw16_query_t *query_fwd, tmap_vsw16_query_t *query_rev,
   fprintf(stderr, "result->score_fwd=%d result->score_rev=%d\n",
           result->score_fwd,
           result->score_rev);
-          */
   /*
    * NB: I am not sure why these sometimes disagree, but they do.  Ignore for
    * now.
