@@ -385,6 +385,7 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
           }
       }
 end_loop:
+      /*
       fprintf(stderr, "H1 i=%d target[i]=%d", i, target[i]);
       for(k = l = 0; k < tmap_vsw16_values_per_128_bits; k++) { // for each start position in the stripe
           for(j = 0; j < slen; j++, l++) {
@@ -392,6 +393,7 @@ end_loop:
           }
       }
       fprintf(stderr, "\n");
+      */
       __tmap_vsw16_max(imax, max); // imax is the maximum number in max
       if(imax > gmax) { 
           gmax = imax; // global maximum score 
@@ -465,9 +467,11 @@ tmap_vsw16_sse2(tmap_vsw16_query_t *query_fwd, tmap_vsw16_query_t *query_rev,
                 tmap_vsw_opt_t *opt, tmap_vsw_result_t *result, int32_t *overflow)
 {
   // TODO: bounds check if we can fit into 16-byte values
+  /*
   fprintf(stderr, "query_start_clip=%d query_end_clip=%d\n", 
           query_start_clip,
           query_end_clip);
+          */
 
   // forward
   //tmap_vsw16_query_print_query_profile(query_fwd);
@@ -475,10 +479,12 @@ tmap_vsw16_sse2(tmap_vsw16_query_t *query_fwd, tmap_vsw16_query_t *query_rev,
                                               0, 0,
                                               query_start_clip, query_end_clip, 
                                               opt, &result->query_end, &result->target_end, 0, overflow);
+  /*
   fprintf(stderr, "FWD\nresult = {%d-%d} {%d-%d} score=%d overflow=%d\n",
           result->query_start, result->query_end,
           result->target_start, result->target_end, 
           result->score_fwd, (*overflow));
+          */
   if(NULL != overflow && 1 == *overflow) return;
   if(-1 == result->query_end) {
       tmap_error("bug encountered", Exit, OutOfRange);
@@ -500,6 +506,7 @@ tmap_vsw16_sse2(tmap_vsw16_query_t *query_fwd, tmap_vsw16_query_t *query_rev,
   result->target_start = tlen - result->target_start - 1; // zero-based
   tmap_reverse_compliment_int(target, tlen); // reverse compliment back
   // Debugging
+  /*
   fprintf(stderr, "REV\nresult = {%d-%d} {%d-%d} score=%d overflow=%d\n",
           result->query_start, result->query_end,
           result->target_start, result->target_end, 
@@ -507,6 +514,7 @@ tmap_vsw16_sse2(tmap_vsw16_query_t *query_fwd, tmap_vsw16_query_t *query_rev,
   fprintf(stderr, "result->score_fwd=%d result->score_rev=%d\n",
           result->score_fwd,
           result->score_rev);
+          */
   /*
    * NB: I am not sure why these sometimes disagree, but they do.  Ignore for
    * now.

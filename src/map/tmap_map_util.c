@@ -1496,6 +1496,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       }
 
       // Debugging
+      /*
       int j;
       fprintf(stderr, "start_pos=%u end_pos=%u strand=%d\n", start_pos, end_pos, strand);
       for(j=0;j<qlen_fwd;j++) {
@@ -1506,6 +1507,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           fputc("ACGTN"[target[j]], stderr);
       }
       fputc('\n', stderr);
+      */
 
       // room for result
       tmp_sam.result = tmap_vsw_result_init();
