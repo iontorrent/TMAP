@@ -37,8 +37,6 @@
 #include <stdio.h>
 #include "tmap_vsw.h"
 
-//#define TMAP_VSW_DEBUG 1
-
 tmap_vsw16_query_t *
 tmap_vsw16_query_init(tmap_vsw16_query_t *prev, const uint8_t *query, int32_t qlen, int32_t tlen, 
                               int32_t query_start_clip, int32_t query_end_clip,

@@ -498,6 +498,12 @@ tmap_vsw16_sse2(tmap_vsw16_query_t *query_fwd, tmap_vsw16_query_t *query_rev,
   if(-1 == result->query_end) {
       tmap_error("bug encountered", Exit, OutOfRange);
   }
+  if(0 == result->query_end && result->score_fwd < 0) { // no significant matches
+      result->query_end = result->query_start = 0;
+      result->target_end = result->target_start = 0;
+      result->score_fwd = result->score_rev = INT32_MIN;
+      return;
+  }
 
   // TODO: we could adjust the start position based on the forward
   // reverse

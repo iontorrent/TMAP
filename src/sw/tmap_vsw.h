@@ -34,6 +34,8 @@
 #include <emmintrin.h>
 #include <unistd.h>
 
+//#define TMAP_VSW_DEBUG 1
+
 /* For branch prediction */
 #ifdef __GNUC__
 #define TMAP_VSW_LIKELY(x) __builtin_expect((x),1)

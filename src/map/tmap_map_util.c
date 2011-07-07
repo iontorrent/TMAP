@@ -1498,7 +1498,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       // Debugging
 #ifdef TMAP_VSW_DEBUG
       int j;
-      fprintf(stderr, "start_pos=%u end_pos=%u strand=%d\n", start_pos, end_pos, strand);
+      fprintf(stderr, "seqid:%u start_pos=%u end_pos=%u strand=%d\n", sams->sams[end].seqid+1, start_pos, end_pos, strand);
       for(j=0;j<qlen_fwd;j++) {
           fputc("ACGTN"[query_fwd[j]], stderr);
       }
