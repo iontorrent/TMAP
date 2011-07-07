@@ -985,7 +985,7 @@ int32_t
 tmap_sw_global_banded_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
                            int32_t score, tmap_sw_path_t *path, int32_t *path_len, int32_t right_j)
 {
-  int32_t i, j, bw, score_max;
+  int32_t i, j, bw, score_max, score_gb;
   int32_t *mat=NULL, *score_matrix=NULL, N_MATRIX_ROW;
   tmap_sw_param_t ap_real;
   tmap_sw_path_t *p=NULL;
@@ -1043,7 +1043,17 @@ tmap_sw_global_banded_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t l
   ap_real = *ap;
   ap_real.gap_end = -1;
   ap_real.band_width = bw;
-  if(score != tmap_sw_global_core(seq1, len1, seq2, len2, &ap_real, path, path_len, right_j)) {
+  score_gb = tmap_sw_global_core(seq1, len1, seq2, len2, &ap_real, path, path_len, right_j);
+  if(score != score_gb) {
+      fprintf(stderr, "score=%d score_gb=%d\n", score, score_gb); 
+      for(i=0;i<len2;i++) {
+          fputc("ACGTN"[seq2[i]], stderr);
+      }
+      fputc('\n', stderr);
+      for(i=0;i<len1;i++) {
+          fputc("ACGTN"[seq1[i]], stderr);
+      }
+      fputc('\n', stderr);
       tmap_error("bug encountered", Exit, OutOfRange);
   }
 

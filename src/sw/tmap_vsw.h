@@ -195,6 +195,6 @@ tmap_vsw_sse2(tmap_vsw_query_t *query,
               uint8_t *target, int32_t tlen,
               int32_t query_start_clip, int32_t query_end_clip,
               tmap_vsw_opt_t *opt, tmap_vsw_result_t *result,
-              int32_t *overflow);
+              int32_t *overflow, int32_t score_thr);
 
 #endif

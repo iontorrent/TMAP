@@ -1518,13 +1518,15 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query_fwd, qlen_fwd, query_rev, qlen_rev,
                                         target, tlen, 
                                         softclip_start, softclip_end,
-                                        vsw_opt, tmp_sam.result, &overflow);
+                                        vsw_opt, tmp_sam.result, 
+                                        &overflow, opt->score_thr);
       }
       else {
           tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query_fwd, qlen_fwd, query_rev, qlen_rev,
                                         target, tlen, 
                                         softclip_end, softclip_start,
-                                        vsw_opt, tmp_sam.result, &overflow);
+                                        vsw_opt, tmp_sam.result, 
+                                        &overflow, opt->score_thr);
       }
       if(1 == overflow) {
           tmap_error("bug encountered", Exit, OutOfRange);

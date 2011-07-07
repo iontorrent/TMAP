@@ -50,14 +50,7 @@ tmap_vsw16_query_destroy(tmap_vsw16_query_t *vsw);
 
 int32_t
 tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_t tlen,
-                        int32_t query_start_skip, int32_t target_start_skip,
                         int32_t query_start_clip, int32_t query_end_clip,
                         tmap_vsw_opt_t *opt, int32_t *query_end, int32_t *target_end,
-                        int32_t direction, int32_t *overflow);
-
-void
-tmap_vsw16_sse2(tmap_vsw16_query_t *query_fwd, tmap_vsw16_query_t *query_rev, 
-                uint8_t *target, int32_t tlen, 
-                int32_t query_start_clip, int32_t query_end_clip,
-                tmap_vsw_opt_t *opt, tmap_vsw_result_t *result, int32_t *overflow);
+                        int32_t direction, int32_t *overflow, int32_t score_thr);
 #endif
