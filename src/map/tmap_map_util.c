@@ -1405,18 +1405,16 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   tmap_seq_to_int(seqs[1]);
 
   vsw_query[0] = tmap_vsw_query_init((uint8_t*)tmap_seq_get_bases(seqs[0])->s, seq_len, 
-                                     (uint8_t*)tmap_seq_get_bases(seqs[1])->s, seq_len, 
                                      seq_len, softclip_start, softclip_end, vsw_opt);
   vsw_query[1] = tmap_vsw_query_init((uint8_t*)tmap_seq_get_bases(seqs[1])->s, seq_len, 
-                                     (uint8_t*)tmap_seq_get_bases(seqs[0])->s, seq_len, 
                                      seq_len, softclip_start, softclip_end, vsw_opt);
 
   i = start = end = 0;
   best_subo = INT32_MIN;
   start_pos = end_pos = 0;
   while(end < sams->n) {
-      uint8_t strand, *query_fwd=NULL, *query_rev;
-      uint32_t qlen_fwd, qlen_rev;
+      uint8_t strand, *query=NULL;
+      uint32_t qlen;
       tmap_map_sam_t tmp_sam;
 
       // get the strand/start/end positions
@@ -1432,10 +1430,8 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       }
 
       // update the query sequence
-      query_fwd = (uint8_t*)tmap_seq_get_bases(seqs[strand])->s;
-      query_rev = (uint8_t*)tmap_seq_get_bases(seqs[1-strand])->s;
-      qlen_fwd = tmap_seq_get_bases(seqs[strand])->l;
-      qlen_rev = tmap_seq_get_bases(seqs[1-strand])->l;
+      query = (uint8_t*)tmap_seq_get_bases(seqs[strand])->s;
+      qlen = tmap_seq_get_bases(seqs[strand])->l;
 
       // check if the hits can be banded
       if(end + 1 < sams->n) {
@@ -1499,8 +1495,8 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
 #ifdef TMAP_VSW_DEBUG
       int j;
       fprintf(stderr, "seqid:%u start_pos=%u end_pos=%u strand=%d\n", sams->sams[end].seqid+1, start_pos, end_pos, strand);
-      for(j=0;j<qlen_fwd;j++) {
-          fputc("ACGTN"[query_fwd[j]], stderr);
+      for(j=0;j<qlen;j++) {
+          fputc("ACGTN"[query[j]], stderr);
       }
       fputc('\n', stderr);
       for(j=0;j<tlen;j++) {
@@ -1515,18 +1511,18 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       // NB: if match/mismatch penalties are on the opposite strands, we may
       // have wrong scores
       if(0 == strand) {
-          tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query_fwd, qlen_fwd, query_rev, qlen_rev,
+          tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query, qlen,
                                         target, tlen, 
                                         softclip_start, softclip_end,
                                         vsw_opt, tmp_sam.result, 
-                                        &overflow, opt->score_thr);
+                                        &overflow, opt->score_thr, 0);
       }
       else {
-          tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query_fwd, qlen_fwd, query_rev, qlen_rev,
+          tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query, qlen,
                                         target, tlen, 
                                         softclip_end, softclip_start,
                                         vsw_opt, tmp_sam.result, 
-                                        &overflow, opt->score_thr);
+                                        &overflow, opt->score_thr, 0);
       }
       if(1 == overflow) {
           tmap_error("bug encountered", Exit, OutOfRange);
@@ -1543,8 +1539,8 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
 
           // adjust target length and position NB: query length is implicitly
           // stored in s->result (consider on the next pass
-          s->pos = start_pos + s->result->target_start - 1; // zero-based 
-          s->target_len = s->result->target_end - s->result->target_start+ 1;
+          s->pos = start_pos - 1; // zero-based
+          s->target_len = s->result->target_end + 1;
           /*
              fprintf(stderr, "strand=%d\n", strand);
              fprintf(stderr, "%d-%d %d-%d %d\n",
@@ -1629,7 +1625,10 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
   tmap_seq_t *seqs[2] = {NULL, NULL};
   int32_t seq_len=0, tlen, target_mem=0;
   uint8_t *target=NULL;
+  tmap_vsw_query_t *vsw_query[2] = {NULL, NULL};
+  tmap_vsw_opt_t *vsw_opt = NULL;
   uint32_t start_pos, end_pos;
+  int32_t overflow, softclip_start, softclip_end;
 
   if(0 == sams->n) {
       return sams;
@@ -1645,7 +1644,12 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
 
   // sort by strand/chr/pos/score
   tmap_sort_introsort(tmap_map_sam_sort_coord, sams->n, sams->sams);
+  softclip_start = (TMAP_MAP_UTIL_SOFT_CLIP_LEFT == opt->softclip_type || TMAP_MAP_UTIL_SOFT_CLIP_ALL == opt->softclip_type) ? 1 : 0;
+  softclip_end = (TMAP_MAP_UTIL_SOFT_CLIP_RIGHT == opt->softclip_type || TMAP_MAP_UTIL_SOFT_CLIP_ALL == opt->softclip_type) ? 1 : 0;
   
+  // initialize opt
+  vsw_opt = tmap_vsw_opt_init(opt->score_match, opt->pen_mm, opt->pen_gapo, opt->pen_gape, opt->score_thr);
+
   // init seqs
   seq_len = tmap_seq_get_bases(seq)->l;
   seqs[0] = tmap_seq_clone(seq); // clone
@@ -1653,55 +1657,80 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
   tmap_seq_reverse_compliment(seqs[1]);
   tmap_seq_to_int(seqs[0]);
   tmap_seq_to_int(seqs[1]);
+
+  vsw_query[0] = tmap_vsw_query_init((uint8_t*)tmap_seq_get_bases(seqs[0])->s, seq_len, 
+                                     seq_len, softclip_start, softclip_end, vsw_opt);
+  vsw_query[1] = tmap_vsw_query_init((uint8_t*)tmap_seq_get_bases(seqs[1])->s, seq_len, 
+                                     seq_len, softclip_start, softclip_end, vsw_opt);
       
   i = start = end = 0;
   start_pos = end_pos = 0;
   while(end < sams->n) {
-      uint8_t strand, *query=NULL;
+      uint8_t strand, *query=NULL, *query_rc=NULL, *tmp_target;
       uint32_t qlen;
       tmap_map_sam_t tmp_sam;
       tmap_map_sam_t *s = NULL;
       int32_t query_start, query_end;
-
-      // get the strand/start/end positions
-      strand = sams->sams[end].strand;
-      if(start == end) {
-          start_pos = sams->sams[start].pos + 1; 
-          end_pos = sams->sams[start].pos + sams->sams[start].target_len; 
-      }
-
-      // update the query sequence
-      query = (uint8_t*)tmap_seq_get_bases(seqs[strand])->s;
-      qlen = tmap_seq_get_bases(seqs[strand])->l;
-
+      
       // do not band when generating the cigar
       tmp_sam = sams->sams[end];
-      // adjust co-ordinates, and query
-      query += tmp_sam.result->query_start; // offset query
-      qlen = tmp_sam.result->query_end - tmp_sam.result->query_start + 1; // update query length
+
+      // get the strand/start/end positions
+      strand = tmp_sam.strand;
+      start_pos = tmp_sam.pos + 1;
+      end_pos = tmp_sam.pos + tmp_sam.target_len;
+
+      // retrieve the reverse complimented query sequence
+      query_rc  = (uint8_t*)tmap_seq_get_bases(seqs[1-strand])->s;
+      query_rc += seq_len - tmp_sam.result->query_end - 1; // offset query
+      qlen = tmp_sam.result->query_end + 1; // adjust based on the query end
 
       // get the target sequence
-      tlen = end_pos - start_pos + 1;
+      tlen = tmp_sam.result->target_end + 1; // adjust based on the target end
       if(target_mem < tlen) { // more memory?
           target_mem = tlen;
           tmap_roundup32(target_mem);
           target = tmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
       }
-      if(tlen != tmap_refseq_subseq(refseq, refseq->annos[sams->sams[end].seqid].offset + start_pos, tlen, target)) {
+      if(tlen != tmap_refseq_subseq(refseq, refseq->annos[tmp_sam.seqid].offset + start_pos, tlen, target)) {
+          tmap_error("bug encountered", Exit, OutOfRange);
+      }
+      
+      /**
+       * Step 1: find the start of the alignment
+       */
+
+      // NB: if match/mismatch penalties are on the opposite strands, we may
+      // have wrong scores
+      if(0 == strand) {
+          tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query_rc, qlen,
+                                        target, tlen, 
+                                        softclip_start, softclip_end,
+                                        vsw_opt, tmp_sam.result, 
+                                        &overflow, opt->score_thr, 1);
+      }
+      else {
+          tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query_rc, qlen,
+                                        target, tlen, 
+                                        softclip_end, softclip_start,
+                                        vsw_opt, tmp_sam.result, 
+                                        &overflow, opt->score_thr, 1);
+      }
+      if(1 == overflow) {
           tmap_error("bug encountered", Exit, OutOfRange);
       }
 
-      // check if any IUPAC bases fall within the range
-      if(0 < tmap_refseq_amb_bases(refseq, sams->sams[end].seqid+1, start_pos, end_pos)) {
-          int32_t j, pos;
-          // modify them
-          for(pos=start_pos;pos<=end_pos;pos++) {
-              j = tmap_refseq_amb_bases(refseq, sams->sams[end].seqid+1, pos, pos); // Note: j is one-based
-              if(0 < j) {
-                  target[pos-start_pos] = 4; // mismatch!
-              }
-          }
-      }
+      // adjust the query and target based off of the start of the alignment
+      query = (uint8_t*)tmap_seq_get_bases(seqs[strand])->s;
+      query += tmp_sam.result->query_start; // offset query
+      qlen = tmp_sam.result->query_end - tmp_sam.result->query_start + 1; // update query length
+      tmp_target = target;
+      target += tmp_sam.result->target_start;
+      tlen = tmp_sam.result->target_end - tmp_sam.result->target_start + 1;
+
+      /**
+       * Step 2: generate the cigar
+       */
 
       // path memory
       if(path_mem <= tlen + seq_len) { // lengthen the path
@@ -1795,6 +1824,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       // update start/end
       end++;
       start = end;
+      target = tmp_target;
   }
       
   // realloc
@@ -1809,6 +1839,8 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
   tmap_map_sams_destroy(sams);
   free(path);
   free(target);
+  tmap_vsw_query_destroy(vsw_query[0]);
+  tmap_vsw_query_destroy(vsw_query[1]);
 
   return sams_tmp;
 }

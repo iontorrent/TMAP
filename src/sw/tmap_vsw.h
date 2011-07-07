@@ -141,8 +141,7 @@ typedef struct {
 } tmap_vsw16_query_t;
 
 typedef struct {
-    tmap_vsw16_query_t *query16_fwd;
-    tmap_vsw16_query_t *query16_rev;
+    tmap_vsw16_query_t *query16;
 } tmap_vsw_query_t;
 
 // ACGTN
@@ -179,8 +178,7 @@ void
 tmap_vsw_result_destroy(tmap_vsw_result_t *result);
 
 tmap_vsw_query_t*
-tmap_vsw_query_init(const uint8_t *query_fwd, int32_t qlen_fwd,
-                    const uint8_t *query_rev, int32_t qlen_rev,
+tmap_vsw_query_init(const uint8_t *query, int32_t qlen,
                     int32_t tlen,
                     int32_t query_start_clip, int32_t query_end_clip,
                     tmap_vsw_opt_t *opt);
@@ -189,12 +187,11 @@ void
 tmap_vsw_query_destroy(tmap_vsw_query_t *query);
 
 int32_t
-tmap_vsw_sse2(tmap_vsw_query_t *query,
-              const uint8_t *query_fwd, int32_t qlen_fwd,
-              const uint8_t *query_rev, int32_t qlen_rev,
+tmap_vsw_sse2(tmap_vsw_query_t *vsw_query,
+              const uint8_t *query, int32_t qlen,
               uint8_t *target, int32_t tlen,
               int32_t query_start_clip, int32_t query_end_clip,
               tmap_vsw_opt_t *opt, tmap_vsw_result_t *result,
-              int32_t *overflow, int32_t score_thr);
+              int32_t *overflow, int32_t score_thr, int32_t is_rev);
 
 #endif
