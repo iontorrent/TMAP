@@ -64,6 +64,7 @@ tmap_vsw16_query_init(tmap_vsw16_query_t *prev, const uint8_t *query, int32_t ql
                               tmap_vsw_opt_t *opt)
 {
   int32_t qlen_mem, slen, a;
+      int32_t min_gap_score, min_mm_score;
   tmap_vsw16_int_t *t;
 
   // get the number of stripes
@@ -94,17 +95,10 @@ tmap_vsw16_query_init(tmap_vsw16_query_t *prev, const uint8_t *query, int32_t ql
   prev->min_edit_score = (opt->pen_gapo+opt->pen_gape < opt->pen_mm) ? -opt->pen_mm : -(opt->pen_gapo+opt->pen_gape); // minimum single-edit score
   prev->min_edit_score--; // for N mismatches
   prev->max_edit_score = opt->score_match;
-  // compute the zero alignment scores
-  if(0 == query_start_clip // leading insertions/mismatches allowed in the alignment
-     || (0 == query_end_clip)) { // trailing insertions/mismatches allowed in the alignment
-          int32_t min_gap_score, min_mm_score;
-          min_mm_score = qlen * -opt->pen_mm; // all mismatches
-          min_gap_score = -opt->pen_gapo + (-opt->pen_gape * qlen); // all insertions
-          prev->zero_aln_score = (min_mm_score < min_gap_score) ? min_mm_score : min_gap_score;
-  }
-  else { // can clip ant least one of {prefix,suffix} of the query
-      prev->zero_aln_score = prev->min_edit_score;
-  }
+  // compute the zero alignment scores (assume no clipping in case of re-use)
+  min_mm_score = qlen * -opt->pen_mm; // all mismatches
+  min_gap_score = -opt->pen_gapo + (-opt->pen_gape * qlen); // all insertions
+  prev->zero_aln_score = (min_mm_score < min_gap_score) ? min_mm_score : min_gap_score;
   // the minimum alignment score
   prev->min_aln_score = prev->zero_aln_score << 1; // double it so that we have room in case of starting at negative infinity
   prev->min_aln_score += prev->min_edit_score; // so it doesn't underflow
@@ -202,12 +196,13 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
                         tmap_vsw_opt_t *opt, int32_t *query_end, int32_t *target_end,
                         int32_t direction, int32_t *overflow, int32_t score_thr)
 {
-  int32_t slen, i, j, k, imax = 0, imin = 0, sum = 0;
+  int32_t slen, i, j, k, sum = 0;
 #ifdef TMAP_VSW_DEBUG
   int32_t l;
 #endif
   uint16_t cmp;
-  int32_t gmax, best, zero;
+  tmap_vsw16_int_t gmax, best;
+  tmap_vsw16_int_t zero, imin = 0, imax = 0;
   __m128i zero_mm, zero_start_mm, negative_infinity_mm, positive_infinity_mm, reduce_mm;
   __m128i pen_gapoe, pen_gape, *H0, *H1, *E;
 
@@ -401,6 +396,9 @@ end_loop:
       fprintf(stderr, "\n");
 #endif
       __tmap_vsw16_max(imax, max); // imax is the maximum number in max
+      if(query->max_aln_score - query->max_edit_score < imax) { // overflow
+          tmap_error("bug encountered", Exit, OutOfRange);
+      }
       if(imax > gmax) { 
           gmax = imax; // global maximum score 
       }

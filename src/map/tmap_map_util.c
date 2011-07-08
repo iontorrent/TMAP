@@ -1720,6 +1720,14 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
           tmap_error("bug encountered", Exit, OutOfRange);
       }
 
+      /*
+      fprintf(stderr, "tmp_sam.result->query_start=%d\n", tmp_sam.result->query_start);
+      fprintf(stderr, "tmp_sam.result->query_end=%d\n", tmp_sam.result->query_end);
+      fprintf(stderr, "tmp_sam.result->target_start=%d\n", tmp_sam.result->target_start);
+      fprintf(stderr, "tmp_sam.result->target_end=%d\n", tmp_sam.result->target_end);
+      fprintf(stderr, "tmp_sam.pos=%u\n", tmp_sam.pos);
+      */
+
       // adjust the query and target based off of the start of the alignment
       query = (uint8_t*)tmap_seq_get_bases(seqs[strand])->s;
       query += tmp_sam.result->query_start; // offset query
@@ -1727,6 +1735,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       tmp_target = target;
       target += tmp_sam.result->target_start;
       tlen = tmp_sam.result->target_end - tmp_sam.result->target_start + 1;
+      tmp_sam.pos += tmp_sam.result->target_start; // keep it zero based
 
       /**
        * Step 2: generate the cigar
@@ -1771,7 +1780,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       (*s) = tmp_sam; 
 
       s->pos = s->pos + (path[path_len-1].i-1); // zero-based 
-      if(0 == strand && path[path_len-1].ctype == TMAP_SW_FROM_I) {
+      if(path[path_len-1].ctype == TMAP_SW_FROM_I) {
           s->pos++;
       }
       s->cigar = tmap_sw_path2cigar(path, path_len, &s->n_cigar);
