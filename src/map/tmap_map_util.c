@@ -1359,6 +1359,7 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
     (par).gap_open = (opt)->pen_gapo; (par).gap_ext = (opt)->pen_gape; \
     (par).gap_end = (opt)->pen_gape; \
     (par).row = 5; \
+    (par).band_width = (opt)->bw; \
 } while(0)
 
 
@@ -1773,7 +1774,9 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       s = &sams_tmp->sams[i];
 
       // Smith Waterman with banding
-      tmap_sw_global_banded_core(target, tlen, query, qlen, &par,
+      // NB: we store the score from the banded version, which does not allow
+      // ins then del, or del then ins.  The vectorized version does.
+      s->score = tmap_sw_global_banded_core(target, tlen, query, qlen, &par,
                                  tmp_sam.result->score_fwd, path, &path_len, strand); 
 
       // shallow copy previous data 

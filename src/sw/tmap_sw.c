@@ -985,7 +985,7 @@ int32_t
 tmap_sw_global_banded_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
                            int32_t score, tmap_sw_path_t *path, int32_t *path_len, int32_t right_j)
 {
-  int32_t i, j, bw, score_max, score_gb;
+  int32_t i, j, max_bw, score_max, score_gb, len;
   int32_t *mat=NULL, *score_matrix=NULL, N_MATRIX_ROW;
   tmap_sw_param_t ap_real;
   tmap_sw_path_t *p=NULL;
@@ -1002,19 +1002,21 @@ tmap_sw_global_banded_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t l
           score_max = mat[i];
       }
   }
+  // the maximum alignment score
   score_max = (len1 < len2) ? (len1 * score_max) : (len2 * score_max);
+  // the difference between the max and observed
   score_max -= score;
-  bw = 0;
+  max_bw = 0;
   if(ap->gap_open + ap->gap_ext <= score_max) { // gap open allowed
-      bw++;
+      max_bw++;
       score_max -= ap->gap_open + ap->gap_ext;
       if(ap->gap_ext <= score_max) { // gap extension allowed
-          bw += (score_max + ap->gap_ext - 1) / ap->gap_ext;
+          max_bw += (score_max + ap->gap_ext - 1) / ap->gap_ext;
       }
   }
   
   // Step 2: if we have a perfect match, run the perfect match algorithm
-  if(0 == bw) { 
+  if(0 == max_bw) { 
       int32_t best_i, best_j;
       best_i = len2;
       best_j = len1;
@@ -1042,9 +1044,27 @@ tmap_sw_global_banded_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t l
   // Step 3: run a banded alignment
   ap_real = *ap;
   ap_real.gap_end = -1;
-  ap_real.band_width = bw;
-  score_gb = tmap_sw_global_core(seq1, len1, seq2, len2, &ap_real, path, path_len, right_j);
+  ap_real.band_width = ap->band_width;
+  len = (len1 < len2) ? len1 : len2;
+  do {
+      score_gb = tmap_sw_global_core(seq1, len1, seq2, len2, &ap_real, path, path_len, right_j);
+      ap_real.band_width <<= 1; // double it
+  } while(score != score_gb && ap_real.band_width <= max_bw && ap_real.band_width <= len);
+  // check if we need to run it at hte maximum band width
+  if(score != score_gb 
+     && max_bw < ap_real.band_width
+     && ap_real.band_width <= (max_bw << 1) 
+     && ap_real.band_width <= len) {
+      ap_real.band_width = max_bw;
+      score_gb = tmap_sw_global_core(seq1, len1, seq2, len2, &ap_real, path, path_len, right_j);
+  }
   if(score != score_gb) {
+      // NB: the vectorized smith waterman sometimes considers deletions then
+      // insertions, so sometimes it can produce a better alignment score than
+      // the global banded smith waterman.  So unfortunately we cannot ensure
+      // that the two scores will match.  Nonetheless, this should happen
+      // rarely, and even more rarely with soft clipping turned on.
+      /*
       fprintf(stderr, "score=%d score_gb=%d\n", score, score_gb); 
       for(i=0;i<len2;i++) {
           fputc("ACGTN"[seq2[i]], stderr);
@@ -1055,6 +1075,8 @@ tmap_sw_global_banded_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t l
       }
       fputc('\n', stderr);
       tmap_error("bug encountered", Exit, OutOfRange);
+      */
+      return score_gb;
   }
 
   return score;
