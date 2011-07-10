@@ -1853,6 +1853,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
   free(target);
   tmap_vsw_query_destroy(vsw_query[0]);
   tmap_vsw_query_destroy(vsw_query[1]);
+  tmap_vsw_opt_destroy(vsw_opt);
 
   return sams_tmp;
 }
