@@ -30,6 +30,11 @@
                                             || ( (a).strand == (b).strand && (a).seqid == (b).seqid && (a).pos < (b).pos ) \
                                             ? 1 : 0 )
 
+#define __tmap_map_sam_sort_coord_end_lt(a, b) (  ((a).strand < (b).strand) \
+                                            || ( (a).strand == (b).strand && (a).seqid < (b).seqid) \
+                                            || ( (a).strand == (b).strand && (a).seqid == (b).seqid && (a).pos + (a).target_len < (b).pos + (b).target_len) \
+                                            ? 1 : 0 )
+
 // sort by strand, min-seqid, min-position, max score
 #define __tmap_map_sam_sort_coord_score_lt(a, b) (  ((a).strand < (b).strand) \
                                             || ( (a).strand == (b).strand && (a).seqid < (b).seqid) \
@@ -41,6 +46,7 @@
 #define __tmap_map_sam_sort_score_lt(a, b) ((a).score > (b).score)
 
 TMAP_SORT_INIT(tmap_map_sam_sort_coord, tmap_map_sam_t, __tmap_map_sam_sort_coord_lt)
+TMAP_SORT_INIT(tmap_map_sam_sort_coord_end, tmap_map_sam_t, __tmap_map_sam_sort_coord_end_lt)
 TMAP_SORT_INIT(tmap_map_sam_sort_coord_score, tmap_map_sam_t, __tmap_map_sam_sort_coord_score_lt)
 TMAP_SORT_INIT(tmap_map_sam_sort_score, tmap_map_sam_t, __tmap_map_sam_sort_score_lt)
 
@@ -1194,7 +1200,9 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
   }
 
   // sort
-  tmap_sort_introsort(tmap_map_sam_sort_coord, sams->n, sams->sams);
+  // NB: since tmap_map_util_sw_gen_score only sets the end position of the
+  // alignment, use that
+  tmap_sort_introsort(tmap_map_sam_sort_coord_end, sams->n, sams->sams);
 
   // remove duplicates within a window
   for(i=j=0;i<sams->n;) {
@@ -1206,7 +1214,7 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
       while(end+1 < sams->n) {
           if(sams->sams[end].seqid == sams->sams[end+1].seqid
              && sams->sams[end].strand == sams->sams[end+1].strand
-             && fabs(sams->sams[end].pos - sams->sams[end+1].pos) <= dup_window) {
+             && fabs((sams->sams[end].pos + sams->sams[end].target_len) - (sams->sams[end+1].pos + sams->sams[end+1].target_len)) <= dup_window) {
               // track the best scoring
               if(sams->sams[best_score_i].score == sams->sams[end+1].score) {
                   best_score_i = end+1;
@@ -1430,10 +1438,6 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           best_subo = sams->sams[end].score_subo;
       }
 
-      // update the query sequence
-      query = (uint8_t*)tmap_seq_get_bases(seqs[strand])->s;
-      qlen = tmap_seq_get_bases(seqs[strand])->l;
-
       // check if the hits can be banded
       if(end + 1 < sams->n) {
           if(sams->sams[end].strand == sams->sams[end+1].strand 
@@ -1446,6 +1450,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
               continue; // there may be more to add
           }
       }
+
       // choose a random one within the window
       if(start == end) {
           tmp_sam = sams->sams[start];
@@ -1455,6 +1460,11 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           r += start;
           tmp_sam = sams->sams[r];
       }
+      
+      // update the query sequence
+      query = (uint8_t*)tmap_seq_get_bases(seqs[strand])->s;
+      qlen = tmap_seq_get_bases(seqs[strand])->l;
+
 
       // add in band width
       // one-based
