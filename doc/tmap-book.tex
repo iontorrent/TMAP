@@ -112,7 +112,7 @@ To access each command, we use \TT{tmap <name>}, where \TT{<name>} is the name o
 
 \section{Common Mapping Options}
 \label{sec:commonoptions}
-Some common options exist across some or all of the mapping commands (\TT{map1}, \TT{map2}, \TT{map3} and \TT{mapall}). 
+Some common options exist across some or all of the mapping commands (\TT{map1}, \TT{map2}, \TT{map3}, \TT{mapvsw} and \TT{mapall}). 
 These options will be discussed here to avoid duplication.
 
 The TMAP mapping commands can accept their input file from the standard input stream.
@@ -378,6 +378,17 @@ Specifies the number of multiples of the match score (\TT{-A}) for the minimum s
 \subsubsection{-H INT}
 Specifies the number of bases to enumerate for a single homopolymer within the seed.
 
+\section{tmap mapvsw}
+\label{sec:mapvsw}
+The \BF{mapvsw} is a command to map sequences to a reference genome.
+This algorithm performs the full Smith Waterman algorithm alignment of the read to the reference genome, using SSE2 (vectorized) programming instructions.
+This algorithm should not be used for large number of reads or large genomes, and instead should be used for debugging and investigating small numbers of reads..
+
+See \autoref{sec:commonoptions} for common options that are in use in this command.
+
+\subsection{Usage}
+There are no algorithm specific options.
+
 \section{tmap mapall}
 \label{sec:mapall}
 The \BF{mapall} is a command to quickly map short sequences to a reference genome.
@@ -385,6 +396,9 @@ This command combines available mapping algorithms for fast and sensitive alignm
 The algorithms follows a two-stage approach, with a set of algorithms and associated settings for each stage.
 If there are no mappings for a read by applying the algorithms in the first stage, then the algorithms in the second stage are applied. 
 For example, a set of algorithms to quickly align near-perfect reads may be used in the first stage, while a set of sensitive algorithms may be used to map difficult reads in the second stage
+
+It is recommended that \TT{mapvsw} is not used for any large scale mapping project.  
+Please see \autoref{sec:mapvsw} for more details.
 
 See \autoref{sec:commonoptions} for common options that are in use in this command.
 
