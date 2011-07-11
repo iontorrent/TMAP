@@ -71,6 +71,10 @@ static inline void
 tmap_stream_convert_eol(tmap_stream_t *ks)
 {
   int i;
+  // set this beforehand
+  if(ks->end < ks->bufsize) {
+      ks->is_eof = 1;
+  }
   // search for:
   // 1. <CR> <NL>
   // 2. <NL>
@@ -115,7 +119,6 @@ tmap_stream_getc(tmap_stream_t *ks)
       ks->last_char = (0 < ks->end) ? ks->buf[ks->end-1] : 0;
       ks->end = tmap_file_fread2(ks->f, ks->buf, ks->bufsize);
       tmap_stream_convert_eol(ks);
-      if (ks->end < ks->bufsize) ks->is_eof = 1;
       if (ks->end == 0) return -1;
   }
   return (int)ks->buf[ks->begin++];
@@ -135,7 +138,6 @@ tmap_stream_getuntil(tmap_stream_t *ks, int delimiter, tmap_string_t *str, int *
               ks->last_char = ks->buf[ks->end-1];
               ks->end = tmap_file_fread2(ks->f, ks->buf, ks->bufsize);
               tmap_stream_convert_eol(ks);
-              if (ks->end < ks->bufsize) ks->is_eof = 1;
               if (ks->end == 0) break;
           } else break;
       }
