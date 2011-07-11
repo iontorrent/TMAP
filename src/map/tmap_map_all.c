@@ -22,6 +22,7 @@
 #include "../io/tmap_seq_io.h"
 #include "../server/tmap_shm.h"
 #include "../sw/tmap_sw.h"
+#include "../sw/tmap_map_vsw.h"
 #include "tmap_map_util.h"
 #include "tmap_map1.h"
 #include "tmap_map1_aux.h"
@@ -29,7 +30,6 @@
 #include "tmap_map2_aux.h"
 #include "tmap_map3.h"
 #include "tmap_map3_aux.h"
-#include "tmap_map_vsw.h"
 #include "tmap_map_driver.h"
 #include "tmap_map_all.h"
 
