@@ -1782,6 +1782,9 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       query_start = tmp_sam.result->query_start;
       query_end = tmp_sam.result->query_end;
       s = &sams_tmp->sams[i];
+      
+      // shallow copy previous data 
+      (*s) = tmp_sam; 
 
       // Smith Waterman with banding
       // NB: we store the score from the banded version, which does not allow
@@ -1789,8 +1792,6 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       s->score = tmap_sw_global_banded_core(target, tlen, query, qlen, &par,
                                  tmp_sam.result->score_fwd, path, &path_len, strand); 
 
-      // shallow copy previous data 
-      (*s) = tmp_sam; 
 
       s->pos = s->pos + (path[path_len-1].i-1); // zero-based 
       if(path[path_len-1].ctype == TMAP_SW_FROM_I) {

@@ -1066,6 +1066,7 @@ tmap_sw_global_banded_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t l
       // rarely, and even more rarely with soft clipping turned on.
       /*
       fprintf(stderr, "score=%d score_gb=%d\n", score, score_gb); 
+      fprintf(stderr, "ap_real.band_width=%d\n", ap_real.band_width);
       for(i=0;i<len2;i++) {
           fputc("ACGTN"[seq2[i]], stderr);
       }
