@@ -29,7 +29,7 @@ GLOBAL_SOURCES = \
 				 src/index/tmap_sa.c src/index/tmap_sa.h \
 				 src/sw/tmap_sw.h src/sw/tmap_sw.c \
 				 src/sw/tmap_fsw.h src/sw/tmap_fsw.c \
-			   src/sw/tmap_vsw.h src/sw/tmap_vsw.c \
+				 src/sw/tmap_vsw.h src/sw/tmap_vsw.c \
 				 src/sw/tmap_vsw16.h src/sw/tmap_vsw16.c 
 
 tmap_SOURCES = \
@@ -39,7 +39,7 @@ tmap_SOURCES = \
 			   src/sam2fs/tmap_sam2fs_aux.h src/sam2fs/tmap_sam2fs_aux.c \
 			   src/sam2fs/tmap_sam2fs.h src/sam2fs/tmap_sam2fs.c \
 			   src/debug/tmap_debug_exact.h src/debug/tmap_debug_exact.c \
-			   src/map/tmap_map_vsw.c \
+			   src/map/tmap_map_vsw.h src/map/tmap_map_vsw.c \
 			   src/map/tmap_map_util.h src/map/tmap_map_util.c \
 			   src/map/tmap_map1.h src/map/tmap_map1.c \
 			   src/map/tmap_map1_aux.h src/map/tmap_map1_aux.c \
