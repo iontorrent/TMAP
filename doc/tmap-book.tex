@@ -132,7 +132,7 @@ The input reads can be in FASTA, FASTQ, or SFF format.
 Specifies the file format of the reads file.
 Without this option, the format is auto-recognized by the file extension.
 The valid inputs are \TT{fa} or \TT{fasta} for FASTA, \TT {fq} or \TT{fastq} for FASTQ, or \TT{sff} for SFF.
-If compiled with SAMtools support, the option also supports \TT{sam} for SAM, or \TT{bam} for BAM.
+If compiled with SAMTools support, the option also supports \TT{sam} for SAM, or \TT{bam} for BAM.
 
 \subsubsection{\TT{-A INT}}
 Specifies the match score.
@@ -269,11 +269,7 @@ Specifies to print the index format that will be created byt TMAP and exit.
 Format strings are of the form \TT{tmap-f<n>}, where \TT{<n>} will only increase as new formats are created.
 Format strings will be the same for all compatible indices.
 \subsection{IUPAC Ambiguity Codes}
-Note that ambiguous IUPAC codes will be converted to the lexicographically smallest DNA base that is not compatible to the IUPAC code to ensure minimum reference bias.
-For example, an IUPAC base \TT{R}, which represents an \TT{A} or a \TT{G}, will be converted to a C.
-All Ns in the reference will be converted to As.
-Furthermore, any non-IUPAC character will be treated as an N.
-The ambiguity codes will only be re-considered when calculating the NM and MD SAM record optional tags.
+Please see \autoref{sec:iupac} for more details. 
 
 \section{tmap map1}
 \label{sec:map1}
@@ -490,17 +486,20 @@ This tag stores the program group identifier corresponding to the PG SAM header 
 
 \subsubsection{MD}
 This tag stores the MD array.
-The goal of this array is to follow the conventions in SAMtools (\cite{SAM-format}).
+The goal of this array is to follow the conventions in SAMTools (\cite{SAM-format}).
 Any IUPAC code originally in the reference will be present in this field.
+Please see \autoref{sec:iupac} for more details. 
 
 \subsubsection{NM}
 This tag stores the edit distance from the reference sequence.
 Matches to any non-DNA IUPAC ambiguity code (B, D, H, K, M, N, R, S, V, W, Y) will be counted as a mismatch.
+Please see \autoref{sec:iupac} for more details. 
 
 \subsubsection{AS}
 This tag stores the alignment score.
 All IUPAC code positions are treated as mismatches.
 If the alignment contains an N in the reference but an A in the read, this score will be incorrect (overestimated) as the N was converted to an A in the reference.
+Please see \autoref{sec:iupac} for more details. 
 
 \subsubsection{XM}
 This tag stores the number of mismatches in the mapping, or in the secondary seed if used.
@@ -537,6 +536,45 @@ This tag stores the flow signals when an SFF is inputted and the \TT{-Y} option 
 The flowgram values are stored as a string of hexidecimal values, with each group of four hexidecimal values corresponding to one flow signal.
 
 \chapter{Appendix}
+
+\section{IUPAC Ambiguity Codes}
+\label{sec:iupac}
+Note that ambiguous IUPAC codes will be converted to the lexicographically smallest DNA base that is not compatible to the IUPAC code to ensure minimum reference bias.
+For example, an IUPAC base \TT{R}, which represents an \TT{A} or a \TT{G}, will be converted to a C.
+All Ns in the reference will be converted to As.
+Furthermore, any non-IUPAC character will be treated as an N.
+The ambiguity codes will only be re-considered when calculating the NM and MD SAM record optional tags.
+
+\section{Insertion/Deletion Justification}
+TMAP will attempt to justify insertions and deletions (indel) to the 5' (left-most) end of the genomic (reference) forward strand.
+This allows the indel to be consistently placed with respect the reference, regardless of the strand during sequencing
+Neither the query nor the reference sequence are changed, only the indel position in the alignment.
+
+For example, if we have the alignment (query on top, target on the bottom):
+\begin{verbatim}
+CGAACATTTTTCGTGGA
+||||||||||-||||||
+CGAACATTTT-CGTGGA
+\end{verbatim}
+the insertion will be moved to its left-most equivalent position:
+\begin{verbatim}
+CGAACATTTTTCGTGGA
+||||||-||||||||||
+CGAACA-TTTTCGTGGA
+\end{verbatim}
+
+Another example would be in a non-homopolymer deletion: 
+\begin{verbatim}
+CGAACAT----CGTGGA
+|||||||----||||||
+CGAACATACATCGTGGA
+\end{verbatim}
+Justifying this deletion to the left would give:
+\begin{verbatim}
+CGA----CAATCGTGGA
+|||----||||||||||
+CGAACATACATCGTGGA
+\end{verbatim}
 
 % References
 \phantomsection
