@@ -185,6 +185,7 @@ tmap_sw_local_core(uint8_t *seq1, int32_t len1,
   @param  seq2      the second DNA sequence (in 2-bit format)
   @param  len2      the length of the second sequence
   @param  ap        the alignment parameters
+  @param  score     the score found by a previous algorithm
   @param  path      the Smith-Waterman alignment path
   @param  path_len  the Smith-Waterman alignment path length
   @param  right_j   0 if we are to left-justify indels, 1 otherwise

@@ -194,6 +194,7 @@ tmap_vsw_opt_destroy(tmap_vsw_opt_t *opt);
 /*!
   @param  query             the query sequence
   @param  qlen              the query sequence length
+  @param  tlen              the target length
   @param  query_start_clip  1 if we are to clip the start of the query, 0 otherwise
   @param  query_end_clip    1 if we are to clip the end of the query, 0 otherwise
   @param  opt               the previous alignment parameters, NULL if none exist
@@ -219,6 +220,7 @@ tmap_vsw_query_destroy(tmap_vsw_query_t *query);
   @param  tlen              the target sequence length
   @param  query_start_clip  1 if we are to clip the start of the query, 0 otherwise
   @param  query_end_clip    1 if we are to clip the end of the query, 0 otherwise
+  @param  opt               the alignment parameters
   @param  score_fwd         the alignment score for the forward smith waterman
   @param  score_rev         the alignment score for the reverse smith waterman
   @param  query_start       the query start position in the alignment (0-based) 

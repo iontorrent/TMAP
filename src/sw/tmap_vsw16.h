@@ -38,8 +38,10 @@
 #include "tmap_vsw.h"
 
 /*!
+  @param  prev              the previous vectorized query sequence, NULL otherwise
   @param  query             the query sequence
   @param  qlen              the query sequence length
+  @param  tlen              the target sequence length
   @param  query_start_clip  1 if we are to clip the start of the query, 0 otherwise
   @param  query_end_clip    1 if we are to clip the end of the query, 0 otherwise
   @param  opt               the previous alignment parameters, NULL if none exist
@@ -57,22 +59,17 @@ void
 tmap_vsw16_query_destroy(tmap_vsw16_query_t *vsw);
 
 /*!
-  @param  vsw_query         the query in its vectorized form
   @param  query             the query sequence
-  @param  qlen              the query sequence length
   @param  target            the target sequence
   @param  tlen              the target sequence length
   @param  query_start_clip  1 if we are to clip the start of the query, 0 otherwise
   @param  query_end_clip    1 if we are to clip the end of the query, 0 otherwise
-  @param  score_fwd         the alignment score for the forward smith waterman
-  @param  score_rev         the alignment score for the reverse smith waterman
-  @param  query_start       the query start position in the alignment (0-based) 
+  @param  opt               the alignment parameters
   @param  query_end         the query end position in the alignment (0-based) 
-  @param  target_start      the target start position in the alignment (0-based) 
   @param  target_end        the target end position in the alignment (0-based) 
+  @param  direction         1 if we are performing forward alignment, 0 otherwise
   @param  overflow           returns 1 if overflow occurs, 0 otherwise
   @param  score_thr         the minimum scoring threshold (inclusive)
-  @param  is_rev            1 if the reverse alignment is being performed, 0 for the forward
   @return                   the alignment score
   */
 int32_t
