@@ -33,7 +33,7 @@
 
 /*!
  *   From which cell; helps recovert the best scoring path.
- *     */
+ */
 enum {
     TMAP_FSW_FROM_M = 0, /*!< from a match/mismatch cell*/
     TMAP_FSW_FROM_I = 1, /*!< from an insertion cell */
@@ -306,9 +306,7 @@ tmap_fsw_flowseq_destroy(tmap_fsw_flowseq_t *flowseq);
   @param  argv  the argument list
   @return       0 if executed successful
   */
-
 int
 tmap_fsw_main(int argc, char *argv[]);
 #endif
-
 #endif

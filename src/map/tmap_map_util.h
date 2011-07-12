@@ -5,16 +5,46 @@
 #include <sys/types.h>
 #include "../sw/tmap_vsw.h"
 
+/*!
+  The default offset for homopolymer errors.
+  */
 #define TMAP_MAP_UTIL_FSW_OFFSET 2
+/*!
+  The default match score.
+  */
 #define TMAP_MAP_UTIL_SCORE_MATCH 1
+/*!
+  The default mismatch penalty.
+  */
 #define TMAP_MAP_UTIL_PEN_MM 3
+/*!
+  The default gap open penalty.
+  */
 #define TMAP_MAP_UTIL_PEN_GAPO 5
+/*!
+  The default gap extension penalty.
+  */
 #define TMAP_MAP_UTIL_PEN_GAPE 2
+/*!
+  The default offset for homopolymer errors.
+  */
 #define TMAP_MAP_UTIL_FSCORE 2
 
+/*!
+  The default flow order.
+  */
 #define TMAP_MAP_UTIL_FLOW_ORDER "TACG"
+
+/*!
+  The maximum read length to consider for mapping differences in map1.
+  */
 #define TMAP_MAP_UTIL_MAX_DIFF_READ_LENGTH 250
 
+/*!
+  Prints the compression for the input/output.
+  @param  _type  the compress type (integer).
+  @return  the compression string.
+ */
 #define __tmap_map_print_compression(_type) switch(_type) { \
   case TMAP_FILE_NO_COMPRESSION: \
                                  tmap_file_fprintf(tmap_file_stderr, " [none]\n"); \

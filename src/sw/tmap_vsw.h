@@ -77,23 +77,23 @@
 #define tmap_vsw16_shift_bytes 2 
 //typedef uint16_t tmap_vsw16_uint_t;
 typedef int16_t tmap_vsw16_int_t;
-// returns the number of stripes required 
+// returns the number of stripes required given the query length
 #define __tmap_vsw16_calc_slen(_qlen) (((_qlen) + tmap_vsw16_values_per_128_bits - 1) >> tmap_vsw16_values_per_128_bits_log2)
-// ret is max in xx.
+// returns the maximum value in stored in the vector
 #define __tmap_vsw16_max(ret, xx) do { \
     (xx) = _mm_max_epi16((xx), _mm_srli_si128((xx), 8)); \
     (xx) = _mm_max_epi16((xx), _mm_srli_si128((xx), 4)); \
     (xx) = _mm_max_epi16((xx), _mm_srli_si128((xx), 2)); \
     (ret) = (tmap_vsw16_int_t)(__tmap_vsw16_mm_extract_epi16((xx), 0) & 0xffff); \
 } while (0) 
-// ret is min in xx.
+// returns the minimum value in stored in the vector
 #define __tmap_vsw16_min(ret, xx) do { \
     (xx) = _mm_min_epi16((xx), _mm_srli_si128((xx), 8)); \
     (xx) = _mm_min_epi16((xx), _mm_srli_si128((xx), 4)); \
     (xx) = _mm_min_epi16((xx), _mm_srli_si128((xx), 2)); \
     (ret) = (tmap_vsw16_int_t)(__tmap_vsw16_mm_extract_epi16((xx), 0) & 0xffff); \
 } while (0) 
-// overcomes the immediate problem
+// Inserts a value into the given location in the vector.  This overcomes the immediate problem when compiling.
 #define __tmap_vsw16_mm_insert(_a, _val, _k) \
   (0 == _k ? __tmap_vsw16_mm_insert_epi16(_a, _val, 0) : \
    (1 == _k ? __tmap_vsw16_mm_insert_epi16(_a, _val, 1) : \
@@ -104,9 +104,10 @@ typedef int16_t tmap_vsw16_int_t;
         (6 == _k ? __tmap_vsw16_mm_insert_epi16(_a, _val, 6) : \
          (7 == _k ? __tmap_vsw16_mm_insert_epi16(_a, _val, 7) : \
           _a))))))))
-// returns cell (i,j) in the scoring matrix
+// returns cell j in the scoring matrix row
 #define __tmap_vsw16_get_matrix_cell1(_Xs, _j, _slen) \
   (((tmap_vsw16_int_t*)(_Xs + ((_j) % _slen)))[(_j) / _slen])
+// returns cell (i,j) in the scoring matrix
 #define __tmap_vsw16_get_matrix_cell(_Xs, _slen, _i, _j) \
   __tmap_vsw16_get_matrix_cell1(_Xs + ((_i) * _slen), _j, _slen)
 // returns the score in the query profile
@@ -121,38 +122,46 @@ typedef int16_t tmap_vsw16_int_t;
 // zero-based query index to zero-based bit #
 #define __tmap_vsw_query_index_to_byte_number(_q, _slen) (((int32_t)(_q)) / _slen)
 
+/*!
+  The parameter and memory for the vectorized alignment.
+ */
 typedef struct {
-    uint8_t query_start_clip:2;
-    uint8_t query_end_clip:2; 
-    uint16_t qlen; // the query length
-    uint16_t tlen; // the target length
-    int32_t slen; // the number of stripes needed
-    int32_t qlen_mem; // get the amount of memory the stripes will occupy
-    tmap_vsw16_int_t min_edit_score; // the minimum edit score
-    tmap_vsw16_int_t max_edit_score; // the minimum edit score
-    tmap_vsw16_int_t zero_aln_score; // the zero-scoring starting alignment value 
-    tmap_vsw16_int_t min_aln_score; // the minimum possible alignment score
-    tmap_vsw16_int_t max_aln_score; // the maximum global alignment score
-    __m128i *query_profile; // the query scoring profile
-    __m128i *H0; // H/H'
-    __m128i *H1; // H/H'
-    __m128i *E; // deletion from the query, insertion into the target
-    int32_t qlen_max; // the maximum query size
+    uint8_t query_start_clip:2; /*!< 1 if we are to clip the start of the query, 0 otherwise */ 
+    uint8_t query_end_clip:2;  /*!< 1 if we are to clip the end of the query, 0 otherwise */ 
+    uint16_t qlen; /*!< the query length */
+    uint16_t tlen; /*!< the target length */
+    int32_t slen; /*!< the number of stripes needed */
+    int32_t qlen_mem; /*!<  get the amount of memory the stripes will occupy */
+    tmap_vsw16_int_t min_edit_score; /*!< the minimum edit score */
+    tmap_vsw16_int_t max_edit_score; /*!< the minimum edit score */
+    tmap_vsw16_int_t zero_aln_score; /*!< the zero-scoring starting alignment value  */
+    tmap_vsw16_int_t min_aln_score; /*!< the minimum possible alignment score */
+    tmap_vsw16_int_t max_aln_score; /*!< the maximum global alignment score */
+    __m128i *query_profile; /*!< the query scoring profile */
+    __m128i *H0; /*!< H/H' */
+    __m128i *H1; /*!< H/H' */
+    __m128i *E; /*!< deletion from the query, insertion into the target */
+    int32_t qlen_max; /*!< the maximum query size */
 } tmap_vsw16_query_t;
 
+/*!
+  Wrapper for the query memory.
+ */
 typedef struct {
-    tmap_vsw16_query_t *query16;
+    tmap_vsw16_query_t *query16; /*!< the query memory */
 } tmap_vsw_query_t;
 
 // ACGTN
 #define TMAP_VSW_ALPHABET_SIZE 5
 
+/*!
+  The alignment scoring parameters.
+  */
 typedef struct {
-    // scoring parameters
-    int32_t score_match;
-    int32_t pen_mm;
-    uint32_t pen_gapo;
-    uint32_t pen_gape;
+    int32_t score_match; /*!< the match score */
+    int32_t pen_mm; /*!< the mismatch penalty */
+    uint32_t pen_gapo; /*!< the gap open penalty */
+    uint32_t pen_gape; /*!< the gap extension penalty */
     int32_t score_thres;
 } tmap_vsw_opt_t;
 

@@ -27,12 +27,12 @@
 #ifndef TMAP_SW_H
 #define TMAP_SW_H
 
+#include <stdint.h>
+
 #define TMAP_SW_CIGAR_OP(_cigar) (((_cigar) & 0xf))
 #define TMAP_SW_CIGAR_LENGTH(_cigar) (((_cigar) >> 4))
 #define TMAP_SW_CIGAR_STORE(_cigar, _op, _len) ((_cigar) = ((_len) << 4) | ((_op) & 0xf))
 #define TMAP_SW_CIGAR_ADD_LENGTH(_cigar, _add) ((_cigar) += ((_add) << 4))
-
-#include <stdint.h>
 
 /*! 
   Functions for Performing Efficient Smith-Waterman

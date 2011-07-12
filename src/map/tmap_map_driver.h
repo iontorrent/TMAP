@@ -8,9 +8,6 @@
 #define TMAP_MAP_DRIVER_THREAD_BLOCK_SIZE 512
 #endif
 
-// TODO
-// init and cleanup script for each sequence
-
 /*!
   This function will be invoked after reading in all the reference data
   to initialize any program options and print messages.

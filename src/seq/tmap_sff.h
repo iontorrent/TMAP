@@ -17,6 +17,7 @@
   */
 
 /*! 
+  The SFF Header.
   */
 typedef struct {
     uint32_t magic;  /*!< the magic number for this file */
@@ -33,6 +34,7 @@ typedef struct {
 } tmap_sff_header_t;
 
 /*! 
+  The SFF Read Header.
   */
 typedef struct {
     uint16_t rheader_length;  /*!< the number of bytes in the  */
@@ -48,6 +50,7 @@ typedef struct {
 } tmap_sff_read_header_t;
 
 /*! 
+  The SFF Read.
   */
 typedef struct {
     uint16_t *flowgram;  /*!< the flowgram  */
@@ -57,6 +60,7 @@ typedef struct {
 } tmap_sff_read_t;
 
 /*! 
+  The SFF Entry.
   */
 typedef struct {
     tmap_sff_header_t *gheader;  /*!< pointer to the global header */

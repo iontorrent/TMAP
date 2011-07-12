@@ -81,8 +81,9 @@ It includes explanations of all command-line options for each command and binary
 Input and output file formats are also detailed.
 The default options of the various programs are designed intelligently to adapt to the various program uses, but in some cases the options may need to be customized.
 
-This document does not try to explain the underlyings algorithm or data-structures used in TMAP.
+This document does not try to explain the underlying algorithms or data-structures used in TMAP.
 Without proper understanding of the underlying algorithms, it is difficult to use this very flexible program knowledgeably to obtain your desired results.
+Please see \autoref{chap:faq} for common questions and their answers.
 
 If you have anything that you would be useful to add to this guide, feel free to relay the addition to the TMAP developers.
 This includes but is not limited to bugs, typos, and explanations.
@@ -146,9 +147,11 @@ This number must always be positive.
 Specifies the gap open penalty.
 This number must always be positive.
 
+See \autoref{sec:indel-scoring} for more information how insertions and deletions are scored.
 \subsubsection{\TT{-E INT}}
 Specifies the gap extension penalty.
 This number must always be positive.
+See \autoref{sec:indel-scoring} for more information how insertions and deletions are scored.
 
 \subsubsection{\TT{-X INT}}
 Specifies the flow score penalty.
@@ -549,20 +552,26 @@ This tag stores the original alignment score, if an SFF was inputted.
 This tag stores the flow signals when an SFF is inputted and the \TT{-Y} option is used.
 The flowgram values are stored as a string of hexidecimal values, with each group of four hexidecimal values corresponding to one flow signal.
 
-\chapter{Appendix}
+\chapter{Commonly Asked Questions}
+\label{chap:faq}
 
-\section{IUPAC Ambiguity Codes}
+\section{How are IUPAC ambiguity codes handled in the reference/target FASTA?}
 \label{sec:iupac}
-Note that ambiguous IUPAC codes will be converted to the lexicographically smallest DNA base that is not compatible to the IUPAC code to ensure minimum reference bias.
+Ambiguous IUPAC codes in the reference/target FASTA will be converted to the lexicographically smallest DNA base that is not compatible to the IUPAC code to ensure minimum reference bias.
 For example, an IUPAC base \TT{R}, which represents an \TT{A} or a \TT{G}, will be converted to a C.
 All Ns in the reference will be converted to As.
 Furthermore, any non-IUPAC character will be treated as an N.
 The ambiguity codes will only be re-considered when calculating the NM and MD SAM record optional tags.
 
-\section{Insertion/Deletion Justification}
-TMAP will attempt to justify insertions and deletions (indel) to the 5' (left-most) end of the genomic (reference) forward strand.
-This allows the indel to be consistently placed with respect the reference, regardless of the strand during sequencing
-Neither the query nor the reference sequence are changed, only the indel position in the alignment.
+\section{How are insertions and deletions scored?}
+\label{sec:indel-scoring}
+Given gap open and gap extension penalties $O$ and $E$, a contiguous indel of length $L$ will have a score of $O + (E * L)$.
+
+\section{How are insertions and deletions justified}
+\label{sec:indel-justification}
+TMAP will attempt to justify insertions and deletions (indels) to the 5' (left-most) end of the genomic (reference) forward strand.
+This allows the indel to be consistently placed with respect the reference, regardless of the strand during sequencing.
+Neither the query sequence nor the reference sequence are changed, only the indel position in the alignment.
 
 For example, if we have the alignment (query on top, target on the bottom):
 \begin{verbatim}
@@ -589,6 +598,8 @@ CGA----CAATCGTGGA
 |||----||||||||||
 CGAACATACATCGTGGA
 \end{verbatim}
+
+\chapter{Appendix}
 
 % References
 \phantomsection

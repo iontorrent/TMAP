@@ -46,7 +46,18 @@ tmap_sam2fs_aux_flow_order_init(char *flow_order);
 void
 tmap_sam2fs_aux_flow_order_destroy(tmap_sam2fs_aux_flow_order_t *f);
 
-// TODO: document
+/*!
+  Aligns the query to the target in flow space, considering only flow space.
+  @param  fp         the file pointer to which to print the alignment, only if aln_ret is NULL
+  @param  qseq       the query (read) sequence
+  @param  qseq_len   the query (read) sequence length
+  @param  tseq       the target (reference) sequence
+  @param  tseq_len   the target (reference) sequence length
+  @param  flow_order  the flow order
+  @param  strand     the sequencing strand
+  @param  sep        the delimiter/separator for outputting to a file
+  @param  aln_ret    the alignment is returned here, NULL if we are to print out
+ */
 void
 tmap_sam2fs_aux_flow_align(tmap_file_t *fp, uint8_t *qseq, int32_t qseq_len,
                            uint8_t *tseq, int32_t tseq_len, 
