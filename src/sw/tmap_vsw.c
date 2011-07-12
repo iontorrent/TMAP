@@ -206,7 +206,7 @@ tmap_vsw_sse2(tmap_vsw_query_t *vsw_query,
           return INT32_MIN; 
       }
       else if((*score_fwd) != (*score_rev)) {
-          fprintf(stderr, "{%d-%d] {%d-%d}\n",
+          fprintf(stderr, "{%d-%d} {%d-%d}\n",
                   (*query_start), (*query_end),
                   (*target_start), (*target_end));
           fprintf(stderr, "(*score_fwd)=%d (*score_rev)=%d\n",
@@ -215,7 +215,7 @@ tmap_vsw_sse2(tmap_vsw_query_t *vsw_query,
       }
 
 #ifdef TMAP_VSW_DEBUG
-      fprintf(stderr, "{%d-%d] {%d-%d}\n",
+      fprintf(stderr, "{%d-%d} {%d-%d}\n",
               (*query_start), (*query_end),
               (*target_start), (*target_end));
 #endif
@@ -225,7 +225,7 @@ tmap_vsw_sse2(tmap_vsw_query_t *vsw_query,
       (*target_start) = tlen - (*target_start) - 1;
 
 #ifdef TMAP_VSW_DEBUG
-      fprintf(stderr, "{%d-%d] {%d-%d}\n",
+      fprintf(stderr, "{%d-%d} {%d-%d}\n",
               (*query_start), (*query_end),
               (*target_start), (*target_end));
 #endif

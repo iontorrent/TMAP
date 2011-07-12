@@ -1707,6 +1707,18 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       if(tlen != tmap_refseq_subseq(refseq, refseq->annos[tmp_sam.seqid].offset + start_pos, tlen, target)) {
           tmap_error("bug encountered", Exit, OutOfRange);
       }
+
+      // check if any IUPAC bases fall within the range
+      if(0 < tmap_refseq_amb_bases(refseq, sams->sams[end].seqid+1, start_pos, end_pos)) {
+          int32_t j, pos;
+          // modify them
+          for(pos=start_pos;pos<=end_pos;pos++) {
+              j = tmap_refseq_amb_bases(refseq, sams->sams[end].seqid+1, pos, pos); // Note: j is one-based
+              if(0 < j) {
+                  target[pos-start_pos] = 4; // mismatch!
+              }
+          }
+      }
       
       /**
        * Step 1: find the start of the alignment
