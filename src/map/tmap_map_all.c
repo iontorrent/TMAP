@@ -53,8 +53,10 @@ tmap_map_all_sams_merge_helper(tmap_map_sams_t *dest, tmap_map_sams_t *src, int3
   for(i=0;i<src->n;i++) {
       // nullify
       tmap_map_sam_copy_and_nullify(&dest->sams[i+n], &src->sams[i]);
-      // copy over the stage #
-      dest->sams[i+n].algo_stage = stage;
+      if(1 < stage) {
+          // copy over the stage #
+          dest->sams[i+n].algo_stage = stage;
+      }
   }
 }
 
@@ -99,6 +101,13 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
 
   // mapping quality
   tmap_map_util_mapq(sams, tmap_seq_get_bases(seq)->l, opt);
+  
+  // filter if we have more stages
+  if(stage < opt->num_stages) {
+      // filter alignments based on score and threshold
+      tmap_map_sams_filter2(sams, opt->mapall_score_thr, opt->mapall_mapq_thr);
+      if(0 == sams->n) return sams;
+  }
 
   // choose alignment(s)
   if(0 == opt->aln_output_mode_ind) {
@@ -111,11 +120,12 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
           tmap_map_sams_filter1(sams, opt->aln_output_mode, algo_ids[i]);
       }
   }
-          
+  
   // generate the cigars
   sams = tmap_map_util_sw_gen_cigar(refseq, sams, seq, opt);
 
   return sams;
+
 }
 
 // thread data
@@ -130,6 +140,8 @@ static int32_t
 tmap_map_all_init(tmap_refseq_t *refseq, tmap_map_opt_t *opt)
 {
   int32_t i;
+      
+  opt->mapall_score_thr *= opt->score_match;
 
   for(i=0;i<opt->num_stages;i++) {
       // map1
@@ -148,7 +160,7 @@ tmap_map_all_init(tmap_refseq_t *refseq, tmap_map_opt_t *opt)
           tmap_map3_init(refseq, opt->opt_map3[i]);
       }
       // mapvsw
-      if(opt->algos[i] & TMAP_MAP_ALGO_MAP_VSW) {
+      if(opt->algos[i] & TMAP_MAP_ALGO_MAPVSW) {
           opt->opt_map_vsw[i]->algo_stage = i+1;
           tmap_map_vsw_init(refseq, opt->opt_map_vsw[i]);
       }
@@ -178,7 +190,7 @@ tmap_map_all_thread_init(void **data, tmap_map_opt_t *opt)
           tmap_map3_thread_init(&d->data_map3[i], opt->opt_map3[i]);
       }
       // mapvsw
-      if(opt->algos[i] & TMAP_MAP_ALGO_MAP_VSW) {
+      if(opt->algos[i] & TMAP_MAP_ALGO_MAPVSW) {
           tmap_map_vsw_thread_init(&d->data_map_vsw[i], opt->opt_map_vsw[i]);
       }
   }
@@ -193,9 +205,10 @@ tmap_map_all_thread_init(void **data, tmap_map_opt_t *opt)
 static tmap_map_sams_t*
 tmap_map_all_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt)
 {
-  int32_t i, n_algos=4;
+  int32_t i, j, n_algos=4;
   tmap_map_sams_t *sams = NULL;
-  tmap_map_sams_t *sams_in[4] = {NULL,NULL,NULL,NULL};
+  tmap_map_sams_t *sams_in[4]={NULL,NULL,NULL,NULL};
+  tmap_map_sams_t *sams_prev[4]={NULL,NULL,NULL,NULL};
   int32_t algo_ids[3] = {TMAP_MAP_ALGO_MAP1,TMAP_MAP_ALGO_MAP2,TMAP_MAP_ALGO_MAP3};
   tmap_map_all_thread_data_t *d = (tmap_map_all_thread_data_t*)(*data);
   
@@ -224,8 +237,12 @@ tmap_map_all_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tma
       tmap_seq_to_int(seqs[i]); // convert to integers
       bases[i] = tmap_seq_get_bases(seqs[i]); // get bases
   }
-
+      
   for(i=0;i<opt->num_stages;i++) {
+      // nullify
+      for(j=0;j<n_algos;j++) {
+          sams_in[j] = NULL;
+      }
       // map1
       if(opt->algos[i] & TMAP_MAP_ALGO_MAP1) {
           seqs_tmp[0] = seqs[2]; seqs_tmp[1] = seqs[1];
@@ -250,30 +267,58 @@ tmap_map_all_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tma
           sams_in[2] = tmap_map_sams_init();
       }
       // mapvsw
-      if(opt->algos[i] & TMAP_MAP_ALGO_MAP_VSW) {
+      if(opt->algos[i] & TMAP_MAP_ALGO_MAPVSW) {
           sams_in[3] = tmap_map_vsw_thread_map_core(&d->data_map_vsw[i], seqs, seq_len, refseq, bwt, sa, opt->opt_map_vsw[i]);
       }
       else {
           sams_in[3] = tmap_map_sams_init();
       }
+  
+      // keep mappings for subsequent stages
+      if(1 == opt->mapall_keep_all) {
+          // merge previous individual mappings
+          if(0 < i) {
+              for(j=0;j<n_algos;j++) {
+                  tmap_map_sams_merge(sams_in[j], sams_prev[j]);
+              }
+          }
+
+          // save mappings for the next stage, if necessary
+          if(i < opt->num_stages-1) {
+              for(j=0;j<n_algos;j++) {
+                  sams_prev[j] = tmap_map_sams_clone(sams_in[j]); // clone
+              }
+          }
+      }
 
       // merge all the mappings
-      sams = tmap_map_all_sams_merge(seq, refseq, bwt, sa,
-                                     sams_in, algo_ids, n_algos, 
-                                     i+1, opt);
-      for(i=0;i<n_algos;i++) {
-          tmap_map_sams_destroy(sams_in[i]);
-          sams_in[i] = NULL;
+      // init
+      sams = tmap_map_all_sams_merge(seq, refseq, bwt, sa, sams_in, algo_ids, n_algos, i+1, opt);
+
+      // destroy the individual mappings
+      for(j=0;j<n_algos;j++) {
+          tmap_map_sams_destroy(sams_in[j]);
+          sams_in[j] = NULL;
       }
 
       // did we find any mappings?
       if(0 < sams->n) {
+          // yes, break out
           break;
       }
-      else if(0 == i && 2 == opt->num_stages) {
-          // destroy for the next round
+      else if(i < opt->num_stages-1) { // only if we have a next stage
           tmap_map_sams_destroy(sams);
-          sams = NULL;
+          sams=NULL;
+      }
+  }
+      
+  // destroy previous individual mappings
+  if(1 == opt->mapall_keep_all) {
+      for(j=0;j<n_algos;j++) {
+          if(NULL != sams_prev[j]) {
+              tmap_map_sams_destroy(sams_prev[j]);
+              sams_prev[j] = NULL;
+          }
       }
   }
   
@@ -305,7 +350,7 @@ tmap_map_all_thread_cleanup(void **data, tmap_map_opt_t *opt)
           tmap_map3_thread_cleanup(&d->data_map3[i], opt->opt_map3[i]);
       }
       // mapvsw
-      if(opt->algos[i] & TMAP_MAP_ALGO_MAP_VSW) {
+      if(opt->algos[i] & TMAP_MAP_ALGO_MAPVSW) {
           tmap_map_vsw_thread_cleanup(&d->data_map_vsw[i], opt->opt_map_vsw[i]);
       }
   }
@@ -384,7 +429,7 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           if(0 == opt->num_stages) opt->num_stages++;
       }
       else if(0 == strcmp("mapvsw", argv[i])) {
-          opt_type_next = TMAP_MAP_ALGO_MAP_VSW;
+          opt_type_next = TMAP_MAP_ALGO_MAPVSW;
           opt->algos[0] |= opt_type_next;
           opt_stage_next = 1;
           if(0 == opt->num_stages) opt->num_stages++;
@@ -408,7 +453,7 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           if(1 == opt->num_stages) opt->num_stages++;
       }
       else if(0 == strcmp("MAPVSW", argv[i])) {
-          opt_type_next = TMAP_MAP_ALGO_MAP_VSW;
+          opt_type_next = TMAP_MAP_ALGO_MAPVSW;
           opt->algos[1] |= opt_type_next;
           opt_stage_next = 2;
           if(1 == opt->num_stages) opt->num_stages++;
@@ -462,7 +507,7 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
                   }
               }
               break;
-            case TMAP_MAP_ALGO_MAP_VSW:
+            case TMAP_MAP_ALGO_MAPVSW:
               // parse mapvsw options
               if(0 < i - start) {
                   if(0 == tmap_map_opt_parse(i-start, argv+start, opt->opt_map_vsw[opt_stage-1])) {

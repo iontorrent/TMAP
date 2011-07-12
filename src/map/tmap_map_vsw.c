@@ -68,7 +68,7 @@ tmap_map_vsw_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len,
       s = &sams->sams[i];
 
       // save the hit
-      s->algo_id = TMAP_MAP_ALGO_MAP_VSW;
+      s->algo_id = TMAP_MAP_ALGO_MAPVSW;
       s->algo_stage = 0;
       s->strand = i & 1;
       s->seqid = i >> 1;
@@ -77,7 +77,7 @@ tmap_map_vsw_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len,
       s->score_subo = INT32_MIN;
       
       // mapvswaux data
-      tmap_map_sam_malloc_aux(s, TMAP_MAP_ALGO_MAP_VSW);
+      tmap_map_sam_malloc_aux(s, TMAP_MAP_ALGO_MAPVSW);
   }
 
   return sams;
@@ -144,7 +144,7 @@ tmap_map_vsw_main(int argc, char *argv[])
   tmap_map_opt_t *opt = NULL;
 
   // init opt
-  opt = tmap_map_opt_init(TMAP_MAP_ALGO_MAP_VSW);
+  opt = tmap_map_opt_init(TMAP_MAP_ALGO_MAPVSW);
 
   // get options
   if(1 != tmap_map_opt_parse(argc, argv, opt) // options parsed successfully

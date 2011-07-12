@@ -87,7 +87,7 @@ enum {
     TMAP_MAP_ALGO_MAP1 = 0x1,  /*!< the map1 algorithm */
     TMAP_MAP_ALGO_MAP2 = 0x2,  /*!< the map2 algorithm */
     TMAP_MAP_ALGO_MAP3 = 0x4,  /*!< the map3 algorithm */
-    TMAP_MAP_ALGO_MAP_VSW = 0x4000,  /*!< the mapvsw algorithm */
+    TMAP_MAP_ALGO_MAPVSW = 0x4000,  /*!< the mapvsw algorithm */
     TMAP_MAP_ALGO_MAPALL = 0x8000, /*!< the mapall algorithm */
 };
 
@@ -110,6 +110,17 @@ enum {
     TMAP_MAP_UTIL_ALN_MODE_ALL_BEST       = 2,  /*!< output all the alignments with the best score */
     TMAP_MAP_UTIL_ALN_MODE_ALL            = 3   /*!< Output all alignments */
 };
+    
+/** 
+ * A list of command line flags take or available.
+ * Taken:
+ * abcdefghijklmnopqrstuvwxz
+ * ABCDEFHGIJKLMNOPQRSTUXYZ
+ *
+ * Available:
+ * y
+ * VW
+*/
 
 typedef struct __tmap_map_opt_t {
     int32_t algo_id;
@@ -188,6 +199,9 @@ typedef struct __tmap_map_opt_t {
     uint32_t algos[2];  /*!< the algorithms that should be run in stage 1 and stage 2, bit-packed */
     int32_t aln_output_mode_ind; /*!< apply the output filter for each algorithm separately (-I) */
     int32_t num_stages;  /*!< the number of stages */ 
+    int32_t mapall_score_thr;  /*!< the stage one scoring threshold (match-score-scaled) (-C) */
+    int32_t mapall_mapq_thr;  /*!< the stage one mapping quality threshold (-D) */
+    int32_t mapall_keep_all;  /*!< keep mappings that do not pass the first stage threshold for the next stage (-K) */
     // stage 1/2 mapping algorithm specific options
     struct __tmap_map_opt_t *opt_map1[2]; /*!< map 1 options */
     struct __tmap_map_opt_t *opt_map2[2]; /*!< map 2 options */
@@ -359,6 +373,21 @@ void
 tmap_map_sams_destroy(tmap_map_sams_t *s);
 
 /*!
+  merges src into dest
+  @param  dest  the destination mapping structure
+  @param  src   the source mapping structure
+  */
+void
+tmap_map_sams_merge(tmap_map_sams_t *dest, tmap_map_sams_t *src);
+
+/*!
+  clones src
+  @param  src   the source mapping structure
+  */
+tmap_map_sams_t *
+tmap_map_sams_clone(tmap_map_sams_t *src);
+
+/*!
   copies the source into the destination, nullifying the source
   @param  dest  the destination mapping structure
   @param  src   the source mapping structure
@@ -393,6 +422,15 @@ tmap_map_sams_filter(tmap_map_sams_t *sams, int32_t aln_output_mode);
   */
 void
 tmap_map_sams_filter1(tmap_map_sams_t *sams, int32_t aln_output_mode, int32_t algo_id);
+
+/*!
+  filters mappings that pass both the scoring and mapping quality thresholds
+  @param  sams       the mappings to filter
+  @param  score_thr  the score threshold
+  @param  mapq_thr   the mapping quality threshold
+  */
+void
+tmap_map_sams_filter2(tmap_map_sams_t *sams, int32_t score_thr, int32_t mapq_thr);
 
 /*!
   removes duplicate alignments that fall within a given window

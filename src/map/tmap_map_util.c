@@ -123,18 +123,21 @@ tmap_map_opt_init(int32_t algo_id)
       opt->max_seed_hits = 12;
       opt->hp_diff = 0;
       break;
-    case TMAP_MAP_ALGO_MAP_VSW:
+    case TMAP_MAP_ALGO_MAPVSW:
       // mapvsw
       break;
     case TMAP_MAP_ALGO_MAPALL:
       // mapall
       opt->aln_output_mode_ind = 0;
+      opt->mapall_score_thr = 8;
+      opt->mapall_mapq_thr = 23; // 0.5% error
+      opt->mapall_keep_all = 1;
       for(i=0;i<2;i++) {
           opt->algos[i] = 0;
           opt->opt_map1[i] = tmap_map_opt_init(TMAP_MAP_ALGO_MAP1);
           opt->opt_map2[i] = tmap_map_opt_init(TMAP_MAP_ALGO_MAP2);
           opt->opt_map3[i] = tmap_map_opt_init(TMAP_MAP_ALGO_MAP3);
-          opt->opt_map_vsw[i] = tmap_map_opt_init(TMAP_MAP_ALGO_MAP_VSW);
+          opt->opt_map_vsw[i] = tmap_map_opt_init(TMAP_MAP_ALGO_MAPVSW);
       }
       break;
     default:
@@ -158,7 +161,7 @@ tmap_map_opt_destroy(tmap_map_opt_t *opt)
     case TMAP_MAP_ALGO_MAP1:
     case TMAP_MAP_ALGO_MAP2:
     case TMAP_MAP_ALGO_MAP3:
-    case TMAP_MAP_ALGO_MAP_VSW:
+    case TMAP_MAP_ALGO_MAPVSW:
       break;
     case TMAP_MAP_ALGO_MAPALL:
       // mapall
@@ -228,8 +231,8 @@ tmap_map_opt_destroy(tmap_map_opt_t *opt)
     } while(0)
 
 #define __tmap_map_opt_usage_map_vsw(_opt, _stage) do { \
-    if(_stage < 0) tmap_file_fprintf(tmap_file_stderr, "%s options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAP_VSW)); \
-    else tmap_file_fprintf(tmap_file_stderr, "%s stage %d options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAP_VSW), _stage); \
+    if(_stage < 0) tmap_file_fprintf(tmap_file_stderr, "%s options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAPVSW)); \
+    else tmap_file_fprintf(tmap_file_stderr, "%s stage %d options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAPVSW), _stage); \
     tmap_file_fprintf(tmap_file_stderr, "         None\n"); \
     tmap_file_fprintf(tmap_file_stderr, "\n"); \
     } while(0)
@@ -300,7 +303,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
     case TMAP_MAP_ALGO_MAP3:
       __tmap_map_opt_usage_map3(opt, -1);
       break;
-    case TMAP_MAP_ALGO_MAP_VSW:
+    case TMAP_MAP_ALGO_MAPVSW:
       __tmap_map_opt_usage_map_vsw(opt, -1);
       break;
     case TMAP_MAP_ALGO_MAPALL:
@@ -314,6 +317,10 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
       tmap_file_fprintf(tmap_file_stderr, "%s options (optional):\n", tmap_algo_id_to_name(opt->algo_id));
       tmap_file_fprintf(tmap_file_stderr, "         -I          apply the output filter (-a) and duplicate removal (-W) for each algorithm separately [%s]\n",
                         (1 == opt->aln_output_mode_ind) ? "true" : "false");
+      tmap_file_fprintf(tmap_file_stderr, "         -C INT      score threshold for stage one divided by the match score [%d]\n", opt->mapall_score_thr);
+      tmap_file_fprintf(tmap_file_stderr, "         -D INT      mapping quality threshold for stage one divided by the match score [%d]\n", opt->mapall_score_thr);
+      tmap_file_fprintf(tmap_file_stderr, "         -K          do not keep mappings that do not pass the first stage threshold for the next stage [%s]\n", 
+                        (0 == opt->mapall_keep_all) ? "true" : "false");
       tmap_file_fprintf(tmap_file_stderr, "\n");
       break;
     default:
@@ -343,11 +350,11 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
     case TMAP_MAP_ALGO_MAP3:
       getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YGjzJZk:vhl:S:H:u:U:");
       break;
-    case TMAP_MAP_ALGO_MAP_VSW:
+    case TMAP_MAP_ALGO_MAPVSW:
       getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YGjzJZk:vhu:U:");
       break;
     case TMAP_MAP_ALGO_MAPALL:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YGjzJZk:vhIu:U:");
+      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YGjzJZk:vhIC:D:K:u:U:");
       break;
     default:
       tmap_error("unrecognized algorithm", Exit, OutOfRange);
@@ -524,10 +531,23 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
                   return 0;
               }
               break;
+            case TMAP_MAP_ALGO_MAPVSW:
+              switch(c) {
+                default:
+                  free(getopt_format);
+                  return 0;
+              }
+              break;
             case TMAP_MAP_ALGO_MAPALL:
               switch(c) {
                 case 'I':
                   opt->aln_output_mode_ind = 1; break;
+                case 'C':
+                  opt->mapall_score_thr = atoi(optarg); break;
+                case 'D':
+                  opt->mapall_mapq_thr = atoi(optarg); break;
+                case 'K':
+                  opt->mapall_keep_all = atoi(optarg); break;
                 default:
                   free(getopt_format);
                   return 0;
@@ -720,6 +740,9 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       break;
     case TMAP_MAP_ALGO_MAPALL:
       tmap_error_cmd_check_int(opt->aln_output_mode_ind, 0, 1, "-I");
+      tmap_error_cmd_check_int(opt->mapall_score_thr, INT32_MIN, INT32_MAX, "-C");
+      tmap_error_cmd_check_int(opt->mapall_mapq_thr, 0, 255, "-D");
+      tmap_error_cmd_check_int(opt->mapall_keep_all, 0, 1, "-K");
       if(0 == opt->algos[0] || 0 == opt->num_stages) {
           tmap_error("no algorithms given for stage 1", Exit, CommandLineArgument);
       }
@@ -797,6 +820,9 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "max_seed_hits=%d\n", opt->max_seed_hits);
   fprintf(stderr, "hp_diff=%d\n", opt->hp_diff);
   fprintf(stderr, "aln_output_mode_ind=%d\n", opt->aln_output_mode_ind);
+  fprintf(stderr, "mapall_score_thr=%d\n", opt->mapall_score_thr);
+  fprintf(stderr, "mapall_mapq_thr=%d\n", opt->mapall_mapq_thr);
+  fprintf(stderr, "mapall_keep_all=%d\n", opt->mapall_keep_all);
 }
 
 void
@@ -812,7 +838,7 @@ tmap_map_sam_malloc_aux(tmap_map_sam_t *s, int32_t algo_id)
     case TMAP_MAP_ALGO_MAP3:
       s->aux.map3_aux = tmap_calloc(1, sizeof(tmap_map_map3_aux_t), "s->aux.map3_aux");
       break;
-    case TMAP_MAP_ALGO_MAP_VSW:
+    case TMAP_MAP_ALGO_MAPVSW:
       s->aux.map_vsw_aux = tmap_calloc(1, sizeof(tmap_map_map_vsw_aux_t), "s->aux.map_vsw_aux");
       break;
     default:
@@ -836,7 +862,7 @@ tmap_map_sam_destroy_aux(tmap_map_sam_t *s)
       free(s->aux.map3_aux);
       s->aux.map3_aux = NULL;
       break;
-    case TMAP_MAP_ALGO_MAP_VSW:
+    case TMAP_MAP_ALGO_MAPVSW:
       free(s->aux.map_vsw_aux);
       s->aux.map_vsw_aux = NULL;
       break;
@@ -898,10 +924,77 @@ tmap_map_sams_destroy(tmap_map_sams_t *s)
   free(s);
 }
 
+static inline void
+tmap_map_sam_copy(tmap_map_sam_t *dest, tmap_map_sam_t *src)
+{
+  int32_t i;
+  // shallow copy
+  (*dest) = (*src);
+  // aux data
+  tmap_map_sam_malloc_aux(dest, src->algo_id);
+  switch(src->algo_id) {
+    case TMAP_MAP_ALGO_MAP1:
+      (*dest->aux.map1_aux) = (*src->aux.map1_aux);
+      break;
+    case TMAP_MAP_ALGO_MAP2:
+      (*dest->aux.map2_aux) = (*src->aux.map2_aux);
+      break;
+    case TMAP_MAP_ALGO_MAP3:
+      (*dest->aux.map3_aux) = (*src->aux.map3_aux);
+      break;
+    case TMAP_MAP_ALGO_MAPVSW:
+      (*dest->aux.map_vsw_aux) = (*src->aux.map_vsw_aux);
+      break;
+    default:
+      break;
+  }
+  // cigar
+  if(0 < src->n_cigar && NULL != src->cigar) {
+      dest->cigar = tmap_malloc(sizeof(uint32_t) * (1 + dest->n_cigar), "dest->cigar");
+      for(i=0;i<dest->n_cigar;i++) {
+          dest->cigar[i] = src->cigar[i];
+      }
+  }
+}
+
+void
+tmap_map_sams_merge(tmap_map_sams_t *dest, tmap_map_sams_t *src) 
+{
+  int32_t i, j;
+  if(NULL == src || 0 == src->n) return;
+
+  j = dest->n;
+  tmap_map_sams_realloc(dest, dest->n + src->n);
+  for(i=0;i<src->n;i++,j++) {
+      tmap_map_sam_copy(&dest->sams[j], &src->sams[i]);
+  }
+}
+
+tmap_map_sams_t *
+tmap_map_sams_clone(tmap_map_sams_t *src)
+{
+  int32_t i;
+  tmap_map_sams_t *dest = NULL;
+  
+  // init
+  dest = tmap_map_sams_init();
+  if(0 == src->n) return dest;
+
+  // realloc
+  tmap_map_sams_realloc(dest, src->n);
+  // copy over data
+  for(i=0;i<src->n;i++) {
+      tmap_map_sam_copy(&dest->sams[i], &src->sams[i]);
+  }
+
+  return dest;
+}
+
 void
 tmap_map_sam_copy_and_nullify(tmap_map_sam_t *dest, tmap_map_sam_t *src)
 {
   (*dest) = (*src);
+  src->n_cigar = 0;
   src->cigar = NULL;
   switch(src->algo_id) {
     case TMAP_MAP_ALGO_MAP1:
@@ -913,7 +1006,7 @@ tmap_map_sam_copy_and_nullify(tmap_map_sam_t *dest, tmap_map_sam_t *src)
     case TMAP_MAP_ALGO_MAP3:
       src->aux.map3_aux = NULL;
       break;
-    case TMAP_MAP_ALGO_MAP_VSW:
+    case TMAP_MAP_ALGO_MAPVSW:
       src->aux.map_vsw_aux = NULL;
       break;
     default:
@@ -971,7 +1064,7 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
                                 sam->score_subo,
                                 sam->n_seeds);
           break;
-        case TMAP_MAP_ALGO_MAP_VSW:
+        case TMAP_MAP_ALGO_MAPVSW:
           tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, refseq, 
                                 sam->strand, sam->seqid, sam->pos,
                                 sam->mapq, sam->cigar, sam->n_cigar,
@@ -1178,6 +1271,26 @@ tmap_map_sams_filter1(tmap_map_sams_t *sams, int32_t aln_output_mode, int32_t al
   else {
       tmap_error("bug encountered", Exit, OutOfRange);
   }
+}
+
+void
+tmap_map_sams_filter2(tmap_map_sams_t *sams, int32_t score_thr, int32_t mapq_thr)
+{
+  int32_t i, j;
+
+  // filter based on score and mapping quality
+  for(i=j=0;i<sams->n;i++) {
+      if(sams->sams[i].score < score_thr || sams->sams[i].mapq < mapq_thr) {
+          tmap_map_sam_destroy(&sams->sams[i]);
+      }
+      else {
+          if(j < i) { // copy if we are not on the same index
+              tmap_map_sam_copy_and_nullify(&sams->sams[j], &sams->sams[i]);
+          }
+          j++;
+      }
+  }
+  tmap_map_sams_realloc(sams, j);
 }
 
 void
@@ -1580,7 +1693,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
             case TMAP_MAP_ALGO_MAP3:
               (*s->aux.map3_aux) = (*tmp_sam.aux.map3_aux);
               break;
-            case TMAP_MAP_ALGO_MAP_VSW:
+            case TMAP_MAP_ALGO_MAPVSW:
               (*s->aux.map_vsw_aux) = (*tmp_sam.aux.map_vsw_aux);
               break;
             default:
@@ -1850,7 +1963,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
         case TMAP_MAP_ALGO_MAP3:
           (*s->aux.map3_aux) = (*tmp_sam.aux.map3_aux);
           break;
-        case TMAP_MAP_ALGO_MAP_VSW:
+        case TMAP_MAP_ALGO_MAPVSW:
           (*s->aux.map_vsw_aux) = (*tmp_sam.aux.map_vsw_aux);
           break;
         default:
