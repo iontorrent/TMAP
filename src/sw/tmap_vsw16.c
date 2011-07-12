@@ -142,48 +142,6 @@ tmap_vsw16_query_init(tmap_vsw16_query_t *prev, const uint8_t *query, int32_t ql
 }
 
 void
-tmap_vsw16_query_reinit(tmap_vsw16_query_t *query, tmap_vsw_result_t *result)
-{
-  tmap_vsw16_int_t *new, *old;
-  int32_t a, i, k;
-  int32_t slen;
-
-  if(0 <= result->query_end && result->query_end+1 < query->qlen) {
-      // update the query profile
-      slen = __tmap_vsw16_calc_slen(query->qlen);
-      new = old = (tmap_vsw16_int_t*)query->query_profile;
-      for(a = 0; a < TMAP_VSW_ALPHABET_SIZE; a++) {
-          for(i = 0; i < slen; ++i) { // for each new stripe
-              for(k = i; k < slen << tmap_vsw16_values_per_128_bits_log2; k += slen) { //  for q_{i+1}, q_{2i+1}, ..., q_{2s+1}
-                  if(query->qlen <= k) {
-                      *new = query->min_edit_score;
-                  }
-                  else {
-                      // use the old query profile
-                      *new = *old;
-                  }
-                  new++;
-                  old++;
-              }
-          }
-          // skip over old stripes
-          for(i = slen; i < query->slen; i++) { // for each old stripe (to skip)
-              for(k = i; k < query->slen << tmap_vsw16_values_per_128_bits_log2; k += query->slen) { //  for q_{i+1}, q_{2i+1}, ..., q_{2s+1}
-                  old++;
-              }
-          }
-      }
-      // update variables
-      query->qlen = result->query_end+1;
-      query->slen = slen;
-      // update H0, H1, and E pointers
-      query->H0 = query->query_profile + (query->slen * TMAP_VSW_ALPHABET_SIZE); // skip over the query profile
-      query->H1 = query->H0 + query->slen; // skip over H0
-      query->E = query->H1 + query->slen; // skip over H1
-  }
-}
-
-void
 tmap_vsw16_query_destroy(tmap_vsw16_query_t *vsw)
 {
   // all memory was allocated as one block
@@ -193,7 +151,7 @@ tmap_vsw16_query_destroy(tmap_vsw16_query_t *vsw)
 int32_t
 tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_t tlen, 
                         int32_t query_start_clip, int32_t query_end_clip,
-                        tmap_vsw_opt_t *opt, int32_t *query_end, int32_t *target_end,
+                        tmap_vsw_opt_t *opt, int16_t *query_end, int16_t *target_end,
                         int32_t direction, int32_t *overflow, int32_t score_thr)
 {
   int32_t slen, i, j, k, sum = 0;

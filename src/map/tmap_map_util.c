@@ -852,8 +852,6 @@ tmap_map_sam_destroy(tmap_map_sam_t *s)
   free(s->cigar);
   s->cigar = NULL;
   s->n_cigar = 0;
-  tmap_vsw_result_destroy(s->result);
-  s->result = NULL;
 }
 
 tmap_map_sams_t *
@@ -879,7 +877,6 @@ tmap_map_sams_realloc(tmap_map_sams_t *s, int32_t n)
       s->sams[i].algo_id = TMAP_MAP_ALGO_NONE;
       s->sams[i].n_cigar = 0;
       s->sams[i].cigar = NULL;
-      s->sams[i].result = NULL;
       s->sams[i].aux.map1_aux = NULL;
       s->sams[i].aux.map2_aux = NULL;
       s->sams[i].aux.map3_aux = NULL;
@@ -906,7 +903,6 @@ tmap_map_sam_copy_and_nullify(tmap_map_sam_t *dest, tmap_map_sam_t *src)
 {
   (*dest) = (*src);
   src->cigar = NULL;
-  src->result = NULL;
   switch(src->algo_id) {
     case TMAP_MAP_ALGO_MAP1:
       src->aux.map1_aux = NULL;
@@ -1516,8 +1512,9 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       fputc('\n', stderr);
 #endif
 
-      // room for result
-      tmp_sam.result = tmap_vsw_result_init();
+      // initialize the bounds
+      tmp_sam.query_start = tmp_sam.query_end = 0;
+      tmp_sam.target_start = tmp_sam.target_end = 0;
 
       // NB: if match/mismatch penalties are on the opposite strands, we may
       // have wrong scores
@@ -1525,14 +1522,20 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query, qlen,
                                         target, tlen, 
                                         softclip_start, softclip_end,
-                                        vsw_opt, tmp_sam.result, 
+                                        vsw_opt, 
+                                        &tmp_sam.score_fwd, &tmp_sam.score_rev,
+                                        &tmp_sam.query_start, &tmp_sam.query_end,
+                                        &tmp_sam.target_start, &tmp_sam.target_end,
                                         &overflow, opt->score_thr, 0);
       }
       else {
           tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query, qlen,
                                         target, tlen, 
                                         softclip_end, softclip_start,
-                                        vsw_opt, tmp_sam.result, 
+                                        vsw_opt, 
+                                        &tmp_sam.score_fwd, &tmp_sam.score_rev,
+                                        &tmp_sam.query_start, &tmp_sam.query_end,
+                                        &tmp_sam.target_start, &tmp_sam.target_end,
                                         &overflow, opt->score_thr, 0);
       }
       if(1 == overflow) {
@@ -1549,16 +1552,16 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           s->cigar = NULL;
 
           // adjust target length and position NB: query length is implicitly
-          // stored in s->result (consider on the next pass
+          // stored in s->query_end (consider on the next pass)
           s->pos = start_pos - 1; // zero-based
-          s->target_len = s->result->target_end + 1;
+          s->target_len = s->target_end + 1;
           /*
              fprintf(stderr, "strand=%d\n", strand);
              fprintf(stderr, "%d-%d %d-%d %d\n",
-             s->result->query_start,
-             s->result->query_end,
-             s->result->target_start,
-             s->result->target_end,
+             s->query_start,
+             s->query_end,
+             s->target_start,
+             s->target_end,
              s->target_len);
              */
 
@@ -1588,8 +1591,6 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           i++;
       }
       else {
-          tmap_vsw_result_destroy(tmp_sam.result);
-          tmp_sam.result = NULL;
           tmp_sam.score = INT32_MIN;
       }
 
@@ -1693,11 +1694,11 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
 
       // retrieve the reverse complimented query sequence
       query_rc  = (uint8_t*)tmap_seq_get_bases(seqs[1-strand])->s;
-      query_rc += seq_len - tmp_sam.result->query_end - 1; // offset query
-      qlen = tmp_sam.result->query_end + 1; // adjust based on the query end
+      query_rc += seq_len - tmp_sam.query_end - 1; // offset query
+      qlen = tmp_sam.query_end + 1; // adjust based on the query end
 
       // get the target sequence
-      tlen = tmp_sam.result->target_end + 1; // adjust based on the target end
+      tlen = tmp_sam.target_end + 1; // adjust based on the target end
       if(target_mem < tlen) { // more memory?
           target_mem = tlen;
           tmap_roundup32(target_mem);
@@ -1717,14 +1718,20 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
           tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query_rc, qlen,
                                         target, tlen, 
                                         softclip_start, softclip_end,
-                                        vsw_opt, tmp_sam.result, 
+                                        vsw_opt, 
+                                        &tmp_sam.score_fwd, &tmp_sam.score_rev,
+                                        &tmp_sam.query_start, &tmp_sam.query_end,
+                                        &tmp_sam.target_start, &tmp_sam.target_end,
                                         &overflow, opt->score_thr, 1);
       }
       else {
           tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query_rc, qlen,
                                         target, tlen, 
                                         softclip_end, softclip_start,
-                                        vsw_opt, tmp_sam.result, 
+                                        vsw_opt, 
+                                        &tmp_sam.score_fwd, &tmp_sam.score_rev,
+                                        &tmp_sam.query_start, &tmp_sam.query_end,
+                                        &tmp_sam.target_start, &tmp_sam.target_end,
                                         &overflow, opt->score_thr, 1);
       }
       if(1 == overflow) {
@@ -1732,21 +1739,21 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       }
 
       /*
-      fprintf(stderr, "tmp_sam.result->query_start=%d\n", tmp_sam.result->query_start);
-      fprintf(stderr, "tmp_sam.result->query_end=%d\n", tmp_sam.result->query_end);
-      fprintf(stderr, "tmp_sam.result->target_start=%d\n", tmp_sam.result->target_start);
-      fprintf(stderr, "tmp_sam.result->target_end=%d\n", tmp_sam.result->target_end);
+      fprintf(stderr, "tmp_sam.query_start=%d\n", tmp_sam.query_start);
+      fprintf(stderr, "tmp_sam.query_end=%d\n", tmp_sam.query_end);
+      fprintf(stderr, "tmp_sam.target_start=%d\n", tmp_sam.target_start);
+      fprintf(stderr, "tmp_sam.target_end=%d\n", tmp_sam.target_end);
       fprintf(stderr, "tmp_sam.pos=%u\n", tmp_sam.pos);
       */
 
       // adjust the query and target based off of the start of the alignment
       query = (uint8_t*)tmap_seq_get_bases(seqs[strand])->s;
-      query += tmp_sam.result->query_start; // offset query
-      qlen = tmp_sam.result->query_end - tmp_sam.result->query_start + 1; // update query length
+      query += tmp_sam.query_start; // offset query
+      qlen = tmp_sam.query_end - tmp_sam.query_start + 1; // update query length
       tmp_target = target;
-      target += tmp_sam.result->target_start;
-      tlen = tmp_sam.result->target_end - tmp_sam.result->target_start + 1;
-      tmp_sam.pos += tmp_sam.result->target_start; // keep it zero based
+      target += tmp_sam.target_start;
+      tlen = tmp_sam.target_end - tmp_sam.target_start + 1;
+      tmp_sam.pos += tmp_sam.target_start; // keep it zero based
 
       /**
        * Step 2: generate the cigar
@@ -1779,8 +1786,8 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
           path = tmap_realloc(path, sizeof(tmap_sw_path_t)*path_mem, "path");
       }
 
-      query_start = tmp_sam.result->query_start;
-      query_end = tmp_sam.result->query_end;
+      query_start = tmp_sam.query_start;
+      query_end = tmp_sam.query_end;
       s = &sams_tmp->sams[i];
       
       // shallow copy previous data 
@@ -1790,7 +1797,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       // NB: we store the score from the banded version, which does not allow
       // ins then del, or del then ins.  The vectorized version does.
       s->score = tmap_sw_global_banded_core(target, tlen, query, qlen, &par,
-                                 tmp_sam.result->score_fwd, path, &path_len, strand); 
+                                 tmp_sam.score_fwd, path, &path_len, strand); 
 
 
       s->pos = s->pos + (path[path_len-1].i-1); // zero-based 
@@ -1838,9 +1845,6 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
           tmap_error("bug encountered", Exit, OutOfRange);
           break;
       }
-
-      // do not copy over result
-      s->result = NULL;
 
       i++;
 

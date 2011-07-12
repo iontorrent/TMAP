@@ -37,20 +37,47 @@
 #include <stdio.h>
 #include "tmap_vsw.h"
 
+/*!
+  @param  query             the query sequence
+  @param  qlen              the query sequence length
+  @param  query_start_clip  1 if we are to clip the start of the query, 0 otherwise
+  @param  query_end_clip    1 if we are to clip the end of the query, 0 otherwise
+  @param  opt               the previous alignment parameters, NULL if none exist
+  @return                   the query sequence in vectorized form
+  */
 tmap_vsw16_query_t *
 tmap_vsw16_query_init(tmap_vsw16_query_t *prev, const uint8_t *query, int32_t qlen, int32_t tlen, 
                               int32_t query_start_clip, int32_t query_end_clip,
                               tmap_vsw_opt_t *opt);
 
-void
-tmap_vsw16_query_reinit(tmap_vsw16_query_t *query, tmap_vsw_result_t *result);
-
+/*!
+  @param  vsw  the query sequence in vectorized form
+ */
 void
 tmap_vsw16_query_destroy(tmap_vsw16_query_t *vsw);
 
+/*!
+  @param  vsw_query         the query in its vectorized form
+  @param  query             the query sequence
+  @param  qlen              the query sequence length
+  @param  target            the target sequence
+  @param  tlen              the target sequence length
+  @param  query_start_clip  1 if we are to clip the start of the query, 0 otherwise
+  @param  query_end_clip    1 if we are to clip the end of the query, 0 otherwise
+  @param  score_fwd         the alignment score for the forward smith waterman
+  @param  score_rev         the alignment score for the reverse smith waterman
+  @param  query_start       the query start position in the alignment (0-based) 
+  @param  query_end         the query end position in the alignment (0-based) 
+  @param  target_start      the target start position in the alignment (0-based) 
+  @param  target_end        the target end position in the alignment (0-based) 
+  @param  overflow           returns 1 if overflow occurs, 0 otherwise
+  @param  score_thr         the minimum scoring threshold (inclusive)
+  @param  is_rev            1 if the reverse alignment is being performed, 0 for the forward
+  @return                   the alignment score
+  */
 int32_t
 tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_t tlen,
                         int32_t query_start_clip, int32_t query_end_clip,
-                        tmap_vsw_opt_t *opt, int32_t *query_end, int32_t *target_end,
+                        tmap_vsw_opt_t *opt, int16_t *query_end, int16_t *target_end,
                         int32_t direction, int32_t *overflow, int32_t score_thr);
 #endif

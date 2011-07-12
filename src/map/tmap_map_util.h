@@ -291,13 +291,19 @@ typedef struct {
     uint32_t *cigar; /*!< the cigar operator array */
     uint16_t target_len; /*!< internal variable, the target length estimated by the seeding step */ 
     uint16_t n_seeds; /*!< the number seeds in this hit */
-    tmap_vsw_result_t *result; // TODO
     union {
         tmap_map_map1_aux_t *map1_aux; /*!< auxiliary data for map1 */
         tmap_map_map2_aux_t *map2_aux; /*!< auxiliary data for map2 */
         tmap_map_map3_aux_t *map3_aux; /*!< auxiliary data for map3 */
         tmap_map_map_vsw_aux_t *map_vsw_aux; /*!< auxiliary data for map_vsw */
     } aux;
+    // for bounding the alignment with vectorized SW
+    int16_t score_fwd; /*!< the alignment score for the forward smith waterman */
+    int16_t score_rev; /*!< the alignment score for the reverse smith waterman */
+    int16_t query_start; /*!< the query start position in the alignment (0-based) */ 
+    int16_t query_end; /*!< the query end position in the alignment (0-based) */ 
+    int16_t target_start; /*!< the target start position in the alignment (0-based) */ 
+    int16_t target_end; /*!< the target end position in the alignment (0-based) */ 
 } tmap_map_sam_t;
 
 /*!

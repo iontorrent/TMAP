@@ -58,19 +58,6 @@ tmap_vsw_opt_destroy(tmap_vsw_opt_t *opt)
   free(opt);
 }
 
-tmap_vsw_result_t *
-tmap_vsw_result_init()
-{
-  return tmap_calloc(1, sizeof(tmap_vsw_result_t), "return");
-}
-
-void
-tmap_vsw_result_destroy(tmap_vsw_result_t *result)
-{
-  if(NULL == result) return;
-  free(result);
-}
-
 tmap_vsw_query_t*
 tmap_vsw_query_init(const uint8_t *query, int32_t qlen,
                     int32_t tlen,
@@ -96,7 +83,10 @@ tmap_vsw_sse2(tmap_vsw_query_t *vsw_query,
               const uint8_t *query, int32_t qlen,
               uint8_t *target, int32_t tlen, 
               int32_t query_start_clip, int32_t query_end_clip,
-              tmap_vsw_opt_t *opt, tmap_vsw_result_t *result,
+              tmap_vsw_opt_t *opt, 
+              int16_t *score_fwd, int16_t *score_rev,
+              int16_t *query_start, int16_t *query_end,
+              int16_t *target_start, int16_t *target_end,
               int32_t *overflow, int32_t score_thr, int32_t is_rev)
 {
   uint8_t *tmp_target;
@@ -128,46 +118,46 @@ tmap_vsw_sse2(tmap_vsw_query_t *vsw_query,
       vsw_query->query16 = tmap_vsw16_query_init(vsw_query->query16, query, qlen, tlen, query_start_clip, query_end_clip, opt);
 
       // run forward
-      result->score_fwd = tmap_vsw16_sse2_forward(vsw_query->query16, target, tlen,
+      (*score_fwd) = tmap_vsw16_sse2_forward(vsw_query->query16, target, tlen,
                                                   query_start_clip, query_end_clip,
-                                                  opt, &result->query_end, &result->target_end,
+                                                  opt, query_end, target_end,
                                                   0, overflow, score_thr);
 
       // check forward results
       if(NULL != overflow && 1 == *overflow) {
           found_forward = 0;
       }
-      else if(result->score_fwd < score_thr) {
+      else if((*score_fwd) < score_thr) {
           found_forward = 0;
       }
-      else if((result->query_end == result->query_start || result->target_end == result->target_start)
-              && result->score_fwd <= 0) {
+      else if(((*query_end) == (*query_start) || (*target_end) == (*target_start))
+              && (*score_fwd) <= 0) {
           found_forward = 0;
       }
-      else if(-1 == result->query_end) {
+      else if(-1 == (*query_end)) {
           tmap_error("bug encountered", Exit, OutOfRange);
       }
 
       // return if we found no legal/good forward results
       if(0 == found_forward) {
-          result->query_end = result->query_start = 0;
-          result->target_end = result->target_start = 0;
-          result->score_fwd = result->score_rev = INT32_MIN;
+          (*query_end) = (*query_start) = 0;
+          (*target_end) = (*target_start) = 0;
+          (*score_fwd) = (*score_rev) = INT16_MIN;
           return INT32_MIN;
       }
 
-      result->query_start = result->target_start = 0;
-      result->score_rev = INT32_MIN;
+      (*query_start) = (*target_start) = 0;
+      (*score_rev) = INT16_MIN;
 
 #ifdef TMAP_VSW_DEBUG
-      fprintf(stderr, "result->score_fwd=%d result->score_rev=%d\n",
-              result->score_fwd, result->score_rev);
+      fprintf(stderr, "(*score_fwd)=%d (*score_rev)=%d\n",
+              (*score_fwd), (*score_rev));
       fprintf(stderr, "{?-%d] {?-%d}\n",
-              result->query_end,
-              result->target_end);
+              (*query_end),
+              (*target_end));
 #endif
 
-      return result->score_fwd;
+      return (*score_fwd);
   }
   else {
 
@@ -178,8 +168,8 @@ tmap_vsw_sse2(tmap_vsw_query_t *vsw_query,
 
 #ifdef TMAP_VSW_DEBUG
       fprintf(stderr, "{?-%d] {?-%d}\n",
-              result->query_end,
-              result->target_end);
+              (*query_end),
+              (*target_end));
       fprintf(stderr, "qlen=%d tlen=%d\n", qlen, tlen);
       for(i=0;i<qlen;i++) {
           fputc("ACGTN"[query[i]], stderr);
@@ -198,51 +188,51 @@ tmap_vsw_sse2(tmap_vsw_query_t *vsw_query,
       // run the reverse
       // NB: we do not start clip since we know here the alignment should begin on
       // the reverse
-      result->score_rev = tmap_vsw16_sse2_forward(vsw_query->query16, target, tlen,
+      (*score_rev) = tmap_vsw16_sse2_forward(vsw_query->query16, target, tlen,
                                                   0/*query_end_clip*/, query_start_clip,
-                                                  opt, &result->query_start, &result->target_start, 
+                                                  opt, query_start, target_start,
                                                   1, overflow, score_thr);
 
 #ifdef TMAP_VSW_DEBUG
-      fprintf(stderr, "is_rev=%d result->score_fwd=%d result->score_rev=%d\n",
-              is_rev, result->score_fwd, result->score_rev);
+      fprintf(stderr, "is_rev=%d (*score_fwd)=%d (*score_rev)=%d\n",
+              is_rev, (*score_fwd), (*score_rev));
 #endif
 
       // check reverse results
       if(1 == *overflow) {
-          result->query_end = result->query_start = 0;
-          result->target_end = result->target_start = 0;
-          result->score_fwd = result->score_rev = INT32_MIN;
+          (*query_end) = (*query_start) = 0;
+          (*target_end) = (*target_start) = 0;
+          (*score_fwd) = (*score_rev) = INT16_MIN;
           return INT32_MIN; 
       }
-      else if(result->score_fwd != result->score_rev) {
-      fprintf(stderr, "{%d-%d] {%d-%d}\n",
-              result->query_start, result->query_end,
-              result->target_start, result->target_end);
-          fprintf(stderr, "result->score_fwd=%d result->score_rev=%d\n",
-                  result->score_fwd, result->score_rev);
+      else if((*score_fwd) != (*score_rev)) {
+          fprintf(stderr, "{%d-%d] {%d-%d}\n",
+                  (*query_start), (*query_end),
+                  (*target_start), (*target_end));
+          fprintf(stderr, "(*score_fwd)=%d (*score_rev)=%d\n",
+                  (*score_fwd), (*score_rev));
           tmap_error("bug encountered", Exit, OutOfRange);
       }
 
 #ifdef TMAP_VSW_DEBUG
       fprintf(stderr, "{%d-%d] {%d-%d}\n",
-              result->query_start, result->query_end,
-              result->target_start, result->target_end);
+              (*query_start), (*query_end),
+              (*target_start), (*target_end));
 #endif
 
       // adjust query_start and query_end
-      result->query_start = qlen - result->query_start - 1;
-      result->target_start = tlen - result->target_start - 1;
+      (*query_start) = qlen - (*query_start) - 1;
+      (*target_start) = tlen - (*target_start) - 1;
 
 #ifdef TMAP_VSW_DEBUG
       fprintf(stderr, "{%d-%d] {%d-%d}\n",
-              result->query_start, result->query_end,
-              result->target_start, result->target_end);
+              (*query_start), (*query_end),
+              (*target_start), (*target_end));
 #endif
       // reverse compliment (is this necessary?)
       tmap_reverse_compliment_int(tmp_target, tmp_tlen);
 
       // return
-      return result->score_fwd;
+      return (*score_fwd);
   }
 }

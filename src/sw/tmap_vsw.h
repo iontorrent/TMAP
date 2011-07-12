@@ -162,45 +162,83 @@ typedef struct {
     int32_t pen_mm; /*!< the mismatch penalty */
     uint32_t pen_gapo; /*!< the gap open penalty */
     uint32_t pen_gape; /*!< the gap extension penalty */
-    int32_t score_thres;
+    int32_t score_thres; /*!< the minimum scoring threshold (inclusive) */
 } tmap_vsw_opt_t;
 
 typedef struct {
-    int32_t score_fwd;
-    int32_t score_rev;
-    int32_t query_start;
-    int32_t query_end;
-    int32_t target_start;
-    int32_t target_end;
+    int32_t score_fwd; /*!< the alignment score for the forward algorithm */
+    int32_t score_rev; /*!< the alignment score for the reverse algorithm */
+    int32_t query_start; /*!< the start alignment position in the query (0-based) */
+    int32_t query_end; /*!< the end alignment position in the query (0-based) */
+    int32_t target_start; /*!< the start alignment position in the target (0-based) */
+    int32_t target_end; /*!< the end alignment position in the target (0-based) */
 } tmap_vsw_result_t;
 
+/*!
+  @param  score_match  the match score
+  @param  pen_mm       the mismatch penalty
+  @param  pen_gapo     the gap open penalty
+  @param  pen_gape     the gap extension penalty
+  @param  score_thr    the minimum scoring threshold (inclusive)
+  @return              the initialized scoring parameters
+ */
 tmap_vsw_opt_t*
 tmap_vsw_opt_init(int32_t score_match, int32_t pen_mm, int32_t pen_gapo, int32_t pen_gape, int32_t score_thr);
 
+/*!
+  @param  opt  the parameters to destroy 
+ */
 void
 tmap_vsw_opt_destroy(tmap_vsw_opt_t *opt);
 
-tmap_vsw_result_t *
-tmap_vsw_result_init();
-
-void
-tmap_vsw_result_destroy(tmap_vsw_result_t *result);
-
+/*!
+  @param  query             the query sequence
+  @param  qlen              the query sequence length
+  @param  query_start_clip  1 if we are to clip the start of the query, 0 otherwise
+  @param  query_end_clip    1 if we are to clip the end of the query, 0 otherwise
+  @param  opt               the previous alignment parameters, NULL if none exist
+  @return                   the query sequence in vectorized form
+  */
 tmap_vsw_query_t*
 tmap_vsw_query_init(const uint8_t *query, int32_t qlen,
                     int32_t tlen,
                     int32_t query_start_clip, int32_t query_end_clip,
                     tmap_vsw_opt_t *opt);
 
+/*!
+  @param  query  the query sequence
+ */
 void
 tmap_vsw_query_destroy(tmap_vsw_query_t *query);
 
+/*!
+  @param  vsw_query         the query in its vectorized form
+  @param  query             the query sequence
+  @param  qlen              the query sequence length
+  @param  target            the target sequence
+  @param  tlen              the target sequence length
+  @param  query_start_clip  1 if we are to clip the start of the query, 0 otherwise
+  @param  query_end_clip    1 if we are to clip the end of the query, 0 otherwise
+  @param  score_fwd         the alignment score for the forward smith waterman
+  @param  score_rev         the alignment score for the reverse smith waterman
+  @param  query_start       the query start position in the alignment (0-based) 
+  @param  query_end         the query end position in the alignment (0-based) 
+  @param  target_start      the target start position in the alignment (0-based) 
+  @param  target_end        the target end position in the alignment (0-based) 
+  @param  overflow           returns 1 if overflow occurs, 0 otherwise
+  @param  score_thr         the minimum scoring threshold (inclusive)
+  @param  is_rev            1 if the reverse alignment is being performed, 0 for the forward
+  @return                   the alignment score
+  */
 int32_t
 tmap_vsw_sse2(tmap_vsw_query_t *vsw_query,
               const uint8_t *query, int32_t qlen,
               uint8_t *target, int32_t tlen,
               int32_t query_start_clip, int32_t query_end_clip,
-              tmap_vsw_opt_t *opt, tmap_vsw_result_t *result,
+              tmap_vsw_opt_t *opt, 
+              int16_t *score_fwd, int16_t *score_rev,
+              int16_t *query_start, int16_t *query_end,
+              int16_t *target_start, int16_t *target_end,
               int32_t *overflow, int32_t score_thr, int32_t is_rev);
 
 #endif
