@@ -211,12 +211,12 @@ tmap_map1_thread_map_core(void **data, tmap_seq_t *seqs[2], tmap_string_t *bases
   if((0 < opt->min_seq_len && seq_len < opt->min_seq_len)
      || (0 < opt->max_seq_len && opt->max_seq_len < seq_len)) {
       // go to the next loop
-      return tmap_map_sams_init();
+      return tmap_map_sams_init(NULL);
   }
 
   // not enough bases, ignore
   if(0 < opt->seed_length && seq_len < opt->seed_length){
-      return tmap_map_sams_init();
+      return tmap_map_sams_init(NULL);
   }
 
   if(opt->seed2_length < 0 || bases[0]->l < opt->seed2_length) {
@@ -270,12 +270,12 @@ tmap_map1_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_b
   // sequence length not in range
   if((0 < opt->min_seq_len && seq_len < opt->min_seq_len)
      || (0 < opt->max_seq_len && opt->max_seq_len < seq_len)) {
-      return tmap_map_sams_init();
+      return tmap_map_sams_init(NULL);
   }
 
   // not enough bases, ignore
   if(0 < opt->seed_length && seq_len < opt->seed_length){
-      return tmap_map_sams_init();
+      return tmap_map_sams_init(NULL);
   }
 
   // clone the sequence 

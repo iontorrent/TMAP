@@ -116,8 +116,10 @@ enum {
  * Taken:
  * abcdefghijklmnopqrstuvwxz
  * ABCDEFHGIJKLMNOPQRSTUXYZ
+ * 12
  *
  * Available:
+ * 03456789
  * y
  * VW
 */
@@ -130,7 +132,8 @@ typedef struct __tmap_map_opt_t {
     char **argv;  /*!< the command line argv structure */
     int argc;  /*!< the number of command line arguments passed */
     char *fn_fasta;  /*!< the fasta reference file name (-f) */
-    char *fn_reads;  /*!< the reads file name (-r) */
+    char **fn_reads;  /*!< the reads file name (-r) */
+    int32_t fn_reads_num; /*!< the number of read files (-r) */
     int32_t reads_format;  /*!< the reads file format (-F)  */
     int32_t score_match;  /*!< the match score (-A) */
     int32_t pen_mm;  /*!< the mismatch penalty (-M) */
@@ -325,6 +328,7 @@ typedef struct {
   */
 typedef struct {
     int32_t n; /*!< the number of hits */
+    int32_t max; /*!< the number of hits before filtering */
     tmap_map_sam_t *sams; /*!< array of hits */
 } tmap_map_sams_t;
 
@@ -352,10 +356,11 @@ tmap_map_sam_destroy(tmap_map_sam_t *s);
 
 /*!
   allocate memory for an empty mapping structure, with no auxiliary data
-  @return  a pointer to the initialized memory
+  @param   prev  copies over the max from prev
+  @return        a pointer to the initialized memory
   */
 tmap_map_sams_t *
-tmap_map_sams_init();
+tmap_map_sams_init(tmap_map_sams_t *prev);
 
 /*!
   reallocate memory for mapping structures; does not allocate auxiliary data
@@ -400,10 +405,13 @@ tmap_map_sam_copy_and_nullify(tmap_map_sam_t *dest, tmap_map_sam_t *src);
   @param  seq           the original read sequence
   @param  refseq        the reference sequence
   @param  sams          the mappings to print
+  @param  end_num       0 if there is no mate, 1 if this is the first fragment, 2 if the this is the last fragment
+  @param  mates         the mate's mappings, NULL if there is no mate
   @param  sam_sff_tags  1 if SFF specific SAM tags are to be outputted, 0 otherwise
   */
 void
-tmap_map_sams_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sams_t *sams, int32_t sam_sff_tags);
+tmap_map_sams_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sams_t *sams, int32_t end_num, 
+                    tmap_map_sams_t *mates, int32_t sam_sff_tags);
 
 /*!
   filters mappings based on the output mode

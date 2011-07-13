@@ -309,7 +309,7 @@ tmap_map2_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
 
   if(NULL == aln) return NULL;
 
-  sams = tmap_map_sams_init();
+  sams = tmap_map_sams_init(NULL);
   tmap_map_sams_realloc(sams, aln->n);
 
   for(i=j=0;i<aln->n;i++) {
@@ -428,7 +428,7 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
 
   // will we always be lower than the score threshold
   if((l*opt.score_match) + (num_n*opt.pen_mm) < opt.score_thr) {
-      return tmap_map_sams_init(0);
+      return tmap_map_sams_init(NULL);
   }
   
   // save sequences

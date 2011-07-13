@@ -69,7 +69,7 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
   tmap_map_sams_t *sams = NULL;
 
   // init
-  sams = tmap_map_sams_init();
+  sams = tmap_map_sams_init(NULL);
 
   // remove duplicates before merging
   if(1 == opt->aln_output_mode_ind) {
@@ -101,6 +101,9 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
 
   // mapping quality
   tmap_map_util_mapq(sams, tmap_seq_get_bases(seq)->l, opt);
+
+  // set the number of hits before filtering
+  sams->max = sams->n;
   
   // filter if we have more stages
   if(stage < opt->num_stages) {
@@ -250,28 +253,28 @@ tmap_map_all_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tma
           sams_in[0] = tmap_map1_thread_map_core(&d->data_map1[i], seqs_tmp, bases_tmp, seq_len, refseq, bwt, sa, opt->opt_map1[i]);
       }
       else {
-          sams_in[0] = tmap_map_sams_init();
+          sams_in[0] = tmap_map_sams_init(NULL);
       }
       // map2
       if(opt->algos[i] & TMAP_MAP_ALGO_MAP2) {
           sams_in[1] = tmap_map2_thread_map_core(&d->data_map2[i], seqs, seq_len, refseq, bwt, sa, opt->opt_map2[i]);
       }
       else {
-          sams_in[1] = tmap_map_sams_init();
+          sams_in[1] = tmap_map_sams_init(NULL);
       }
       // map3
       if(opt->algos[i] & TMAP_MAP_ALGO_MAP3) {
           sams_in[2] = tmap_map3_thread_map_core(&d->data_map3[i], seqs, seq_len, refseq, bwt, sa, opt->opt_map3[i]);
       }
       else {
-          sams_in[2] = tmap_map_sams_init();
+          sams_in[2] = tmap_map_sams_init(NULL);
       }
       // mapvsw
       if(opt->algos[i] & TMAP_MAP_ALGO_MAPVSW) {
           sams_in[3] = tmap_map_vsw_thread_map_core(&d->data_map_vsw[i], seqs, seq_len, refseq, bwt, sa, opt->opt_map_vsw[i]);
       }
       else {
-          sams_in[3] = tmap_map_sams_init();
+          sams_in[3] = tmap_map_sams_init(NULL);
       }
   
       // keep mappings for subsequent stages
@@ -373,8 +376,13 @@ tmap_map_all_core(tmap_map_opt_t *opt)
 
 // for map1/map2/map3/mapvsw
 #define __tmap_map_all_opts_copy1(opt_map_all, opt_map_other) do { \
+    int _i; \
     (opt_map_other)->fn_fasta = tmap_strdup((opt_map_all)->fn_fasta); \
-    (opt_map_other)->fn_reads = tmap_strdup((opt_map_all)->fn_reads); \
+    (opt_map_other)->fn_reads_num = (opt_map_all)->fn_reads_num; \
+    (opt_map_other)->fn_reads = tmap_malloc(sizeof(char*)*(opt_map_other)->fn_reads_num, "(opt_map_other)->fn_reads"); \
+    for(_i=0;_i<(opt_map_other)->fn_reads_num;_i++) { \
+        (opt_map_other)->fn_reads[_i] = tmap_strdup((opt_map_all)->fn_reads[_i]); \
+    } \
     (opt_map_other)->reads_format = (opt_map_all)->reads_format; \
     (opt_map_other)->score_match = (opt_map_all)->score_match; \
     (opt_map_other)->pen_mm = (opt_map_all)->pen_mm; \

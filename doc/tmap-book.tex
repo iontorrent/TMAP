@@ -283,49 +283,49 @@ See \autoref{sec:commonoptions} for common options that are in use in this comma
 
 \subsection{Usage}
 
-\subsubsection{-l INT}
+\subsubsection{\TT{-l INT}}
 Specifies the primary seed (k-mer) length; reads must be of at least this length.
 
-\subsubsection{-s INT}
+\subsubsection{\TT{-s INT}}
 Specifies the maximum number of edits allowed in the primary seed.
 This includes both mismatches and each base in an insertion or deletion. 
 
-\subsubsection{-L INT}
+\subsubsection{\TT{-L INT}}
 Specifies the secondary seed (k-mer) length; this number of bases will be examimed before extending all mappings.
 
-\subsubsection{-p NUM}
+\subsubsection{\TT{-p NUM}}
 Specified the maximum number of edits or false-negative probability assuming the maximum error rate (\TT{-P}).
 This former includes both mismatches and each base in an insertion or deletion. 
 The latter false-negative probability is the probability of not consideing the correct mapping if it exists. 
 
-\subsubsection{-P NUM}
+\subsubsection{\TT{-P NUM}}
 Specified the assumed maximum per-base error rate.
 This classifies both mismatches and each base in an insertion or deletion as errors 
 
-\subsubsection{-m NUM}
+\subsubsection{\TT{-m NUM}}
 Specifies the maximum number of mismatches allowed, or the fraction of mismatches with respect to the read length.
 When the secondary seed is enabled, this parameter is relative to the secondary seed length, not the read length;
 
-\subsubsection{-o NUM}
+\subsubsection{\TT{-o NUM}}
 Specifies the maximum number of indels allowed in the mapping, or the fraction of indels with respect to the read length.
 The number of indels is equal to the number of gap opens.
 When the secondary seed is enabled, this parameter is relative to the secondary seed length, not the read length;
 
-\subsubsection{-e NUM}
+\subsubsection{\TT{-e NUM}}
 Specifies the maximum number of indel extensions allowed in the mapping, or the fraction of indel extensionswith respect to the read length.
 The number of indel extensions is equal to the number of gap extensions.
 When the secondary seed is enabled, this parameter is relative to the secondary seed length, not the read length;
 
-\subsubsection{-d INT}
+\subsubsection{\TT{-d INT}}
 Specifies the maximum number of candidate alignment locations (CALs) to allow a deletion to be extended.
 
-\subsubsection{-i INT}
+\subsubsection{\TT{-i INT}}
 Specifies to disallow indels within this number of bases from the ends of the read.
 
-\subsubsection{-b INT}
+\subsubsection{\TT{-b INT}}
 Specifies to stop searching for mappings when this many best scoring mappings have been found.
 
-\subsubsection{-Q INT}
+\subsubsection{\TT{-Q INT}}
 Specifies the maximum number of alignment nodes in memory in the implicite prefix trie traversal before the search is stopped.
 
 \section{tmap map2}
@@ -337,23 +337,23 @@ See \autoref{sec:commonoptions} for common options that are in use in this comma
 
 \subsection{Usage}
 
-\subsubsection{-c FLOAT}
+\subsubsection{\TT{-c FLOAT}}
 Specifies the coefficient to adjust the mapping score threshold based on the read length.
 Given a $l$-long read, the threshold for a mapping to be retained is $a*max\{T,c*log(l)\}$, where $a$ is the match score (\TT{-A}) and $T$ is the minimum score threshold (\TT{-T}).
 
-\subsubsection{-w INT}
+\subsubsection{\TT{-w INT}}
 Specifies the band width in the banded local alignment.
 
-\subsubsection{-T INT}
+\subsubsection{\TT{-T INT}}
 Specifies the number of multiples of the match score (\TT{-A}) for the minimum scoring threshold.
 
-\subsubsection{-S INT}
+\subsubsection{\TT{-S INT}}
 Specifies the maximum seeding interval size for extending a mapping.
 
-\subsubsection{-b INT}
+\subsubsection{\TT{-b INT}}
 Specifies the number of mappings to retain at during extension of the seed.
 
-\subsubsection{-N INT}
+\subsubsection{\TT{-N INT}}
 Specifies the number seeds supporting the given mapping needed to skip the reverse alignment.
 
 \section{tmap map3}
@@ -365,20 +365,20 @@ See \autoref{sec:commonoptions} for common options that are in use in this comma
 
 \subsection{Usage}
 
-\subsubsection{-l INT}
+\subsubsection{\TT{-l INT}}
 Specifies the $k$-mer length to seed candidate alignment locations (CALs).
 With a value of $-1$ will set the seed length to $\left(ceiling(log_4(R)) + 2\right)$ where $R$ is the reference genome length.
 
-\subsubsection{-S INT}
+\subsubsection{\TT{-S INT}}
 Specifies the maximum number of CALs allowed to be returned by a seed before it is ignored.
 
-\subsubsection{-w INT}
+\subsubsection{\TT{-w INT}}
 Specifies the band width in the banded local alignment.
 
-\subsubsection{-T INT}
+\subsubsection{\TT{-T INT}}
 Specifies the number of multiples of the match score (\TT{-A}) for the minimum scoring threshold.
 
-\subsubsection{-H INT}
+\subsubsection{\TT{-H INT}}
 Specifies the number of bases to enumerate for a single homopolymer within the seed.
 
 \section{tmap mapvsw}
@@ -397,7 +397,7 @@ There are no algorithm specific options.
 The \BF{mapall} is a command to quickly map short sequences to a reference genome.
 This command combines available mapping algorithms for fast and sensitive alignment.
 The algorithms follows a two-stage approach, with a set of algorithms and associated settings for each stage.
-If there are no mappings for a read by applying the algorithms in the first stage, then the algorithms in the second stage are applied. 
+If there are no mappings for a read by applying the algorithms in the first stage that pass filters, then the algorithms in the second stage are applied. 
 For example, a set of algorithms to quickly align near-perfect reads may be used in the first stage, while a set of sensitive algorithms may be used to map difficult reads in the second stage
 
 It is recommended that \TT{mapvsw} is not used for any large scale mapping project.  
@@ -426,6 +426,16 @@ It is possible to have a given algorithm run in both stages with different optio
 \subsubsection{\TT{-I}}
 Specifies to apply the output filter (\TT{-a}) and duplicate removal (\TT{-W}) separately for each algorithm.
 This is useful for comparing the mappings across all the algorithms.
+
+\subsubsection{\TT{-C INT}}
+Specifies the number of multiples of the match score (\TT{-A}) for the minimum scoring threshold for the first stage.
+An alignment is filtered in the first stage if it has an alignment score less than this threshold, and there are algorithms in the second stage.
+\subsubsection{\TT{-D INT}}
+Specifies the mapping quality threshold for the first stage.
+An alignment is filtered in the first stage if it has a mapping quality less than this threshold, and there are algorithms in the second stage.
+\subsubsection{\TT{-K}}
+Specifies not to keep mappings from the first stage for the second stage.
+If this option is not given, the mappings from the first stage are added to any mappings from the second stage as candidates.
 
 \section{tmap server}
 \label{sec:server}
@@ -517,6 +527,9 @@ This tag stores the alignment score.
 All IUPAC code positions are treated as mismatches.
 If the alignment contains an N in the reference but an A in the read, this score will be incorrect (overestimated) as the N was converted to an A in the reference.
 Please see \autoref{sec:iupac} for more details. 
+\subsubsection{NH}
+This tag stores the number of hits found during alignment.
+The number of alignments reported in the output is determined by \TT{-a} and therefore fewer alignments may be present in the output than specified by the \TT{NH} tag.
 
 \subsubsection{XM}
 This tag stores the number of mismatches in the mapping, or in the secondary seed if used.

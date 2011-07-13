@@ -42,13 +42,9 @@
                                             || ( (a).strand == (b).strand && (a).seqid == (b).seqid && (a).pos == (b).pos && (a).score > (b).score) \
                                             ? 1 : 0 )
 
-// sort by max-score
-#define __tmap_map_sam_sort_score_lt(a, b) ((a).score > (b).score)
-
 TMAP_SORT_INIT(tmap_map_sam_sort_coord, tmap_map_sam_t, __tmap_map_sam_sort_coord_lt)
 TMAP_SORT_INIT(tmap_map_sam_sort_coord_end, tmap_map_sam_t, __tmap_map_sam_sort_coord_end_lt)
 TMAP_SORT_INIT(tmap_map_sam_sort_coord_score, tmap_map_sam_t, __tmap_map_sam_sort_coord_score_lt)
-TMAP_SORT_INIT(tmap_map_sam_sort_score, tmap_map_sam_t, __tmap_map_sam_sort_score_lt)
 
 tmap_map_opt_t *
 tmap_map_opt_init(int32_t algo_id)
@@ -65,7 +61,9 @@ tmap_map_opt_init(int32_t algo_id)
   opt->argc = -1;
 
   // global options 
-  opt->fn_fasta = opt->fn_reads = NULL;
+  opt->fn_fasta = NULL;
+  opt->fn_reads = NULL;
+  opt->fn_reads_num = 0;
   opt->reads_format = TMAP_READS_FORMAT_UNKNOWN;
   opt->score_match = TMAP_MAP_UTIL_SCORE_MATCH;
   opt->pen_mm = TMAP_MAP_UTIL_PEN_MM;
@@ -153,7 +151,10 @@ tmap_map_opt_destroy(tmap_map_opt_t *opt)
   int32_t i;
 
   free(opt->fn_fasta);
-  free(opt->fn_reads); 
+  for(i=0;i<opt->fn_reads_num;i++) {
+      free(opt->fn_reads[i]); 
+  }
+  free(opt->fn_reads);
   free(opt->sam_rg);
   free(opt->flow_order);
 
@@ -248,7 +249,15 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "\n");
   tmap_file_fprintf(tmap_file_stderr, "global options (required):\n");
   tmap_file_fprintf(tmap_file_stderr, "         -f FILE     the FASTA reference file name [%s]\n", opt->fn_fasta);
-  tmap_file_fprintf(tmap_file_stderr, "         -r FILE     the reads file name [%s]\n", (NULL == opt->fn_reads) ? "stdin" : opt->fn_reads);
+  tmap_file_fprintf(tmap_file_stderr, "         -r FILE     the reads file name [");
+  if(0 == opt->fn_reads_num) tmap_file_fprintf(tmap_file_stderr, "stdin");
+  else {
+      for(i=0;i<opt->fn_reads_num;i++) {
+          if(0 < i) tmap_file_fprintf(tmap_file_stderr, ",");
+          tmap_file_fprintf(tmap_file_stderr, "%s", opt->fn_reads[i]);
+      }
+  }
+  tmap_file_fprintf(tmap_file_stderr, "]\n");
   tmap_file_fprintf(tmap_file_stderr, "\n");
   tmap_file_fprintf(tmap_file_stderr, "global options (optional):\n");
 #ifdef HAVE_SAMTOOLS
@@ -319,7 +328,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
                         (1 == opt->aln_output_mode_ind) ? "true" : "false");
       tmap_file_fprintf(tmap_file_stderr, "         -C INT      score threshold for stage one divided by the match score [%d]\n", opt->mapall_score_thr);
       tmap_file_fprintf(tmap_file_stderr, "         -D INT      mapping quality threshold for stage one divided by the match score [%d]\n", opt->mapall_score_thr);
-      tmap_file_fprintf(tmap_file_stderr, "         -K          do not keep mappings that do not pass the first stage threshold for the next stage [%s]\n", 
+      tmap_file_fprintf(tmap_file_stderr, "         -K          do not keep mappings from the first stage for the next stage [%s]\n", 
                         (0 == opt->mapall_keep_all) ? "true" : "false");
       tmap_file_fprintf(tmap_file_stderr, "\n");
       break;
@@ -336,7 +345,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
 int32_t
 tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
 {
-  int c;
+  int i, c;
   char *getopt_format = NULL;
 
   opt->argc = argc; opt->argv = argv;
@@ -368,8 +377,10 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
         case 'f': 
           opt->fn_fasta = tmap_strdup(optarg); break;
         case 'r':
-          opt->fn_reads = tmap_strdup(optarg); 
-          tmap_get_reads_file_format_from_fn_int(opt->fn_reads, &opt->reads_format, &opt->input_compr);
+          opt->fn_reads_num++;
+          opt->fn_reads = tmap_realloc(opt->fn_reads, sizeof(char*) * opt->fn_reads_num, "opt->fn_reads");
+          opt->fn_reads[opt->fn_reads_num-1] = tmap_strdup(optarg); 
+          tmap_get_reads_file_format_from_fn_int(opt->fn_reads[opt->fn_reads_num-1], &opt->reads_format, &opt->input_compr);
           break;
         case 'F':
           opt->reads_format = tmap_get_reads_file_format_int(optarg); break;
@@ -430,11 +441,15 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           opt->remove_sff_clipping = 0; break;
         case 'j':
           opt->input_compr = TMAP_FILE_BZ2_COMPRESSION;
-          tmap_get_reads_file_format_from_fn_int(opt->fn_reads, &opt->reads_format, &opt->input_compr);
+          for(i=0;i<opt->fn_reads_num;i++) {
+              tmap_get_reads_file_format_from_fn_int(opt->fn_reads[i], &opt->reads_format, &opt->input_compr);
+          }
           break;
         case 'z':
           opt->input_compr = TMAP_FILE_GZ_COMPRESSION;
-          tmap_get_reads_file_format_from_fn_int(opt->fn_reads, &opt->reads_format, &opt->input_compr);
+          for(i=0;i<opt->fn_reads_num;i++) {
+              tmap_get_reads_file_format_from_fn_int(opt->fn_reads[i], &opt->reads_format, &opt->input_compr);
+          }
           break;
         case 'J':
           opt->output_compr = TMAP_FILE_BZ2_COMPRESSION; break;
@@ -581,11 +596,17 @@ tmap_map_opt_file_check_with_null(char *fn1, char *fn2)
 
 // check that the mapall global options match the algorithm specific global options
 #define __tmap_map_opt_check_common1(opt_map_all, opt_map_other) do { \
+    int32_t _i; \
     if(0 != tmap_map_opt_file_check_with_null((opt_map_other)->fn_fasta, (opt_map_all)->fn_fasta)) { \
         tmap_error("option -f was specified outside of the common options", Exit, CommandLineArgument); \
     } \
-    if(0 != tmap_map_opt_file_check_with_null((opt_map_other)->fn_reads, (opt_map_all)->fn_reads)) { \
+    if((opt_map_other)->fn_reads_num != (opt_map_all)->fn_reads_num) { \
         tmap_error("option -r was specified outside of the common options", Exit, CommandLineArgument); \
+    } \
+    for(_i=0;_i<(opt_map_other)->fn_reads_num;_i++) { \
+        if(0 != tmap_map_opt_file_check_with_null((opt_map_other)->fn_reads[_i], (opt_map_all)->fn_reads[_i])) { \
+            tmap_error("option -r was specified outside of the common options", Exit, CommandLineArgument); \
+        } \
     } \
     if((opt_map_other)->reads_format != (opt_map_all)->reads_format) { \
         tmap_error("option -F was specified outside of the common options", Exit, CommandLineArgument); \
@@ -663,8 +684,20 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   else if(NULL != opt->fn_fasta && 0 < opt->shm_key) {
       tmap_error("option -f and option -k may not be specified together", Exit, CommandLineArgument);
   }
-  if(NULL == opt->fn_reads && TMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
+  if(0 == opt->fn_reads_num && TMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
       tmap_error("option -F or option -r must be specified", Exit, CommandLineArgument);
+  }
+  else if(1 < opt->fn_reads_num) {
+      if(1 == opt->sam_sff_tags) {
+          tmap_error("options -1 and -2 cannot be used with -Y", Exit, CommandLineArgument);
+      }
+      else if(1 == opt->flow_order_use_sff) {
+          tmap_error("options -1 and -2 cannot be used with -x", Exit, CommandLineArgument);
+      }
+      else if(NULL != opt->flow_order) {
+          tmap_error("options -1 and -2 cannot be used with -x", Exit, CommandLineArgument);
+      }
+      // OK
   }
   if(TMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
       tmap_error("the reads format (-r) was unrecognized", Exit, CommandLineArgument);
@@ -768,9 +801,13 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
 void
 tmap_map_opt_print(tmap_map_opt_t *opt)
 {
+  int32_t i;
   fprintf(stderr, "algo_id=%d\n", opt->algo_id);
   fprintf(stderr, "fn_fasta=%s\n", opt->fn_fasta);
-  fprintf(stderr, "fn_reads=%s\n", opt->fn_reads);
+  for(i=0;i<opt->fn_reads_num;i++) {
+      if(0 < i) fprintf(stderr, ",");
+      fprintf(stderr, "fn_reads=%s\n", opt->fn_reads[i]);
+  }
   fprintf(stderr, "reads_format=%d\n", opt->reads_format);
   fprintf(stderr, "score_match=%d\n", opt->score_match);
   fprintf(stderr, "pen_mm=%d\n", opt->pen_mm);
@@ -881,11 +918,12 @@ tmap_map_sam_destroy(tmap_map_sam_t *s)
 }
 
 tmap_map_sams_t *
-tmap_map_sams_init()
+tmap_map_sams_init(tmap_map_sams_t *prev)
 {
   tmap_map_sams_t *sams = tmap_calloc(1, sizeof(tmap_map_sams_t), "sams");
   sams->sams = NULL;
   sams->n = 0;
+  if(NULL != prev) sams->max = prev->max;
   return sams;
 }
 
@@ -977,7 +1015,7 @@ tmap_map_sams_clone(tmap_map_sams_t *src)
   tmap_map_sams_t *dest = NULL;
   
   // init
-  dest = tmap_map_sams_init();
+  dest = tmap_map_sams_init(src);
   if(0 == src->n) return dest;
 
   // realloc
@@ -1015,35 +1053,61 @@ tmap_map_sam_copy_and_nullify(tmap_map_sam_t *dest, tmap_map_sam_t *src)
 }
 
 static void
-tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, int32_t sam_sff_tags, int32_t aln_num)
+tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, int32_t sam_sff_tags, 
+                   int32_t nh, int32_t aln_num, int32_t end_num, int32_t mate_unmapped, tmap_map_sam_t *mate)
 {
+  uint32_t mate_strand, mate_seqid, mate_pos, mate_tlen;
+  // mate info
+  mate_strand = mate_seqid = mate_pos = mate_tlen = 0;
+  if(NULL != mate && 0 == mate_unmapped) {
+      mate_strand = mate->strand;
+      mate_seqid = mate->seqid;
+      mate_pos = mate->pos;
+  }
   if(NULL == sam) { // unmapped
       tmap_sam_print_unmapped(tmap_file_stdout, seq, sam_sff_tags, refseq,
-                              0, 0, 0,
-                              0, 0, 0);
+                              end_num, mate_unmapped, 1,
+                              mate_strand, mate_seqid, mate_pos);
   }
   else {
       // Note: samtools does not like this value
       if(INT32_MIN == sam->score_subo) {
           sam->score_subo++;
       }
+      // Set the mate tlen
+      if(NULL != mate && 0 == mate_unmapped) {
+          // NB: assumes 5'->3' ordering of the fragments
+          if(mate->pos < sam->pos) {
+              mate_tlen = sam->pos + sam->target_len - mate->pos;
+          }
+          else {
+              mate_tlen = mate->pos + mate->target_len - sam->pos;
+          }
+          // NB: first fragment is always positive, the rest are always negative
+          if(1 == end_num) { // first end
+              if(mate_tlen < 0) mate_tlen = -mate_tlen;
+          }
+          else { // second end
+              if(0 < mate_tlen) mate_tlen = -mate_tlen;
+          }
+      }
       switch(sam->algo_id) {
         case TMAP_MAP_ALGO_MAP1:
           tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, refseq, 
                                 sam->strand, sam->seqid, sam->pos, aln_num,
-                                0, 0, 0, 0,
-                                0, 0, 0,
+                                end_num, mate_unmapped, 1,
+                                mate_strand, mate_seqid, mate_pos, mate_tlen,
                                 sam->mapq, sam->cigar, sam->n_cigar,
-                                sam->score, sam->ascore, sam->algo_id, sam->algo_stage, "");
+                                sam->score, sam->ascore, nh, sam->algo_id, sam->algo_stage, "");
           break;
         case TMAP_MAP_ALGO_MAP2:
           if(0 < sam->aux.map2_aux->XI) {
               tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, refseq, 
                                     sam->strand, sam->seqid, sam->pos, aln_num,
-                                    0, 0, 0, 0,
-                                    0, 0, 0,
+                                    end_num, mate_unmapped, 1,
+                                    mate_strand, mate_seqid, mate_pos, mate_tlen,
                                     sam->mapq, sam->cigar, sam->n_cigar,
-                                    sam->score, sam->ascore, sam->algo_id, sam->algo_stage, 
+                                    sam->score, sam->ascore, nh, sam->algo_id, sam->algo_stage, 
                                     "\tXS:i:%d\tXT:i:%d\t\tXF:i:%d\tXE:i:%d\tXI:i:%d",
                                     sam->score_subo,
                                     sam->n_seeds,
@@ -1053,10 +1117,10 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
           else {
               tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, refseq, 
                                     sam->strand, sam->seqid, sam->pos, aln_num,
-                                    0, 0, 0, 0,
-                                    0, 0, 0,
+                                    end_num, mate_unmapped, 1,
+                                    mate_strand, mate_seqid, mate_pos, mate_tlen,
                                     sam->mapq, sam->cigar, sam->n_cigar,
-                                    sam->score, sam->ascore, sam->algo_id, sam->algo_stage, 
+                                    sam->score, sam->ascore, nh, sam->algo_id, sam->algo_stage, 
                                     "\tXS:i:%d\tXT:i:%d\tXF:i:%d\tXE:i:%d",
                                     sam->score_subo,
                                     sam->n_seeds,
@@ -1066,10 +1130,10 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
         case TMAP_MAP_ALGO_MAP3:
           tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, refseq, 
                                 sam->strand, sam->seqid, sam->pos, aln_num,
-                                0, 0, 0, 0,
-                                0, 0, 0,
+                                end_num, mate_unmapped, 1,
+                                mate_strand, mate_seqid, mate_pos, mate_tlen,
                                 sam->mapq, sam->cigar, sam->n_cigar,
-                                sam->score, sam->ascore, sam->algo_id, sam->algo_stage, 
+                                sam->score, sam->ascore, nh, sam->algo_id, sam->algo_stage, 
                                 "\tXS:i:%d\tXT:i:%d",
                                 sam->score_subo,
                                 sam->n_seeds);
@@ -1077,10 +1141,10 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
         case TMAP_MAP_ALGO_MAPVSW:
           tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, refseq, 
                                 sam->strand, sam->seqid, sam->pos, aln_num,
-                                0, 0, 0, 0,
-                                0, 0, 0,
+                                end_num, mate_unmapped, 1,
+                                mate_strand, mate_seqid, mate_pos, mate_tlen,
                                 sam->mapq, sam->cigar, sam->n_cigar,
-                                sam->score, sam->ascore, sam->algo_id, sam->algo_stage, 
+                                sam->score, sam->ascore, nh, sam->algo_id, sam->algo_stage, 
                                 "\tXS:i:%d",
                                 sam->score_subo);
           break;
@@ -1089,19 +1153,28 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
 }
 
 void 
-tmap_map_sams_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sams_t *sams, int32_t sam_sff_tags) 
+tmap_map_sams_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sams_t *sams, int32_t end_num,
+                    tmap_map_sams_t *mates, int32_t sam_sff_tags) 
 {
   int32_t i;
-  if(0 < sams->n) {
-      if(1 < sams->n) { // sort by alignment score
-          tmap_sort_introsort(tmap_map_sam_sort_score, sams->n, sams->sams);
+  tmap_map_sam_t *mate = NULL;
+  int32_t mate_unmapped = 0;
+  if(NULL != mates) {
+      if(0 < mates->n) {
+          // assumes the mates are sorted by their alignment score
+          mate = &mates->sams[0];
       }
+      else {
+          mate_unmapped = 1;
+      }
+  }
+  if(0 < sams->n) {
       for(i=0;i<sams->n;i++) {
-          tmap_map_sam_print(seq, refseq, &sams->sams[i], sam_sff_tags, i);
+          tmap_map_sam_print(seq, refseq, &sams->sams[i], sam_sff_tags, sams->max, i, end_num, mate_unmapped, mate);
       }
   }
   else {
-      tmap_map_sam_print(seq, refseq, NULL, sam_sff_tags, 0);
+      tmap_map_sam_print(seq, refseq, NULL, sam_sff_tags, sams->max, 0, end_num, mate_unmapped, mate);
   }
 }
 
@@ -1515,7 +1588,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   }
 
   // the final mappings will go here 
-  sams_tmp = tmap_map_sams_init();
+  sams_tmp = tmap_map_sams_init(sams);
   tmap_map_sams_realloc(sams_tmp, sams->n);
 
   // sort by strand/chr/pos/score
@@ -1772,7 +1845,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
   }
 
   // the final mappings will go here 
-  sams_tmp = tmap_map_sams_init();
+  sams_tmp = tmap_map_sams_init(sams);
   tmap_map_sams_realloc(sams_tmp, sams->n);
 
   // scoring matrix
@@ -1944,6 +2017,18 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       s->cigar = tmap_sw_path2cigar(path, path_len, &s->n_cigar);
       if(0 == s->n_cigar) {
           tmap_error("bug encountered", Exit, OutOfRange);
+      }
+
+      s->target_len = 0;
+      for(j=0;j<s->n_cigar;j++) {
+          switch(TMAP_SW_CIGAR_OP(s->cigar[j])) {
+            case BAM_CMATCH:
+            case BAM_CDEL:
+              s->target_len += TMAP_SW_CIGAR_LENGTH(s->cigar[j]);
+              break;
+            default:
+              break;
+          }
       }
 
       // add soft clipping 
@@ -2355,6 +2440,18 @@ tmap_map_util_fsw(tmap_seq_t *seq,
                   s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*(1 + s->n_cigar), "s->cigar");
                   s->cigar[s->n_cigar] = (k << 4) | 4;
                   s->n_cigar++;
+              }
+          }
+      
+          s->target_len = 0;
+          for(j=0;j<s->n_cigar;j++) {
+              switch(TMAP_SW_CIGAR_OP(s->cigar[j])) {
+                case BAM_CMATCH:
+                case BAM_CDEL:
+                  s->target_len += TMAP_SW_CIGAR_LENGTH(s->cigar[j]);
+                  break;
+                default:
+                  break;
               }
           }
 

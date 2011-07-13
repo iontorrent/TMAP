@@ -339,7 +339,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
   }
 
   // alloc
-  sams_tmp = tmap_map_sams_init();
+  sams_tmp = tmap_map_sams_init(sams);
   tmap_map_sams_realloc(sams_tmp, n);
             
   // copy over
@@ -475,7 +475,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
       }
   }
   if(max_mm < num_n || max_diff < num_n) {
-      return tmap_map_sams_init();
+      return tmap_map_sams_init(NULL);
   }
 
   /*
@@ -487,7 +487,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
   */
   
   // initialize
-  sams = tmap_map_sams_init();
+  sams = tmap_map_sams_init(NULL);
 
   match_sa_start.offset = 0;
   match_sa_start.hi = 0;

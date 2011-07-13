@@ -39,7 +39,7 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq,
   @param  seq           the sequence that is unmapped
   @param  sam_sff_tags  1 if SFF specific SAM tags are to be outputted, 0 otherwise
   @param  refseq        pointer to the reference sequence (forward)
-  @param  m_num         0 if there is no mate (all mate params ignored), 1 if the mate is the first fragement, 2 if the mate is the second fragment
+  @param  end_num       0 if there is no mate (all mate params ignored), 1 if the mate is the first fragment, 2 if the mate is the last fragment
   @param  m_unmapped    1 if the mate is unmapped, 0 otherwise (m_strand/m_seqid/m_pos are ignored)
   @param  m_prop        1 if properly paired, 0 otherwise
   @param  m_strand      the mates strand
@@ -48,7 +48,7 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq,
   */
 inline void
 tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tmap_refseq_t *refseq,
-                        uint32_t m_num, uint32_t m_unmapped, uint32_t m_prop,
+                        uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop,
                         uint32_t m_strand, uint32_t m_seqid, uint32_t m_pos);
 
 
@@ -62,7 +62,7 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
   @param  seqid       the sequence index (0-based)
   @param  pos         the position (0-based)
   @param  aln_num     1 if the alignment is a secondary alignment, 0 otherwise
-  @param  m_num       0 if there is no mate (all mate params ignored), 1 if the mate is the first fragement, 2 if the mate is the second fragment
+  @param  end_num     0 if there is no mate (all mate params ignored), 1 if the mate is the first fragment, 2 if the mate is the last fragment
   @param  m_unmapped  1 if the mate is unmapped, 0 otherwise (m_strand/m_seqid/m_pos/m_tlen are ignored)
   @param  m_prop      1 if properly paired, 0 otherwise
   @param  m_strand    the mates strand
@@ -74,6 +74,7 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
   @param  n_cigar     the number of cigar operations
   @param  score       the alignment score
   @param  ascore      the original base alignment score (SFF only)
+  @param  nh          the number of reported alignments (NH tag)
   @param  algo_id     the algorithm id
   @param  algo_stage  the algorithm stage (1 or 2) 
   @param  format      optional tag format (printf-style)
@@ -83,10 +84,10 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
 inline void
 tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tmap_refseq_t *refseq,
                       uint8_t strand, uint32_t seqid, uint32_t pos, int32_t secondary,
-                      uint32_t m_num, uint32_t m_unmapped, uint32_t m_prop, uint32_t m_strand,
+                      uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, uint32_t m_strand,
                       uint32_t m_seqid, uint32_t m_pos, uint32_t m_tlen,
                       uint8_t mapq, uint32_t *cigar, int32_t n_cigar,
-                      int32_t score, int32_t ascore, int32_t algo_id, int32_t algo_stage,
+                      int32_t score, int32_t ascore, int32_t nh, int32_t algo_id, int32_t algo_stage,
                       const char *format, ...);
 
 #ifdef HAVE_SAMTOOLS

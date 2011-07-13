@@ -260,7 +260,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
   }
 
   // init
-  sams = tmap_map_sams_init();
+  sams = tmap_map_sams_init(NULL);
 
   // update the seed length
   seed_length = opt->seed_length;

@@ -55,10 +55,10 @@ tmap_map_vsw_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len,
   if((0 < opt->min_seq_len && seq_len < opt->min_seq_len)
      || (0 < opt->max_seq_len && opt->max_seq_len < seq_len)) {
       // go to the next loop
-      return tmap_map_sams_init();
+      return tmap_map_sams_init(NULL);
   }
 
-  sams = tmap_map_sams_init();
+  sams = tmap_map_sams_init(NULL);
   tmap_map_sams_realloc(sams, refseq->num_annos<<1); // one for each contig and strand
 
   for(i=0;i<refseq->num_annos<<1;i++) {
@@ -96,7 +96,7 @@ tmap_map_vsw_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tma
   // sequence length not in range
   if((0 < opt->min_seq_len && seq_len < opt->min_seq_len)
      || (0 < opt->max_seq_len && opt->max_seq_len < seq_len)) {
-      return tmap_map_sams_init();
+      return tmap_map_sams_init(NULL);
   }
 
   // clone the sequence 

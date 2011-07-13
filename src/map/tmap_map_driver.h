@@ -58,9 +58,10 @@ typedef int32_t (*tmap_driver_func_thread_cleanup)(void **data, tmap_map_opt_t *
   data to be passed to a thread                         
   */
 typedef struct {                                            
-    tmap_seq_t **seq_buffer;  /*!< the buffer of sequences */    
-    int32_t seq_buffer_length;  /*!< the buffer length */
-    tmap_map_sams_t **sams;  /*!< the alignments for each sequence */
+    int32_t num_ends;  /*!< the number of mates (one for fragments) */
+    tmap_seq_t ***seq_buffer;  /*!< the buffers of sequences */    
+    int32_t seq_buffer_length;  /*!< the buffers length */
+    tmap_map_sams_t ***sams;  /*!< the alignments for each sequence */
     tmap_refseq_t *refseq;  /*!< pointer to the reference sequence (forward) */
     tmap_bwt_t *bwt[2];  /*!< pointer to the BWT indices (forward/reverse) */
     tmap_sa_t *sa[2];  /*!< pointer to the SA (forward/reverse) */    
@@ -74,6 +75,7 @@ typedef struct {
 
 /*!
   The core worker routine of mapall
+  @param  num_ends             the number of ends
   @param  seq_buffer           the buffer of sequences
   @param  sams                 the sams to return
   @param  seq_buffer_length    the number of sequences in the buffer
@@ -88,7 +90,7 @@ typedef struct {
   @param  opt                  the program parameters 
  */
 void
-tmap_map_driver_core_worker(tmap_seq_t **seq_buffer, tmap_map_sams_t **sams, int32_t seq_buffer_length,
+tmap_map_driver_core_worker(int32_t num_ends, tmap_seq_t **seq_buffer[2], tmap_map_sams_t **sams[2], int32_t seq_buffer_length,
                          tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2],
                          tmap_driver_func_thread_init func_thread_init, 
                          tmap_driver_func_thread_map func_thread_map, 

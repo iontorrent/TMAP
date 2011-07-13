@@ -71,7 +71,7 @@ tmap_map2_thread_map_core(void **data, tmap_seq_t *seqs[4], int32_t seq_len, tma
 
   if((0 < opt->min_seq_len && seq_len < opt->min_seq_len)
      || (0 < opt->max_seq_len && opt->max_seq_len < seq_len)) {
-      return tmap_map_sams_init();
+      return tmap_map_sams_init(NULL);
   }
 
   sams = tmap_map2_aux_core(opt, seqs, refseq, bwt, sa, d->pool);
@@ -162,7 +162,7 @@ tmap_map2_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_b
   
   if((0 < opt->min_seq_len && seq_len < opt->min_seq_len)
      || (0 < opt->max_seq_len && opt->max_seq_len < seq_len)) {
-      return tmap_map_sams_init();
+      return tmap_map_sams_init(NULL);
   }
 
   for(i=0;i<4;i++) {
