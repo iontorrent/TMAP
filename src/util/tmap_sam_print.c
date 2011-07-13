@@ -199,17 +199,27 @@ tmap_sam_print_flowgram(tmap_file_t *fp, uint16_t *flowgram, int32_t length)
 }
 
 inline void
-tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags)
+tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tmap_refseq_t *refseq,
+                      uint32_t m_num, uint32_t m_unmapped, uint32_t m_prop, 
+                      uint32_t m_strand, uint32_t m_seqid, uint32_t m_pos)
 {
-  uint16_t flag = 0x0004;
+  uint32_t flag = 0;
   tmap_string_t *name=NULL, *bases=NULL, *qualities=NULL;
 
   name = tmap_seq_get_name(seq);
   bases = tmap_seq_get_bases(seq);
   qualities = tmap_seq_get_qualities(seq);
+  
+  flag = 0x4;
+  if(0 < m_num) { // mate info
+      if(1 == m_prop) flag |= 0x2; // properly aligned
+      if(1 == m_unmapped) flag |= 0x8; // unmapped
+      else if(1 == m_strand) flag |= 0x20; // strand 
+      flag |= (2 == m_num) ? 0x40 : 0x80; // first/second end
+  }
 
   tmap_file_fprintf(fp, "%s\t%u\t", name->s, flag);
-  // cigar
+  // sff
   if(TMAP_SEQ_TYPE_SFF == seq->type 
      && (0 < seq->data.sff->rheader->clip_left || 0 < seq->data.sff->rheader->clip_right)) {
       // since bases were hard-clipped.
@@ -233,9 +243,25 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags)
   else {
       tmap_file_fprintf(fp, "*");
   }
-  tmap_file_fprintf(fp, "\t%u\t%u\t*\t*\t0\t0\t%s\t%s",
-                    0, 0, 
+  // seqid, pos, and cigar
+  tmap_file_fprintf(fp, "\t%u\t%u\t*", 0, 0);
+  // mate info
+  if(0 == m_num) { // no mate
+      tmap_file_fprintf(fp, "\t*\t0\t0");
+  }
+  else if(1 == m_unmapped) { // unmapped mate
+      tmap_file_fprintf(fp, "\t*\t0\t0");
+  }
+  else { // mapped mate
+      tmap_file_fprintf(fp, "\t%s\t%u\t%u",
+                        refseq->annos[m_seqid].name->s,
+                        m_pos+1,
+                        0);
+  }
+  // bases and qual
+  tmap_file_fprintf(fp, "\t%s\t%s",
                     bases->s, (0 == qualities->l) ? "*" : qualities->s);
+  // optional tags
   tmap_file_fprintf(fp, "\tRG:Z:%s\tPG:Z:%s",
                     tmap_sam_rg_id,
                     PACKAGE_NAME);
@@ -378,7 +404,9 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
 
 inline void
 tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tmap_refseq_t *refseq,
-                      uint8_t strand, uint32_t seqid, uint32_t pos, 
+                      uint8_t strand, uint32_t seqid, uint32_t pos, int32_t aln_num,
+                      uint32_t m_num, uint32_t m_unmapped, uint32_t m_prop, uint32_t m_strand,
+                      uint32_t m_seqid, uint32_t m_pos, uint32_t m_tlen,
                       uint8_t mapq, uint32_t *cigar, int32_t n_cigar,
                       int32_t score, int32_t ascore, int32_t algo_id, int32_t algo_stage,
                       const char *format, ...)
@@ -386,7 +414,7 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
   va_list ap;
   int32_t i;
   tmap_string_t *name=NULL, *bases=NULL, *qualities=NULL;
-  uint32_t *cigar_tmp = NULL, cigar_tmp_allocated = 0;
+  uint32_t flag, *cigar_tmp = NULL, cigar_tmp_allocated = 0;
   tmap_string_t *md;
   int32_t nm;
 
@@ -401,6 +429,17 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
 
   if(0 == pos + 1) {
       tmap_error("position is out of range", Exit, OutOfRange);
+  }
+
+  // flag
+  flag = 0;
+  if(1 == strand) flag |= 0x10; // strand
+  if(0 < aln_num) flag |= 0x100; // secondary alignment
+  if(0 < m_num) { // mate info
+      if(1 == m_prop) flag |= 0x2; // properly aligned
+      if(1 == m_unmapped) flag |= 0x8; // unmapped
+      else if(1 == m_strand) flag |= 0x20; // strand 
+      flag |= (2 == m_num) ? 0x40 : 0x80; // first/second end
   }
 
   tmap_file_fprintf(fp, "%s\t%u\t%s\t%u\t%u\t",
@@ -430,9 +469,26 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
           tmap_file_fprintf(fp, "%dH", seq->data.sff->rheader->clip_right);
       }
   }
+  
+  // mate info
+  if(0 == m_num) { // no mate
+      tmap_file_fprintf(fp, "\t*\t0\t0");
+  }
+  else if(1 == m_unmapped) { // unmapped mate
+      tmap_file_fprintf(fp, "%s\t%u\t%s\t%u\t%u\t",
+                        refseq->annos[seqid].name->s,
+                        pos + 1,
+                        0);
+  }
+  else { // mapped mate
+      tmap_file_fprintf(fp, "\t%s\t%u\t%u",
+                        refseq->annos[m_seqid].name->s,
+                        m_pos+1,
+                        m_tlen+1);
+  }
 
   // bases and qualities
-  tmap_file_fprintf(fp, "\t*\t0\t0\t%s\t%s",
+  tmap_file_fprintf(fp, "\t%s\t%s",
                     bases->s, (0 == qualities->l) ? "*" : qualities->s);
   
   // RG and PG

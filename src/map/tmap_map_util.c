@@ -1015,10 +1015,12 @@ tmap_map_sam_copy_and_nullify(tmap_map_sam_t *dest, tmap_map_sam_t *src)
 }
 
 static void
-tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, int32_t sam_sff_tags)
+tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, int32_t sam_sff_tags, int32_t aln_num)
 {
   if(NULL == sam) { // unmapped
-      tmap_sam_print_unmapped(tmap_file_stdout, seq, sam_sff_tags);
+      tmap_sam_print_unmapped(tmap_file_stdout, seq, sam_sff_tags, refseq,
+                              0, 0, 0,
+                              0, 0, 0);
   }
   else {
       // Note: samtools does not like this value
@@ -1028,14 +1030,18 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
       switch(sam->algo_id) {
         case TMAP_MAP_ALGO_MAP1:
           tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, refseq, 
-                                sam->strand, sam->seqid, sam->pos,
+                                sam->strand, sam->seqid, sam->pos, aln_num,
+                                0, 0, 0, 0,
+                                0, 0, 0,
                                 sam->mapq, sam->cigar, sam->n_cigar,
                                 sam->score, sam->ascore, sam->algo_id, sam->algo_stage, "");
           break;
         case TMAP_MAP_ALGO_MAP2:
           if(0 < sam->aux.map2_aux->XI) {
               tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, refseq, 
-                                    sam->strand, sam->seqid, sam->pos,
+                                    sam->strand, sam->seqid, sam->pos, aln_num,
+                                    0, 0, 0, 0,
+                                    0, 0, 0,
                                     sam->mapq, sam->cigar, sam->n_cigar,
                                     sam->score, sam->ascore, sam->algo_id, sam->algo_stage, 
                                     "\tXS:i:%d\tXT:i:%d\t\tXF:i:%d\tXE:i:%d\tXI:i:%d",
@@ -1046,7 +1052,9 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
           }
           else {
               tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, refseq, 
-                                    sam->strand, sam->seqid, sam->pos,
+                                    sam->strand, sam->seqid, sam->pos, aln_num,
+                                    0, 0, 0, 0,
+                                    0, 0, 0,
                                     sam->mapq, sam->cigar, sam->n_cigar,
                                     sam->score, sam->ascore, sam->algo_id, sam->algo_stage, 
                                     "\tXS:i:%d\tXT:i:%d\tXF:i:%d\tXE:i:%d",
@@ -1057,7 +1065,9 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
           break;
         case TMAP_MAP_ALGO_MAP3:
           tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, refseq, 
-                                sam->strand, sam->seqid, sam->pos,
+                                sam->strand, sam->seqid, sam->pos, aln_num,
+                                0, 0, 0, 0,
+                                0, 0, 0,
                                 sam->mapq, sam->cigar, sam->n_cigar,
                                 sam->score, sam->ascore, sam->algo_id, sam->algo_stage, 
                                 "\tXS:i:%d\tXT:i:%d",
@@ -1066,7 +1076,9 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
           break;
         case TMAP_MAP_ALGO_MAPVSW:
           tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, refseq, 
-                                sam->strand, sam->seqid, sam->pos,
+                                sam->strand, sam->seqid, sam->pos, aln_num,
+                                0, 0, 0, 0,
+                                0, 0, 0,
                                 sam->mapq, sam->cigar, sam->n_cigar,
                                 sam->score, sam->ascore, sam->algo_id, sam->algo_stage, 
                                 "\tXS:i:%d",
@@ -1085,11 +1097,11 @@ tmap_map_sams_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sams_t *sam
           tmap_sort_introsort(tmap_map_sam_sort_score, sams->n, sams->sams);
       }
       for(i=0;i<sams->n;i++) {
-          tmap_map_sam_print(seq, refseq, &sams->sams[i], sam_sff_tags);
+          tmap_map_sam_print(seq, refseq, &sams->sams[i], sam_sff_tags, i);
       }
   }
   else {
-      tmap_map_sam_print(seq, refseq, NULL, sam_sff_tags);
+      tmap_map_sam_print(seq, refseq, NULL, sam_sff_tags, 0);
   }
 }
 

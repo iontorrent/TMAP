@@ -38,9 +38,19 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq,
   @param  fp            the file pointer to which to print
   @param  seq           the sequence that is unmapped
   @param  sam_sff_tags  1 if SFF specific SAM tags are to be outputted, 0 otherwise
+  @param  refseq        pointer to the reference sequence (forward)
+  @param  m_num         0 if there is no mate (all mate params ignored), 1 if the mate is the first fragement, 2 if the mate is the second fragment
+  @param  m_unmapped    1 if the mate is unmapped, 0 otherwise (m_strand/m_seqid/m_pos are ignored)
+  @param  m_prop        1 if properly paired, 0 otherwise
+  @param  m_strand      the mates strand
+  @param  m_seqid       the mates seqid (zero-based), 0 otherwise
+  @param  m_pos         the mates position (zero-based), 0 otherwise
   */
 inline void
-tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags);
+tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tmap_refseq_t *refseq,
+                        uint32_t m_num, uint32_t m_unmapped, uint32_t m_prop,
+                        uint32_t m_strand, uint32_t m_seqid, uint32_t m_pos);
+
 
 /*! 
   prints out a mapped SAM record 
@@ -51,6 +61,14 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags);
   @param  strand      the strand of the mapping
   @param  seqid       the sequence index (0-based)
   @param  pos         the position (0-based)
+  @param  aln_num     1 if the alignment is a secondary alignment, 0 otherwise
+  @param  m_num       0 if there is no mate (all mate params ignored), 1 if the mate is the first fragement, 2 if the mate is the second fragment
+  @param  m_unmapped  1 if the mate is unmapped, 0 otherwise (m_strand/m_seqid/m_pos/m_tlen are ignored)
+  @param  m_prop      1 if properly paired, 0 otherwise
+  @param  m_strand    the mates strand
+  @param  m_seqid     the mates seqid (zero-based), 0 otherwise
+  @param  m_pos       the mates position (zero-based), 0 otherwise
+  @param  m_tlen      the mate template length (zero-based), 0 otherwise
   @param  mapq        the mapping quality
   @param  cigar       the cigar array
   @param  n_cigar     the number of cigar operations
@@ -64,7 +82,9 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags);
   */
 inline void
 tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tmap_refseq_t *refseq,
-                      uint8_t strand, uint32_t seqid, uint32_t pos,
+                      uint8_t strand, uint32_t seqid, uint32_t pos, int32_t secondary,
+                      uint32_t m_num, uint32_t m_unmapped, uint32_t m_prop, uint32_t m_strand,
+                      uint32_t m_seqid, uint32_t m_pos, uint32_t m_tlen,
                       uint8_t mapq, uint32_t *cigar, int32_t n_cigar,
                       int32_t score, int32_t ascore, int32_t algo_id, int32_t algo_stage,
                       const char *format, ...);
