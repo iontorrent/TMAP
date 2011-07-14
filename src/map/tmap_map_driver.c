@@ -151,6 +151,9 @@ tmap_map_driver_core_worker(int32_t num_ends, tmap_seq_t ***seq_buffer, tmap_map
                                           sams[i][low]->n, sams[i][low]->sams);
                   }
               }
+              if(NULL == seq_buffer[i][low]) {
+                  tmap_error("bug encoutereed", Exit, OutOfRange);
+              }
           }
       }
       // next
@@ -309,6 +312,7 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
           thread_data = tmap_calloc(opt->num_threads, sizeof(tmap_map_driver_thread_data_t), "thread_data");
 
           for(i=0;i<opt->num_threads;i++) {
+              thread_data[i].num_ends = num_ends;
               thread_data[i].seq_buffer = seq_buffer;
               thread_data[i].sams = sams;
               thread_data[i].seq_buffer_length = seq_buffer_length;
