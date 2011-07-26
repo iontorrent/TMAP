@@ -325,7 +325,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
 {
   tmap_map_sams_t *sams_tmp = NULL;
   tmap_map_sam_t *sam_cur = NULL;
-  uint32_t i, j, k, n, num_all_sa;
+  uint32_t i, j, k, n, num_all_sa, aln_ref;
 
   // max # of entries
   for(i=n=0;i<sams->n;i++) {
@@ -356,7 +356,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
           sam_cur = &sams_tmp->sams[j];
 
           strand = sams->sams[i].strand;
-
+          aln_ref = sam->aux.map1_aux->aln_ref;
 
           // query sequence
           if(0 == strand) { // forward
@@ -364,24 +364,36 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
           }
           else { // reverse
               pacpos = tmap_sa_pac_pos(sa[1-strand], bwt[1-strand], k); // since we used the reverse index
-              pacpos += sam->aux.map1_aux->aln_ref;
+              pacpos += aln_ref;
           }
-          pacpos = (pacpos < sam->aux.map1_aux->aln_ref) ? 0 : (pacpos - sam->aux.map1_aux->aln_ref); 
-
+          pacpos = (pacpos < aln_ref) ? 0 : (pacpos - aln_ref);
           pacpos++; // make one-based
           
+          // NB: addressing the symptom, not the problem
+          // This happens when we are at the end of the reference on the reverse
+          // strand
+          if(refseq->len < pacpos + aln_ref - 1) aln_ref = refseq->len - pacpos + 1;
+          
           // save the hit
-          if(0 < tmap_refseq_pac2real(refseq, pacpos, sam->aux.map1_aux->aln_ref, &seqid, &pos)) {
+          if(0 < tmap_refseq_pac2real(refseq, pacpos, aln_ref, &seqid, &pos)) {
               // copy over previous parameters
               sam_cur->algo_id = TMAP_MAP_ALGO_MAP1;
               sam_cur->algo_stage = 0;
               sam_cur->strand = strand;
               sam_cur->seqid = seqid;
               sam_cur->pos = pos-1; // adjust to zero-based
-              sam_cur->target_len = sam->aux.map1_aux->aln_ref;
+              sam_cur->target_len = aln_ref;
               sam_cur->score_subo = INT32_MIN;
               if(0 < opt->seed2_length && seed2_len < bases[strand]->l) { // adjust if we used a secondary seed
-                  sam_cur->target_len += bases[strand]->l - seed2_len;
+                  // adjust both the target length and position
+                  if(sam_cur->pos < (bases[strand]->l - seed2_len)) {
+                      sam_cur->target_len += sam_cur->pos;
+                      sam_cur->pos = 0;
+                  }
+                  else {
+                      sam_cur->target_len += (bases[strand]->l - seed2_len);
+                      sam_cur->pos -= (bases[strand]->l - seed2_len);
+                  }
               }
               else if(sam_cur->target_len < bases[strand]->l) {
                   sam_cur->target_len = bases[strand]->l;
