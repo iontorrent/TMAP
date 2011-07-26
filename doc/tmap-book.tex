@@ -580,7 +580,7 @@ The ambiguity codes will only be re-considered when calculating the NM and MD SA
 \label{sec:indel-scoring}
 Given gap open and gap extension penalties $O$ and $E$, a contiguous indel of length $L$ will have a score of $O + (E * L)$.
 
-\section{How are insertions and deletions justified}
+\section{How are insertions and deletions justified?}
 \label{sec:indel-justification}
 TMAP will attempt to justify insertions and deletions (indels) to the 5' (left-most) end of the genomic (reference) forward strand.
 This allows the indel to be consistently placed with respect the reference, regardless of the strand during sequencing.
@@ -612,6 +612,12 @@ CGA----CAATCGTGGA
 CGAACATACATCGTGGA
 \end{verbatim}
 
+\section{Will the output of TMAP be the same if run twice?}
+TMAP will always produce the same output if run twice unless the \TT{-a 1} option and multiple threads (\TT{-n}) are used.
+Using the \TT{-a 1} option will output random hits for reads with multiple equaly likely mapping locations.
+TMAP uses a deterministic random seed so that when using only one thread the same random choice will be made.
+Nevertheless, when using multiple threads (\TT{-n}), the order in which the random function call is made by the threads is determined by the operating system's scheduling of the threads.
+Therefore, the random function may return a different random mapping for the same read upon a second execution of TMAP.
 \chapter{Appendix}
 
 % References
