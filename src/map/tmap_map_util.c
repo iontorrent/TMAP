@@ -2006,8 +2006,10 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       // Smith Waterman with banding
       // NB: we store the score from the banded version, which does not allow
       // ins then del, or del then ins.  The vectorized version does.
+      // NB: left genomic indel justification is facilitated by always using the
+      // forward strand target/query combination.
       s->score = tmap_sw_global_banded_core(target, tlen, query, qlen, &par,
-                                 tmp_sam.score_fwd, path, &path_len, strand); 
+                                 tmp_sam.score_fwd, path, &path_len, 0); 
 
 
       s->pos = s->pos + (path[path_len-1].i-1); // zero-based 
