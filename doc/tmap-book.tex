@@ -598,7 +598,6 @@ CGAACATTTTTCGTGGA
 ||||||-||||||||||
 CGAACA-TTTTCGTGGA
 \end{verbatim}
-
 Another example would be in a non-homopolymer deletion: 
 \begin{verbatim}
 CGAACAT----CGTGGA
@@ -611,6 +610,20 @@ CGA----CAATCGTGGA
 |||----||||||||||
 CGAACATACATCGTGGA
 \end{verbatim}
+Justification will not occur if it disconnects a contiguous indel, causing a potential difference in the alignment score.
+The following alignment:
+\begin{verbatim}
+AGGTGC--TTTACAAGC
+||||||--|||||||||
+AGGTGCCTTTTACAAGC
+\end{verbatim}
+could be changed to: 
+\begin{verbatim}
+AGGTG-C-TTTACAAGC
+|||||-|-|||||||||
+AGGTGCCTTTTACAAGC
+\end{verbatim}
+This would change the alignment and decrease) the resulting score.
 
 \section{Will the output of TMAP be the same if run twice?}
 TMAP will always produce the same output if run twice unless the \TT{-a 1} option and multiple threads (\TT{-n}) are used.
