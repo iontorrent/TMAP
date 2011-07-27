@@ -327,7 +327,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
       tmap_file_fprintf(tmap_file_stderr, "         -I          apply the output filter (-a) and duplicate removal (-W) for each algorithm separately [%s]\n",
                         (1 == opt->aln_output_mode_ind) ? "true" : "false");
       tmap_file_fprintf(tmap_file_stderr, "         -C INT      score threshold for stage one divided by the match score [%d]\n", opt->mapall_score_thr);
-      tmap_file_fprintf(tmap_file_stderr, "         -D INT      mapping quality threshold for stage one divided by the match score [%d]\n", opt->mapall_score_thr);
+      tmap_file_fprintf(tmap_file_stderr, "         -D INT      mapping quality threshold for stage one divided by the match score [%d]\n", opt->mapall_mapq_thr);
       tmap_file_fprintf(tmap_file_stderr, "         -K          do not keep mappings from the first stage for the next stage [%s]\n", 
                         (0 == opt->mapall_keep_all) ? "true" : "false");
       tmap_file_fprintf(tmap_file_stderr, "\n");
