@@ -54,6 +54,7 @@ AC_CHECK_LIB([bz2], [BZ2_bzRead])
 AC_CHECK_LIB([m], [pow])
 AC_CHECK_LIB([pthread], [pthread_create])
 AC_CHECK_LIB([tcmalloc],malloc) 
+#AC_CHECK_LIB([libtcmalloc_minimal],malloc) # Use this to not include the heap profiler and checker
 AC_CHECK_FUNCS([pow strdup memset strchr strdup strstr memmove])
 
 # Check types
