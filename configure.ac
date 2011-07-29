@@ -53,6 +53,7 @@ AC_CHECK_LIB([z], [gzread])
 AC_CHECK_LIB([bz2], [BZ2_bzRead])
 AC_CHECK_LIB([m], [pow])
 AC_CHECK_LIB([pthread], [pthread_create])
+AC_CHECK_LIB([tcmalloc],malloc) 
 AC_CHECK_FUNCS([pow strdup memset strchr strdup strstr memmove])
 
 # Check types

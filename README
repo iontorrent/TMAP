@@ -20,5 +20,18 @@ TMAP - flow mapper
 
 === To Install ===
 
-1. Run:
+1. Compile TMAP:
   sh autogen.sh && ./configure && make
+2. Install
+  make install
+
+=== Optional Installs ===
+1. TCMalloc
+  TMAP will run approximately 15% faster using the tcmalloc memory allocation
+  implementation.  To use tcmalloc, install the Google performance tools:
+    http://code.google.com/p/google-perftools
+  If you have previously compiled TMAP, execute the following command:
+    make distclean && sh autogen.sh && ./configure && make clean && make
+  After installation, execute the following command:
+    sh autogen.sh && ./configure && make clean && make
+  The performance increase should occur when using multiple-threads.
