@@ -148,11 +148,11 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, tmap_seq_io_t *seq
           tmap_error("flow order was specified when using an SFF", Exit, OutOfRange);
       }
       if(NULL != sam_rg) { // SAM RG is user-specified
-          tmap_sam_parse_rg(sam_rg, 
+          tmap_file_fprintf(fp, "%s\tFO:%s\tKS:%s\tPG:%s\n",
+                            sam_rg,
                             seqio->io.sffio->gheader->flow->s,
                             seqio->io.sffio->gheader->key->s,
                             PACKAGE_NAME);
-          tmap_file_fprintf(fp, "%s\n", sam_rg);
       }
       else {
           tmap_file_fprintf(fp, "@RG\tID:%s\tFO:%s\tKS:%s\tPG:%s\n",
