@@ -84,6 +84,7 @@ tmap_map2_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
 {
   int32_t i;
   int32_t best_score, best_score_subo, num_best;
+  int32_t best_repetitive = 0;
 
   if(0 == sams->n) {
       return 0;
@@ -93,6 +94,7 @@ tmap_map2_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
   tmap_sort_introsort(tmap_map2_sam_sort_score, sams->n, sams->sams);
 
   //Note: assumes that the alignments are sorted by decreasing score
+  best_repetitive = (1 == sams->sams[0].aux.map2_aux->flag) ? 1 : 0;
   best_score = sams->sams[0].score;
   num_best = 0;
   for(i=0;i<sams->n;i++) {
@@ -103,6 +105,9 @@ tmap_map2_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
           break;
       }
       num_best++;
+      if(1 == sams->sams[i].aux.map2_aux->flag) {
+          best_repetitive = 1;
+      }
       if(0 < sams->sams[i].aux.map2_aux->XI) {
           num_best++; // artificially increase
       }
@@ -118,7 +123,7 @@ tmap_map2_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
       }
   }
 
-  if(1 < num_best) {
+  if(1 < num_best || 0 < best_repetitive) {
       for(i=0;i<sams->n;i++) {
           sams->sams[i].mapq = 0;
       }

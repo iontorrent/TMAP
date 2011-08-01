@@ -120,6 +120,7 @@ tmap_map_opt_init(int32_t algo_id)
       opt->seed_length_set = 0;
       opt->max_seed_hits = 12;
       opt->hp_diff = 0;
+      opt->hit_frac = 0.25;
       break;
     case TMAP_MAP_ALGO_MAPVSW:
       // mapvsw
@@ -226,6 +227,7 @@ tmap_map_opt_destroy(tmap_map_opt_t *opt)
     tmap_file_fprintf(tmap_file_stderr, "         -l INT      the k-mer length to seed CALs (-1 tunes to the genome size) [%d]\n", (_opt)->seed_length); \
     tmap_file_fprintf(tmap_file_stderr, "         -S INT      the maximum number of hits returned by a seed [%d]\n", (_opt)->max_seed_hits); \
     tmap_file_fprintf(tmap_file_stderr, "         -H INT      single homopolymer error difference for enumeration [%d]\n", (_opt)->hp_diff); \
+    tmap_file_fprintf(tmap_file_stderr, "         -V INT      the fraction of seed positions that are under the maximum (-S) [%.3lf]\n", (_opt)->hit_frac); \
     tmap_file_fprintf(tmap_file_stderr, "         -u INT      the minimum sequence length to examine [%d]\n", (_opt)->min_seq_len); \
     tmap_file_fprintf(tmap_file_stderr, "         -U INT      the maximum sequence length to examine [%d]\n", (_opt)->max_seq_len); \
     tmap_file_fprintf(tmap_file_stderr, "\n"); \
@@ -357,7 +359,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YGjzJZk:vhc:S:b:N:u:U:");
       break;
     case TMAP_MAP_ALGO_MAP3:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YGjzJZk:vhl:S:H:u:U:");
+      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YGjzJZk:vhl:S:H:V:u:U:");
       break;
     case TMAP_MAP_ALGO_MAPVSW:
       getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YGjzJZk:vhu:U:");
@@ -540,7 +542,8 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
                   opt->max_seed_hits = atoi(optarg); break;
                 case 'H':
                   opt->hp_diff = atoi(optarg); break;
-                  break;
+                case 'V':
+                  opt->hit_frac = atof(optarg); break;
                 default:
                   free(getopt_format);
                   return 0;
@@ -770,6 +773,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       tmap_error_cmd_check_int(opt->max_seed_hits, 1, INT32_MAX, "-S");
       tmap_error_cmd_check_int(opt->hp_diff, 0, INT32_MAX, "-H");
       if(0 < opt->hp_diff && TMAP_SEQ_TYPE_SFF != opt->reads_format) tmap_error("-H option must be used with SFF only", Exit, OutOfRange); 
+      tmap_error_cmd_check_int(opt->hit_frac, 0, 1, "-Y");
       break;
     case TMAP_MAP_ALGO_MAPALL:
       tmap_error_cmd_check_int(opt->aln_output_mode_ind, 0, 1, "-I");
@@ -856,6 +860,7 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "seeds_rev=%d\n", opt->seeds_rev);
   fprintf(stderr, "max_seed_hits=%d\n", opt->max_seed_hits);
   fprintf(stderr, "hp_diff=%d\n", opt->hp_diff);
+  fprintf(stderr, "hit_frac=%lf\n", opt->hit_frac);
   fprintf(stderr, "aln_output_mode_ind=%d\n", opt->aln_output_mode_ind);
   fprintf(stderr, "mapall_score_thr=%d\n", opt->mapall_score_thr);
   fprintf(stderr, "mapall_mapq_thr=%d\n", opt->mapall_mapq_thr);
@@ -1472,6 +1477,7 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
   int32_t mapq;
   int32_t stage = -1;
   int32_t algo_id = TMAP_MAP_ALGO_NONE; 
+  int32_t best_repetitive = 0;
 
   // estimate mapping quality TODO: this needs to be refined
   best_i = 0;
@@ -1490,8 +1496,17 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
           best_i = i;
           stage = (algo_id == TMAP_MAP_ALGO_NONE) ? sams->sams[i].algo_stage-1 : -1;
           algo_id = (algo_id == TMAP_MAP_ALGO_NONE) ? sams->sams[i].algo_id : -1;
+          if(sams->sams[i].algo_id == TMAP_MAP_ALGO_MAP2 && 1 == sams->sams[i].aux.map2_aux->flag) {
+              best_repetitive = 1;
+          }
+          else {
+              best_repetitive = 0;
+          }
       }
       else if(cur_score == best_score) { // qual
+          if(sams->sams[i].algo_id == TMAP_MAP_ALGO_MAP2 && 1 == sams->sams[i].aux.map2_aux->flag) {
+              best_repetitive = 1;
+          }
           n_best++;
       }
       else {
@@ -1513,7 +1528,7 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
       }
   }
   if(best_subo < best_subo2) best_subo = best_subo2;
-  if(1 < n_best || best_score <= best_subo) {
+  if(1 < n_best || best_score <= best_subo || 0 < best_repetitive) {
       mapq = 0;
   }
   else {

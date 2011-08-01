@@ -114,14 +114,14 @@ enum {
 /** 
  * A list of command line flags take or available.
  * Taken:
- * abcdefghijklmnopqrstuvwxz
- * ABCDEFHGIJKLMNOPQRSTUXYZ
+ * abcdefghijklmnopqrstuvwxyz
+ * ABCDEFHGIJKLMNOPQRSTUWXYZ
  * 12
  *
  * Available:
  * 03456789
- * y
- * VW
+ * 
+ * 
 */
 
 typedef struct __tmap_map_opt_t {
@@ -194,6 +194,7 @@ typedef struct __tmap_map_opt_t {
     // map3 options
     int32_t max_seed_hits; /*!< the maximum number of hits returned by a seed (-S) */
     int32_t hp_diff; /*!< single homopolymer error difference for enumeration (-H) */
+    double hit_frac; /*!<   the fraction of seed positions that are under the maximum (-S) (-V) */
 
     // mapvsw options
     // None
@@ -273,7 +274,8 @@ typedef struct {
   */
 typedef struct {
     uint16_t XF:2;  /*!< support for the forward/reverse alignment (1-forward 2-reverse 3-both) */
-    uint16_t XE:14;  /*!< the number of supporting seeds */
+    uint16_t flag:1; /*!< 0 for non-repetitive hit, 1 for repetitive hit */
+    uint16_t XE:13;  /*!< the number of supporting seeds */
     int32_t XI;  /*!< the suffix interval size */
 } tmap_map_map2_aux_t;
 

@@ -371,6 +371,7 @@ tmap_map2_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
       else {
           sam->aux.map2_aux->XI = 0;
       }
+      sam->aux.map2_aux->flag = (p->flag & 0x1) ? 1 : 0;
       j++;
   }
   if(j != aln->n) {
@@ -489,7 +490,7 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
       b[0]->hits[i].k++;
   }
   
-  // generate CIGAR and print SAM
+  // store in SAM 
   sams = tmap_map2_aux_store_hits(refseq, &opt, b[0], l);
 
   // free
