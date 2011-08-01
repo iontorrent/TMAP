@@ -386,16 +386,25 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
               sam_cur->score_subo = INT32_MIN;
               if(0 < opt->seed2_length && seed2_len < bases[strand]->l) { // adjust if we used a secondary seed
                   // adjust both the target length and position
-                  if(sam_cur->pos < (bases[strand]->l - seed2_len)) {
-                      sam_cur->target_len += sam_cur->pos;
-                      sam_cur->pos = 0;
-                  }
-                  else {
+                  if(0 == strand) { // forward
                       sam_cur->target_len += (bases[strand]->l - seed2_len);
-                      sam_cur->pos -= (bases[strand]->l - seed2_len);
+                      // NB: sam_cur->pos is zero based
+                      if(refseq->annos[sam_cur->seqid].len < sam_cur->pos + sam_cur->target_len) {
+                          sam_cur->target_len = refseq->annos[sam_cur->seqid].len - sam_cur->pos;
+                      }
+                  }
+                  else { // reverse
+                      if(sam_cur->pos < (bases[strand]->l - seed2_len)) { // before the start of the chromosome
+                          sam_cur->target_len += sam_cur->pos;
+                          sam_cur->pos = 0;
+                      }
+                      else { // move to the end of the read
+                          sam_cur->target_len += (bases[strand]->l - seed2_len);
+                          sam_cur->pos -= (bases[strand]->l - seed2_len);
+                      }
                   }
               }
-              else if(sam_cur->target_len < bases[strand]->l) {
+              else if(sam_cur->target_len < bases[strand]->l) { // do not adjust, we used the full read
                   sam_cur->target_len = bases[strand]->l;
               }
 
