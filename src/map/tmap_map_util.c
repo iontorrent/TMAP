@@ -94,7 +94,7 @@ tmap_map_opt_init(int32_t algo_id)
       // map1
       opt->seed_length = 32;
       opt->seed_max_diff = 2;
-      opt->seed2_length = 64;
+      opt->seed2_length = 48;
       opt->max_diff = -1; opt->max_diff_fnr = 0.04;
       opt->max_mm = 3; opt->max_mm_frac = -1.;
       opt->max_err_rate = 0.02;
