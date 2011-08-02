@@ -61,7 +61,7 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
   @param  strand      the strand of the mapping
   @param  seqid       the sequence index (0-based)
   @param  pos         the position (0-based)
-  @param  aln_num     1 if the alignment is a secondary alignment, 0 otherwise
+  @param  secondary   1 if the alignment is a secondary alignment, 0 otherwise
   @param  end_num     0 if there is no mate (all mate params ignored), 1 if the mate is the first fragment, 2 if the mate is the last fragment
   @param  m_unmapped  1 if the mate is unmapped, 0 otherwise (m_strand/m_seqid/m_pos/m_tlen are ignored)
   @param  m_prop      1 if properly paired, 0 otherwise
