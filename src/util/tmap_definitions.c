@@ -554,11 +554,30 @@ tmap_validate_flow_order(const char *flow_order)
         case 'c': j |= 0x2; break;
         case 'g': j |= 0x4; break;
         case 't': j |= 0x8; break;
-        default: tmap_error("unrecognized DNA base (-x)", Exit, CommandLineArgument); break;
+        default: return -1; 
       }
   }
   if(0xf != j) {
-      tmap_error("all DNA bases must be present at least once (-x)", Exit, CommandLineArgument);
+      return -2;
+  }
+  return 0;
+}
+
+int32_t
+tmap_validate_key_seq(const char *key_seq)
+{
+  int32_t i;
+  tmap_error_cmd_check_int(strlen(key_seq), 4, INT32_MAX, "-x");
+  for(i=0;i<strlen(key_seq);i++) { // each base must be used
+      switch(tolower(key_seq[i])) {
+        case 'a': 
+        case 'c': 
+        case 'g': 
+        case 't': 
+          break;
+        default: 
+          return -1;
+      }
   }
   return 1;
 }

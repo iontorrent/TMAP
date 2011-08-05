@@ -142,8 +142,11 @@ typedef struct __tmap_map_opt_t {
     int32_t fscore;  /*!< the flow score penalty (-X) */
     char *flow_order; /*!< the flow order (-x) */
     int32_t flow_order_use_sff; /*!< the flow order should be from the sff (-x) */
+    char *key_seq; /*!< the key sequence (-t) */
+    int32_t key_seq_use_sff; /*!< the key sequence should be from the sff (-t) */
     int32_t bw; /*!< the extra bases to add before and after the target during Smith-Waterman (-w) */
     int32_t softclip_type; /*!< soft clip type (-g) */
+    int32_t softclip_key; /*!< soft clip only the last base of the key (-y) */
     int32_t dup_window; /*!< remove duplicate alignments from different algorithms within this bp window (-W) */
     int32_t max_seed_band; /*!< the band to group seeds (-B)*/
     int32_t score_thr;  /*!< the score threshold (match-score-scaled) (-T) */
@@ -184,7 +187,7 @@ typedef struct __tmap_map_opt_t {
     int32_t max_entries;  /*!< maximum number of alignment nodes (-Q) */
     
     // map2 options
-    double yita;  /*!< the error recurrence coefficient (-y)  */
+    double yita;  /*!< the error recurrence coefficient (PERMANENTLY SET) */
     //double mask_level;  /*!< the mask level (-m) */
     double length_coef;  /*!< the coefficient of length-threshold adjustment (-c) */
     int32_t max_seed_intv;  /*!< the maximum seed interval (-S) */

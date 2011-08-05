@@ -72,8 +72,11 @@ tmap_map_opt_init(int32_t algo_id)
   opt->fscore = TMAP_MAP_UTIL_FSCORE;
   opt->flow_order = NULL;
   opt->flow_order_use_sff = 0;
+  opt->key_seq = NULL;
+  opt->key_seq_use_sff = 0;
   opt->bw = 50; 
   opt->softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_RIGHT;
+  opt->softclip_key = 0;
   opt->remove_sff_clipping = 1;
   opt->dup_window = 128;
   opt->max_seed_band = 15;
@@ -158,6 +161,7 @@ tmap_map_opt_destroy(tmap_map_opt_t *opt)
   free(opt->fn_reads);
   free(opt->sam_rg);
   free(opt->flow_order);
+  free(opt->key_seq);
 
   switch(opt->algo_id) {
     case TMAP_MAP_ALGO_MAP1:
@@ -274,12 +278,16 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "         -X INT      the flow score penalty [%d]\n", opt->fscore);
   tmap_file_fprintf(tmap_file_stderr, "         -x STRING   the flow order ([ACGT]{4+} or \"sff\") [%s]\n",
                     (NULL == opt->flow_order) ? "not using" : opt->flow_order);
+  tmap_file_fprintf(tmap_file_stderr, "         -t STRING   the key sequence ([ACGT]{4+} or \"sff\") [%s]\n",
+                    (NULL == opt->key_seq) ? "not using" : opt->key_seq);
   tmap_file_fprintf(tmap_file_stderr, "         -w INT      the band width [%d]\n", opt->bw);
   tmap_file_fprintf(tmap_file_stderr, "         -g          the soft-clipping type [%d]\n", opt->softclip_type);
   tmap_file_fprintf(tmap_file_stderr, "                             0 - allow on the right and left portions of the read\n");
   tmap_file_fprintf(tmap_file_stderr, "                             1 - allow on the left portion of the read\n");
   tmap_file_fprintf(tmap_file_stderr, "                             2 - allow on the right portion of the read\n");
   tmap_file_fprintf(tmap_file_stderr, "                             3 - do not allow soft-clipping\n");
+  tmap_file_fprintf(tmap_file_stderr, "         -y          soft clip only the last base of the key [%d]\n",
+                    (1 == opt->softclip_key) ? "true" : "false");
   tmap_file_fprintf(tmap_file_stderr, "         -W INT      remove duplicate alignments within this bp window (-1 to disable) [%d]\n",
                     opt->dup_window);
   tmap_file_fprintf(tmap_file_stderr, "         -B INT      the window of bases in which to group seeds [%d]\n", opt->max_seed_band); 
@@ -353,19 +361,19 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   opt->argc = argc; opt->argv = argv;
   switch(opt->algo_id) {
     case TMAP_MAP_ALGO_MAP1:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YGjzJZk:vhl:s:L:p:P:m:o:e:d:i:b:Q:u:U:");
+      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhl:s:L:p:P:m:o:e:d:i:b:Q:u:U:");
       break;
     case TMAP_MAP_ALGO_MAP2:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YGjzJZk:vhc:S:b:N:u:U:");
+      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhc:S:b:N:u:U:");
       break;
     case TMAP_MAP_ALGO_MAP3:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YGjzJZk:vhl:S:H:V:u:U:");
+      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhl:S:H:V:u:U:");
       break;
     case TMAP_MAP_ALGO_MAPVSW:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YGjzJZk:vhu:U:");
+      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhu:U:");
       break;
     case TMAP_MAP_ALGO_MAPALL:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:w:g:W:B:T:q:n:a:R:YGjzJZk:vhIC:D:K:u:U:");
+      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhIC:D:K:u:U:");
       break;
     default:
       tmap_error("unrecognized algorithm", Exit, OutOfRange);
@@ -405,10 +413,21 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
               opt->flow_order_use_sff = 0;
           }
           break;
+        case 't':
+          opt->key_seq = tmap_strdup(optarg);
+          if(0 == strcmp("sff", opt->key_seq) || 0 == strcmp("SFF", opt->key_seq)) {
+              opt->key_seq_use_sff = 1;
+          }
+          else {
+              opt->key_seq_use_sff = 0;
+          }
+          break;
         case 'w':
           opt->bw = atoi(optarg); break;
         case 'g':
           opt->softclip_type = atoi(optarg); break;
+        case 'y':
+          opt->softclip_type  = 1; break;
         case 'W':
           opt->dup_window = atoi(optarg); break;
         case 'B':
@@ -635,11 +654,20 @@ tmap_map_opt_file_check_with_null(char *fn1, char *fn2)
     if((opt_map_other)->flow_order_use_sff != (opt_map_all)->flow_order_use_sff) { \
         tmap_error("option -x was specified outside of the common options", Exit, CommandLineArgument); \
     } \
+    if(0 != tmap_map_opt_file_check_with_null((opt_map_other)->key_seq, (opt_map_all)->key_seq)) { \
+        tmap_error("option -t was specified outside of the common options", Exit, CommandLineArgument); \
+    } \
+    if((opt_map_other)->key_seq_use_sff != (opt_map_all)->key_seq_use_sff) { \
+        tmap_error("option -t was specified outside of the common options", Exit, CommandLineArgument); \
+    } \
     if((opt_map_other)->bw != (opt_map_all)->bw) { \
         tmap_error("option -w was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->softclip_type != (opt_map_all)->softclip_type) { \
         tmap_error("option -g was specified outside of the common options", Exit, CommandLineArgument); \
+    } \
+    if((opt_map_other)->softclip_key != (opt_map_all)->softclip_key) { \
+        tmap_error("option -y was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->dup_window != (opt_map_all)->dup_window) { \
         tmap_error("option -W was specified outside of the common options", Exit, CommandLineArgument); \
@@ -697,8 +725,14 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       else if(1 == opt->flow_order_use_sff) {
           tmap_error("options -1 and -2 cannot be used with -x", Exit, CommandLineArgument);
       }
+      else if(1 == opt->key_seq_use_sff) {
+          tmap_error("options -1 and -2 cannot be used with -t", Exit, CommandLineArgument);
+      }
       else if(NULL != opt->flow_order) {
           tmap_error("options -1 and -2 cannot be used with -x", Exit, CommandLineArgument);
+      }
+      else if(NULL != opt->key_seq) {
+          tmap_error("options -1 and -2 cannot be used with -t", Exit, CommandLineArgument);
       }
       // OK
   }
@@ -717,11 +751,41 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
           }
       }
       else {
-          tmap_validate_flow_order(opt->flow_order);
+          switch(tmap_validate_flow_order(opt->flow_order)) {
+            case 0:
+              break;
+            case -1:
+              tmap_error("unrecognized DNA base (-x)", Exit, CommandLineArgument);
+            case -2:
+              tmap_error("all DNA bases must be present at least once (-x)", Exit, CommandLineArgument);
+            default:
+              tmap_error("unrecognized error (-x)", Exit, CommandLineArgument);
+              break;
+          }
+      }
+  }
+  if(NULL != opt->key_seq) {
+      if(0 == strcmp("sff", opt->key_seq) || 0 == strcmp("SFF", opt->key_seq)) {
+          if(TMAP_READS_FORMAT_SFF != opt->reads_format) {
+              tmap_error("an SFF was not specified (-r) but you want to use the sff flow order (-t)", Exit, CommandLineArgument);
+          }
+      }
+      else {
+          switch(tmap_validate_key_seq(opt->key_seq)) {
+            case 0:
+              break;
+            case -1:
+              tmap_error("unrecognized DNA base (-t)", Exit, CommandLineArgument); break;
+              break;
+            default:
+              tmap_error("unrecognized error (-t)", Exit, CommandLineArgument);
+              break;
+          }
       }
   }
   tmap_error_cmd_check_int(opt->bw, 0, INT32_MAX, "-w");
   tmap_error_cmd_check_int(opt->softclip_type, 0, 3, "-g");
+  tmap_error_cmd_check_int(opt->softclip_key, 0, 1, "-y");
   tmap_error_cmd_check_int(opt->dup_window, -1, INT32_MAX, "-W");
   tmap_error_cmd_check_int(opt->max_seed_band, 1, INT32_MAX, "-B");
   tmap_error_cmd_check_int(opt->score_thr, INT32_MIN, INT32_MAX, "-T");
@@ -761,7 +825,6 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       }
       break;
     case TMAP_MAP_ALGO_MAP2:
-      //tmap_error_cmd_check_int(opt->yita, 0, 1, "-y");
       //tmap_error_cmd_check_int(opt->mask_level, 0, 1, "-m");
       tmap_error_cmd_check_int(opt->length_coef, 0, INT32_MAX, "-c");
       tmap_error_cmd_check_int(opt->max_seed_intv, 0, INT32_MAX, "-S");
@@ -820,8 +883,11 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "fscore=%d\n", opt->fscore);
   fprintf(stderr, "flow_order=%s\n", opt->flow_order);
   fprintf(stderr, "flow_order_use_sff=%d\n", opt->flow_order_use_sff);
+  fprintf(stderr, "key_seq=%s\n", opt->key_seq);
+  fprintf(stderr, "key_seq_use_sff=%d\n", opt->key_seq_use_sff);
   fprintf(stderr, "bw=%d\n", opt->bw);
   fprintf(stderr, "softclip_type=%d\n", opt->softclip_type);
+  fprintf(stderr, "softclip_key=%d\n", opt->softclip_key);
   fprintf(stderr, "dup_window=%d\n", opt->dup_window);
   fprintf(stderr, "max_seed_band=%d\n", opt->max_seed_band);
   fprintf(stderr, "score_thr=%d\n", opt->score_thr);

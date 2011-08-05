@@ -22,6 +22,7 @@
   @param  seqio         the input reading data structure, NULL otherwise
   @param  sam_rg        the SAM RG line, NULL otherwise
   @param  flow_order     the flow order, this should be NULL if the input file is SFF and the sam_sff_flags is one
+  @param  key_seq       the key sequence, this should be NULL if the input file is SFF and the sam_sff_flags is one
   @param  sam_sff_tags  1 if SFF specific SAM tags are to be outputted, 0 otherwise
   @param  argc          the number of input command line arguments
   @param  argv          the input command line arguments
@@ -30,7 +31,7 @@
 void
 tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, 
                       tmap_seq_io_t *seqio, char *sam_rg, 
-                      char *flow_order, int32_t sam_sff_tags, 
+                      char *flow_order, char *key_seq, int32_t sam_sff_tags, 
                       int argc, char *argv[]);
 
 /*! 

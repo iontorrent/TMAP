@@ -286,9 +286,19 @@ tmap_compare_versions(const char *v1, const char *v2);
 /*!
   validates the flow order
   @param  flow_order  the flow order to validate
-  @return            1 if all four bases are present in the flow order, 0 otherwise
+  @return            0 if all four bases are present in the flow order, 
+  -1 if there was an unrecognized base, and -2 if not all bases are present.
   */
 int32_t
 tmap_validate_flow_order(const char *flow_order);
+
+/*!
+  validates the key sequence
+  @param  key_seq  the flow order to validate
+  @return            0 if all four bases are present in the flow order, 
+  and -1 if there was an unrecognized base.
+  */
+int32_t
+tmap_validate_key_seq(const char *key_seq);
 
 #endif

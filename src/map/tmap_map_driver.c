@@ -278,7 +278,7 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
 
   // SAM header
   tmap_sam_print_header(tmap_file_stdout, refseq, (1 == num_ends) ? seqio[0] : NULL, 
-                        opt->sam_rg, opt->flow_order, opt->sam_sff_tags, opt->argc, opt->argv);
+                        opt->sam_rg, opt->flow_order, opt->key_seq, opt->sam_sff_tags, opt->argc, opt->argv);
 
   tmap_progress_print("processing reads");
   while(1) {
