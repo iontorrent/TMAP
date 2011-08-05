@@ -172,6 +172,19 @@ inline int32_t
 tmap_refseq_subseq(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t length, uint8_t *target);
 
 /*! 
+  Retrieves a subsequence of the reference in 2-bit format
+  @param  refseq  pointer to the structure in which the data is stored
+  @param  seqid   the sequence id (one-based)
+  @param  start   the start position (one-based)
+  @param  end     the end position (one-based)
+  @param  target  pre-allocated memory for the target
+  @param  to_n    change all ambiguous bases to N, otherwise they will be returned as the correct code
+  @return         the target sequence if successful, NULL otherwise
+  */
+inline uint8_t*
+tmap_refseq_subseq2(const tmap_refseq_t *refseq, uint32_t seqid, uint32_t start, uint32_t end, uint8_t *target, int32_t to_n);
+
+/*! 
   Checks if the given reference range has ambiguous bases
   @param  refseq  pointer to the structure in which the data is stored
   @param  seqid   the sequence index (one-based)

@@ -310,35 +310,9 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
   }
   ref_end--;
       
-  target = tmap_malloc(sizeof(char) * (ref_end - ref_start + 1), "target");
-  if(ref_end - ref_start + 1 != tmap_refseq_subseq(refseq, ref_start + refseq->annos[seqid].offset, ref_end - ref_start + 1, target)) {
-      fprintf(stderr, "ref_start=%u ref_end=%u refseq->len=%u\n", ref_start, ref_end, (uint32_t)refseq->len);
-      fprintf(stderr, "cigar=");
-      for(i=0;i<n_cigar;i++) { // go through each cigar operator
-          int32_t op_len;
-          op_len = cigar[i] >> 4;
-          fprintf(stderr, "%d%c", op_len, "MIDNSHP"[cigar[i]&0xf]);
-          switch(cigar[i]&0xf) {
-            case BAM_CMATCH:
-            case BAM_CDEL:
-            case BAM_CREF_SKIP:
-            default:
-              break;
-          }
-      }
-      fprintf(stderr, "\n");
+  target = tmap_refseq_subseq2(refseq, seqid+1, ref_start, ref_end, NULL, 0);
+  if(NULL == target) {
       tmap_error("bug encountered", Exit, OutOfRange);
-  }
-
-  // check if any IUPAC bases fall within the range
-  if(0 < tmap_refseq_amb_bases(refseq, seqid+1, ref_start, ref_end)) {
-      // modify them
-      for(ref_i=ref_start;ref_i<=ref_end;ref_i++) {
-          j = tmap_refseq_amb_bases(refseq, seqid+1, ref_i, ref_i); // Note: j is one-based
-          if(0 < j) {
-              target[ref_i-ref_start] = refseq->annos[seqid].amb_bases[j-1];
-          }
-      }
   }
 
   if(0 == n_cigar) {
@@ -423,7 +397,7 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
   va_list ap;
   int32_t i;
   tmap_string_t *name=NULL, *bases=NULL, *qualities=NULL;
-  uint32_t flag, *cigar_tmp = NULL, cigar_tmp_allocated = 0;
+  uint32_t flag;
   tmap_string_t *md;
   int32_t nm;
 
@@ -461,7 +435,6 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
                     name->s, flag, refseq->annos[seqid].name->s,
                     pos + 1,
                     mapq);
-  cigar_tmp = cigar;
 
   // print out the cigar
   if(TMAP_SEQ_TYPE_SFF == seq->type) {
@@ -474,7 +447,7 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
   }
   for(i=0;i<n_cigar;i++) {
       tmap_file_fprintf(fp, "%d%c",
-                        cigar_tmp[i]>>4, "MIDNSHP"[cigar_tmp[i]&0xf]);
+                        cigar[i]>>4, "MIDNSHP"[cigar[i]&0xf]);
   }
   if(TMAP_SEQ_TYPE_SFF == seq->type) {
       if(1 == strand && 0 < seq->data.sff->rheader->clip_left) {
@@ -512,7 +485,7 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
                     PACKAGE_NAME);
 
   // MD and NM
-  md = tmap_sam_md(refseq, bases->s, seqid, pos, cigar_tmp, n_cigar, &nm);
+  md = tmap_sam_md(refseq, bases->s, seqid, pos, cigar, n_cigar, &nm);
   tmap_file_fprintf(fp, "\tMD:Z:%s\tNM:i:%d", md->s, nm);
   tmap_string_destroy(md);
 
@@ -548,10 +521,6 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
   if(1 == strand) { // reverse back
       tmap_string_reverse_compliment(bases, 0);
       tmap_string_reverse(qualities);
-  }
-
-  if(1 == cigar_tmp_allocated) {
-      free(cigar_tmp);
   }
 }
 

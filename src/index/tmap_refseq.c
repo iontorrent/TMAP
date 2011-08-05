@@ -772,6 +772,38 @@ tmap_refseq_subseq(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t length
   return l;
 }
 
+inline uint8_t*
+tmap_refseq_subseq2(const tmap_refseq_t *refseq, uint32_t seqid, uint32_t start, uint32_t end, uint8_t *target, int32_t to_n)
+{
+  uint32_t i, j;
+
+  if(0 == seqid || refseq->num_annos < seqid || end < start) {
+      return NULL;
+  }
+
+  if(NULL == target) { 
+      target = tmap_malloc(sizeof(char) * (end - start + 1), "target");
+  }
+  if((end - start + 1) != tmap_refseq_subseq(refseq, refseq->annos[seqid-1].offset + start, end - start + 1, target)) {
+      free(target);
+      return NULL;
+  }
+
+  // check if any IUPAC bases fall within the range
+  // NB: this could be done more efficiently, since we we know start <= end
+  if(0 < tmap_refseq_amb_bases(refseq, seqid, start, end)) {
+      // modify them
+      for(i=start;i<=end;i++) {
+          j = tmap_refseq_amb_bases(refseq, seqid, i, i); // Note: j is one-based
+          if(0 < j) {
+              target[i-start] = (0 == to_n) ? refseq->annos[seqid-1].amb_bases[j-1] : 4;
+          }
+      }
+  }
+
+  return target;
+}
+
 inline int32_t
 tmap_refseq_amb_bases(const tmap_refseq_t *refseq, uint32_t seqid, uint32_t start, uint32_t end)
 {

@@ -427,7 +427,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
         case 'g':
           opt->softclip_type = atoi(optarg); break;
         case 'y':
-          opt->softclip_type  = 1; break;
+          opt->softclip_key = 1; break;
         case 'W':
           opt->dup_window = atoi(optarg); break;
         case 'B':
@@ -785,7 +785,15 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   }
   tmap_error_cmd_check_int(opt->bw, 0, INT32_MAX, "-w");
   tmap_error_cmd_check_int(opt->softclip_type, 0, 3, "-g");
-  tmap_error_cmd_check_int(opt->softclip_key, 0, 1, "-y");
+  if(1 == opt->softclip_key) {
+      if(NULL == opt->key_seq && TMAP_READS_FORMAT_SFF != opt->reads_format) {
+          tmap_error("an SFF (-r) or the key sequence (-t) must be specified to use -y", Exit, CommandLineArgument);
+      }
+  }
+  else {
+      tmap_error_cmd_check_int(opt->softclip_key, 0, 0, "-y");
+  }
+
   tmap_error_cmd_check_int(opt->dup_window, -1, INT32_MAX, "-W");
   tmap_error_cmd_check_int(opt->max_seed_band, 1, INT32_MAX, "-B");
   tmap_error_cmd_check_int(opt->score_thr, INT32_MIN, INT32_MAX, "-T");
@@ -1761,21 +1769,11 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           tmap_roundup32(target_mem);
           target = tmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
       }
-      if(tlen != tmap_refseq_subseq(refseq, refseq->annos[sams->sams[end].seqid].offset + start_pos, tlen, target)) {
+      // NB: IUPAC codes are turned into mismatches
+      if(NULL == tmap_refseq_subseq2(refseq, sams->sams[end].seqid+1, start_pos, end_pos, target, 1)) {
           tmap_error("bug encountered", Exit, OutOfRange);
       }
 
-      // check if any IUPAC bases fall within the range
-      if(0 < tmap_refseq_amb_bases(refseq, sams->sams[end].seqid+1, start_pos, end_pos)) {
-          int32_t j, pos;
-          // modify them
-          for(pos=start_pos;pos<=end_pos;pos++) {
-              j = tmap_refseq_amb_bases(refseq, sams->sams[end].seqid+1, pos, pos); // Note: j is one-based
-              if(0 < j) {
-                  target[pos-start_pos] = 4; // mismatch!
-              }
-          }
-      }
 
       // Debugging
 #ifdef TMAP_VSW_DEBUG
@@ -1907,7 +1905,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
                  tmap_seq_t *seq,
                  tmap_map_opt_t *opt)
 {
-  int32_t i, j, matrix[25];
+  int32_t i, j, k, l, matrix[25];
   int32_t start, end;
   tmap_map_sams_t *sams_tmp = NULL;
   tmap_sw_param_t par;
@@ -1920,6 +1918,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
   tmap_vsw_opt_t *vsw_opt = NULL;
   uint32_t start_pos, end_pos;
   int32_t overflow, softclip_start, softclip_end;
+  uint8_t key_base = 0;
 
   if(0 == sams->n) {
       return sams;
@@ -1954,6 +1953,19 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
   vsw_query[1] = tmap_vsw_query_init((uint8_t*)tmap_seq_get_bases(seqs[1])->s, seq_len, 
                                      seq_len, softclip_start, softclip_end, vsw_opt);
       
+  if(1 == opt->softclip_key) {
+      // get the last base
+      if(NULL != opt->key_seq) {
+          key_base = tmap_nt_char_to_int[(int)opt->key_seq[strlen(opt->key_seq)-1]]; 
+      }
+      else {
+          if(TMAP_SEQ_TYPE_SFF != seq->type) {
+              tmap_error("bug encountered", Exit, OutOfRange);
+          }
+          key_base = tmap_nt_char_to_int[(int)seq->data.sff->gheader->key->s[seq->data.sff->gheader->key->l-1]];
+      }
+  }
+      
   i = start = end = 0;
   start_pos = end_pos = 0;
   while(end < sams->n) {
@@ -1983,20 +1995,9 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
           tmap_roundup32(target_mem);
           target = tmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
       }
-      if(tlen != tmap_refseq_subseq(refseq, refseq->annos[tmp_sam.seqid].offset + start_pos, tlen, target)) {
+      // NB: IUPAC codes are turned into mismatches
+      if(NULL == tmap_refseq_subseq2(refseq, sams->sams[end].seqid+1, start_pos, end_pos, target, 1)) {
           tmap_error("bug encountered", Exit, OutOfRange);
-      }
-
-      // check if any IUPAC bases fall within the range
-      if(0 < tmap_refseq_amb_bases(refseq, sams->sams[end].seqid+1, start_pos, end_pos)) {
-          int32_t j, pos;
-          // modify them
-          for(pos=start_pos;pos<=end_pos;pos++) {
-              j = tmap_refseq_amb_bases(refseq, sams->sams[end].seqid+1, pos, pos); // Note: j is one-based
-              if(0 < j) {
-                  target[pos-start_pos] = 4; // mismatch!
-              }
-          }
       }
       
       /**
@@ -2149,6 +2150,130 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
         default:
           tmap_error("bug encountered", Exit, OutOfRange);
           break;
+      }
+
+      // key trim the data
+      if(1 == opt->softclip_key) {
+          //NB: we may only need to look at the first cigar
+          int32_t op, op_len;
+          op = op_len = 0;
+          if(0 == strand) { // forward
+              for(j = k = l = 0; j < s->n_cigar; j++) {
+                  // get the cigar
+                  op = TMAP_SW_CIGAR_OP(s->cigar[j]);
+                  op_len = TMAP_SW_CIGAR_LENGTH(s->cigar[j]);
+                  if(op == BAM_CDEL) break; // looking for mismatch/insertion
+                  if(op == BAM_CSOFT_CLIP) break; // already start trimming
+
+                  while(0 < op_len) {
+                      if(query[k] != key_base) break;
+                      if(op == BAM_CINS) {
+                      }
+                      else if(op == BAM_CMATCH && target[l] != query[k]) {
+                          l++;
+                      }
+                      else {
+                          break;
+                      }
+                      op_len--;
+                      k++; // since we can only have match/mismatch/insertion
+                  }
+                  if(0 == k) { 
+                      // no trimming
+                      break;
+                  }
+                  else if(0 < op_len) {
+                      if(j == 0) {
+                          // reallocate
+                          s->n_cigar++;
+                          s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*s->n_cigar, "s->cigar");
+                          for(k=s->n_cigar-1;0<k;k--) { // shift up
+                              s->cigar[k] = s->cigar[k-1];
+                          }
+                          s->cigar[0] = 0;
+                          j++; // reflect the shift in j 
+                      }
+                      // NB: 0 < j
+                      // add to the leading soft-clip
+                      TMAP_SW_CIGAR_STORE(s->cigar[0], BAM_CSOFT_CLIP, TMAP_SW_CIGAR_LENGTH(s->cigar[j]) - op_len + TMAP_SW_CIGAR_LENGTH(s->cigar[0]));
+                      // reduce the cigar length
+                      TMAP_SW_CIGAR_STORE(s->cigar[j], op, op_len);
+                      break;
+                  }
+                  else { // NB: the full op was removed
+                      if(0 == j) {
+                          TMAP_SW_CIGAR_STORE(s->cigar[0], BAM_CSOFT_CLIP, TMAP_SW_CIGAR_LENGTH(s->cigar[0]));
+                      }
+                      else {
+                          // add to the leading soft-clip
+                          TMAP_SW_CIGAR_STORE(s->cigar[0], BAM_CSOFT_CLIP, TMAP_SW_CIGAR_LENGTH(s->cigar[j]) + TMAP_SW_CIGAR_LENGTH(s->cigar[0]));
+                          // shift down and overwrite the current cigar
+                          for(k=j;k<s->n_cigar-1;k++) {
+                              s->cigar[k] = s->cigar[k+1];
+                          }
+                          s->n_cigar--;
+                          j--; // since j is incremented later
+                      }
+                  }
+              }
+              // update the position based on the number of reference bases we
+              // skipped
+              s->pos += l;
+          }
+          else { // reverse
+              for(j = s->n_cigar-1, k = qlen-1, l = tlen-1; 0 <= j; j--) {
+                  // get the cigar
+                  op = TMAP_SW_CIGAR_OP(s->cigar[j]);
+                  op_len = TMAP_SW_CIGAR_LENGTH(s->cigar[j]);
+                  if(op == BAM_CDEL) break; // looking for mismatch/insertion
+                  if(op == BAM_CSOFT_CLIP) break; // already start trimming
+                  while(0 < op_len) {
+                      if(query[k] != (3 - key_base)) break;
+                      if(op == BAM_CINS) {
+                      }
+                      else if(op == BAM_CMATCH && target[l] != query[k]) {
+                          l--;
+                      }
+                      else {
+                          break;
+                      }
+                      op_len--;
+                      k--; // since we can only have match/mismatch/insertion
+                  }
+                  if(qlen-1 == k) { 
+                      // no trimming
+                      break;
+                  }
+                  else if(0 < op_len) {
+                      if(j == s->n_cigar-1) {
+                          // reallocate
+                          s->n_cigar++;
+                          s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*s->n_cigar, "s->cigar");
+                          s->cigar[s->n_cigar-1] = 0;
+                      }
+                      // add to the ending soft-clip
+                      TMAP_SW_CIGAR_STORE(s->cigar[s->n_cigar-1], BAM_CSOFT_CLIP, TMAP_SW_CIGAR_LENGTH(s->cigar[j]) - op_len + TMAP_SW_CIGAR_LENGTH(s->cigar[s->n_cigar-1]));
+                      // reduce the cigar length
+                      TMAP_SW_CIGAR_STORE(s->cigar[j], op, op_len);
+                      break;
+                  }
+                  else { // NB: the full op was removed
+                      if(j == s->n_cigar-1) {
+                          TMAP_SW_CIGAR_STORE(s->cigar[s->n_cigar-1], BAM_CSOFT_CLIP, TMAP_SW_CIGAR_LENGTH(s->cigar[s->n_cigar-1]));
+                      }
+                      else {
+                          // add to the ending soft-clip
+                          TMAP_SW_CIGAR_STORE(s->cigar[s->n_cigar-1], BAM_CSOFT_CLIP, TMAP_SW_CIGAR_LENGTH(s->cigar[s->n_cigar-1]));
+                          // shift down and overwrite the current cigar
+                          for(k=j;k<s->n_cigar-1;k++) {
+                              s->cigar[k] = s->cigar[k+1];
+                          }
+                          s->n_cigar--;
+                          j++; // since j is decremented later
+                      }
+                  }
+              }
+          }
       }
 
       i++;

@@ -391,8 +391,11 @@ tmap_map_all_core(tmap_map_opt_t *opt)
     (opt_map_other)->fscore = (opt_map_all)->fscore; \
     (opt_map_other)->flow_order = tmap_strdup((opt_map_all)->flow_order); \
     (opt_map_other)->flow_order_use_sff = (opt_map_all)->flow_order_use_sff; \
+    (opt_map_other)->key_seq = tmap_strdup((opt_map_all)->key_seq); \
+    (opt_map_other)->key_seq_use_sff = (opt_map_all)->key_seq_use_sff; \
     (opt_map_other)->bw = (opt_map_all)->bw; \
     (opt_map_other)->softclip_type = (opt_map_all)->softclip_type; \
+    (opt_map_other)->softclip_key = (opt_map_all)->softclip_key; \
     (opt_map_other)->dup_window = (opt_map_all)->dup_window; \
     (opt_map_other)->max_seed_band = (opt_map_all)->max_seed_band; \
     (opt_map_other)->score_thr = (opt_map_all)->score_thr; \

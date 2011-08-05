@@ -579,5 +579,5 @@ tmap_validate_key_seq(const char *key_seq)
           return -1;
       }
   }
-  return 1;
+  return 0;
 }
