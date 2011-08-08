@@ -2,21 +2,7 @@ TMAP - flow mapper
 
 === Pre-requisites ===
 1. Compiler (required):
-  The compiler and system must support SSE4 instructions.  GCC 4.3 first 
-	privided support for SSE4.
-
-2. SAMtools (optional):
-  The following commands rely on linking to samtools:
-    tmap sam2fs
-  They will will be unavailable if the samtools directory cannot be located.
-
-  The samtools directory must be placed in this directory.  The 
-  easiest way to do this is to a symbolic link:
-    ln -s <path to samtools> samtools 
-  Then the samtools library must be built:
-    cd samtools
-	make
-	cd ..
+  The compiler and system must support SSE2 instructions.  
 
 === To Install ===
 
@@ -26,7 +12,8 @@ TMAP - flow mapper
   make install
 
 === Optional Installs ===
-1. TCMalloc
+
+1. TCMalloc (optional)
   TMAP will run approximately 15% faster using the tcmalloc memory allocation
   implementation.  To use tcmalloc, install the Google performance tools:
     http://code.google.com/p/google-perftools
@@ -35,3 +22,69 @@ TMAP - flow mapper
   After installation, execute the following command:
     sh autogen.sh && ./configure && make clean && make
   The performance increase should occur when using multiple-threads.
+
+2. SAMtools (optional):
+  The following commands rely on linking to samtools:
+    tmap sam2fs
+  They will will be unavailable if the samtools directory cannot be located.
+	Furthermore, SAM/BAM as input will be unavailable.
+
+  The samtools directory must be placed in this directory.  The 
+  easiest way to do this is to a symbolic link:
+    ln -s <path to samtools> samtools 
+  Then the samtools library must be built:
+    cd samtools
+	make
+	cd ..
+  After the samtools library is linked and compiled, run:
+    sh autogen.sh && ./configure && make clean && make
+
+=== Developer Notes ===
+
+There are a number of areas for potential improvement within TMAP for those
+that are interested; they will be mentioned here.  A great way to find places
+where the code can be improved is to use Google's performance tools:
+  http://code.google.com/p/google-perftools
+This includes a heap checker, heap profiler, and cpu profiler.  Examining 
+performance on large genomes (hg19) is recommended.
+
+1. Smith Waterman extensions
+  Currently, each hit is examined with Smith Waterman (score only), which
+   re-considers the portion of the read that matched during seeding.  We need
+   only re-examine the portion of the read that is not matched during seeding.
+   This could be tracked during seeding for the Smith Waterman step, though 
+   the merging of hits from each algorithm could be complicated by this step.
+   Nonetheless, this would improve the run time of the program, especially for
+   high-quality data and/or longer reads (>200bp).
+
+2 . Smith Waterman vectorization
+  The vectorized (SSE2) Smith Waterman implemented supports an combination of
+    start and end soft-clipping.  To support any type of soft-clipping, some 
+    performance trade-offs needed to be made.  In particular, 16-bit integers
+	are stored in the 128-bit integers, giving only 8 bytes/values per 128-bit 
+    integer.  This could be improved to 16 bytes/values per 128-bit integer by
+    using 8-bit integers.  This would require better overflow handling.  Also,
+    handling negative infinity for the Smith Waterman initialization would be
+    difficult.  Nonetheless, this could significantly improve the performance of
+    the most expensive portion of the program.
+
+3. Best two-stage mapping
+  There is no current recommendation for the best settings for two-stage 
+    mapping, which could significantly decrease the running time.  A good 
+	project would be to optimize these settings.
+
+4. Mapping quality calibration
+  The mapping quality is sufficiently calibrated, but can always be improved,
+    especially for longer reads.  This is a major area for improvement.
+
+5. Support for paired ends/mate pairs
+  There is no support for multi-end reads, though you can try seeing what
+    happens if you specify "-r" twice, just saying.  Nonetheless, proper support
+     for paired ends should be written, including paired end rescue, and paired
+     end alignment scoring.  The vectorized Smith Waterman may be useful here.
+
+6. Speeding up lookups in the FM-index/BWT.
+  Further implementation improvements or parameter tuning could be made to make
+    the lookups in the FM-index/BWT faster.  This includes the occurrence 
+	interval, the suffix array interval, and the k-mer occurence hash.  Caching
+	these results may also make sense.
