@@ -286,7 +286,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "                             1 - allow on the left portion of the read\n");
   tmap_file_fprintf(tmap_file_stderr, "                             2 - allow on the right portion of the read\n");
   tmap_file_fprintf(tmap_file_stderr, "                             3 - do not allow soft-clipping\n");
-  tmap_file_fprintf(tmap_file_stderr, "         -y          soft clip only the last base of the key [%d]\n",
+  tmap_file_fprintf(tmap_file_stderr, "         -y          soft clip only the last base of the key [%s]\n",
                     (1 == opt->softclip_key) ? "true" : "false");
   tmap_file_fprintf(tmap_file_stderr, "         -W INT      remove duplicate alignments within this bp window (-1 to disable) [%d]\n",
                     opt->dup_window);
