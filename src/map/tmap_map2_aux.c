@@ -320,6 +320,16 @@ tmap_map2_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
 
       strand = (p->flag & 0x10) ? 1 : 0;
 
+      // skip over duplicate hits, or sub-optimal hits to the same location
+      if(0 < i) {
+          tmap_map2_hit_t *q = aln->hits + i - 1;
+          if(q->flag == p->flag && q->k == p->k && q->G <= p->G && q->tlen <= p->tlen) continue;
+      }
+      if(i < aln->n) {
+          tmap_map2_hit_t *q = aln->hits + i + 1;
+          if(p->flag == q->flag && p->k == q->k && p->G <= q->G && p->tlen <= q->tlen) continue;
+      }
+
       // adjust for contig boundaries
       if(tmap_refseq_pac2real(refseq, p->k, p->tlen, &seqid, &coor) <= 0) {
           if(1 == strand) { // reverse
@@ -469,7 +479,8 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
           p->beg = l - p->end;
           p->end = l - x;
           if(p->l == 0) {
-              p->k = refseq->len - (p->k + p->tlen);
+              if(refseq->len < (p->k + p->tlen)) p->k = 0;
+              else p->k = refseq->len - (p->k + p->tlen);
           }
       }
       tmap_map2_aux_merge_hits(b, l, 0);
