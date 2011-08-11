@@ -1653,6 +1653,28 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
     (par).band_width = (opt)->bw; \
 } while(0)
 
+// ACGTNBDHKMRSVWYN
+// This gives a mask for match iupac characters versus A/C/G/T/N
+//  A  C  G  T   N  B  D  H   K  M  R  S   V  W  Y  N
+static int32_t matrix_iupac_mask[89] = {
+    1, 0, 0, 0,  1, 0, 1, 1,  0, 1, 1, 0,  1, 1, 0, 1, // A
+    0, 1, 0, 0,  1, 1, 0, 1,  0, 1, 0, 1,  1, 0, 1, 1, // C
+    0, 0, 1, 0,  1, 1, 1, 0,  1, 0, 1, 1,  1, 0, 0, 1, // G
+    0, 0, 0, 1,  1, 1, 1, 1,  1, 0, 0, 0,  0, 1, 1, 1, // T 
+    1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1  // N
+};
+
+#define __map_util_gen_ap_iupac(par, opt) do { \
+    int32_t i; \
+    for(i=0;i<80;i++) { \
+        if(0 < matrix_iupac_mask[i]) (par).matrix[i] = (opt)->score_match; \
+        else (par).matrix[i] = -(opt)->pen_mm; \
+    } \
+    (par).gap_open = (opt)->pen_gapo; (par).gap_ext = (opt)->pen_gape; \
+    (par).gap_end = (opt)->pen_gape; \
+    (par).row = 16; \
+    (par).band_width = (opt)->bw; \
+} while(0)
 
 tmap_map_sams_t *
 tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
@@ -1770,7 +1792,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           target = tmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
       }
       // NB: IUPAC codes are turned into mismatches
-      if(NULL == tmap_refseq_subseq2(refseq, sams->sams[end].seqid+1, start_pos, end_pos, target, 1)) {
+      if(NULL == tmap_refseq_subseq2(refseq, sams->sams[end].seqid+1, start_pos, end_pos, target, 1, NULL)) {
           tmap_error("bug encountered", Exit, OutOfRange);
       }
 
@@ -1905,10 +1927,10 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
                  tmap_seq_t *seq,
                  tmap_map_opt_t *opt)
 {
-  int32_t i, j, k, l, matrix[25];
+  int32_t i, j, k, l, matrix[25], matrix_iupac[80];
   int32_t start, end;
   tmap_map_sams_t *sams_tmp = NULL;
-  tmap_sw_param_t par;
+  tmap_sw_param_t par, par_iupac;
   tmap_sw_path_t *path = NULL;
   int32_t path_len, path_mem=0;
   tmap_seq_t *seqs[2] = {NULL, NULL};
@@ -1919,6 +1941,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
   uint32_t start_pos, end_pos;
   int32_t overflow, softclip_start, softclip_end;
   uint8_t key_base = 0;
+  int32_t iupac_init = 0;
 
   if(0 == sams->n) {
       return sams;
@@ -1930,7 +1953,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
 
   // scoring matrix
   par.matrix = matrix;
-  __map_util_gen_ap(par, opt); // TODO
+  __map_util_gen_ap(par, opt); 
 
   // sort by strand/chr/pos/score
   tmap_sort_introsort(tmap_map_sam_sort_coord, sams->n, sams->sams);
@@ -1974,6 +1997,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       tmap_map_sam_t tmp_sam;
       tmap_map_sam_t *s = NULL;
       int32_t query_start, query_end;
+      int32_t conv = 0;
       
       // do not band when generating the cigar
       tmp_sam = sams->sams[end];
@@ -1996,7 +2020,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
           target = tmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
       }
       // NB: IUPAC codes are turned into mismatches
-      if(NULL == tmap_refseq_subseq2(refseq, sams->sams[end].seqid+1, start_pos, end_pos, target, 1)) {
+      if(NULL == tmap_refseq_subseq2(refseq, sams->sams[end].seqid+1, start_pos, end_pos, target, 1, &conv)) {
           tmap_error("bug encountered", Exit, OutOfRange);
       }
       
@@ -2051,6 +2075,21 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
        * Step 2: generate the cigar
        */
 
+      if(0 < conv) { // NB: there were IUPAC bases
+          // init iupac parameters, if necessary
+          if(0 == iupac_init) {
+              par_iupac.matrix = matrix_iupac;
+              __map_util_gen_ap_iupac(par_iupac, opt);
+              iupac_init = 1;
+          }
+          // Get the new target
+          // NB: IUPAC codes are turned into mismatches
+          start_pos += tmp_sam.target_start;
+          if(NULL == tmap_refseq_subseq2(refseq, sams->sams[end].seqid+1, start_pos, end_pos, target, 0, NULL)) {
+              tmap_error("bug encountered", Exit, OutOfRange);
+          }
+      }
+
       // path memory
       if(path_mem <= tlen + seq_len) { // lengthen the path
           path_mem = tlen + seq_len;
@@ -2060,15 +2099,15 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
 
       // Debugging
       /*
-         for(j=0;j<qlen;j++) {
-         fputc("ACGTN"[query[j]], stderr);
-         }
-         fputc('\n', stderr);
-         for(j=0;j<tlen;j++) {
-         fputc("ACGTN"[target[j]], stderr);
-         }
-         fputc('\n', stderr);
-         */
+      for(j=0;j<qlen;j++) {
+          fputc("ACGTN"[query[j]], stderr);
+      }
+      fputc('\n', stderr);
+      for(j=0;j<tlen;j++) {
+          fputc(tmap_iupac_int_to_char[target[j]], stderr);
+      }
+      fputc('\n', stderr);
+      */
 
 
       // path memory
@@ -2090,9 +2129,15 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       // ins then del, or del then ins.  The vectorized version does.
       // NB: left genomic indel justification is facilitated by always using the
       // forward strand target/query combination.
-      s->score = tmap_sw_global_banded_core(target, tlen, query, qlen, &par,
-                                 tmp_sam.score_fwd, path, &path_len, 0); 
-
+      // NB: iupac bases may also increase the score
+      if(0 < conv) { // NB: there were IUPAC bases
+          s->score = tmap_sw_global_banded_core(target, tlen, query, qlen, &par_iupac,
+                                                tmp_sam.score_fwd, path, &path_len, 0); 
+      }
+      else {
+          s->score = tmap_sw_global_banded_core(target, tlen, query, qlen, &par,
+                                                tmp_sam.score_fwd, path, &path_len, 0); 
+      }
 
       s->pos = s->pos + (path[path_len-1].i-1); // zero-based 
       if(path[path_len-1].ctype == TMAP_SW_FROM_I) {

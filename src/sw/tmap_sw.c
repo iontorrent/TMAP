@@ -996,7 +996,7 @@ tmap_sw_global_banded_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t l
   // Step 1: calculate the band width
   // get the maximum score
   score_max = 0; 
-  for(i=0;i<4;i++) {
+  for(i=0;i<N_MATRIX_ROW;i++) {
       mat = score_matrix + 0 * N_MATRIX_ROW;
       if(score_max < mat[i]) {
           score_max = mat[i];
@@ -1005,7 +1005,7 @@ tmap_sw_global_banded_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t l
   // the maximum alignment score
   score_max = (len1 < len2) ? (len1 * score_max) : (len2 * score_max);
   // the difference between the max and observed
-  score_max -= score;
+  score_max -= score; 
   max_bw = 0;
   if(ap->gap_open + ap->gap_ext <= score_max) { // gap open allowed
       max_bw++;
@@ -1016,10 +1016,17 @@ tmap_sw_global_banded_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t l
   }
   
   // Step 2: if we have a perfect match, run the perfect match algorithm
-  if(0 == max_bw) { 
+  if(0 == max_bw) { // implies tlen == qlen, not checked 
       int32_t best_i, best_j;
       best_i = len2;
       best_j = len1;
+      if(0 < score_max) { // NB: potential for IUPAC bases
+          score = 0;
+          for(i=j=0;i<len1 && j<len2;i++,j++) {
+              mat = score_matrix + seq2[j] * N_MATRIX_ROW;
+              score += mat[seq1[i]];
+          }
+      }
       // retrieve the path if necessary
       if(NULL == path) {
           // do nothing

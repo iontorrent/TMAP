@@ -310,7 +310,7 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
   }
   ref_end--;
       
-  target = tmap_refseq_subseq2(refseq, seqid+1, ref_start, ref_end, NULL, 0);
+  target = tmap_refseq_subseq2(refseq, seqid+1, ref_start, ref_end, NULL, 0, NULL);
   if(NULL == target) {
       tmap_error("bug encountered", Exit, OutOfRange);
   }
