@@ -1921,13 +1921,141 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   return sams_tmp;
 }
 
+static void tmap_map_util_keytrim(uint8_t *query, int32_t qlen,
+                                  uint8_t *target, int32_t tlen,
+                                  int8_t strand, uint8_t key_base, 
+                                  tmap_map_sam_t *s)
+{
+  int32_t j, k, l;
+  int32_t op, op_len;
+  //NB: we may only need to look at the first cigar
+  op = op_len = 0;
+  if(0 == strand) { // forward
+      for(j = k = l = 0; j < s->n_cigar; j++) {
+          // get the cigar
+          op = TMAP_SW_CIGAR_OP(s->cigar[j]);
+          op_len = TMAP_SW_CIGAR_LENGTH(s->cigar[j]);
+          if(op == BAM_CDEL) break; // looking for mismatch/insertion
+          if(op == BAM_CSOFT_CLIP) break; // already start trimming
+
+          while(0 < op_len) {
+              if(query[k] != key_base) break;
+              if(op == BAM_CINS) {
+              }
+              else if(op == BAM_CMATCH && target[l] != query[k]) {
+                  l++;
+              }
+              else {
+                  break;
+              }
+              op_len--;
+              k++; // since we can only have match/mismatch/insertion
+          }
+          if(0 == k) { 
+              // no trimming
+              break;
+          }
+          else if(0 < op_len) {
+              if(j == 0) {
+                  // reallocate
+                  s->n_cigar++;
+                  s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*s->n_cigar, "s->cigar");
+                  for(k=s->n_cigar-1;0<k;k--) { // shift up
+                      s->cigar[k] = s->cigar[k-1];
+                  }
+                  s->cigar[0] = 0;
+                  j++; // reflect the shift in j 
+              }
+              // NB: 0 < j
+              // add to the leading soft-clip
+              TMAP_SW_CIGAR_STORE(s->cigar[0], BAM_CSOFT_CLIP, TMAP_SW_CIGAR_LENGTH(s->cigar[j]) - op_len + TMAP_SW_CIGAR_LENGTH(s->cigar[0]));
+              // reduce the cigar length
+              TMAP_SW_CIGAR_STORE(s->cigar[j], op, op_len);
+              break;
+          }
+          else { // NB: the full op was removed
+              if(0 == j) {
+                  TMAP_SW_CIGAR_STORE(s->cigar[0], BAM_CSOFT_CLIP, TMAP_SW_CIGAR_LENGTH(s->cigar[0]));
+              }
+              else {
+                  // add to the leading soft-clip
+                  TMAP_SW_CIGAR_STORE(s->cigar[0], BAM_CSOFT_CLIP, TMAP_SW_CIGAR_LENGTH(s->cigar[j]) + TMAP_SW_CIGAR_LENGTH(s->cigar[0]));
+                  // shift down and overwrite the current cigar
+                  for(k=j;k<s->n_cigar-1;k++) {
+                      s->cigar[k] = s->cigar[k+1];
+                  }
+                  s->n_cigar--;
+                  j--; // since j is incremented later
+              }
+          }
+      }
+      // update the position based on the number of reference bases we
+      // skipped
+      s->pos += l;
+  }
+  else { // reverse
+      for(j = s->n_cigar-1, k = qlen-1, l = tlen-1; 0 <= j; j--) {
+          // get the cigar
+          op = TMAP_SW_CIGAR_OP(s->cigar[j]);
+          op_len = TMAP_SW_CIGAR_LENGTH(s->cigar[j]);
+          if(op == BAM_CDEL) break; // looking for mismatch/insertion
+          if(op == BAM_CSOFT_CLIP) break; // already start trimming
+          while(0 < op_len) {
+              if(query[k] != (3 - key_base)) break;
+              if(op == BAM_CINS) {
+              }
+              else if(op == BAM_CMATCH && target[l] != query[k]) {
+                  l--;
+              }
+              else {
+                  break;
+              }
+              op_len--;
+              k--; // since we can only have match/mismatch/insertion
+          }
+          if(qlen-1 == k) { 
+              // no trimming
+              break;
+          }
+          else if(0 < op_len) {
+              if(j == s->n_cigar-1) {
+                  // reallocate
+                  s->n_cigar++;
+                  s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*s->n_cigar, "s->cigar");
+                  s->cigar[s->n_cigar-1] = 0;
+              }
+              // add to the ending soft-clip
+              TMAP_SW_CIGAR_STORE(s->cigar[s->n_cigar-1], BAM_CSOFT_CLIP, TMAP_SW_CIGAR_LENGTH(s->cigar[j]) - op_len + TMAP_SW_CIGAR_LENGTH(s->cigar[s->n_cigar-1]));
+              // reduce the cigar length
+              TMAP_SW_CIGAR_STORE(s->cigar[j], op, op_len);
+              break;
+          }
+          else { // NB: the full op was removed
+              if(j == s->n_cigar-1) {
+                  TMAP_SW_CIGAR_STORE(s->cigar[s->n_cigar-1], BAM_CSOFT_CLIP, TMAP_SW_CIGAR_LENGTH(s->cigar[s->n_cigar-1]));
+              }
+              else {
+                  // add to the ending soft-clip
+                  TMAP_SW_CIGAR_STORE(s->cigar[s->n_cigar-1], BAM_CSOFT_CLIP, TMAP_SW_CIGAR_LENGTH(s->cigar[s->n_cigar-1]));
+                  // shift down and overwrite the current cigar
+                  for(k=j;k<s->n_cigar-1;k++) {
+                      s->cigar[k] = s->cigar[k+1];
+                  }
+                  s->n_cigar--;
+                  j++; // since j is decremented later
+              }
+          }
+      }
+  }
+}
+
 tmap_map_sams_t *
 tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
                  tmap_map_sams_t *sams, 
                  tmap_seq_t *seq,
                  tmap_map_opt_t *opt)
 {
-  int32_t i, j, k, l, matrix[25], matrix_iupac[80];
+  int32_t i, j, matrix[25], matrix_iupac[80];
   int32_t start, end;
   tmap_map_sams_t *sams_tmp = NULL;
   tmap_sw_param_t par, par_iupac;
@@ -2199,126 +2327,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
 
       // key trim the data
       if(1 == opt->softclip_key) {
-          //NB: we may only need to look at the first cigar
-          int32_t op, op_len;
-          op = op_len = 0;
-          if(0 == strand) { // forward
-              for(j = k = l = 0; j < s->n_cigar; j++) {
-                  // get the cigar
-                  op = TMAP_SW_CIGAR_OP(s->cigar[j]);
-                  op_len = TMAP_SW_CIGAR_LENGTH(s->cigar[j]);
-                  if(op == BAM_CDEL) break; // looking for mismatch/insertion
-                  if(op == BAM_CSOFT_CLIP) break; // already start trimming
-
-                  while(0 < op_len) {
-                      if(query[k] != key_base) break;
-                      if(op == BAM_CINS) {
-                      }
-                      else if(op == BAM_CMATCH && target[l] != query[k]) {
-                          l++;
-                      }
-                      else {
-                          break;
-                      }
-                      op_len--;
-                      k++; // since we can only have match/mismatch/insertion
-                  }
-                  if(0 == k) { 
-                      // no trimming
-                      break;
-                  }
-                  else if(0 < op_len) {
-                      if(j == 0) {
-                          // reallocate
-                          s->n_cigar++;
-                          s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*s->n_cigar, "s->cigar");
-                          for(k=s->n_cigar-1;0<k;k--) { // shift up
-                              s->cigar[k] = s->cigar[k-1];
-                          }
-                          s->cigar[0] = 0;
-                          j++; // reflect the shift in j 
-                      }
-                      // NB: 0 < j
-                      // add to the leading soft-clip
-                      TMAP_SW_CIGAR_STORE(s->cigar[0], BAM_CSOFT_CLIP, TMAP_SW_CIGAR_LENGTH(s->cigar[j]) - op_len + TMAP_SW_CIGAR_LENGTH(s->cigar[0]));
-                      // reduce the cigar length
-                      TMAP_SW_CIGAR_STORE(s->cigar[j], op, op_len);
-                      break;
-                  }
-                  else { // NB: the full op was removed
-                      if(0 == j) {
-                          TMAP_SW_CIGAR_STORE(s->cigar[0], BAM_CSOFT_CLIP, TMAP_SW_CIGAR_LENGTH(s->cigar[0]));
-                      }
-                      else {
-                          // add to the leading soft-clip
-                          TMAP_SW_CIGAR_STORE(s->cigar[0], BAM_CSOFT_CLIP, TMAP_SW_CIGAR_LENGTH(s->cigar[j]) + TMAP_SW_CIGAR_LENGTH(s->cigar[0]));
-                          // shift down and overwrite the current cigar
-                          for(k=j;k<s->n_cigar-1;k++) {
-                              s->cigar[k] = s->cigar[k+1];
-                          }
-                          s->n_cigar--;
-                          j--; // since j is incremented later
-                      }
-                  }
-              }
-              // update the position based on the number of reference bases we
-              // skipped
-              s->pos += l;
-          }
-          else { // reverse
-              for(j = s->n_cigar-1, k = qlen-1, l = tlen-1; 0 <= j; j--) {
-                  // get the cigar
-                  op = TMAP_SW_CIGAR_OP(s->cigar[j]);
-                  op_len = TMAP_SW_CIGAR_LENGTH(s->cigar[j]);
-                  if(op == BAM_CDEL) break; // looking for mismatch/insertion
-                  if(op == BAM_CSOFT_CLIP) break; // already start trimming
-                  while(0 < op_len) {
-                      if(query[k] != (3 - key_base)) break;
-                      if(op == BAM_CINS) {
-                      }
-                      else if(op == BAM_CMATCH && target[l] != query[k]) {
-                          l--;
-                      }
-                      else {
-                          break;
-                      }
-                      op_len--;
-                      k--; // since we can only have match/mismatch/insertion
-                  }
-                  if(qlen-1 == k) { 
-                      // no trimming
-                      break;
-                  }
-                  else if(0 < op_len) {
-                      if(j == s->n_cigar-1) {
-                          // reallocate
-                          s->n_cigar++;
-                          s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*s->n_cigar, "s->cigar");
-                          s->cigar[s->n_cigar-1] = 0;
-                      }
-                      // add to the ending soft-clip
-                      TMAP_SW_CIGAR_STORE(s->cigar[s->n_cigar-1], BAM_CSOFT_CLIP, TMAP_SW_CIGAR_LENGTH(s->cigar[j]) - op_len + TMAP_SW_CIGAR_LENGTH(s->cigar[s->n_cigar-1]));
-                      // reduce the cigar length
-                      TMAP_SW_CIGAR_STORE(s->cigar[j], op, op_len);
-                      break;
-                  }
-                  else { // NB: the full op was removed
-                      if(j == s->n_cigar-1) {
-                          TMAP_SW_CIGAR_STORE(s->cigar[s->n_cigar-1], BAM_CSOFT_CLIP, TMAP_SW_CIGAR_LENGTH(s->cigar[s->n_cigar-1]));
-                      }
-                      else {
-                          // add to the ending soft-clip
-                          TMAP_SW_CIGAR_STORE(s->cigar[s->n_cigar-1], BAM_CSOFT_CLIP, TMAP_SW_CIGAR_LENGTH(s->cigar[s->n_cigar-1]));
-                          // shift down and overwrite the current cigar
-                          for(k=j;k<s->n_cigar-1;k++) {
-                              s->cigar[k] = s->cigar[k+1];
-                          }
-                          s->n_cigar--;
-                          j++; // since j is decremented later
-                      }
-                  }
-              }
-          }
+          tmap_map_util_keytrim(query, qlen, target, tlen, strand, key_base, s);
       }
 
       i++;
