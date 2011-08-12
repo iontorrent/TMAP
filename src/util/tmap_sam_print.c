@@ -231,20 +231,12 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
       flag |= (1 == end_num) ? 0x40 : 0x80; // first/second end
   }
 
-  tmap_file_fprintf(fp, "%s\t%u\t", name->s, flag);
-  // sff
+  // name, flag, seqid, pos, mapq
+  tmap_file_fprintf(fp, "%s\t%u\t*\t%u\t%u\t", name->s, flag, 0, 0);
+  // cigar
   if(TMAP_SEQ_TYPE_SFF == seq->type 
      && (0 < seq->data.sff->rheader->clip_left || 0 < seq->data.sff->rheader->clip_right)) {
-      // since bases were hard-clipped.
-      if(0 == strcmp(seq->data.sff->rheader->name->s, "IB8EW:4:291")) {
-          fprintf(stderr, "right_clipping=[%d,%d] sff->rheader->clip_left=%d sff->rheader->clip_right=%d\n",
-                  seq->data.sff->rheader->clip_adapter_right,
-                  seq->data.sff->rheader->clip_qual_right,
-                  seq->data.sff->rheader->clip_left,
-                  seq->data.sff->rheader->clip_right);
-      }
-
-
+      // sff
      if(0 < seq->data.sff->rheader->clip_left) {
          tmap_file_fprintf(fp, "%dH", seq->data.sff->rheader->clip_left);
      }
@@ -256,8 +248,6 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
   else {
       tmap_file_fprintf(fp, "*");
   }
-  // seqid, pos, and cigar
-  tmap_file_fprintf(fp, "\t%u\t%u\t*", 0, 0);
   // mate info
   if(0 == end_num) { // no mate
       tmap_file_fprintf(fp, "\t*\t0\t0");
