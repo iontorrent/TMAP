@@ -231,9 +231,10 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
       flag |= (1 == end_num) ? 0x40 : 0x80; // first/second end
   }
 
-  // name, flag, seqid, pos, mapq
-  tmap_file_fprintf(fp, "%s\t%u\t*\t%u\t%u\t", name->s, flag, 0, 0);
-  // cigar
+  // name, flag, seqid, pos, mapq, cigar
+  tmap_file_fprintf(fp, "%s\t%u\t*\t%u\t%u\t*", name->s, flag, 0, 0);
+  // NB: hard clipped portions of the read is not reported
+  /*
   if(TMAP_SEQ_TYPE_SFF == seq->type 
      && (0 < seq->data.sff->rheader->clip_left || 0 < seq->data.sff->rheader->clip_right)) {
       // sff
@@ -248,6 +249,7 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
   else {
       tmap_file_fprintf(fp, "*");
   }
+  */
   // mate info
   if(0 == end_num) { // no mate
       tmap_file_fprintf(fp, "\t*\t0\t0");
