@@ -39,13 +39,11 @@ typedef struct {
     gzFile gz;  /*!< gzip file pointer */
     BZFILE *bz2;  /*!< bz2 file pointer */
     int32_t c;  /*!< compression type */
+#ifndef DISABLE_BZ2
     char unused[BZ_MAX_UNUSED];  /*!< for bz2 function 'BZ2_bzReadOpen' */
     int32_t n_unused;  /*!< for bz2 function 'BZ2_bzReadGetUnused' */
     int32_t bzerror;  /*!< stores the last BZ2 error */
     int32_t open_type;  /*!< the type of bzip2 stream */
-#ifndef DISABLE_BZ2
-#endif
-#ifndef DISABLE_BZ2
 #endif
 } tmap_file_t;
 
