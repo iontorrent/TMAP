@@ -303,10 +303,18 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "         -G          do not remove SFF clipping [%d]\n", opt->remove_sff_clipping);
   tmap_file_fprintf(tmap_file_stderr, "         -Y          include SFF specific SAM tags [%s]\n",
                     (1 == opt->sam_sff_tags) ? "true" : "false");
+
+#ifndef DISABLE_BZ2
   tmap_file_fprintf(tmap_file_stderr, "         -z/-j       the input is gz/bz2 compressed (gzip/bzip2)");
   __tmap_map_print_compression(opt->input_compr);
   tmap_file_fprintf(tmap_file_stderr, "         -Z/-J       the output is gz/bz2 compressed (gzip/bzip2)");
   __tmap_map_print_compression(opt->output_compr);
+#else
+  tmap_file_fprintf(tmap_file_stderr, "         -z       the input is gz compressed (gzip)");
+  __tmap_map_print_compression(opt->input_compr);
+  tmap_file_fprintf(tmap_file_stderr, "         -Z       the output is gz compressed (gzip)");
+  __tmap_map_print_compression(opt->output_compr);
+#endif
   tmap_file_fprintf(tmap_file_stderr, "         -k INT      use shared memory with the following key [%d]\n", opt->shm_key);
   tmap_file_fprintf(tmap_file_stderr, "         -v          print verbose progress information\n");
   tmap_file_fprintf(tmap_file_stderr, "         -h          print this message\n");

@@ -285,21 +285,25 @@ tmap_get_reads_file_format_from_fn_int(char *fn, int32_t *reads_format, int32_t 
 
   // auto-recognize the compression type
   if(TMAP_FILE_NO_COMPRESSION == (*compr_type)) {
-      if(NULL != tmap_check_suffix(fn, ".bz2", 0)) {
-          compr_suffix_length = 4; // ".bz2"
-          (*compr_type) = TMAP_FILE_BZ2_COMPRESSION;
-      }
-      else if(NULL != tmap_check_suffix(fn, ".gz", 0)) {
+      if(NULL != tmap_check_suffix(fn, ".gz", 0)) {
           compr_suffix_length = 3; // ".gz"
           (*compr_type) = TMAP_FILE_GZ_COMPRESSION;
       }
+#ifndef DISABLE_BZ2
+      else if(NULL != tmap_check_suffix(fn, ".bz2", 0)) {
+          compr_suffix_length = 4; // ".bz2"
+          (*compr_type) = TMAP_FILE_BZ2_COMPRESSION;
+      }
+#endif
       else {
           compr_suffix_length = 0; // unknown/none
       }
   }
+#ifndef DISABLE_BZ2
   else if(TMAP_FILE_BZ2_COMPRESSION == (*compr_type)) {
       compr_suffix_length = 4; // ".bz2"
   }
+#endif
   else if(TMAP_FILE_GZ_COMPRESSION == (*compr_type)) {
       compr_suffix_length = 3; // ".gz"
   }
@@ -331,12 +335,14 @@ tmap_get_reads_file_format_from_fn_int(char *fn, int32_t *reads_format, int32_t 
 
   // check the suffix implied by the compression type
   switch((*compr_type)) {
+#ifndef DISABLE_BZ2
     case TMAP_FILE_BZ2_COMPRESSION:
       if(NULL == tmap_check_suffix(fn, ".bz2", 0)) {
           tmap_error("the expected bzip2 file extension is \".bz2\"", Warn, OutOfRange);
           compr_suffix_length = tmap_get_last_dot_index(fn); // remove file extension
       }
       break;
+#endif
     case TMAP_FILE_GZ_COMPRESSION:
       if(NULL == tmap_check_suffix(fn, ".gz", 0)) {
           tmap_error("the expected gzip file extension is \".gz\"", Warn, OutOfRange);

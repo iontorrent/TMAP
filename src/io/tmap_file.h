@@ -37,7 +37,9 @@ enum {
 typedef struct {
     FILE *fp;  /*!< stdio file pointer */
     gzFile gz;  /*!< gzip file pointer */
+#ifndef DISABLE_BZ2
     BZFILE *bz2;  /*!< bz2 file pointer */
+#endif
     int32_t c;  /*!< compression type */
 #ifndef DISABLE_BZ2
     char unused[BZ_MAX_UNUSED];  /*!< for bz2 function 'BZ2_bzReadOpen' */
