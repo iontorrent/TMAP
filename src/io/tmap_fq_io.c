@@ -201,6 +201,7 @@ tmap_fq_io_read(tmap_fq_io_t *fqio, tmap_fq_t *fq)
   tmap_stream_t *ks = fqio->f;
   if (fqio->last_char == 0) { /* then jump to the next header line */
       if ((c = tmap_stream_getc(ks)) != -1 && c != '>' && c != '@') {
+          fprintf(stderr, "c=[%c,%d]\n", (char)c, c);
           tmap_file_fprintf(tmap_file_stderr, "\nAfter line number %d\n", fqio->line_number);
           tmap_error("Was expecting a header line ('>' or '@').  Is there empty line or extra qualities?", Exit, OutOfRange);
       }
@@ -238,6 +239,7 @@ tmap_fq_io_read(tmap_fq_io_t *fqio, tmap_fq_t *fq)
       fq->qual->s = tmap_realloc(fq->qual->s, fq->qual->m, "fq->qual->s");
   }
   while ((c = tmap_stream_getc(ks)) != -1 && c != TMAP_FQ_IO_DELIMITER_NL); /* skip the rest of '+' line */
+  /* skip the rest of '+' line */
   fqio->line_number++;
   if (c == -1) return -2; /* we should not stop here */
   while ((c = tmap_stream_getc(ks)) != -1 && c != TMAP_FQ_IO_DELIMITER_NL) {
@@ -246,6 +248,10 @@ tmap_fq_io_read(tmap_fq_io_t *fqio, tmap_fq_t *fq)
           tmap_error("The quality string was longer than the sequence string", Exit, OutOfRange);
       }
     if (c >= 33 && c <= 127) fq->qual->s[fq->qual->l++] = (unsigned char)c;
+  }
+  if(fq->qual->l != fq->seq->l) {
+      tmap_file_fprintf(tmap_file_stderr, "\nAfter line number %d\n", fqio->line_number);
+      tmap_error("The length of the quality string did not equal the length of the sequence string", Exit, OutOfRange);
   }
   fq->qual->s[fq->qual->l] = 0; /* null terminated string */
   fqio->line_number++;
