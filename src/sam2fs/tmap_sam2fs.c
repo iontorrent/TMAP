@@ -432,6 +432,9 @@ tmap_sam2fs_aux(bam1_t *bam, tmap_sam2fs_aux_flow_order_t *flow_order, int32_t f
   if(1 < bam->core.n_cigar && (BAM_CSOFT_CLIP & cigar[bam->core.n_cigar-1])) {
       soft_clip_end = (cigar[bam->core.n_cigar-1] >> 4);
   }
+  
+  // get the read bases
+  bam_seq = bam1_seq(bam);
 
   // change the flow order based on soft-clipping and the start index
   tmp_flow_order_len = flow_order->flow_order_len;
@@ -471,8 +474,6 @@ tmap_sam2fs_aux(bam1_t *bam, tmap_sam2fs_aux_flow_order_t *flow_order, int32_t f
   }
   flow_order_start_index = 0;
 
-  // get the read bases
-  bam_seq = bam1_seq(bam);
   read_bases = tmap_calloc(1+bam->core.l_qseq, sizeof(char), "read_bases");
   for(i=soft_clip_start;i<bam->core.l_qseq-soft_clip_end;i++) {
       read_bases[i-soft_clip_start] = bam_nt16_rev_table[bam1_seqi(bam_seq, i)]; 
