@@ -384,6 +384,7 @@ tmap_map_all_core(tmap_map_opt_t *opt)
         (opt_map_other)->fn_reads[_i] = tmap_strdup((opt_map_all)->fn_reads[_i]); \
     } \
     (opt_map_other)->reads_format = (opt_map_all)->reads_format; \
+    (opt_map_other)->fn_sam = tmap_strdup((opt_map_all)->fn_sam); \
     (opt_map_other)->score_match = (opt_map_all)->score_match; \
     (opt_map_other)->pen_mm = (opt_map_all)->pen_mm; \
     (opt_map_other)->pen_gapo = (opt_map_all)->pen_gapo; \
