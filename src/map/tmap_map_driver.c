@@ -274,7 +274,12 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
   }
 
   // Note: 'tmap_file_stdout' should not have been previously modified
-  tmap_file_stdout = tmap_file_fdopen(fileno(stdout), "wb", opt->output_compr);
+  if(NULL == opt->fn_sam) {
+      tmap_file_stdout = tmap_file_fdopen(fileno(stdout), "wb", opt->output_compr);
+  }
+  else {
+      tmap_file_stdout = tmap_file_fopen(opt->fn_sam, "wb", opt->output_compr);
+  }
 
   // SAM header
   tmap_sam_print_header(tmap_file_stdout, refseq, (1 == num_ends) ? seqio[0] : NULL, 

@@ -116,10 +116,10 @@ enum {
  * Taken:
  * abcdefghijklmnopqrstuvwxyz
  * ABCDEFHGIJKLMNOPQRSTUWXYZ
- * 12
+ * 012
  *
  * Available:
- * 03456789
+ * 3456789
  * 
  * 
 */
@@ -135,6 +135,7 @@ typedef struct __tmap_map_opt_t {
     char **fn_reads;  /*!< the reads file name (-r) */
     int32_t fn_reads_num; /*!< the number of read files (-r) */
     int32_t reads_format;  /*!< the reads file format (-F)  */
+    char *fn_sam; /*!< the output file name (-0) */
     int32_t score_match;  /*!< the match score (-A) */
     int32_t pen_mm;  /*!< the mismatch penalty (-M) */
     int32_t pen_gapo;  /*!< the indel open penalty (-O) */

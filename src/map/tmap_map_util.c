@@ -65,6 +65,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->fn_reads = NULL;
   opt->fn_reads_num = 0;
   opt->reads_format = TMAP_READS_FORMAT_UNKNOWN;
+  opt->fn_sam = NULL;
   opt->score_match = TMAP_MAP_UTIL_SCORE_MATCH;
   opt->pen_mm = TMAP_MAP_UTIL_PEN_MM;
   opt->pen_gapo = TMAP_MAP_UTIL_PEN_GAPO;
@@ -159,6 +160,7 @@ tmap_map_opt_destroy(tmap_map_opt_t *opt)
       free(opt->fn_reads[i]); 
   }
   free(opt->fn_reads);
+  free(opt->fn_sam);
   free(opt->sam_rg);
   free(opt->flow_order);
   free(opt->key_seq);
@@ -271,6 +273,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
 #else
   tmap_file_fprintf(tmap_file_stderr, "         -F STRING   the reads file format (fastq|fq|fasta|fa|sff) [%s]\n", reads_format);
 #endif
+  tmap_file_fprintf(tmap_file_stderr, "         -0 FILE     the SAM file name [%s]\n", (NULL == opt->fn_sam) ? "stdout" : opt->fn_sam);
   tmap_file_fprintf(tmap_file_stderr, "         -A INT      score for a match [%d]\n", opt->score_match);
   tmap_file_fprintf(tmap_file_stderr, "         -M INT      the mismatch penalty [%d]\n", opt->pen_mm);
   tmap_file_fprintf(tmap_file_stderr, "         -O INT      the indel start penalty [%d]\n", opt->pen_gapo);
@@ -369,19 +372,19 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   opt->argc = argc; opt->argv = argv;
   switch(opt->algo_id) {
     case TMAP_MAP_ALGO_MAP1:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhl:s:L:p:P:m:o:e:d:i:b:Q:u:U:");
+      getopt_format = tmap_strdup("f:r:F:0:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhl:s:L:p:P:m:o:e:d:i:b:Q:u:U:");
       break;
     case TMAP_MAP_ALGO_MAP2:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhc:S:b:N:u:U:");
+      getopt_format = tmap_strdup("f:r:F:0:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhc:S:b:N:u:U:");
       break;
     case TMAP_MAP_ALGO_MAP3:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhl:S:H:V:u:U:");
+      getopt_format = tmap_strdup("f:r:F:0:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhl:S:H:V:u:U:");
       break;
     case TMAP_MAP_ALGO_MAPVSW:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhu:U:");
+      getopt_format = tmap_strdup("f:r:F:0:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhu:U:");
       break;
     case TMAP_MAP_ALGO_MAPALL:
-      getopt_format = tmap_strdup("f:r:F:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhIC:D:K:u:U:");
+      getopt_format = tmap_strdup("f:r:F:0:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhIC:D:K:u:U:");
       break;
     default:
       tmap_error("unrecognized algorithm", Exit, OutOfRange);
@@ -402,6 +405,8 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           break;
         case 'F':
           opt->reads_format = tmap_get_reads_file_format_int(optarg); break;
+        case '0':
+          opt->fn_sam = tmap_strdup(optarg); break;
         case 'A':
           opt->score_match = atoi(optarg); break;
         case 'M':
@@ -637,6 +642,9 @@ tmap_map_opt_file_check_with_null(char *fn1, char *fn2)
         if(0 != tmap_map_opt_file_check_with_null((opt_map_other)->fn_reads[_i], (opt_map_all)->fn_reads[_i])) { \
             tmap_error("option -r was specified outside of the common options", Exit, CommandLineArgument); \
         } \
+    } \
+    if(0 != tmap_map_opt_file_check_with_null((opt_map_other)->fn_sam, (opt_map_all)->fn_sam)) { \
+        tmap_error("option -0 was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->reads_format != (opt_map_all)->reads_format) { \
         tmap_error("option -F was specified outside of the common options", Exit, CommandLineArgument); \
@@ -891,6 +899,8 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
       if(0 < i) fprintf(stderr, ",");
       fprintf(stderr, "fn_reads=%s\n", opt->fn_reads[i]);
   }
+  fprintf(stderr, "fn_sam=%s\n", opt->fn_sam);
+  fprintf(stderr, "reads_format=%d\n", opt->reads_format);
   fprintf(stderr, "reads_format=%d\n", opt->reads_format);
   fprintf(stderr, "score_match=%d\n", opt->score_match);
   fprintf(stderr, "pen_mm=%d\n", opt->pen_mm);
