@@ -72,9 +72,9 @@ tmap_map_opt_init(int32_t algo_id)
   opt->pen_gape = TMAP_MAP_UTIL_PEN_GAPE;
   opt->fscore = TMAP_MAP_UTIL_FSCORE;
   opt->flow_order = NULL;
-  opt->flow_order_use_sff = 0;
+  opt->flow_order_use_file = 0;
   opt->key_seq = NULL;
-  opt->key_seq_use_sff = 0;
+  opt->key_seq_use_file = 0;
   opt->bw = 50; 
   opt->softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_RIGHT;
   opt->softclip_key = 0;
@@ -279,9 +279,9 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "         -O INT      the indel start penalty [%d]\n", opt->pen_gapo);
   tmap_file_fprintf(tmap_file_stderr, "         -E INT      the indel extend penalty [%d]\n", opt->pen_gape);
   tmap_file_fprintf(tmap_file_stderr, "         -X INT      the flow score penalty [%d]\n", opt->fscore);
-  tmap_file_fprintf(tmap_file_stderr, "         -x STRING   the flow order ([ACGT]{4+} or \"sff\") [%s]\n",
+  tmap_file_fprintf(tmap_file_stderr, "         -x STRING   the flow order ([ACGT]{4+} or \"file\") [%s]\n",
                     (NULL == opt->flow_order) ? "not using" : opt->flow_order);
-  tmap_file_fprintf(tmap_file_stderr, "         -t STRING   the key sequence ([ACGT]{4+} or \"sff\") [%s]\n",
+  tmap_file_fprintf(tmap_file_stderr, "         -t STRING   the key sequence ([ACGT]{4+} or \"file\") [%s]\n",
                     (NULL == opt->key_seq) ? "not using" : opt->key_seq);
   tmap_file_fprintf(tmap_file_stderr, "         -w INT      the band width [%d]\n", opt->bw);
   tmap_file_fprintf(tmap_file_stderr, "         -g          the soft-clipping type [%d]\n", opt->softclip_type);
@@ -419,20 +419,20 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           opt->fscore = atoi(optarg); break;
         case 'x':
           opt->flow_order = tmap_strdup(optarg); 
-          if(0 == strcmp("sff", opt->flow_order) || 0 == strcmp("SFF", opt->flow_order)) {
-              opt->flow_order_use_sff = 1;
+          if(0 == strcmp("file", opt->flow_order) || 0 == strcmp("FILE", opt->flow_order)) {
+              opt->flow_order_use_file = 1;
           }
           else {
-              opt->flow_order_use_sff = 0;
+              opt->flow_order_use_file = 0;
           }
           break;
         case 't':
           opt->key_seq = tmap_strdup(optarg);
-          if(0 == strcmp("sff", opt->key_seq) || 0 == strcmp("SFF", opt->key_seq)) {
-              opt->key_seq_use_sff = 1;
+          if(0 == strcmp("file", opt->key_seq) || 0 == strcmp("FILE", opt->key_seq)) {
+              opt->key_seq_use_file = 1;
           }
           else {
-              opt->key_seq_use_sff = 0;
+              opt->key_seq_use_file = 0;
           }
           break;
         case 'w':
@@ -667,13 +667,13 @@ tmap_map_opt_file_check_with_null(char *fn1, char *fn2)
     if(0 != tmap_map_opt_file_check_with_null((opt_map_other)->flow_order, (opt_map_all)->flow_order)) { \
         tmap_error("option -x was specified outside of the common options", Exit, CommandLineArgument); \
     } \
-    if((opt_map_other)->flow_order_use_sff != (opt_map_all)->flow_order_use_sff) { \
+    if((opt_map_other)->flow_order_use_file != (opt_map_all)->flow_order_use_file) { \
         tmap_error("option -x was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if(0 != tmap_map_opt_file_check_with_null((opt_map_other)->key_seq, (opt_map_all)->key_seq)) { \
         tmap_error("option -t was specified outside of the common options", Exit, CommandLineArgument); \
     } \
-    if((opt_map_other)->key_seq_use_sff != (opt_map_all)->key_seq_use_sff) { \
+    if((opt_map_other)->key_seq_use_file != (opt_map_all)->key_seq_use_file) { \
         tmap_error("option -t was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->bw != (opt_map_all)->bw) { \
@@ -738,10 +738,10 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       if(1 == opt->sam_sff_tags) {
           tmap_error("options -1 and -2 cannot be used with -Y", Exit, CommandLineArgument);
       }
-      else if(1 == opt->flow_order_use_sff) {
+      else if(1 == opt->flow_order_use_file) {
           tmap_error("options -1 and -2 cannot be used with -x", Exit, CommandLineArgument);
       }
-      else if(1 == opt->key_seq_use_sff) {
+      else if(1 == opt->key_seq_use_file) {
           tmap_error("options -1 and -2 cannot be used with -t", Exit, CommandLineArgument);
       }
       else if(NULL != opt->flow_order) {
@@ -761,7 +761,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
   tmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
   if(NULL != opt->flow_order) {
-      if(0 == strcmp("sff", opt->flow_order) || 0 == strcmp("SFF", opt->flow_order)) {
+      if(0 == strcmp("file", opt->flow_order) || 0 == strcmp("FILE", opt->flow_order)) {
           if(TMAP_READS_FORMAT_SFF != opt->reads_format) {
               tmap_error("an SFF was not specified (-r) but you want to use the sff flow order (-x)", Exit, CommandLineArgument);
           }
@@ -781,7 +781,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       }
   }
   if(NULL != opt->key_seq) {
-      if(0 == strcmp("sff", opt->key_seq) || 0 == strcmp("SFF", opt->key_seq)) {
+      if(0 == strcmp("file", opt->key_seq) || 0 == strcmp("FILE", opt->key_seq)) {
           if(TMAP_READS_FORMAT_SFF != opt->reads_format) {
               tmap_error("an SFF was not specified (-r) but you want to use the sff flow order (-t)", Exit, CommandLineArgument);
           }
@@ -798,6 +798,12 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
               break;
           }
       }
+  }
+  if((NULL == opt->key_seq && 0 == opt->key_seq_use_file) && (NULL != opt->flow_order || 1 == opt->flow_order_use_file)) {
+      tmap_error("key sequence (-t) specified without a flow order (-x)", Exit, CommandLineArgument);
+  }
+  if((NULL != opt->key_seq || 1 == opt->key_seq_use_file) && (NULL == opt->flow_order && 0 == opt->flow_order_use_file)) {
+      tmap_error("key sequence (-t) specified without a flow order (-x)", Exit, CommandLineArgument);
   }
   tmap_error_cmd_check_int(opt->bw, 0, INT32_MAX, "-w");
   tmap_error_cmd_check_int(opt->softclip_type, 0, 3, "-g");
@@ -908,9 +914,9 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "pen_gape=%d\n", opt->pen_gape);
   fprintf(stderr, "fscore=%d\n", opt->fscore);
   fprintf(stderr, "flow_order=%s\n", opt->flow_order);
-  fprintf(stderr, "flow_order_use_sff=%d\n", opt->flow_order_use_sff);
+  fprintf(stderr, "flow_order_use_file=%d\n", opt->flow_order_use_file);
   fprintf(stderr, "key_seq=%s\n", opt->key_seq);
-  fprintf(stderr, "key_seq_use_sff=%d\n", opt->key_seq_use_sff);
+  fprintf(stderr, "key_seq_use_file=%d\n", opt->key_seq_use_file);
   fprintf(stderr, "bw=%d\n", opt->bw);
   fprintf(stderr, "softclip_type=%d\n", opt->softclip_type);
   fprintf(stderr, "softclip_key=%d\n", opt->softclip_key);
@@ -2375,123 +2381,12 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
   return sams_tmp;
 }
 
-#define _tmap_map_util_sw_aux_path_adjust(_p, _ql, _tl) do { \
-    (_p).i = _tl - (_p).i + 1; \
-    (_p).j = _ql - (_p).j + 1; \
-} while(0) \
-
-int32_t 
-tmap_map_util_sw_aux(tmap_map_sam_t *sam,
-                 uint8_t *target, int32_t target_length,
-                 uint8_t *query, int32_t query_length,
-                 uint32_t seqid, uint32_t pos,
-                 tmap_sw_param_t *par, tmap_sw_path_t *path, int32_t *path_len,
-                 int32_t score_thr, int32_t softclip_type, int32_t strand)
-{
-  int32_t i, score, score_subo;
-
-  if(1 == strand) { // reverse, but do not compliment, since we want consistent behavior on the nucleotides
-      tmap_reverse_int(query, query_length);
-      tmap_reverse_int(target, target_length);
-  }
-
-  /*
-  fprintf(stderr, "strand=%d\n", strand);
-  for(i=0;i<query_length;i++)
-    fputc("ACGTN"[query[i]], stderr);
-  fputc('\n', stderr);
-  for(i=0;i<target_length;i++)
-    fputc("ACGTN"[target[i]], stderr);
-  fputc('\n', stderr);
-  */
-
-  switch(softclip_type) {
-    case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
-      //fprintf(stderr, "TMAP_MAP_UTIL_SOFT_CLIP_ALL\n");
-      score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 1, 1, path, path_len, strand);
-      break;
-    case TMAP_MAP_UTIL_SOFT_CLIP_LEFT:
-      score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 1, 0, path, path_len, strand);
-      break;
-    case TMAP_MAP_UTIL_SOFT_CLIP_RIGHT:
-      score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 0, 1, path, path_len, strand);
-      break;
-    case TMAP_MAP_UTIL_SOFT_CLIP_NONE:
-    default:
-      score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 0, 0, path, path_len, strand);
-      break;
-  }
-  score_subo = sam->score_subo;
-
-  if(0 < (*path_len) && score_thr < score) {
-
-      if(1 == strand) { // reverse compliment 
-          // adjust path
-          // TODO
-
-          // reverse the path and adjust its values
-          for(i=0;i<(*path_len)>>1;i++) {
-              // reverse
-              tmap_sw_path_t tmp= path[i];
-              path[i] = path[(*path_len)-i-1];
-              path[(*path_len)-i-1] = tmp;
-              // adjust 
-              _tmap_map_util_sw_aux_path_adjust(path[i], query_length, target_length);
-              _tmap_map_util_sw_aux_path_adjust(path[(*path_len)-i-1], query_length, target_length);
-          }
-          if(1 == ((*path_len) & 1)) {
-              _tmap_map_util_sw_aux_path_adjust(path[i], query_length, target_length);
-          }
-      }
-
-      sam->strand = strand;
-      sam->seqid = seqid;
-      sam->pos = pos + (path[(*path_len)-1].i-1); // zero-based 
-      if(0 == strand && path[(*path_len)-1].ctype == TMAP_SW_FROM_I) {
-          sam->pos++;
-      }
-      sam->score = score;
-      sam->score_subo = score_subo;
-      sam->cigar = tmap_sw_path2cigar(path, (*path_len), &sam->n_cigar);
-
-      if(0 == sam->n_cigar) {
-          tmap_error("bug encountered", Exit, OutOfRange);
-      }
-
-      // add soft clipping 
-      if(1 < path[(*path_len)-1].j) {
-          // soft clip the front of the read
-          sam->cigar = tmap_realloc(sam->cigar, sizeof(uint32_t)*(1+sam->n_cigar), "sam->cigar");
-          for(i=sam->n_cigar-1;0<=i;i--) { // shift up
-              sam->cigar[i+1] = sam->cigar[i];
-          }
-          TMAP_SW_CIGAR_STORE(sam->cigar[0], BAM_CSOFT_CLIP, path[(*path_len)-1].j-1);
-          sam->n_cigar++;
-      }
-      if(path[0].j < query_length) {
-          // soft clip the end of the read
-          sam->cigar = tmap_realloc(sam->cigar, sizeof(uint32_t)*(1+sam->n_cigar), "sam->cigar");
-          TMAP_SW_CIGAR_STORE(sam->cigar[sam->n_cigar], BAM_CSOFT_CLIP, query_length - path[0].j);
-          sam->n_cigar++;
-      }
-  }
-  else {
-      sam->score = INT32_MIN;
-      sam->cigar = NULL;
-      sam->n_cigar = 0;
-      (*path_len) = 0;
-  }
-  if(1 == strand) { // reverse back
-      tmap_reverse_int(query, query_length);
-      tmap_reverse_int(target, target_length);
-  }
-  return (0 == sam->n_cigar) ? 0 : 1;
-}
-
-// TODO: make sure the "longest" read alignment is found
+// TODO: use the flow signals from the sff or SAM/BAM...
+// NB: if seq is an SFF, it will have its key sequence
 void
-tmap_map_util_fsw(tmap_seq_t *seq, 
+tmap_map_util_fsw(tmap_fsw_flowseq_t *fseq, tmap_seq_t *seq, 
                   uint8_t *flow_order, int32_t flow_order_len,
+                  uint8_t *key_seq, int32_t key_seq_len,
                   tmap_map_sams_t *sams, tmap_refseq_t *refseq,
                   int32_t bw, int32_t softclip_type, int32_t score_thr,
                   int32_t score_match, int32_t pen_mm, int32_t pen_gapo, 
@@ -2501,14 +2396,13 @@ tmap_map_util_fsw(tmap_seq_t *seq,
   uint8_t *target = NULL;
   int32_t target_mem = 0, target_len = 0;
 
-  tmap_fsw_flowseq_t *fseq[2] = {NULL, NULL};
   tmap_fsw_path_t *path = NULL;
   int32_t path_mem = 0, path_len = 0;
   tmap_fsw_param_t param;
   int32_t matrix[25];
-  tmap_seq_t *seq_rc = NULL;
-  uint8_t *flow_order_rc=NULL;
-  int32_t softclip_types[2];
+  int32_t start_softclip_len = 0;
+
+  if(0 == sams->n) return;
 
   // generate the alignment parameters
   param.matrix = matrix;
@@ -2516,43 +2410,18 @@ tmap_map_util_fsw(tmap_seq_t *seq,
   param.offset = TMAP_MAP_UTIL_FSW_OFFSET; // this sets the hp difference
   __tmap_fsw_gen_ap1(param, score_match, pen_mm, pen_gapo, pen_gape, fscore);
 
-  softclip_types[0] = softclip_type;
-  softclip_types[1] = __tmap_map_util_reverse_soft_clipping(softclip_type);
+  // get flow sequence 
+  fseq = tmap_fsw_flowseq_from_seq(fseq, seq, flow_order, flow_order_len, key_seq, key_seq_len);
 
   // go through each hit
   for(i=0;i<sams->n;i++) {
       tmap_map_sam_t *s = &sams->sams[i];
       uint32_t ref_start, ref_end;
 
-      // get flow sequence if necessary
-      if(NULL == fseq[s->strand]) {
-          if(0 == s->strand) {
-              fseq[s->strand] = tmap_fsw_seq_to_flowseq(seq, flow_order, flow_order_len);
-          }
-          else {
-              flow_order_rc = tmap_malloc(sizeof(uint8_t) * flow_order_len, "flow_order_rc");
-              for(j=0;j<flow_order_len;j++) {
-                  flow_order_rc[j] = 3 - flow_order[flow_order_len-j-1];
-              }
-              seq_rc = tmap_seq_clone(seq);
-              tmap_seq_reverse_compliment(seq_rc);
-              fseq[s->strand] = tmap_fsw_seq_to_flowseq(seq_rc, flow_order_rc, flow_order_len);
-          }
-          // HERE
-          //tmap_fsw_flowseq_print(tmap_file_stderr, fseq[s->strand]);
-      }
-
-      // HERE
-      /*
-      uint32_t *old_cigar, old_n_cigar;
-      old_n_cigar = s->n_cigar;
-      old_cigar = tmap_malloc(sizeof(uint32_t)*old_n_cigar, "old_cigar");
-      for(j=0;j<s->n_cigar;j++) {
-          old_cigar[j] = s->cigar[j];
-      }
-      */
-
+      // get the reference end position
+      // NB: soft-clipping at the start may cause ref_start to be moved
       param.band_width = 0;
+      start_softclip_len = 0;
       ref_start = ref_end = s->pos + 1;
       for(j=0;j<s->n_cigar;j++) {
           int32_t op, op_len;
@@ -2574,10 +2443,12 @@ tmap_map_util_fsw(tmap_seq_t *seq,
             case BAM_CSOFT_CLIP:
               if(0 == j) {
                   if(ref_start <= op_len) {
+                      start_softclip_len = ref_start;
                       ref_start = 1;
                   }
                   else {
-                      ref_start = ref_start - op_len + 1;
+                      start_softclip_len = op_len;
+                      ref_start = ref_start - op_len;
                   }
               }
               else ref_end += op_len;
@@ -2587,12 +2458,14 @@ tmap_map_util_fsw(tmap_seq_t *seq,
               break;
           }
       }
+      ref_end--; // NB: since we want this to be one-based
 
       // check bounds
       if(ref_start < 1) ref_start = 1;
       if(refseq->annos[s->seqid].len < ref_end) {
           ref_end = refseq->annos[s->seqid].len;
       }
+      else if(ref_end < 1) ref_end = 1;
 
       // get the target sequence
       target_len = ref_end - ref_start + 1;
@@ -2602,37 +2475,34 @@ tmap_map_util_fsw(tmap_seq_t *seq,
           target = tmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
       }
       target_len = tmap_refseq_subseq(refseq, ref_start + refseq->annos[s->seqid].offset, target_len, target);
-
-      // check if any IUPAC bases fall within the range
       /*
-      if(0 < tmap_refseq_amb_bases(refseq, s->seqid+1, ref_start, ref_end)) {
-          int32_t j, pos;
-          // modify them
-          for(pos=ref_start;pos<=ref_end;pos++) {
-              j = tmap_refseq_amb_bases(refseq, s->seqid+1, pos, pos); // Note: j is one-based
-              if(0 < j) {
-                  target[pos-ref_start] = 4; // mismatch!
-              }
-          }
+      // NB: IUPAC codes are turned into mismatches
+      if(NULL == tmap_refseq_subseq2(refseq, sams->sams[end].seqid+1, start_pos, end_pos, target, 1, NULL)) {
+          tmap_error("bug encountered", Exit, OutOfRange);
       }
       */
+
+      if(1 == s->strand) { // reverse compliment
+          tmap_reverse_compliment_int(target, target_len);
+      }
 
       // add to the band width
       param.band_width += 2 * bw;
 
       // make sure we have enough memory for the path
-      while(path_mem <= target_len + fseq[s->strand]->num_flows) { // lengthen the path
-          path_mem = target_len + fseq[s->strand]->num_flows + 1;
+      while(path_mem <= target_len + fseq->num_flows) { // lengthen the path
+          path_mem = target_len + fseq->num_flows + 1;
           tmap_roundup32(path_mem);
           path = tmap_realloc(path, sizeof(tmap_fsw_path_t)*path_mem, "path");
       }
 
       /*
+      fprintf(stderr, "strand=%d\n", s->strand);
       fprintf(stderr, "ref_start=%d ref_end=%d\n", ref_start, ref_end);
       fprintf(stderr, "base_calls:\n");
-      for(j=0;j<fseq[s->strand]->num_flows;j++) {
-          for(k=0;k<fseq[s->strand]->base_calls[j];k++) {
-              fputc("ACGTN"[fseq[s->strand]->flow_order[j % fseq[s->strand]->flow_order_len]], stderr);
+      for(j=0;j<fseq->num_flows;j++) {
+          for(k=0;k<fseq->base_calls[j];k++) {
+              fputc("ACGTN"[fseq->flow_order[j % fseq->flow_order_len]], stderr);
           }
       }
       fputc('\n', stderr);
@@ -2641,8 +2511,8 @@ tmap_map_util_fsw(tmap_seq_t *seq,
           fputc("ACGTN"[target[j]], stderr);
       }
       fputc('\n', stderr);
-      for(j=0;j<fseq[s->strand]->flow_order_len;j++) {
-          fputc("ACGTN"[fseq[s->strand]->flow_order[j]], stderr);
+      for(j=0;j<fseq->flow_order_len;j++) {
+          fputc("ACGTN"[fseq->flow_order[j]], stderr);
       }
       fputc('\n', stderr);
       */
@@ -2650,22 +2520,21 @@ tmap_map_util_fsw(tmap_seq_t *seq,
       // re-align
       s->ascore = s->score;
       path_len = path_mem;
-      //fprintf(stderr, "old score=%d\n", s->score);
-      switch(softclip_types[s->strand]) {
+      switch(softclip_type) {
         case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
-          s->score = tmap_fsw_clipping_core(target, target_len, fseq[s->strand], &param, 
+          s->score = tmap_fsw_clipping_core(target, target_len, fseq, &param, 
                                             1, 1, path, &path_len);
           break;
         case TMAP_MAP_UTIL_SOFT_CLIP_LEFT:
-          s->score = tmap_fsw_clipping_core(target, target_len, fseq[s->strand], &param, 
+          s->score = tmap_fsw_clipping_core(target, target_len, fseq, &param, 
                                             1, 0, path, &path_len);
           break;
         case TMAP_MAP_UTIL_SOFT_CLIP_RIGHT:
-          s->score = tmap_fsw_clipping_core(target, target_len, fseq[s->strand], &param, 
+          s->score = tmap_fsw_clipping_core(target, target_len, fseq, &param, 
                                             0, 1, path, &path_len);
           break;
         case TMAP_MAP_UTIL_SOFT_CLIP_NONE:
-          s->score = tmap_fsw_clipping_core(target, target_len, fseq[s->strand], &param, 
+          s->score = tmap_fsw_clipping_core(target, target_len, fseq, &param, 
                                             0, 0, path, &path_len);
           break;
         default:
@@ -2679,27 +2548,39 @@ tmap_map_util_fsw(tmap_seq_t *seq,
 
           /*
           for(j=0;j<path_len;j++) {
-              fprintf(stderr, "j=%d path[j].i=%d path[j].j=%d\n", j, path[j].i, path[j].j);
+              fprintf(stderr, "j=%d path[j].i=%d path[j].j=%d path[j].type=%d\n", j, path[j].i, path[j].j, path[j].ctype);
           }
           */
 
+          // score
           s->score = (int32_t)((s->score + 99.99)/100.0); 
+
+          // position
           s->pos = (ref_start-1);
-          if(0 <= path[path_len-1].j) { // does not begin with an insertion
-              s->pos += (path[path_len-1].j);
+          // NB: must be careful of leading insertions and strandedness
+          if(0 == s->strand) {
+              if(0 <= path[path_len-1].j) { 
+                  s->pos += (path[path_len-1].j);
+              }
+          }
+          else {
+              if(path[0].j < target_len) {
+                  s->pos += target_len - path[0].j - 1;
+              }
           }
           if(refseq->len < s->pos) {
-              //fprintf(stderr, "ref_start=%d path[path_len-1].j=%d\n", ref_start, path[path_len-1].j);
               tmap_error("bug encountered", Exit, OutOfRange);
           }
-          //fprintf(stderr, "path[path_len-1].i=%d path[0].i=%d num_flows=%d\n", path[path_len-1].i, path[0].i, fseq[s->strand]->num_flows);
+
+          // new cigar
           free(s->cigar);
           s->cigar = tmap_fsw_path2cigar(path, path_len, &s->n_cigar, 1);
 
+          // soft-clipping
           if(0 < path[path_len-1].i) { // skipped beginning flows
               // get the number of bases to clip
               for(j=k=0;j<path[path_len-1].i;j++) {
-                  k += fseq[s->strand]->base_calls[j];
+                  k += fseq->base_calls[j];
               }
               if(0 < k) { // bases should be soft-clipped
                   s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*(1 + s->n_cigar), "s->cigar");
@@ -2711,15 +2592,26 @@ tmap_map_util_fsw(tmap_seq_t *seq,
               }
           }
 
-          if(path[0].i+1 < fseq[s->strand]->num_flows) { // skipped ending flows
+          // soft-clipping
+          if(path[0].i+1 < fseq->num_flows) { // skipped ending flows
               // get the number of bases to clip 
-              for(j=path[0].i+1,k=0;j<fseq[s->strand]->num_flows;j++) {
-                  k += fseq[s->strand]->base_calls[j];
+              for(j=path[0].i+1,k=0;j<fseq->num_flows;j++) {
+                  k += fseq->base_calls[j];
               }
               if(0 < k) { // bases should be soft-clipped
                   s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*(1 + s->n_cigar), "s->cigar");
                   s->cigar[s->n_cigar] = (k << 4) | 4;
                   s->n_cigar++;
+              }
+          }
+
+          // reverse the cigar if on the reverse strand
+          if(1 == s->strand) {
+              for(i=0;i<s->n_cigar>>1;i++) {
+                  uint32_t c;
+                  c = s->cigar[i];
+                  s->cigar[i] = s->cigar[s->n_cigar-i-1];
+                  s->cigar[s->n_cigar-i-1] = c;
               }
           }
       
@@ -2734,51 +2626,9 @@ tmap_map_util_fsw(tmap_seq_t *seq,
                   break;
               }
           }
-
-          // HERE
-              /*
-          int32_t differs = 0;
-          if(s->n_cigar != old_n_cigar) {
-              differs = 1;
-          }
-          else {
-              for(j=0;j<s->n_cigar;j++) {
-                  if(s->cigar[j] != old_cigar[j]) {
-                      differs = 1;
-                      break;
-                  }
-              }
-          }
-          if(1 == differs) {
-              for(j=0;j<path_len;j++) {
-                  fprintf(stderr, "j=%d path[j].i=%d path[j].j=%d\n", j, path[j].i, path[j].j);
-              }
-              fprintf(stderr, "NEW: [");
-              for(j=0;j<s->n_cigar;j++) {
-                  fprintf(stderr, "%d%c", s->cigar[j]>>4, "MIDNSHP"[s->cigar[j]&0xf]);
-              }
-              fprintf(stderr, "]\n");
-              fprintf(stderr, "OLD: [");
-              for(j=0;j<old_n_cigar;j++) {
-                  fprintf(stderr, "%d%c", old_cigar[j]>>4, "MIDNSHP"[old_cigar[j]&0xf]);
-              }
-              fprintf(stderr, "]\n\n");
-          }
-              */
       }
-
-      // HERE
-      //free(old_cigar);
   }
   // free
-  if(NULL != fseq[0]) {
-      tmap_fsw_flowseq_destroy(fseq[0]);
-  }
-  if(NULL != fseq[1]) {
-      free(flow_order_rc);
-      tmap_fsw_flowseq_destroy(fseq[1]);
-      tmap_seq_destroy(seq_rc);
-  }
   free(target);
   free(path);
 }

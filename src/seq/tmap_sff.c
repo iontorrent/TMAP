@@ -515,3 +515,40 @@ tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping)
       sff->read->quality->s[sff->read->quality->l] = '\0';
   }
 }
+
+int32_t
+tmap_sff_get_flow_order_int(tmap_sff_t *sff, uint8_t **flow_order)
+{
+  int32_t i;
+  int32_t flow_order_len = sff->gheader->flow->l;
+  (*flow_order) = tmap_malloc(sizeof(uint8_t) * flow_order_len, "flow_order");
+  for(i=0;i<flow_order_len;i++) {
+      (*flow_order)[i] = tmap_nt_char_to_int[(int)sff->gheader->flow->s[i]];
+  }
+  return flow_order_len;
+}
+
+int32_t
+tmap_sff_get_key_seq_int(tmap_sff_t *sff, uint8_t **key_seq)
+{
+  int32_t i;
+  int32_t key_seq_len = sff->gheader->flow->l;
+  (*key_seq) = tmap_malloc(sizeof(uint8_t) * key_seq_len, "key_seq");
+  for(i=0;i<key_seq_len;i++) {
+      (*key_seq)[i] = tmap_nt_char_to_int[(int)sff->gheader->key->s[i]];
+  }
+  return key_seq_len;
+}
+
+int32_t
+tmap_sff_get_flowgram(tmap_sff_t *sff, uint16_t **flowgram, int32_t mem)
+{
+  int32_t i;
+  if(mem <= sff->gheader->flow_length) {
+      (*flowgram) = tmap_realloc((*flowgram), sizeof(uint16_t) * sff->gheader->flow_length, "flowgram");
+  }
+  for(i=0;i<sff->gheader->flow_length;i++) {
+      (*flowgram)[i] = sff->read->flowgram[i];
+  }
+  return sff->gheader->flow_length;
+}

@@ -4,6 +4,7 @@
 
 #include <sys/types.h>
 #include "../sw/tmap_vsw.h"
+#include "../sw/tmap_fsw.h"
 
 /*!
   The default offset for homopolymer errors.
@@ -142,9 +143,9 @@ typedef struct __tmap_map_opt_t {
     int32_t pen_gape;  /*!< the indel extension penalty (-E) */
     int32_t fscore;  /*!< the flow score penalty (-X) */
     char *flow_order; /*!< the flow order (-x) */
-    int32_t flow_order_use_sff; /*!< the flow order should be from the sff (-x) */
+    int32_t flow_order_use_file; /*!< the flow order should be from the file (-x) */
     char *key_seq; /*!< the key sequence (-t) */
-    int32_t key_seq_use_sff; /*!< the key sequence should be from the sff (-t) */
+    int32_t key_seq_use_file; /*!< the key sequence should be from the file (-t) */
     int32_t bw; /*!< the extra bases to add before and after the target during Smith-Waterman (-w) */
     int32_t softclip_type; /*!< soft clip type (-g) */
     int32_t softclip_key; /*!< soft clip only the last base of the key (-y) */
@@ -518,9 +519,12 @@ tmap_map_util_sw_aux(tmap_map_sam_t *sam,
 
 /*!
   re-aligns mappings in flow space
+  @param  fs             the flow sequence structure to re-use, NULL otherwise
   @param  seq            the seq read sequence
   @param  flow_order      the flow order
   @param  flow_order_len  the flow order length
+  @param  key_seq        the key sequence
+  @param  key_seq_len    the key sequence length
   @param  sams           the mappings to adjust 
   @param  refseq         the reference sequence
   @param  bw             the band width
@@ -533,8 +537,9 @@ tmap_map_util_sw_aux(tmap_map_sam_t *sam,
   @param  fscore         the flow penalty
   */
 void
-tmap_map_util_fsw(tmap_seq_t *seq, 
+tmap_map_util_fsw(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, 
                   uint8_t *flow_order, int32_t flow_order_len,
+                  uint8_t *key_seq, int32_t key_seq_len,
                   tmap_map_sams_t *sams, tmap_refseq_t *refseq,
                   int32_t bw, int32_t softclip_type, int32_t score_thr,
                   int32_t score_match, int32_t pen_mm, int32_t pen_gapo, 

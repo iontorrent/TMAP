@@ -98,4 +98,23 @@ tmap_sam_get_qualities(tmap_sam_t *sam)
 {
     return sam->qual;
 }
+
+int32_t
+tmap_sam_get_flow_order_int(tmap_sam_t *sam, uint8_t **flow_order)
+{
+  return 0;
+}
+
+int32_t
+tmap_sam_get_key_seq_int(tmap_sam_t *sam, uint8_t **key_seq)
+{
+  return 0;
+}
+
+int32_t
+tmap_sam_get_flowgram(tmap_sam_t *sam, uint16_t **flowgram, int32_t mem)
+{
+  return 0;
+}
+
 #endif

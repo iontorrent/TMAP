@@ -183,4 +183,29 @@ tmap_sff_get_qualities(tmap_sff_t *sff);
 inline void
 tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping);
 
+/*!
+  @param  sff        pointer to the structure to convert
+  @param  flow_order a pointer to where the flow order should be stored 
+  @return            the length of the flow order
+ */
+int32_t
+tmap_sff_get_flow_order_int(tmap_sff_t *sff, uint8_t **flow_order);
+
+/*!
+  @param  sff      pointer to the structure to convert
+  @param  key_seq  pointer to where the key sequence should be stored 
+  @return          the length of the key sequence
+ */
+int32_t
+tmap_sff_get_key_seq_int(tmap_sff_t *sff, uint8_t **key_seq);
+
+/*!
+  @param  sff      pointer to the structure to convert
+  @param  flowgram  pionter to where the flowgram should be stored
+  @param  mem      memory size already allocated to flowgram
+  @return          the flowgram length
+ */
+int32_t
+tmap_sff_get_flowgram(tmap_sff_t *sff, uint16_t **flowgram, int32_t mem);
+
 #endif

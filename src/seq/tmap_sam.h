@@ -91,6 +91,35 @@ tmap_sam_get_bases(tmap_sam_t *sam);
  */
 inline tmap_string_t *
 tmap_sam_get_qualities(tmap_sam_t *sam);
+
+/*!
+  @param  sam        pointer to the structure to convert
+  @param  flow_order a pointer to where the flow order should be stored 
+  @return            the length of the flow order
+  @details         this is currently not implemented
+ */
+int32_t
+tmap_sam_get_flow_order_int(tmap_sam_t *sam, uint8_t **flow_order);
+
+/*!
+  @param  sam      pointer to the structure to convert
+  @param  key_seq  pointer to where the key sequence should be stored 
+  @return          the length of the key sequence
+  @details         this is currently not implemented
+ */
+int32_t
+tmap_sam_get_key_seq_int(tmap_sam_t *sam, uint8_t **key_seq);
+
+/*!
+  @param  sam      pointer to the structure to convert
+  @param  flowgram  pionter to where the flowgram should be stored
+  @param  mem      memory size already allocated to flowgram
+  @return          the flowgram length
+  @details         this is currently not implemented
+ */
+int32_t
+tmap_sam_get_flowgram(tmap_sam_t *sam, uint16_t **flowgram, int32_t mem);
+
 #endif
 
 #endif

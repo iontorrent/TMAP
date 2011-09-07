@@ -2,8 +2,6 @@
 #ifndef TMAP_FSW_H
 #define TMAP_FSW_H
 
-#include "../seq/tmap_sff.h"
-
 // We have 6-bits total, so 3-bits for above, and 3-bits for below
 #define TMAP_FSW_MAX_OFFSET 7
 
@@ -102,6 +100,7 @@ typedef struct {
     int32_t flow_order_len; /*!< the flow order length */
     uint8_t *base_calls; /*!< for each flow, the number of bases called [0-255] */
     uint16_t *flowgram; /*!< for each flow, the flowgram signal (100*signal)  */
+    int32_t mem; /*!< the memory for the flowgram and base_calls */
     int32_t num_flows; /*!< the number of flows */
     int32_t key_index; /*!< the 0-based index of the key base if the key is part of the first or last flow (should be -1, 0, or num_flow-1). */
     int32_t key_bases; /*!< the number of bases part of the key_index flow that are explained by the key sequence */
@@ -121,6 +120,19 @@ typedef struct {
 tmap_fsw_flowseq_t *
 tmap_fsw_flowseq_init(uint8_t *flow_order, int32_t flow_order_len, uint8_t *base_calls, uint16_t *flowgram,
                       int32_t num_flows, int32_t key_index, int32_t key_bases);
+
+/*!
+  Create a structure for flow-space Smith Waterman from an sequence structure
+  @param  fs             a flow space structure to re-use, null otherwise
+  @param  seq            the sequence structure
+  @param  flow_order      the flow order (in integer format)
+  @param  flow_order_len  the flow order length
+  @param  key_seq        the key sequence (in integer format)
+  @param  key_seq_len    the key sequence length
+  @return                pointer to the flowseq structure
+  */
+tmap_fsw_flowseq_t *
+tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow_order, int32_t flow_order_len, uint8_t *key_seq, uint8_t key_seq_len);
 
 /*!
   @param  fp      the file stream in which to print
@@ -281,16 +293,6 @@ tmap_fsw_get_aln(tmap_fsw_path_t *path, int32_t path_len,
 void 
 tmap_fsw_print_aln(tmap_file_t *fp, int64_t score, tmap_fsw_path_t *path, int32_t path_len,
                    uint8_t *flow_order, int32_t flow_order_len, uint8_t *target, uint8_t strand, int32_t j_type, char sep);
-
-/*!
-  Create a structure for flow-space Smith Waterman from an sequence structure
-  @param  seq            the sequence structure
-  @param  flow_order      the flow order (in integer format); not used for an SFF
-  @param  flow_order_len  the flow order length; not used for an SFF
-  @return                pointer to the flowseq structure
-  */
-tmap_fsw_flowseq_t *
-tmap_fsw_seq_to_flowseq(tmap_seq_t *seq, uint8_t *flow_order, int32_t flow_order_len);
 
 /*!
   Frees the memory associated with this structure

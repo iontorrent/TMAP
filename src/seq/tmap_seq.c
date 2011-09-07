@@ -323,4 +323,69 @@ tmap_seq_sff2fq(tmap_seq_t *seq)
   return ret;
 }
 
-// TODO sam/bam to fastq
+int32_t
+tmap_seq_get_flow_order_int(tmap_seq_t *seq, uint8_t **flow_order)
+{
+  switch(seq->type) {
+    case TMAP_SEQ_TYPE_FQ:
+      break;
+    case TMAP_SEQ_TYPE_SFF:
+      return tmap_sff_get_flow_order_int(seq->data.sff, flow_order);
+      break;
+#ifdef HAVE_SAMTOOLS
+    case TMAP_SEQ_TYPE_SAM:
+    case TMAP_SEQ_TYPE_BAM:
+      return tmap_sam_get_flow_order_int(seq->data.sam, flow_order);
+      break;
+#endif
+    default:
+      tmap_error("type is unrecognized", Exit, OutOfRange);
+      break;
+  }
+  return 0;
+}
+
+int32_t
+tmap_seq_get_key_seq_int(tmap_seq_t *seq, uint8_t **key_seq)
+{
+  switch(seq->type) {
+    case TMAP_SEQ_TYPE_FQ:
+      break;
+    case TMAP_SEQ_TYPE_SFF:
+      return tmap_sff_get_key_seq_int(seq->data.sff, key_seq);
+      break;
+#ifdef HAVE_SAMTOOLS
+    case TMAP_SEQ_TYPE_SAM:
+    case TMAP_SEQ_TYPE_BAM:
+      return tmap_sam_get_key_seq_int(seq->data.sam, key_seq);
+      break;
+#endif
+    default:
+      tmap_error("type is unrecognized", Exit, OutOfRange);
+      break;
+  }
+  return 0;
+}
+
+// NB: includes key bases if present
+int32_t
+tmap_seq_get_flowgram(tmap_seq_t *seq, uint16_t **flowgram, int32_t mem)
+{
+  switch(seq->type) {
+    case TMAP_SEQ_TYPE_FQ:
+      break;
+    case TMAP_SEQ_TYPE_SFF:
+      return tmap_sff_get_flowgram(seq->data.sff, flowgram, mem);
+      break;
+#ifdef HAVE_SAMTOOLS
+    case TMAP_SEQ_TYPE_SAM:
+    case TMAP_SEQ_TYPE_BAM:
+      return tmap_sam_get_flowgram(seq->data.sam, flowgram, mem);
+      break;
+#endif
+    default:
+      tmap_error("type is unrecognized", Exit, OutOfRange);
+      break;
+  }
+  return 0;
+}

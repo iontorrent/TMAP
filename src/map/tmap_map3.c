@@ -131,7 +131,7 @@ tmap_map3_thread_init(void **data, tmap_map_opt_t *opt)
 
   d = tmap_calloc(1, sizeof(tmap_map3_thread_data_t), "d");
 
-  if(0 == opt->flow_order_use_sff && NULL != opt->flow_order) { // copy input flow order
+  if(0 == opt->flow_order_use_file && NULL != opt->flow_order) { // copy input flow order
       d->flow_order_len = strlen(opt->flow_order);
       d->flow_order = tmap_malloc(sizeof(uint8_t) * d->flow_order_len, "d->flow_order");
       for(i=0;i<d->flow_order_len;i++) {
@@ -169,7 +169,7 @@ tmap_map3_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_b
   int32_t i, seq_len;
   tmap_map3_thread_data_t *d = (tmap_map3_thread_data_t*)(*data);
 
-  if(0 == d->flow_order_len && 1 == opt->flow_order_use_sff) { // copy the SFF's flow order
+  if(0 == d->flow_order_len && 1 == opt->flow_order_use_file) { // copy the SFF's flow order
       d->flow_order_len = seq->data.sff->gheader->flow->l;
       d->flow_order = tmap_malloc(sizeof(uint8_t) * d->flow_order_len, "d->flow_order");
       for(i=0;i<d->flow_order_len;i++) {
