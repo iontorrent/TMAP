@@ -179,7 +179,8 @@ typedef struct __tmap_map_opt_t {
     // map3 options
     int32_t max_seed_hits; /*!< the maximum number of hits returned by a seed (-S) */
     int32_t hp_diff; /*!< single homopolymer error difference for enumeration (-H) */
-    double hit_frac; /*!<   the fraction of seed positions that are under the maximum (-S) (-V) */
+    double hit_frac; /*!< the fraction of seed positions that are under the maximum (-S) (-V) */
+    int32_t seed_step; /*!< the number of bases to increase the seed for each seed increase iteration (-c) */ 
 
     // mapvsw options
     // None

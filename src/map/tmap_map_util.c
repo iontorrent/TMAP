@@ -876,7 +876,6 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       query = (uint8_t*)tmap_seq_get_bases(seqs[strand])->s;
       qlen = tmap_seq_get_bases(seqs[strand])->l;
 
-
       // add in band width
       // one-based
       if(start_pos < opt->bw) {

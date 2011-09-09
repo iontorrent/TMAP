@@ -305,15 +305,28 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
       seq_len[i] = bases->l;
       query = (uint8_t*)bases->s;
 
-      // pre-allocate mmemory
       n_seeds[i] = 0;
-      m_seeds[i] = seq_len[i] - seed_length + 1; // maximum number of seeds possible
-      seeds[i] = tmap_malloc(m_seeds[i]*sizeof(tmap_map3_aux_seed_t), "seeds[i]");
-
-      // seed the alignment
-      tmap_map3_aux_core_seed(query, seq_len[i], flow[i],
-                              refseq, bwt, sa, opt, &seeds[i], &n_seeds[i], &m_seeds[i],
-                              seed_length);
+      // pre-allocate mmemory
+      if(0 < opt->seed_step) {
+          m_seeds[i] = 0;
+          for(j=seed_length;j<=seq_len[i];j+=opt->seed_step) {
+              m_seeds[i] += seq_len[i] - j + 1; // maximum number of seeds possible
+          }
+          seeds[i] = tmap_malloc(m_seeds[i]*sizeof(tmap_map3_aux_seed_t), "seeds[i]");
+          for(j=seed_length;j<=seq_len[i];j+=opt->seed_step) {
+              tmap_map3_aux_core_seed(query, seq_len[i], flow[i],
+                                      refseq, bwt, sa, opt, &seeds[i], &n_seeds[i], &m_seeds[i],
+                                      j);
+          }
+      }
+      else {
+          m_seeds[i] = seq_len[i] - seed_length + 1; // maximum number of seeds possible
+          seeds[i] = tmap_malloc(m_seeds[i]*sizeof(tmap_map3_aux_seed_t), "seeds[i]");
+          // seed the alignment
+          tmap_map3_aux_core_seed(query, seq_len[i], flow[i],
+                                  refseq, bwt, sa, opt, &seeds[i], &n_seeds[i], &m_seeds[i],
+                                  seed_length);
+      }
 
       // for SAM storage
       for(j=0;j<n_seeds[i];j++) {
