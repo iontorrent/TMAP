@@ -53,7 +53,7 @@ tmap_map_all_sams_merge_helper(tmap_map_sams_t *dest, tmap_map_sams_t *src, int3
   for(i=0;i<src->n;i++) {
       // nullify
       tmap_map_sam_copy_and_nullify(&dest->sams[i+n], &src->sams[i]);
-      if(1 < stage) {
+      if(0 < stage) {
           // copy over the stage #
           dest->sams[i+n].algo_stage = stage;
       }
@@ -126,7 +126,7 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
   
   // generate the cigars
   sams = tmap_map_util_sw_gen_cigar(refseq, sams, seq, opt);
-
+  
   return sams;
 
 }

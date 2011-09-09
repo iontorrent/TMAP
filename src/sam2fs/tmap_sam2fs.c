@@ -625,19 +625,19 @@ tmap_sam2fs_aux(bam1_t *bam, tmap_sam2fs_aux_flow_order_t *flow_order, int32_t f
   flowseq = tmap_fsw_flowseq_init(tmp_flow_order, tmp_flow_order_len, base_calls, flowgram, flow_len, -1, 0);
   score = INT32_MIN;
   switch(softclip_type) {
-    case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
+    case TMAP_MAP_OPT_SOFT_CLIP_ALL:
       score = tmap_fsw_clipping_core((uint8_t*)ref_bases, ref_bases_len, flowseq, &param,
                                         1, 1, path, &path_len);
       break;
-    case TMAP_MAP_UTIL_SOFT_CLIP_LEFT:
+    case TMAP_MAP_OPT_SOFT_CLIP_LEFT:
       score = tmap_fsw_clipping_core((uint8_t*)ref_bases, ref_bases_len, flowseq, &param,
                                         1, 0, path, &path_len);
       break;
-    case TMAP_MAP_UTIL_SOFT_CLIP_RIGHT:
+    case TMAP_MAP_OPT_SOFT_CLIP_RIGHT:
       score = tmap_fsw_clipping_core((uint8_t*)ref_bases, ref_bases_len, flowseq, &param,
                                         0, 1, path, &path_len);
       break;
-    case TMAP_MAP_UTIL_SOFT_CLIP_NONE:
+    case TMAP_MAP_OPT_SOFT_CLIP_NONE:
       score = tmap_fsw_clipping_core((uint8_t*)ref_bases, ref_bases_len, flowseq, &param,
                                         0, 0, path, &path_len);
       break;
@@ -970,13 +970,13 @@ tmap_sam2fs_opt_init()
 
   opt->flow_order = tmap_strdup("TACG");
   opt->key_sequence = NULL;
-  opt->score_match = TMAP_MAP_UTIL_SCORE_MATCH;
-  opt->pen_mm = TMAP_MAP_UTIL_PEN_MM;
-  opt->pen_gapo = TMAP_MAP_UTIL_PEN_GAPO;
-  opt->pen_gape = TMAP_MAP_UTIL_PEN_GAPE;
-  opt->fscore = TMAP_MAP_UTIL_FSCORE;
+  opt->score_match = TMAP_MAP_OPT_SCORE_MATCH;
+  opt->pen_mm = TMAP_MAP_OPT_PEN_MM;
+  opt->pen_gapo = TMAP_MAP_OPT_PEN_GAPO;
+  opt->pen_gape = TMAP_MAP_OPT_PEN_GAPE;
+  opt->fscore = TMAP_MAP_OPT_FSCORE;
   opt->flow_offset = 1;
-  opt->softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_RIGHT;
+  opt->softclip_type = TMAP_MAP_OPT_SOFT_CLIP_RIGHT;
   opt->output_type = TMAP_SAM2FS_OUTPUT_ALN;
   opt->output_newlines = 0;
   opt->j_type = TMAP_FSW_NO_JUSTIFY;
