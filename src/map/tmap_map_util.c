@@ -569,7 +569,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
             case TMAP_MAP_ALGO_MAP3:
               switch(c) {
                 case 'l':
-                  opt->seed_length = atoi(optarg); opt->seed_length_set = 1; break;
+                  opt->seed_length = atoi(optarg); 
+                  if(0 < opt->seed_length) opt->seed_length_set = 1; 
+                  break;
                 case 'S':
                   opt->max_seed_hits = atoi(optarg); break;
                 case 'H':

@@ -196,6 +196,18 @@ tmap_map3_aux_core_seed(uint8_t *query,
                   tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, 0);
                   j++;
               }
+              else {
+                  // see if we can extend to make it unique
+                  int32_t k = i;
+                  while(0 < tmap_bwt_match_exact(bwt, 1, query + k, &cur_sa)) {
+                      k++;
+                      if((cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
+                          tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, k, 0);
+                          j++;
+                          break;
+                      }
+                  }
+              }
           }
           else {
               // skip over if we came up short
@@ -268,7 +280,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
   // init
   sams = tmap_map_sams_init(NULL);
 
-  // update the seed length
+  // update the seed length based on the read length
   seed_length = opt->seed_length;
   if(0 == opt->seed_length_set) {
       i = tmap_seq_get_bases(seq[0])->l;
