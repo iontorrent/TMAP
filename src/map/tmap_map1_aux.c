@@ -475,11 +475,11 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
   */
   
   // the maximum # of differences
-  if(bases[0]->l <= TMAP_MAP_UTIL_MAX_DIFF_READ_LENGTH) {
+  if(bases[0]->l <= TMAP_MAP_OPT_MAX_DIFF_READ_LENGTH) {
       best_diff = max_diff = opt->max_diff_table[bases[0]->l];
   }
   else {
-      best_diff = max_diff = opt->max_diff_table[TMAP_MAP_UTIL_MAX_DIFF_READ_LENGTH];
+      best_diff = max_diff = opt->max_diff_table[TMAP_MAP_OPT_MAX_DIFF_READ_LENGTH];
   }
   
   // bound differenes by the maximum # of differences

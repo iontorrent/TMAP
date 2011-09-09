@@ -41,6 +41,7 @@ tmap_SOURCES = \
 			   src/debug/tmap_debug_exact.h src/debug/tmap_debug_exact.c \
 			   src/map/tmap_map_vsw.h src/map/tmap_map_vsw.c \
 			   src/map/tmap_map_util.h src/map/tmap_map_util.c \
+			   src/map/tmap_map_opt.h src/map/tmap_map_opt.c \
 			   src/map/tmap_map1.h src/map/tmap_map1.c \
 			   src/map/tmap_map1_aux.h src/map/tmap_map1_aux.c \
 			   src/map/tmap_map2.h src/map/tmap_map2.c \
