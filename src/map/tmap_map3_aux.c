@@ -18,9 +18,14 @@ tmap_map3_aux_seed_add(tmap_map3_aux_seed_t **seeds,
                        int32_t k,
                        int32_t l,
                        int32_t start, 
-                       int32_t offset,
+                       int32_t n_diff,
                        int32_t seed_step)
 {
+  /*
+  if(offset < INT8_MIN || INT8_MAX < offset) {
+      tmap_error("offset for hp enumeration was out of range", Warn, OutOfRange);
+  }
+  */
   if((*m_seeds) <= (*n_seeds)) {
       (*m_seeds) = (0 == (*m_seeds)) ? 64 : ((*m_seeds) << 1);
       (*seeds) = tmap_realloc((*seeds), sizeof(tmap_map3_aux_seed_t)*(*m_seeds), "(*seeds)");
@@ -28,7 +33,7 @@ tmap_map3_aux_seed_add(tmap_map3_aux_seed_t **seeds,
   (*seeds)[(*n_seeds)].k = k;
   (*seeds)[(*n_seeds)].l = l;
   (*seeds)[(*n_seeds)].start = start;
-  (*seeds)[(*n_seeds)].offset = offset;
+  (*seeds)[(*n_seeds)].n_diff = n_diff;
   (*seeds)[(*n_seeds)].seed_step = seed_step;
   (*n_seeds)++;
 }
@@ -201,9 +206,9 @@ tmap_map3_aux_core_seed(uint8_t *query,
               }
               // seed stepping
               if(0 < seed_step) {
-                  int32_t k = seed_step;
+                  int32_t k = i + seed_length;
                   int32_t n = 0;
-                  while(0 < tmap_bwt_match_exact(bwt, seed_step, query + i + k, &cur_sa)) {
+                  while(k + seed_step < query_length && 0 < tmap_bwt_match_exact(bwt, seed_step, query + k, &cur_sa)) {
                       if((cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
                           tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, 0, n);
                       }
@@ -365,11 +370,11 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
                       pos = 0;
                   }
                   else {
-                      if(pos < seed_length_ext + seeds[i][j].offset - 1 ) {
+                      if(pos < seed_length_ext + seeds[i][j].n_diff - 1 ) {
                           pos = 0;
                       }
                       else {
-                          pos -= seed_length_ext + seeds[i][j].offset - 1;
+                          pos -= seed_length_ext + seeds[i][j].n_diff - 1;
                       }
                   }
 

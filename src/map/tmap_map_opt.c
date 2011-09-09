@@ -282,7 +282,7 @@ tmap_map_opt_destroy(tmap_map_opt_t *opt)
     tmap_file_fprintf(tmap_file_stderr, "         -S INT      the maximum number of hits returned by a seed [%d]\n", (_opt)->max_seed_hits); \
     tmap_file_fprintf(tmap_file_stderr, "         -H INT      single homopolymer error difference for enumeration [%d]\n", (_opt)->hp_diff); \
     tmap_file_fprintf(tmap_file_stderr, "         -V INT      the fraction of seed positions that are under the maximum [%.3lf]\n", (_opt)->hit_frac); \
-    tmap_file_fprintf(tmap_file_stderr, "         -c INT      the number of bases to increase the seed for each seed increase iteration (-1 to disable) [%d]\n", (_opt)->hit_frac); \
+    tmap_file_fprintf(tmap_file_stderr, "         -c INT      the number of bases to increase the seed for each seed increase iteration (-1 to disable) [%d]\n", (_opt)->seed_step); \
     tmap_file_fprintf(tmap_file_stderr, "         -u INT      the minimum sequence length to examine [%d]\n", (_opt)->min_seq_len); \
     tmap_file_fprintf(tmap_file_stderr, "         -U INT      the maximum sequence length to examine [%d]\n", (_opt)->max_seq_len); \
     tmap_file_fprintf(tmap_file_stderr, "\n"); \
