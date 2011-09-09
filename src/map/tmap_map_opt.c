@@ -172,7 +172,7 @@ tmap_map_opt_init(int32_t algo_id)
       opt->max_seed_hits = 12;
       opt->hp_diff = 0;
       opt->hit_frac = 0.25;
-      opt->seed_step = 8;
+      opt->seed_step = 16;
       break;
     case TMAP_MAP_ALGO_MAPVSW:
       // mapvsw
