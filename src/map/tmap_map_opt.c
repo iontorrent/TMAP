@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <math.h>
 #include <string.h>
+#include <getopt.h>
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_error.h"
 #include "../io/tmap_file.h"
@@ -10,6 +11,86 @@
 #include "../util/tmap_progress.h"
 #include "../util/tmap_definitions.h"
 #include "tmap_map_opt.h"
+
+
+static struct option tmap_map_opt_long_options[] =
+{  
+    // global options
+    {"fn-fasta", required_argument, 0, 'f'},
+    {"fn-reads", required_argument, 0, 'r'},
+    {"reads-format", required_argument, 0, 'F'},
+    {"fn-sam", required_argument, 0, '0'},
+    {"score-match", required_argument, 0, 'A'},
+    {"pen-mismatch", required_argument, 0, 'M'},
+    {"pen-gap-open", required_argument, 0, 'O'},
+    {"pen-gap-extension", required_argument, 0, 'E'},
+    {"flow-score", required_argument, 0, 'X'},
+    {"flow-order", required_argument, 0, 'x'},
+    {"key-seq", required_argument, 0, 't'},
+    {"band-width", required_argument, 0, 'w'},
+    {"softclip-type", required_argument, 0, 'g'},
+    {"softclip-key", no_argument, 0, 'y'},
+    {"duplicate-window", required_argument, 0, 'W'},
+    {"max-seed-band", required_argument, 0, 'B'},
+    {"score-thres", required_argument, 0, 'T'},
+    {"reads-queue-size", required_argument, 0, 'q'},
+    {"num-threads", required_argument, 0, 'n'},
+    {"aln-output-mode", required_argument, 0, 'a'},
+    {"sam-rg", required_argument, 0, 'R'},
+    {"sam-sff-tags", no_argument, 0, 'Y'},
+    {"remove-sff-clipping", no_argument, 0, 'G'},
+    {"input-gz", no_argument, 0, 'z'},
+#ifndef DISABLE_BZ2
+    {"input-bz2", no_argument, 0, 'j'},
+#endif
+    {"output-gz", no_argument, 0, 'Z'},
+#ifndef DISABLE_BZ2
+    {"output-bz2", no_argument, 0, 'J'},
+#endif
+    {"shm-key", required_argument, 0, 'k'},
+    {"help", no_argument, 0, 'h'},
+    {"verbose", no_argument, 0, 'v'},
+
+    // map1/map3 options
+    {"seed-length", required_argument, 0, 'l'},
+
+    // map1 options
+    {"seed-max-diff", required_argument, 0, 's'},
+    {"seed2-length", required_argument, 0, 'L'},
+    {"max-diff", required_argument, 0, 'p'},
+    {"max-diff-fnr", required_argument, 0, 'p'},
+    {"max-err-rate", required_argument, 0, 'P'},
+    {"max-mismatch", required_argument, 0, 'm'},
+    {"max-mismatch-frac", required_argument, 0, 'm'},
+    {"max-gap-open", required_argument, 0, 'o'},
+    {"max-gap-open-frac", required_argument, 0, 'o'},
+    {"max-gap-extension", required_argument, 0, 'e'},
+    {"max-gap-extension-frac", required_argument, 0, 'e'},
+    {"max-cals-del", required_argument, 0, 'd'},
+    {"indel-ends-bound", required_argument, 0, 'i'},
+    {"max-best-cals", required_argument, 0, 'b'},
+    {"max-nodes", required_argument, 0, 'Q'},
+
+    // map2 options
+    {"length-coef", required_argument, 0, 'c'},
+    {"max-seed-intv", required_argument, 0, 'S'},
+    {"z-best", required_argument, 0, 'b'},
+    {"seeds-rev", required_argument, 0, 'N'},
+
+    // map3 options
+    {"max-seed-hits", required_argument, 0, 'S'},
+    {"hp-diff", required_argument, 0, 'H'},
+    {"hit-frac", required_argument, 0, 'V'},
+
+    // mapvsw options
+    // None
+
+    // mapall options
+    {"mapall-aln-output-mode-independent", no_argument, 0, 'I'},
+    {"mapall-score-thr", required_argument, 0, 'C'},
+    {"mapall-mapq-thr", required_argument, 0, 'D'},
+    {"mapall-keep-all", no_argument, 0, 'K'},
+};
 
 tmap_map_opt_t *
 tmap_map_opt_init(int32_t algo_id)
@@ -249,7 +330,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "         -t STRING   the key sequence ([ACGT]{4+} or \"sff\") [%s]\n",
                     (NULL == opt->key_seq) ? "not using" : opt->key_seq);
   tmap_file_fprintf(tmap_file_stderr, "         -w INT      the band width [%d]\n", opt->bw);
-  tmap_file_fprintf(tmap_file_stderr, "         -g          the soft-clipping type [%d]\n", opt->softclip_type);
+  tmap_file_fprintf(tmap_file_stderr, "         -g INT      the soft-clipping type [%d]\n", opt->softclip_type);
   tmap_file_fprintf(tmap_file_stderr, "                             0 - allow on the right and left portions of the read\n");
   tmap_file_fprintf(tmap_file_stderr, "                             1 - allow on the left portion of the read\n");
   tmap_file_fprintf(tmap_file_stderr, "                             2 - allow on the right portion of the read\n");
@@ -331,7 +412,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
 int32_t
 tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
 {
-  int i, c;
+  int i, c, option_index;
   char *getopt_format = NULL;
 
   opt->argc = argc; opt->argv = argv;
@@ -358,7 +439,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
 
   // global options
   // Note: possible memory leaks if the same option (besides -R) are specified twice
-  while((c = getopt(argc, argv, getopt_format)) >= 0) {
+  while((c = getopt_long(argc, argv, getopt_format, tmap_map_opt_long_options, &option_index)) >= 0) {
       switch(c) { 
         case 'f': 
           opt->fn_fasta = tmap_strdup(optarg); break;

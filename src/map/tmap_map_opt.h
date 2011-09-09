@@ -3,6 +3,7 @@
 #define TMAP_MAP_OPT_H
 
 #include <sys/types.h>
+#include <getopt.h>
 #include "../sw/tmap_vsw.h"
 
 /*!
@@ -101,7 +102,6 @@ enum {
  *
  * Available:
  * 3456789
- * 
  * 
 */
 
