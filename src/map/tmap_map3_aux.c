@@ -204,16 +204,18 @@ tmap_map3_aux_core_seed(uint8_t *query,
                   tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, 0, 0);
                   j++;
               }
-              // seed stepping
-              if(0 < seed_step) {
-                  int32_t k = i + seed_length;
-                  int32_t n = 0;
-                  while(k + seed_step < query_length && 0 < tmap_bwt_match_exact(bwt, seed_step, query + k, &cur_sa)) {
-                      if((cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
-                          tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, 0, n);
+              else {
+                  // seed stepping
+                  if(0 < seed_step) {
+                      int32_t k = i + seed_length;
+                      int32_t n = 0;
+                      while(k + seed_step < query_length && 0 < tmap_bwt_match_exact(bwt, seed_step, query + k, &cur_sa)) {
+                          if((cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
+                              tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, 0, n);
+                          }
+                          k += seed_step;
+                          n++;
                       }
-                      k += seed_step;
-                      n++;
                   }
               }
           }
