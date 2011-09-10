@@ -25,9 +25,9 @@ static char *algo_id_to_name[17] = {
     "dummy11",
     "dummy12",
     "dummy13",
-    "dummy14",
     "mapvsw",
-    "mapall"
+    "mapall",
+    "global options"
 };
 
 char *

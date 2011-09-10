@@ -34,6 +34,12 @@ tmap_progress_set_verbosity(int32_t verbosity)
   tmap_progress_verbosity = verbosity;
 }
 
+int32_t
+tmap_progress_get_verbosity()
+{
+  return tmap_progress_verbosity;
+}
+
 static void 
 tmap_progress_vprint1(const char *format, clock_t start_time, va_list ap)
 {

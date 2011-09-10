@@ -11,87 +11,720 @@
 #include "../util/tmap_progress.h"
 #include "../util/tmap_definitions.h"
 #include "tmap_map_opt.h"
+  
+static char *tmap_map_opt_input_types[] = {"INT", "FLOAT", "NUM", "FILE", "STRING", "NONE"};
 
+// TODO: move to the header
+// int32_t print function
+#define __tmap_map_opt_option_print_func_int_init(_name) \
+  static void tmap_map_opt_option_print_func_##_name(void *arg) { \
+      tmap_map_opt_t *opt = (tmap_map_opt_t*)arg; \
+      tmap_file_fprintf(tmap_file_stderr, "[%d]", opt->_name); \
+  }
 
-static struct option tmap_map_opt_long_options[] =
-{  
-    // global options
-    {"fn-fasta", required_argument, 0, 'f'},
-    {"fn-reads", required_argument, 0, 'r'},
-    {"reads-format", required_argument, 0, 'F'},
-    {"fn-sam", required_argument, 0, '0'},
-    {"score-match", required_argument, 0, 'A'},
-    {"pen-mismatch", required_argument, 0, 'M'},
-    {"pen-gap-open", required_argument, 0, 'O'},
-    {"pen-gap-extension", required_argument, 0, 'E'},
-    {"flow-score", required_argument, 0, 'X'},
-    {"flow-order", required_argument, 0, 'x'},
-    {"key-seq", required_argument, 0, 't'},
-    {"band-width", required_argument, 0, 'w'},
-    {"softclip-type", required_argument, 0, 'g'},
-    {"softclip-key", no_argument, 0, 'y'},
-    {"duplicate-window", required_argument, 0, 'W'},
-    {"max-seed-band", required_argument, 0, 'B'},
-    {"score-thres", required_argument, 0, 'T'},
-    {"reads-queue-size", required_argument, 0, 'q'},
-    {"num-threads", required_argument, 0, 'n'},
-    {"aln-output-mode", required_argument, 0, 'a'},
-    {"sam-rg", required_argument, 0, 'R'},
-    {"sam-sff-tags", no_argument, 0, 'Y'},
-    {"remove-sff-clipping", no_argument, 0, 'G'},
-    {"input-gz", no_argument, 0, 'z'},
-#ifndef DISABLE_BZ2
-    {"input-bz2", no_argument, 0, 'j'},
+// double print function
+#define __tmap_map_opt_option_print_func_double_init(_name) \
+  static void tmap_map_opt_option_print_func_##_name(void *arg) { \
+      tmap_map_opt_t *opt = (tmap_map_opt_t*)arg; \
+      tmap_file_fprintf(tmap_file_stderr, "[%lf]", opt->_name); \
+  }
+
+// char array print function
+#define __tmap_map_opt_option_print_func_chars_init(_name, _null_msg) \
+  static void tmap_map_opt_option_print_func_##_name(void *arg) { \
+      tmap_map_opt_t *opt = (tmap_map_opt_t*)arg; \
+      tmap_file_fprintf(tmap_file_stderr, "[%s]", (NULL == opt->_name) ? _null_msg : opt->_name); \
+  } \
+
+// true/false 
+#define __tmap_map_opt_option_print_func_tf_init(_name) \
+  static void tmap_map_opt_option_print_func_##_name(void *arg) { \
+      tmap_map_opt_t *opt = (tmap_map_opt_t*)arg; \
+      tmap_file_fprintf(tmap_file_stderr, "[%s]", (1 == opt->_name) ? "true" : "false"); \
+  }
+
+// verbosity
+#define __tmap_map_opt_option_print_func_verbosity_init() \
+  static void tmap_map_opt_option_print_func_verbosity(void *arg) { \
+      tmap_file_fprintf(tmap_file_stderr, "[%s]", (1 == tmap_progress_get_verbosity()) ? "true" : "false"); \
+  }
+
+// compression
+#define __tmap_map_opt_option_print_func_compr_init(_name, _var, _compr) \
+  static void tmap_map_opt_option_print_func_##_name(void *arg) { \
+      tmap_map_opt_t *opt = (tmap_map_opt_t*)arg; \
+      tmap_file_fprintf(tmap_file_stderr, "[%s]", (_compr == opt->_var) ? "using" : "not using"); \
+  }
+
+// number/probability
+#define __tmap_map_opt_option_print_func_np_init(_name_num, _name_prob) \
+  static void tmap_map_opt_option_print_func_##_name_num(void *arg) { \
+      tmap_map_opt_t *opt = (tmap_map_opt_t*)arg; \
+      if(opt->_name_num < 0) { \
+          tmap_file_fprintf(tmap_file_stderr, "[probability: %lf]", opt->_name_prob); \
+      } \
+      else { \
+          tmap_file_fprintf(tmap_file_stderr, "[number: %d]", opt->_name_num); \
+      } \
+  }
+
+// number/fraction
+#define __tmap_map_opt_option_print_func_nf_init(_name_num, _name_frac) \
+  static void tmap_map_opt_option_print_func_##_name_num(void *arg) { \
+      tmap_map_opt_t *opt = (tmap_map_opt_t*)arg; \
+      if(opt->_name_num < 0) { \
+          tmap_file_fprintf(tmap_file_stderr, "[fraction: %lf]", opt->_name_frac); \
+      } \
+      else { \
+          tmap_file_fprintf(tmap_file_stderr, "[number: %d]", opt->_name_num); \
+      } \
+  }
+
+// array of character arrays (i.e. list of file names)
+#define __tmap_map_opt_option_print_func_fns_init(_name_array, _name_length) \
+  static void tmap_map_opt_option_print_func_##_name_array(void *arg) { \
+      tmap_map_opt_t *opt = (tmap_map_opt_t*)arg; \
+      int32_t i; \
+      tmap_file_fprintf(tmap_file_stderr, "["); \
+      if(0 == opt->_name_length) tmap_file_fprintf(tmap_file_stderr, "stdin"); \
+      else { \
+          for(i=0;i<opt->_name_length;i++) { \
+              if(0 < i) tmap_file_fprintf(tmap_file_stderr, ","); \
+              tmap_file_fprintf(tmap_file_stderr, "%s", opt->_name_array[i]); \
+          } \
+      } \
+      tmap_file_fprintf(tmap_file_stderr, "]"); \
+  }
+
+// reads format
+#define __tmap_map_opt_option_print_func_reads_format_init(_name) \
+  static void tmap_map_opt_option_print_func_##_name(void *arg) { \
+      tmap_map_opt_t *opt = (tmap_map_opt_t*)arg; \
+      char *reads_format = tmap_get_reads_file_format_string(opt->_name); \
+      tmap_file_fprintf(tmap_file_stderr, "[%s]", reads_format); \
+      free(reads_format); \
+  }
+
+/*
+ * Define the print functions for each opt
+ */
+// global options
+__tmap_map_opt_option_print_func_chars_init(fn_fasta, "not using")
+__tmap_map_opt_option_print_func_fns_init(fn_reads, fn_reads_num)
+__tmap_map_opt_option_print_func_reads_format_init(reads_format)
+__tmap_map_opt_option_print_func_chars_init(fn_sam, "stdout")
+__tmap_map_opt_option_print_func_int_init(score_match)
+__tmap_map_opt_option_print_func_int_init(pen_mm)
+__tmap_map_opt_option_print_func_int_init(pen_gapo)
+__tmap_map_opt_option_print_func_int_init(pen_gape)
+__tmap_map_opt_option_print_func_int_init(fscore)
+__tmap_map_opt_option_print_func_chars_init(flow_order, "not using")
+__tmap_map_opt_option_print_func_chars_init(key_seq, "not using")
+__tmap_map_opt_option_print_func_int_init(bw)
+__tmap_map_opt_option_print_func_int_init(softclip_type)
+__tmap_map_opt_option_print_func_tf_init(softclip_key)
+__tmap_map_opt_option_print_func_int_init(dup_window)
+__tmap_map_opt_option_print_func_int_init(max_seed_band)
+__tmap_map_opt_option_print_func_int_init(score_thr)
+__tmap_map_opt_option_print_func_int_init(reads_queue_size)
+__tmap_map_opt_option_print_func_int_init(num_threads)
+__tmap_map_opt_option_print_func_int_init(aln_output_mode)
+__tmap_map_opt_option_print_func_chars_init(sam_rg, "not using")
+__tmap_map_opt_option_print_func_tf_init(sam_sff_tags)
+__tmap_map_opt_option_print_func_tf_init(remove_sff_clipping)
+__tmap_map_opt_option_print_func_compr_init(input_compr_gz, input_compr, TMAP_FILE_GZ_COMPRESSION)
+__tmap_map_opt_option_print_func_compr_init(input_compr_bz2, input_compr, TMAP_FILE_BZ2_COMPRESSION)
+__tmap_map_opt_option_print_func_compr_init(output_compr_gz, output_compr, TMAP_FILE_GZ_COMPRESSION)
+__tmap_map_opt_option_print_func_compr_init(output_compr_bz2, output_compr, TMAP_FILE_BZ2_COMPRESSION)
+__tmap_map_opt_option_print_func_int_init(shm_key)
+__tmap_map_opt_option_print_func_verbosity_init()
+// map1/map2/map3 options, but specific to each
+__tmap_map_opt_option_print_func_int_init(min_seq_len)
+__tmap_map_opt_option_print_func_int_init(max_seq_len)
+// map1/map3 options
+__tmap_map_opt_option_print_func_int_init(seed_length)
+// map1 options
+__tmap_map_opt_option_print_func_int_init(seed_max_diff)
+__tmap_map_opt_option_print_func_int_init(seed2_length)
+__tmap_map_opt_option_print_func_np_init(max_diff, max_diff_fnr)
+__tmap_map_opt_option_print_func_double_init(max_err_rate)
+__tmap_map_opt_option_print_func_nf_init(max_mm, max_mm_frac)
+__tmap_map_opt_option_print_func_nf_init(max_gapo, max_gapo_frac)
+__tmap_map_opt_option_print_func_nf_init(max_gape, max_gape_frac)
+__tmap_map_opt_option_print_func_int_init(max_cals_del)
+__tmap_map_opt_option_print_func_int_init(indel_ends_bound)
+__tmap_map_opt_option_print_func_int_init(max_best_cals)
+__tmap_map_opt_option_print_func_int_init(max_entries)
+// map2 options
+//__tmap_map_opt_option_print_func_double_init(yita)
+__tmap_map_opt_option_print_func_double_init(length_coef)
+__tmap_map_opt_option_print_func_int_init(max_seed_intv)
+__tmap_map_opt_option_print_func_int_init(z_best)
+__tmap_map_opt_option_print_func_int_init(seeds_rev)
+// map3 options
+__tmap_map_opt_option_print_func_int_init(max_seed_hits)
+__tmap_map_opt_option_print_func_int_init(hp_diff)
+__tmap_map_opt_option_print_func_double_init(hit_frac)
+__tmap_map_opt_option_print_func_int_init(seed_step)
+// mapvsw options
+// mapall options
+__tmap_map_opt_option_print_func_tf_init(aln_output_mode_ind)
+__tmap_map_opt_option_print_func_int_init(mapall_score_thr)
+__tmap_map_opt_option_print_func_int_init(mapall_mapq_thr)
+__tmap_map_opt_option_print_func_int_init(mapall_keep_all)
+
+static int32_t
+tmap_map_opt_option_flag_length(tmap_map_opt_option_t *opt)
+{
+  int32_t flag_length = 0;
+  if(0 < opt->option.val) flag_length += 3; // dash, char, comma
+  if(NULL != opt->name) flag_length += 2 + strlen(opt->name);
+  return flag_length;
+}
+
+static int32_t 
+tmap_map_opt_option_type_length(tmap_map_opt_option_t *opt)
+{
+  int32_t type_length = 0;
+  if(TMAP_MAP_OPT_TYPE_NONE != opt->type) {
+      type_length = strlen(tmap_map_opt_input_types[opt->type]);
+  }
+  return type_length;
+}
+          
+void
+tmap_map_opt_option_print(tmap_map_opt_option_t *opt, tmap_map_opt_t *parent_opt)
+{
+  int32_t i, flag_length, type_length;
+  static char *spacer = "         ";
+
+  flag_length = tmap_map_opt_option_flag_length(opt);
+  type_length = tmap_map_opt_option_type_length(opt);
+
+  if(NULL == opt->option.name) {
+      tmap_error("option did not have a name", Exit, OutOfRange);
+  }
+
+  // spacer
+  tmap_file_fprintf(tmap_file_stderr, spacer);
+  // short flag, if available
+  if(0 < opt->option.val) {
+      tmap_file_fprintf(tmap_file_stderr, "-%c,", (char)opt->option.val);
+  }
+  // long flag
+  tmap_file_fprintf(tmap_file_stderr, "--%s", opt->option.name);
+  if(NULL != parent_opt) {
+      for(i=flag_length;i< parent_opt->options->max_flag_length;i++) {
+          tmap_file_fprintf(tmap_file_stderr, " ");
+      }
+  }
+  tmap_file_fprintf(tmap_file_stderr, " ");
+  // type
+  tmap_file_fprintf(tmap_file_stderr, "%s",
+                    (TMAP_MAP_OPT_TYPE_NONE == opt->type) ? "" : tmap_map_opt_input_types[opt->type]);
+  if(NULL != parent_opt) {
+      for(i=type_length;i<parent_opt->options->max_type_length;i++) {
+          tmap_file_fprintf(tmap_file_stderr, " ");
+      }
+  }
+  // spacer
+  tmap_file_fprintf(tmap_file_stderr, spacer);
+  // description
+  tmap_file_fprintf(tmap_file_stderr, "%s",
+                    opt->description);
+  // value, if available
+  if(NULL != opt->print_func && NULL != parent_opt) {
+      tmap_file_fprintf(tmap_file_stderr, " ");
+      opt->print_func(parent_opt);
+  }
+  tmap_file_fprintf(tmap_file_stderr, "\n");
+  // multi-option description
+  if(NULL != opt->multi_options) {
+      for(i=0;NULL != opt->multi_options[i];i++) {
+          // spacers
+          tmap_file_fprintf(tmap_file_stderr, spacer);
+          tmap_file_fprintf(tmap_file_stderr, spacer);
+          tmap_file_fprintf(tmap_file_stderr, "%s\n", opt->multi_options[i]);
+      }
+  }
+}
+
+static tmap_map_opt_options_t *
+tmap_map_opt_options_init()
+{
+  return tmap_calloc(1, sizeof(tmap_map_opt_options_t), "");
+}
+
+static void
+tmap_map_opt_options_add(tmap_map_opt_options_t *options, const char *name, 
+                         int32_t has_arg, int32_t *flag, int32_t val, int32_t type, 
+                         char *description, char **multi_options,
+                         tmap_map_opt_option_print_t print_func,
+                         int32_t algos)
+{
+  int32_t flag_length = 0, type_length = 0;
+  while(options->mem <= options->n) {
+      if(0 == options->mem) {
+          options->mem = 4;
+      }
+      else {
+          options->mem *= 2;
+      }
+      options->options = tmap_realloc(options->options, sizeof(tmap_map_opt_option_t) * options->mem, "options->options");
+  }
+  
+  if(NULL == name) {
+      tmap_error("option did not have a name", Exit, OutOfRange);
+  }
+  if(NULL == description) {
+      tmap_error("option did not have a description", Exit, OutOfRange);
+  }
+  options->options[options->n].name = tmap_strdup(name);
+  options->options[options->n].option.name = options->options[options->n].name;
+  options->options[options->n].option.has_arg = has_arg;
+  options->options[options->n].option.flag = flag;
+  options->options[options->n].option.val = val;
+  options->options[options->n].type = type;
+  options->options[options->n].description = (NULL == description) ? NULL : tmap_strdup(description);
+  options->options[options->n].multi_options = multi_options;
+  options->options[options->n].print_func = (NULL == print_func) ? NULL : print_func;
+  options->options[options->n].algos = algos;
+
+  flag_length = tmap_map_opt_option_flag_length(&options->options[options->n]);
+  if(options->max_flag_length < flag_length) {
+      options->max_flag_length = flag_length;
+  }
+
+  type_length = tmap_map_opt_option_type_length(&options->options[options->n]);
+  if(options->max_type_length < type) {
+      options->max_type_length = type;
+  }
+
+  options->n++;
+}
+
+static void
+tmap_map_opt_options_destroy(tmap_map_opt_options_t *options)
+{
+  int32_t i;
+  for(i=0;i<options->n;i++) {
+      free(options->options[i].name);
+      free(options->options[i].description);
+  }
+  free(options->options);
+  free(options);
+}
+
+static void
+tmap_map_opt_init_helper(tmap_map_opt_t *opt)
+{
+  static char *softclipping_type[] = {"0 - allow on the left and right portion of the read",
+      "1 - allow on the left portion of the read",
+      "2 - allow on the right portion of the read",
+      "3 - do not allow soft-clipping",
+      NULL};
+  static char *aln_output_mode[] = {"0 - unique best hits",
+      "1 - random best hit",
+      "2 - all best hits",
+      "3 - all alignments",
+      NULL};
+
+  opt->options = tmap_map_opt_options_init();
+
+  // global options
+  tmap_map_opt_options_add(opt->options, "fn-fasta", required_argument, 0, 'f', 
+                           TMAP_MAP_OPT_TYPE_FILE,
+                           "FASTA reference file name",
+                           NULL,
+                           tmap_map_opt_option_print_func_fn_fasta,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "fn-reads", required_argument, 0, 'r', 
+                           TMAP_MAP_OPT_TYPE_FILE,
+                           "the reads file name", 
+                           NULL,
+                           tmap_map_opt_option_print_func_fn_reads,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "reads-format", required_argument, 0, 'i', 
+                           TMAP_MAP_OPT_TYPE_STRING,
+#ifdef HAVE_SAMTOOLS
+                           "the reads file format (opt->options, fastq|fq|fasta|fa|sff|sam|bam)",
+#else
+                           "the reads file format (opt->options, fastq|fq|fasta|fa|sff)",
 #endif
-    {"output-gz", no_argument, 0, 'Z'},
+                           NULL,
+                           tmap_map_opt_option_print_func_reads_format,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "fn-sam", required_argument, 0, 's', 
+                           TMAP_MAP_OPT_TYPE_FILE,
+                           "the SAM file name",
+                           NULL,
+                           tmap_map_opt_option_print_func_fn_sam,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "score-match", required_argument, 0, 'A', 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "score for a match",
+                           NULL,
+                           tmap_map_opt_option_print_func_score_match,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "pen-mismatch", required_argument, 0, 'M', 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the mismatch penalty",
+                           NULL,
+                           tmap_map_opt_option_print_func_pen_mm,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "pen-gap-open", required_argument, 0, 'O', 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the indel start penalty",
+                           NULL,
+                           tmap_map_opt_option_print_func_pen_gapo,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "pen-gap-extension", required_argument, 0, 'E', 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the indel extension penalty",
+                           NULL,
+                           tmap_map_opt_option_print_func_pen_gape,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "pen-flow-error", required_argument, 0, 'X', 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the flow score penalty",
+                           NULL,
+                           tmap_map_opt_option_print_func_fscore,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "flow-order", required_argument, 0, 'F', 
+                           TMAP_MAP_OPT_TYPE_STRING,
+                           "the flow order ([ACGT]{4+} or \"file\")",
+                           NULL,
+                           tmap_map_opt_option_print_func_flow_order,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "key-sequence", required_argument, 0, 'K', 
+                           TMAP_MAP_OPT_TYPE_STRING,
+                           "the key sequence ([ACGT]{4+}",
+                           NULL,
+                           tmap_map_opt_option_print_func_key_seq,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "band-width", required_argument, 0, 'w', 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the band width",
+                           NULL,
+                           tmap_map_opt_option_print_func_bw,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "softclip-type", required_argument, 0, 'g', 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the soft-clipping type",
+                           softclipping_type,
+                           tmap_map_opt_option_print_func_softclip_type,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "softclip-key", no_argument, 0, 'y', 
+                           TMAP_MAP_OPT_TYPE_NONE,
+                           "soft clip only the last base of the key",
+                           NULL,
+                           tmap_map_opt_option_print_func_softclip_key,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "duplicate-window", required_argument, 0, 'W', 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "remove duplicate alignments within this bp window (-1 to disable)",
+                           NULL,
+                           tmap_map_opt_option_print_func_dup_window,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "max-seed-band", required_argument, 0, 'B', 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the window of bases in which to group seeds",
+                           NULL,
+                           tmap_map_opt_option_print_func_max_seed_band,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "score-thres", required_argument, 0, 'T', 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "score threshold divided by the match score",
+                           NULL,
+                           tmap_map_opt_option_print_func_score_thr,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "reads-queue-size", required_argument, 0, 'q', 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the queue size for the reads (-1 to disable)",
+                           NULL,
+                           tmap_map_opt_option_print_func_reads_queue_size,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "num-threads", required_argument, 0, 'n', 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the number of threads",
+                           NULL,
+                           tmap_map_opt_option_print_func_num_threads,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "aln-output-mode", required_argument, 0, 'a', 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "output filter",
+                           aln_output_mode,
+                           tmap_map_opt_option_print_func_aln_output_mode,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "sam-read-group", required_argument, 0, 'R', 
+                           TMAP_MAP_OPT_TYPE_STRING,
+                           "the RG tags to add to the SAM header",
+                           NULL,
+                           tmap_map_opt_option_print_func_sam_rg,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "sam-sff-tags", no_argument, 0, 'Y', 
+                           TMAP_MAP_OPT_TYPE_NONE,
+                           "do not remove SFF clipping",
+                           NULL,
+                           tmap_map_opt_option_print_func_sam_sff_tags,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "remove-sff-clipping", no_argument, 0, 'G', 
+                           TMAP_MAP_OPT_TYPE_NONE,
+                           "include SFF specific SAM tags",
+                           NULL,
+                           tmap_map_opt_option_print_func_remove_sff_clipping,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "input-gz", no_argument, 0, 'z', 
+                           TMAP_MAP_OPT_TYPE_NONE,
+                           "the input is gz (gzip) compressed",
+                           NULL,
+                           tmap_map_opt_option_print_func_input_compr_gz,
+                           TMAP_MAP_ALGO_GLOBAL);
 #ifndef DISABLE_BZ2
-    {"output-bz2", no_argument, 0, 'J'},
+  tmap_map_opt_options_add(opt->options, "input-bz2", no_argument, 0, 'j', 
+                           TMAP_MAP_OPT_TYPE_NONE,
+                           "the input is bz2 (bzip2) compressed",
+                           NULL,
+                           tmap_map_opt_option_print_func_input_compr_bz2,
+                           TMAP_MAP_ALGO_GLOBAL);
 #endif
-    {"shm-key", required_argument, 0, 'k'},
-    {"help", no_argument, 0, 'h'},
-    {"verbose", no_argument, 0, 'v'},
+  tmap_map_opt_options_add(opt->options, "output-gz", no_argument, 0, 'Z', 
+                           TMAP_MAP_OPT_TYPE_NONE,
+                           "the output is gz (gzip) compressed",
+                           NULL,
+                           tmap_map_opt_option_print_func_output_compr_gz,
+                           TMAP_MAP_ALGO_GLOBAL);
+#ifndef DISABLE_BZ2
+  tmap_map_opt_options_add(opt->options, "output-bz2", no_argument, 0, 'J', 
+                           TMAP_MAP_OPT_TYPE_NONE,
+                           "the output is bz2 (bzip2) compressed",
+                           NULL,
+                           tmap_map_opt_option_print_func_output_compr_bz2,
+                           TMAP_MAP_ALGO_GLOBAL);
+#endif
+  tmap_map_opt_options_add(opt->options, "shared-memory-key", required_argument, 0, 'k', 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "use shared memory with the following key",
+                           NULL,
+                           tmap_map_opt_option_print_func_shm_key,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "help", no_argument, 0, 'h', 
+                           TMAP_MAP_OPT_TYPE_NONE,
+                           "print this message",
+                           NULL,
+                           NULL,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "verbose", no_argument, 0, 'v', 
+                           TMAP_MAP_OPT_TYPE_NONE,
+                           "print verbose progress information",
+                           NULL,
+                           tmap_map_opt_option_print_func_verbosity,
+                           TMAP_MAP_ALGO_GLOBAL);
 
-    // map1/map3 options
-    {"seed-length", required_argument, 0, 'l'},
+  // map1/map3 options
+  tmap_map_opt_options_add(opt->options, "seed-length", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the k-mer length to seed CALs (-1 to disable)",
+                           NULL,
+                           tmap_map_opt_option_print_func_seed_length,
+                           TMAP_MAP_ALGO_MAP1 | TMAP_MAP_ALGO_MAP3);
 
-    // map1 options
-    {"seed-max-diff", required_argument, 0, 's'},
-    {"seed2-length", required_argument, 0, 'L'},
-    {"max-diff", required_argument, 0, 'p'},
-    {"max-diff-fnr", required_argument, 0, 'p'},
-    {"max-err-rate", required_argument, 0, 'P'},
-    {"max-mismatch", required_argument, 0, 'm'},
-    {"max-mismatch-frac", required_argument, 0, 'm'},
-    {"max-gap-open", required_argument, 0, 'o'},
-    {"max-gap-open-frac", required_argument, 0, 'o'},
-    {"max-gap-extension", required_argument, 0, 'e'},
-    {"max-gap-extension-frac", required_argument, 0, 'e'},
-    {"max-cals-del", required_argument, 0, 'd'},
-    {"indel-ends-bound", required_argument, 0, 'i'},
-    {"max-best-cals", required_argument, 0, 'b'},
-    {"max-nodes", required_argument, 0, 'Q'},
+  // map1 options
+  tmap_map_opt_options_add(opt->options, "seed-max-diff", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "maximum number of edits in the seed",
+                           NULL,
+                           tmap_map_opt_option_print_func_seed_max_diff,
+                           TMAP_MAP_ALGO_MAP1);
+  tmap_map_opt_options_add(opt->options, "seed2-length", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the secondary seed length (-1 to disable)",
+                           NULL,
+                           tmap_map_opt_option_print_func_seed2_length,
+                           TMAP_MAP_ALGO_MAP1);
+  tmap_map_opt_options_add(opt->options, "max-diff", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_NUM,
+                           "maximum number of edits or false-negative probability assuming the maximum error rate",
+                           NULL,
+                           tmap_map_opt_option_print_func_max_diff,
+                           TMAP_MAP_ALGO_MAP1);
+  tmap_map_opt_options_add(opt->options, "max-error-rate", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_FLOAT,
+                           "the assumed per-base maximum error rate",
+                           NULL,
+                           tmap_map_opt_option_print_func_max_err_rate,
+                           TMAP_MAP_ALGO_MAP1);
+  tmap_map_opt_options_add(opt->options, "max-mismatches", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_NUM,
+                           "maximum number of or (read length) fraction of mismatches",
+                           NULL,
+                           tmap_map_opt_option_print_func_max_mm,
+                           TMAP_MAP_ALGO_MAP1);
+  tmap_map_opt_options_add(opt->options, "max-gap-opens", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_NUM,
+                           "maximum number of or (read length) fraction of indel starts",
+                           NULL,
+                           tmap_map_opt_option_print_func_max_gapo,
+                           TMAP_MAP_ALGO_MAP1);
+  tmap_map_opt_options_add(opt->options, "max-gap-extensions", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_NUM,
+                           "maximum number of or (read length) fraction of indel extensions",
+                           NULL,
+                           tmap_map_opt_option_print_func_max_gape,
+                           TMAP_MAP_ALGO_MAP1);
+  tmap_map_opt_options_add(opt->options, "max-cals-deletion", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the maximum number of CALs to extend a deletion ",
+                           NULL,
+                           tmap_map_opt_option_print_func_max_cals_del,
+                           TMAP_MAP_ALGO_MAP1);
+  tmap_map_opt_options_add(opt->options, "indel-ends-bound", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "number of bps from the end of the read ",
+                           NULL,
+                           tmap_map_opt_option_print_func_indel_ends_bound,
+                           TMAP_MAP_ALGO_MAP1);
+  tmap_map_opt_options_add(opt->options, "max-best-cals", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "optimal CALs have been found ",
+                           NULL,
+                           tmap_map_opt_option_print_func_max_best_cals,
+                           TMAP_MAP_ALGO_MAP1);
+  tmap_map_opt_options_add(opt->options, "max-nodes", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "maximum number of alignment nodes ",
+                           NULL,
+                           tmap_map_opt_option_print_func_max_entries,
+                           TMAP_MAP_ALGO_MAP1);
 
-    // map2 options
-    {"length-coef", required_argument, 0, 'c'},
-    {"max-seed-intv", required_argument, 0, 'S'},
-    {"z-best", required_argument, 0, 'b'},
-    {"seeds-rev", required_argument, 0, 'N'},
+  // map2 options
+  tmap_map_opt_options_add(opt->options, "length-coef", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_FLOAT,
+"coefficient of length-threshold adjustment",
+                           NULL,
+                           tmap_map_opt_option_print_func_length_coef,
+                           TMAP_MAP_ALGO_MAP2);
+  tmap_map_opt_options_add(opt->options, "max-seed-intv", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_INT,
+"maximum seeding interval size",
+                           NULL,
+                           tmap_map_opt_option_print_func_max_seed_intv,
+                           TMAP_MAP_ALGO_MAP2);
+  tmap_map_opt_options_add(opt->options, "z-best", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "z-best",
+                           NULL,
+                           tmap_map_opt_option_print_func_z_best,
+                           TMAP_MAP_ALGO_MAP2);
+  tmap_map_opt_options_add(opt->options, "seeds-rev", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_INT,
+"# seeds to trigger reverse alignment",
+                           NULL,
+                           tmap_map_opt_option_print_func_seeds_rev,
+                           TMAP_MAP_ALGO_MAP2);
 
-    // map3 options
-    {"max-seed-hits", required_argument, 0, 'S'},
-    {"hp-diff", required_argument, 0, 'H'},
-    {"hit-frac", required_argument, 0, 'V'},
-    {"seed-step", required_argument, 0, 'c'},
+  // map3 options
+  tmap_map_opt_options_add(opt->options, "max-seed-hits", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the maximum number of hits returned by a seed",
+                           NULL,
+                           tmap_map_opt_option_print_func_max_seed_hits,
+                           TMAP_MAP_ALGO_MAP3);
+  tmap_map_opt_options_add(opt->options, "hp-diff", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "single homopolymer error difference for enumeration",
+                           NULL,
+                           tmap_map_opt_option_print_func_hp_diff,
+                           TMAP_MAP_ALGO_MAP3);
+  tmap_map_opt_options_add(opt->options, "hit-frac", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_FLOAT,
+                           "the fraction of seed positions that are under the maximum",
+                           NULL,
+                           tmap_map_opt_option_print_func_hit_frac,
+                           TMAP_MAP_ALGO_MAP3);
+  tmap_map_opt_options_add(opt->options, "seed-step", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the number of bases to increase the seed for each seed increase iteration (-1 to disable)",
+                           NULL,
+                           tmap_map_opt_option_print_func_seed_step,
+                           TMAP_MAP_ALGO_MAP3);
 
-    // mapvsw options
-    // None
+  // mapvsw options
+  // None
 
-    // mapall options
-    {"mapall-aln-output-mode-independent", no_argument, 0, 'I'},
-    {"mapall-score-thr", required_argument, 0, 'C'},
-    {"mapall-mapq-thr", required_argument, 0, 'D'},
-    {"mapall-keep-all", no_argument, 0, 'K'},
-};
+  // map1/map2/map3 options, but specific to each
+  tmap_map_opt_options_add(opt->options, "min-seq-length", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the minimum sequence length to examine",
+                           NULL,
+                           tmap_map_opt_option_print_func_min_seq_len,
+                           ~TMAP_MAP_ALGO_MAPALL);
+  tmap_map_opt_options_add(opt->options, "max-seq-length", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the maximum sequence length to examine",
+                           NULL,
+                           tmap_map_opt_option_print_func_max_seq_len,
+                           ~TMAP_MAP_ALGO_MAPALL);
+
+  // mapall options
+  tmap_map_opt_options_add(opt->options, "staged-aln-output-mode-ind", no_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_NONE,
+                           "apply the output filter and duplicate removal for each algorithm separately",
+                           NULL,
+                           tmap_map_opt_option_print_func_aln_output_mode_ind,
+                           TMAP_MAP_ALGO_MAPALL);
+  tmap_map_opt_options_add(opt->options, "staged-score-thres", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "score threshold for stage one divided by the match score",
+                           NULL,
+                           tmap_map_opt_option_print_func_mapall_score_thr,
+                           TMAP_MAP_ALGO_MAPALL);
+  tmap_map_opt_options_add(opt->options, "staged-mapq-thres", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "mapping quality threshold for stage one divided by the match score",
+                           NULL,
+                           tmap_map_opt_option_print_func_mapall_mapq_thr,
+                           TMAP_MAP_ALGO_MAPALL);
+  tmap_map_opt_options_add(opt->options, "staged-keep-all", no_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_NONE,
+                           "do not keep mappings from the first stage for the next stage",
+                           NULL,
+                           tmap_map_opt_option_print_func_mapall_keep_all,
+                           TMAP_MAP_ALGO_MAPALL);
+
+  /*
+  // Prints out all single-flag command line options
+  int i, c;
+  for(c=1;c<256;c++) {
+      for(i=0;i<opt->options->n;i++) {
+          if(c == opt->options->options[i].option.val) {
+              fputc((char)c, stderr);
+              if(required_argument == opt->options->options[i].option.has_arg) {
+                  fputc(':', stderr);
+              }
+          }
+      }
+  }
+  fprintf(stderr, "\n");
+  */
+  
+  /*
+  // Prints out all command line options
+  int i, c;
+  for(c=0;c<256;c++) {
+      for(i=0;i<opt->options->n;i++) {
+          if(c == opt->options->options[i].option.val) {
+              if(0 < opt->options->options[i].option.val) {
+                  tmap_file_fprintf(tmap_file_stderr, "-%c,", (char)opt->options->options[i].option.val);
+              }
+              // long flag
+              tmap_file_fprintf(tmap_file_stderr, "--%s\n", opt->options->options[i].option.name);
+          }
+      }
+  }
+  fprintf(stderr, "\n");
+  */
+}
 
 tmap_map_opt_t *
 tmap_map_opt_init(int32_t algo_id)
@@ -195,6 +828,9 @@ tmap_map_opt_init(int32_t algo_id)
       break;
   }
 
+  // build options for parsing and printing
+  tmap_map_opt_init_helper(opt);
+
   return opt;
 }
 
@@ -233,181 +869,72 @@ tmap_map_opt_destroy(tmap_map_opt_t *opt)
       break;
   }
 
+  // destroy options for parsing and printing
+  tmap_map_opt_options_destroy(opt->options);
+
   free(opt);
 }
-#define __tmap_map_opt_usage_map1(_opt, _stage) do { \
-    if(_stage < 0) tmap_file_fprintf(tmap_file_stderr, "%s options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAP1)); \
-    else tmap_file_fprintf(tmap_file_stderr, "%s stage %d options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAP1), _stage); \
-    tmap_file_fprintf(tmap_file_stderr, "         -l INT      the k-mer length to seed CALs (-1 to disable) [%d]\n", (_opt)->seed_length); \
-    tmap_file_fprintf(tmap_file_stderr, "         -s INT      maximum number of edits in the seed [%d]\n", (_opt)->seed_max_diff); \
-    tmap_file_fprintf(tmap_file_stderr, "         -L INT      the secondary seed length (-1 to disable) [%d]\n", (_opt)->seed2_length); \
-    tmap_file_fprintf(tmap_file_stderr, "         -p NUM      maximum number of edits or false-negative probability assuming the maximum error rate "); \
-    if((_opt)->max_diff < 0) tmap_file_fprintf(tmap_file_stderr, "[number: %d]\n", (_opt)->max_diff); \
-    else tmap_file_fprintf(tmap_file_stderr, "[probability: %d]\n", (_opt)->max_diff_fnr); \
-    tmap_file_fprintf(tmap_file_stderr, "         -P NUM      the assumed per-base maximum error rate [%lf]\n", (_opt)->max_err_rate); \
-    tmap_file_fprintf(tmap_file_stderr, "         -m NUM      maximum number of or (read length) fraction of mismatches"); \
-    if((_opt)->max_mm < 0) tmap_file_fprintf(tmap_file_stderr, " [fraction: %lf]\n", (_opt)->max_mm_frac); \
-    else tmap_file_fprintf(tmap_file_stderr, " [number: %d]\n", (_opt)->max_mm); \
-    tmap_file_fprintf(tmap_file_stderr, "         -o NUM      maximum number of or (read length) fraction of indel starts"); \
-    if((_opt)->max_gapo < 0) tmap_file_fprintf(tmap_file_stderr, " [fraction: %lf]\n", (_opt)->max_gapo_frac); \
-    else tmap_file_fprintf(tmap_file_stderr, " [number: %d]\n", (_opt)->max_gapo); \
-    tmap_file_fprintf(tmap_file_stderr, "         -e NUM      maximum number of or (read length) fraction of indel extensions"); \
-    if((_opt)->max_gape < 0) tmap_file_fprintf(tmap_file_stderr, " [fraction: %lf]\n", (_opt)->max_gape_frac); \
-    else tmap_file_fprintf(tmap_file_stderr, " [number: %d]\n", (_opt)->max_gape); \
-    tmap_file_fprintf(tmap_file_stderr, "         -d INT      the maximum number of CALs to extend a deletion [%d]\n", (_opt)->max_cals_del); \
-    tmap_file_fprintf(tmap_file_stderr, "         -i INT      indels are not allowed within INT number of bps from the end of the read [%d]\n", (_opt)->indel_ends_bound); \
-    tmap_file_fprintf(tmap_file_stderr, "         -b INT      stop searching when INT optimal CALs have been found [%d]\n", (_opt)->max_best_cals); \
-    tmap_file_fprintf(tmap_file_stderr, "         -Q INT      maximum number of alignment nodes [%d]\n", (_opt)->max_entries); \
-    tmap_file_fprintf(tmap_file_stderr, "         -u INT      the minimum sequence length to examine [%d]\n", (_opt)->min_seq_len); \
-    tmap_file_fprintf(tmap_file_stderr, "         -U INT      the maximum sequence length to examine [%d]\n", (_opt)->max_seq_len); \
-    tmap_file_fprintf(tmap_file_stderr, "\n"); \
-    } while(0)
 
-#define __tmap_map_opt_usage_map2(_opt, _stage) do { \
-    if(_stage < 0) tmap_file_fprintf(tmap_file_stderr, "%s options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAP2)); \
-    else tmap_file_fprintf(tmap_file_stderr, "%s stage %d options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAP2), _stage); \
-    tmap_file_fprintf(tmap_file_stderr, "         -c FLOAT    coefficient of length-threshold adjustment [%.1lf]\n", (_opt)->length_coef); \
-    tmap_file_fprintf(tmap_file_stderr, "         -S INT      maximum seeding interval size [%d]\n", (_opt)->max_seed_intv); \
-    tmap_file_fprintf(tmap_file_stderr, "         -b INT      Z-best [%d]\n", (_opt)->z_best); \
-    tmap_file_fprintf(tmap_file_stderr, "         -N INT      # seeds to trigger reverse alignment [%d]\n", (_opt)->seeds_rev); \
-    tmap_file_fprintf(tmap_file_stderr, "         -u INT      the minimum sequence length to examine [%d]\n", (_opt)->min_seq_len); \
-    tmap_file_fprintf(tmap_file_stderr, "         -U INT      the maximum sequence length to examine [%d]\n", (_opt)->max_seq_len); \
-    tmap_file_fprintf(tmap_file_stderr, "\n"); \
-    } while(0)
+static void
+tmap_map_opt_usage_algo(tmap_map_opt_t *opt, int32_t stage)
+{
+  int32_t i;
+  if(stage < 0) {
+      tmap_file_fprintf(tmap_file_stderr, "\n%s options (optional):\n", tmap_algo_id_to_name(opt->algo_id));
+  }
+  else {
+      tmap_file_fprintf(tmap_file_stderr, "\n%s stage %d options (optional):\n", tmap_algo_id_to_name(opt->algo_id), stage);
+  }
+  for(i=0;i<opt->options->n;i++) {
+      tmap_map_opt_option_t *o = &opt->options->options[i];
 
-#define __tmap_map_opt_usage_map3(_opt, _stage) do { \
-    if(_stage < 0) tmap_file_fprintf(tmap_file_stderr, "%s options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAP3)); \
-    else tmap_file_fprintf(tmap_file_stderr, "%s stage %d options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAP3), _stage); \
-    tmap_file_fprintf(tmap_file_stderr, "         -l INT      the k-mer length to seed CALs (-1 tunes to the genome size) [%d]\n", (_opt)->seed_length); \
-    tmap_file_fprintf(tmap_file_stderr, "         -S INT      the maximum number of hits returned by a seed [%d]\n", (_opt)->max_seed_hits); \
-    tmap_file_fprintf(tmap_file_stderr, "         -H INT      single homopolymer error difference for enumeration [%d]\n", (_opt)->hp_diff); \
-    tmap_file_fprintf(tmap_file_stderr, "         -V INT      the fraction of seed positions that are under the maximum [%.3lf]\n", (_opt)->hit_frac); \
-    tmap_file_fprintf(tmap_file_stderr, "         -c INT      the number of bases to increase the seed for each seed increase iteration (-1 to disable) [%d]\n", (_opt)->seed_step); \
-    tmap_file_fprintf(tmap_file_stderr, "         -u INT      the minimum sequence length to examine [%d]\n", (_opt)->min_seq_len); \
-    tmap_file_fprintf(tmap_file_stderr, "         -U INT      the maximum sequence length to examine [%d]\n", (_opt)->max_seq_len); \
-    tmap_file_fprintf(tmap_file_stderr, "\n"); \
-    } while(0)
-
-#define __tmap_map_opt_usage_map_vsw(_opt, _stage) do { \
-    if(_stage < 0) tmap_file_fprintf(tmap_file_stderr, "%s options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAPVSW)); \
-    else tmap_file_fprintf(tmap_file_stderr, "%s stage %d options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAPVSW), _stage); \
-    tmap_file_fprintf(tmap_file_stderr, "         None\n"); \
-    tmap_file_fprintf(tmap_file_stderr, "\n"); \
-    } while(0)
+      if(0 < (o->algos & opt->algo_id)) {
+          tmap_map_opt_option_print(o, opt);
+      }
+  }
+}
 
 int
 tmap_map_opt_usage(tmap_map_opt_t *opt)
 {
-  char *reads_format = tmap_get_reads_file_format_string(opt->reads_format);
   int32_t i;
-
+  
+  // print global options
   tmap_file_fprintf(tmap_file_stderr, "\n");
   tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [options]\n", tmap_algo_id_to_name(opt->algo_id), PACKAGE);
   tmap_file_fprintf(tmap_file_stderr, "\n");
-  tmap_file_fprintf(tmap_file_stderr, "global options (required):\n");
-  tmap_file_fprintf(tmap_file_stderr, "         -f FILE     the FASTA reference file name [%s]\n", opt->fn_fasta);
-  tmap_file_fprintf(tmap_file_stderr, "         -r FILE     the reads file name [");
-  if(0 == opt->fn_reads_num) tmap_file_fprintf(tmap_file_stderr, "stdin");
-  else {
-      for(i=0;i<opt->fn_reads_num;i++) {
-          if(0 < i) tmap_file_fprintf(tmap_file_stderr, ",");
-          tmap_file_fprintf(tmap_file_stderr, "%s", opt->fn_reads[i]);
+  tmap_file_fprintf(tmap_file_stderr, "global options:\n");
+
+  for(i=0;i<opt->options->n;i++) {
+      tmap_map_opt_option_t *o = &opt->options->options[i];
+
+      if(o->algos == TMAP_MAP_ALGO_GLOBAL) {
+          tmap_map_opt_option_print(o, opt);
       }
   }
-  tmap_file_fprintf(tmap_file_stderr, "]\n");
-  tmap_file_fprintf(tmap_file_stderr, "\n");
-  tmap_file_fprintf(tmap_file_stderr, "global options (optional):\n");
-#ifdef HAVE_SAMTOOLS
-  tmap_file_fprintf(tmap_file_stderr, "         -F STRING   the reads file format (fastq|fq|fasta|fa|sff|sam|bam) [%s]\n", reads_format);
-#else
-  tmap_file_fprintf(tmap_file_stderr, "         -F STRING   the reads file format (fastq|fq|fasta|fa|sff) [%s]\n", reads_format);
-#endif
-  tmap_file_fprintf(tmap_file_stderr, "         -0 FILE     the SAM file name [%s]\n", (NULL == opt->fn_sam) ? "stdout" : opt->fn_sam);
-  tmap_file_fprintf(tmap_file_stderr, "         -A INT      score for a match [%d]\n", opt->score_match);
-  tmap_file_fprintf(tmap_file_stderr, "         -M INT      the mismatch penalty [%d]\n", opt->pen_mm);
-  tmap_file_fprintf(tmap_file_stderr, "         -O INT      the indel start penalty [%d]\n", opt->pen_gapo);
-  tmap_file_fprintf(tmap_file_stderr, "         -E INT      the indel extend penalty [%d]\n", opt->pen_gape);
-  tmap_file_fprintf(tmap_file_stderr, "         -X INT      the flow score penalty [%d]\n", opt->fscore);
-  tmap_file_fprintf(tmap_file_stderr, "         -x STRING   the flow order ([ACGT]{4+} or \"sff\") [%s]\n",
-                    (NULL == opt->flow_order) ? "not using" : opt->flow_order);
-  tmap_file_fprintf(tmap_file_stderr, "         -t STRING   the key sequence ([ACGT]{4+} or \"sff\") [%s]\n",
-                    (NULL == opt->key_seq) ? "not using" : opt->key_seq);
-  tmap_file_fprintf(tmap_file_stderr, "         -w INT      the band width [%d]\n", opt->bw);
-  tmap_file_fprintf(tmap_file_stderr, "         -g INT      the soft-clipping type [%d]\n", opt->softclip_type);
-  tmap_file_fprintf(tmap_file_stderr, "                             0 - allow on the right and left portions of the read\n");
-  tmap_file_fprintf(tmap_file_stderr, "                             1 - allow on the left portion of the read\n");
-  tmap_file_fprintf(tmap_file_stderr, "                             2 - allow on the right portion of the read\n");
-  tmap_file_fprintf(tmap_file_stderr, "                             3 - do not allow soft-clipping\n");
-  tmap_file_fprintf(tmap_file_stderr, "         -y          soft clip only the last base of the key [%s]\n",
-                    (1 == opt->softclip_key) ? "true" : "false");
-  tmap_file_fprintf(tmap_file_stderr, "         -W INT      remove duplicate alignments within this bp window (-1 to disable) [%d]\n",
-                    opt->dup_window);
-  tmap_file_fprintf(tmap_file_stderr, "         -B INT      the window of bases in which to group seeds [%d]\n", opt->max_seed_band); 
-  tmap_file_fprintf(tmap_file_stderr, "         -T INT      score threshold divided by the match score [%d]\n", opt->score_thr);
-  tmap_file_fprintf(tmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
-  tmap_file_fprintf(tmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
-  tmap_file_fprintf(tmap_file_stderr, "         -a INT      output filter [%d]\n", opt->aln_output_mode);
-  tmap_file_fprintf(tmap_file_stderr, "                             0 - unique best hits\n");
-  tmap_file_fprintf(tmap_file_stderr, "                             1 - random best hit\n");
-  tmap_file_fprintf(tmap_file_stderr, "                             2 - all best hits\n");
-  tmap_file_fprintf(tmap_file_stderr, "                             3 - all alignments\n");
-  tmap_file_fprintf(tmap_file_stderr, "         -R STRING   the RG tags to add to the SAM header [%s]\n", opt->sam_rg);
-  tmap_file_fprintf(tmap_file_stderr, "         -G          do not remove SFF clipping [%d]\n", opt->remove_sff_clipping);
-  tmap_file_fprintf(tmap_file_stderr, "         -Y          include SFF specific SAM tags [%s]\n",
-                    (1 == opt->sam_sff_tags) ? "true" : "false");
 
-#ifndef DISABLE_BZ2
-  tmap_file_fprintf(tmap_file_stderr, "         -z/-j       the input is gz/bz2 compressed (gzip/bzip2)");
-  __tmap_map_print_compression(opt->input_compr);
-  tmap_file_fprintf(tmap_file_stderr, "         -Z/-J       the output is gz/bz2 compressed (gzip/bzip2)");
-  __tmap_map_print_compression(opt->output_compr);
-#else
-  tmap_file_fprintf(tmap_file_stderr, "         -z       the input is gz compressed (gzip)");
-  __tmap_map_print_compression(opt->input_compr);
-  tmap_file_fprintf(tmap_file_stderr, "         -Z       the output is gz compressed (gzip)");
-  __tmap_map_print_compression(opt->output_compr);
-#endif
-  tmap_file_fprintf(tmap_file_stderr, "         -k INT      use shared memory with the following key [%d]\n", opt->shm_key);
-  tmap_file_fprintf(tmap_file_stderr, "         -v          print verbose progress information\n");
-  tmap_file_fprintf(tmap_file_stderr, "         -h          print this message\n");
-  tmap_file_fprintf(tmap_file_stderr, "\n");
-
+  // print algorithm specific options
   switch(opt->algo_id) {
     case TMAP_MAP_ALGO_MAP1:
-      __tmap_map_opt_usage_map1(opt, -1);
-      break;
     case TMAP_MAP_ALGO_MAP2:
-      __tmap_map_opt_usage_map2(opt, -1);
-      break;
     case TMAP_MAP_ALGO_MAP3:
-      __tmap_map_opt_usage_map3(opt, -1);
-      break;
     case TMAP_MAP_ALGO_MAPVSW:
-      __tmap_map_opt_usage_map_vsw(opt, -1);
+      tmap_map_opt_usage_algo(opt, -1);
       break;
     case TMAP_MAP_ALGO_MAPALL:
       for(i=0;i<2;i++) {
-          __tmap_map_opt_usage_map1(opt->opt_map1[i], i+1);
-          __tmap_map_opt_usage_map2(opt->opt_map2[i], i+1);
-          __tmap_map_opt_usage_map3(opt->opt_map3[i], i+1);
-          __tmap_map_opt_usage_map_vsw(opt->opt_map_vsw[i], i+1);
+          tmap_map_opt_usage_algo(opt->opt_map1[i], i+1);
+          tmap_map_opt_usage_algo(opt->opt_map2[i], i+1);
+          tmap_map_opt_usage_algo(opt->opt_map3[i], i+1);
+          tmap_map_opt_usage_algo(opt->opt_map_vsw[i], i+1);
       }
-      // mapall
-      tmap_file_fprintf(tmap_file_stderr, "%s options (optional):\n", tmap_algo_id_to_name(opt->algo_id));
-      tmap_file_fprintf(tmap_file_stderr, "         -I          apply the output filter (-a) and duplicate removal (-W) for each algorithm separately [%s]\n",
-                        (1 == opt->aln_output_mode_ind) ? "true" : "false");
-      tmap_file_fprintf(tmap_file_stderr, "         -C INT      score threshold for stage one divided by the match score [%d]\n", opt->mapall_score_thr);
-      tmap_file_fprintf(tmap_file_stderr, "         -D INT      mapping quality threshold for stage one divided by the match score [%d]\n", opt->mapall_mapq_thr);
-      tmap_file_fprintf(tmap_file_stderr, "         -K          do not keep mappings from the first stage for the next stage [%s]\n", 
-                        (0 == opt->mapall_keep_all) ? "true" : "false");
-      tmap_file_fprintf(tmap_file_stderr, "\n");
+      tmap_map_opt_usage_algo(opt, -1);
       break;
     default:
       break;
   }
 
-  // free
-  free(reads_format);
+  tmap_map_opt_destroy(opt);
 
   return 1;
 }
@@ -415,58 +942,49 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
 int32_t
 tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
 {
-  int i, c, option_index;
-  char *getopt_format = NULL;
+  int i, c, option_index, val = 0;
+  char *getopt_format = "A:B:E:F:GJK:M:O:R:T:W:X:YZa:f:g:hi:jk:n:q:r:s:vw:yz";
+  struct option *options = NULL;
+
+  // allocate
+  options = tmap_calloc(1, sizeof(struct option) * opt->options->n, "options");
+
+  // shallow copy
+  for(i=0;i<opt->options->n;i++) {
+      options[i] = opt->options->options[i].option; 
+  }
 
   opt->argc = argc; opt->argv = argv;
+
+  // check algorithm
   switch(opt->algo_id) {
     case TMAP_MAP_ALGO_MAP1:
-      getopt_format = tmap_strdup("f:r:F:0:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhl:s:L:p:P:m:o:e:d:i:b:Q:u:U:");
-      break;
     case TMAP_MAP_ALGO_MAP2:
-      getopt_format = tmap_strdup("f:r:F:0:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhc:S:b:N:u:U:");
-      break;
     case TMAP_MAP_ALGO_MAP3:
-      getopt_format = tmap_strdup("f:r:F:0:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhl:S:H:V:c:u:U:");
-      break;
     case TMAP_MAP_ALGO_MAPVSW:
-      getopt_format = tmap_strdup("f:r:F:0:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhu:U:");
-      break;
     case TMAP_MAP_ALGO_MAPALL:
-      getopt_format = tmap_strdup("f:r:F:0:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhIC:D:K:u:U:");
       break;
     default:
       tmap_error("unrecognized algorithm", Exit, OutOfRange);
       break;
   }
 
-  // global options
-  // Note: possible memory leaks if the same option (besides -R) are specified twice
-  while((c = getopt_long(argc, argv, getopt_format, tmap_map_opt_long_options, &option_index)) >= 0) {
-      switch(c) { 
-        case 'f': 
-          opt->fn_fasta = tmap_strdup(optarg); break;
-        case 'r':
-          opt->fn_reads_num++;
-          opt->fn_reads = tmap_realloc(opt->fn_reads, sizeof(char*) * opt->fn_reads_num, "opt->fn_reads");
-          opt->fn_reads[opt->fn_reads_num-1] = tmap_strdup(optarg); 
-          tmap_get_reads_file_format_from_fn_int(opt->fn_reads[opt->fn_reads_num-1], &opt->reads_format, &opt->input_compr);
+  while((c = getopt_long(argc, argv, getopt_format, options, &option_index)) >= 0) {
+      // Global options
+      if(c == '?') {
           break;
-        case 'F':
-          opt->reads_format = tmap_get_reads_file_format_int(optarg); break;
-        case '0':
-          opt->fn_sam = tmap_strdup(optarg); break;
-        case 'A':
-          opt->score_match = atoi(optarg); break;
-        case 'M':
-          opt->pen_mm = atoi(optarg); break;
-        case 'O':
-          opt->pen_gapo = atoi(optarg); break;
-        case 'E':
-          opt->pen_gape = atoi(optarg); break;
-        case 'X':
-          opt->fscore = atoi(optarg); break;
-        case 'x':
+      }
+      else if(c == 'A' || (0 == c && 0 == strcmp("score-match", options[option_index].name))) {       
+          opt->score_match = atoi(optarg);
+      }
+      else if(c == 'B' || (0 == c && 0 == strcmp("max-seed-band", options[option_index].name))) {       
+          opt->max_seed_band = atoi(optarg);
+      }
+      else if(c == 'E' || (0 == c && 0 == strcmp("pen-gap-extension", options[option_index].name))) {       
+          opt->pen_gape = atoi(optarg);
+      }
+      else if(c == 'F' || (0 == c && 0 == strcmp("flow-order", options[option_index].name))) {       
+          free(opt->flow_order);
           opt->flow_order = tmap_strdup(optarg); 
           if(0 == strcmp("sff", opt->flow_order) || 0 == strcmp("SFF", opt->flow_order)) {
               opt->flow_order_use_sff = 1;
@@ -474,8 +992,15 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           else {
               opt->flow_order_use_sff = 0;
           }
-          break;
-        case 't':
+      }
+      else if(c == 'G' || (0 == c && 0 == strcmp("remove-sff-clipping", options[option_index].name))) {       
+          opt->remove_sff_clipping = 0; 
+      }
+      else if(c == 'J' || (0 == c && 0 == strcmp("output-bz2", options[option_index].name))) {       
+          opt->output_compr = TMAP_FILE_BZ2_COMPRESSION;
+      }
+      else if(c == 'K' || (0 == c && 0 == strcmp("key-sequence", options[option_index].name))) {       
+          free(opt->key_seq);
           opt->key_seq = tmap_strdup(optarg);
           if(0 == strcmp("sff", opt->key_seq) || 0 == strcmp("SFF", opt->key_seq)) {
               opt->key_seq_use_sff = 1;
@@ -483,28 +1008,16 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           else {
               opt->key_seq_use_sff = 0;
           }
-          break;
-        case 'w':
-          opt->bw = atoi(optarg); break;
-        case 'g':
-          opt->softclip_type = atoi(optarg); break;
-        case 'y':
-          opt->softclip_key = 1; break;
-        case 'W':
-          opt->dup_window = atoi(optarg); break;
-        case 'B':
-          opt->max_seed_band = atoi(optarg); break;
-        case 'T':
-          opt->score_thr = atoi(optarg); break;
-        case 'q':
-          opt->reads_queue_size = atoi(optarg); break;
-        case 'n':
-          opt->num_threads = atoi(optarg); break;
-        case 'a':
-          opt->aln_output_mode = atoi(optarg); break;
-        case 'R':
+      }
+      else if(c == 'M' || (0 == c && 0 == strcmp("pen-mismatch", options[option_index].name))) {       
+          opt->pen_mm = atoi(optarg);
+      }
+      else if(c == 'O' || (0 == c && 0 == strcmp("pen-gap-open", options[option_index].name))) {       
+          opt->pen_gapo = atoi(optarg);
+      }
+      else if(c == 'R' || (0 == c && 0 == strcmp("sam-read-group", options[option_index].name))) {       
           if(NULL == opt->sam_rg) {
-              // add fiv for the string "@RG\t" and null terminator
+              // add five for the string "@RG\t" and null terminator
               opt->sam_rg = tmap_realloc(opt->sam_rg, sizeof(char) * (5 + strlen(optarg)), "opt->sam_rg");
               strcpy(opt->sam_rg, "@RG\t");
               strcat(opt->sam_rg, optarg);
@@ -517,153 +1030,189 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           }
           // remove trailing white spaces
           tmap_chomp(opt->sam_rg);
+      }
+      else if(c == 'T' || (0 == c && 0 == strcmp("score-thres", options[option_index].name))) {       
+          opt->score_thr = atoi(optarg);
+      }
+      else if(c == 'W' || (0 == c && 0 == strcmp("duplicate-window", options[option_index].name))) {       
+          opt->dup_window = atoi(optarg);
+      }
+      else if(c == 'X' || (0 == c && 0 == strcmp("pen-flow-error", options[option_index].name))) {       
+          opt->fscore = atoi(optarg);
+      }
+      else if(c == 'Y' || (0 == c && 0 == strcmp("sam-sff-tags", options[option_index].name))) {       
+          opt->sam_sff_tags = 1;
+      }
+      else if(c == 'Z' || (0 == c && 0 == strcmp("output-gz", options[option_index].name))) {       
+          opt->output_compr = TMAP_FILE_GZ_COMPRESSION;
+      }
+      else if(c == 'a' || (0 == c && 0 == strcmp("aln-output-mode", options[option_index].name))) {       
+          opt->aln_output_mode = atoi(optarg);
+      }
+      else if(c == 'f' || (0 == c && 0 == strcmp("fn-fasta", options[option_index].name))) {       
+          free(opt->fn_fasta);
+          opt->fn_fasta = tmap_strdup(optarg);
+      }
+      else if(c == 'g' || (0 == c && 0 == strcmp("softclip-type", options[option_index].name))) {       
+          opt->softclip_type = atoi(optarg);
+      }
+      else if(c == 'h' || (0 == c && 0 == strcmp("help", options[option_index].name))) {       
           break;
-        case 'Y':
-          opt->sam_sff_tags = 1; break;
-        case 'G':
-          opt->remove_sff_clipping = 0; break;
-        case 'j':
+      }
+      else if(c == 'i' || (0 == c && 0 == strcmp("reads-format", options[option_index].name))) {       
+          opt->reads_format = tmap_get_reads_file_format_int(optarg);
+      }
+      else if(c == 'j' || (0 == c && 0 == strcmp("input-bz2", options[option_index].name))) {       
           opt->input_compr = TMAP_FILE_BZ2_COMPRESSION;
           for(i=0;i<opt->fn_reads_num;i++) {
               tmap_get_reads_file_format_from_fn_int(opt->fn_reads[i], &opt->reads_format, &opt->input_compr);
           }
-          break;
-        case 'z':
+      }
+      else if(c == 'k' || (0 == c && 0 == strcmp("shared-memory-key", options[option_index].name))) {       
+          opt->shm_key = atoi(optarg);
+      }
+      else if(c == 'n' || (0 == c && 0 == strcmp("num-threads", options[option_index].name))) {       
+          opt->num_threads = atoi(optarg);
+      }
+      else if(c == 'q' || (0 == c && 0 == strcmp("reads-queue-size", options[option_index].name))) {       
+          opt->reads_queue_size = atoi(optarg);
+      }
+      else if(c == 'r' || (0 == c && 0 == strcmp("fn-reads", options[option_index].name))) {       
+          opt->fn_reads_num++;
+          opt->fn_reads = tmap_realloc(opt->fn_reads, sizeof(char*) * opt->fn_reads_num, "opt->fn_reads");
+          opt->fn_reads[opt->fn_reads_num-1] = tmap_strdup(optarg); 
+          tmap_get_reads_file_format_from_fn_int(opt->fn_reads[opt->fn_reads_num-1], &opt->reads_format, &opt->input_compr);
+      }
+      else if(c == 's' || (0 == c && 0 == strcmp("fn-sam", options[option_index].name))) {       
+          free(opt->fn_sam);
+          opt->fn_sam = tmap_strdup(optarg);
+      }
+      else if(c == 'v' || (0 == c && 0 == strcmp("verbose", options[option_index].name))) {       
+          tmap_progress_set_verbosity(1);
+      }
+      else if(c == 'w' || (0 == c && 0 == strcmp("band-width", options[option_index].name))) {       
+          opt->bw = atoi(optarg);
+      }
+      else if(c == 'y' || (0 == c && 0 == strcmp("softclip-key", options[option_index].name))) {       
+          opt->softclip_key = 1;
+      }
+      else if(c == 'z' || (0 == c && 0 == strcmp("input-gz", options[option_index].name))) {       
           opt->input_compr = TMAP_FILE_GZ_COMPRESSION;
           for(i=0;i<opt->fn_reads_num;i++) {
               tmap_get_reads_file_format_from_fn_int(opt->fn_reads[i], &opt->reads_format, &opt->input_compr);
           }
-          break;
-        case 'J':
-          opt->output_compr = TMAP_FILE_BZ2_COMPRESSION; break;
-        case 'Z':
-          opt->output_compr = TMAP_FILE_GZ_COMPRESSION; break;
-        case 'k':
-          opt->shm_key = atoi(optarg); break;
-        case 'v':
-          tmap_progress_set_verbosity(1); break;
-        case 'h':
-          free(getopt_format);
-          return 0;
-          break;
-        case 'u':
-          opt->min_seq_len = atoi(optarg); break;
-        case 'U':
-          opt->max_seq_len = atoi(optarg); break;
-        default:
-          // algorithm-specific options
-          switch(opt->algo_id) {
-            case TMAP_MAP_ALGO_MAP1:
-              switch(c) {
-                case 'l':
-                  opt->seed_length = atoi(optarg); break;
-                case 's':
-                  opt->seed_max_diff = atoi(optarg); break;
-                case 'L':
-                  opt->seed2_length = atoi(optarg); break;
-                case 'p':
-                  if(NULL != strstr(optarg, ".")) opt->max_diff = -1, opt->max_diff_fnr = atof(optarg);
-                  else opt->max_diff = atoi(optarg), opt->max_diff_fnr = -1.0;
-                  break;
-                case 'P':
-                  opt->max_err_rate = atof(optarg); break;
-                case 'm':
-                  if(NULL != strstr(optarg, ".")) opt->max_mm = -1, opt->max_mm_frac = atof(optarg);
-                  else opt->max_mm = atoi(optarg), opt->max_mm_frac = -1.0;
-                  break;
-                case 'o':
-                  if(NULL != strstr(optarg, ".")) opt->max_gapo = -1, opt->max_gapo_frac = atof(optarg);
-                  else opt->max_gapo = atoi(optarg), opt->max_gapo_frac = -1.0;
-                  break;
-                case 'e':
-                  if(NULL != strstr(optarg, ".")) opt->max_gape = -1, opt->max_gape_frac = atof(optarg);
-                  else opt->max_gape = atoi(optarg), opt->max_gape_frac = -1.0;
-                  break;
-                case 'd':
-                  opt->max_cals_del = atoi(optarg); break;
-                case 'i':
-                  opt->indel_ends_bound = atoi(optarg); break;
-                case 'b':
-                  opt->max_best_cals = atoi(optarg); break;
-                case 'Q':
-                  opt->max_entries = atoi(optarg); break;
-                default:
-                  free(getopt_format);
-                  return 0;
-              }
-              break;
-            case TMAP_MAP_ALGO_MAP2:
-              switch(c) {
-                  /*
-                     case 'y': 
-                     opt->yita = atof(optarg); break;
-                     */
-                  /*
-                     case 'm': 
-                     opt->mask_level = atof(optarg); break;
-                     */
-                case 'c':
-                  opt->length_coef = atof(optarg); break;
-                case 'S':
-                  opt->max_seed_intv = atoi(optarg); break;
-                case 'b':
-                  opt->z_best= atoi(optarg); break;
-                case 'N':
-                  opt->seeds_rev = atoi(optarg); break;
-                default: 
-                  free(getopt_format);
-                  return 0;
-              }
-              break;
-            case TMAP_MAP_ALGO_MAP3:
-              switch(c) {
-                case 'l':
-                  opt->seed_length = atoi(optarg); 
-                  if(0 < opt->seed_length) opt->seed_length_set = 1; 
-                  break;
-                case 'S':
-                  opt->max_seed_hits = atoi(optarg); break;
-                case 'H':
-                  opt->hp_diff = atoi(optarg); break;
-                case 'V':
-                  opt->hit_frac = atof(optarg); break;
-                case 'c':
-                  opt->seed_step = atoi(optarg); break;
-                default:
-                  free(getopt_format);
-                  return 0;
-              }
-              break;
-            case TMAP_MAP_ALGO_MAPVSW:
-              switch(c) {
-                default:
-                  free(getopt_format);
-                  return 0;
-              }
-              break;
-            case TMAP_MAP_ALGO_MAPALL:
-              switch(c) {
-                case 'I':
-                  opt->aln_output_mode_ind = 1; break;
-                case 'C':
-                  opt->mapall_score_thr = atoi(optarg); break;
-                case 'D':
-                  opt->mapall_mapq_thr = atoi(optarg); break;
-                case 'K':
-                  opt->mapall_keep_all = atoi(optarg); break;
-                default:
-                  free(getopt_format);
-                  return 0;
-              }
-              break;
-            default:
-              break;
-          }
+      }
+      // End of global/single-flag options 
+      else if(0 != c) {
+          tmap_error("bug encountered", Exit, CommandLineArgument);
+      }
+      // MAP1/MAP2/MAP3/MAPVSW
+      else if(0 == strcmp("min-seq-length", options[option_index].name) && (opt->algo_id == TMAP_MAP_ALGO_MAP1 || opt->algo_id == TMAP_MAP_ALGO_MAP3 
+                                                                            || opt->algo_id == TMAP_MAP_ALGO_MAP3 || opt->algo_id == TMAP_MAP_ALGO_MAPVSW)) {
+          opt->min_seq_len = atoi(optarg);
+      }
+      else if(0 == strcmp("max-seq-length", options[option_index].name) && (opt->algo_id == TMAP_MAP_ALGO_MAP1 || opt->algo_id == TMAP_MAP_ALGO_MAP3 
+                                                                            || opt->algo_id == TMAP_MAP_ALGO_MAP3 || opt->algo_id == TMAP_MAP_ALGO_MAPVSW)) {
+          opt->max_seq_len = atoi(optarg);
+      }
+      // MAP1/MAP3
+      else if(0 == strcmp("seed-length", options[option_index].name) && (opt->algo_id == TMAP_MAP_ALGO_MAP1 || opt->algo_id == TMAP_MAP_ALGO_MAP3)) {
+          opt->seed_length = atoi(optarg);
+      }
+      // MAP1
+      else if(0 == strcmp("seed-max-diff", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP1) {
+          opt->seed_max_diff = atoi(optarg);
+      }
+      else if(0 == strcmp("seed2-length", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP1) {
+          opt->seed2_length = atoi(optarg);
+      }
+      else if(0 == strcmp("max-diff", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP1) {
+          if(NULL != strstr(optarg, ".")) opt->max_diff = -1, opt->max_diff_fnr = atof(optarg);
+          else opt->max_diff = atoi(optarg), opt->max_diff_fnr = -1.0;
+      }
+      else if(0 == strcmp("max-error-rate", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP1) {
+          opt->max_err_rate = atof(optarg);
+      }
+      else if(0 == strcmp("max-mismatches", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP1) {
+          if(NULL != strstr(optarg, ".")) opt->max_mm = -1, opt->max_mm_frac = atof(optarg);
+          else opt->max_mm = atoi(optarg), opt->max_mm_frac = -1.0;
+      }
+      else if(0 == strcmp("max-gap-opens", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP1) {
+          if(NULL != strstr(optarg, ".")) opt->max_gapo = -1, opt->max_gapo_frac = atof(optarg);
+          else opt->max_gapo = atoi(optarg), opt->max_gapo_frac = -1.0;
+      }
+      else if(0 == strcmp("max-gap-extensions", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP1) {
+          if(NULL != strstr(optarg, ".")) opt->max_gape = -1, opt->max_gape_frac = atof(optarg);
+          else opt->max_gape = atoi(optarg), opt->max_gape_frac = -1.0;
+      }
+      else if(0 == strcmp("max-cals-deletion", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP1) {
+          opt->max_cals_del = atoi(optarg);
+      }
+      else if(0 == strcmp("indel-ends-bound", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP1) {
+          opt->indel_ends_bound = atoi(optarg);
+      }
+      else if(0 == strcmp("max-best-cals", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP1) {
+          opt->max_best_cals = atoi(optarg);
+      }
+      else if(0 == strcmp("max-nodes", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP1) {
+          opt->max_entries = atoi(optarg);
+      }
+      // MAP2
+      else if(0 == strcmp("length-coef", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP2) {
+          opt->length_coef = atof(optarg);
+      }
+      else if(0 == strcmp("max-seed-intv", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP2) {
+          opt->max_seed_intv = atoi(optarg);
+      }
+      else if(0 == strcmp("z-best", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP2) {
+          opt->z_best= atoi(optarg);
+      }
+      else if(0 == strcmp("seeds-rev", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP2) {
+          opt->seeds_rev = atoi(optarg);
+      }
+      // MAP 3
+      else if(0 == strcmp("max-seed-hits", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP3) {
+          opt->max_seed_hits = atoi(optarg);
+      }
+      else if(0 == strcmp("hp-diff", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP3) {
+          opt->hp_diff = atoi(optarg);
+      }
+      else if(0 == strcmp("hit-frac", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP3) {
+          opt->hit_frac = atof(optarg);
+      }
+      else if(0 == strcmp("seed-step", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP3) {
+          opt->seed_step = atoi(optarg);
+      }
+      // MAPALL
+      else if(0 == strcmp("staged-aln-output-mode-ind", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAPALL) {
+          opt->aln_output_mode_ind = 1;
+      }
+      else if(0 == strcmp("staged-score-thres", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAPALL) {
+          opt->mapall_score_thr = atoi(optarg);
+      }
+      else if(0 == strcmp("staged-mapq-thres", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAPALL) {
+          opt->mapall_mapq_thr = atoi(optarg);
+      }
+      else if(0 == strcmp("staged-keep-all", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAPALL) {
+          opt->mapall_keep_all = 1;
+      }
+      else {
           break;
       }
+      if(argc == optind) {
+          val = 1;
+      }
   }
-  free(getopt_format);
-  return 1;
+  if(optind < argc) {
+      val = 0;
+      tmap_file_fprintf(tmap_file_stderr, "non-option command-line-elements: ");
+      while(optind < argc) {
+          tmap_file_fprintf(tmap_file_stderr, "%s ", argv[optind++]);
+      }
+      tmap_file_fprintf(tmap_file_stderr, "\n");
+  }
+  free(options);
+  return val;
 }
 
 static int32_t
