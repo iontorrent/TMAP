@@ -181,7 +181,10 @@ tmap_map_driver_core_worker(int32_t num_ends, tmap_seq_t ***seq_buffer, tmap_map
 
                   // re-align the alignments in flow-space
                   if(NULL != fs) {
-                      // Note: seq_buffer should have its key sequence
+                      // TODO: if this is run, we do not need to run
+                      // tmap_sw_global_banded_core...
+                      // NB: seq_buffer should have its key sequence if 0 <
+                      // key_seq_len
                       tmap_map_util_fsw(fs, seq,
                                         flow_order, flow_order_len,
                                         key_seq, key_seq_len,
