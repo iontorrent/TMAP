@@ -398,7 +398,7 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            TMAP_MAP_ALGO_GLOBAL);
   tmap_map_opt_options_add(opt->options, "key-sequence", required_argument, 0, 'K', 
                            TMAP_MAP_OPT_TYPE_STRING,
-                           "the key sequence ([ACGT]{4+}",
+                           "the key sequence ([ACGT]{4+} or \"file\")",
                            NULL,
                            tmap_map_opt_option_print_func_key_seq,
                            TMAP_MAP_ALGO_GLOBAL);
