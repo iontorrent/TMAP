@@ -1186,7 +1186,7 @@ tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow
   */
   
   // key bases
-  if(key_seq[key_seq_len-1] == bases->s[0]) {
+  if(0 < key_seq_len && key_seq[key_seq_len-1] == bases->s[0]) {
       fs->key_index = 0;
       fs->key_bases = 0;
       for(i=key_seq_len-1;0<=i && key_seq[i] == bases->s[0];i--) {
@@ -1200,22 +1200,27 @@ tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow
       
   // get the flow for the last base in the key
   i = 0;
-  last_key_flow = -1;
-  while(i < key_seq_len) {
-      last_key_flow++;
-      while(key_seq[i] != flow_order[last_key_flow % flow_order_len]) {
+  if(0 < key_seq_len) {
+      last_key_flow = -1;
+      while(i < key_seq_len) {
           last_key_flow++;
+          while(key_seq[i] != flow_order[last_key_flow % flow_order_len]) {
+              last_key_flow++;
+          }
+          while(i < key_seq_len && key_seq[i] == flow_order[last_key_flow]) {
+              i++;
+          }
       }
-      while(i < key_seq_len && key_seq[i] == flow_order[last_key_flow]) {
-          i++;
-      }
+  }
+  else {
+      last_key_flow = 0;
   }
 
   // flow order
   to_fill = 0;
   if(flow_order_len == fs->flow_order_len) {
       j = last_key_flow;
-      if(0 == fs->key_bases) j++; 
+      if(0 < key_seq_len && 0 == fs->key_bases) j++; 
       for(i=0;i<flow_order_len;i++,j++) {
           if(fs->flow_order[i] != flow_order[j % flow_order_len]) {
               to_fill = 1;
@@ -1229,7 +1234,7 @@ tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow
   if(1 == to_fill) {
       fs->flow_order = tmap_realloc(fs->flow_order, sizeof(uint8_t) * flow_order_len, "fs->flow_order");
       j = last_key_flow;
-      if(0 == fs->key_bases) j++; 
+      if(0 < key_seq_len && 0 == fs->key_bases) j++; 
       for(i=0;i<flow_order_len;i++,j++) {
           fs->flow_order[i] = flow_order[j % flow_order_len];
       }
@@ -1262,7 +1267,7 @@ tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow
           fs->flowgram = tmap_calloc(fs->num_flows, sizeof(uint16_t), "flowgram");
       }
   }
-  else {
+  else if(0 < key_seq_len) {
       // remove the key
       j = last_key_flow + 1;
       if(0 < fs->key_bases) {

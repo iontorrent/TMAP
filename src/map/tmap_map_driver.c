@@ -101,10 +101,11 @@ tmap_map_driver_get_flow_info(tmap_seq_t *seq, tmap_map_opt_t *opt,
       return tmap_fsw_flowseq_init(NULL, 0, NULL, NULL, 0, 0, 0);
   }
   else if(0 != (*flow_order_len) && 0 == (*key_seq_len)) {
-      tmap_error("flow order was specified but not the key sequence", Exit, OutOfRange);
+      tmap_error("the flow order was specified but not the key sequence", Warn, OutOfRange);
+      return tmap_fsw_flowseq_init(NULL, 0, NULL, NULL, 0, 0, 0);
   }
   else if(0 == (*flow_order_len) && 0 != (*key_seq_len)) {
-      tmap_error("key sequence was specified but not the flow order", Exit, OutOfRange);
+      tmap_error("the key sequence was specified but not the flow order", Exit, OutOfRange);
   }
 
   return NULL;
