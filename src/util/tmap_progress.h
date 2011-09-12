@@ -27,6 +27,12 @@ void
 tmap_progress_set_verbosity(int32_t verbosity);
 
 /*! 
+  @return  the verbosity level
+  */
+int32_t
+tmap_progress_get_verbosity();
+
+/*! 
   @param  format      the format for the message
   @param  ...         the arguments to fill in the format
   */

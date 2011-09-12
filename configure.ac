@@ -5,7 +5,7 @@
 #  or with explicit permission from, Nils Homer.
 
 AC_PREREQ(2.61);
-AC_INIT([tmap],[0.0.32],[nils.homer@lifetech.com],[tmap])
+AC_INIT([tmap],[0.1.1],[nils.homer@lifetech.com],[tmap])
 AC_COPYRIGHT([See LICENSE for copyright information.])
 AC_CONFIG_AUX_DIR(config)
 AM_INIT_AUTOMAKE([dist-bzip2 subdir-objects])
@@ -54,7 +54,7 @@ AC_CHECK_LIB([z], [gzread])
 AC_CHECK_LIB([m], [pow])
 AC_CHECK_LIB([pthread], [pthread_create])
 #AC_CHECK_LIB([libtcmalloc_minimal],malloc) # Use this to not include the heap profiler and checker
-AC_CHECK_FUNCS([pow strdup memset strchr strdup strstr memmove])
+AC_CHECK_FUNCS([pow strdup memset strchr strdup strstr memmove getopt_long])
 
 # Check types
 AC_TYPE_INT8_T
@@ -74,7 +74,7 @@ AC_CHECK_SIZEOF([long int])
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([stdlib.h stdio.h stdint.h string.h sys/time.h unistd.h float.h zlib.h bzlib.h pthread.h limits.h netinet/in.h emmintrin.h])
+AC_CHECK_HEADERS([stdlib.h stdio.h stdint.h string.h sys/time.h unistd.h float.h zlib.h bzlib.h pthread.h limits.h netinet/in.h emmintrin.h getopt.h])
 
 AC_C_INLINE
 

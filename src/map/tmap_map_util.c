@@ -15,6 +15,7 @@
 #include "../sw/tmap_sw.h"
 #include "../sw/tmap_fsw.h"
 #include "../sw/tmap_vsw.h"
+#include "tmap_map_opt.h"
 #include "tmap_map_util.h"
 
 #define tmap_map_util_reverse_query(_query, _ql, _i) \
@@ -45,925 +46,6 @@
 TMAP_SORT_INIT(tmap_map_sam_sort_coord, tmap_map_sam_t, __tmap_map_sam_sort_coord_lt)
 TMAP_SORT_INIT(tmap_map_sam_sort_coord_end, tmap_map_sam_t, __tmap_map_sam_sort_coord_end_lt)
 TMAP_SORT_INIT(tmap_map_sam_sort_coord_score, tmap_map_sam_t, __tmap_map_sam_sort_coord_score_lt)
-
-tmap_map_opt_t *
-tmap_map_opt_init(int32_t algo_id)
-{
-  int32_t i;
-  tmap_map_opt_t *opt = NULL;
-
-  opt = tmap_calloc(1, sizeof(tmap_map_opt_t), "opt");
-
-  // internal data
-  opt->algo_id = algo_id;
-  opt->algo_stage = -1;
-  opt->argv = NULL;
-  opt->argc = -1;
-
-  // global options 
-  opt->fn_fasta = NULL;
-  opt->fn_reads = NULL;
-  opt->fn_reads_num = 0;
-  opt->reads_format = TMAP_READS_FORMAT_UNKNOWN;
-  opt->fn_sam = NULL;
-  opt->score_match = TMAP_MAP_UTIL_SCORE_MATCH;
-  opt->pen_mm = TMAP_MAP_UTIL_PEN_MM;
-  opt->pen_gapo = TMAP_MAP_UTIL_PEN_GAPO;
-  opt->pen_gape = TMAP_MAP_UTIL_PEN_GAPE;
-  opt->fscore = TMAP_MAP_UTIL_FSCORE;
-  opt->flow_order = NULL;
-  opt->flow_order_use_file = 0;
-  opt->key_seq = NULL;
-  opt->key_seq_use_file = 0;
-  opt->bw = 50; 
-  opt->softclip_type = TMAP_MAP_UTIL_SOFT_CLIP_RIGHT;
-  opt->softclip_key = 0;
-  opt->remove_sff_clipping = 1;
-  opt->dup_window = 128;
-  opt->max_seed_band = 15;
-  opt->score_thr = 8;
-  opt->reads_queue_size = 262144;
-  opt->num_threads = 1;
-  opt->aln_output_mode = TMAP_MAP_UTIL_ALN_MODE_RAND_BEST;
-  opt->sam_rg = NULL;
-  opt->sam_sff_tags = 0;
-  opt->input_compr = TMAP_FILE_NO_COMPRESSION;
-  opt->output_compr = TMAP_FILE_NO_COMPRESSION;
-  opt->shm_key = 0;
-  opt->min_seq_len = -1;
-  opt->max_seq_len = -1;
-
-  switch(algo_id) {
-    case TMAP_MAP_ALGO_MAP1:
-      // map1
-      opt->seed_length = 32;
-      opt->seed_max_diff = 2;
-      opt->seed2_length = 48;
-      opt->max_diff = -1; opt->max_diff_fnr = 0.04;
-      opt->max_mm = 3; opt->max_mm_frac = -1.;
-      opt->max_err_rate = 0.02;
-      opt->max_gapo = 1; opt->max_gapo_frac = -1.;
-      opt->max_gape = 6; opt->max_gape_frac = -1.;
-      opt->max_cals_del = 10;
-      opt->indel_ends_bound = 5;
-      opt->max_best_cals = 32;
-      opt->max_entries = 2000000;
-      break;
-    case TMAP_MAP_ALGO_MAP2:
-      // map2
-      opt->yita = 5.5f;
-      //opt->mask_level = 0.50; 
-      opt->length_coef = 5.5f;
-      opt->max_seed_intv = 3; 
-      opt->z_best = 1; 
-      opt->seeds_rev = 5;
-      break;
-    case TMAP_MAP_ALGO_MAP3:
-      // map3
-      opt->seed_length = -1;
-      opt->seed_length_set = 0;
-      opt->max_seed_hits = 12;
-      opt->hp_diff = 0;
-      opt->hit_frac = 0.25;
-      break;
-    case TMAP_MAP_ALGO_MAPVSW:
-      // mapvsw
-      break;
-    case TMAP_MAP_ALGO_MAPALL:
-      // mapall
-      opt->aln_output_mode_ind = 0;
-      opt->mapall_score_thr = 8;
-      opt->mapall_mapq_thr = 23; // 0.5% error
-      opt->mapall_keep_all = 1;
-      for(i=0;i<2;i++) {
-          opt->algos[i] = 0;
-          opt->opt_map1[i] = tmap_map_opt_init(TMAP_MAP_ALGO_MAP1);
-          opt->opt_map2[i] = tmap_map_opt_init(TMAP_MAP_ALGO_MAP2);
-          opt->opt_map3[i] = tmap_map_opt_init(TMAP_MAP_ALGO_MAP3);
-          opt->opt_map_vsw[i] = tmap_map_opt_init(TMAP_MAP_ALGO_MAPVSW);
-      }
-      break;
-    default:
-      break;
-  }
-
-  return opt;
-}
-
-void
-tmap_map_opt_destroy(tmap_map_opt_t *opt)
-{
-  int32_t i;
-
-  free(opt->fn_fasta);
-  for(i=0;i<opt->fn_reads_num;i++) {
-      free(opt->fn_reads[i]); 
-  }
-  free(opt->fn_reads);
-  free(opt->fn_sam);
-  free(opt->sam_rg);
-  free(opt->flow_order);
-  free(opt->key_seq);
-
-  switch(opt->algo_id) {
-    case TMAP_MAP_ALGO_MAP1:
-    case TMAP_MAP_ALGO_MAP2:
-    case TMAP_MAP_ALGO_MAP3:
-    case TMAP_MAP_ALGO_MAPVSW:
-      break;
-    case TMAP_MAP_ALGO_MAPALL:
-      // mapall
-      for(i=0;i<2;i++) {
-          opt->algos[i] = 0;
-          tmap_map_opt_destroy(opt->opt_map1[i]);
-          tmap_map_opt_destroy(opt->opt_map2[i]);
-          tmap_map_opt_destroy(opt->opt_map3[i]);
-          tmap_map_opt_destroy(opt->opt_map_vsw[i]);
-      }
-      break;
-    default:
-      break;
-  }
-
-  free(opt);
-}
-#define __tmap_map_opt_usage_map1(_opt, _stage) do { \
-    if(_stage < 0) tmap_file_fprintf(tmap_file_stderr, "%s options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAP1)); \
-    else tmap_file_fprintf(tmap_file_stderr, "%s stage %d options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAP1), _stage); \
-    tmap_file_fprintf(tmap_file_stderr, "         -l INT      the k-mer length to seed CALs (-1 to disable) [%d]\n", (_opt)->seed_length); \
-    tmap_file_fprintf(tmap_file_stderr, "         -s INT      maximum number of edits in the seed [%d]\n", (_opt)->seed_max_diff); \
-    tmap_file_fprintf(tmap_file_stderr, "         -L INT      the secondary seed length (-1 to disable) [%d]\n", (_opt)->seed2_length); \
-    tmap_file_fprintf(tmap_file_stderr, "         -p NUM      maximum number of edits or false-negative probability assuming the maximum error rate "); \
-    if((_opt)->max_diff < 0) tmap_file_fprintf(tmap_file_stderr, "[number: %d]\n", (_opt)->max_diff); \
-    else tmap_file_fprintf(tmap_file_stderr, "[probability: %d]\n", (_opt)->max_diff_fnr); \
-    tmap_file_fprintf(tmap_file_stderr, "         -P NUM      the assumed per-base maximum error rate [%lf]\n", (_opt)->max_err_rate); \
-    tmap_file_fprintf(tmap_file_stderr, "         -m NUM      maximum number of or (read length) fraction of mismatches"); \
-    if((_opt)->max_mm < 0) tmap_file_fprintf(tmap_file_stderr, " [fraction: %lf]\n", (_opt)->max_mm_frac); \
-    else tmap_file_fprintf(tmap_file_stderr, " [number: %d]\n", (_opt)->max_mm); \
-    tmap_file_fprintf(tmap_file_stderr, "         -o NUM      maximum number of or (read length) fraction of indel starts"); \
-    if((_opt)->max_gapo < 0) tmap_file_fprintf(tmap_file_stderr, " [fraction: %lf]\n", (_opt)->max_gapo_frac); \
-    else tmap_file_fprintf(tmap_file_stderr, " [number: %d]\n", (_opt)->max_gapo); \
-    tmap_file_fprintf(tmap_file_stderr, "         -e NUM      maximum number of or (read length) fraction of indel extensions"); \
-    if((_opt)->max_gape < 0) tmap_file_fprintf(tmap_file_stderr, " [fraction: %lf]\n", (_opt)->max_gape_frac); \
-    else tmap_file_fprintf(tmap_file_stderr, " [number: %d]\n", (_opt)->max_gape); \
-    tmap_file_fprintf(tmap_file_stderr, "         -d INT      the maximum number of CALs to extend a deletion [%d]\n", (_opt)->max_cals_del); \
-    tmap_file_fprintf(tmap_file_stderr, "         -i INT      indels are not allowed within INT number of bps from the end of the read [%d]\n", (_opt)->indel_ends_bound); \
-    tmap_file_fprintf(tmap_file_stderr, "         -b INT      stop searching when INT optimal CALs have been found [%d]\n", (_opt)->max_best_cals); \
-    tmap_file_fprintf(tmap_file_stderr, "         -Q INT      maximum number of alignment nodes [%d]\n", (_opt)->max_entries); \
-    tmap_file_fprintf(tmap_file_stderr, "         -u INT      the minimum sequence length to examine [%d]\n", (_opt)->min_seq_len); \
-    tmap_file_fprintf(tmap_file_stderr, "         -U INT      the maximum sequence length to examine [%d]\n", (_opt)->max_seq_len); \
-    tmap_file_fprintf(tmap_file_stderr, "\n"); \
-    } while(0)
-
-#define __tmap_map_opt_usage_map2(_opt, _stage) do { \
-    if(_stage < 0) tmap_file_fprintf(tmap_file_stderr, "%s options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAP2)); \
-    else tmap_file_fprintf(tmap_file_stderr, "%s stage %d options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAP2), _stage); \
-    tmap_file_fprintf(tmap_file_stderr, "         -c FLOAT    coefficient of length-threshold adjustment [%.1lf]\n", (_opt)->length_coef); \
-    tmap_file_fprintf(tmap_file_stderr, "         -S INT      maximum seeding interval size [%d]\n", (_opt)->max_seed_intv); \
-    tmap_file_fprintf(tmap_file_stderr, "         -b INT      Z-best [%d]\n", (_opt)->z_best); \
-    tmap_file_fprintf(tmap_file_stderr, "         -N INT      # seeds to trigger reverse alignment [%d]\n", (_opt)->seeds_rev); \
-    tmap_file_fprintf(tmap_file_stderr, "         -u INT      the minimum sequence length to examine [%d]\n", (_opt)->min_seq_len); \
-    tmap_file_fprintf(tmap_file_stderr, "         -U INT      the maximum sequence length to examine [%d]\n", (_opt)->max_seq_len); \
-    tmap_file_fprintf(tmap_file_stderr, "\n"); \
-    } while(0)
-
-#define __tmap_map_opt_usage_map3(_opt, _stage) do { \
-    if(_stage < 0) tmap_file_fprintf(tmap_file_stderr, "%s options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAP3)); \
-    else tmap_file_fprintf(tmap_file_stderr, "%s stage %d options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAP3), _stage); \
-    tmap_file_fprintf(tmap_file_stderr, "         -l INT      the k-mer length to seed CALs (-1 tunes to the genome size) [%d]\n", (_opt)->seed_length); \
-    tmap_file_fprintf(tmap_file_stderr, "         -S INT      the maximum number of hits returned by a seed [%d]\n", (_opt)->max_seed_hits); \
-    tmap_file_fprintf(tmap_file_stderr, "         -H INT      single homopolymer error difference for enumeration [%d]\n", (_opt)->hp_diff); \
-    tmap_file_fprintf(tmap_file_stderr, "         -V INT      the fraction of seed positions that are under the maximum (-S) [%.3lf]\n", (_opt)->hit_frac); \
-    tmap_file_fprintf(tmap_file_stderr, "         -u INT      the minimum sequence length to examine [%d]\n", (_opt)->min_seq_len); \
-    tmap_file_fprintf(tmap_file_stderr, "         -U INT      the maximum sequence length to examine [%d]\n", (_opt)->max_seq_len); \
-    tmap_file_fprintf(tmap_file_stderr, "\n"); \
-    } while(0)
-
-#define __tmap_map_opt_usage_map_vsw(_opt, _stage) do { \
-    if(_stage < 0) tmap_file_fprintf(tmap_file_stderr, "%s options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAPVSW)); \
-    else tmap_file_fprintf(tmap_file_stderr, "%s stage %d options (optional):\n", tmap_algo_id_to_name(TMAP_MAP_ALGO_MAPVSW), _stage); \
-    tmap_file_fprintf(tmap_file_stderr, "         None\n"); \
-    tmap_file_fprintf(tmap_file_stderr, "\n"); \
-    } while(0)
-
-int
-tmap_map_opt_usage(tmap_map_opt_t *opt)
-{
-  char *reads_format = tmap_get_reads_file_format_string(opt->reads_format);
-  int32_t i;
-
-  tmap_file_fprintf(tmap_file_stderr, "\n");
-  tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [options]\n", tmap_algo_id_to_name(opt->algo_id), PACKAGE);
-  tmap_file_fprintf(tmap_file_stderr, "\n");
-  tmap_file_fprintf(tmap_file_stderr, "global options (required):\n");
-  tmap_file_fprintf(tmap_file_stderr, "         -f FILE     the FASTA reference file name [%s]\n", opt->fn_fasta);
-  tmap_file_fprintf(tmap_file_stderr, "         -r FILE     the reads file name [");
-  if(0 == opt->fn_reads_num) tmap_file_fprintf(tmap_file_stderr, "stdin");
-  else {
-      for(i=0;i<opt->fn_reads_num;i++) {
-          if(0 < i) tmap_file_fprintf(tmap_file_stderr, ",");
-          tmap_file_fprintf(tmap_file_stderr, "%s", opt->fn_reads[i]);
-      }
-  }
-  tmap_file_fprintf(tmap_file_stderr, "]\n");
-  tmap_file_fprintf(tmap_file_stderr, "\n");
-  tmap_file_fprintf(tmap_file_stderr, "global options (optional):\n");
-#ifdef HAVE_SAMTOOLS
-  tmap_file_fprintf(tmap_file_stderr, "         -F STRING   the reads file format (fastq|fq|fasta|fa|sff|sam|bam) [%s]\n", reads_format);
-#else
-  tmap_file_fprintf(tmap_file_stderr, "         -F STRING   the reads file format (fastq|fq|fasta|fa|sff) [%s]\n", reads_format);
-#endif
-  tmap_file_fprintf(tmap_file_stderr, "         -0 FILE     the SAM file name [%s]\n", (NULL == opt->fn_sam) ? "stdout" : opt->fn_sam);
-  tmap_file_fprintf(tmap_file_stderr, "         -A INT      score for a match [%d]\n", opt->score_match);
-  tmap_file_fprintf(tmap_file_stderr, "         -M INT      the mismatch penalty [%d]\n", opt->pen_mm);
-  tmap_file_fprintf(tmap_file_stderr, "         -O INT      the indel start penalty [%d]\n", opt->pen_gapo);
-  tmap_file_fprintf(tmap_file_stderr, "         -E INT      the indel extend penalty [%d]\n", opt->pen_gape);
-  tmap_file_fprintf(tmap_file_stderr, "         -X INT      the flow score penalty [%d]\n", opt->fscore);
-  tmap_file_fprintf(tmap_file_stderr, "         -x STRING   the flow order ([ACGT]{4+} or \"file\") [%s]\n",
-                    (NULL == opt->flow_order) ? "not using" : opt->flow_order);
-  tmap_file_fprintf(tmap_file_stderr, "         -t STRING   the key sequence ([ACGT]{4+} or \"file\") [%s]\n",
-                    (NULL == opt->key_seq) ? "not using" : opt->key_seq);
-  tmap_file_fprintf(tmap_file_stderr, "         -w INT      the band width [%d]\n", opt->bw);
-  tmap_file_fprintf(tmap_file_stderr, "         -g          the soft-clipping type [%d]\n", opt->softclip_type);
-  tmap_file_fprintf(tmap_file_stderr, "                             0 - allow on the right and left portions of the read\n");
-  tmap_file_fprintf(tmap_file_stderr, "                             1 - allow on the left portion of the read\n");
-  tmap_file_fprintf(tmap_file_stderr, "                             2 - allow on the right portion of the read\n");
-  tmap_file_fprintf(tmap_file_stderr, "                             3 - do not allow soft-clipping\n");
-  tmap_file_fprintf(tmap_file_stderr, "         -y          soft clip only the last base of the key [%s]\n",
-                    (1 == opt->softclip_key) ? "true" : "false");
-  tmap_file_fprintf(tmap_file_stderr, "         -W INT      remove duplicate alignments within this bp window (-1 to disable) [%d]\n",
-                    opt->dup_window);
-  tmap_file_fprintf(tmap_file_stderr, "         -B INT      the window of bases in which to group seeds [%d]\n", opt->max_seed_band); 
-  tmap_file_fprintf(tmap_file_stderr, "         -T INT      score threshold divided by the match score [%d]\n", opt->score_thr);
-  tmap_file_fprintf(tmap_file_stderr, "         -q INT      the queue size for the reads (-1 disables) [%d]\n", opt->reads_queue_size);
-  tmap_file_fprintf(tmap_file_stderr, "         -n INT      the number of threads [%d]\n", opt->num_threads);
-  tmap_file_fprintf(tmap_file_stderr, "         -a INT      output filter [%d]\n", opt->aln_output_mode);
-  tmap_file_fprintf(tmap_file_stderr, "                             0 - unique best hits\n");
-  tmap_file_fprintf(tmap_file_stderr, "                             1 - random best hit\n");
-  tmap_file_fprintf(tmap_file_stderr, "                             2 - all best hits\n");
-  tmap_file_fprintf(tmap_file_stderr, "                             3 - all alignments\n");
-  tmap_file_fprintf(tmap_file_stderr, "         -R STRING   the RG tags to add to the SAM header [%s]\n", opt->sam_rg);
-  tmap_file_fprintf(tmap_file_stderr, "         -G          do not remove SFF clipping [%d]\n", opt->remove_sff_clipping);
-  tmap_file_fprintf(tmap_file_stderr, "         -Y          include SFF specific SAM tags [%s]\n",
-                    (1 == opt->sam_sff_tags) ? "true" : "false");
-
-#ifndef DISABLE_BZ2
-  tmap_file_fprintf(tmap_file_stderr, "         -z/-j       the input is gz/bz2 compressed (gzip/bzip2)");
-  __tmap_map_print_compression(opt->input_compr);
-  tmap_file_fprintf(tmap_file_stderr, "         -Z/-J       the output is gz/bz2 compressed (gzip/bzip2)");
-  __tmap_map_print_compression(opt->output_compr);
-#else
-  tmap_file_fprintf(tmap_file_stderr, "         -z       the input is gz compressed (gzip)");
-  __tmap_map_print_compression(opt->input_compr);
-  tmap_file_fprintf(tmap_file_stderr, "         -Z       the output is gz compressed (gzip)");
-  __tmap_map_print_compression(opt->output_compr);
-#endif
-  tmap_file_fprintf(tmap_file_stderr, "         -k INT      use shared memory with the following key [%d]\n", opt->shm_key);
-  tmap_file_fprintf(tmap_file_stderr, "         -v          print verbose progress information\n");
-  tmap_file_fprintf(tmap_file_stderr, "         -h          print this message\n");
-  tmap_file_fprintf(tmap_file_stderr, "\n");
-
-  switch(opt->algo_id) {
-    case TMAP_MAP_ALGO_MAP1:
-      __tmap_map_opt_usage_map1(opt, -1);
-      break;
-    case TMAP_MAP_ALGO_MAP2:
-      __tmap_map_opt_usage_map2(opt, -1);
-      break;
-    case TMAP_MAP_ALGO_MAP3:
-      __tmap_map_opt_usage_map3(opt, -1);
-      break;
-    case TMAP_MAP_ALGO_MAPVSW:
-      __tmap_map_opt_usage_map_vsw(opt, -1);
-      break;
-    case TMAP_MAP_ALGO_MAPALL:
-      for(i=0;i<2;i++) {
-          __tmap_map_opt_usage_map1(opt->opt_map1[i], i+1);
-          __tmap_map_opt_usage_map2(opt->opt_map2[i], i+1);
-          __tmap_map_opt_usage_map3(opt->opt_map3[i], i+1);
-          __tmap_map_opt_usage_map_vsw(opt->opt_map_vsw[i], i+1);
-      }
-      // mapall
-      tmap_file_fprintf(tmap_file_stderr, "%s options (optional):\n", tmap_algo_id_to_name(opt->algo_id));
-      tmap_file_fprintf(tmap_file_stderr, "         -I          apply the output filter (-a) and duplicate removal (-W) for each algorithm separately [%s]\n",
-                        (1 == opt->aln_output_mode_ind) ? "true" : "false");
-      tmap_file_fprintf(tmap_file_stderr, "         -C INT      score threshold for stage one divided by the match score [%d]\n", opt->mapall_score_thr);
-      tmap_file_fprintf(tmap_file_stderr, "         -D INT      mapping quality threshold for stage one divided by the match score [%d]\n", opt->mapall_mapq_thr);
-      tmap_file_fprintf(tmap_file_stderr, "         -K          do not keep mappings from the first stage for the next stage [%s]\n", 
-                        (0 == opt->mapall_keep_all) ? "true" : "false");
-      tmap_file_fprintf(tmap_file_stderr, "\n");
-      break;
-    default:
-      break;
-  }
-
-  // free
-  free(reads_format);
-
-  return 1;
-}
-
-int32_t
-tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
-{
-  int i, c;
-  char *getopt_format = NULL;
-
-  opt->argc = argc; opt->argv = argv;
-  switch(opt->algo_id) {
-    case TMAP_MAP_ALGO_MAP1:
-      getopt_format = tmap_strdup("f:r:F:0:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhl:s:L:p:P:m:o:e:d:i:b:Q:u:U:");
-      break;
-    case TMAP_MAP_ALGO_MAP2:
-      getopt_format = tmap_strdup("f:r:F:0:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhc:S:b:N:u:U:");
-      break;
-    case TMAP_MAP_ALGO_MAP3:
-      getopt_format = tmap_strdup("f:r:F:0:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhl:S:H:V:u:U:");
-      break;
-    case TMAP_MAP_ALGO_MAPVSW:
-      getopt_format = tmap_strdup("f:r:F:0:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhu:U:");
-      break;
-    case TMAP_MAP_ALGO_MAPALL:
-      getopt_format = tmap_strdup("f:r:F:0:A:M:O:E:X:x:t:w:g:yW:B:T:q:n:a:R:YGjzJZk:vhIC:D:K:u:U:");
-      break;
-    default:
-      tmap_error("unrecognized algorithm", Exit, OutOfRange);
-      break;
-  }
-
-  // global options
-  // Note: possible memory leaks if the same option (besides -R) are specified twice
-  while((c = getopt(argc, argv, getopt_format)) >= 0) {
-      switch(c) { 
-        case 'f': 
-          opt->fn_fasta = tmap_strdup(optarg); break;
-        case 'r':
-          opt->fn_reads_num++;
-          opt->fn_reads = tmap_realloc(opt->fn_reads, sizeof(char*) * opt->fn_reads_num, "opt->fn_reads");
-          opt->fn_reads[opt->fn_reads_num-1] = tmap_strdup(optarg); 
-          tmap_get_reads_file_format_from_fn_int(opt->fn_reads[opt->fn_reads_num-1], &opt->reads_format, &opt->input_compr);
-          break;
-        case 'F':
-          opt->reads_format = tmap_get_reads_file_format_int(optarg); break;
-        case '0':
-          opt->fn_sam = tmap_strdup(optarg); break;
-        case 'A':
-          opt->score_match = atoi(optarg); break;
-        case 'M':
-          opt->pen_mm = atoi(optarg); break;
-        case 'O':
-          opt->pen_gapo = atoi(optarg); break;
-        case 'E':
-          opt->pen_gape = atoi(optarg); break;
-        case 'X':
-          opt->fscore = atoi(optarg); break;
-        case 'x':
-          opt->flow_order = tmap_strdup(optarg); 
-          if(0 == strcmp("file", opt->flow_order) || 0 == strcmp("FILE", opt->flow_order)) {
-              opt->flow_order_use_file = 1;
-          }
-          else {
-              opt->flow_order_use_file = 0;
-          }
-          break;
-        case 't':
-          opt->key_seq = tmap_strdup(optarg);
-          if(0 == strcmp("file", opt->key_seq) || 0 == strcmp("FILE", opt->key_seq)) {
-              opt->key_seq_use_file = 1;
-          }
-          else {
-              opt->key_seq_use_file = 0;
-          }
-          break;
-        case 'w':
-          opt->bw = atoi(optarg); break;
-        case 'g':
-          opt->softclip_type = atoi(optarg); break;
-        case 'y':
-          opt->softclip_key = 1; break;
-        case 'W':
-          opt->dup_window = atoi(optarg); break;
-        case 'B':
-          opt->max_seed_band = atoi(optarg); break;
-        case 'T':
-          opt->score_thr = atoi(optarg); break;
-        case 'q':
-          opt->reads_queue_size = atoi(optarg); break;
-        case 'n':
-          opt->num_threads = atoi(optarg); break;
-        case 'a':
-          opt->aln_output_mode = atoi(optarg); break;
-        case 'R':
-          if(NULL == opt->sam_rg) {
-              // add fiv for the string "@RG\t" and null terminator
-              opt->sam_rg = tmap_realloc(opt->sam_rg, sizeof(char) * (5 + strlen(optarg)), "opt->sam_rg");
-              strcpy(opt->sam_rg, "@RG\t");
-              strcat(opt->sam_rg, optarg);
-          }
-          else {
-              // add two for the tab separator and null terminator
-              opt->sam_rg = tmap_realloc(opt->sam_rg, sizeof(char) * (2 + strlen(optarg) + strlen(opt->sam_rg)), "opt->sam_rg");
-              if(0 < strlen(optarg) && '\t' != optarg[0]) strcat(opt->sam_rg, "\t"); // add a tab separator
-              strcat(opt->sam_rg, optarg);
-          }
-          // remove trailing white spaces
-          tmap_chomp(opt->sam_rg);
-          break;
-        case 'Y':
-          opt->sam_sff_tags = 1; break;
-        case 'G':
-          opt->remove_sff_clipping = 0; break;
-        case 'j':
-          opt->input_compr = TMAP_FILE_BZ2_COMPRESSION;
-          for(i=0;i<opt->fn_reads_num;i++) {
-              tmap_get_reads_file_format_from_fn_int(opt->fn_reads[i], &opt->reads_format, &opt->input_compr);
-          }
-          break;
-        case 'z':
-          opt->input_compr = TMAP_FILE_GZ_COMPRESSION;
-          for(i=0;i<opt->fn_reads_num;i++) {
-              tmap_get_reads_file_format_from_fn_int(opt->fn_reads[i], &opt->reads_format, &opt->input_compr);
-          }
-          break;
-        case 'J':
-          opt->output_compr = TMAP_FILE_BZ2_COMPRESSION; break;
-        case 'Z':
-          opt->output_compr = TMAP_FILE_GZ_COMPRESSION; break;
-        case 'k':
-          opt->shm_key = atoi(optarg); break;
-        case 'v':
-          tmap_progress_set_verbosity(1); break;
-        case 'h':
-          free(getopt_format);
-          return 0;
-          break;
-        case 'u':
-          opt->min_seq_len = atoi(optarg); break;
-        case 'U':
-          opt->max_seq_len = atoi(optarg); break;
-        default:
-          // algorithm-specific options
-          switch(opt->algo_id) {
-            case TMAP_MAP_ALGO_MAP1:
-              switch(c) {
-                case 'l':
-                  opt->seed_length = atoi(optarg); break;
-                case 's':
-                  opt->seed_max_diff = atoi(optarg); break;
-                case 'L':
-                  opt->seed2_length = atoi(optarg); break;
-                case 'p':
-                  if(NULL != strstr(optarg, ".")) opt->max_diff = -1, opt->max_diff_fnr = atof(optarg);
-                  else opt->max_diff = atoi(optarg), opt->max_diff_fnr = -1.0;
-                  break;
-                case 'P':
-                  opt->max_err_rate = atof(optarg); break;
-                case 'm':
-                  if(NULL != strstr(optarg, ".")) opt->max_mm = -1, opt->max_mm_frac = atof(optarg);
-                  else opt->max_mm = atoi(optarg), opt->max_mm_frac = -1.0;
-                  break;
-                case 'o':
-                  if(NULL != strstr(optarg, ".")) opt->max_gapo = -1, opt->max_gapo_frac = atof(optarg);
-                  else opt->max_gapo = atoi(optarg), opt->max_gapo_frac = -1.0;
-                  break;
-                case 'e':
-                  if(NULL != strstr(optarg, ".")) opt->max_gape = -1, opt->max_gape_frac = atof(optarg);
-                  else opt->max_gape = atoi(optarg), opt->max_gape_frac = -1.0;
-                  break;
-                case 'd':
-                  opt->max_cals_del = atoi(optarg); break;
-                case 'i':
-                  opt->indel_ends_bound = atoi(optarg); break;
-                case 'b':
-                  opt->max_best_cals = atoi(optarg); break;
-                case 'Q':
-                  opt->max_entries = atoi(optarg); break;
-                default:
-                  free(getopt_format);
-                  return 0;
-              }
-              break;
-            case TMAP_MAP_ALGO_MAP2:
-              switch(c) {
-                  /*
-                     case 'y': 
-                     opt->yita = atof(optarg); break;
-                     */
-                  /*
-                     case 'm': 
-                     opt->mask_level = atof(optarg); break;
-                     */
-                case 'c':
-                  opt->length_coef = atof(optarg); break;
-                case 'S':
-                  opt->max_seed_intv = atoi(optarg); break;
-                case 'b':
-                  opt->z_best= atoi(optarg); break;
-                case 'N':
-                  opt->seeds_rev = atoi(optarg); break;
-                default: 
-                  free(getopt_format);
-                  return 0;
-              }
-              break;
-            case TMAP_MAP_ALGO_MAP3:
-              switch(c) {
-                case 'l':
-                  opt->seed_length = atoi(optarg); opt->seed_length_set = 1; break;
-                case 'S':
-                  opt->max_seed_hits = atoi(optarg); break;
-                case 'H':
-                  opt->hp_diff = atoi(optarg); break;
-                case 'V':
-                  opt->hit_frac = atof(optarg); break;
-                default:
-                  free(getopt_format);
-                  return 0;
-              }
-              break;
-            case TMAP_MAP_ALGO_MAPVSW:
-              switch(c) {
-                default:
-                  free(getopt_format);
-                  return 0;
-              }
-              break;
-            case TMAP_MAP_ALGO_MAPALL:
-              switch(c) {
-                case 'I':
-                  opt->aln_output_mode_ind = 1; break;
-                case 'C':
-                  opt->mapall_score_thr = atoi(optarg); break;
-                case 'D':
-                  opt->mapall_mapq_thr = atoi(optarg); break;
-                case 'K':
-                  opt->mapall_keep_all = atoi(optarg); break;
-                default:
-                  free(getopt_format);
-                  return 0;
-              }
-              break;
-            default:
-              break;
-          }
-          break;
-      }
-  }
-  free(getopt_format);
-  return 1;
-}
-
-static int32_t
-tmap_map_opt_file_check_with_null(char *fn1, char *fn2)
-{
-  if(NULL == fn1 && NULL == fn2) {
-      return 0;
-  }
-  else if((NULL == fn1 && NULL != fn2)
-          || (NULL != fn1 && NULL == fn2)) {
-      return 1;
-  }
-  else if(0 != strcmp(fn1, fn2)) {
-      return 1;
-  }
-  return 0;
-}
-
-// check that the mapall global options match the algorithm specific global options
-#define __tmap_map_opt_check_common1(opt_map_all, opt_map_other) do { \
-    int32_t _i; \
-    if(0 != tmap_map_opt_file_check_with_null((opt_map_other)->fn_fasta, (opt_map_all)->fn_fasta)) { \
-        tmap_error("option -f was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->fn_reads_num != (opt_map_all)->fn_reads_num) { \
-        tmap_error("option -r was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    for(_i=0;_i<(opt_map_other)->fn_reads_num;_i++) { \
-        if(0 != tmap_map_opt_file_check_with_null((opt_map_other)->fn_reads[_i], (opt_map_all)->fn_reads[_i])) { \
-            tmap_error("option -r was specified outside of the common options", Exit, CommandLineArgument); \
-        } \
-    } \
-    if(0 != tmap_map_opt_file_check_with_null((opt_map_other)->fn_sam, (opt_map_all)->fn_sam)) { \
-        tmap_error("option -0 was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->reads_format != (opt_map_all)->reads_format) { \
-        tmap_error("option -F was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->score_match != (opt_map_all)->score_match) { \
-        tmap_error("option -A was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->pen_mm != (opt_map_all)->pen_mm) { \
-        tmap_error("option -M was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->pen_gapo != (opt_map_all)->pen_gapo) { \
-        tmap_error("option -O was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->pen_gape != (opt_map_all)->pen_gape) { \
-        tmap_error("option -E was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->fscore != (opt_map_all)->fscore) { \
-        tmap_error("option -X was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if(0 != tmap_map_opt_file_check_with_null((opt_map_other)->flow_order, (opt_map_all)->flow_order)) { \
-        tmap_error("option -x was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->flow_order_use_file != (opt_map_all)->flow_order_use_file) { \
-        tmap_error("option -x was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if(0 != tmap_map_opt_file_check_with_null((opt_map_other)->key_seq, (opt_map_all)->key_seq)) { \
-        tmap_error("option -t was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->key_seq_use_file != (opt_map_all)->key_seq_use_file) { \
-        tmap_error("option -t was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->bw != (opt_map_all)->bw) { \
-        tmap_error("option -w was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->softclip_type != (opt_map_all)->softclip_type) { \
-        tmap_error("option -g was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->softclip_key != (opt_map_all)->softclip_key) { \
-        tmap_error("option -y was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->dup_window != (opt_map_all)->dup_window) { \
-        tmap_error("option -W was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->max_seed_band != (opt_map_all)->max_seed_band) { \
-        tmap_error("option -B was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->score_thr != (opt_map_all)->score_thr) { \
-        tmap_error("option -T was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->reads_queue_size != (opt_map_all)->reads_queue_size) { \
-        tmap_error("option -q was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->num_threads != (opt_map_all)->num_threads) { \
-        tmap_error("option -n was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if(0 != tmap_map_opt_file_check_with_null((opt_map_other)->sam_rg, (opt_map_all)->sam_rg)) { \
-        tmap_error("option -R was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->sam_sff_tags != (opt_map_all)->sam_sff_tags) { \
-        tmap_error("option -Y was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->remove_sff_clipping != (opt_map_all)->remove_sff_clipping) { \
-        tmap_error("option -G was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->input_compr != (opt_map_all)->input_compr) { \
-        tmap_error("option -j or -z was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->output_compr != (opt_map_all)->output_compr) { \
-        tmap_error("option -J or -Z was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-    if((opt_map_other)->shm_key != (opt_map_all)->shm_key) { \
-        tmap_error("option -k was specified outside of the common options", Exit, CommandLineArgument); \
-    } \
-} while(0)
-
-void
-tmap_map_opt_check(tmap_map_opt_t *opt)
-{
-  int32_t i;
-  // global options
-  if(NULL == opt->fn_fasta && 0 == opt->shm_key) {
-      tmap_error("option -f or option -k must be specified", Exit, CommandLineArgument);
-  }
-  else if(NULL != opt->fn_fasta && 0 < opt->shm_key) {
-      tmap_error("option -f and option -k may not be specified together", Exit, CommandLineArgument);
-  }
-  if(0 == opt->fn_reads_num && TMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
-      tmap_error("option -F or option -r must be specified", Exit, CommandLineArgument);
-  }
-  else if(1 < opt->fn_reads_num) {
-      if(1 == opt->sam_sff_tags) {
-          tmap_error("options -1 and -2 cannot be used with -Y", Exit, CommandLineArgument);
-      }
-      else if(1 == opt->flow_order_use_file) {
-          tmap_error("options -1 and -2 cannot be used with -x", Exit, CommandLineArgument);
-      }
-      else if(1 == opt->key_seq_use_file) {
-          tmap_error("options -1 and -2 cannot be used with -t", Exit, CommandLineArgument);
-      }
-      else if(NULL != opt->flow_order) {
-          tmap_error("options -1 and -2 cannot be used with -x", Exit, CommandLineArgument);
-      }
-      else if(NULL != opt->key_seq) {
-          tmap_error("options -1 and -2 cannot be used with -t", Exit, CommandLineArgument);
-      }
-      // OK
-  }
-  if(TMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
-      tmap_error("the reads format (-r) was unrecognized", Exit, CommandLineArgument);
-  }
-  tmap_error_cmd_check_int(opt->score_match, 0, INT32_MAX, "-A");
-  tmap_error_cmd_check_int(opt->pen_mm, 0, INT32_MAX, "-M");
-  tmap_error_cmd_check_int(opt->pen_gapo, 0, INT32_MAX, "-O");
-  tmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
-  tmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
-  if(NULL != opt->flow_order) {
-      if(0 == strcmp("file", opt->flow_order) || 0 == strcmp("FILE", opt->flow_order)) {
-          if(TMAP_READS_FORMAT_SFF != opt->reads_format) {
-              tmap_error("an SFF was not specified (-r) but you want to use the sff flow order (-x)", Exit, CommandLineArgument);
-          }
-      }
-      else {
-          switch(tmap_validate_flow_order(opt->flow_order)) {
-            case 0:
-              break;
-            case -1:
-              tmap_error("unrecognized DNA base (-x)", Exit, CommandLineArgument);
-            case -2:
-              tmap_error("all DNA bases must be present at least once (-x)", Exit, CommandLineArgument);
-            default:
-              tmap_error("unrecognized error (-x)", Exit, CommandLineArgument);
-              break;
-          }
-      }
-  }
-  if(NULL != opt->key_seq) {
-      if(0 == strcmp("file", opt->key_seq) || 0 == strcmp("FILE", opt->key_seq)) {
-          if(TMAP_READS_FORMAT_SFF != opt->reads_format) {
-              tmap_error("an SFF was not specified (-r) but you want to use the sff flow order (-t)", Exit, CommandLineArgument);
-          }
-      }
-      else {
-          switch(tmap_validate_key_seq(opt->key_seq)) {
-            case 0:
-              break;
-            case -1:
-              tmap_error("unrecognized DNA base (-t)", Exit, CommandLineArgument); break;
-              break;
-            default:
-              tmap_error("unrecognized error (-t)", Exit, CommandLineArgument);
-              break;
-          }
-      }
-  }
-  if((NULL == opt->key_seq && 0 == opt->key_seq_use_file) && (NULL != opt->flow_order || 1 == opt->flow_order_use_file)) {
-      tmap_error("key sequence (-t) specified without a flow order (-x)", Exit, CommandLineArgument);
-  }
-  if((NULL != opt->key_seq || 1 == opt->key_seq_use_file) && (NULL == opt->flow_order && 0 == opt->flow_order_use_file)) {
-      tmap_error("key sequence (-t) specified without a flow order (-x)", Exit, CommandLineArgument);
-  }
-  tmap_error_cmd_check_int(opt->bw, 0, INT32_MAX, "-w");
-  tmap_error_cmd_check_int(opt->softclip_type, 0, 3, "-g");
-  if(1 == opt->softclip_key) {
-      if(NULL == opt->key_seq && TMAP_READS_FORMAT_SFF != opt->reads_format) {
-          tmap_error("an SFF (-r) or the key sequence (-t) must be specified to use -y", Exit, CommandLineArgument);
-      }
-  }
-  else {
-      tmap_error_cmd_check_int(opt->softclip_key, 0, 0, "-y");
-  }
-
-  tmap_error_cmd_check_int(opt->dup_window, -1, INT32_MAX, "-W");
-  tmap_error_cmd_check_int(opt->max_seed_band, 1, INT32_MAX, "-B");
-  tmap_error_cmd_check_int(opt->score_thr, INT32_MIN, INT32_MAX, "-T");
-  if(-1 != opt->reads_queue_size) tmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
-  tmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
-  tmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
-  if(TMAP_FILE_BZ2_COMPRESSION == opt->output_compr
-     && -1 == opt->reads_queue_size) {
-      tmap_error("cannot buffer reads with bzip2 output (options \"-q 1 -J\")", Exit, OutOfRange);
-  }
-  if(-1 != opt->min_seq_len) tmap_error_cmd_check_int(opt->min_seq_len, 1, INT32_MAX, "-u");
-  if(-1 != opt->max_seq_len) tmap_error_cmd_check_int(opt->max_seq_len, 1, INT32_MAX, "-U");
-  if(-1 != opt->min_seq_len && -1 != opt->max_seq_len &&
-     opt->max_seq_len < opt->min_seq_len) {
-      tmap_error("The minimum sequence length must be less than the maximum sequence length (-u and -U)", Exit, OutOfRange);
-  }
-
-  switch(opt->algo_id) {
-    case TMAP_MAP_ALGO_MAP1:
-      // map1 options
-      tmap_error_cmd_check_int((opt->max_diff_fnr < 0) ? opt->max_diff: (int32_t)opt->max_diff_fnr, 0, INT32_MAX, "-p");
-      tmap_error_cmd_check_int((int32_t)opt->max_err_rate, 0, INT32_MAX, "-P");
-      // this will take care of the case where they are both < 0
-      tmap_error_cmd_check_int((opt->max_mm_frac < 0) ? opt->max_mm : (int32_t)opt->max_mm_frac, 0, INT32_MAX, "-m");
-      // this will take care of the case where they are both < 0
-      tmap_error_cmd_check_int((opt->max_gapo_frac < 0) ? opt->max_gapo : (int32_t)opt->max_gapo_frac, 0, INT32_MAX, "-m");
-      // this will take care of the case where they are both < 0
-      tmap_error_cmd_check_int((opt->max_gape_frac < 0) ? opt->max_gape : (int32_t)opt->max_gape_frac, 0, INT32_MAX, "-m");
-      tmap_error_cmd_check_int(opt->max_cals_del, 1, INT32_MAX, "-d");
-      tmap_error_cmd_check_int(opt->indel_ends_bound, 0, INT32_MAX, "-i");
-      tmap_error_cmd_check_int(opt->max_best_cals, 0, INT32_MAX, "-b");
-      tmap_error_cmd_check_int(opt->max_entries, 1, INT32_MAX, "-Q");
-      if(-1 != opt->seed_length) tmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "-l");
-      if(-1 != opt->seed2_length) tmap_error_cmd_check_int(opt->seed2_length, 1, INT32_MAX, "-l");
-      if(-1 != opt->seed_length && -1 != opt->seed2_length) {
-          tmap_error_cmd_check_int(opt->seed_length, 1, opt->seed2_length, "The secondary seed length (-L) must be less than the primary seed length (-l)");
-      }
-      break;
-    case TMAP_MAP_ALGO_MAP2:
-      //tmap_error_cmd_check_int(opt->mask_level, 0, 1, "-m");
-      tmap_error_cmd_check_int(opt->length_coef, 0, INT32_MAX, "-c");
-      tmap_error_cmd_check_int(opt->max_seed_intv, 0, INT32_MAX, "-S");
-      tmap_error_cmd_check_int(opt->z_best, 1, INT32_MAX, "-Z");
-      tmap_error_cmd_check_int(opt->seeds_rev, 0, INT32_MAX, "-N");
-      break;
-    case TMAP_MAP_ALGO_MAP3:
-      if(-1 != opt->seed_length) tmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "-l");
-      tmap_error_cmd_check_int(opt->max_seed_hits, 1, INT32_MAX, "-S");
-      tmap_error_cmd_check_int(opt->hp_diff, 0, INT32_MAX, "-H");
-      if(0 < opt->hp_diff && TMAP_SEQ_TYPE_SFF != opt->reads_format) tmap_error("-H option must be used with SFF only", Exit, OutOfRange); 
-      tmap_error_cmd_check_int(opt->hit_frac, 0, 1, "-Y");
-      break;
-    case TMAP_MAP_ALGO_MAPALL:
-      tmap_error_cmd_check_int(opt->aln_output_mode_ind, 0, 1, "-I");
-      tmap_error_cmd_check_int(opt->mapall_score_thr, INT32_MIN, INT32_MAX, "-C");
-      tmap_error_cmd_check_int(opt->mapall_mapq_thr, 0, 255, "-D");
-      tmap_error_cmd_check_int(opt->mapall_keep_all, 0, 1, "-K");
-      if(0 == opt->algos[0] || 0 == opt->num_stages) {
-          tmap_error("no algorithms given for stage 1", Exit, CommandLineArgument);
-      }
-      for(i=0;i<2;i++) {
-          // check mapping algorithm specific options
-          tmap_map_opt_check(opt->opt_map1[i]);
-          tmap_map_opt_check(opt->opt_map2[i]);
-          tmap_map_opt_check(opt->opt_map3[i]);
-          tmap_map_opt_check(opt->opt_map_vsw[i]);
-
-          // check that common values match other opt values
-          __tmap_map_opt_check_common1(opt, opt->opt_map1[i]);
-          __tmap_map_opt_check_common1(opt, opt->opt_map2[i]);
-          __tmap_map_opt_check_common1(opt, opt->opt_map3[i]);
-          __tmap_map_opt_check_common1(opt, opt->opt_map_vsw[i]);
-      }
-      break;
-    default:
-      break;
-  }
-}
-
-void
-tmap_map_opt_print(tmap_map_opt_t *opt)
-{
-  int32_t i;
-  fprintf(stderr, "algo_id=%d\n", opt->algo_id);
-  fprintf(stderr, "fn_fasta=%s\n", opt->fn_fasta);
-  for(i=0;i<opt->fn_reads_num;i++) {
-      if(0 < i) fprintf(stderr, ",");
-      fprintf(stderr, "fn_reads=%s\n", opt->fn_reads[i]);
-  }
-  fprintf(stderr, "fn_sam=%s\n", opt->fn_sam);
-  fprintf(stderr, "reads_format=%d\n", opt->reads_format);
-  fprintf(stderr, "reads_format=%d\n", opt->reads_format);
-  fprintf(stderr, "score_match=%d\n", opt->score_match);
-  fprintf(stderr, "pen_mm=%d\n", opt->pen_mm);
-  fprintf(stderr, "pen_gapo=%d\n", opt->pen_gapo);
-  fprintf(stderr, "pen_gape=%d\n", opt->pen_gape);
-  fprintf(stderr, "fscore=%d\n", opt->fscore);
-  fprintf(stderr, "flow_order=%s\n", opt->flow_order);
-  fprintf(stderr, "flow_order_use_file=%d\n", opt->flow_order_use_file);
-  fprintf(stderr, "key_seq=%s\n", opt->key_seq);
-  fprintf(stderr, "key_seq_use_file=%d\n", opt->key_seq_use_file);
-  fprintf(stderr, "bw=%d\n", opt->bw);
-  fprintf(stderr, "softclip_type=%d\n", opt->softclip_type);
-  fprintf(stderr, "softclip_key=%d\n", opt->softclip_key);
-  fprintf(stderr, "dup_window=%d\n", opt->dup_window);
-  fprintf(stderr, "max_seed_band=%d\n", opt->max_seed_band);
-  fprintf(stderr, "score_thr=%d\n", opt->score_thr);
-  fprintf(stderr, "reads_queue_size=%d\n", opt->reads_queue_size);
-  fprintf(stderr, "num_threads=%d\n", opt->num_threads);
-  fprintf(stderr, "aln_output_mode=%d\n", opt->aln_output_mode);
-  fprintf(stderr, "sam_rg=%s\n", opt->sam_rg);
-  fprintf(stderr, "sam_sff_tags=%d\n", opt->sam_sff_tags);
-  fprintf(stderr, "remove_sff_clipping=%d\n", opt->remove_sff_clipping);
-  fprintf(stderr, "input_compr=%d\n", opt->input_compr);
-  fprintf(stderr, "output_compr=%d\n", opt->output_compr);
-  fprintf(stderr, "shm_key=%d\n", (int)opt->shm_key);
-  fprintf(stderr, "min_seq_len=%d\n", opt->min_seq_len);
-  fprintf(stderr, "max_seq_len=%d\n", opt->max_seq_len);
-  fprintf(stderr, "seed_length=%d\n", opt->seed_length);
-  fprintf(stderr, "seed_length_set=%d\n", opt->seed_length_set);
-  fprintf(stderr, "seed_max_diff=%d\n", opt->seed_max_diff);
-  fprintf(stderr, "seed2_length=%d\n", opt->seed2_length);
-  fprintf(stderr, "max_diff=%d\n", opt->max_diff);
-  fprintf(stderr, "max_diff_fnr=%lf\n", opt->max_diff_fnr);
-  fprintf(stderr, "max_err_rate=%lf\n", opt->max_err_rate);
-  fprintf(stderr, "max_mm=%d\n", opt->max_mm);
-  fprintf(stderr, "max_mm_frac=%lf\n", opt->max_mm_frac);
-  fprintf(stderr, "max_gapo=%d\n", opt->max_gapo);
-  fprintf(stderr, "max_gapo_frac=%lf\n", opt->max_gapo_frac);
-  fprintf(stderr, "max_gape=%d\n", opt->max_gape);
-  fprintf(stderr, "max_gape_frac=%lf\n", opt->max_gape_frac);
-  fprintf(stderr, "max_cals_del=%d\n", opt->max_cals_del);
-  fprintf(stderr, "indel_ends_bound=%d\n", opt->indel_ends_bound);
-  fprintf(stderr, "max_best_cals=%d\n", opt->max_best_cals);
-  fprintf(stderr, "max_entries=%d\n", opt->max_entries);
-  fprintf(stderr, "yita=%lf\n", opt->yita);
-  fprintf(stderr, "length_coef=%lf\n", opt->length_coef);
-  fprintf(stderr, "max_seed_intv=%d\n", opt->max_seed_intv);
-  fprintf(stderr, "z_best=%d\n", opt->z_best);
-  fprintf(stderr, "seeds_rev=%d\n", opt->seeds_rev);
-  fprintf(stderr, "max_seed_hits=%d\n", opt->max_seed_hits);
-  fprintf(stderr, "hp_diff=%d\n", opt->hp_diff);
-  fprintf(stderr, "hit_frac=%lf\n", opt->hit_frac);
-  fprintf(stderr, "aln_output_mode_ind=%d\n", opt->aln_output_mode_ind);
-  fprintf(stderr, "mapall_score_thr=%d\n", opt->mapall_score_thr);
-  fprintf(stderr, "mapall_mapq_thr=%d\n", opt->mapall_mapq_thr);
-  fprintf(stderr, "mapall_keep_all=%d\n", opt->mapall_keep_all);
-}
 
 void
 tmap_map_sam_malloc_aux(tmap_map_sam_t *s, int32_t algo_id)
@@ -1363,7 +445,7 @@ tmap_map_sams_filter1(tmap_map_sams_t *sams, int32_t aln_output_mode, int32_t al
       }
   }
 
-  if(TMAP_MAP_UTIL_ALN_MODE_ALL == aln_output_mode) {
+  if(TMAP_MAP_OPT_ALN_MODE_ALL == aln_output_mode) {
       return;
   }
 
@@ -1394,7 +476,7 @@ tmap_map_sams_filter1(tmap_map_sams_t *sams, int32_t aln_output_mode, int32_t al
       tmap_map_sams_realloc(sams, j);
   }
 
-  if(TMAP_MAP_UTIL_ALN_MODE_UNIQ_BEST == aln_output_mode) {
+  if(TMAP_MAP_OPT_ALN_MODE_UNIQ_BEST == aln_output_mode) {
       if(1 < n_best) { // there can only be one
           if(TMAP_MAP_ALGO_NONE == algo_id) {
               tmap_map_sams_realloc(sams, 0);
@@ -1416,7 +498,7 @@ tmap_map_sams_filter1(tmap_map_sams_t *sams, int32_t aln_output_mode, int32_t al
           }
       }
   }
-  else if(TMAP_MAP_UTIL_ALN_MODE_RAND_BEST == aln_output_mode) { // get a random
+  else if(TMAP_MAP_OPT_ALN_MODE_RAND_BEST == aln_output_mode) { // get a random
       int32_t r = (int32_t)(drand48() * n_best);
 
       // keep the rth one
@@ -1453,7 +535,7 @@ tmap_map_sams_filter1(tmap_map_sams_t *sams, int32_t aln_output_mode, int32_t al
           tmap_map_sams_realloc(sams, j);
       }
   }
-  else if(TMAP_MAP_UTIL_ALN_MODE_ALL_BEST == aln_output_mode) {
+  else if(TMAP_MAP_OPT_ALN_MODE_ALL_BEST == aln_output_mode) {
       // do nothing
   }
   else {
@@ -1728,8 +810,8 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
 
   // sort by strand/chr/pos/score
   tmap_sort_introsort(tmap_map_sam_sort_coord, sams->n, sams->sams);
-  softclip_start = (TMAP_MAP_UTIL_SOFT_CLIP_LEFT == opt->softclip_type || TMAP_MAP_UTIL_SOFT_CLIP_ALL == opt->softclip_type) ? 1 : 0;
-  softclip_end = (TMAP_MAP_UTIL_SOFT_CLIP_RIGHT == opt->softclip_type || TMAP_MAP_UTIL_SOFT_CLIP_ALL == opt->softclip_type) ? 1 : 0;
+  softclip_start = (TMAP_MAP_OPT_SOFT_CLIP_LEFT == opt->softclip_type || TMAP_MAP_OPT_SOFT_CLIP_ALL == opt->softclip_type) ? 1 : 0;
+  softclip_end = (TMAP_MAP_OPT_SOFT_CLIP_RIGHT == opt->softclip_type || TMAP_MAP_OPT_SOFT_CLIP_ALL == opt->softclip_type) ? 1 : 0;
 
   // initialize opt
   vsw_opt = tmap_vsw_opt_init(opt->score_match, opt->pen_mm, opt->pen_gapo, opt->pen_gape, opt->score_thr);
@@ -1793,7 +875,6 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       // update the query sequence
       query = (uint8_t*)tmap_seq_get_bases(seqs[strand])->s;
       qlen = tmap_seq_get_bases(seqs[strand])->l;
-
 
       // add in band width
       // one-based
@@ -2109,8 +1190,8 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
 
   // sort by strand/chr/pos/score
   tmap_sort_introsort(tmap_map_sam_sort_coord, sams->n, sams->sams);
-  softclip_start = (TMAP_MAP_UTIL_SOFT_CLIP_LEFT == opt->softclip_type || TMAP_MAP_UTIL_SOFT_CLIP_ALL == opt->softclip_type) ? 1 : 0;
-  softclip_end = (TMAP_MAP_UTIL_SOFT_CLIP_RIGHT == opt->softclip_type || TMAP_MAP_UTIL_SOFT_CLIP_ALL == opt->softclip_type) ? 1 : 0;
+  softclip_start = (TMAP_MAP_OPT_SOFT_CLIP_LEFT == opt->softclip_type || TMAP_MAP_OPT_SOFT_CLIP_ALL == opt->softclip_type) ? 1 : 0;
+  softclip_end = (TMAP_MAP_OPT_SOFT_CLIP_RIGHT == opt->softclip_type || TMAP_MAP_OPT_SOFT_CLIP_ALL == opt->softclip_type) ? 1 : 0;
   
   // initialize opt
   vsw_opt = tmap_vsw_opt_init(opt->score_match, opt->pen_mm, opt->pen_gapo, opt->pen_gape, opt->score_thr);
@@ -2381,8 +1462,120 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
   return sams_tmp;
 }
 
-// TODO: use the flow signals from the sff or SAM/BAM...
-// NB: if seq is an SFF, it will have its key sequence
+#define _tmap_map_util_sw_aux_path_adjust(_p, _ql, _tl) do { \
+    (_p).i = _tl - (_p).i + 1; \
+    (_p).j = _ql - (_p).j + 1; \
+} while(0) \
+
+int32_t 
+tmap_map_util_sw_aux(tmap_map_sam_t *sam,
+                 uint8_t *target, int32_t target_length,
+                 uint8_t *query, int32_t query_length,
+                 uint32_t seqid, uint32_t pos,
+                 tmap_sw_param_t *par, tmap_sw_path_t *path, int32_t *path_len,
+                 int32_t score_thr, int32_t softclip_type, int32_t strand)
+{
+  int32_t i, score, score_subo;
+
+  if(1 == strand) { // reverse, but do not compliment, since we want consistent behavior on the nucleotides
+      tmap_reverse_int(query, query_length);
+      tmap_reverse_int(target, target_length);
+  }
+
+  /*
+  fprintf(stderr, "strand=%d\n", strand);
+  for(i=0;i<query_length;i++)
+    fputc("ACGTN"[query[i]], stderr);
+  fputc('\n', stderr);
+  for(i=0;i<target_length;i++)
+    fputc("ACGTN"[target[i]], stderr);
+  fputc('\n', stderr);
+  */
+
+  switch(softclip_type) {
+    case TMAP_MAP_OPT_SOFT_CLIP_ALL:
+      //fprintf(stderr, "TMAP_MAP_OPT_SOFT_CLIP_ALL\n");
+      score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 1, 1, path, path_len, strand);
+      break;
+    case TMAP_MAP_OPT_SOFT_CLIP_LEFT:
+      score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 1, 0, path, path_len, strand);
+      break;
+    case TMAP_MAP_OPT_SOFT_CLIP_RIGHT:
+      score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 0, 1, path, path_len, strand);
+      break;
+    case TMAP_MAP_OPT_SOFT_CLIP_NONE:
+    default:
+      score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 0, 0, path, path_len, strand);
+      break;
+  }
+  score_subo = sam->score_subo;
+
+  if(0 < (*path_len) && score_thr < score) {
+
+      if(1 == strand) { // reverse compliment 
+          // adjust path
+          // TODO
+
+          // reverse the path and adjust its values
+          for(i=0;i<(*path_len)>>1;i++) {
+              // reverse
+              tmap_sw_path_t tmp= path[i];
+              path[i] = path[(*path_len)-i-1];
+              path[(*path_len)-i-1] = tmp;
+              // adjust 
+              _tmap_map_util_sw_aux_path_adjust(path[i], query_length, target_length);
+              _tmap_map_util_sw_aux_path_adjust(path[(*path_len)-i-1], query_length, target_length);
+          }
+          if(1 == ((*path_len) & 1)) {
+              _tmap_map_util_sw_aux_path_adjust(path[i], query_length, target_length);
+          }
+      }
+
+      sam->strand = strand;
+      sam->seqid = seqid;
+      sam->pos = pos + (path[(*path_len)-1].i-1); // zero-based 
+      if(0 == strand && path[(*path_len)-1].ctype == TMAP_SW_FROM_I) {
+          sam->pos++;
+      }
+      sam->score = score;
+      sam->score_subo = score_subo;
+      sam->cigar = tmap_sw_path2cigar(path, (*path_len), &sam->n_cigar);
+
+      if(0 == sam->n_cigar) {
+          tmap_error("bug encountered", Exit, OutOfRange);
+      }
+
+      // add soft clipping 
+      if(1 < path[(*path_len)-1].j) {
+          // soft clip the front of the read
+          sam->cigar = tmap_realloc(sam->cigar, sizeof(uint32_t)*(1+sam->n_cigar), "sam->cigar");
+          for(i=sam->n_cigar-1;0<=i;i--) { // shift up
+              sam->cigar[i+1] = sam->cigar[i];
+          }
+          TMAP_SW_CIGAR_STORE(sam->cigar[0], BAM_CSOFT_CLIP, path[(*path_len)-1].j-1);
+          sam->n_cigar++;
+      }
+      if(path[0].j < query_length) {
+          // soft clip the end of the read
+          sam->cigar = tmap_realloc(sam->cigar, sizeof(uint32_t)*(1+sam->n_cigar), "sam->cigar");
+          TMAP_SW_CIGAR_STORE(sam->cigar[sam->n_cigar], BAM_CSOFT_CLIP, query_length - path[0].j);
+          sam->n_cigar++;
+      }
+  }
+  else {
+      sam->score = INT32_MIN;
+      sam->cigar = NULL;
+      sam->n_cigar = 0;
+      (*path_len) = 0;
+  }
+  if(1 == strand) { // reverse back
+      tmap_reverse_int(query, query_length);
+      tmap_reverse_int(target, target_length);
+  }
+  return (0 == sam->n_cigar) ? 0 : 1;
+}
+
+// TODO: make sure the "longest" read alignment is found
 void
 tmap_map_util_fsw(tmap_fsw_flowseq_t *fseq, tmap_seq_t *seq, 
                   uint8_t *flow_order, int32_t flow_order_len,
@@ -2407,7 +1600,7 @@ tmap_map_util_fsw(tmap_fsw_flowseq_t *fseq, tmap_seq_t *seq,
   // generate the alignment parameters
   param.matrix = matrix;
   param.band_width = 0;
-  param.offset = TMAP_MAP_UTIL_FSW_OFFSET; // this sets the hp difference
+  param.offset = TMAP_MAP_OPT_FSW_OFFSET; // this sets the hp difference
   __tmap_fsw_gen_ap1(param, score_match, pen_mm, pen_gapo, pen_gape, fscore);
 
   // get flow sequence 
@@ -2520,20 +1713,21 @@ tmap_map_util_fsw(tmap_fsw_flowseq_t *fseq, tmap_seq_t *seq,
       // re-align
       s->ascore = s->score;
       path_len = path_mem;
+      //fprintf(stderr, "old score=%d\n", s->score);
       switch(softclip_type) {
-        case TMAP_MAP_UTIL_SOFT_CLIP_ALL:
+        case TMAP_MAP_OPT_SOFT_CLIP_ALL:
           s->score = tmap_fsw_clipping_core(target, target_len, fseq, &param, 
                                             1, 1, path, &path_len);
           break;
-        case TMAP_MAP_UTIL_SOFT_CLIP_LEFT:
+        case TMAP_MAP_OPT_SOFT_CLIP_LEFT:
           s->score = tmap_fsw_clipping_core(target, target_len, fseq, &param, 
                                             1, 0, path, &path_len);
           break;
-        case TMAP_MAP_UTIL_SOFT_CLIP_RIGHT:
+        case TMAP_MAP_OPT_SOFT_CLIP_RIGHT:
           s->score = tmap_fsw_clipping_core(target, target_len, fseq, &param, 
                                             0, 1, path, &path_len);
           break;
-        case TMAP_MAP_UTIL_SOFT_CLIP_NONE:
+        case TMAP_MAP_OPT_SOFT_CLIP_NONE:
           s->score = tmap_fsw_clipping_core(target, target_len, fseq, &param, 
                                             0, 0, path, &path_len);
           break;

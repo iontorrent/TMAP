@@ -11,7 +11,8 @@ typedef struct {
     uint32_t k; /*!< the lower SA interval */
     uint32_t l; /*!< the upper SA interval */
     uint16_t start; /*!< the # of bases from the start of the read (0-based) */
-    int16_t offset; /*!< the # of bases inserted or deleted from the read */
+    int8_t n_diff; /*!< the # of bases inserted or deleted from the read */
+    uint8_t seed_step; /*!< the # of steps used in the seed */
 } tmap_map3_aux_seed_t;
 
 /*!

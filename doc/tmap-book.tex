@@ -31,7 +31,7 @@ urlcolor=myurlcolor     % color of external links
 % TODO check all options are present
 
 % Version number
-\newcommand{\Version}{0.0.32}
+\newcommand{\Version}{0.1.1}
 
 % layout
 \setlength\topmargin{0in}
@@ -123,51 +123,58 @@ The output of these commands also write to the standard output stream.
 This facilitates the use of these TMAP commands in a pipe-and-filter model.
 
 \subsection{Global Options}
-\subsubsection{\TT{-f FILE}}
+\subsubsection{\TT{-f,--fn-fasta FILE}}
 Specifies the file name of the reference genome in FASTA format.
 The maximum number of bases in the reference genome can be $4294967295$, due to the use of 32-bit values to represent each position in the reference.
 
-\subsubsection{\TT{-r FILE}}
+\subsubsection{\TT{-r,--fn-reads FILE}}
 Specifies the file name of the reads to mapped.
 The input reads can be in FASTA, FASTQ, or SFF format.
 
-\subsubsection{\TT{-F STRING}}
+\subsubsection{\TT{-i,--reads-format STRING}}
 Specifies the file format of the reads file.
 Without this option, the format is auto-recognized by the file extension.
 The valid inputs are \TT{fa} or \TT{fasta} for FASTA, \TT {fq} or \TT{fastq} for FASTQ, or \TT{sff} for SFF.
 If compiled with SAMTools support, the option also supports \TT{sam} for SAM, or \TT{bam} for BAM.
 
-\subsubsection{\TT{-0 FILE}}
+\subsubsection{\TT{-s,--fn-sam FILE}}
 Specifies the file name of the output file SAM format.
 If this is not specified, the output will be written to stdout.
 
-\subsubsection{\TT{-A INT}}
+\subsubsection{\TT{-A,--score-match INT}}
 Specifies the match score.
 This number must always be positive.
 
-\subsubsection{\TT{-M INT}}
+\subsubsection{\TT{-M,--pen-mismatch INT}}
 Specifies the mismatch penalty.
 This number must always be positive.
 
-\subsubsection{\TT{-O INT}}
+\subsubsection{\TT{-O,--pen-gap-open INT}}
 Specifies the gap open penalty.
 This number must always be positive.
 
 See \autoref{sec:indel-scoring} for more information how insertions and deletions are scored.
-\subsubsection{\TT{-E INT}}
+\subsubsection{\TT{-E,--pen-gap-extension INT}}
 Specifies the gap extension penalty.
 This number must always be positive.
 See \autoref{sec:indel-scoring} for more information how insertions and deletions are scored.
 
-\subsubsection{\TT{-X INT}}
+\subsubsection{\TT{-X,--pen-flow-error INT}}
 Specifies the flow score penalty.
 This number must always be positive.
 
-\subsubsection{\TT{-w INT}}
+
+\subsubsection{\TT{-F,--flow-order STRING}}
+Specifies the flow order ([ACGT]{4+} or ``file'' to obtain it from the input file.
+
+\subsubsection{\TT{-K,--key-sequence STRING}}
+Specifies the key sequence ([ACGT]{4+} or ``file'' to obtain it from the input file.
+
+\subsubsection{\TT{-w,--band,width INT}}
 Specifies the band width for local alignment.
 This number must always be positive.
 
-\subsubsection{\TT{-g INT}}
+\subsubsection{\TT{-g,--softclip-type INT}}
 Specifies that the type of soft-clipping to perform.
 \begin{enumerate}
 	\setcounter{enumi}{-1} % start at zero
@@ -177,22 +184,25 @@ Specifies that the type of soft-clipping to perform.
 	\item do not soft-clip any portion of the read
 \end{enumerate}
 
-\subsubsection{\TT{-y}}
+\subsubsection{\TT{-y,--softclip-key}}
 Specifies to soft clip only the last base of the key when using an SFF as input.
 
-\subsubsection{\TT{-W INT}}
+\subsubsection{\TT{-W,--duplicate-window INT}}
 Specifies to remove duplicate mappings that occur within this bp window.
 
-\subsubsection{\TT{-B INT}}
+\subsubsection{\TT{-B,--max-seed-band INT}}
 Specifies the window in bases in which to group seeds.
 
-\subsubsection{\TT{-q INT}}
+\subsubsection{\TT{-T,--score-thres INT}}
+Specifies the number of multiples of the match score (\TT{-A}) for the minimum scoring threshold.
+
+\subsubsection{\TT{-q,--reads-queue-size INT}}
 Specifies the number of reads to cache or load into memory at one time.
 
-\subsubsection{\TT{-n INT}}
+\subsubsection{\TT{-n,--num-threads INT}}
 Specifies the number of threads to run.
 
-\subsubsection{\TT{-a INT}}
+\subsubsection{\TT{-a,--aln-output-mode INT}}
 Specifies the output filter for the mappings.
 \begin{enumerate}
 	\setcounter{enumi}{-1} % start at zero
@@ -204,43 +214,43 @@ Specifies the output filter for the mappings.
 \end{enumerate}
 Reads that have no mapping are returned as unmapped reads.
 
-\subsubsection{\TT{-R STRING}}
+\subsubsection{\TT{-R,--sam-read-group STRING}}
 Specifies the RG (read group) line to use in the SAM file (with tab separators).
 The ``PG'', ``FO'', and ``KS'' tags should not be specified in this string; they will be added by tmap.
 Alternatively, multiple \TT{-R} options can also be used to populate the RG line. 
 For example, \TT{-R CN:SEQUENCING\_CENTER -R PG:TMAP -R PL:IONTORRENT} will populate the \TT{CN}, \TT{PG}, and \TT{PL} tags in the RG record.
 
-\subsubsection{\TT{-Y}}
+\subsubsection{\TT{-Y,--sam-sff-tags}}
 Specifies that SFF specific tags should be added to the output SAM file.
 
-\subsubsection{\TT{-G}}
+\subsubsection{\TT{-G,--remove-sff-clipping}}
 Specifies to not remove bases and qualities based on the adapter and quality clipping fields found in the an input SFF file.
 
-\subsubsection{\TT{-j}, \TT{-z}}
+\subsubsection{\TT{-j,--input-bz2}, \TT{-z,--input-gz}}
 Specifies that the input is bzip2 (\TT{-j}) or gzip (\TT{-z}) compressed.
 This is auto-recognized if the input file name has the extension \TT{.bz2} for bzip2 and \TT{.gz} for gzip.
 
-\subsubsection{\TT{-J}, \TT{-Z}}
+\subsubsection{\TT{-J,--output-bz2}, \TT{-Z,--output-gz}}
 Specifies that the output should be bzip2 (\TT{-J}) or gzip (\TT{-Z}) compressed.
 
-\subsubsection{\TT{-k INT}}
+\subsubsection{\TT{-k,--shared-memory-key INT}}
 Specifies the shared memory key if the reference index has been loaded into shared memory.
 
-\subsubsection{\TT{-v}}
+\subsubsection{\TT{-v,--verbose}}
 Specifies to print verbose progress messages, otherwise progress messages will be surpressed.
 
-\subsubsection{\TT{-h}}
+\subsubsection{\TT{-h,--help}}
 Specifies to print a help message, listing all available options.
 
-\subsubsection{\TT{-u INT}}
+\subsubsection{\TT{--min-seq-length INT}}
 Specifies the minimum sequence length to consider (inclusive).
 This is applied to each algorithm independently.
-Therefore, when using \TT{mapall}, we could specify a unique sequence length range (using \TT{-u} and \TT{-U}) each algorithm.
+Therefore, when using \TT{mapall}, we could specify a unique sequence length range (using \TT{---min-seq-length} and \TT{---max-seq-length}) each algorithm.
 
-\subsubsection{\TT{-U INT}}
+\subsubsection{\TT{--max-seq-length INT}}
 Specifies the maximum sequence length to consider (inclusive).
 This is applied to each algorithm independently.
-Therefore, when using \TT{mapall}, we could specify a unique sequence length range (using \TT{-u} and \TT{-U}) each algorithm.
+Therefore, when using \TT{mapall}, we could specify a unique sequence length range (using \TT{---min-seq-length} and \TT{---max-seq-length}) each algorithm.
 
 \section{tmap index}
 \label{sec:index}
@@ -292,49 +302,49 @@ See \autoref{sec:commonoptions} for common options that are in use in this comma
 
 \subsection{Usage}
 
-\subsubsection{\TT{-l INT}}
+\subsubsection{\TT{--seed-length INT}}
 Specifies the primary seed (k-mer) length; reads must be of at least this length.
 
-\subsubsection{\TT{-s INT}}
+\subsubsection{\TT{--seed-max-diff INT}}
 Specifies the maximum number of edits allowed in the primary seed.
 This includes both mismatches and each base in an insertion or deletion. 
 
-\subsubsection{\TT{-L INT}}
+\subsubsection{\TT{--seed2-length INT}}
 Specifies the secondary seed (k-mer) length; this number of bases will be examimed before extending all mappings.
 
-\subsubsection{\TT{-p NUM}}
-Specified the maximum number of edits or false-negative probability assuming the maximum error rate (\TT{-P}).
+\subsubsection{\TT{--max-diff NUM}}
+Specified the maximum number of edits or false-negative probability assuming the maximum error rate (\TT{--max-error-rate}).
 This former includes both mismatches and each base in an insertion or deletion. 
 The latter false-negative probability is the probability of not consideing the correct mapping if it exists. 
 
-\subsubsection{\TT{-P NUM}}
+\subsubsection{\TT{--max-error-rate NUM}}
 Specified the assumed maximum per-base error rate.
 This classifies both mismatches and each base in an insertion or deletion as errors 
 
-\subsubsection{\TT{-m NUM}}
+\subsubsection{\TT{--max-mismatches NUM}}
 Specifies the maximum number of mismatches allowed, or the fraction of mismatches with respect to the read length.
 When the secondary seed is enabled, this parameter is relative to the secondary seed length, not the read length;
 
-\subsubsection{\TT{-o NUM}}
+\subsubsection{\TT{--max-gap-opens NUM}}
 Specifies the maximum number of indels allowed in the mapping, or the fraction of indels with respect to the read length.
 The number of indels is equal to the number of gap opens.
 When the secondary seed is enabled, this parameter is relative to the secondary seed length, not the read length;
 
-\subsubsection{\TT{-e NUM}}
+\subsubsection{\TT{--max-gap-extensions NUM}}
 Specifies the maximum number of indel extensions allowed in the mapping, or the fraction of indel extensionswith respect to the read length.
 The number of indel extensions is equal to the number of gap extensions.
 When the secondary seed is enabled, this parameter is relative to the secondary seed length, not the read length;
 
-\subsubsection{\TT{-d INT}}
+\subsubsection{\TT{--max-cals-deletion INT}}
 Specifies the maximum number of candidate alignment locations (CALs) to allow a deletion to be extended.
 
-\subsubsection{\TT{-i INT}}
+\subsubsection{\TT{--indel-ends-bound INT}}
 Specifies to disallow indels within this number of bases from the ends of the read.
 
-\subsubsection{\TT{-b INT}}
+\subsubsection{\TT{--max-best-cals INT}}
 Specifies to stop searching for mappings when this many best scoring mappings have been found.
 
-\subsubsection{\TT{-Q INT}}
+\subsubsection{\TT{--max-nodes INT}}
 Specifies the maximum number of alignment nodes in memory in the implicite prefix trie traversal before the search is stopped.
 
 \section{tmap map2}
@@ -346,24 +356,18 @@ See \autoref{sec:commonoptions} for common options that are in use in this comma
 
 \subsection{Usage}
 
-\subsubsection{\TT{-c FLOAT}}
+\subsubsection{\TT{--length-coef FLOAT}}
 Specifies the coefficient to adjust the mapping score threshold based on the read length.
 Given a $l$-long read, the threshold for a mapping to be retained is $a*max\{T,c*log(l)\}$, where $a$ is the match score (\TT{-A}) and $T$ is the minimum score threshold (\TT{-T}).
 
-\subsubsection{\TT{-w INT}}
-Specifies the band width in the banded local alignment.
+\subsubsection{\TT{--max-seed-intv INT}}
+Specifies the maximum seed interval size (mappings) to retain at during extension of the seed.
 
-\subsubsection{\TT{-T INT}}
-Specifies the number of multiples of the match score (\TT{-A}) for the minimum scoring threshold.
+\subsubsection{\TT{--z-best INT}}
+Specifies the maximum number of top-scoring nodes to keep on each iteration.
 
-\subsubsection{\TT{-S INT}}
+\subsubsection{\TT{--seeds-rev INT}}
 Specifies the maximum seeding interval size for extending a mapping.
-
-\subsubsection{\TT{-b INT}}
-Specifies the number of mappings to retain at during extension of the seed.
-
-\subsubsection{\TT{-N INT}}
-Specifies the number seeds supporting the given mapping needed to skip the reverse alignment.
 
 \section{tmap map3}
 \label{sec:map3}
@@ -374,24 +378,22 @@ See \autoref{sec:commonoptions} for common options that are in use in this comma
 
 \subsection{Usage}
 
-\subsubsection{\TT{-l INT}}
+\subsubsection{\TT{--seed-length INT}}
 Specifies the $k$-mer length to seed candidate alignment locations (CALs).
 With a value of $-1$ will set the seed length to $\left(ceiling(log_4(R)) + 2\right)$ where $R$ is the reference genome length.
 
-\subsubsection{\TT{-S INT}}
+\subsubsection{\TT{--max-seed-hits INT}}
 Specifies the maximum number of CALs allowed to be returned by a seed before it is ignored.
 
-\subsubsection{\TT{-w INT}}
-Specifies the band width in the banded local alignment.
-
-\subsubsection{\TT{-T INT}}
-Specifies the number of multiples of the match score (\TT{-A}) for the minimum scoring threshold.
-
-\subsubsection{\TT{-H INT}}
+\subsubsection{\TT{--hp-diff INT}}
 Specifies the number of bases to enumerate for a single homopolymer within the seed.
 
-\subsubsection{\TT{-V FLOAT}}
-Specifies the fraction of seed positions that are under the maximum (\TT{-S}).
+\subsubsection{\TT{--hit-frac FLOAT}}
+Specifies the fraction of seed positions that are under the maximum (\TT{--max-seed-hits}).
+
+\subsubsection{\TT{--seed-step INT}}
+Specifies the number of bases to increase the seed while repetitive (-1 to disable).
+
 \section{tmap mapvsw}
 \label{sec:mapvsw}
 The \BF{mapvsw} is a command to map sequences to a reference genome.
@@ -427,24 +429,24 @@ The options specific to this algorithm should be specified directly thereafter.
 The order of the specified algorithms does not matter, only the case (upper versus lower) in determining which algorithm is applied at which stage.
 
 An example would be:\\
-\TT{tmap mapall -f ref.fasta -r reads.fastq -g -M 3 map1 -l 12 -s 4 MAP2 -b 5 MAP3 -S 10}.\\
-In this case, the \TT{map1} algorithm will be applied with the options \TT{-l 12 -s 4 -M 3} in the first stage.
-If no mapping is found for a read, the \TT{map2} algorithm with the options \TT{-b 5 -g -M 3} and the \TT{map3} algorithm with the options \TT{-g -M 3 -S 10} will be applied in the second stage.
-Notice how the global options \TT{-g -M 3} are applied to all the algorithms where applicable.
+\TT{tmap mapall -f ref.fasta -r reads.fastq -g 1 -M 3 map1 --seed-length 12 --seed-max-diff 4 MAP2 --z-best 5 MAP3 --max-seed-hits 10}.\\
+In this case, the \TT{map1} algorithm will be applied with the options \TT{-g 1 -M 3 --seed-length 12 --seed-max-diff 4} in the first stage.
+If no mapping is found for a read, the \TT{map2} algorithm with the options \TT{-g 1 -M 3 --z-best 5} and the \TT{map3} algorithm with the options \TT{-g 1 -M 3 --max-seed-hits 10} will be applied in the second stage.
+Notice how the global options \TT{-g 1 -M 3} are applied to all the algorithms where applicable.
 It is possible to have a given algorithm run in both stages with different options.
 
 \subsection{Usage}
-\subsubsection{\TT{-I}}
+\subsubsection{\TT{--staged-aln-output-mode-ind}}
 Specifies to apply the output filter (\TT{-a}) and duplicate removal (\TT{-W}) separately for each algorithm.
 This is useful for comparing the mappings across all the algorithms.
 
-\subsubsection{\TT{-C INT}}
+\subsubsection{\TT{--staged-score-thres INT}}
 Specifies the number of multiples of the match score (\TT{-A}) for the minimum scoring threshold for the first stage.
 An alignment is filtered in the first stage if it has an alignment score less than this threshold, and there are algorithms in the second stage.
-\subsubsection{\TT{-D INT}}
+\subsubsection{\TT{--staged-mapq-thres INT}}
 Specifies the mapping quality threshold for the first stage.
 An alignment is filtered in the first stage if it has a mapping quality less than this threshold, and there are algorithms in the second stage.
-\subsubsection{\TT{-K}}
+\subsubsection{\TT{--staged-keep-all}}
 Specifies not to keep mappings from the first stage for the second stage.
 If this option is not given, the mappings from the first stage are added to any mappings from the second stage as candidates.
 
@@ -488,7 +490,6 @@ Specifies to load the forward suffix array.
 
 \subsubsection{\TT{-S}}
 Specifies to load the reverse suffix array.
-
 
 \chapter{File Formats}
 

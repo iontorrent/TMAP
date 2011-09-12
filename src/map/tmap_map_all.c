@@ -53,7 +53,7 @@ tmap_map_all_sams_merge_helper(tmap_map_sams_t *dest, tmap_map_sams_t *src, int3
   for(i=0;i<src->n;i++) {
       // nullify
       tmap_map_sam_copy_and_nullify(&dest->sams[i+n], &src->sams[i]);
-      if(1 < stage) {
+      if(0 < stage) {
           // copy over the stage #
           dest->sams[i+n].algo_stage = stage;
       }
@@ -126,7 +126,7 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
   
   // generate the cigars
   sams = tmap_map_util_sw_gen_cigar(refseq, sams, seq, opt);
-
+  
   return sams;
 
 }
@@ -402,7 +402,7 @@ tmap_map_all_core(tmap_map_opt_t *opt)
     (opt_map_other)->score_thr = (opt_map_all)->score_thr; \
     (opt_map_other)->reads_queue_size = (opt_map_all)->reads_queue_size; \
     (opt_map_other)->num_threads = (opt_map_all)->num_threads; \
-    (opt_map_other)->aln_output_mode = TMAP_MAP_UTIL_ALN_MODE_ALL; \
+    (opt_map_other)->aln_output_mode = TMAP_MAP_OPT_ALN_MODE_ALL; \
     (opt_map_other)->sam_rg = tmap_strdup((opt_map_all)->sam_rg); \
     (opt_map_other)->sam_sff_tags = (opt_map_all)->sam_sff_tags; \
     (opt_map_other)->input_compr = (opt_map_all)->input_compr; \

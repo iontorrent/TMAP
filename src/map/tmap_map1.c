@@ -54,7 +54,7 @@ tmap_map1_print_max_diff(tmap_map_opt_t *opt, int32_t stage)
   int32_t i, k, l;
 
   // initialize
-  for(i=0;i<=TMAP_MAP_UTIL_MAX_DIFF_READ_LENGTH;i++) {
+  for(i=0;i<=TMAP_MAP_OPT_MAX_DIFF_READ_LENGTH;i++) {
       opt->max_diff_table[i] = 0;
   }
 
@@ -62,7 +62,7 @@ tmap_map1_print_max_diff(tmap_map_opt_t *opt, int32_t stage)
       if(0 < stage) tmap_progress_print("calculating maximum differences in map1 for stage %d", stage);
       else tmap_progress_print("calculating maximum differences in map1");
 
-      for(i = 17, k = 0;i <= TMAP_MAP_UTIL_MAX_DIFF_READ_LENGTH;i++) {
+      for(i = 17, k = 0;i <= TMAP_MAP_OPT_MAX_DIFF_READ_LENGTH;i++) {
           l = tmap_map1_cal_maxdiff(i, opt->max_err_rate, opt->max_diff_fnr);
           if(l != k ) {
               tmap_progress_print("%dbp reads will have at most %d differences", i, l);
@@ -72,7 +72,7 @@ tmap_map1_print_max_diff(tmap_map_opt_t *opt, int32_t stage)
       }
   }
   else {
-      for(i=0;i <= TMAP_MAP_UTIL_MAX_DIFF_READ_LENGTH;i++) {
+      for(i=0;i <= TMAP_MAP_OPT_MAX_DIFF_READ_LENGTH;i++) {
           opt->max_diff_table[i] = opt->max_diff;
       }
   }

@@ -18,8 +18,14 @@ tmap_map3_aux_seed_add(tmap_map3_aux_seed_t **seeds,
                        int32_t k,
                        int32_t l,
                        int32_t start, 
-                       int32_t offset)
+                       int32_t n_diff,
+                       int32_t seed_step)
 {
+  /*
+  if(offset < INT8_MIN || INT8_MAX < offset) {
+      tmap_error("offset for hp enumeration was out of range", Warn, OutOfRange);
+  }
+  */
   if((*m_seeds) <= (*n_seeds)) {
       (*m_seeds) = (0 == (*m_seeds)) ? 64 : ((*m_seeds) << 1);
       (*seeds) = tmap_realloc((*seeds), sizeof(tmap_map3_aux_seed_t)*(*m_seeds), "(*seeds)");
@@ -27,7 +33,8 @@ tmap_map3_aux_seed_add(tmap_map3_aux_seed_t **seeds,
   (*seeds)[(*n_seeds)].k = k;
   (*seeds)[(*n_seeds)].l = l;
   (*seeds)[(*n_seeds)].start = start;
-  (*seeds)[(*n_seeds)].offset = offset;
+  (*seeds)[(*n_seeds)].n_diff = n_diff;
+  (*seeds)[(*n_seeds)].seed_step = seed_step;
   (*n_seeds)++;
 }
 
@@ -98,7 +105,7 @@ tmap_map3_aux_core_seed_helper(uint8_t *query,
               tmp_sa = next_sa;
               if(0 < tmap_bwt_match_exact_alt(bwt, bases_to_align, query + i + n_bases, &tmp_sa)
                  && (tmp_sa.l - tmp_sa.k + 1) <= opt->max_seed_hits) {
-                  tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, tmp_sa.k, tmp_sa.l, offset, n_bases-k);
+                  tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, tmp_sa.k, tmp_sa.l, offset, n_bases-k, 0);
               }
           }
 
@@ -122,7 +129,7 @@ tmap_map3_aux_core_seed_helper(uint8_t *query,
               // match exactly from here onwards
               if(0 < tmap_bwt_match_exact_alt(bwt, seed_length - (i - offset) - n_bases, query + i + n_bases, &tmp_sa)
                  && (tmp_sa.l - tmp_sa.k + 1) <= opt->max_seed_hits) {
-                  tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, tmp_sa.k, tmp_sa.l, offset, k);
+                  tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, tmp_sa.k, tmp_sa.l, offset, k, 0);
               }
               // move to the next
               cur_sa = tmp_sa;
@@ -139,7 +146,7 @@ tmap_map3_aux_core_seed_helper(uint8_t *query,
 
   // add in the seed with no hp indels
   if((next_sa.l - next_sa.k + 1) <= opt->max_seed_hits) {
-      tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, next_sa.k, next_sa.l, offset, 0);
+      tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, next_sa.k, next_sa.l, offset, 0, 0);
   }
 }
 
@@ -154,7 +161,8 @@ tmap_map3_aux_core_seed(uint8_t *query,
                         tmap_map3_aux_seed_t **seeds,
                         int32_t *n_seeds,
                         int32_t *m_seeds,
-                        int32_t seed_length)
+                        int32_t seed_length,
+                        int32_t seed_step)
 {
   int32_t i, j, flow_i;
 
@@ -193,8 +201,22 @@ tmap_map3_aux_core_seed(uint8_t *query,
           if(0 < tmap_bwt_match_exact(bwt, seed_length, query + i, &cur_sa)) {
               count++;
               if((cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
-                  tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, 0);
+                  tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, 0, 0);
                   j++;
+              }
+              else {
+                  // seed stepping
+                  if(0 < seed_step) {
+                      int32_t k = i + seed_length;
+                      int32_t n = 0;
+                      while(k + seed_step < query_length && 0 < tmap_bwt_match_exact(bwt, seed_step, query + k, &cur_sa)) {
+                          if((cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
+                              tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, 0, n);
+                          }
+                          k += seed_step;
+                          n++;
+                      }
+                  }
               }
           }
           else {
@@ -203,6 +225,7 @@ tmap_map3_aux_core_seed(uint8_t *query,
           }
       }
       // remove seeds if there were too many repetitive hits
+      // NB: does not count seed steps
       if(j / (double)count < opt->hit_frac) {
           (*n_seeds) -= j;
       }
@@ -268,7 +291,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
   // init
   sams = tmap_map_sams_init(NULL);
 
-  // update the seed length
+  // update the seed length based on the read length
   seed_length = opt->seed_length;
   if(0 == opt->seed_length_set) {
       i = tmap_seq_get_bases(seq[0])->l;
@@ -293,15 +316,28 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
       seq_len[i] = bases->l;
       query = (uint8_t*)bases->s;
 
-      // pre-allocate mmemory
       n_seeds[i] = 0;
-      m_seeds[i] = seq_len[i] - seed_length + 1; // maximum number of seeds possible
+      // pre-allocate mmemory
+      if(0 < opt->seed_step) {
+          m_seeds[i] = 0;
+          int32_t k;
+          for(j=seed_length,k=0;j<=seq_len[i];j+=opt->seed_step,k++) {
+              if(UINT8_MAX < k) {
+                  tmap_error("seed step out of range", Warn, OutOfRange);
+                  break;
+              }
+              m_seeds[i] += seq_len[i] - j + 1; // maximum number of seeds possible
+          }
+      }
+      else {
+          m_seeds[i] = seq_len[i] - seed_length + 1; // maximum number of seeds possible
+      }
       seeds[i] = tmap_malloc(m_seeds[i]*sizeof(tmap_map3_aux_seed_t), "seeds[i]");
 
       // seed the alignment
       tmap_map3_aux_core_seed(query, seq_len[i], flow[i],
                               refseq, bwt, sa, opt, &seeds[i], &n_seeds[i], &m_seeds[i],
-                              seed_length);
+                              seed_length, opt->seed_step);
 
       // for SAM storage
       for(j=0;j<n_seeds[i];j++) {
@@ -317,6 +353,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
       for(j=0;j<n_seeds[i];j++) { // go through all seeds
           uint32_t seqid, pos;
           uint32_t k, pacpos;
+          uint8_t seed_length_ext = seed_length + (seeds[i][j].seed_step * opt->seed_length);
           for(k=seeds[i][j].k;k<=seeds[i][j].l;k++) { // through all occurrences
               tmap_map_sam_t *s = NULL;
               pacpos = tmap_sa_pac_pos(sa, bwt, k);
@@ -335,11 +372,11 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
                       pos = 0;
                   }
                   else {
-                      if(pos < seed_length + seeds[i][j].offset - 1 ) {
+                      if(pos < seed_length_ext + seeds[i][j].n_diff - 1 ) {
                           pos = 0;
                       }
                       else {
-                          pos -= seed_length + seeds[i][j].offset - 1;
+                          pos -= seed_length_ext + seeds[i][j].n_diff - 1;
                       }
                   }
 
