@@ -60,6 +60,7 @@ tmap_map_driver_get_flow_info(tmap_seq_t *seq, tmap_map_opt_t *opt,
                               uint8_t **key_seq, int32_t *key_seq_len)
 {
   int32_t i;
+  static int32_t warned = 0;
 
   // NB: SAM/BAM could be supported, but is not yet
   if(1 == opt->flow_order_use_file) {
@@ -101,7 +102,10 @@ tmap_map_driver_get_flow_info(tmap_seq_t *seq, tmap_map_opt_t *opt,
       return tmap_fsw_flowseq_init(NULL, 0, NULL, NULL, 0, 0, 0);
   }
   else if(0 != (*flow_order_len) && 0 == (*key_seq_len)) {
-      tmap_error("the flow order was specified but not the key sequence", Warn, OutOfRange);
+      if(0 == warned) {
+          tmap_error("the flow order was specified but not the key sequence", Warn, OutOfRange);
+      }
+      warned++;
       return tmap_fsw_flowseq_init(NULL, 0, NULL, NULL, 0, 0, 0);
   }
   else if(0 == (*flow_order_len) && 0 != (*key_seq_len)) {
