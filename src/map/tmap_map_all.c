@@ -421,8 +421,11 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   opt_type = opt_type_next = TMAP_MAP_ALGO_NONE;
   opt_stage = opt_stage_next = 0;
   opt->num_stages = 0;
-  while(i<argc) {
-      if(0 == strcmp("map1", argv[i])) {
+  while(i<=argc) {
+      if(i == argc) { 
+          // do nothing
+      }
+      else if(0 == strcmp("map1", argv[i])) {
           opt_type_next = TMAP_MAP_ALGO_MAP1;
           opt->algos[0] |= opt_type_next;
           opt_stage_next = 1;
@@ -477,11 +480,8 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
          */
 
       if(opt_type != opt_type_next
-         || i == argc-1) {
-          if(i == argc-1) {
-              i++;
-          }
-          optind=1; // needed for getopt
+         || i == argc) {
+          optind=1; // needed for getopt_long
           switch(opt_type) {
             case TMAP_MAP_ALGO_NONE:
               // parse common options
@@ -535,9 +535,9 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           start = i;
       }
       i++;
-      if(argc < i) {
-          i = argc;
-      }
+  }
+  if(argc < i) {
+      i = argc;
   }
   optind = i;
   

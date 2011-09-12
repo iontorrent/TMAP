@@ -946,6 +946,14 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   char *getopt_format = "A:B:E:F:GJK:M:O:R:T:W:X:YZa:f:g:hi:jk:n:q:r:s:vw:yz";
   struct option *options = NULL;
 
+  // set options passed in
+  opt->argc = argc; opt->argv = argv;
+  
+  if(argc == optind) {
+      // no need to parse
+      return 1;
+  }
+
   // allocate
   options = tmap_calloc(1, sizeof(struct option) * opt->options->n, "options");
 
@@ -953,8 +961,6 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   for(i=0;i<opt->options->n;i++) {
       options[i] = opt->options->options[i].option; 
   }
-
-  opt->argc = argc; opt->argv = argv;
 
   // check algorithm
   switch(opt->algo_id) {
