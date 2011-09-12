@@ -464,13 +464,13 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            TMAP_MAP_ALGO_GLOBAL);
   tmap_map_opt_options_add(opt->options, "sam-sff-tags", no_argument, 0, 'Y', 
                            TMAP_MAP_OPT_TYPE_NONE,
-                           "do not remove SFF clipping",
+                           "include SFF specific SAM tags",
                            NULL,
                            tmap_map_opt_option_print_func_sam_sff_tags,
                            TMAP_MAP_ALGO_GLOBAL);
   tmap_map_opt_options_add(opt->options, "remove-sff-clipping", no_argument, 0, 'G', 
                            TMAP_MAP_OPT_TYPE_NONE,
-                           "include SFF specific SAM tags",
+                           "do not remove SFF clipping",
                            NULL,
                            tmap_map_opt_option_print_func_remove_sff_clipping,
                            TMAP_MAP_ALGO_GLOBAL);
