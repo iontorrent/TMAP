@@ -168,6 +168,10 @@ extern char tmap_iupac_int_to_char[17];
 #define tmap_roundup32(x) (--(x), (x)|=(x)>>1, (x)|=(x)>>2, (x)|=(x)>>4, (x)|=(x)>>8, (x)|=(x)>>16, ++(x))
 #endif
 
+// debug functions
+#define tmap_print_debug_int(_name) (fprintf(stderr, #_name "=%d\n", (_name)))
+#define tmap_print_debug_string(_name) (fprintf(stderr, #_name "=%s\n", (_name)))
+
 /*!
   @param  reads_format  the reads format
   @return               the sequence format (for tmap_seq_t)
