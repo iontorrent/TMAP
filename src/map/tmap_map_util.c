@@ -1462,119 +1462,6 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
   return sams_tmp;
 }
 
-#define _tmap_map_util_sw_aux_path_adjust(_p, _ql, _tl) do { \
-    (_p).i = _tl - (_p).i + 1; \
-    (_p).j = _ql - (_p).j + 1; \
-} while(0) \
-
-int32_t 
-tmap_map_util_sw_aux(tmap_map_sam_t *sam,
-                 uint8_t *target, int32_t target_length,
-                 uint8_t *query, int32_t query_length,
-                 uint32_t seqid, uint32_t pos,
-                 tmap_sw_param_t *par, tmap_sw_path_t *path, int32_t *path_len,
-                 int32_t score_thr, int32_t softclip_type, int32_t strand)
-{
-  int32_t i, score, score_subo;
-
-  if(1 == strand) { // reverse, but do not compliment, since we want consistent behavior on the nucleotides
-      tmap_reverse_int(query, query_length);
-      tmap_reverse_int(target, target_length);
-  }
-
-  /*
-  fprintf(stderr, "strand=%d\n", strand);
-  for(i=0;i<query_length;i++)
-    fputc("ACGTN"[query[i]], stderr);
-  fputc('\n', stderr);
-  for(i=0;i<target_length;i++)
-    fputc("ACGTN"[target[i]], stderr);
-  fputc('\n', stderr);
-  */
-
-  switch(softclip_type) {
-    case TMAP_MAP_OPT_SOFT_CLIP_ALL:
-      //fprintf(stderr, "TMAP_MAP_OPT_SOFT_CLIP_ALL\n");
-      score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 1, 1, path, path_len, strand);
-      break;
-    case TMAP_MAP_OPT_SOFT_CLIP_LEFT:
-      score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 1, 0, path, path_len, strand);
-      break;
-    case TMAP_MAP_OPT_SOFT_CLIP_RIGHT:
-      score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 0, 1, path, path_len, strand);
-      break;
-    case TMAP_MAP_OPT_SOFT_CLIP_NONE:
-    default:
-      score = tmap_sw_clipping_core(target, target_length, query, query_length, par, 0, 0, path, path_len, strand);
-      break;
-  }
-  score_subo = sam->score_subo;
-
-  if(0 < (*path_len) && score_thr < score) {
-
-      if(1 == strand) { // reverse compliment 
-          // adjust path
-          // TODO
-
-          // reverse the path and adjust its values
-          for(i=0;i<(*path_len)>>1;i++) {
-              // reverse
-              tmap_sw_path_t tmp= path[i];
-              path[i] = path[(*path_len)-i-1];
-              path[(*path_len)-i-1] = tmp;
-              // adjust 
-              _tmap_map_util_sw_aux_path_adjust(path[i], query_length, target_length);
-              _tmap_map_util_sw_aux_path_adjust(path[(*path_len)-i-1], query_length, target_length);
-          }
-          if(1 == ((*path_len) & 1)) {
-              _tmap_map_util_sw_aux_path_adjust(path[i], query_length, target_length);
-          }
-      }
-
-      sam->strand = strand;
-      sam->seqid = seqid;
-      sam->pos = pos + (path[(*path_len)-1].i-1); // zero-based 
-      if(0 == strand && path[(*path_len)-1].ctype == TMAP_SW_FROM_I) {
-          sam->pos++;
-      }
-      sam->score = score;
-      sam->score_subo = score_subo;
-      sam->cigar = tmap_sw_path2cigar(path, (*path_len), &sam->n_cigar);
-
-      if(0 == sam->n_cigar) {
-          tmap_error("bug encountered", Exit, OutOfRange);
-      }
-
-      // add soft clipping 
-      if(1 < path[(*path_len)-1].j) {
-          // soft clip the front of the read
-          sam->cigar = tmap_realloc(sam->cigar, sizeof(uint32_t)*(1+sam->n_cigar), "sam->cigar");
-          for(i=sam->n_cigar-1;0<=i;i--) { // shift up
-              sam->cigar[i+1] = sam->cigar[i];
-          }
-          TMAP_SW_CIGAR_STORE(sam->cigar[0], BAM_CSOFT_CLIP, path[(*path_len)-1].j-1);
-          sam->n_cigar++;
-      }
-      if(path[0].j < query_length) {
-          // soft clip the end of the read
-          sam->cigar = tmap_realloc(sam->cigar, sizeof(uint32_t)*(1+sam->n_cigar), "sam->cigar");
-          TMAP_SW_CIGAR_STORE(sam->cigar[sam->n_cigar], BAM_CSOFT_CLIP, query_length - path[0].j);
-          sam->n_cigar++;
-      }
-  }
-  else {
-      sam->score = INT32_MIN;
-      sam->cigar = NULL;
-      sam->n_cigar = 0;
-      (*path_len) = 0;
-  }
-  if(1 == strand) { // reverse back
-      tmap_reverse_int(query, query_length);
-      tmap_reverse_int(target, target_length);
-  }
-  return (0 == sam->n_cigar) ? 0 : 1;
-}
-
 // TODO: make sure the "longest" read alignment is found
 void
 tmap_map_util_fsw(tmap_fsw_flowseq_t *fseq, tmap_seq_t *seq, 
@@ -1588,6 +1475,7 @@ tmap_map_util_fsw(tmap_fsw_flowseq_t *fseq, tmap_seq_t *seq,
   int32_t i, j, k, l;
   uint8_t *target = NULL;
   int32_t target_mem = 0, target_len = 0;
+  int32_t was_int = 1;
 
   tmap_fsw_path_t *path = NULL;
   int32_t path_mem = 0, path_len = 0;
@@ -1602,6 +1490,11 @@ tmap_map_util_fsw(tmap_fsw_flowseq_t *fseq, tmap_seq_t *seq,
   param.band_width = 0;
   param.offset = TMAP_MAP_OPT_FSW_OFFSET; // this sets the hp difference
   __tmap_fsw_gen_ap1(param, score_match, pen_mm, pen_gapo, pen_gape, fscore);
+
+  was_int = tmap_seq_is_int(seq);
+  if(0 == tmap_seq_is_int(seq)) {
+      tmap_seq_to_int(seq);
+  }
 
   // get flow sequence 
   fseq = tmap_fsw_flowseq_from_seq(fseq, seq, flow_order, flow_order_len, key_seq, key_seq_len);
@@ -1750,7 +1643,7 @@ tmap_map_util_fsw(tmap_fsw_flowseq_t *fseq, tmap_seq_t *seq,
           s->score = (int32_t)((s->score + 99.99)/100.0); 
 
           // position
-          s->pos = (ref_start-1);
+          s->pos = (ref_start-1); // zero-based
           // NB: must be careful of leading insertions and strandedness
           if(0 == s->strand) {
               if(0 <= path[path_len-1].j) { 
@@ -1769,7 +1662,7 @@ tmap_map_util_fsw(tmap_fsw_flowseq_t *fseq, tmap_seq_t *seq,
           // new cigar
           free(s->cigar);
           s->cigar = tmap_fsw_path2cigar(path, path_len, &s->n_cigar, 1);
-
+          
           // soft-clipping
           if(0 < path[path_len-1].i) { // skipped beginning flows
               // get the number of bases to clip
@@ -1798,31 +1691,13 @@ tmap_map_util_fsw(tmap_fsw_flowseq_t *fseq, tmap_seq_t *seq,
                   s->n_cigar++;
               }
           }
-
-          // reverse the cigar if on the reverse strand
-          if(1 == s->strand) {
-              for(i=0;i<s->n_cigar>>1;i++) {
-                  uint32_t c;
-                  c = s->cigar[i];
-                  s->cigar[i] = s->cigar[s->n_cigar-i-1];
-                  s->cigar[s->n_cigar-i-1] = c;
-              }
-          }
-      
-          s->target_len = 0;
-          for(j=0;j<s->n_cigar;j++) {
-              switch(TMAP_SW_CIGAR_OP(s->cigar[j])) {
-                case BAM_CMATCH:
-                case BAM_CDEL:
-                  s->target_len += TMAP_SW_CIGAR_LENGTH(s->cigar[j]);
-                  break;
-                default:
-                  break;
-              }
-          }
       }
   }
   // free
   free(target);
   free(path);
+
+  if(0 == was_int) {
+      tmap_seq_to_char(seq);
+  }
 }

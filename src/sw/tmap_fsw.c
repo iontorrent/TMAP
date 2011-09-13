@@ -435,7 +435,6 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
           // if base_call_diff < 0, add deletions (fewer read bases than reference bases)
           base_call_diff = base_call - base_calls[i-1];
           // starts with an insertion?
-          // TODO
           for(k=0;k<base_call;k++) {
               p->i = i-1;
               p->j = j-1;

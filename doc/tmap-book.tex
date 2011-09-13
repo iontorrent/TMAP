@@ -679,6 +679,49 @@ Using the local alignment and the scoring parameters to determine the soft-clipp
 
 For how soft-clipping is represented in SAM files, see the SAM specification for more details (\url{http://samtools.sourceforge.net/SAM1.pdf}).
 
+\section{What is flow space re-alignment}
+Re-alignment in flow space is possible with TMAP, and is turned on only when the flow order option is set (\TT{-F}).
+With normal Smith Waterman, errors in homopolymers are treated similarly to insertions and deletions (indels) that are from biological origins.
+Re-alignment in flow space allows TMAP to consider indels and errors in homopolymers differently than other insdels, even though the resultant base space alignment may be similar.
+
+For example, the following alignment (read on top) shows a one-base insertion of a G.
+This could be due to an error estimating the number of Gs from a specific flow, or a true biological difference/insertion.
+\begin{verbatim}
+TAGGACACCGGTCTGA
+|||||||||-||||||
+TAGGACACC-GTCTGA
+\end{verbatim}
+
+In the following example, we observe a mismatch/SNP difference in base space:
+\begin{verbatim}
+TAGGACACCGGTCTGA
+||||||||| ||||||
+TAGGACACCCGTCTGA
+\end{verbatim}
+This could be due to a biological difference/SNP, or due to an under-call of the C and an overcall of the adjacent G.
+In the latter case, an acceptable alignment may be:
+\begin{verbatim}
+TAGGACACC-GGTCTGA
+|||||||||--||||||
+TAGGACACCC-GTCTGA
+\end{verbatim}
+
+Finally, more complicated scenarios can arise, where flow space re-alignment may yield a more faithful alignment.
+In the following example, a base space alignment may be:
+\begin{verbatim}
+TCAT--AAATTTT
+||| --|||||||
+TCAATAAAATTTT
+\end{verbatim}
+A suitable flow space re-alignment would be:
+\begin{verbatim}
+TCA-T-AAATTTT
+|||-|-||||||
+TCAATAAAATTTT
+\end{verbatim}
+The first alignment may be prefered in base space due to the use of affine gap penalties (see \autoref{sec:indel-scoring}) and the other scoring parameters.
+If we penalize insertions or deletions due to homopolymer differences less than other insertions or deletions, the latter alignment may be more likely.
+Given Ion Torrent data, the latter may be more faithful to the underlying error mode.
 \chapter{Appendix}
 
 % References
@@ -686,5 +729,6 @@ For how soft-clipping is represented in SAM files, see the SAM specification for
 \addcontentsline{toc}{chapter}{References}
 \bibliography{tmap-book}
 \bibliographystyle{natbib}
+
 
 \end{document}

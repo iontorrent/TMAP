@@ -1410,8 +1410,8 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->bw, 0, INT32_MAX, "-w");
   tmap_error_cmd_check_int(opt->softclip_type, 0, 3, "-g");
   if(1 == opt->softclip_key) {
-      if(NULL == opt->key_seq && TMAP_READS_FORMAT_SFF != opt->reads_format) {
-          tmap_error("an SFF (-r) or the key sequence (-K) must be specified to use -y", Exit, CommandLineArgument);
+      if(NULL == opt->key_seq && 0 == opt->key_seq_use_file) {
+          tmap_error("the key sequence (-K) must be specified to use -y", Exit, CommandLineArgument);
       }
   }
   else {
