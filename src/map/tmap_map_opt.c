@@ -1273,10 +1273,10 @@ tmap_map_opt_file_check_with_null(char *fn1, char *fn2)
         tmap_error("option -X was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if(0 != tmap_map_opt_file_check_with_null((opt_map_other)->flow_order, (opt_map_all)->flow_order)) { \
-        tmap_error("option -x was specified outside of the common options", Exit, CommandLineArgument); \
+        tmap_error("option -F was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->flow_order_use_file != (opt_map_all)->flow_order_use_file) { \
-        tmap_error("option -x was specified outside of the common options", Exit, CommandLineArgument); \
+        tmap_error("option -F was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if(0 != tmap_map_opt_file_check_with_null((opt_map_other)->key_seq, (opt_map_all)->key_seq)) { \
         tmap_error("option -t was specified outside of the common options", Exit, CommandLineArgument); \
@@ -1347,13 +1347,13 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
           tmap_error("options -1 and -2 cannot be used with -Y", Exit, CommandLineArgument);
       }
       else if(1 == opt->flow_order_use_file) {
-          tmap_error("options -1 and -2 cannot be used with -x", Exit, CommandLineArgument);
+          tmap_error("options -1 and -2 cannot be used with -F", Exit, CommandLineArgument);
       }
       else if(1 == opt->key_seq_use_file) {
           tmap_error("options -1 and -2 cannot be used with -t", Exit, CommandLineArgument);
       }
       else if(NULL != opt->flow_order) {
-          tmap_error("options -1 and -2 cannot be used with -x", Exit, CommandLineArgument);
+          tmap_error("options -1 and -2 cannot be used with -F", Exit, CommandLineArgument);
       }
       else if(NULL != opt->key_seq) {
           tmap_error("options -1 and -2 cannot be used with -t", Exit, CommandLineArgument);
@@ -1369,9 +1369,9 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
   tmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
   if(NULL != opt->flow_order) {
-      if(0 == strcmp("sff", opt->flow_order) || 0 == strcmp("SFF", opt->flow_order)) {
+      if(0 == strcmp("file", opt->flow_order) || 0 == strcmp("FILE", opt->flow_order)) {
           if(TMAP_READS_FORMAT_SFF != opt->reads_format) {
-              tmap_error("an SFF was not specified (-r) but you want to use the sff flow order (-x)", Exit, CommandLineArgument);
+              tmap_error("an SFF was not specified (-r) but you want to use the sff flow order (-F)", Exit, CommandLineArgument);
           }
       }
       else {
@@ -1379,19 +1379,19 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
             case 0:
               break;
             case -1:
-              tmap_error("unrecognized DNA base (-x)", Exit, CommandLineArgument);
+              tmap_error("unrecognized DNA base (-F)", Exit, CommandLineArgument);
             case -2:
-              tmap_error("all DNA bases must be present at least once (-x)", Exit, CommandLineArgument);
+              tmap_error("all DNA bases must be present at least once (-F)", Exit, CommandLineArgument);
             default:
-              tmap_error("unrecognized error (-x)", Exit, CommandLineArgument);
+              tmap_error("unrecognized error (-F)", Exit, CommandLineArgument);
               break;
           }
       }
   }
   if(NULL != opt->key_seq) {
-      if(0 == strcmp("sff", opt->key_seq) || 0 == strcmp("SFF", opt->key_seq)) {
+      if(0 == strcmp("file", opt->key_seq) || 0 == strcmp("FILE", opt->key_seq)) {
           if(TMAP_READS_FORMAT_SFF != opt->reads_format) {
-              tmap_error("an SFF was not specified (-r) but you want to use the sff flow order (-t)", Exit, CommandLineArgument);
+              tmap_error("an SFF was not specified (-r) but you want to use the sff flow order (-K)", Exit, CommandLineArgument);
           }
       }
       else {
@@ -1399,10 +1399,10 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
             case 0:
               break;
             case -1:
-              tmap_error("unrecognized DNA base (-t)", Exit, CommandLineArgument); break;
+              tmap_error("unrecognized DNA base (-K)", Exit, CommandLineArgument); break;
               break;
             default:
-              tmap_error("unrecognized error (-t)", Exit, CommandLineArgument);
+              tmap_error("unrecognized error (-K)", Exit, CommandLineArgument);
               break;
           }
       }
@@ -1411,7 +1411,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->softclip_type, 0, 3, "-g");
   if(1 == opt->softclip_key) {
       if(NULL == opt->key_seq && TMAP_READS_FORMAT_SFF != opt->reads_format) {
-          tmap_error("an SFF (-r) or the key sequence (-t) must be specified to use -y", Exit, CommandLineArgument);
+          tmap_error("an SFF (-r) or the key sequence (-K) must be specified to use -y", Exit, CommandLineArgument);
       }
   }
   else {
