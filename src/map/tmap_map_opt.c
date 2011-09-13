@@ -194,7 +194,7 @@ tmap_map_opt_option_type_length(tmap_map_opt_option_t *opt)
 static void
 tmap_map_opt_option_print(tmap_map_opt_option_t *opt, tmap_map_opt_t *parent_opt)
 {
-  int32_t i, flag_length, type_length;
+  int32_t i, j, flag_length, type_length, length_to_description = 0;
   static char *spacer = "         ";
 
   flag_length = tmap_map_opt_option_flag_length(opt);
@@ -205,29 +205,29 @@ tmap_map_opt_option_print(tmap_map_opt_option_t *opt, tmap_map_opt_t *parent_opt
   }
 
   // spacer
-  tmap_file_fprintf(tmap_file_stderr, spacer);
+  length_to_description += tmap_file_fprintf(tmap_file_stderr, spacer);
   // short flag, if available
   if(0 < opt->option.val) {
-      tmap_file_fprintf(tmap_file_stderr, "-%c,", (char)opt->option.val);
+      length_to_description += tmap_file_fprintf(tmap_file_stderr, "-%c,", (char)opt->option.val);
   }
   // long flag
-  tmap_file_fprintf(tmap_file_stderr, "--%s", opt->option.name);
+  length_to_description += tmap_file_fprintf(tmap_file_stderr, "--%s", opt->option.name);
   if(NULL != parent_opt) {
       for(i=flag_length;i< parent_opt->options->max_flag_length;i++) {
-          tmap_file_fprintf(tmap_file_stderr, " ");
+          length_to_description += tmap_file_fprintf(tmap_file_stderr, " ");
       }
   }
-  tmap_file_fprintf(tmap_file_stderr, " ");
+  length_to_description += tmap_file_fprintf(tmap_file_stderr, " ");
   // type
-  tmap_file_fprintf(tmap_file_stderr, "%s",
+  length_to_description += tmap_file_fprintf(tmap_file_stderr, "%s",
                     (TMAP_MAP_OPT_TYPE_NONE == opt->type) ? "" : tmap_map_opt_input_types[opt->type]);
   if(NULL != parent_opt) {
       for(i=type_length;i<parent_opt->options->max_type_length;i++) {
-          tmap_file_fprintf(tmap_file_stderr, " ");
+          length_to_description += tmap_file_fprintf(tmap_file_stderr, " ");
       }
   }
   // spacer
-  tmap_file_fprintf(tmap_file_stderr, spacer);
+  length_to_description += tmap_file_fprintf(tmap_file_stderr, spacer);
   // description
   tmap_file_fprintf(tmap_file_stderr, "%s",
                     opt->description);
@@ -241,7 +241,9 @@ tmap_map_opt_option_print(tmap_map_opt_option_t *opt, tmap_map_opt_t *parent_opt
   if(NULL != opt->multi_options) {
       for(i=0;NULL != opt->multi_options[i];i++) {
           // spacers
-          tmap_file_fprintf(tmap_file_stderr, spacer);
+          for(j=0;j<length_to_description;j++) {
+              tmap_file_fprintf(tmap_file_stderr, " ");
+          }
           tmap_file_fprintf(tmap_file_stderr, spacer);
           tmap_file_fprintf(tmap_file_stderr, "%s\n", opt->multi_options[i]);
       }
