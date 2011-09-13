@@ -295,8 +295,8 @@ tmap_map_opt_options_add(tmap_map_opt_options_t *options, const char *name,
   }
 
   type_length = tmap_map_opt_option_type_length(&options->options[options->n]);
-  if(options->max_type_length < type) {
-      options->max_type_length = type;
+  if(options->max_type_length < type_length) {
+      options->max_type_length = type_length;
   }
 
   options->n++;
