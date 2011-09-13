@@ -178,10 +178,13 @@ tmap_sff_get_qualities(tmap_sff_t *sff);
   removes the key sequence and clipped sequence from the read and quality fields
   @param  sff              pointer to the structure to convert
   @param  remove_clipping  1 if we are to remove clipped sequence, 0 otherwise
+  @param  key_seq          the key sequence to enforce, NULL otherwise
+  @param  key_seq_len      the key sequence length, 0 otherwise
+  @return                  0 if the key sequence did not match, 1 otherwise 
   @details                 this will not modify the header
   */
-inline void
-tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping);
+int32_t
+tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping, uint8_t *key_seq, int32_t key_seq_len);
 
 /*!
   @param  sff        pointer to the structure to convert

@@ -81,7 +81,7 @@ tmap_map_driver_get_flow_info(tmap_seq_t *seq, tmap_map_opt_t *opt,
       (*flow_order_len) = 0;
   }
   if(1 == opt->key_seq_use_file) {
-      (*key_seq_len) = tmap_seq_get_key_seq_int(seq, key_seq); 
+      (*key_seq_len) = tmap_seq_get_key_seq_int(seq, key_seq);
       if(0 == (*key_seq_len)) {
           tmap_error("could not retrieve the key sequence from the input file", Exit, OutOfRange);
       }
@@ -147,9 +147,12 @@ tmap_map_driver_core_worker(int32_t num_ends, tmap_seq_t ***seq_buffer, tmap_map
               tmap_seq_t *seq = NULL;
 
               seq = seq_buffer[i][low];
-
+              
               // remove key sequence for seeding
-              tmap_seq_remove_key_sequence(seq, opt->remove_sff_clipping);
+              if(0 == tmap_seq_remove_key_sequence(seq, opt->remove_sff_clipping, key_seq, key_seq_len)) {
+                  // key sequence did not match
+                  continue;
+              }
 
               // map thread data,
               sams[i][low] = func_thread_map(&data, seq, refseq, bwt, sa, opt);

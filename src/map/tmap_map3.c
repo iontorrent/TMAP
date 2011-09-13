@@ -52,7 +52,6 @@ tmap_map3_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
   score_thr = opt->score_thr;
   score_match = opt->score_match;
 
-  // estimate mapping quality TODO: this needs to be refined
   best_score = INT32_MIN;
   best_subo = INT32_MIN;
   n_best = 0;

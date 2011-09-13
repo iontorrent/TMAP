@@ -14,7 +14,6 @@
   
 static char *tmap_map_opt_input_types[] = {"INT", "FLOAT", "NUM", "FILE", "STRING", "NONE"};
 
-// TODO: move to the header
 // int32_t print function
 #define __tmap_map_opt_option_print_func_int_init(_name) \
   static void tmap_map_opt_option_print_func_##_name(void *arg) { \
@@ -106,7 +105,7 @@ static char *tmap_map_opt_input_types[] = {"INT", "FLOAT", "NUM", "FILE", "STRIN
   }
 
 /*
- * Define the print functions for each opt
+ * Define the print functions for each opt.
  */
 // global options
 __tmap_map_opt_option_print_func_chars_init(fn_fasta, "not using")
@@ -192,7 +191,7 @@ tmap_map_opt_option_type_length(tmap_map_opt_option_t *opt)
   return type_length;
 }
           
-void
+static void
 tmap_map_opt_option_print(tmap_map_opt_option_t *opt, tmap_map_opt_t *parent_opt)
 {
   int32_t i, flag_length, type_length;
@@ -1252,10 +1251,10 @@ tmap_map_opt_file_check_with_null(char *fn1, char *fn2)
         } \
     } \
     if(0 != tmap_map_opt_file_check_with_null((opt_map_other)->fn_sam, (opt_map_all)->fn_sam)) { \
-        tmap_error("option -0 was specified outside of the common options", Exit, CommandLineArgument); \
+        tmap_error("option -s was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->reads_format != (opt_map_all)->reads_format) { \
-        tmap_error("option -F was specified outside of the common options", Exit, CommandLineArgument); \
+        tmap_error("option -i was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->score_match != (opt_map_all)->score_match) { \
         tmap_error("option -A was specified outside of the common options", Exit, CommandLineArgument); \
@@ -1279,10 +1278,10 @@ tmap_map_opt_file_check_with_null(char *fn1, char *fn2)
         tmap_error("option -F was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if(0 != tmap_map_opt_file_check_with_null((opt_map_other)->key_seq, (opt_map_all)->key_seq)) { \
-        tmap_error("option -t was specified outside of the common options", Exit, CommandLineArgument); \
+        tmap_error("option -K was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->key_seq_use_file != (opt_map_all)->key_seq_use_file) { \
-        tmap_error("option -t was specified outside of the common options", Exit, CommandLineArgument); \
+        tmap_error("option -K was specified outside of the common options", Exit, CommandLineArgument); \
     } \
     if((opt_map_other)->bw != (opt_map_all)->bw) { \
         tmap_error("option -w was specified outside of the common options", Exit, CommandLineArgument); \
@@ -1308,6 +1307,7 @@ tmap_map_opt_file_check_with_null(char *fn1, char *fn2)
     if((opt_map_other)->num_threads != (opt_map_all)->num_threads) { \
         tmap_error("option -n was specified outside of the common options", Exit, CommandLineArgument); \
     } \
+    /* NB: "aln_output_mode" or "-a" may be modified by mapall */ \
     if(0 != tmap_map_opt_file_check_with_null((opt_map_other)->sam_rg, (opt_map_all)->sam_rg)) { \
         tmap_error("option -R was specified outside of the common options", Exit, CommandLineArgument); \
     } \
@@ -1340,7 +1340,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       tmap_error("option -f and option -k may not be specified together", Exit, CommandLineArgument);
   }
   if(0 == opt->fn_reads_num && TMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
-      tmap_error("option -F or option -r must be specified", Exit, CommandLineArgument);
+      tmap_error("option -r or option -i must be specified", Exit, CommandLineArgument);
   }
   else if(1 < opt->fn_reads_num) {
       if(1 == opt->sam_sff_tags) {
@@ -1350,18 +1350,18 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
           tmap_error("options -1 and -2 cannot be used with -F", Exit, CommandLineArgument);
       }
       else if(1 == opt->key_seq_use_file) {
-          tmap_error("options -1 and -2 cannot be used with -t", Exit, CommandLineArgument);
+          tmap_error("options -1 and -2 cannot be used with -K", Exit, CommandLineArgument);
       }
       else if(NULL != opt->flow_order) {
           tmap_error("options -1 and -2 cannot be used with -F", Exit, CommandLineArgument);
       }
       else if(NULL != opt->key_seq) {
-          tmap_error("options -1 and -2 cannot be used with -t", Exit, CommandLineArgument);
+          tmap_error("options -1 and -2 cannot be used with -K", Exit, CommandLineArgument);
       }
       // OK
   }
   if(TMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
-      tmap_error("the reads format (-r) was unrecognized", Exit, CommandLineArgument);
+      tmap_error("the reads format (-r/-i) was unrecognized", Exit, CommandLineArgument);
   }
   tmap_error_cmd_check_int(opt->score_match, 0, INT32_MAX, "-A");
   tmap_error_cmd_check_int(opt->pen_mm, 0, INT32_MAX, "-M");
@@ -1391,7 +1391,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   if(NULL != opt->key_seq) {
       if(0 == strcmp("file", opt->key_seq) || 0 == strcmp("FILE", opt->key_seq)) {
           if(TMAP_READS_FORMAT_SFF != opt->reads_format) {
-              tmap_error("an SFF was not specified (-r) but you want to use the sff flow order (-K)", Exit, CommandLineArgument);
+              tmap_error("an SFF was not specified (-r) but you want to use the sff key sequence (-K)", Exit, CommandLineArgument);
           }
       }
       else {
@@ -1428,54 +1428,53 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
      && -1 == opt->reads_queue_size) {
       tmap_error("cannot buffer reads with bzip2 output (options \"-q 1 -J\")", Exit, OutOfRange);
   }
-  if(-1 != opt->min_seq_len) tmap_error_cmd_check_int(opt->min_seq_len, 1, INT32_MAX, "-u");
-  if(-1 != opt->max_seq_len) tmap_error_cmd_check_int(opt->max_seq_len, 1, INT32_MAX, "-U");
-  if(-1 != opt->min_seq_len && -1 != opt->max_seq_len &&
-     opt->max_seq_len < opt->min_seq_len) {
-      tmap_error("The minimum sequence length must be less than the maximum sequence length (-u and -U)", Exit, OutOfRange);
+  if(-1 != opt->min_seq_len) tmap_error_cmd_check_int(opt->min_seq_len, 1, INT32_MAX, "--min-seq-length");
+  if(-1 != opt->max_seq_len) tmap_error_cmd_check_int(opt->max_seq_len, 1, INT32_MAX, "--max-seq-length");
+  if(-1 != opt->min_seq_len && -1 != opt->max_seq_len && opt->max_seq_len < opt->min_seq_len) {
+      tmap_error("The minimum sequence length must be less than the maximum sequence length (--min-seq-length and --max-seq-length)", Exit, OutOfRange);
   }
 
   switch(opt->algo_id) {
-    case TMAP_MAP_ALGO_MAP1:
-      // map1 options
-      tmap_error_cmd_check_int((opt->max_diff_fnr < 0) ? opt->max_diff: (int32_t)opt->max_diff_fnr, 0, INT32_MAX, "-p");
-      tmap_error_cmd_check_int((int32_t)opt->max_err_rate, 0, INT32_MAX, "-P");
-      // this will take care of the case where they are both < 0
-      tmap_error_cmd_check_int((opt->max_mm_frac < 0) ? opt->max_mm : (int32_t)opt->max_mm_frac, 0, INT32_MAX, "-m");
-      // this will take care of the case where they are both < 0
-      tmap_error_cmd_check_int((opt->max_gapo_frac < 0) ? opt->max_gapo : (int32_t)opt->max_gapo_frac, 0, INT32_MAX, "-m");
-      // this will take care of the case where they are both < 0
-      tmap_error_cmd_check_int((opt->max_gape_frac < 0) ? opt->max_gape : (int32_t)opt->max_gape_frac, 0, INT32_MAX, "-m");
-      tmap_error_cmd_check_int(opt->max_cals_del, 1, INT32_MAX, "-d");
-      tmap_error_cmd_check_int(opt->indel_ends_bound, 0, INT32_MAX, "-i");
-      tmap_error_cmd_check_int(opt->max_best_cals, 0, INT32_MAX, "-b");
-      tmap_error_cmd_check_int(opt->max_entries, 1, INT32_MAX, "-Q");
-      if(-1 != opt->seed_length) tmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "-l");
-      if(-1 != opt->seed2_length) tmap_error_cmd_check_int(opt->seed2_length, 1, INT32_MAX, "-l");
+    case TMAP_MAP_ALGO_MAP1: // map1 options
+      if(-1 != opt->seed_length) tmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "--seed-length");
+      tmap_error_cmd_check_int(opt->seed_max_diff, 0, INT32_MAX, "--seed-max-diff");
+      if(-1 != opt->seed2_length) tmap_error_cmd_check_int(opt->seed2_length, 1, INT32_MAX, "--seed2-length");
       if(-1 != opt->seed_length && -1 != opt->seed2_length) {
-          tmap_error_cmd_check_int(opt->seed_length, 1, opt->seed2_length, "The secondary seed length (-L) must be less than the primary seed length (-l)");
+          tmap_error_cmd_check_int(opt->seed_length, 1, opt->seed2_length, "The secondary seed length (--seed2-length) must be less than the primary seed length (--seed-length)");
       }
+      tmap_error_cmd_check_int((opt->max_diff_fnr < 0) ? opt->max_diff: (int32_t)opt->max_diff_fnr, 0, INT32_MAX, "--max-diff");
+      tmap_error_cmd_check_int((int32_t)opt->max_err_rate, 0, INT32_MAX, "--max-error-rate");
+      // this will take care of the case where they are both < 0
+      tmap_error_cmd_check_int((opt->max_mm_frac < 0) ? opt->max_mm : (int32_t)opt->max_mm_frac, 0, INT32_MAX, "--max-mismatches");
+      // this will take care of the case where they are both < 0
+      tmap_error_cmd_check_int((opt->max_gapo_frac < 0) ? opt->max_gapo : (int32_t)opt->max_gapo_frac, 0, INT32_MAX, "--max-gap-opens");
+      // this will take care of the case where they are both < 0
+      tmap_error_cmd_check_int((opt->max_gape_frac < 0) ? opt->max_gape : (int32_t)opt->max_gape_frac, 0, INT32_MAX, "--max-gap-extensions");
+      tmap_error_cmd_check_int(opt->max_cals_del, 1, INT32_MAX, "--max-cals-deletion");
+      tmap_error_cmd_check_int(opt->indel_ends_bound, 0, INT32_MAX, "--indels-ends-bound");
+      tmap_error_cmd_check_int(opt->max_best_cals, 0, INT32_MAX, "--max-best-cals");
+      tmap_error_cmd_check_int(opt->max_entries, 1, INT32_MAX, "--max-nodes");
       break;
     case TMAP_MAP_ALGO_MAP2:
       //tmap_error_cmd_check_int(opt->mask_level, 0, 1, "-m");
-      tmap_error_cmd_check_int(opt->length_coef, 0, INT32_MAX, "-c");
-      tmap_error_cmd_check_int(opt->max_seed_intv, 0, INT32_MAX, "-S");
-      tmap_error_cmd_check_int(opt->z_best, 1, INT32_MAX, "-Z");
-      tmap_error_cmd_check_int(opt->seeds_rev, 0, INT32_MAX, "-N");
+      tmap_error_cmd_check_int(opt->length_coef, 0, INT32_MAX, "--length-coef");
+      tmap_error_cmd_check_int(opt->max_seed_intv, 0, INT32_MAX, "--max-seed-intv");
+      tmap_error_cmd_check_int(opt->z_best, 1, INT32_MAX, "--z-best");
+      tmap_error_cmd_check_int(opt->seeds_rev, 0, INT32_MAX, "--seeds-rev");
       break;
     case TMAP_MAP_ALGO_MAP3:
-      if(-1 != opt->seed_length) tmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "-l");
-      tmap_error_cmd_check_int(opt->max_seed_hits, 1, INT32_MAX, "-S");
-      tmap_error_cmd_check_int(opt->hp_diff, 0, INT32_MAX, "-H");
-      if(0 < opt->hp_diff && TMAP_SEQ_TYPE_SFF != opt->reads_format) tmap_error("-H option must be used with SFF only", Exit, OutOfRange); 
-      tmap_error_cmd_check_int(opt->seed_step, -1, INT32_MAX, "-c");
-      tmap_error_cmd_check_int(opt->hit_frac, 0, 1, "-Y");
+      if(-1 != opt->seed_length) tmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "--seed-length");
+      tmap_error_cmd_check_int(opt->max_seed_hits, 1, INT32_MAX, "--max-seed-hits");
+      tmap_error_cmd_check_int(opt->hp_diff, 0, INT32_MAX, "--hp-diff");
+      if(0 < opt->hp_diff && (NULL == opt->flow_order && 0 == opt->flow_order_use_file)) tmap_error("--hp-diff option requires a flow order from (-F) or file", Exit, OutOfRange); 
+      tmap_error_cmd_check_int(opt->hit_frac, 0, 1, "--hit-frac");
+      tmap_error_cmd_check_int(opt->seed_step, -1, INT32_MAX, "--seed-step");
       break;
     case TMAP_MAP_ALGO_MAPALL:
-      tmap_error_cmd_check_int(opt->aln_output_mode_ind, 0, 1, "-I");
-      tmap_error_cmd_check_int(opt->mapall_score_thr, INT32_MIN, INT32_MAX, "-C");
-      tmap_error_cmd_check_int(opt->mapall_mapq_thr, 0, 255, "-D");
-      tmap_error_cmd_check_int(opt->mapall_keep_all, 0, 1, "-K");
+      tmap_error_cmd_check_int(opt->aln_output_mode_ind, 0, 1, "--staged-aln-output-mode-ind");
+      tmap_error_cmd_check_int(opt->mapall_score_thr, INT32_MIN, INT32_MAX, "--staged-score-thres");
+      tmap_error_cmd_check_int(opt->mapall_mapq_thr, 0, 255, "--staged-mapq-thres");
+      tmap_error_cmd_check_int(opt->mapall_keep_all, 0, 1, "--staged-keep-all");
       if(0 == opt->algos[0] || 0 == opt->num_stages) {
           tmap_error("no algorithms given for stage 1", Exit, CommandLineArgument);
       }

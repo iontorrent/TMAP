@@ -277,11 +277,4 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt);
 void
 tmap_map_opt_check(tmap_map_opt_t *opt);
 
-/*!
-  @param  opt   pointer to the options
-  */
-void
-tmap_map_opt_print(tmap_map_opt_t *opt);
-
-
 #endif

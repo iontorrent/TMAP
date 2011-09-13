@@ -264,19 +264,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
   if(0 < opt->hp_diff) {
       // set up the flow order to be used
       if(NULL == flow_order) {
-          // try to use the sff
-          if(TMAP_SEQ_TYPE_SFF != seq[0]->type) {
-              tmap_error("bug encountered", Exit, OutOfRange);
-          }
-          else {
-              flow_order_len = seq[0]->data.sff->gheader->flow->l;
-              flow[0] = tmap_malloc(sizeof(uint8_t)*flow_order_len, "flow[0]");
-              flow[1] = tmap_malloc(sizeof(uint8_t)*flow_order_len, "flow[0]");
-              for(i=0;i<flow_order_len;i++) {
-                  flow[0][i] = tmap_nt_char_to_int[(int)seq[0]->data.sff->gheader->flow->s[i]]; // forward
-                  flow[0][flow_order_len-1-i] = 3 - tmap_nt_char_to_int[(int)seq[0]->data.sff->gheader->flow->s[i]]; // reverse compliment
-              }
-          }
+          tmap_error("bug encountered", Exit, OutOfRange);
       }
       else {
           flow[0] = tmap_malloc(sizeof(uint8_t)*flow_order_len, "flow[0]");

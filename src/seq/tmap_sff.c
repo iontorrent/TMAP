@@ -452,12 +452,31 @@ tmap_sff_get_qualities(tmap_sff_t *sff)
   return sff->read->quality;
 }
 
-inline void
-tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping)
+inline int32_t 
+tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping, uint8_t *key_seq, int32_t key_seq_len)
 {
-  int32_t i;
-
+  int32_t i, was_int;
   int32_t left, right; // zero-based
+  int32_t key_match = 1;
+
+  // check if the key sequence matches
+  if(NULL != key_seq && 0 < key_seq_len) {
+      was_int = 1;
+      if(0 == sff->is_int) {
+          was_int = 0;
+          tmap_sff_to_int(sff);
+      }
+      // NB: key_seq and sff must be in integer format
+      for(i=0;i<key_seq_len;i++) {
+          if(sff->read->bases->s[i] != key_seq[i]) {
+              key_match = 0;
+              break;
+          }
+      }
+      if(0 == was_int) {
+          tmap_sff_to_char(sff);
+      }
+  }
 
   if(1 == remove_clipping) {
       // left clipping
@@ -514,6 +533,8 @@ tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping)
       sff->read->bases->s[sff->read->bases->l] = '\0';
       sff->read->quality->s[sff->read->quality->l] = '\0';
   }
+
+  return key_match;
 }
 
 int32_t

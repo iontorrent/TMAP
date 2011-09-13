@@ -290,11 +290,11 @@ tmap_seq_get_qualities(tmap_seq_t *seq)
   return NULL;
 }
 
-inline void
-tmap_seq_remove_key_sequence(tmap_seq_t *seq, int32_t remove_clipping)
+inline int32_t
+tmap_seq_remove_key_sequence(tmap_seq_t *seq, int32_t remove_clipping, uint8_t *key_seq, int32_t key_seq_len)
 {
-  if(TMAP_SEQ_TYPE_SFF != seq->type) return; // ignore
-  tmap_sff_remove_key_sequence(seq->data.sff, remove_clipping);
+  if(TMAP_SEQ_TYPE_SFF != seq->type) return 1; // ignore
+  return tmap_sff_remove_key_sequence(seq->data.sff, remove_clipping, key_seq, key_seq_len);
 }
 
 tmap_seq_t *

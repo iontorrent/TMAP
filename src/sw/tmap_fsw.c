@@ -1158,6 +1158,7 @@ tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow
   tmap_string_t *bases = NULL;
   int32_t last_key_flow;
   int32_t to_fill = 0, was_int;
+  int32_t num_flows = 0;
 
   if(NULL == fs) {
       fs = tmap_calloc(1, sizeof(tmap_fsw_flowseq_t), "fs");
@@ -1173,16 +1174,22 @@ tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow
       tmap_seq_to_int(seq);
   }
 
-  // HERE
   /*
+  tmap_print_debug_int((int)bases->l);
   for(i=0;i<bases->l;i++) {
       fputc("ACGTN"[(int)bases->s[i]], stderr);
   }
   fputc('\n', stderr);
-  for(i=0;i<key_seq_len;i++) {
-      fputc("ACGTN"[(int)key_seq[i]], stderr);
+  for(i=0;i<flow_order_len;i++) {
+      fputc("ACGTN"[(int)flow_order[i]], stderr);
   }
   fputc('\n', stderr);
+  if(0 < key_seq_len) {
+      for(i=0;i<key_seq_len;i++) {
+          fputc("ACGTN"[(int)key_seq[i]], stderr);
+      }
+      fputc('\n', stderr);
+  }
   */
   
   // key bases
@@ -1217,6 +1224,7 @@ tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow
   }
 
   // flow order
+  // NB: shift based on the key sequence
   to_fill = 0;
   if(flow_order_len == fs->flow_order_len) {
       j = last_key_flow;
@@ -1241,34 +1249,34 @@ tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow
       fs->flow_order_len = flow_order_len;
   }
 
+  // find the flowgram length
+  i = num_flows = 0;
+  while(i < bases->l) {
+      while(bases->s[i] != fs->flow_order[num_flows % flow_order_len]) {
+          num_flows++;
+      }
+      while(i < bases->l && bases->s[i] == fs->flow_order[num_flows % flow_order_len]) {
+          i++;
+      }
+      num_flows++;
+  }
+
   // get flowgram
   // NB: the returned flowgram should always include the key sequence
   to_fill = 0;
   fs->num_flows = tmap_seq_get_flowgram(seq, &fs->flowgram, fs->mem);
   if(0 == fs->num_flows) { // unsuccessful
+      // will generate one from the base sequence
       to_fill = 1;
-      // make a flowgram from the base calls
-      // NB: bases should not include the key sequence
-
-      // find the flowgram length
-      i = fs->num_flows = 0;
-      while(i < bases->l) {
-          while(bases->s[i] != fs->flow_order[fs->num_flows % flow_order_len]) {
-              fs->num_flows++;
-          }
-          while(i < bases->l && bases->s[i] == fs->flow_order[fs->num_flows % flow_order_len]) {
-              i++;
-          }
-          fs->num_flows++;
-      }
       
       // flowgram
+      fs->num_flows = num_flows; 
       if(fs->mem < fs->num_flows) {
           fs->flowgram = tmap_calloc(fs->num_flows, sizeof(uint16_t), "flowgram");
       }
   }
   else if(0 < key_seq_len) {
-      // remove the key
+      // remove the key from the flowgram
       j = last_key_flow + 1;
       if(0 < fs->key_bases) {
           j--;
@@ -1277,6 +1285,19 @@ tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow
           fs->flowgram[i] = fs->flowgram[i+j];
       }
       fs->num_flows -= j;
+      // NB: we must remove ending flows that are not part of the base sequence
+      if(num_flows < fs->num_flows) {
+          fs->num_flows = num_flows;
+          fs->flowgram = tmap_realloc(fs->flowgram, sizeof(uint16_t) * fs->num_flows, "fs->flowgram");
+      }
+      else if(fs->num_flows < num_flows) {
+          tmap_print_debug_int(fs->num_flows);
+          tmap_print_debug_int(num_flows);
+          tmap_print_debug_int(j);
+          tmap_print_debug_string(tmap_seq_get_name(seq)->s);
+          tmap_print_debug_int(((int)tmap_seq_get_bases(seq)->l));
+          tmap_error("bug encountered", Exit, OutOfRange);
+      }
       // NB: do not include the key sequence in the key bases
   }
 

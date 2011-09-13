@@ -123,10 +123,13 @@ tmap_seq_get_qualities(tmap_seq_t *seq);
 /*! 
   @param                   seq  pointer to the structure to convert
   @param  remove_clipping  1 if we are to remove clipped sequence, 0 otherwise
+  @param  key_seq          the key sequence (integer format) to enforce, NULL otherwise
+  @param  key_seq_len      the key sequence length, 0 otherwise
+  @return                  0 if the key sequence did not match, 1 otherwise 
   @details                 this will not modify the header
   */
-void
-tmap_seq_remove_key_sequence(tmap_seq_t *seq, int32_t remove_clipping);
+int32_t
+tmap_seq_remove_key_sequence(tmap_seq_t *seq, int32_t remove_clipping, uint8_t *key_seq, int32_t key_seq_len);
 
 /*! 
   @param  seq  pointer to the structure to convert
