@@ -532,7 +532,7 @@ int32_t
 tmap_sff_get_key_seq_int(tmap_sff_t *sff, uint8_t **key_seq)
 {
   int32_t i;
-  int32_t key_seq_len = sff->gheader->flow->l;
+  int32_t key_seq_len = sff->gheader->key->l;
   (*key_seq) = tmap_malloc(sizeof(uint8_t) * key_seq_len, "key_seq");
   for(i=0;i<key_seq_len;i++) {
       (*key_seq)[i] = tmap_nt_char_to_int[(int)sff->gheader->key->s[i]];
