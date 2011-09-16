@@ -445,7 +445,7 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
           for(k=base_call_diff;k<0;k++) {
               p->i = i-1;
               p->j = j-1;
-              p->ctype = TMAP_FSW_FROM_I;
+              p->ctype = TMAP_FSW_FROM_D;
               p++;
               if(*path_len <= p - path) tmap_error("bug encountered", Exit, OutOfRange);
           }
