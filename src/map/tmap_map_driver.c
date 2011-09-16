@@ -194,7 +194,7 @@ tmap_map_driver_core_worker(int32_t num_ends, tmap_seq_t ***seq_buffer, tmap_map
                                         sams[i][low], refseq, 
                                         opt->bw, opt->softclip_type, opt->score_thr,
                                         opt->score_match, opt->pen_mm, opt->pen_gapo,
-                                        opt->pen_gape, opt->fscore);
+                                        opt->pen_gape, opt->fscore, 1-opt->ignore_flowgram);
                   }
 
                   // sort by alignment score

@@ -1470,7 +1470,7 @@ tmap_map_util_fsw(tmap_fsw_flowseq_t *fseq, tmap_seq_t *seq,
                   tmap_map_sams_t *sams, tmap_refseq_t *refseq,
                   int32_t bw, int32_t softclip_type, int32_t score_thr,
                   int32_t score_match, int32_t pen_mm, int32_t pen_gapo, 
-                  int32_t pen_gape, int32_t fscore)
+                  int32_t pen_gape, int32_t fscore, int32_t use_flowgram)
 {
   int32_t i, j, k, l;
   uint8_t *target = NULL;
@@ -1497,7 +1497,7 @@ tmap_map_util_fsw(tmap_fsw_flowseq_t *fseq, tmap_seq_t *seq,
   }
 
   // get flow sequence 
-  fseq = tmap_fsw_flowseq_from_seq(fseq, seq, flow_order, flow_order_len, key_seq, key_seq_len);
+  fseq = tmap_fsw_flowseq_from_seq(fseq, seq, flow_order, flow_order_len, key_seq, key_seq_len, use_flowgram);
 
   // go through each hit
   for(i=0;i<sams->n;i++) {
@@ -1610,19 +1610,19 @@ tmap_map_util_fsw(tmap_fsw_flowseq_t *fseq, tmap_seq_t *seq,
       switch(softclip_type) {
         case TMAP_MAP_OPT_SOFT_CLIP_ALL:
           s->score = tmap_fsw_clipping_core(target, target_len, fseq, &param, 
-                                            1, 1, path, &path_len);
+                                            1, 1, s->strand, path, &path_len);
           break;
         case TMAP_MAP_OPT_SOFT_CLIP_LEFT:
           s->score = tmap_fsw_clipping_core(target, target_len, fseq, &param, 
-                                            1, 0, path, &path_len);
+                                            1, 0, s->strand, path, &path_len);
           break;
         case TMAP_MAP_OPT_SOFT_CLIP_RIGHT:
           s->score = tmap_fsw_clipping_core(target, target_len, fseq, &param, 
-                                            0, 1, path, &path_len);
+                                            0, 1, s->strand, path, &path_len);
           break;
         case TMAP_MAP_OPT_SOFT_CLIP_NONE:
           s->score = tmap_fsw_clipping_core(target, target_len, fseq, &param, 
-                                            0, 0, path, &path_len);
+                                            0, 0, s->strand, path, &path_len);
           break;
         default:
           tmap_error("soft clipping type was not recognized", Exit, OutOfRange);
@@ -1659,37 +1659,53 @@ tmap_map_util_fsw(tmap_fsw_flowseq_t *fseq, tmap_seq_t *seq,
               tmap_error("bug encountered", Exit, OutOfRange);
           }
 
+
           // new cigar
           free(s->cigar);
           s->cigar = tmap_fsw_path2cigar(path, path_len, &s->n_cigar, 1);
+
+          // reverse the cigar
+          if(1 == s->strand) {
+              for(i=0;i<s->n_cigar>>1;i++) {
+                  uint32_t t = s->cigar[i];
+                  s->cigar[i] = s->cigar[s->n_cigar-i-1];
+                  s->cigar[s->n_cigar-i-1] = t;
+              }
+          }
+
+          int32_t skipped_start, skipped_end;
+          skipped_start = skipped_end = 0;
           
           // soft-clipping
           if(0 < path[path_len-1].i) { // skipped beginning flows
               // get the number of bases to clip
-              for(j=k=0;j<path[path_len-1].i;j++) {
-                  k += fseq->base_calls[j];
-              }
-              if(0 < k) { // bases should be soft-clipped
-                  s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*(1 + s->n_cigar), "s->cigar");
-                  for(l=s->n_cigar-1;0<=l;l--) {
-                      s->cigar[l+1] = s->cigar[l];
-                  }
-                  TMAP_SW_CIGAR_STORE(s->cigar[0], BAM_CSOFT_CLIP, k);
-                  s->n_cigar++;
+              for(j=0;j<path[path_len-1].i;j++) {
+                  skipped_start += fseq->base_calls[j];
               }
           }
-
-          // soft-clipping
           if(path[0].i+1 < fseq->num_flows) { // skipped ending flows
               // get the number of bases to clip 
-              for(j=path[0].i+1,k=0;j<fseq->num_flows;j++) {
-                  k += fseq->base_calls[j];
+              for(j=path[0].i+1;j<fseq->num_flows;j++) {
+                  skipped_end += fseq->base_calls[j];
               }
-              if(0 < k) { // bases should be soft-clipped
-                  s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*(1 + s->n_cigar), "s->cigar");
-                  s->cigar[s->n_cigar] = (k << 4) | 4;
-                  s->n_cigar++;
+          }
+          if(1 == s->strand) { // swap
+              k = skipped_start;
+              skipped_start = skipped_end;
+              skipped_end = k;
+          }
+          if(0 < skipped_start) { // start soft clip
+              s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*(1 + s->n_cigar), "s->cigar");
+              for(l=s->n_cigar-1;0<=l;l--) {
+                  s->cigar[l+1] = s->cigar[l];
               }
+              TMAP_SW_CIGAR_STORE(s->cigar[0], BAM_CSOFT_CLIP, skipped_start);
+              s->n_cigar++;
+          }
+          if(0 < skipped_end) { // end soft clip
+              s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*(1 + s->n_cigar), "s->cigar");
+              s->cigar[s->n_cigar] = (skipped_end << 4) | 4;
+              s->n_cigar++;
           }
       }
   }

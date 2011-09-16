@@ -71,8 +71,9 @@ enum {
     TMAP_MAP_ALGO_MAP1 = 0x1,  /*!< the map1 algorithm */
     TMAP_MAP_ALGO_MAP2 = 0x2,  /*!< the map2 algorithm */
     TMAP_MAP_ALGO_MAP3 = 0x4,  /*!< the map3 algorithm */
-    TMAP_MAP_ALGO_MAPVSW = 0x2000,  /*!< the mapvsw algorithm */
-    TMAP_MAP_ALGO_MAPALL = 0x4000, /*!< the mapall algorithm */
+    TMAP_MAP_ALGO_MAPVSW = 0x1000,  /*!< the mapvsw algorithm */
+    TMAP_MAP_ALGO_MAPALL = 0x2000, /*!< the mapall algorithm */
+    TMAP_MAP_ALGO_FLOWSPACE = 0x4000, /*!< flowspace options when printing parameters */
     TMAP_MAP_ALGO_GLOBAL = 0x8000, /*!< global options when printing parameters */
 };
 
@@ -160,14 +161,8 @@ typedef struct __tmap_map_opt_t {
     int32_t pen_mm;  /*!< the mismatch penalty (-M,--pen-mismatch) */
     int32_t pen_gapo;  /*!< the indel open penalty (-O,--pen-gap-open) */
     int32_t pen_gape;  /*!< the indel extension penalty (-E,--pen-gap-extension) */
-    int32_t fscore;  /*!< the flow score penalty (-X,--pen-flow-error) */
-    char *flow_order; /*!< the flow order (-F,--flow-order) */
-    int32_t flow_order_use_file; /*!< the flow order should be from the sff */
-    char *key_seq; /*!< the key sequence (-K,--key-sequence) */
-    int32_t key_seq_use_file; /*!< the key sequence should be from the sff */
     int32_t bw; /*!< the extra bases to add before and after the target during Smith-Waterman (-w,--band-width) */
     int32_t softclip_type; /*!< soft clip type (-g,--softclip-type) */
-    int32_t softclip_key; /*!< soft clip only the last base of the key (-y,--softclip-key) */
     int32_t dup_window; /*!< remove duplicate alignments from different algorithms within this bp window (-W,--duplicate-window) */
     int32_t max_seed_band; /*!< the band to group seeds (-B,--max-seed-band) */
     int32_t score_thr;  /*!< the score threshold (match-score-scaled) (-T,--score-thres) */
@@ -175,11 +170,20 @@ typedef struct __tmap_map_opt_t {
     int32_t num_threads;  /*!< the number of threads (-n,--num-threads) */
     int32_t aln_output_mode;  /*!< specifies how to choose alignments (-a,--aln-output-mode) */
     char *sam_rg;  /*!< specifies the RG line in the SAM header (-R,--sam-read-group) */
-    int32_t sam_sff_tags;  /*!< specifies to output SFF specific SAM tags (-Y,--sam-sff-tags) */
-    int32_t remove_sff_clipping; /*!< removes SFF clipping (-G,--remove-sff-clipping) */
     int32_t input_compr;  /*!< the input compression type (-j,--input-bz2 and -z,--input-gz) */
     int32_t output_compr;  /*!< the output compression type (-J,--output-bz2 and -Z,--output-gz) */
     key_t shm_key;  /*!< the shared memory key (-k,--shared-memory-key) */
+
+    // flowspace tags
+    int32_t fscore;  /*!< the flow score penalty (-X,--pen-flow-error) */
+    char *flow_order; /*!< the flow order (-F,--flow-order) */
+    int32_t flow_order_use_file; /*!< the flow order should be from the sff */
+    char *key_seq; /*!< the key sequence (-K,--key-sequence) */
+    int32_t key_seq_use_file; /*!< the key sequence should be from the sff */
+    int32_t softclip_key; /*!< soft clip only the last base of the key (-y,--softclip-key) */
+    int32_t sam_sff_tags;  /*!< specifies to output SFF specific SAM tags (-Y,--sam-sff-tags) */
+    int32_t ignore_flowgram;  /*!< specifies to ignore the flowgram if available (-S,--ignore-flowgram) */
+    int32_t remove_sff_clipping; /*!< removes SFF clipping (-G,--remove-sff-clipping) */
 
     // map1/map2/map3 options, but specific to each
     int32_t min_seq_len; /*< the minimum sequence length to examine (--min-seq-length) */
@@ -276,5 +280,13 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt);
   */
 void
 tmap_map_opt_check(tmap_map_opt_t *opt);
+
+/*!
+  Copies only the global parameters from src into opt
+  @param  opt_dest  the destination
+  @param  opt_src   the soure
+  */
+void
+tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src);
 
 #endif

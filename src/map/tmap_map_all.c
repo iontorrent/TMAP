@@ -374,42 +374,6 @@ tmap_map_all_core(tmap_map_opt_t *opt)
                        opt);
 }
 
-// for map1/map2/map3/mapvsw
-#define __tmap_map_all_opts_copy1(opt_map_all, opt_map_other) do { \
-    int _i; \
-    (opt_map_other)->fn_fasta = tmap_strdup((opt_map_all)->fn_fasta); \
-    (opt_map_other)->fn_reads_num = (opt_map_all)->fn_reads_num; \
-    (opt_map_other)->fn_reads = tmap_malloc(sizeof(char*)*(opt_map_other)->fn_reads_num, "(opt_map_other)->fn_reads"); \
-    for(_i=0;_i<(opt_map_other)->fn_reads_num;_i++) { \
-        (opt_map_other)->fn_reads[_i] = tmap_strdup((opt_map_all)->fn_reads[_i]); \
-    } \
-    (opt_map_other)->reads_format = (opt_map_all)->reads_format; \
-    (opt_map_other)->fn_sam = tmap_strdup((opt_map_all)->fn_sam); \
-    (opt_map_other)->score_match = (opt_map_all)->score_match; \
-    (opt_map_other)->pen_mm = (opt_map_all)->pen_mm; \
-    (opt_map_other)->pen_gapo = (opt_map_all)->pen_gapo; \
-    (opt_map_other)->pen_gape = (opt_map_all)->pen_gape; \
-    (opt_map_other)->fscore = (opt_map_all)->fscore; \
-    (opt_map_other)->flow_order = tmap_strdup((opt_map_all)->flow_order); \
-    (opt_map_other)->flow_order_use_file = (opt_map_all)->flow_order_use_file; \
-    (opt_map_other)->key_seq = tmap_strdup((opt_map_all)->key_seq); \
-    (opt_map_other)->key_seq_use_file = (opt_map_all)->key_seq_use_file; \
-    (opt_map_other)->bw = (opt_map_all)->bw; \
-    (opt_map_other)->softclip_type = (opt_map_all)->softclip_type; \
-    (opt_map_other)->softclip_key = (opt_map_all)->softclip_key; \
-    (opt_map_other)->dup_window = (opt_map_all)->dup_window; \
-    (opt_map_other)->max_seed_band = (opt_map_all)->max_seed_band; \
-    (opt_map_other)->score_thr = (opt_map_all)->score_thr; \
-    (opt_map_other)->reads_queue_size = (opt_map_all)->reads_queue_size; \
-    (opt_map_other)->num_threads = (opt_map_all)->num_threads; \
-    (opt_map_other)->aln_output_mode = TMAP_MAP_OPT_ALN_MODE_ALL; \
-    (opt_map_other)->sam_rg = tmap_strdup((opt_map_all)->sam_rg); \
-    (opt_map_other)->sam_sff_tags = (opt_map_all)->sam_sff_tags; \
-    (opt_map_other)->input_compr = (opt_map_all)->input_compr; \
-    (opt_map_other)->output_compr = (opt_map_all)->output_compr; \
-    (opt_map_other)->shm_key = (opt_map_all)->shm_key; \
-} while(0)
-
 int32_t
 tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
 {
@@ -490,10 +454,10 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
               }
               // copy over common values into the other opts
               for(j=0;j<2;j++) {
-                  __tmap_map_all_opts_copy1(opt, opt->opt_map1[j]);
-                  __tmap_map_all_opts_copy1(opt, opt->opt_map2[j]);
-                  __tmap_map_all_opts_copy1(opt, opt->opt_map3[j]);
-                  __tmap_map_all_opts_copy1(opt, opt->opt_map_vsw[j]);
+                  tmap_map_opt_copy_global(opt->opt_map1[j], opt);
+                  tmap_map_opt_copy_global(opt->opt_map2[j], opt);
+                  tmap_map_opt_copy_global(opt->opt_map3[j], opt);
+                  tmap_map_opt_copy_global(opt->opt_map_vsw[j], opt);
               }
               break;
             case TMAP_MAP_ALGO_MAP1:

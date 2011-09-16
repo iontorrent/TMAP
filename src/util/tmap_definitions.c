@@ -24,9 +24,9 @@ static char *algo_id_to_name[17] = {
     "dummy10",
     "dummy11",
     "dummy12",
-    "dummy13",
     "mapvsw",
     "mapall",
+    "flowspace options",
     "global options"
 };
 

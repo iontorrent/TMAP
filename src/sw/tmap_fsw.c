@@ -351,6 +351,7 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
                   const tmap_fsw_param_t *ap,
                   int32_t best_i, int32_t best_j, uint8_t best_ctype, 
                   int32_t flowseq_start_clip, int32_t flowseq_end_clip,
+                  int32_t right_j,
                   tmap_fsw_path_t *path, int32_t *path_len)
 {
   register int32_t i, j;
@@ -510,29 +511,61 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
           }
           */
 
-          k = j - 1; // for base_call_diff < 0
-          for(l=0;l<sub_path_len;l++) {
-              (*p) = sub_path[l]; // store p->j and p->ctype
-              p->i = i - 1; // same flow index
-              k = p->j; // for base_call_diff < 0
-
-              if(0 < base_call_diff // there are bases left that were inserted
-                 && TMAP_FSW_FROM_M == sub_path[l].ctype) { // delete a "match"
-                  // change the type to a deletion
-                  p->ctype = TMAP_FSW_FROM_HP_PLUS;
-                  base_call_diff--;
+          // correctly justify indels
+          if(1 == right_j) {
+              if(0 < base_call_diff) { // change beginning matches to insertions
+                  for(l=0;l<sub_path_len && 0 < base_call_diff;l++) {
+                      if(TMAP_FSW_FROM_M == sub_path[l].ctype) { // delete a "match"
+                          sub_path[l].ctype = TMAP_FSW_FROM_HP_PLUS;
+                          base_call_diff--;
+                      }
+                  }
               }
-
-              p++;
-              if(*path_len <= p - path) tmap_error("bug encountered", Exit, OutOfRange);
+              // add deletions before storing the path
+              while(base_call_diff < 0) { // there are bases left that were deleted
+                  p->ctype = TMAP_FSW_FROM_HP_MINUS; // add an insertion
+                  p->i = i - 1;
+                  p->j = j - 1; // is this correct ? 
+                  p++;
+                  if(*path_len <= p - path) tmap_error("bug encountered", Exit, OutOfRange);
+                  base_call_diff++;
+              }
+              for(l=0;l<sub_path_len;l++) {
+                  (*p) = sub_path[l]; // store p->j and p->ctype
+                  p->i = i - 1; // same flow index
+                  p++;
+                  if(*path_len <= p - path) tmap_error("bug encountered", Exit, OutOfRange);
+              }
           }
-          while(base_call_diff < 0) { // there are bases left that were deleted
-              p->ctype = TMAP_FSW_FROM_HP_MINUS; // add an insertion
-              p->i = i - 1;
-              p->j = j - 1; // is this correct ? 
-              p++;
-              if(*path_len <= p - path) tmap_error("bug encountered", Exit, OutOfRange);
-              base_call_diff++;
+          else {
+              if(0 < base_call_diff) { // change end matches to insertions
+                  for(l=sub_path_len-1;0<=l && 0 < base_call_diff;l--) {
+                      if(TMAP_FSW_FROM_M == sub_path[l].ctype) { // delete a "match"
+                          sub_path[l].ctype = TMAP_FSW_FROM_HP_PLUS;
+                          base_call_diff--;
+                      }
+                  }
+              }
+              k = j - 1; // for base_call_diff < 0
+              for(l=0;l<sub_path_len;l++) {
+                  (*p) = sub_path[l]; // store p->j and p->ctype
+                  p->i = i - 1; // same flow index
+                  k = p->j; // for base_call_diff < 0
+                  p++;
+                  if(*path_len <= p - path) tmap_error("bug encountered", Exit, OutOfRange);
+              }
+              // add deletions after storing the path
+              while(base_call_diff < 0) { // there are bases left that were deleted
+                  p->ctype = TMAP_FSW_FROM_HP_MINUS; // add an insertion
+                  p->i = i - 1;
+                  p->j = k; // is this correct ? 
+                  p++;
+                  if(*path_len <= p - path) tmap_error("bug encountered", Exit, OutOfRange);
+                  base_call_diff++;
+              }
+          }
+          if(0 != base_call_diff) {
+              tmap_error("bug encountered", Exit, OutOfRange);
           }
 
           // move the row and column (as necessary)
@@ -565,6 +598,7 @@ tmap_fsw_clipping_core(uint8_t *seq, int32_t len,
                     tmap_fsw_flowseq_t *flowseq,
                     const tmap_fsw_param_t *ap,
                     int32_t flowseq_start_clip, int32_t flowseq_end_clip,
+                    int32_t right_j,
                     tmap_fsw_path_t *path, int32_t *path_len)
 {
   register int32_t i, j;
@@ -752,6 +786,7 @@ tmap_fsw_clipping_core(uint8_t *seq, int32_t len,
                         ap, 
                         best_i, best_j, best_ctype, 
                         flowseq_start_clip, flowseq_end_clip,
+                        right_j,
                         path, path_len);
   }
 
@@ -837,20 +872,22 @@ int64_t
 tmap_fsw_extend_core(uint8_t *seq, int32_t len, 
                      tmap_fsw_flowseq_t *flowseq,
                      const tmap_fsw_param_t *ap,
+                     int32_t right_j,
                      tmap_fsw_path_t *path, int32_t *path_len, int32_t prev_score)
 {
   return prev_score + tmap_fsw_clipping_core(seq, len, flowseq,
-                             ap, 0, 1, path, path_len);
+                             ap, 0, 1, right_j, path, path_len);
 }
 
 int64_t
 tmap_fsw_extend_fitting_core(uint8_t *seq, int32_t len, 
                              tmap_fsw_flowseq_t *flowseq,
                              const tmap_fsw_param_t *ap,
+                             int32_t right_j,
                              tmap_fsw_path_t *path, int32_t *path_len, int32_t prev_score)
 {
   return prev_score + tmap_fsw_clipping_core(seq, len, flowseq,
-                             ap, 0, 0, path, path_len);
+                             ap, 0, 0, right_j, path, path_len);
 }
 
 static inline
@@ -1150,7 +1187,7 @@ tmap_fsw_print_aln(tmap_file_t *fp, int64_t score, tmap_fsw_path_t *path, int32_
 }
 
 tmap_fsw_flowseq_t *
-tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow_order, int32_t flow_order_len, uint8_t *key_seq, uint8_t key_seq_len)
+tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow_order, int32_t flow_order_len, uint8_t *key_seq, uint8_t key_seq_len, int32_t use_flowgram)
 {
 
   int32_t i, j;
@@ -1263,7 +1300,12 @@ tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow
   // get flowgram
   // NB: the returned flowgram should always include the key sequence
   to_fill = 0;
-  fs->num_flows = tmap_seq_get_flowgram(seq, &fs->flowgram, fs->mem);
+  if(1 == use_flowgram) {
+      fs->num_flows = tmap_seq_get_flowgram(seq, &fs->flowgram, fs->mem);
+  }
+  else {
+      fs->num_flows = 0;
+  }
   if(0 == fs->num_flows) { // unsuccessful
       // will generate one from the base sequence
       to_fill = 1;
@@ -1612,7 +1654,7 @@ int tmap_fsw_main(int argc, char *argv[])
   int64_t score = tmap_fsw_clipping_core((uint8_t*)opt->target, opt->target_length,
                                        flowseq,
                                        &opt->param,
-                                       0, 0,
+                                       0, 0, 0,
                                        path, &path_len);
 
   tmap_file_stdout = tmap_file_fdopen(fileno(stdout), "wb", TMAP_FILE_NO_COMPRESSION);

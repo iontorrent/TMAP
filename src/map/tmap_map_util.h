@@ -275,6 +275,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
   @param  pen_gapo       the gap open penalty
   @param  pen_gape       the gap extension penalty
   @param  fscore         the flow penalty
+  @param  use_flowgram   1 to use the flowgram if available, 0 otherwise
   */
 void
 tmap_map_util_fsw(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, 
@@ -283,5 +284,5 @@ tmap_map_util_fsw(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq,
                   tmap_map_sams_t *sams, tmap_refseq_t *refseq,
                   int32_t bw, int32_t softclip_type, int32_t score_thr,
                   int32_t score_match, int32_t pen_mm, int32_t pen_gapo, 
-                  int32_t pen_gape, int32_t fscore);
+                  int32_t pen_gape, int32_t fscore, int32_t use_flowgram);
 #endif

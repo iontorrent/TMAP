@@ -129,10 +129,11 @@ tmap_fsw_flowseq_init(uint8_t *flow_order, int32_t flow_order_len, uint8_t *base
   @param  flow_order_len  the flow order length
   @param  key_seq        the key sequence (in integer format)
   @param  key_seq_len    the key sequence length
+  @param  use_flowgram   use the flowgram if available
   @return                pointer to the flowseq structure
   */
 tmap_fsw_flowseq_t *
-tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow_order, int32_t flow_order_len, uint8_t *key_seq, uint8_t key_seq_len);
+tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow_order, int32_t flow_order_len, uint8_t *key_seq, uint8_t key_seq_len, int32_t use_flowgram);
 
 /*!
   @param  fp      the file stream in which to print
@@ -196,6 +197,7 @@ tmap_fsw_sub_core(uint8_t *seq, int32_t len,
   @param  len         the length of the second sequence
   @param  flowseq      the flow sequence structure to align
   @param  ap          the alignment parameters
+  @param  right_j            1 to justify indels to the right, 0 otherwise
   @param  path        the returned alignment path with maximum length of (1 + [len * (num_flows + 1) * (ap->offset + 1)])
   @param  path_len    the returned path_len
   @param  prev_score  the alignment score up to this point
@@ -206,6 +208,7 @@ int64_t
 tmap_fsw_extend_core(uint8_t *seq, int32_t len,
                      tmap_fsw_flowseq_t *flowseq,
                      const tmap_fsw_param_t *ap,
+                     int32_t right_j,
                      tmap_fsw_path_t *path, int32_t *path_len, 
                      int32_t prev_score);
 
@@ -215,6 +218,7 @@ tmap_fsw_extend_core(uint8_t *seq, int32_t len,
   @param  len         the length of the second sequence
   @param  flowseq      the flow sequence structure to align
   @param  ap          the alignment parameters
+  @param  right_j            1 to justify indels to the right, 0 otherwise
   @param  path        the returned alignment path with maximum length of (1 + [len * (num_flows + 1) * (ap->offset + 1)])
   @param  path_len    the returned path_len
   @param  prev_score  the alignment score up to this point
@@ -225,6 +229,7 @@ int64_t
 tmap_fsw_extend_fitting_core(uint8_t *seq, int32_t len,
                              tmap_fsw_flowseq_t *flowseq,
                              const tmap_fsw_param_t *ap,
+                             int32_t right_j,
                              tmap_fsw_path_t *path, int32_t *path_len, 
                              int32_t prev_score);
 
@@ -238,6 +243,7 @@ tmap_fsw_extend_fitting_core(uint8_t *seq, int32_t len,
   @param  path_len           the returned path_len
   @param  flowseq_start_clip  1 to allow clipping at the start of the flow sequence, 0 otherwise
   @param  flowseq_end_clip    1 to allow clipping at the end of the flow sequence, 0 otherwise
+  @param  right_j            1 to justify indels to the right, 0 otherwise
   @return                    the returned alignment score
   @details                   this assumes that the ap parameter scores have been multiplied by 100; only include non-key flows
   */
@@ -246,6 +252,7 @@ tmap_fsw_clipping_core(uint8_t *seq, int32_t len,
                        tmap_fsw_flowseq_t *flowseq,
                        const tmap_fsw_param_t *ap,
                        int32_t flowseq_start_clip, int32_t flowseq_end_clip,
+                       int32_t right_j,
                        tmap_fsw_path_t *path, int32_t *path_len);
 
 /*!

@@ -160,17 +160,6 @@ Specifies the gap extension penalty.
 This number must always be positive.
 See \autoref{sec:indel-scoring} for more information how insertions and deletions are scored.
 
-\subsubsection{\TT{-X,--pen-flow-error INT}}
-Specifies the flow score penalty.
-This number must always be positive.
-
-
-\subsubsection{\TT{-F,--flow-order STRING}}
-Specifies the flow order ([ACGT]{4+} or ``file'' to obtain it from the input file.
-
-\subsubsection{\TT{-K,--key-sequence STRING}}
-Specifies the key sequence ([ACGT]{4+} or ``file'' to obtain it from the input file.
-
 \subsubsection{\TT{-w,--band,width INT}}
 Specifies the band width for local alignment.
 This number must always be positive.
@@ -184,9 +173,6 @@ Specifies that the type of soft-clipping to perform.
 	\item soft-clip only the right portion of the read.
 	\item do not soft-clip any portion of the read
 \end{enumerate}
-
-\subsubsection{\TT{-y,--softclip-key}}
-Specifies to soft clip only the last base of the key when using an SFF as input.
 
 \subsubsection{\TT{-W,--duplicate-window INT}}
 Specifies to remove duplicate mappings that occur within this bp window.
@@ -221,12 +207,6 @@ The ``PG'', ``FO'', and ``KS'' tags should not be specified in this string; they
 Alternatively, multiple \TT{-R} options can also be used to populate the RG line. 
 For example, \TT{-R CN:SEQUENCING\_CENTER -R PG:TMAP -R PL:IONTORRENT} will populate the \TT{CN}, \TT{PG}, and \TT{PL} tags in the RG record.
 
-\subsubsection{\TT{-Y,--sam-sff-tags}}
-Specifies that SFF specific tags should be added to the output SAM file.
-
-\subsubsection{\TT{-G,--remove-sff-clipping}}
-Specifies to not remove bases and qualities based on the adapter and quality clipping fields found in the an input SFF file.
-
 \subsubsection{\TT{-j,--input-bz2}, \TT{-z,--input-gz}}
 Specifies that the input is bzip2 (\TT{-j}) or gzip (\TT{-z}) compressed.
 This is auto-recognized if the input file name has the extension \TT{.bz2} for bzip2 and \TT{.gz} for gzip.
@@ -252,6 +232,34 @@ Therefore, when using \TT{mapall}, we could specify a unique sequence length ran
 Specifies the maximum sequence length to consider (inclusive).
 This is applied to each algorithm independently.
 Therefore, when using \TT{mapall}, we could specify a unique sequence length range (using \TT{---min-seq-length} and \TT{---max-seq-length}) each algorithm.
+
+\subsection{Flowspace Options}
+These options control how TMAP uses and outputs information about the flow order from the sequencing machine.
+Flow space re-alignment will be performed when the flow order is specified (\TT{-F,--flow-order}).
+See \autoref{sec:fs-realign} for a description of flow space re-alignment.
+
+\subsubsection{\TT{-X,--pen-flow-error INT}}
+Specifies the flow score penalty.
+This number must always be positive.
+
+\subsubsection{\TT{-F,--flow-order STRING}}
+Specifies the flow order ([ACGT]{4+} or ``file'' to obtain it from the input file.
+
+\subsubsection{\TT{-K,--key-sequence STRING}}
+Specifies the key sequence ([ACGT]{4+} or ``file'' to obtain it from the input file.
+
+\subsubsection{\TT{-y,--softclip-key}}
+Specifies to soft clip only the last base of the key sequence.
+
+\subsubsection{\TT{-Y,--sam-sff-tags}}
+Specifies that SFF specific tags should be added to the output SAM file.
+See \autoref{sec:samformat} for more informaton.
+
+\subsubsection{\TT{-S,--ignore-flowgram}}
+Specifies to not use the flowgram, otherwise uses the flowgram for flowspace re-alignment when available.
+
+\subsubsection{\TT{-G,--remove-sff-clipping}}
+Specifies to not remove bases and qualities based on the adapter and quality clipping fields found in the an input SFF file.
 
 \section{tmap index}
 \label{sec:index}
@@ -495,6 +503,7 @@ Specifies to load the reverse suffix array.
 \chapter{File Formats}
 
 \section{SAM Alignment Format}
+\label{sec:samformat}
 TMAP is produces mappings in the SAM format (\cite{SAM-format}).
 Optional tags are used to store information about mappings useful for downstream processing.
 
@@ -680,6 +689,7 @@ Using the local alignment and the scoring parameters to determine the soft-clipp
 For how soft-clipping is represented in SAM files, see the SAM specification for more details (\url{http://samtools.sourceforge.net/SAM1.pdf}).
 
 \section{What is flow space re-alignment}
+\label{sec:fs-realign}
 Re-alignment in flow space is possible with TMAP, and is turned on only when the flow order option is set (\TT{-F}).
 With normal Smith Waterman, errors in homopolymers are treated similarly to insertions and deletions (indels) that are from biological origins.
 Re-alignment in flow space allows TMAP to consider indels and errors in homopolymers differently than other insdels, even though the resultant base space alignment may be similar.
