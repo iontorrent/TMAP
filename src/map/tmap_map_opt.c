@@ -902,7 +902,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
   
   // print global options
   tmap_file_fprintf(tmap_file_stderr, "\n");
-  tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [options]\n", tmap_algo_id_to_name(opt->algo_id), PACKAGE);
+  tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [options]\n", PACKAGE, tmap_algo_id_to_name(opt->algo_id));
   tmap_file_fprintf(tmap_file_stderr, "\n");
   tmap_file_fprintf(tmap_file_stderr, "global options:\n");
 
