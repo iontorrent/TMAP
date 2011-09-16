@@ -444,6 +444,7 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
          */
 
       if(opt_type != opt_type_next
+         || opt_stage != opt_stage_next
          || i == argc) {
           optind=1; // needed for getopt_long
           switch(opt_type) {

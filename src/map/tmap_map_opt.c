@@ -968,7 +968,7 @@ int32_t
 tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
 {
   int i, c, option_index, val = 0;
-  char *getopt_format = NULL; //"A:B:E:F:GJK:M:O:R:S:T:W:X:YZa:f:g:hi:jk:n:q:r:s:vw:yz";
+  char *getopt_format = NULL; 
   int32_t getopt_format_mem = 0;
   int32_t getopt_format_len = 1;
   struct option *options = NULL;
