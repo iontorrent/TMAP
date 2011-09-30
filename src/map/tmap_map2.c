@@ -64,7 +64,7 @@ tmap_map2_thread_init(void **data, tmap_map_opt_t *opt)
 }
 
 tmap_map_sams_t*
-tmap_map2_thread_map_core(void **data, tmap_seq_t *seqs[4], int32_t seq_len, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt)
+tmap_map2_thread_map_core(void **data, tmap_seq_t *seqs[4], int32_t seq_len, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_rand_t *rand, tmap_map_opt_t *opt)
 {
   tmap_map_sams_t *sams = NULL;
   tmap_map2_thread_data_t *d = (tmap_map2_thread_data_t*)(*data);
@@ -74,7 +74,7 @@ tmap_map2_thread_map_core(void **data, tmap_seq_t *seqs[4], int32_t seq_len, tma
       return tmap_map_sams_init(NULL);
   }
 
-  sams = tmap_map2_aux_core(opt, seqs, refseq, bwt, sa, d->pool);
+  sams = tmap_map2_aux_core(opt, seqs, refseq, bwt, sa, rand, d->pool);
 
   return sams;
 }
@@ -157,7 +157,7 @@ tmap_map2_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
 }
 
 static tmap_map_sams_t*
-tmap_map2_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt)
+tmap_map2_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_rand_t *rand, tmap_map_opt_t *opt)
 {
   tmap_map_sams_t *sams = NULL;
   tmap_seq_t *seqs[4]={NULL,NULL,NULL,NULL};
@@ -186,7 +186,7 @@ tmap_map2_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_b
   }
 
   // get the sams
-  sams = tmap_map2_thread_map_core(data, seqs, seq_len, refseq, bwt, sa, opt);
+  sams = tmap_map2_thread_map_core(data, seqs, seq_len, refseq, bwt, sa, rand, opt);
 
   // destroy
   for(i=0;i<4;i++) {

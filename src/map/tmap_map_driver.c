@@ -14,6 +14,7 @@
 #include "../util/tmap_progress.h"
 #include "../util/tmap_sam_print.h"
 #include "../util/tmap_sort.h"
+#include "../util/tmap_rand.h"
 #include "../seq/tmap_seq.h"
 #include "../index/tmap_refseq.h"
 #include "../index/tmap_bwt_gen.h"
@@ -123,6 +124,7 @@ tmap_map_driver_core_worker(int32_t num_ends, tmap_seq_t ***seq_buffer, tmap_map
                          tmap_driver_func_thread_map func_thread_map, 
                          tmap_driver_func_mapq func_mapq,
                          tmap_driver_func_thread_cleanup func_thread_cleanup,
+                         tmap_rand_t *rand,
                          int32_t tid, tmap_map_opt_t *opt)
 {
   int32_t i, low = 0;
@@ -155,7 +157,7 @@ tmap_map_driver_core_worker(int32_t num_ends, tmap_seq_t ***seq_buffer, tmap_map
               }
 
               // map thread data,
-              sams[i][low] = func_thread_map(&data, seq, refseq, bwt, sa, opt);
+              sams[i][low] = func_thread_map(&data, seq, refseq, bwt, sa, rand, opt);
               if(sams[i][low] == NULL) {
                   tmap_error("the thread function did not return a mapping", Exit, OutOfRange);
               }
@@ -164,10 +166,10 @@ tmap_map_driver_core_worker(int32_t num_ends, tmap_seq_t ***seq_buffer, tmap_map
                   // mapall should have already done this!
                   if(TMAP_MAP_ALGO_MAPALL != opt->algo_id) {
                       // smith waterman (score only)
-                      sams[i][low] = tmap_map_util_sw_gen_score(refseq, sams[i][low], seq_buffer[i][low], opt);
+                      sams[i][low] = tmap_map_util_sw_gen_score(refseq, sams[i][low], seq_buffer[i][low], rand, opt);
 
                       // remove duplicates
-                      tmap_map_util_remove_duplicates(sams[i][low], opt->dup_window);
+                      tmap_map_util_remove_duplicates(sams[i][low], opt->dup_window, rand);
 
                       // mapping quality
                       func_mapq(sams[i][low], tmap_seq_get_bases(seq)->l, opt);
@@ -176,7 +178,7 @@ tmap_map_driver_core_worker(int32_t num_ends, tmap_seq_t ***seq_buffer, tmap_map
                       sams[i][low]->max = sams[i][low]->n;
 
                       // filter alignments
-                      tmap_map_sams_filter(sams[i][low], opt->aln_output_mode);
+                      tmap_map_sams_filter(sams[i][low], opt->aln_output_mode, rand);
 
                       // smith waterman - generate cigars
                       sams[i][low] = tmap_map_util_sw_gen_cigar(refseq, sams[i][low], seq_buffer[i][low], opt);
@@ -236,6 +238,7 @@ tmap_map_driver_core_thread_worker(void *arg)
                            thread_data->func_thread_map, 
                            thread_data->func_mapq, 
                            thread_data->func_thread_cleanup,
+                           thread_data->rand,
                            thread_data->tid, thread_data->opt);
 
   return arg;
@@ -258,6 +261,11 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
   tmap_seq_t ***seq_buffer = NULL;
   tmap_map_sams_t ***sams = NULL;
   tmap_shm_t *shm = NULL;
+#ifdef HAVE_LIBPTHREAD
+  tmap_rand_t **rand = NULL;
+#else
+  tmap_rand_t *rand = NULL;
+#endif
   int32_t seq_type, reads_queue_size, num_ends;
 
   // check input functions
@@ -329,6 +337,15 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
       }
   }
 
+#ifdef HAVE_LIBPTHREAD
+  rand = tmap_malloc(opt->num_threads * sizeof(tmap_rand_t), "rand");
+  for(i=0;i<opt->num_threads;i++) {
+      rand[i] = tmap_rand_init(i);
+  }
+#else
+  rand = tmap_rand_init(13);
+#endif
+
   // Note: 'tmap_file_stdout' should not have been previously modified
   if(NULL == opt->fn_sam) {
       tmap_file_stdout = tmap_file_fdopen(fileno(stdout), "wb", opt->output_compr);
@@ -359,6 +376,7 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
       if(1 == opt->num_threads) {
           tmap_map_driver_core_worker(num_ends, seq_buffer, sams, seq_buffer_length, refseq, bwt, sa, 
                                    func_thread_init, func_thread_map, func_mapq, func_thread_cleanup, 
+                                   rand[0],
                                    0, opt);
       }
       else {
@@ -387,6 +405,7 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
               thread_data[i].func_mapq = func_mapq;
               thread_data[i].func_thread_cleanup = func_thread_cleanup;
               thread_data[i].tid = i;
+              thread_data[i].rand = rand[i];
               thread_data[i].opt = opt; 
               if(0 != pthread_create(&threads[i], &attr, tmap_map_driver_core_thread_worker, &thread_data[i])) {
                   tmap_error("error creating threads", Exit, ThreadError);
@@ -404,6 +423,7 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
 #else 
       tmap_map_driver_core_worker(num_ends, seq_buffer, sams, seq_buffer_length, refseq, bwt, sa, 
                                   func_thread_init, func_thread_map, func_mapq, func_thread_cleanup, 
+                                  rand,
                                   0, opt);
 #endif
 
@@ -469,4 +489,12 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
   if(0 < opt->shm_key) {
       tmap_shm_destroy(shm, 0);
   }
+#ifdef HAVE_LIBPTHREAD
+  for(i=0;i<opt->num_threads;i++) {
+      tmap_rand_destroy(rand[i]);
+  }
+  free(rand);
+#else
+  tmap_rand_destroy(rand);
+#endif
 }

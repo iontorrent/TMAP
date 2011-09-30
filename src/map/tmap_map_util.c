@@ -8,6 +8,7 @@
 #include "../util/tmap_progress.h"
 #include "../util/tmap_sort.h"
 #include "../util/tmap_definitions.h"
+#include "../util/tmap_rand.h"
 #include "../seq/tmap_seq.h"
 #include "../index/tmap_refseq.h"
 #include "../index/tmap_bwt.h"
@@ -364,7 +365,7 @@ tmap_map_sams_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sams_t *sam
 }
 
 void
-tmap_map_sams_filter1(tmap_map_sams_t *sams, int32_t aln_output_mode, int32_t algo_id)
+tmap_map_sams_filter1(tmap_map_sams_t *sams, int32_t aln_output_mode, int32_t algo_id, tmap_rand_t *rand)
 {
   int32_t i, j, k;
   int32_t n_best = 0;
@@ -499,7 +500,7 @@ tmap_map_sams_filter1(tmap_map_sams_t *sams, int32_t aln_output_mode, int32_t al
       }
   }
   else if(TMAP_MAP_OPT_ALN_MODE_RAND_BEST == aln_output_mode) { // get a random
-      int32_t r = (int32_t)(drand48() * n_best);
+      int32_t r = (int32_t)(tmap_rand_get(rand) * n_best);
 
       // keep the rth one
       if(TMAP_MAP_ALGO_NONE == algo_id) {
@@ -564,13 +565,13 @@ tmap_map_sams_filter2(tmap_map_sams_t *sams, int32_t score_thr, int32_t mapq_thr
 }
 
 void
-tmap_map_sams_filter(tmap_map_sams_t *sams, int32_t aln_output_mode)
+tmap_map_sams_filter(tmap_map_sams_t *sams, int32_t aln_output_mode, tmap_rand_t *rand)
 {
-  tmap_map_sams_filter1(sams, aln_output_mode, TMAP_MAP_ALGO_NONE);
+  tmap_map_sams_filter1(sams, aln_output_mode, TMAP_MAP_ALGO_NONE, rand);
 }
 
 void
-tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
+tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window, tmap_rand_t *rand)
 {
   int32_t i, next_i, j, k, end, best_score_i, best_score_n, best_score_subo;
 
@@ -616,7 +617,7 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window)
 
       // randomize the best scoring      
       if(1 < best_score_n) {
-          k = (int32_t)(best_score_n * drand48()); // make this zero-based 
+          k = (int32_t)(best_score_n * tmap_rand_get(rand)); // make this zero-based 
           best_score_n = 0; // make this one-based
           end = i;
           while(best_score_n <= k) { // this assumes we know there are at least "best_score
@@ -786,6 +787,7 @@ tmap_map_sams_t *
 tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                  tmap_map_sams_t *sams, 
                  tmap_seq_t *seq,
+                 tmap_rand_t *rand,
                  tmap_map_opt_t *opt)
 {
   int32_t i;
@@ -867,7 +869,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           tmp_sam = sams->sams[start];
       }
       else {
-          int32_t r = (int32_t)(drand48() * (end - start + 1));
+          int32_t r = (int32_t)(tmap_rand_get(rand) * (end - start + 1));
           r += start;
           tmp_sam = sams->sams[r];
       }

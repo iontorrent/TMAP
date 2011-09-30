@@ -4,6 +4,7 @@ GLOBAL_SOURCES = \
 				 src/util/tmap_alloc.h src/util/tmap_alloc.c \
 				 src/util/tmap_definitions.h src/util/tmap_definitions.c \
 				 src/util/tmap_error.h src/util/tmap_error.c \
+				 src/util/tmap_rand.h src/util/tmap_rand.c \
 				 src/util/tmap_fibheap.h src/util/tmap_fibheap.c \
 				 src/util/tmap_hash.h \
 				 src/util/tmap_progress.h src/util/tmap_progress.c \

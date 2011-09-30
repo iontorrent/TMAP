@@ -10,6 +10,7 @@
 #endif
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_sort.h"
+#include "../util/tmap_rand.h"
 #include "../seq/tmap_seq.h"
 #include "../index/tmap_refseq.h"
 #include "../index/tmap_bwtl.h"
@@ -397,6 +398,7 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
                    tmap_refseq_t *refseq,
                    tmap_bwt_t *bwt[2],
                    tmap_sa_t *sa[2],
+                   tmap_rand_t *rand,
                    tmap_map2_global_mempool_t *pool)
 {
   tmap_map_opt_t opt;
@@ -457,7 +459,7 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
       for(i=0;i<l;i++) {
           uint8_t c = (uint8_t)bases->s[i];
           if(c >= 4) {
-              c = (int)(drand48() * 4); // FIXME: ambiguous bases are not properly handled
+              c = (int)(tmap_rand_get(rand) * 4); // FIXME: ambiguous bases are not properly handled
               seq[0]->s[i] = c; // original
               seq[1]->s[l-1-i] = 3 - c; // reverse compliment
               rseq[0]->s[l-1-i] = c; // reverse 

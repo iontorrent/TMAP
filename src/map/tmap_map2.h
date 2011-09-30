@@ -35,11 +35,12 @@ tmap_map2_thread_init(void **data, tmap_map_opt_t *opt);
  @param  refseq   the reference sequence
  @param  bwt      the bwt structure
  @param  sa       the sa structure
+ @param  rand     the random number generator
  @param  opt      the program options
  @return          the mappings, NULL otherwise
  */
 tmap_map_sams_t*
-tmap_map2_thread_map_core(void **data, tmap_seq_t *seqs[4], int32_t seq_len, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt);
+tmap_map2_thread_map_core(void **data, tmap_seq_t *seqs[4], int32_t seq_len, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_rand_t *rand, tmap_map_opt_t *opt);
 
 /*!
  cleans up the mapping routine for a given thread

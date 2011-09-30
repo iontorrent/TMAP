@@ -32,10 +32,11 @@ typedef int32_t (*tmap_driver_func_thread_init)(void **data, tmap_map_opt_t *opt
   @param  refseq  the reference sequence
   @param  bwt     the bwt structure
   @param  sa      the sa structure
+  @param  rand    the random number generator
   @param  opt     the program options
   @return         the mappings upon success, NULL otherwise
  */
-typedef tmap_map_sams_t* (*tmap_driver_func_thread_map)(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt);
+typedef tmap_map_sams_t* (*tmap_driver_func_thread_map)(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_rand_t *rand, tmap_map_opt_t *opt);
 
 /*!
   This function will be invoked to give a mapping quality to a set of mappings
@@ -69,6 +70,7 @@ typedef struct {
     tmap_driver_func_thread_map func_thread_map; /* this function will be run once per thread per input sequence to map the sequence */
     tmap_driver_func_mapq func_mapq; /* this function will be run to calculate the mapping quality */
     tmap_driver_func_thread_cleanup func_thread_cleanup; /* this function will be run once per thread to cleanup/destroy any persistent data across that thread */
+    tmap_rand_t *rand;  /*!< the random number generator */
     int32_t tid;  /*!< the zero-based thread id */
     tmap_map_opt_t *opt;  /*!< the options to this program */    
 } tmap_map_driver_thread_data_t;
@@ -86,6 +88,7 @@ typedef struct {
   @param  func_thread_map      the thread map function
   @param  func_mapq            the mapping quality function
   @param  func_thread_cleanup  the thread cleanup function
+  @param  rand                 the random number generator
   @param  tid                  the thread ids
   @param  opt                  the program parameters 
  */
@@ -96,6 +99,7 @@ tmap_map_driver_core_worker(int32_t num_ends, tmap_seq_t **seq_buffer[2], tmap_m
                          tmap_driver_func_thread_map func_thread_map, 
                          tmap_driver_func_mapq func_mapq,
                          tmap_driver_func_thread_cleanup func_thread_cleanup,
+                         tmap_rand_t *rand,
                          int32_t tid, tmap_map_opt_t *opt);
 
 /*!

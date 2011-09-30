@@ -162,7 +162,7 @@ tmap_map3_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len, tma
 }
 
 static tmap_map_sams_t *
-tmap_map3_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt)
+tmap_map3_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_rand_t *rand, tmap_map_opt_t *opt)
 {
   tmap_seq_t *seqs[2] = {NULL, NULL};
   tmap_map_sams_t *sams = NULL;

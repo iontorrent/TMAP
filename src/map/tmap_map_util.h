@@ -3,6 +3,7 @@
 #define TMAP_MAP_UTIL_H
 
 #include <sys/types.h>
+#include "../util/tmap_rand.h"
 #include "../sw/tmap_fsw.h"
 #include "../sw/tmap_vsw.h"
 #include "tmap_map_opt.h"
@@ -187,19 +188,21 @@ tmap_map_sams_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sams_t *sam
   filters mappings based on the output mode
   @param  sams             the mappings to filter
   @param  aln_output_mode  the output mode
+  @param  rand             the random number generator
   */
 void
-tmap_map_sams_filter(tmap_map_sams_t *sams, int32_t aln_output_mode);
+tmap_map_sams_filter(tmap_map_sams_t *sams, int32_t aln_output_mode, tmap_rand_t *rand);
 
 /*!
   filters mappings based on the output mode
   @param  sams             the mappings to filter
   @param  aln_output_mode  the output mode
   @param  algo_id          the algorithm identifier
+  @param  rand             the random number generator
   only filters mappings based on the algorithm id (none process all)
   */
 void
-tmap_map_sams_filter1(tmap_map_sams_t *sams, int32_t aln_output_mode, int32_t algo_id);
+tmap_map_sams_filter1(tmap_map_sams_t *sams, int32_t aln_output_mode, int32_t algo_id, tmap_rand_t *rand);
 
 /*!
   filters mappings that pass both the scoring and mapping quality thresholds
@@ -214,9 +217,10 @@ tmap_map_sams_filter2(tmap_map_sams_t *sams, int32_t score_thr, int32_t mapq_thr
   removes duplicate alignments that fall within a given window
   @param  sams        the mappings to adjust 
   @param  dup_window  the window size to cluster mappings
+  @param  rand        the random number generator
   */
 void
-tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window);
+tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window, tmap_rand_t *rand);
 
 /*!
  Computes the mapping quality from the mappings of multiple algorithms
@@ -233,6 +237,7 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt);
   @param  refseq        the reference sequence
   @param  sams          the seeded sams
   @param  seq           the query sequence
+  @param  rand             the random number generator
   @param  opt           the program parameters
   @return               the locally aligned sams
   */
@@ -240,6 +245,7 @@ tmap_map_sams_t *
 tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                  tmap_map_sams_t *sams,
                  tmap_seq_t *seq,
+                 tmap_rand_t *rand,
                  tmap_map_opt_t *opt);
 
 /*!
