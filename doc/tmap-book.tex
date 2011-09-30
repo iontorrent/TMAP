@@ -648,8 +648,9 @@ AGGTGCCTTTTACAAGC
 This would change the alignment and decrease) the resulting score.
 
 \section{Will the output of TMAP be the same if run twice?}
-TMAP will always produce the same output if run twice, even when multiple threads (\TT{-n}) are used.
+TMAP will always produce the same output if run twice, even when using multiple threads (\TT{-n}).
 This is enabled by using a complementary-multiply-with-carry random number generator, one per thread.
+Of course, if different options are used, then the results will post likely vary, even if a different number of threads are used.
 
 \section{How does TMAP soft clip bases in the read?} 
 TMAP has the ability to soft clip bases during alignment, that is to not include in the alignment bases that are present in the read.  
