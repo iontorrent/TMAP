@@ -9,6 +9,8 @@
 extern int 
 tmap_index(int argc, char *argv[]);
 extern int 
+tmap_index_speed(int argc, char *argv[]);
+extern int 
 tmap_server_main(int argc, char *argv[]);
 extern int 
 tmap_map1_main(int argc, char *argv[]);

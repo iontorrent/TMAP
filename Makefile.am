@@ -26,6 +26,7 @@ GLOBAL_SOURCES = \
 				 src/index/tmap_bwt_gen.h src/index/tmap_bwt_gen.c \
 				 src/index/tmap_bwt_match.h src/index/tmap_bwt_match.c \
 				 src/index/tmap_index.h src/index/tmap_index.c \
+				 src/index/tmap_index_speed.h src/index/tmap_index_speed.c \
 				 src/index/tmap_refseq.h src/index/tmap_refseq.c \
 				 src/index/tmap_sa.c src/index/tmap_sa.h \
 				 src/sw/tmap_sw.h src/sw/tmap_sw.c \
