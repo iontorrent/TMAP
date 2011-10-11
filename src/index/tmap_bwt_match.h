@@ -13,7 +13,7 @@
   */
 typedef struct {
     uint32_t offset;  /*!< the number of (read) bases used so far in this search (one-based) */
-    uint32_t hi;  /*!< the hash index of the SA interval if the offset is less than or equal to the hash width */
+    uint64_t hi;  /*!< the hash index of the SA interval if the offset is less than or equal to the hash width */
     uint32_t k;  /*!< the lower occurrence of the SA interval */
     uint32_t l;  /*!< the upper occurrence of the SA interval */
 } tmap_bwt_match_occ_t;

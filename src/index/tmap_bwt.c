@@ -27,7 +27,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <assert.h>
 #include <stdint.h>
 #include <unistd.h>
 
@@ -38,6 +37,12 @@
 #include "../io/tmap_file.h"
 #include "tmap_bwt_gen.h"
 #include "tmap_bwt.h"
+
+static uint64_t
+tmap_bwt_get_hash_length(uint64_t i)
+{
+  return ((uint64_t)1) << (i << 1); // 4^{hash_width} entries
+}
 
 tmap_bwt_t *
 tmap_bwt_read(const char *fn_fasta, uint32_t is_rev)
@@ -77,7 +82,7 @@ tmap_bwt_read(const char *fn_fasta, uint32_t is_rev)
       bwt->hash_k = tmap_malloc(bwt->hash_width*sizeof(uint32_t*), "bwt->hash_k");
       bwt->hash_l = tmap_malloc(bwt->hash_width*sizeof(uint32_t*), "bwt->hash_l");
       for(i=1;i<=bwt->hash_width;i++) {
-          uint32_t hash_length = 1 << (i * 2); // 4^{hash_width} entries
+          uint64_t hash_length = tmap_bwt_get_hash_length(i);
           bwt->hash_k[i-1] = tmap_malloc(hash_length*sizeof(uint32_t), "bwt->hash_k[i-1]");
           bwt->hash_l[i-1] = tmap_malloc(hash_length*sizeof(uint32_t), "bwt->hash_l[i-1]");
           if(hash_length != tmap_file_fread(bwt->hash_k[i-1], sizeof(uint32_t), hash_length, fp_bwt)
@@ -131,7 +136,7 @@ tmap_bwt_write(const char *fn_fasta, tmap_bwt_t *bwt, uint32_t is_rev)
   if(0 < bwt->hash_width) {
       int32_t i;
       for(i=1;i<=bwt->hash_width;i++) {
-          uint32_t hash_length = 1 << (i * 2); // 4^{hash_width} entries
+          uint64_t hash_length = tmap_bwt_get_hash_length(i);
           if(hash_length != tmap_file_fwrite(bwt->hash_k[i-1], sizeof(uint32_t), hash_length, fp_bwt)
              || hash_length != tmap_file_fwrite(bwt->hash_l[i-1], sizeof(uint32_t), hash_length, fp_bwt)) {
               tmap_error(NULL, Exit, WriteFileError);
@@ -164,7 +169,7 @@ tmap_bwt_shm_num_bytes(tmap_bwt_t *bwt)
   //variable length data
   n += sizeof(uint32_t)*bwt->bwt_size; // bwt
   for(i=1;i<=bwt->hash_width;i++) {
-      uint32_t hash_length = 1 << (i * 2); // 4^{hash_width} entries
+      uint64_t hash_length = tmap_bwt_get_hash_length(i);
       n += sizeof(uint32_t)*hash_length; // hash_k[i-1]
       n += sizeof(uint32_t)*hash_length; // hash_l[i-1]
   }
@@ -241,7 +246,7 @@ tmap_bwt_shm_pack(tmap_bwt_t *bwt, uint8_t *buf)
   // variable length data
   memcpy(buf, bwt->bwt, bwt->bwt_size*sizeof(uint32_t)); buf += bwt->bwt_size*sizeof(uint32_t);
   for(i=1;i<=bwt->hash_width;i++) {
-      uint32_t hash_length = 1 << (i * 2); // 4^{hash_width} entries
+      uint64_t hash_length = tmap_bwt_get_hash_length(i);
       memcpy(buf, bwt->hash_k[i-1], hash_length*sizeof(uint32_t)); buf += hash_length*sizeof(uint32_t);
       memcpy(buf, bwt->hash_l[i-1], hash_length*sizeof(uint32_t)); buf += hash_length*sizeof(uint32_t);
   }
@@ -276,7 +281,7 @@ tmap_bwt_shm_unpack(uint8_t *buf)
   // variable length data
   bwt->bwt = (uint32_t*)buf; buf += bwt->bwt_size*sizeof(uint32_t);
   for(i=1;i<=bwt->hash_width;i++) {
-      uint32_t hash_length = 1 << (i * 2); // 4^{hash_width} entries
+      uint64_t hash_length = tmap_bwt_get_hash_length(i);
       bwt->hash_k[i-1] = (uint32_t*)buf; buf += hash_length*sizeof(uint32_t);
       bwt->hash_l[i-1] = (uint32_t*)buf; buf += hash_length*sizeof(uint32_t);
   }
@@ -364,10 +369,10 @@ tmap_bwt_gen_cnt_table(tmap_bwt_t *bwt)
 }
 
 static inline void
-tmap_bwt_gen_helper(tmap_bwt_t *bwt, uint32_t hash_width, uint32_t hash_value, uint32_t level, 
+tmap_bwt_gen_helper(tmap_bwt_t *bwt, uint32_t hash_width, uint64_t hash_value, uint32_t level, 
                     uint32_t **k, uint32_t **l)
 {
-  uint32_t i, j;
+  uint64_t i, j;
   // TODO: could make this tail-recursive for speed
 
   if(hash_width < level) {
@@ -385,7 +390,7 @@ tmap_bwt_gen_helper(tmap_bwt_t *bwt, uint32_t hash_width, uint32_t hash_value, u
   else { // at a non-leaf
       for(i=0;i<4;i++) {
           if(l[level-1][i] < k[level-1][i]) {
-              uint32_t lower, upper;
+              uint64_t lower, upper;
 
               lower = (hash_value << 2) + i;
               upper = ((hash_value + 1) << 2);
@@ -417,7 +422,8 @@ void
 tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width)
 {
   uint32_t **k=NULL, **l=NULL;
-  uint32_t i, j, sum;
+  uint32_t i, sum;
+  uint64_t j;
 
   tmap_progress_print("constructing the occurence hash for the BWT string");
 
@@ -443,11 +449,11 @@ tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width)
       k[i] = tmap_malloc(sizeof(uint32_t)*4, "k[i]");
       l[i] = tmap_malloc(sizeof(uint32_t)*4, "l[i]");
   }
-
+  
   // create a hash for each level
   // Note: this could be improved by using the hash of the previous level etc.
   for(i=1;i<=bwt->hash_width;i++) {
-      uint32_t hash_length = 1 << (i * 2); // 4^{hash_width} entries
+      uint64_t hash_length = tmap_bwt_get_hash_length(i);
 
       // allocate memory for this level
       bwt->hash_k[i-1] = tmap_malloc(sizeof(uint32_t)*hash_length, "bwt->hash_k[i-1]");

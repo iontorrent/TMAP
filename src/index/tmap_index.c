@@ -173,7 +173,7 @@ int tmap_index(int argc, char *argv[])
   if(opt.hash_width <= 0) {
       tmap_error("option -w out of range", Exit, CommandLineArgument);
   }
-  if(opt.sa_interval < 0 || (1 < opt.sa_interval && 0 != (opt.sa_interval % 2))) {
+  if(opt.sa_interval <= 0 || (1 < opt.sa_interval && 0 != (opt.sa_interval % 2))) {
       tmap_error("option -i out of range", Exit, CommandLineArgument);
   }
 

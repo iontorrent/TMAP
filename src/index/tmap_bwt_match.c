@@ -18,7 +18,7 @@ tmap_bwt_match_occ(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8_t c,
       next->l = UINT32_MAX; 
   }
   else { // use the hash
-      uint32_t prev_hi = (NULL == prev) ? 0 : prev->hi;
+      uint64_t prev_hi = (NULL == prev) ? 0 : prev->hi;
       next->offset = offset + 1;
       next->hi = (prev_hi << 2) + c;
       next->k = bwt->hash_k[next->offset-1][next->hi];
@@ -42,7 +42,7 @@ tmap_bwt_match_2occ(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8_t c
       next->l += bwt->L2[c];
   }
   else { // use the hash
-      uint32_t prev_hi = (NULL == prev) ? 0 : prev->hi;
+      uint64_t prev_hi = (NULL == prev) ? 0 : prev->hi;
       next->offset = offset + 1;
       next->hi = (prev_hi << 2) + c;
       next->k = bwt->hash_k[next->offset-1][next->hi];
@@ -68,7 +68,7 @@ tmap_bwt_match_occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, tmap_bwt_
       }
   }
   else { // use the hash
-      uint32_t prev_hi = (NULL == prev) ? 0 : prev->hi;
+      uint64_t prev_hi = (NULL == prev) ? 0 : prev->hi;
       for(i=0;i<4;i++) {
           next[i].offset = offset + 1;
           next[i].hi = (prev_hi << 2) + i;
@@ -97,7 +97,7 @@ tmap_bwt_match_2occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, tmap_bwt
       }
   }
   else { // use the hash
-      uint32_t prev_hi = (NULL == prev) ? 0 : prev->hi;
+      uint64_t prev_hi = (NULL == prev) ? 0 : prev->hi;
       for(i=0;i<4;i++) {
           next[i].offset = offset + 1;
           next[i].hi = (prev_hi << 2) + i;
