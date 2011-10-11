@@ -32,6 +32,8 @@ tmap_index_speed_test(tmap_index_t *index, tmap_index_speed_opt_t *opt)
 
   num_found = 0;
   for(i=0;i<opt->kmer_num;i++) {
+      // HERE
+      //tmap_progress_print2("processed %d kmers", i);
       if(0 < i && 0 == (i % 50000)) {
           tmap_progress_print2("processed %d kmers", i);
       }
@@ -51,9 +53,11 @@ tmap_index_speed_test(tmap_index_t *index, tmap_index_speed_opt_t *opt)
       found = 0;
       for(j=0;j<2;j++) {
           if(0 < tmap_bwt_match_exact(index->bwt[j], opt->kmer_length, seq, &cur)) {
-              for(k=cur.k;k<=cur.l;k++) {
-                  // retrieve the packed position
-                  pacpos = index->bwt[j]->seq_len - tmap_sa_pac_pos(index->sa[j], index->bwt[j], k) - opt->kmer_length + 1;
+              if(0 <= opt->enum_max_hits && (cur.l - cur.k + 1) <= opt->enum_max_hits) {
+                  for(k=cur.k;k<=cur.l;k++) {
+                      // retrieve the packed position
+                      pacpos = index->bwt[j]->seq_len - tmap_sa_pac_pos(index->sa[j], index->bwt[j], k) - opt->kmer_length + 1;
+                  }
               }
               found = 1;
           }
@@ -121,8 +125,10 @@ usage(tmap_index_speed_opt_t *opt)
                     (NULL == opt->fn_fasta) ? "not using" : opt->fn_fasta);
   tmap_file_fprintf(tmap_file_stderr, "         -k INT      use shared memory with the following key [%d]\n", opt->shm_key);
   tmap_file_fprintf(tmap_file_stderr, "         -w INT      the new index hash width [%d]\n", opt->hash_width);
+  tmap_file_fprintf(tmap_file_stderr, "         -e INT      the maximum number of hits to enumerate (-1 for unlimited, 0 to disable) [%d]\n", opt->enum_max_hits);
   tmap_file_fprintf(tmap_file_stderr, "         -K INT      the kmer length to simulate [%d]\n", opt->kmer_length);
   tmap_file_fprintf(tmap_file_stderr, "         -N INT      the number of kmers to simulate [%d]\n", opt->kmer_num);
+  tmap_file_fprintf(tmap_file_stderr, "         -R          simulate kmers from the reference [%s]\n", (1 == opt->from_ref) ? "true" : "false");
   tmap_file_fprintf(tmap_file_stderr, "Options (optional):\n");
   tmap_file_fprintf(tmap_file_stderr, "         -v          print verbose progress information\n");
   tmap_file_fprintf(tmap_file_stderr, "         -h          print this message\n");
@@ -138,11 +144,12 @@ tmap_index_speed(int argc, char *argv[])
 
   opt.fn_fasta = NULL;
   opt.hash_width = -1;
+  opt.enum_max_hits = 1024;
   opt.kmer_length = 12;
   opt.kmer_num = 100000;
   opt.from_ref = 0;
       
-  while((c = getopt(argc, argv, "f:k:w:K:N:Rhv")) >= 0) {
+  while((c = getopt(argc, argv, "f:k:w:e:K:N:Rhv")) >= 0) {
       switch(c) {
         case 'f':
           opt.fn_fasta = tmap_strdup(optarg); break;
@@ -150,6 +157,8 @@ tmap_index_speed(int argc, char *argv[])
           opt.shm_key = atoi(optarg); break;
         case 'w':
           opt.hash_width = atoi(optarg); break;
+        case 'e':
+          opt.enum_max_hits = atoi(optarg); break;
         case 'K':
           opt.kmer_length = atoi(optarg); break;
         case 'N':
