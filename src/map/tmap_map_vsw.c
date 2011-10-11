@@ -18,6 +18,7 @@
 #include "../index/tmap_bwt.h"
 #include "../index/tmap_bwt_match.h"
 #include "../index/tmap_sa.h"
+#include "../index/tmap_index.h"
 #include "../io/tmap_seq_io.h"
 #include "../server/tmap_shm.h"
 #include "../sw/tmap_sw.h"
@@ -47,7 +48,7 @@ tmap_map_vsw_thread_init(void **data, tmap_map_opt_t *opt)
 // reverse and reverse compliment
 tmap_map_sams_t*
 tmap_map_vsw_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len,
-                          tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt)
+                             tmap_index_t *index, tmap_map_opt_t *opt)
 {
   int32_t i;
   tmap_map_sams_t *sams = NULL;
@@ -59,9 +60,9 @@ tmap_map_vsw_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len,
   }
 
   sams = tmap_map_sams_init(NULL);
-  tmap_map_sams_realloc(sams, refseq->num_annos<<1); // one for each contig and strand
+  tmap_map_sams_realloc(sams, index->refseq->num_annos<<1); // one for each contig and strand
 
-  for(i=0;i<refseq->num_annos<<1;i++) {
+  for(i=0;i<index->refseq->num_annos<<1;i++) {
       tmap_map_sam_t *s;
 
       // save
@@ -73,7 +74,7 @@ tmap_map_vsw_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len,
       s->strand = i & 1;
       s->seqid = i >> 1;
       s->pos = 0;
-      s->target_len = refseq->annos[s->seqid].len;
+      s->target_len = index->refseq->annos[s->seqid].len;
       s->score_subo = INT32_MIN;
       
       // mapvswaux data
@@ -84,7 +85,7 @@ tmap_map_vsw_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len,
 }
 
 static tmap_map_sams_t*
-tmap_map_vsw_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_rand_t *rand, tmap_map_opt_t *opt)
+tmap_map_vsw_thread_map(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_rand_t *rand, tmap_map_opt_t *opt)
 {
   int32_t seq_len = 0;;
   tmap_seq_t *seqs[2]={NULL, NULL};
@@ -111,7 +112,7 @@ tmap_map_vsw_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tma
   tmap_seq_to_int(seqs[1]);
 
   // core algorithm
-  sams = tmap_map_vsw_thread_map_core(data, seqs, seq_len, refseq, bwt, sa, opt);
+  sams = tmap_map_vsw_thread_map_core(data, seqs, seq_len, index, opt);
 
   // destroy
   tmap_seq_destroy(seqs[0]);

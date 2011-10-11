@@ -5,11 +5,69 @@
 #include "../util/tmap_error.h"
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_progress.h"
+#include "../server/tmap_shm.h"
 #include "tmap_refseq.h"
 #include "tmap_bwt_gen.h"
 #include "tmap_bwt.h"
 #include "tmap_sa.h"
 #include "tmap_index.h"
+
+tmap_index_t*
+tmap_index_init(const char *fn_fasta, key_t shm_key)
+{
+  tmap_index_t *index = NULL;
+
+  index = tmap_calloc(1, sizeof(tmap_index), "index");
+
+  index->shm_key = shm_key;
+
+  // get the reference information
+  if(0 == index->shm_key) {
+      tmap_progress_print("reading in reference data");
+      index->refseq = tmap_refseq_read(fn_fasta, 0);
+      index->bwt[0] = tmap_bwt_read(fn_fasta, 0);
+      index->bwt[1] = tmap_bwt_read(fn_fasta, 1);
+      index->sa[0] = tmap_sa_read(fn_fasta, 0);
+      index->sa[1] = tmap_sa_read(fn_fasta, 1);
+      tmap_progress_print2("reference data read in");
+  }
+  else {
+      tmap_progress_print("retrieving reference data from shared memory");
+      index->shm = tmap_shm_init(index->shm_key, 0, 0);
+      if(NULL == (index->refseq = tmap_refseq_shm_unpack(tmap_shm_get_buffer(index->shm, TMAP_SHM_LISTING_REFSEQ)))) {
+          tmap_error("the packed reference sequence was not found in shared memory", Exit, SharedMemoryListing);
+      }
+      if(NULL == (index->bwt[0] = tmap_bwt_shm_unpack(tmap_shm_get_buffer(index->shm, TMAP_SHM_LISTING_BWT)))) {
+          tmap_error("the BWT string was not found in shared memory", Exit, SharedMemoryListing);
+      }
+      if(NULL == (index->bwt[1] = tmap_bwt_shm_unpack(tmap_shm_get_buffer(index->shm, TMAP_SHM_LISTING_REV_BWT)))) {
+          tmap_error("the reverse BWT string was not found in shared memory", Exit, SharedMemoryListing);
+      }
+      if(NULL == (index->sa[0] = tmap_sa_shm_unpack(tmap_shm_get_buffer(index->shm, TMAP_SHM_LISTING_SA)))) {
+          tmap_error("the SA was not found in shared memory", Exit, SharedMemoryListing);
+      }
+      if(NULL == (index->sa[1] = tmap_sa_shm_unpack(tmap_shm_get_buffer(index->shm, TMAP_SHM_LISTING_REV_SA)))) {
+          tmap_error("the reverse SA was not found in shared memory", Exit, SharedMemoryListing);
+      }
+      tmap_progress_print2("reference data retrieved from shared memory");
+  }
+  
+  return index;
+}
+
+void
+tmap_index_destroy(tmap_index_t *index)
+{
+  tmap_refseq_destroy(index->refseq);
+  tmap_bwt_destroy(index->bwt[0]);
+  tmap_bwt_destroy(index->bwt[1]);
+  tmap_sa_destroy(index->sa[0]);
+  tmap_sa_destroy(index->sa[1]);
+  if(0 < index->shm_key) {
+      tmap_shm_destroy(index->shm, 0);
+  }
+  free(index);
+}
 
 static void tmap_index_core(tmap_index_opt_t *opt)
 {

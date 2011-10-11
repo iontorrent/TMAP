@@ -28,15 +28,13 @@ tmap_map_vsw_thread_init(void **data, tmap_map_opt_t *opt);
  @param  data     pointer to the mapping data pointer
  @param  seqs     the sequence to map (reverse and reverse compliment in integer format)
  @param  seq_len  the sequence lenth
- @param  refseq   the reference sequence
- @param  bwt      the bwt structure
- @param  sa       the sa structure
+ @param  index    the reference index
  @param  opt      the program options
  @return          the mappings, NULL otherwise
  */
 tmap_map_sams_t*
 tmap_map_vsw_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len,
-                          tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt);
+                             tmap_index_t *index, tmap_map_opt_t *opt);
 
 /*!
  cleans up the mapping routine for a given thread

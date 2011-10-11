@@ -3,6 +3,7 @@
 #include "../index/tmap_refseq.h"
 #include "../index/tmap_bwt.h"
 #include "../index/tmap_sa.h"
+#include "../index/tmap_index.h"
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_sort.h"
 #include "../seq/tmap_seq.h"

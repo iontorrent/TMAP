@@ -5,7 +5,6 @@
 #include <config.h>
 #ifdef HAVE_LIBPTHREAD
 #include <pthread.h>
-#include <unistd.h>
 #endif
 #include <unistd.h>
 #include "../util/tmap_error.h"
@@ -21,6 +20,7 @@
 #include "../index/tmap_bwt.h"
 #include "../index/tmap_bwt_match.h"
 #include "../index/tmap_sa.h"
+#include "../index/tmap_index.h"
 #include "../io/tmap_seq_io.h"
 #include "../server/tmap_shm.h"
 #include "../sw/tmap_fsw.h"
@@ -119,7 +119,7 @@ tmap_map_driver_get_flow_info(tmap_seq_t *seq, tmap_map_opt_t *opt,
 
 void
 tmap_map_driver_core_worker(int32_t num_ends, tmap_seq_t ***seq_buffer, tmap_map_sams_t ***sams, int32_t seq_buffer_length,
-                         tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2],
+                         tmap_index_t *index,
                          tmap_driver_func_thread_init func_thread_init, 
                          tmap_driver_func_thread_map func_thread_map, 
                          tmap_driver_func_mapq func_mapq,
@@ -157,7 +157,7 @@ tmap_map_driver_core_worker(int32_t num_ends, tmap_seq_t ***seq_buffer, tmap_map
               }
 
               // map thread data,
-              sams[i][low] = func_thread_map(&data, seq, refseq, bwt, sa, rand, opt);
+              sams[i][low] = func_thread_map(&data, seq, index, rand, opt);
               if(sams[i][low] == NULL) {
                   tmap_error("the thread function did not return a mapping", Exit, OutOfRange);
               }
@@ -166,7 +166,7 @@ tmap_map_driver_core_worker(int32_t num_ends, tmap_seq_t ***seq_buffer, tmap_map
                   // mapall should have already done this!
                   if(TMAP_MAP_ALGO_MAPALL != opt->algo_id) {
                       // smith waterman (score only)
-                      sams[i][low] = tmap_map_util_sw_gen_score(refseq, sams[i][low], seq_buffer[i][low], rand, opt);
+                      sams[i][low] = tmap_map_util_sw_gen_score(index->refseq, sams[i][low], seq_buffer[i][low], rand, opt);
 
                       // remove duplicates
                       tmap_map_util_remove_duplicates(sams[i][low], opt->dup_window, rand);
@@ -181,7 +181,7 @@ tmap_map_driver_core_worker(int32_t num_ends, tmap_seq_t ***seq_buffer, tmap_map
                       tmap_map_sams_filter(sams[i][low], opt->aln_output_mode, rand);
 
                       // smith waterman - generate cigars
-                      sams[i][low] = tmap_map_util_sw_gen_cigar(refseq, sams[i][low], seq_buffer[i][low], opt);
+                      sams[i][low] = tmap_map_util_sw_gen_cigar(index->refseq, sams[i][low], seq_buffer[i][low], opt);
                   }
 
                   // re-align the alignments in flow-space
@@ -193,7 +193,7 @@ tmap_map_driver_core_worker(int32_t num_ends, tmap_seq_t ***seq_buffer, tmap_map
                       tmap_map_util_fsw(fs, seq,
                                         flow_order, flow_order_len,
                                         key_seq, key_seq_len,
-                                        sams[i][low], refseq, 
+                                        sams[i][low], index->refseq, 
                                         opt->bw, opt->softclip_type, opt->score_thr,
                                         opt->score_match, opt->pen_mm, opt->pen_gapo,
                                         opt->pen_gape, opt->fscore, 1-opt->ignore_flowgram);
@@ -233,7 +233,7 @@ tmap_map_driver_core_thread_worker(void *arg)
   tmap_map_driver_thread_data_t *thread_data = (tmap_map_driver_thread_data_t*)arg;
 
   tmap_map_driver_core_worker(thread_data->num_ends, thread_data->seq_buffer, thread_data->sams, thread_data->seq_buffer_length, 
-                           thread_data->refseq, thread_data->bwt, thread_data->sa, 
+                           thread_data->index,
                            thread_data->func_thread_init, 
                            thread_data->func_thread_map, 
                            thread_data->func_mapq, 
@@ -254,13 +254,10 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
 {
   uint32_t i, j, n_reads_processed=0;
   int32_t seq_buffer_length=0;
-  tmap_refseq_t *refseq=NULL;
-  tmap_bwt_t *bwt[2]={NULL, NULL};
-  tmap_sa_t *sa[2]={NULL, NULL};
   tmap_seq_io_t **seqio=NULL;
   tmap_seq_t ***seq_buffer = NULL;
   tmap_map_sams_t ***sams = NULL;
-  tmap_shm_t *shm = NULL;
+  tmap_index_t *index = NULL;
 #ifdef HAVE_LIBPTHREAD
   tmap_rand_t **rand = NULL;
 #else
@@ -283,40 +280,11 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
       seqio[i] = tmap_seq_io_init(opt->fn_reads[i], seq_type, 0, opt->input_compr);
   }
 
-  // get the reference information
-  if(0 == opt->shm_key) {
-      tmap_progress_print("reading in reference data");
-      refseq = tmap_refseq_read(opt->fn_fasta, 0);
-      bwt[0] = tmap_bwt_read(opt->fn_fasta, 0);
-      bwt[1] = tmap_bwt_read(opt->fn_fasta, 1);
-      sa[0] = tmap_sa_read(opt->fn_fasta, 0);
-      sa[1] = tmap_sa_read(opt->fn_fasta, 1);
-      tmap_progress_print2("reference data read in");
-  }
-  else {
-      tmap_progress_print("retrieving reference data from shared memory");
-      shm = tmap_shm_init(opt->shm_key, 0, 0);
-      if(NULL == (refseq = tmap_refseq_shm_unpack(tmap_shm_get_buffer(shm, TMAP_SHM_LISTING_REFSEQ)))) {
-          tmap_error("the packed reference sequence was not found in shared memory", Exit, SharedMemoryListing);
-      }
-      if(NULL == (bwt[0] = tmap_bwt_shm_unpack(tmap_shm_get_buffer(shm, TMAP_SHM_LISTING_BWT)))) {
-          tmap_error("the BWT string was not found in shared memory", Exit, SharedMemoryListing);
-      }
-      if(NULL == (bwt[1] = tmap_bwt_shm_unpack(tmap_shm_get_buffer(shm, TMAP_SHM_LISTING_REV_BWT)))) {
-          tmap_error("the reverse BWT string was not found in shared memory", Exit, SharedMemoryListing);
-      }
-      if(NULL == (sa[0] = tmap_sa_shm_unpack(tmap_shm_get_buffer(shm, TMAP_SHM_LISTING_SA)))) {
-          tmap_error("the SA was not found in shared memory", Exit, SharedMemoryListing);
-      }
-      if(NULL == (sa[1] = tmap_sa_shm_unpack(tmap_shm_get_buffer(shm, TMAP_SHM_LISTING_REV_SA)))) {
-          tmap_error("the reverse SA was not found in shared memory", Exit, SharedMemoryListing);
-      }
-      tmap_progress_print2("reference data retrieved from shared memory");
-
-  }
+  // get the index
+  index = tmap_index_init(opt->fn_fasta, opt->shm_key);
 
   // initialize the options and print any relevant information
-  if(0 != func_init(refseq, opt)) {
+  if(0 != func_init(index->refseq, opt)) {
       tmap_error("the main function could not be initialized", Exit, OutOfRange);
   }
 
@@ -355,7 +323,7 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
   }
 
   // SAM header
-  tmap_sam_print_header(tmap_file_stdout, refseq, (1 == num_ends) ? seqio[0] : NULL, 
+  tmap_sam_print_header(tmap_file_stdout, index->refseq, (1 == num_ends) ? seqio[0] : NULL, 
                         opt->sam_rg, opt->flow_order, opt->key_seq, opt->sam_sff_tags, opt->argc, opt->argv);
 
   tmap_progress_print("processing reads");
@@ -374,7 +342,7 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
       // do alignment
 #ifdef HAVE_LIBPTHREAD
       if(1 == opt->num_threads) {
-          tmap_map_driver_core_worker(num_ends, seq_buffer, sams, seq_buffer_length, refseq, bwt, sa, 
+          tmap_map_driver_core_worker(num_ends, seq_buffer, sams, seq_buffer_length, index,
                                    func_thread_init, func_thread_map, func_mapq, func_thread_cleanup, 
                                    rand[0],
                                    0, opt);
@@ -395,11 +363,7 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
               thread_data[i].seq_buffer = seq_buffer;
               thread_data[i].sams = sams;
               thread_data[i].seq_buffer_length = seq_buffer_length;
-              thread_data[i].refseq = refseq;
-              thread_data[i].bwt[0] = bwt[0];
-              thread_data[i].bwt[1] = bwt[1];
-              thread_data[i].sa[0] = sa[0];
-              thread_data[i].sa[1] = sa[1];
+              thread_data[i].index = index;
               thread_data[i].func_thread_init = func_thread_init;
               thread_data[i].func_thread_map = func_thread_map;
               thread_data[i].func_mapq = func_mapq;
@@ -421,7 +385,7 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
           free(thread_data);
       }
 #else 
-      tmap_map_driver_core_worker(num_ends, seq_buffer, sams, seq_buffer_length, refseq, bwt, sa, 
+      tmap_map_driver_core_worker(num_ends, seq_buffer, sams, seq_buffer_length, index,
                                   func_thread_init, func_thread_map, func_mapq, func_thread_cleanup, 
                                   rand,
                                   0, opt);
@@ -433,12 +397,12 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
       for(i=0;i<seq_buffer_length;i++) {
           // write
           if(1 == num_ends) {
-              tmap_map_sams_print(seq_buffer[0][i], refseq, sams[0][i], 
+              tmap_map_sams_print(seq_buffer[0][i], index->refseq, sams[0][i], 
                                   0, NULL, opt->sam_sff_tags);
           }
           else {
               for(j=0;j<num_ends;j++) {
-                  tmap_map_sams_print(seq_buffer[j][i], refseq, sams[j][i], 
+                  tmap_map_sams_print(seq_buffer[j][i], index->refseq, sams[j][i], 
                                     (0 == j) ? 1 : ((num_ends-1 == j) ? 2 : 0),
                                     sams[(j+1) % num_ends][i], opt->sam_sff_tags);
               }
@@ -470,11 +434,7 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
   tmap_file_fclose(tmap_file_stdout);
 
   // free memory
-  tmap_refseq_destroy(refseq);
-  tmap_bwt_destroy(bwt[0]);
-  tmap_bwt_destroy(bwt[1]);
-  tmap_sa_destroy(sa[0]);
-  tmap_sa_destroy(sa[1]);
+  tmap_index_destroy(index);
   for(i=0;i<num_ends;i++) {
       tmap_seq_io_destroy(seqio[i]);
       for(j=0;j<reads_queue_size;j++) {
@@ -486,9 +446,6 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
   free(seqio);
   free(seq_buffer);
   free(sams);
-  if(0 < opt->shm_key) {
-      tmap_shm_destroy(shm, 0);
-  }
 #ifdef HAVE_LIBPTHREAD
   for(i=0;i<opt->num_threads;i++) {
       tmap_rand_destroy(rand[i]);

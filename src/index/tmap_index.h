@@ -6,9 +6,25 @@
 // (2^32) - 1
 #define TMAP_INDEX_TOO_BIG_GENOME 0xFFFFFFFF
 
+#include "../server/tmap_shm.h"
+
 /*! 
   @details  Constructs the packed reference sequence, BWT string, and Suffix Array.
   */
+
+typedef struct {
+    tmap_refseq_t *refseq;
+    tmap_bwt_t *bwt[2];
+    tmap_sa_t *sa[2];
+    tmap_shm_t *shm;
+    key_t shm_key;
+} tmap_index_t;
+
+tmap_index_t*
+tmap_index_init(const char *fn_fasta, key_t shm_key);
+
+void
+tmap_index_destroy(tmap_index_t *index);
 
 /*! 
   structure to store the command line options for 'tmap index'

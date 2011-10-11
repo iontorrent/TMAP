@@ -18,6 +18,7 @@
 #include "../index/tmap_bwt.h"
 #include "../index/tmap_bwt_match.h"
 #include "../index/tmap_sa.h"
+#include "../index/tmap_index.h"
 #include "../io/tmap_seq_io.h"
 #include "../server/tmap_shm.h"
 #include "../sw/tmap_sw.h"
@@ -200,7 +201,7 @@ tmap_map1_thread_init(void **data, tmap_map_opt_t *opt)
 // reverse and reverse compliment
 tmap_map_sams_t*
 tmap_map1_thread_map_core(void **data, tmap_seq_t *seqs[2], tmap_string_t *bases[2], int32_t seq_len,
-                          tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt)
+                          tmap_index_t *index, tmap_map_opt_t *opt)
 {
   tmap_map1_thread_data_t *d = (tmap_map1_thread_data_t*)(*data);
   int32_t seed2_len = 0;
@@ -241,23 +242,23 @@ tmap_map1_thread_map_core(void **data, tmap_seq_t *seqs[2], tmap_string_t *bases
       memset(d->width[0], 0, (1+d->width_length) * sizeof(tmap_bwt_match_width_t));
       memset(d->width[1], 0, (1+d->width_length) * sizeof(tmap_bwt_match_width_t));
   }
-  tmap_bwt_match_cal_width_reverse(bwt[0], seed2_len, bases[0]->s + (seq_len - seed2_len), d->width[0]);
-  tmap_bwt_match_cal_width_reverse(bwt[1], seed2_len, bases[1]->s + (seq_len - seed2_len), d->width[1]);
+  tmap_bwt_match_cal_width_reverse(index->bwt[0], seed2_len, bases[0]->s + (seq_len - seed2_len), d->width[0]);
+  tmap_bwt_match_cal_width_reverse(index->bwt[1], seed2_len, bases[1]->s + (seq_len - seed2_len), d->width[1]);
 
   // seed width
   if(0 < opt->seed_length) {
-      tmap_bwt_match_cal_width_reverse(bwt[0], opt->seed_length, bases[0]->s + (seq_len - opt->seed_length), d->seed_width[0]);
-      tmap_bwt_match_cal_width_reverse(bwt[1], opt->seed_length, bases[1]->s + (seq_len - opt->seed_length), d->seed_width[1]);
+      tmap_bwt_match_cal_width_reverse(index->bwt[0], opt->seed_length, bases[0]->s + (seq_len - opt->seed_length), d->seed_width[0]);
+      tmap_bwt_match_cal_width_reverse(index->bwt[1], opt->seed_length, bases[1]->s + (seq_len - opt->seed_length), d->seed_width[1]);
   }
 
   // map
-  sams = tmap_map1_aux_core(seqs, refseq, bwt, sa, d->width, (0 < opt_local.seed_length) ? d->seed_width : NULL, &opt_local, d->stack, seed2_len);
+  sams = tmap_map1_aux_core(seqs, index->refseq, index->bwt, index->sa, d->width, (0 < opt_local.seed_length) ? d->seed_width : NULL, &opt_local, d->stack, seed2_len);
 
   return sams;
 }
 
 static tmap_map_sams_t*
-tmap_map1_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_rand_t *rand, tmap_map_opt_t *opt)
+tmap_map1_thread_map(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_rand_t *rand, tmap_map_opt_t *opt)
 {
   int32_t seq_len = 0;;
   tmap_seq_t *seqs[2]={NULL, NULL};
@@ -294,7 +295,7 @@ tmap_map1_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_b
   bases[1] = tmap_seq_get_bases(seqs[1]);
   
   // core algorithm
-  sams = tmap_map1_thread_map_core(data, seqs, bases, seq_len, refseq, bwt, sa, opt);
+  sams = tmap_map1_thread_map_core(data, seqs, bases, seq_len, index, opt);
 
   // destroy
   tmap_seq_destroy(seqs[0]);

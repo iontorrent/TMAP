@@ -16,6 +16,7 @@
 #include "../index/tmap_bwtl.h"
 #include "../index/tmap_bwt.h"
 #include "../index/tmap_sa.h"
+#include "../index/tmap_index.h"
 #include "../sw/tmap_sw.h"
 #include "../sw/tmap_fsw.h"
 #include "tmap_map_util.h"

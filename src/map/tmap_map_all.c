@@ -19,6 +19,7 @@
 #include "../index/tmap_bwt.h"
 #include "../index/tmap_bwt_match.h"
 #include "../index/tmap_sa.h"
+#include "../index/tmap_index.h"
 #include "../io/tmap_seq_io.h"
 #include "../server/tmap_shm.h"
 #include "../sw/tmap_sw.h"
@@ -61,9 +62,9 @@ tmap_map_all_sams_merge_helper(tmap_map_sams_t *dest, tmap_map_sams_t *src, int3
 }
 
 static tmap_map_sams_t *
-tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2],
+tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_index_t *index,
                         tmap_map_sams_t **sams_in, int32_t *algo_ids, int32_t n_algos,
-                       int32_t stage, tmap_rand_t *rand, tmap_map_opt_t *opt)
+                        int32_t stage, tmap_rand_t *rand, tmap_map_opt_t *opt)
 {
   int32_t i;
   tmap_map_sams_t *sams = NULL;
@@ -75,7 +76,7 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
   if(1 == opt->aln_output_mode_ind) {
       for(i=0;i<n_algos;i++) {
           // smith waterman (score only)
-          sams_in[i] = tmap_map_util_sw_gen_score(refseq, sams_in[i], seq, rand, opt);
+          sams_in[i] = tmap_map_util_sw_gen_score(index->refseq, sams_in[i], seq, rand, opt);
           
           // duplicate removal
           tmap_map_util_remove_duplicates(sams_in[i], opt->dup_window, rand);
@@ -93,7 +94,7 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
   // remove duplicates after merging
   if(0 == opt->aln_output_mode_ind) {
       // smith waterman (score only)
-      sams = tmap_map_util_sw_gen_score(refseq, sams, seq, rand, opt);
+      sams = tmap_map_util_sw_gen_score(index->refseq, sams, seq, rand, opt);
 
       // duplicate removal
       tmap_map_util_remove_duplicates(sams, opt->dup_window, rand);
@@ -125,7 +126,7 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[
   }
   
   // generate the cigars
-  sams = tmap_map_util_sw_gen_cigar(refseq, sams, seq, opt);
+  sams = tmap_map_util_sw_gen_cigar(index->refseq, sams, seq, opt);
   
   return sams;
 
@@ -206,7 +207,7 @@ tmap_map_all_thread_init(void **data, tmap_map_opt_t *opt)
 // Note: we assume that filtering and duplicate removal will not be done but the
 // map* algorithms when their program options "algo_id != -1"
 static tmap_map_sams_t*
-tmap_map_all_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_rand_t *rand, tmap_map_opt_t *opt)
+tmap_map_all_thread_map(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_rand_t *rand, tmap_map_opt_t *opt)
 {
   int32_t i, j, n_algos=4;
   tmap_map_sams_t *sams = NULL;
@@ -250,28 +251,28 @@ tmap_map_all_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tma
       if(opt->algos[i] & TMAP_MAP_ALGO_MAP1) {
           seqs_tmp[0] = seqs[2]; seqs_tmp[1] = seqs[1];
           bases_tmp[0] = bases[2]; bases_tmp[1] = bases[1];
-          sams_in[0] = tmap_map1_thread_map_core(&d->data_map1[i], seqs_tmp, bases_tmp, seq_len, refseq, bwt, sa, opt->opt_map1[i]);
+          sams_in[0] = tmap_map1_thread_map_core(&d->data_map1[i], seqs_tmp, bases_tmp, seq_len, index, opt->opt_map1[i]);
       }
       else {
           sams_in[0] = tmap_map_sams_init(NULL);
       }
       // map2
       if(opt->algos[i] & TMAP_MAP_ALGO_MAP2) {
-          sams_in[1] = tmap_map2_thread_map_core(&d->data_map2[i], seqs, seq_len, refseq, bwt, sa, rand, opt->opt_map2[i]);
+          sams_in[1] = tmap_map2_thread_map_core(&d->data_map2[i], seqs, seq_len, index, rand, opt->opt_map2[i]);
       }
       else {
           sams_in[1] = tmap_map_sams_init(NULL);
       }
       // map3
       if(opt->algos[i] & TMAP_MAP_ALGO_MAP3) {
-          sams_in[2] = tmap_map3_thread_map_core(&d->data_map3[i], seqs, seq_len, refseq, bwt, sa, opt->opt_map3[i]);
+          sams_in[2] = tmap_map3_thread_map_core(&d->data_map3[i], seqs, seq_len, index, opt->opt_map3[i]);
       }
       else {
           sams_in[2] = tmap_map_sams_init(NULL);
       }
       // mapvsw
       if(opt->algos[i] & TMAP_MAP_ALGO_MAPVSW) {
-          sams_in[3] = tmap_map_vsw_thread_map_core(&d->data_map_vsw[i], seqs, seq_len, refseq, bwt, sa, opt->opt_map_vsw[i]);
+          sams_in[3] = tmap_map_vsw_thread_map_core(&d->data_map_vsw[i], seqs, seq_len, index, opt->opt_map_vsw[i]);
       }
       else {
           sams_in[3] = tmap_map_sams_init(NULL);
@@ -296,7 +297,7 @@ tmap_map_all_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tma
 
       // merge all the mappings
       // init
-      sams = tmap_map_all_sams_merge(seq, refseq, bwt, sa, sams_in, algo_ids, n_algos, i+1, rand, opt);
+      sams = tmap_map_all_sams_merge(seq, index, sams_in, algo_ids, n_algos, i+1, rand, opt);
 
       // destroy the individual mappings
       for(j=0;j<n_algos;j++) {

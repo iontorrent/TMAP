@@ -19,6 +19,7 @@
 #include "../index/tmap_bwt.h"
 #include "../index/tmap_bwt_match.h"
 #include "../index/tmap_sa.h"
+#include "../index/tmap_index.h"
 #include "../io/tmap_seq_io.h"
 #include "../server/tmap_shm.h"
 #include "../sw/tmap_sw.h"
@@ -145,7 +146,7 @@ tmap_map3_thread_init(void **data, tmap_map_opt_t *opt)
 }
 
 tmap_map_sams_t*
-tmap_map3_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt)
+tmap_map3_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len, tmap_index_t *index, tmap_map_opt_t *opt)
 {
   tmap_map_sams_t *sams = NULL;
   tmap_map3_thread_data_t *d = (tmap_map3_thread_data_t*)(*data);
@@ -156,13 +157,13 @@ tmap_map3_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len, tma
   }
 
   // align
-  sams = tmap_map3_aux_core(seqs, d->flow_order, d->flow_order_len, refseq, bwt[1], sa[1], opt);
+  sams = tmap_map3_aux_core(seqs, d->flow_order, d->flow_order_len, index->refseq, index->bwt[1], index->sa[1], opt);
 
   return sams;
 }
 
 static tmap_map_sams_t *
-tmap_map3_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_rand_t *rand, tmap_map_opt_t *opt)
+tmap_map3_thread_map(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_rand_t *rand, tmap_map_opt_t *opt)
 {
   tmap_seq_t *seqs[2] = {NULL, NULL};
   tmap_map_sams_t *sams = NULL;
@@ -196,7 +197,7 @@ tmap_map3_thread_map(void **data, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_b
   tmap_seq_to_int(seqs[1]);
 
   // align
-  sams = tmap_map3_aux_core(seqs, d->flow_order, d->flow_order_len, refseq, bwt[1], sa[1], opt);
+  sams = tmap_map3_aux_core(seqs, d->flow_order, d->flow_order_len, index->refseq, index->bwt[1], index->sa[1], opt);
 
   // destroy
   tmap_seq_destroy(seqs[0]);

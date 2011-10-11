@@ -5,6 +5,7 @@
 #include "../index/tmap_refseq.h"
 #include "../index/tmap_bwt.h"
 #include "../index/tmap_sa.h"
+#include "../index/tmap_index.h"
 #include "../index/tmap_bwt_match.h"
 #include "../sw/tmap_sw.h"
 #include "tmap_map_util.h"
