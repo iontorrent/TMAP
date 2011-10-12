@@ -54,9 +54,6 @@ tmap_index_init(const char *fn_fasta, key_t shm_key)
   }
 
   for(i=0;i<2;i++) {
-      fprintf(stderr, "index->refseq->len=%u index->bwt[i]->seq_len=%u\n",
-              index->refseq->len,
-              index->bwt[i]->seq_len);
       if(index->refseq->len != index->bwt[i]->seq_len) {
           tmap_error("refseq and bwt lengths do not match", Exit, OutOfRange);
       }
