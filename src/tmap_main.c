@@ -57,7 +57,6 @@ static int usage()
   fprintf(stderr, "         sff2fq         converts a SFF file to a FASTQ file\n");
   fprintf(stderr, "         refinfo        prints information about the reference\n");
   fprintf(stderr, "         pac2fasta      converts a packed FASTA to a FASTA file\n");
-  fprintf(stderr, "         indexspeed     index performance benchmarks\n");
 #ifdef HAVE_SAMTOOLS
   fprintf(stderr, "         sam2fs         pretty print SAM records in flow space\n");
 #endif
@@ -66,6 +65,7 @@ static int usage()
   fprintf(stderr, "Debugging:\n");
   fprintf(stderr, "         exact          perform simple exact matching\n");
   fprintf(stderr, "         fsw            perform flow Smith-Waterman\n");
+  fprintf(stderr, "         indexspeed     index performance benchmarks\n");
 #endif
   return 1;
 }
@@ -95,13 +95,13 @@ int main(int argc, char *argv[])
       else if (0 == strcmp("sff2fq", argv[1])) ret = tmap_seq_io_sff2fq_main(argc-1, argv+1);
       else if (0 == strcmp("refinfo", argv[1])) ret = tmap_refseq_refinfo_main(argc-1, argv+1);
       else if (0 == strcmp("pac2fasta", argv[1])) ret = tmap_refseq_pac2fasta_main(argc-1, argv+1);
-      else if (0 == strcmp("indexspeed", argv[1])) ret = tmap_index_speed(argc-1, argv+1);
 #ifdef HAVE_SAMTOOLS
       else if (0 == strcmp("sam2fs", argv[1])) ret = tmap_sam2fs_main(argc-1, argv+1);
 #endif
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
       else if (0 == strcmp("exact", argv[1])) ret = tmap_debug_exact(argc-1, argv+1);
       else if (0 == strcmp("fsw", argv[1])) ret = tmap_fsw_main(argc-1, argv+1);
+      else if (0 == strcmp("indexspeed", argv[1])) ret = tmap_index_speed(argc-1, argv+1);
 #endif
       else if (0 == strcmp("--version", argv[1]) || 0 == strcmp("-v", argv[1])) ret = version();
       else if (0 == strcmp("--help", argv[1]) || 0 == strcmp("-h", argv[1])) ret = usage();
