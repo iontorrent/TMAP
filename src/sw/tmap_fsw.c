@@ -1421,11 +1421,11 @@ tmap_fsw_main_opt_init()
   opt->j_type = TMAP_FSW_NO_JUSTIFY;
 
   // param
-  opt->param.gap_open = TMAP_MAP_UTIL_PEN_GAPO*100;
-  opt->param.gap_ext = TMAP_MAP_UTIL_PEN_GAPE*100;
-  opt->param.gap_end = TMAP_MAP_UTIL_PEN_GAPE*100;
+  opt->param.gap_open = TMAP_MAP_OPT_PEN_GAPO*100;
+  opt->param.gap_ext = TMAP_MAP_OPT_PEN_GAPE*100;
+  opt->param.gap_end = TMAP_MAP_OPT_PEN_GAPE*100;
   opt->param.matrix = tmap_fsw_sm_short; // 11*100 - match, -19*100 - mismatch
-  opt->param.fscore = TMAP_MAP_UTIL_FSCORE*100; // set this to score_match + gap_open + gap_ext
+  opt->param.fscore = TMAP_MAP_OPT_FSCORE*100; // set this to score_match + gap_open + gap_ext
   opt->param.offset = 0;
   opt->param.row = 5;
   opt->param.band_width = 50;

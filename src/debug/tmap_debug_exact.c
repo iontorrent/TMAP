@@ -86,7 +86,7 @@ tmap_debug_exact_core_worker(tmap_refseq_t *refseq, tmap_bwt_t *bwt, tmap_sa_t *
 
   if(0 == n_only) {
       if(0 == mapped) {
-          tmap_sam_print_unmapped(tmap_file_stdout, orig_seq, 0);
+          tmap_sam_print_unmapped(tmap_file_stdout, orig_seq, 0, refseq, 0, 0, 0, 0, 0, 0);
       }
   }
   else {
@@ -115,7 +115,7 @@ tmap_debug_exact_core(tmap_debug_exact_opt_t *opt)
   if(0 == opt->n_only) {
       refseq = tmap_refseq_read(opt->fn_fasta, 0);
       sa = tmap_sa_read(opt->fn_fasta, 1);
-      tmap_sam_print_header(tmap_file_stdout, refseq, seqio, NULL, NULL, 0, opt->argc, opt->argv);
+      tmap_sam_print_header(tmap_file_stdout, refseq, seqio, NULL, NULL, NULL, 0, opt->argc, opt->argv);
   }
 
   while(0 <= tmap_seq_io_read(seqio, seq)) {
