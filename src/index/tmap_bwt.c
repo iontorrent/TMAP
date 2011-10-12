@@ -29,6 +29,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <assert.h>
 
 #include "../util/tmap_error.h"
 #include "../util/tmap_alloc.h"
@@ -369,7 +370,6 @@ tmap_bwt_gen_cnt_table(tmap_bwt_t *bwt)
   }
 }
 
-// TODO: we can use the previous hash results to inform the current...
 static void
 tmap_bwt_gen_hash_helper(tmap_bwt_t *bwt, int32_t len)
 {
@@ -377,12 +377,13 @@ tmap_bwt_gen_hash_helper(tmap_bwt_t *bwt, int32_t len)
   uint8_t *seq = NULL;
   tmap_bwt_match_occ_t match_sa;
   uint32_t sum = 0;
-  uint64_t hash_i = 0;
+  uint64_t hash_i = 0, low, high;
   //int32_t j;
 
   seq = tmap_calloc(len, sizeof(uint8_t), "seq");
 
-  i = 0;
+  i = 0; // length of the current k-mer
+  hash_i = 0;
   while(1) {
       if(len < i) {
           tmap_error("ABORT", Exit, OutOfRange);
@@ -392,27 +393,9 @@ tmap_bwt_gen_hash_helper(tmap_bwt_t *bwt, int32_t len)
           n = tmap_bwt_match_exact(bwt, len, seq, &match_sa);
           bwt->hash_k[len-1][hash_i] = match_sa.k;
           bwt->hash_l[len-1][hash_i] = match_sa.l;
-          // DEBUGGING
-          /*
-          for(j=0;j<len;j++) {
-              fputc("ACGT"[seq[j]], stderr);
+          if(match_sa.k <= match_sa.l) {
+              sum += n;
           }
-          fputc('\t', stderr);
-          uint64_t t = hash_i;
-          for(j=0;j<len;j++) {
-              fputc("ACGT"[t&3], stderr);
-              if(seq[len-j-1] != (t&3)) {
-                  tmap_error("bug encountered", Exit, OutOfRange);
-              }
-              t >>= 2;
-          }
-          fputc('\t', stderr);
-          fputc('\t', stderr);
-          fprintf(stderr, "n=%d\toffset=%d\n", n, match_sa.offset);
-          */
-          sum += n;
-
-          // TODO: we can use the offset when no hits are found...
 
           // find the next base
           i--;
@@ -424,11 +407,36 @@ tmap_bwt_gen_hash_helper(tmap_bwt_t *bwt, int32_t len)
           if(i < 0) break;
           seq[i]++;
           hash_i++;
+          i++;
       }
       else {
-          hash_i <<= 2;
+          // check the previous hash
+          if(0 < i && (UINT32_MAX == bwt->hash_k[i-1][hash_i] || bwt->hash_l[i-1][hash_i] < bwt->hash_k[i-1][hash_i])) {
+              // no need to search further
+              low = hash_i << (2 * (len - i));
+              high = (hash_i+1) << (2 * (len - i));
+              while(low < high) {
+                  bwt->hash_k[len-1][low] = UINT32_MAX;
+                  bwt->hash_l[len-1][low] = UINT32_MAX;
+                  low++;
+              }
+              // find the next base
+              i--;
+              while(0 <= i && 3 == seq[i]) {
+                  seq[i] = 0;
+                  hash_i >>= 2;
+                  i--;
+              }
+              if(i < 0) break;
+              seq[i]++;
+              hash_i++;
+              i++;
+          }
+          else {
+              hash_i <<= 2;
+              i++;
+          }
       }
-      i++;
   }
       
   //fprintf(stderr, "sum=%d (bwt->seq_len - len + 1)=%d\n", sum, bwt->seq_len - len + 1);

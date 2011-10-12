@@ -43,6 +43,8 @@ typedef unsigned char uint8_t;
 #define TMAP_BWT_OCC_INTERVAL 0x80
 #define TMAP_BWT_HASH_WIDTH 12
 
+// NB: we do not need a multi-level hash, just the highest-level hash.  We can
+// simulate the others from this one...
 /*! 
   BWT data structure
   */
