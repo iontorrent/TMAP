@@ -38,7 +38,7 @@
 #include "../io/tmap_file.h"
 #include "tmap_bwt_gen.h"
 #include "tmap_bwt.h"
-#include "tmap_bwt_match.h" // HERE
+#include "tmap_bwt_match.h"
 
 static uint64_t
 tmap_bwt_get_hash_length(uint64_t i)

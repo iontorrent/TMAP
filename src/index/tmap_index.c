@@ -16,6 +16,7 @@ tmap_index_t*
 tmap_index_init(const char *fn_fasta, key_t shm_key)
 {
   tmap_index_t *index = NULL;
+  int32_t i;
 
   index = tmap_calloc(1, sizeof(tmap_index_t), "index");
 
@@ -25,10 +26,10 @@ tmap_index_init(const char *fn_fasta, key_t shm_key)
   if(0 == index->shm_key) {
       tmap_progress_print("reading in reference data");
       index->refseq = tmap_refseq_read(fn_fasta, 0);
-      index->bwt[0] = tmap_bwt_read(fn_fasta, 0);
-      index->bwt[1] = tmap_bwt_read(fn_fasta, 1);
-      index->sa[0] = tmap_sa_read(fn_fasta, 0);
-      index->sa[1] = tmap_sa_read(fn_fasta, 1);
+      for(i=0;i<2;i++) {
+          index->bwt[i] = tmap_bwt_read(fn_fasta, i);
+          index->sa[i] = tmap_sa_read(fn_fasta, i);
+      }
       tmap_progress_print2("reference data read in");
   }
   else {
@@ -50,6 +51,18 @@ tmap_index_init(const char *fn_fasta, key_t shm_key)
           tmap_error("the reverse SA was not found in shared memory", Exit, SharedMemoryListing);
       }
       tmap_progress_print2("reference data retrieved from shared memory");
+  }
+
+  for(i=0;i<2;i++) {
+      fprintf(stderr, "index->refseq->len=%u index->bwt[i]->seq_len=%u\n",
+              index->refseq->len,
+              index->bwt[i]->seq_len);
+      if(index->refseq->len != index->bwt[i]->seq_len) {
+          tmap_error("refseq and bwt lengths do not match", Exit, OutOfRange);
+      }
+      if(index->refseq->len != index->sa[i]->seq_len) {
+          tmap_error("refseq and sa lengths do not match", Exit, OutOfRange);
+      }
   }
   
   return index;
