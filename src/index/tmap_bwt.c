@@ -508,7 +508,7 @@ tmap_bwt_occ(const tmap_bwt_t *bwt, uint32_t k, uint8_t c)
   uint32_t *p;
 
   if(k == bwt->seq_len) return bwt->L2[c+1] - bwt->L2[c];
-  if(UINT32_MAX-1 <= k) return 0;
+  if(UINT32_MAX == k) return 0;
   if(k >= bwt->primary) --k; // because $ is not in bwt
 
   // retrieve Occ at k/bwt->occ_interval
@@ -550,7 +550,8 @@ tmap_bwt_2occ(const tmap_bwt_t *bwt, uint32_t k, uint32_t l, uint8_t c, uint32_t
   }
   _k = (k >= bwt->primary)? k-1 : k;
   _l = (l >= bwt->primary)? l-1 : l;
-  if(_l/bwt->occ_interval != _k/bwt->occ_interval || UINT32_MAX-1 <= k || UINT32_MAX-1 <= l) {
+  if(_l/bwt->occ_interval != _k/bwt->occ_interval || UINT32_MAX == k || UINT32_MAX == l) {
+      if(l == UINT32_MAX) k = UINT32_MAX; 
       *ok = tmap_bwt_occ(bwt, k, c);
       *ol = tmap_bwt_occ(bwt, l, c);
   } else {
@@ -589,7 +590,7 @@ tmap_bwt_occ4(const tmap_bwt_t *bwt, uint32_t k, uint32_t cnt[4])
 {
   uint32_t l, j, x;
   uint32_t *p;
-  if(UINT32_MAX-1 <= k) {
+  if(UINT32_MAX == k) {
       memset(cnt, 0, 4 * sizeof(uint32_t));
       return;
   }
@@ -617,7 +618,8 @@ tmap_bwt_2occ4(const tmap_bwt_t *bwt, uint32_t k, uint32_t l, uint32_t cntk[4], 
   }
   _k = (k >= bwt->primary)? k-1 : k;
   _l = (l >= bwt->primary)? l-1 : l;
-  if(_l/bwt->occ_interval != _k/bwt->occ_interval || UINT32_MAX-1 <= k || UINT32_MAX-1 <= l) {
+  if(_l/bwt->occ_interval != _k/bwt->occ_interval || UINT32_MAX == k || UINT32_MAX == l) {
+      if(l == UINT32_MAX) k = UINT32_MAX; 
       tmap_bwt_occ4(bwt, k, cntk);
       tmap_bwt_occ4(bwt, l, cntl);
   } else {
