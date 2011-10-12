@@ -90,6 +90,7 @@ tmap_refseq_print_header(tmap_file_t *fp, tmap_refseq_t *refseq)
       tmap_file_fprintf(fp, "contig-%d:\t%s\t%u\n", i+1, refseq->annos[i].name->s, refseq->annos[i].len);
   }
   tmap_file_fprintf(fp, "length:\t%llu\n", (unsigned long long int)refseq->len);
+  tmap_file_fprintf(fp, "supported:\t%s\n", (0 == tmap_refseq_supported(refseq)) ? "false" : "true");
 }
 
 static inline void
@@ -407,7 +408,8 @@ tmap_refseq_read_header(tmap_file_t *fp, tmap_refseq_t *refseq)
       tmap_error(NULL, Exit, ReadFileError);
   }
   if(0 == tmap_refseq_supported(refseq)) {
-      fprintf(stderr, "version: %s\n", refseq->package_version->s);
+      fprintf(stderr, "reference version: %s\n", refseq->package_version->s);
+      fprintf(stderr, "package version: %s\n", PACKAGE_VERSION);
       tmap_error("the reference index is not supported", Exit, ReadFileError);
   }
      

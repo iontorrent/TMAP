@@ -390,14 +390,8 @@ tmap_bwt_gen_hash_helper(tmap_bwt_t *bwt, int32_t len)
       if(i == len) {
           // test
           n = tmap_bwt_match_exact(bwt, len, seq, &match_sa);
-          if(match_sa.l < match_sa.k) {
-              bwt->hash_k[len-1][hash_i] = UINT32_MAX;
-              bwt->hash_l[len-1][hash_i] = UINT32_MAX;
-          }
-          else {
-              bwt->hash_k[len-1][hash_i] = match_sa.k;
-              bwt->hash_l[len-1][hash_i] = match_sa.l;
-          }
+          bwt->hash_k[len-1][hash_i] = match_sa.k;
+          bwt->hash_l[len-1][hash_i] = match_sa.l;
           // DEBUGGING
           /*
           for(j=0;j<len;j++) {
