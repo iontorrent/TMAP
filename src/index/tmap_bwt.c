@@ -37,6 +37,7 @@
 #include "../io/tmap_file.h"
 #include "tmap_bwt_gen.h"
 #include "tmap_bwt.h"
+#include "tmap_bwt_match.h" // HERE
 
 static uint64_t
 tmap_bwt_get_hash_length(uint64_t i)
@@ -368,12 +369,90 @@ tmap_bwt_gen_cnt_table(tmap_bwt_t *bwt)
   }
 }
 
+// TODO: we can use the previous hash results to inform the current...
+static void
+tmap_bwt_gen_hash_helper(tmap_bwt_t *bwt, int32_t len)
+{
+  int32_t i, n;
+  uint8_t *seq = NULL;
+  tmap_bwt_match_occ_t match_sa;
+  uint32_t sum = 0;
+  uint64_t hash_i = 0;
+  //int32_t j;
+
+  seq = tmap_calloc(len, sizeof(uint8_t), "seq");
+
+  i = 0;
+  while(1) {
+      if(len < i) {
+          tmap_error("ABORT", Exit, OutOfRange);
+      }
+      if(i == len) {
+          // test
+          n = tmap_bwt_match_exact(bwt, len, seq, &match_sa);
+          if(match_sa.l < match_sa.k) {
+              bwt->hash_k[len-1][hash_i] = UINT32_MAX;
+              bwt->hash_l[len-1][hash_i] = UINT32_MAX;
+          }
+          else {
+              bwt->hash_k[len-1][hash_i] = match_sa.k;
+              bwt->hash_l[len-1][hash_i] = match_sa.l;
+          }
+          // DEBUGGING
+          /*
+          for(j=0;j<len;j++) {
+              fputc("ACGT"[seq[j]], stderr);
+          }
+          fputc('\t', stderr);
+          uint64_t t = hash_i;
+          for(j=0;j<len;j++) {
+              fputc("ACGT"[t&3], stderr);
+              if(seq[len-j-1] != (t&3)) {
+                  tmap_error("bug encountered", Exit, OutOfRange);
+              }
+              t >>= 2;
+          }
+          fputc('\t', stderr);
+          fputc('\t', stderr);
+          fprintf(stderr, "n=%d\toffset=%d\n", n, match_sa.offset);
+          */
+          sum += n;
+
+          // TODO: we can use the offset when no hits are found...
+
+          // find the next base
+          i--;
+          while(0 <= i && 3 == seq[i]) {
+              seq[i] = 0;
+              hash_i >>= 2;
+              i--;
+          }
+          if(i < 0) break;
+          seq[i]++;
+          hash_i++;
+      }
+      else {
+          hash_i <<= 2;
+      }
+      i++;
+  }
+      
+  //fprintf(stderr, "sum=%d (bwt->seq_len - len + 1)=%d\n", sum, bwt->seq_len - len + 1);
+  if(sum != bwt->seq_len - len + 1) {
+      tmap_error("sum != bwt->seq_len - len + 1", Exit, OutOfRange);
+  }
+  
+  free(seq);
+}
+
 void
 tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width)
 {
-  uint32_t i, sum;
-  uint32_t k[4], l[4];
+  uint32_t i;
+  /*
+  uint32_t sum k[4], l[4];
   uint64_t b, j;
+  */
 
   tmap_progress_print("constructing the occurence hash for the BWT string");
 
@@ -391,62 +470,18 @@ tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width)
   bwt->hash_k = tmap_malloc(sizeof(uint32_t*)*hash_width, "bwt->hash_k");
   bwt->hash_l = tmap_malloc(sizeof(uint32_t*)*hash_width, "bwt->hash_l");
 
-  // base case
-  bwt->hash_k[0] = tmap_malloc(sizeof(uint32_t)*4, "bwt->hash_k[0]");
-  bwt->hash_l[0] = tmap_malloc(sizeof(uint32_t)*4, "bwt->hash_l[0]");
-  tmap_bwt_2occ4(bwt, -1, bwt->seq_len, bwt->hash_k[0], bwt->hash_l[0]);
-  for(i=0;i<4;i++) {
-      bwt->hash_k[0][i] += bwt->L2[i] + 1;
-      bwt->hash_l[0][i] += bwt->L2[i];
-      if(bwt->hash_l[0][i] < bwt->hash_k[0][i]) {
-          bwt->hash_k[0][i] = bwt->hash_l[0][i] = UINT32_MAX;
-      }
-  }
-  
-  // inductive step, use previous hash results
-  bwt->hash_width = 0; // do not use the hash, yet
-  for(i=2;i<=hash_width;i++) {
+  bwt->hash_width = 0;
+  for(i=1;i<=hash_width;i++) {
       uint64_t hash_length = tmap_bwt_get_hash_length(i);
-      uint64_t hash_length_prev = tmap_bwt_get_hash_length(i-1);
       
       // allocate memory for this level
       bwt->hash_k[i-1] = tmap_malloc(sizeof(uint32_t)*hash_length, "bwt->hash_k[i-1]");
       bwt->hash_l[i-1] = tmap_malloc(sizeof(uint32_t)*hash_length, "bwt->hash_l[i-1]");
-  
-      for(j=0;j<hash_length_prev;j++) { // go through the previous
-          if(UINT32_MAX == bwt->hash_k[i-2][j]) {
-              for(b=0;b<4;b++) {
-                  bwt->hash_k[i-1][(j << 2) + b] = UINT32_MAX;
-                  bwt->hash_l[i-1][(j << 2) + b] = UINT32_MAX;
-              }
-          }
-          else {
-              tmap_bwt_2occ4(bwt, bwt->hash_k[i-2][j]-1, bwt->hash_l[i-2][j], k, l); 
-              // add to the occ
-              for(b=0;b<4;b++) {
-                  bwt->hash_k[i-1][(j << 2) + b] = k[b] + bwt->L2[b] + 1;
-                  bwt->hash_l[i-1][(j << 2) + b] = l[b] + bwt->L2[b];
-                  if(bwt->hash_l[i-1][(j << 2) + b] < bwt->hash_k[i-1][(j << 2) + b]) { // no match
-                      bwt->hash_k[i-1][(j << 2) + b] = UINT32_MAX;
-                      bwt->hash_l[i-1][(j << 2) + b] = UINT32_MAX;
-                  }
-              }
-          }
-      }
-      
-      // check sum
-      for(j=sum=0;j<hash_length;j++) {
-          if(UINT32_MAX != bwt->hash_k[i-1][j]) {
-              sum += bwt->hash_l[i-1][j] - bwt->hash_k[i-1][j] + 1;
-          }
-      }
-      if(sum != bwt->seq_len - i + 1) {
-          tmap_error("sum != bwt->seq_len - bwt->hash_width + 1", Exit, OutOfRange);
-      }
-  }
-  // update
-  bwt->hash_width = hash_width;
 
+      tmap_bwt_gen_hash_helper(bwt, i);
+      bwt->hash_width = i; // updated the hash width
+  }
+  
   tmap_progress_print2("constructed the occurence hash for the BWT string");
 }
 
@@ -479,7 +514,7 @@ tmap_bwt_occ(const tmap_bwt_t *bwt, uint32_t k, uint8_t c)
   uint32_t *p;
 
   if(k == bwt->seq_len) return bwt->L2[c+1] - bwt->L2[c];
-  if(k == (uint32_t)(-1)) return 0;
+  if(UINT32_MAX-1 <= k) return 0;
   if(k >= bwt->primary) --k; // because $ is not in bwt
 
   // retrieve Occ at k/bwt->occ_interval
@@ -521,7 +556,7 @@ tmap_bwt_2occ(const tmap_bwt_t *bwt, uint32_t k, uint32_t l, uint8_t c, uint32_t
   }
   _k = (k >= bwt->primary)? k-1 : k;
   _l = (l >= bwt->primary)? l-1 : l;
-  if(_l/bwt->occ_interval != _k/bwt->occ_interval || k == (uint32_t)(-1) || l == (uint32_t)(-1)) {
+  if(_l/bwt->occ_interval != _k/bwt->occ_interval || UINT32_MAX-1 <= k || UINT32_MAX-1 <= l) {
       *ok = tmap_bwt_occ(bwt, k, c);
       *ol = tmap_bwt_occ(bwt, l, c);
   } else {
@@ -560,7 +595,7 @@ tmap_bwt_occ4(const tmap_bwt_t *bwt, uint32_t k, uint32_t cnt[4])
 {
   uint32_t l, j, x;
   uint32_t *p;
-  if(k == (uint32_t)(-1)) {
+  if(UINT32_MAX-1 <= k) {
       memset(cnt, 0, 4 * sizeof(uint32_t));
       return;
   }
@@ -588,7 +623,7 @@ tmap_bwt_2occ4(const tmap_bwt_t *bwt, uint32_t k, uint32_t l, uint32_t cntk[4], 
   }
   _k = (k >= bwt->primary)? k-1 : k;
   _l = (l >= bwt->primary)? l-1 : l;
-  if(_l/bwt->occ_interval != _k/bwt->occ_interval || k == (uint32_t)(-1) || l == (uint32_t)(-1)) {
+  if(_l/bwt->occ_interval != _k/bwt->occ_interval || UINT32_MAX-1 <= k || UINT32_MAX-1 <= l) {
       tmap_bwt_occ4(bwt, k, cntk);
       tmap_bwt_occ4(bwt, l, cntl);
   } else {
