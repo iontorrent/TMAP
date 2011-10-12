@@ -368,62 +368,12 @@ tmap_bwt_gen_cnt_table(tmap_bwt_t *bwt)
   }
 }
 
-static inline void
-tmap_bwt_gen_helper(tmap_bwt_t *bwt, uint32_t hash_width, uint64_t hash_value, uint32_t level, 
-                    uint32_t **k, uint32_t **l)
-{
-  uint64_t i, j;
-  // TODO: could make this tail-recursive for speed
-
-  if(hash_width < level) {
-      // do nothing
-      return;
-  }
-  else if(hash_width == level) { // at the leaves
-      // store values
-      for(i=0;i<4;i++) {
-          bwt->hash_k[hash_width-1][(hash_value << 2) + i] = k[level-1][i] + bwt->L2[i] + 1;
-          bwt->hash_l[hash_width-1][(hash_value << 2) + i] = l[level-1][i] + bwt->L2[i]; 
-      }
-      return;
-  }
-  else { // at a non-leaf
-      for(i=0;i<4;i++) {
-          if(l[level-1][i] < k[level-1][i]) {
-              uint64_t lower, upper;
-
-              lower = (hash_value << 2) + i;
-              upper = ((hash_value + 1) << 2);
-              if(upper <= lower) {
-                  tmap_error("Control reached unexpected point", Exit, OutOfRange);
-              }
-
-              // all at this level or below are NULL
-              for(j=lower;j<upper;j++) {
-                  bwt->hash_k[hash_width-1][j] = UINT32_MAX;
-                  bwt->hash_l[hash_width-1][j] = UINT32_MAX;
-              }
-
-              level--;
-              return;
-          }
-          else { // descend deeper
-              tmap_bwt_2occ4(bwt, 
-                             k[level-1][i]+bwt->L2[i], l[level-1][i]+bwt->L2[i], 
-                             k[level], l[level]); // get occ values
-              tmap_bwt_gen_helper(bwt, hash_width, (hash_value << 2) + i, level+1, k, l); 
-          }
-      }
-      return;
-  }
-}
-
 void
 tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width)
 {
-  uint32_t **k=NULL, **l=NULL;
   uint32_t i, sum;
-  uint64_t j;
+  uint32_t k[4], l[4];
+  uint64_t b, j;
 
   tmap_progress_print("constructing the occurence hash for the BWT string");
 
@@ -436,52 +386,66 @@ tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width)
       tmap_error("Hash width is too great to fit in memory", Exit, OutOfRange);
   }
 
-  bwt->hash_width = hash_width;
 
   // memory for each level
-  bwt->hash_k = tmap_malloc(sizeof(uint32_t*)*bwt->hash_width, "bwt->hash_k");
-  bwt->hash_l = tmap_malloc(sizeof(uint32_t*)*bwt->hash_width, "bwt->hash_l");
+  bwt->hash_k = tmap_malloc(sizeof(uint32_t*)*hash_width, "bwt->hash_k");
+  bwt->hash_l = tmap_malloc(sizeof(uint32_t*)*hash_width, "bwt->hash_l");
 
-  // working space
-  k = tmap_malloc(sizeof(uint32_t*)*hash_width, "k");
-  l = tmap_malloc(sizeof(uint32_t*)*hash_width, "l");
-  for(i=0;i<hash_width;i++) {
-      k[i] = tmap_malloc(sizeof(uint32_t)*4, "k[i]");
-      l[i] = tmap_malloc(sizeof(uint32_t)*4, "l[i]");
+  // base case
+  bwt->hash_k[0] = tmap_malloc(sizeof(uint32_t)*4, "bwt->hash_k[0]");
+  bwt->hash_l[0] = tmap_malloc(sizeof(uint32_t)*4, "bwt->hash_l[0]");
+  tmap_bwt_2occ4(bwt, -1, bwt->seq_len, bwt->hash_k[0], bwt->hash_l[0]);
+  for(i=0;i<4;i++) {
+      bwt->hash_k[0][i] += bwt->L2[i] + 1;
+      bwt->hash_l[0][i] += bwt->L2[i];
+      if(bwt->hash_l[0][i] < bwt->hash_k[0][i]) {
+          bwt->hash_k[0][i] = bwt->hash_l[0][i] = UINT32_MAX;
+      }
   }
   
-  // create a hash for each level
-  // Note: this could be improved by using the hash of the previous level etc.
-  for(i=1;i<=bwt->hash_width;i++) {
+  // inductive step, use previous hash results
+  bwt->hash_width = 0; // do not use the hash, yet
+  for(i=2;i<=hash_width;i++) {
       uint64_t hash_length = tmap_bwt_get_hash_length(i);
-
+      uint64_t hash_length_prev = tmap_bwt_get_hash_length(i-1);
+      
       // allocate memory for this level
       bwt->hash_k[i-1] = tmap_malloc(sizeof(uint32_t)*hash_length, "bwt->hash_k[i-1]");
       bwt->hash_l[i-1] = tmap_malloc(sizeof(uint32_t)*hash_length, "bwt->hash_l[i-1]");
-
-      // create the hash
-      tmap_bwt_2occ4(bwt, -1, bwt->seq_len, k[0], l[0]);
-      tmap_bwt_gen_helper(bwt, i, 0, 1, k, l); 
-
+  
+      for(j=0;j<hash_length_prev;j++) { // go through the previous
+          if(UINT32_MAX == bwt->hash_k[i-2][j]) {
+              for(b=0;b<4;b++) {
+                  bwt->hash_k[i-1][(j << 2) + b] = UINT32_MAX;
+                  bwt->hash_l[i-1][(j << 2) + b] = UINT32_MAX;
+              }
+          }
+          else {
+              tmap_bwt_2occ4(bwt, bwt->hash_k[i-2][j]-1, bwt->hash_l[i-2][j], k, l); 
+              // add to the occ
+              for(b=0;b<4;b++) {
+                  bwt->hash_k[i-1][(j << 2) + b] = k[b] + bwt->L2[b] + 1;
+                  bwt->hash_l[i-1][(j << 2) + b] = l[b] + bwt->L2[b];
+                  if(bwt->hash_l[i-1][(j << 2) + b] < bwt->hash_k[i-1][(j << 2) + b]) { // no match
+                      bwt->hash_k[i-1][(j << 2) + b] = UINT32_MAX;
+                      bwt->hash_l[i-1][(j << 2) + b] = UINT32_MAX;
+                  }
+              }
+          }
+      }
+      
       // check sum
       for(j=sum=0;j<hash_length;j++) {
           if(UINT32_MAX != bwt->hash_k[i-1][j]) {
               sum += bwt->hash_l[i-1][j] - bwt->hash_k[i-1][j] + 1;
           }
       }
-
       if(sum != bwt->seq_len - i + 1) {
           tmap_error("sum != bwt->seq_len - bwt->hash_width + 1", Exit, OutOfRange);
       }
   }
-
-  // free working memory
-  for(i=0;i<hash_width;i++) {
-      free(k[i]);
-      free(l[i]);
-  }
-  free(k);
-  free(l);
+  // update
+  bwt->hash_width = hash_width;
 
   tmap_progress_print2("constructed the occurence hash for the BWT string");
 }
@@ -604,9 +568,10 @@ tmap_bwt_occ4(const tmap_bwt_t *bwt, uint32_t k, uint32_t cnt[4])
   p = tmap_bwt_occ_intv(bwt, k);
   memcpy(cnt, p, 16);
   p += 4; // move to the first bwt cell
-  j = k >> 4 << 4;
-  for(l = k / bwt->occ_interval * bwt->occ_interval, x = 0; l < j; l += 16, ++p)
+  j = (k >> 4) << 4;
+  for(l = (k / bwt->occ_interval) * bwt->occ_interval, x = 0; l < j; l += 16, ++p) {
     x += __occ_aux4(bwt, *p);
+  }
   x += __occ_aux4(bwt, *p & ~((1U<<((~k&15)<<1)) - 1)) - (~k&15);
   cnt[0] += x&0xff; cnt[1] += x>>8&0xff; cnt[2] += x>>16&0xff; cnt[3] += x>>24;
 }
