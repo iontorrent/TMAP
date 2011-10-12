@@ -17,7 +17,7 @@ tmap_index_init(const char *fn_fasta, key_t shm_key)
 {
   tmap_index_t *index = NULL;
 
-  index = tmap_calloc(1, sizeof(tmap_index), "index");
+  index = tmap_calloc(1, sizeof(tmap_index_t), "index");
 
   index->shm_key = shm_key;
 
