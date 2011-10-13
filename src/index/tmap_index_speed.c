@@ -32,12 +32,10 @@ tmap_index_speed_test(tmap_index_t *index, tmap_index_speed_opt_t *opt)
 
   num_found = 0;
   for(i=0;i<opt->kmer_num;i++) {
-      // HERE
-      //tmap_progress_print2("processed %d kmers", i);
       if(0 < i && 0 == (i % 50000)) {
           tmap_progress_print2("processed %d kmers", i);
       }
-      if(0 == opt->from_ref) {
+      if(tmap_rand_get(rand) < opt->rand_frac) {
           for(j=0;j<opt->kmer_length;j++) {
               seq[j] = (uint8_t)(tmap_rand_get(rand) * 4);
           }
@@ -128,7 +126,7 @@ usage(tmap_index_speed_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "         -e INT      the maximum number of hits to enumerate (-1 for unlimited, 0 to disable) [%d]\n", opt->enum_max_hits);
   tmap_file_fprintf(tmap_file_stderr, "         -K INT      the kmer length to simulate [%d]\n", opt->kmer_length);
   tmap_file_fprintf(tmap_file_stderr, "         -N INT      the number of kmers to simulate [%d]\n", opt->kmer_num);
-  tmap_file_fprintf(tmap_file_stderr, "         -R          simulate kmers from the reference [%s]\n", (1 == opt->from_ref) ? "true" : "false");
+  tmap_file_fprintf(tmap_file_stderr, "         -R FLOAT    the fraction of random kmers [%.2lf]\n", (1 == opt->rand_frac) ? "true" : "false");
   tmap_file_fprintf(tmap_file_stderr, "Options (optional):\n");
   tmap_file_fprintf(tmap_file_stderr, "         -v          print verbose progress information\n");
   tmap_file_fprintf(tmap_file_stderr, "         -h          print this message\n");
@@ -147,10 +145,10 @@ tmap_index_speed(int argc, char *argv[])
   opt.enum_max_hits = 1024;
   opt.kmer_length = 12;
   opt.kmer_num = 100000;
-  opt.from_ref = 0;
+  opt.rand_frac = 1.0;
   opt.shm_key = 0;
       
-  while((c = getopt(argc, argv, "f:k:w:e:K:N:Rhv")) >= 0) {
+  while((c = getopt(argc, argv, "f:k:w:e:K:N:R:hv")) >= 0) {
       switch(c) {
         case 'f':
           opt.fn_fasta = tmap_strdup(optarg); break;
@@ -165,7 +163,7 @@ tmap_index_speed(int argc, char *argv[])
         case 'N':
           opt.kmer_num = atoi(optarg); break;
         case 'R':
-          opt.from_ref = 1; break;
+          opt.rand_frac = atof(optarg); break;
         case 'v':
           tmap_progress_set_verbosity(1); break;
         case 'h':
@@ -188,6 +186,9 @@ tmap_index_speed(int argc, char *argv[])
   }
   if(opt.kmer_num <= 0) {
       tmap_error("the numer of kmers to simulate must be greater than zero (-N)", Exit, CommandLineArgument);
+  }
+  if(opt.rand_frac < 0 || 1 < opt.rand_frac) {
+      tmap_error("the option -R must be between 0 and 1", Exit, CommandLineArgument);
   }
 
   tmap_index_speed_core(&opt);
