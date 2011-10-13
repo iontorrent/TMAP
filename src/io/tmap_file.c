@@ -157,14 +157,16 @@ tmap_file_fdopen(int filedes, const char *mode, int32_t compression)
 }
 
 void 
-tmap_file_fclose(tmap_file_t *fp) 
+tmap_file_fclose1(tmap_file_t *fp, int32_t close_underlyingfp) 
 {
   int closed_ok = 1;
   switch(fp->c) {
     case TMAP_FILE_NO_COMPRESSION:
-      if(EOF == fclose(fp->fp) ) {
-          closed_ok = 0;
-          break;
+      if(1 == close_underlyingfp) {
+          if(EOF == fclose(fp->fp) ) {
+              closed_ok = 0;
+              break;
+          }
       }
       break;
 #ifndef DISABLE_BZ2 
@@ -176,9 +178,11 @@ tmap_file_fclose(tmap_file_t *fp)
               break;
           }
       }
-      if(EOF == fclose(fp->fp) ) {
-          closed_ok = 0;
-          break;
+      if(1 == close_underlyingfp) {
+          if(EOF == fclose(fp->fp) ) {
+              closed_ok = 0;
+              break;
+          }
       }
       break;
 #endif
@@ -198,6 +202,12 @@ tmap_file_fclose(tmap_file_t *fp)
   }
 
   free(fp);
+}
+
+void 
+tmap_file_fclose(tmap_file_t *fp) 
+{
+  tmap_file_fclose1(fp, 1);
 }
 
 size_t 

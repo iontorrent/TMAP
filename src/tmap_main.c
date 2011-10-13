@@ -109,7 +109,8 @@ int main(int argc, char *argv[])
           tmap_error1(PACKAGE, "Unknown command", Exit, CommandLineArgument);
       }
 
-      tmap_file_fclose(tmap_file_stderr);
+      // NB: do not close the underlying stderr stream!
+      tmap_file_fclose1(tmap_file_stderr, 0);
   }
 
   return ret;

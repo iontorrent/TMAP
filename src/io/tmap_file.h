@@ -75,6 +75,15 @@ tmap_file_fdopen(int filedes, const char *mode, int32_t compression);
 /*! 
   closes the file associated with the file pointer
   @param  fp  pointer to the file structure to close
+  @param  close_underlying_fp  1 to close the underlying file pionter, 0 otherwise
+  @return     a pointer to the initialized file structure
+  */
+void
+tmap_file_fclose1(tmap_file_t *fp, int32_t close_underlying_fp);
+
+/*! 
+  closes the file associated with the file pointer
+  @param  fp  pointer to the file structure to close
   @return     a pointer to the initialized file structure
   */
 void 
