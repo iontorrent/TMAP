@@ -148,6 +148,7 @@ tmap_index_speed(int argc, char *argv[])
   opt.kmer_length = 12;
   opt.kmer_num = 100000;
   opt.from_ref = 0;
+  opt.shm_key = 0;
       
   while((c = getopt(argc, argv, "f:k:w:e:K:N:Rhv")) >= 0) {
       switch(c) {
