@@ -162,6 +162,11 @@ tmap_file_fclose(tmap_file_t *fp)
   int closed_ok = 1;
   switch(fp->c) {
     case TMAP_FILE_NO_COMPRESSION:
+      if(EOF == fclose(fp->fp) ) {
+          closed_ok = 0;
+          break;
+      }
+      break;
 #ifndef DISABLE_BZ2 
     case TMAP_FILE_BZ2_COMPRESSION:
       if(TMAP_FILE_BZ2_WRITE == fp->open_type) {
