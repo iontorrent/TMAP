@@ -342,7 +342,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
       for(j=0;j<n_seeds[i];j++) { // go through all seeds
           uint32_t seqid, pos;
           uint32_t k, pacpos;
-          uint8_t seed_length_ext = seed_length + (seeds[i][j].seed_step * opt->seed_length);
+          uint8_t seed_length_ext = seed_length + (seeds[i][j].seed_step * opt->seed_step);
           for(k=seeds[i][j].k;k<=seeds[i][j].l;k++) { // through all occurrences
               tmap_map_sam_t *s = NULL;
               pacpos = tmap_sa_pac_pos(sa, bwt, k);
