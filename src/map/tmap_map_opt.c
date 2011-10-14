@@ -167,6 +167,7 @@ __tmap_map_opt_option_print_func_int_init(max_seed_hits)
 __tmap_map_opt_option_print_func_int_init(hp_diff)
 __tmap_map_opt_option_print_func_double_init(hit_frac)
 __tmap_map_opt_option_print_func_int_init(seed_step)
+__tmap_map_opt_option_print_func_tf_init(fwd_search)
 // mapvsw options
 // mapall options
 __tmap_map_opt_option_print_func_tf_init(aln_output_mode_ind)
@@ -659,6 +660,12 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_seed_step,
                            TMAP_MAP_ALGO_MAP3);
+  tmap_map_opt_options_add(opt->options, "fwd-search", no_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_NONE,
+                           "use forward search instead of a reverse search",
+                           NULL,
+                           tmap_map_opt_option_print_func_fwd_search,
+                           TMAP_MAP_ALGO_MAP3);
 
   // mapvsw options
   // None
@@ -820,6 +827,7 @@ tmap_map_opt_init(int32_t algo_id)
       opt->hp_diff = 0;
       opt->hit_frac = 0.25;
       opt->seed_step = 16;
+      opt->fwd_search = 0;
       break;
     case TMAP_MAP_ALGO_MAPVSW:
       // mapvsw
@@ -1239,6 +1247,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
       else if(0 == strcmp("seed-step", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP3) {
           opt->seed_step = atoi(optarg);
+      }
+      else if(0 == strcmp("fwd-search", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP3) {
+          opt->fwd_search = 1;
       }
       // MAPALL
       else if(0 == strcmp("staged-aln-output-mode-ind", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAPALL) {
@@ -1666,6 +1677,7 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "hp_diff=%d\n", opt->hp_diff);
   fprintf(stderr, "hit_frac=%lf\n", opt->hit_frac);
   fprintf(stderr, "seed_step=%d\n", opt->seed_step);
+  fprintf(stderr, "fwd_search=%d\n", opt->fwd_search);
   fprintf(stderr, "aln_output_mode_ind=%d\n", opt->aln_output_mode_ind);
   fprintf(stderr, "mapall_score_thr=%d\n", opt->mapall_score_thr);
   fprintf(stderr, "mapall_mapq_thr=%d\n", opt->mapall_mapq_thr);

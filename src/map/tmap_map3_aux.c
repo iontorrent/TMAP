@@ -19,8 +19,7 @@ tmap_map3_aux_seed_add(tmap_map3_aux_seed_t **seeds,
                        int32_t k,
                        int32_t l,
                        int32_t start, 
-                       int32_t n_diff,
-                       int32_t seed_step)
+                       int16_t seed_length)
 {
   /*
   if(offset < INT8_MIN || INT8_MAX < offset) {
@@ -34,8 +33,7 @@ tmap_map3_aux_seed_add(tmap_map3_aux_seed_t **seeds,
   (*seeds)[(*n_seeds)].k = k;
   (*seeds)[(*n_seeds)].l = l;
   (*seeds)[(*n_seeds)].start = start;
-  (*seeds)[(*n_seeds)].n_diff = n_diff;
-  (*seeds)[(*n_seeds)].seed_step = seed_step;
+  (*seeds)[(*n_seeds)].seed_length = seed_length;
   (*n_seeds)++;
 }
 
@@ -106,7 +104,7 @@ tmap_map3_aux_core_seed_helper(uint8_t *query,
               tmp_sa = next_sa;
               if(0 < tmap_bwt_match_exact_alt(bwt, bases_to_align, query + i + n_bases, &tmp_sa)
                  && (tmp_sa.l - tmp_sa.k + 1) <= opt->max_seed_hits) {
-                  tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, tmp_sa.k, tmp_sa.l, offset, n_bases-k, 0);
+                  tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, tmp_sa.k, tmp_sa.l, offset, seed_length + n_bases - k);
               }
           }
 
@@ -130,7 +128,7 @@ tmap_map3_aux_core_seed_helper(uint8_t *query,
               // match exactly from here onwards
               if(0 < tmap_bwt_match_exact_alt(bwt, seed_length - (i - offset) - n_bases, query + i + n_bases, &tmp_sa)
                  && (tmp_sa.l - tmp_sa.k + 1) <= opt->max_seed_hits) {
-                  tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, tmp_sa.k, tmp_sa.l, offset, k, 0);
+                  tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, tmp_sa.k, tmp_sa.l, offset, seed_length + k);
               }
               // move to the next
               cur_sa = tmp_sa;
@@ -147,7 +145,7 @@ tmap_map3_aux_core_seed_helper(uint8_t *query,
 
   // add in the seed with no hp indels
   if((next_sa.l - next_sa.k + 1) <= opt->max_seed_hits) {
-      tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, next_sa.k, next_sa.l, offset, 0, 0);
+      tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, next_sa.k, next_sa.l, offset, seed_length);
   }
 }
 
@@ -195,34 +193,81 @@ tmap_map3_aux_core_seed(uint8_t *query,
       }
   }
   else {
-      int count;
-      tmap_bwt_match_occ_t cur_sa;
+      int k, count;
+      tmap_bwt_match_occ_t cur_sa, prev_sa;
       j = count = 0;
-      for(i=query_length-seed_length;0<=i;i--) {
-          if(0 < tmap_bwt_match_exact(bwt, seed_length, query + i, &cur_sa)) {
-              count++;
-              if((cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
-                  tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, 0, 0);
-                  j++;
-              }
-              else {
-                  // seed stepping
-                  if(0 < seed_step) {
-                      int32_t k = i + seed_length;
-                      int32_t n = 0;
-                      while(k + seed_step < query_length && 0 < tmap_bwt_match_exact(bwt, seed_step, query + k, &cur_sa)) {
-                          if((cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
-                              tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, 0, n);
+      if(opt->fwd_search) {
+          for(i=0;i<query_length-seed_length+1;i++) {
+              if(0 < tmap_bwt_match_exact(bwt, seed_length, query + i, &cur_sa)) {
+                  count++;
+                  if((cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
+                      // extend further
+                      prev_sa = cur_sa;
+                      k = i + 1;
+                      while(k < query_length - seed_length) {
+                          tmap_bwt_match_2occ(bwt, &prev_sa, query[k], &cur_sa);
+                          if(cur_sa.l < cur_sa.k) {
+                              // use prev
+                              cur_sa = prev_sa;
+                              break;
                           }
-                          k += seed_step;
-                          n++;
+                          else {
+                              // keep going
+                              prev_sa = cur_sa;
+                              k++;
+                          }
+                      }
+                      k--; // k is always one greater
+                      tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, k, seed_length + k - i);
+                      j++;
+                  }
+                  else {
+                      // seed stepping
+                      if(0 < seed_step) {
+                          k = i + seed_length;
+                          int32_t n = 0;
+                          while(k + seed_step < query_length && 0 < tmap_bwt_match_exact(bwt, seed_step, query + k, &cur_sa)) {
+                              if((cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
+                                  tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, seed_length + k - i);
+                                  break;
+                              }
+                              k += seed_step;
+                              n++;
+                          }
                       }
                   }
               }
           }
-          else {
-              // skip over if we came up short
-              i -= (seed_length - cur_sa.offset); 
+      }
+      else {
+          for(i=query_length-seed_length;0<=i;i--) {
+              if(0 < tmap_bwt_match_exact(bwt, seed_length, query + i, &cur_sa)) {
+                  count++;
+                  if((cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
+                      tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, seed_length);
+                      j++;
+                  }
+                  else {
+                      // seed stepping
+                      if(0 < seed_step) {
+                          int32_t k = i + seed_length;
+                          int32_t n = 0;
+                          while(k + seed_step < query_length && 0 < tmap_bwt_match_exact(bwt, seed_step, query + k, &cur_sa)) {
+                              if((cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
+                                  tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, seed_length + k - i);
+                                  // break when the e find the first hit
+                                  break;
+                              }
+                              k += seed_step;
+                              n++;
+                          }
+                      }
+                  }
+              }
+              else {
+                  // skip over if we came up short
+                  i -= (seed_length - cur_sa.offset); 
+              }
           }
       }
       // remove seeds if there were too many repetitive hits
@@ -230,14 +275,6 @@ tmap_map3_aux_core_seed(uint8_t *query,
       if(j / (double)count < opt->hit_frac) {
           (*n_seeds) -= j;
       }
-      /*
-      for(i=0;i<query_length-seed_length+1;i++) {
-          if(0 < tmap_bwt_match_exact(bwt, seed_length, query + i, &cur_sa)
-                 && (cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
-              tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, 0);
-          }
-      }
-      */
   }
 }
 
@@ -342,7 +379,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
       for(j=0;j<n_seeds[i];j++) { // go through all seeds
           uint32_t seqid, pos;
           uint32_t k, pacpos;
-          uint8_t seed_length_ext = seed_length + (seeds[i][j].seed_step * opt->seed_step);
+          uint8_t seed_length_ext = seeds[i][j].seed_length;
           for(k=seeds[i][j].k;k<=seeds[i][j].l;k++) { // through all occurrences
               tmap_map_sam_t *s = NULL;
               pacpos = tmap_sa_pac_pos(sa, bwt, k);
@@ -361,11 +398,11 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
                       pos = 0;
                   }
                   else {
-                      if(pos < seed_length_ext + seeds[i][j].n_diff - 1 ) {
+                      if(pos < seed_length_ext - 1 ) {
                           pos = 0;
                       }
                       else {
-                          pos -= seed_length_ext + seeds[i][j].n_diff - 1;
+                          pos -= seed_length_ext - 1;
                       }
                   }
 

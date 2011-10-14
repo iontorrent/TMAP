@@ -224,6 +224,7 @@ typedef struct __tmap_map_opt_t {
     int32_t hp_diff; /*!< single homopolymer error difference for enumeration (--hp-diff) */
     double hit_frac; /*!< the fraction of seed positions that are under the maximum (--hit-frac) */
     int32_t seed_step; /*!< the number of bases to increase the seed for each seed increase iteration (--seed-step) */ 
+    int32_t fwd_search; /*!< perform a forward search instead of a reverse search (--fwd-search) */
 
     // mapvsw options
     // None
