@@ -18,7 +18,7 @@
 #include "tmap_index_speed.h"
 
 static int32_t  
-tmap_index_speed_test(tmap_index_t *index, tmap_index_speed_opt_t *opt)
+tmap_index_speed_test(tmap_index_t *index, clock_t *total_clock, tmap_index_speed_opt_t *opt)
 {
   tmap_rand_t *rand;
   int32_t i, j, num_found, found;
@@ -26,6 +26,7 @@ tmap_index_speed_test(tmap_index_t *index, tmap_index_speed_opt_t *opt)
   uint32_t pacpos;
   uint8_t *seq = NULL;
   tmap_bwt_match_occ_t cur;
+  clock_t start_clock = 0;
 
   rand = tmap_rand_init(13);
   seq = tmap_malloc(opt->kmer_length * sizeof(uint8_t), "seq");
@@ -50,6 +51,7 @@ tmap_index_speed_test(tmap_index_t *index, tmap_index_speed_opt_t *opt)
       }
       found = 0;
       for(j=0;j<2;j++) {
+          start_clock = clock();
           if(0 < tmap_bwt_match_exact(index->bwt[j], opt->kmer_length, seq, &cur)) {
               if(0 <= opt->enum_max_hits && (cur.l - cur.k + 1) <= opt->enum_max_hits) {
                   for(k=cur.k;k<=cur.l;k++) {
@@ -59,6 +61,7 @@ tmap_index_speed_test(tmap_index_t *index, tmap_index_speed_opt_t *opt)
               }
               found = 1;
           }
+          (*total_clock) += clock() - start_clock;
       }
       if(0 < found) {
           num_found++;
@@ -76,7 +79,7 @@ static void
 tmap_index_speed_core(tmap_index_speed_opt_t *opt)
 {
   tmap_index_t *index = NULL;
-  clock_t start_clock, end_clock = 0;
+  clock_t total_clock= 0;
   time_t start_time, end_time;
   int32_t num_found;
 
@@ -94,13 +97,11 @@ tmap_index_speed_core(tmap_index_speed_opt_t *opt)
 
   // clock on
   start_time = time(NULL);
-  start_clock = clock();
 
   // run the speed test
-  num_found = tmap_index_speed_test(index, opt);
+  num_found = tmap_index_speed_test(index, &total_clock, opt);
 
   // clock off
-  end_clock = clock();
   end_time = time(NULL);
 
   // free
@@ -108,8 +109,8 @@ tmap_index_speed_core(tmap_index_speed_opt_t *opt)
 
   // print the results
   tmap_progress_print2("[tmap index] found %d out of %d (%.2f%%)", num_found, opt->kmer_num, (100.0 * num_found) / opt->kmer_num);
-  tmap_progress_print2("[tmap index] total wallclock time: %d seconds", (int)difftime(end_time,start_time));
-  tmap_progress_print2("[tmap index] total cpu cycle time: %.2f seconds", (float)(end_clock - start_clock) / CLOCKS_PER_SEC);
+  tmap_progress_print2("[tmap index] wallclock time: %d seconds", (int)difftime(end_time,start_time));
+  tmap_progress_print2("[tmap index] index lookup cpu cycle time: %.2f seconds", (float)(total_clock) / CLOCKS_PER_SEC);
 }
 
 static int 
