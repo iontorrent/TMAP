@@ -11,17 +11,17 @@ def check_option(parser, value, name):
     if None == value:
         print 'Option ' + name + ' required.\n'
         parser.print_help()
-        exit(1)
+        sys.exit(1)
 
 def check_file(file_name):
     if not os.path.isfile(file_name):
         print 'File not found: ' + str(file_name)
-        exit(1)
+        sys.exit(1)
 
 def check_dir(file_name):
     if not os.path.isdir(file_name):
         print 'Directory not found: ' + str(file_name)
-        exit(1)
+        sys.exit(1)
 
 if __name__ == "__main__":
     parser = OptionParser()
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
     if len(args) != 0:
         parser.print_help()
-        exit(1)
+        sys.exit(1)
 
     # Check options
     check_option(parser, options.fn_fasta, '-f')
@@ -152,4 +152,4 @@ run ()
         ])
     if 0 != returncode:
         print "Error submitting the job"
-        exit(1)
+        sys.exit(1)
