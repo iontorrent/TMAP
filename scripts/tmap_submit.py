@@ -83,7 +83,10 @@ if __name__ == "__main__":
 
     # Create the tmap command 
     p = re.compile('.*/')
-    fn_sam = p.sub(options.sam_dir, options.fn_reads) + ".sam"
+    temp_mapall_algorithms = options.mapall_algorithms
+    temp = '_'.join(temp_mapall_algorithms.split(' '))
+    
+    fn_sam = p.sub(options.sam_dir, options.fn_reads) + "." + temp + ".sam"
     tmap_cmd = "time %s %s -f %s -r %s -n %s -v %s > %s" % (
             options.tmap_path,
             options.mapping_algorithm,
