@@ -87,7 +87,7 @@ if __name__ == "__main__":
     temp = '_'.join(temp_mapall_algorithms.split(' '))
     
     fn_sam = p.sub(options.sam_dir, options.fn_reads) + "." + temp + ".sam"
-    tmap_cmd = "time %s %s -f %s -r %s -n %s -v %s > %s" % (
+    tmap_cmd = "time -p %s %s -f %s -r %s -n %s -v %s > %s" % (
             options.tmap_path,
             options.mapping_algorithm,
             options.fn_fasta,
