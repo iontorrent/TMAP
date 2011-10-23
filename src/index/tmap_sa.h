@@ -76,7 +76,7 @@ void
 tmap_sa_destroy(tmap_sa_t *sa);
 
 /*! 
-  returns the suffix array position given the occurence position
+  returns the suffix array position given the occurrence position
   @param  sa   the suffix array
   @param  bwt  the bwt structure 
   @param  k    the suffix array position

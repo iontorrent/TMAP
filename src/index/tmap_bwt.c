@@ -334,7 +334,7 @@ tmap_bwt_update_occ_interval(tmap_bwt_t *bwt, uint32_t occ_interval)
       tmap_error("bug encountered", Exit, OutOfRange);
   }
 
-  n_occ = ((bwt->seq_len + occ_interval - 1) / occ_interval) + 1; // the number of occurences to store, on top of the bwt string
+  n_occ = ((bwt->seq_len + occ_interval - 1) / occ_interval) + 1; // the number of occurrences to store, on top of the bwt string
   bwt->occ_interval = occ_interval;
   bwt->bwt_size += n_occ * 4; // the new size
   buf = tmap_calloc(bwt->bwt_size, sizeof(uint32_t), "buf"); // will be the new bwt
@@ -456,7 +456,7 @@ tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width)
   uint64_t b, j;
   */
 
-  tmap_progress_print("constructing the occurence hash for the BWT string");
+  tmap_progress_print("constructing the occurrence hash for the BWT string");
 
   if(bwt->seq_len < hash_width) {
       tmap_error("Hash width was greater than the sequence length, defaulting to the sequence length", Warn, OutOfRange);
@@ -484,7 +484,7 @@ tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width)
       bwt->hash_width = i; // updated the hash width
   }
   
-  tmap_progress_print2("constructed the occurence hash for the BWT string");
+  tmap_progress_print2("constructed the occurrence hash for the BWT string");
 }
 
 static inline int 
