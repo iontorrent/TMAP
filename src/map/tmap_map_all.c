@@ -328,8 +328,8 @@ tmap_map_all_thread_map(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_
       else if(i < opt->num_stages-1) { // only if we have a next stage
           tmap_map_sams_destroy(sams);
           sams=NULL;
-          tmap_map_stats_destroy(curstat);
       }
+      tmap_map_stats_destroy(curstat);
   }
       
   // destroy previous individual mappings
