@@ -1172,11 +1172,11 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           tmap_error("bug encountered", Exit, CommandLineArgument);
       }
       // MAP1/MAP2/MAP3/MAPVSW
-      else if(0 == strcmp("min-seq-length", options[option_index].name) && (opt->algo_id == TMAP_MAP_ALGO_MAP1 || opt->algo_id == TMAP_MAP_ALGO_MAP3 
+      else if(0 == strcmp("min-seq-length", options[option_index].name) && (opt->algo_id == TMAP_MAP_ALGO_MAP1 || opt->algo_id == TMAP_MAP_ALGO_MAP2 
                                                                             || opt->algo_id == TMAP_MAP_ALGO_MAP3 || opt->algo_id == TMAP_MAP_ALGO_MAPVSW)) {
           opt->min_seq_len = atoi(optarg);
       }
-      else if(0 == strcmp("max-seq-length", options[option_index].name) && (opt->algo_id == TMAP_MAP_ALGO_MAP1 || opt->algo_id == TMAP_MAP_ALGO_MAP3 
+      else if(0 == strcmp("max-seq-length", options[option_index].name) && (opt->algo_id == TMAP_MAP_ALGO_MAP1 || opt->algo_id == TMAP_MAP_ALGO_MAP2 
                                                                             || opt->algo_id == TMAP_MAP_ALGO_MAP3 || opt->algo_id == TMAP_MAP_ALGO_MAPVSW)) {
           opt->max_seq_len = atoi(optarg);
       }
