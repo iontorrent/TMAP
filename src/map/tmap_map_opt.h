@@ -225,6 +225,7 @@ typedef struct __tmap_map_opt_t {
     double hit_frac; /*!< the fraction of seed positions that are under the maximum (--hit-frac) */
     int32_t seed_step; /*!< the number of bases to increase the seed for each seed increase iteration (--seed-step) */ 
     int32_t fwd_search; /*!< perform a forward search instead of a reverse search (--fwd-search) */
+    double skip_seed_frac; /*!< the fraction of a seed to skip when a lookup succeeds (--skip-seed-frac) */ 
 
     // mapvsw options
     // None

@@ -168,6 +168,7 @@ __tmap_map_opt_option_print_func_int_init(hp_diff)
 __tmap_map_opt_option_print_func_double_init(hit_frac)
 __tmap_map_opt_option_print_func_int_init(seed_step)
 __tmap_map_opt_option_print_func_tf_init(fwd_search)
+__tmap_map_opt_option_print_func_double_init(skip_seed_frac)
 // mapvsw options
 // mapall options
 __tmap_map_opt_option_print_func_tf_init(aln_output_mode_ind)
@@ -666,6 +667,12 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_fwd_search,
                            TMAP_MAP_ALGO_MAP3);
+  tmap_map_opt_options_add(opt->options, "skip-seed-frac", no_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_NONE,
+                           "the fraction of a seed to skip when a lookup succeeds",
+                           NULL,
+                           tmap_map_opt_option_print_func_skip_seed_frac,
+                           TMAP_MAP_ALGO_MAP3);
 
   // mapvsw options
   // None
@@ -828,6 +835,7 @@ tmap_map_opt_init(int32_t algo_id)
       opt->hit_frac = 0.25;
       opt->seed_step = 16;
       opt->fwd_search = 0;
+      opt->skip_seed_frac = 0.0;
       break;
     case TMAP_MAP_ALGO_MAPVSW:
       // mapvsw
@@ -1251,6 +1259,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(0 == strcmp("fwd-search", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP3) {
           opt->fwd_search = 1;
       }
+      else if(0 == strcmp("skip-seed-frac", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP3) {
+          opt->skip_seed_frac = atof(optarg);
+      }
       // MAPALL
       else if(0 == strcmp("staged-aln-output-mode-ind", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAPALL) {
           opt->aln_output_mode_ind = 1;
@@ -1540,6 +1551,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       if(0 < opt->hp_diff && (NULL == opt->flow_order && 0 == opt->flow_order_use_file)) tmap_error("--hp-diff option requires a flow order from (-F) or file", Exit, OutOfRange); 
       tmap_error_cmd_check_int(opt->hit_frac, 0, 1, "--hit-frac");
       tmap_error_cmd_check_int(opt->seed_step, -1, INT32_MAX, "--seed-step");
+      tmap_error_cmd_check_int(opt->skip_seed_frac, 0, 1, "--skip-seed-frac");
       break;
     case TMAP_MAP_ALGO_MAPALL:
       tmap_error_cmd_check_int(opt->aln_output_mode_ind, 0, 1, "--staged-aln-output-mode-ind");
@@ -1678,6 +1690,7 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "hit_frac=%lf\n", opt->hit_frac);
   fprintf(stderr, "seed_step=%d\n", opt->seed_step);
   fprintf(stderr, "fwd_search=%d\n", opt->fwd_search);
+  fprintf(stderr, "skip_seed_frac=%lf\n", opt->skip_seed_frac);
   fprintf(stderr, "aln_output_mode_ind=%d\n", opt->aln_output_mode_ind);
   fprintf(stderr, "mapall_score_thr=%d\n", opt->mapall_score_thr);
   fprintf(stderr, "mapall_mapq_thr=%d\n", opt->mapall_mapq_thr);
