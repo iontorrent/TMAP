@@ -254,7 +254,9 @@ tmap_map3_aux_core_seed(uint8_t *query,
                   if((cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
                       tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, seed_length);
                       j++;
-                      i -= opt->skip_seed_frac * (seed_length - 1); // -1 since i will be incremented
+                      if(0 < opt->skip_seed_frac) {
+                          i -= opt->skip_seed_frac * (seed_length - 1); // -1 since i will be incremented
+                      }
                   }
                   else {
                       // seed stepping
@@ -264,7 +266,9 @@ tmap_map3_aux_core_seed(uint8_t *query,
                           while(k + seed_step < query_length && 0 < tmap_bwt_match_exact(bwt, seed_step, query + k, &cur_sa)) {
                               if((cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
                                   tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, seed_length + k - i);
-                                  i -= opt->skip_seed_frac * (seed_length + k - i - 1); // -1 since i will be incremented
+                                  if(0 < opt->skip_seed_frac) {
+                                      i -= opt->skip_seed_frac * (seed_length + k - i - 1); // -1 since i will be incremented
+                                  }
                                   // break when the e find the first hit
                                   break;
                               }
