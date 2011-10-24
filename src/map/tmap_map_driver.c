@@ -445,20 +445,20 @@ tmap_map_driver_core(tmap_map_driver_func_init func_init,
           tmap_progress_print2("processed %d reads", n_reads_processed);
           tmap_progress_print2("stats [%.2lf,%.2lf,%.2lf,%.2lf,%.2lf]",
                                stat->num_with_mapping * 100.0 / (double)stat->num_reads,
-                               stat->num_after_seeding/(double)stat->num_reads,
-                               stat->num_after_scoring/(double)stat->num_reads,
-                               stat->num_after_rmdup/(double)stat->num_reads,
-                               stat->num_after_filter/(double)stat->num_reads);
+                               stat->num_after_seeding/(double)stat->num_with_mapping,
+                               stat->num_after_scoring/(double)stat->num_with_mapping,
+                               stat->num_after_rmdup/(double)stat->num_with_mapping,
+                               stat->num_after_filter/(double)stat->num_with_mapping);
       }
   }
   if(-1 == opt->reads_queue_size) {
       tmap_progress_print2("processed %d reads", n_reads_processed);
       tmap_progress_print2("stats [%.2lf,%.2lf,%.2lf,%.2lf,%.2lf]",
                            stat->num_with_mapping * 100.0 / (double)stat->num_reads,
-                           stat->num_after_seeding/(double)stat->num_reads,
-                           stat->num_after_scoring/(double)stat->num_reads,
-                           stat->num_after_rmdup/(double)stat->num_reads,
-                           stat->num_after_filter/(double)stat->num_reads);
+                           stat->num_after_seeding/(double)stat->num_with_mapping,
+                           stat->num_after_scoring/(double)stat->num_with_mapping,
+                           stat->num_after_rmdup/(double)stat->num_with_mapping,
+                           stat->num_after_filter/(double)stat->num_with_mapping);
   }
 
   // close the input/output
