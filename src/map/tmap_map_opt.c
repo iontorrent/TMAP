@@ -667,8 +667,8 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_fwd_search,
                            TMAP_MAP_ALGO_MAP3);
-  tmap_map_opt_options_add(opt->options, "skip-seed-frac", no_argument, 0, 0, 
-                           TMAP_MAP_OPT_TYPE_NONE,
+  tmap_map_opt_options_add(opt->options, "skip-seed-frac", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_FLOAT,
                            "the fraction of a seed to skip when a lookup succeeds",
                            NULL,
                            tmap_map_opt_option_print_func_skip_seed_frac,
