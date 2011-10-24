@@ -157,9 +157,8 @@ tmap_map_driver_core_worker(int32_t num_ends, tmap_seq_t ***seq_buffer, tmap_map
                   // key sequence did not match
                   continue;
               }
-              
               stat->num_reads++;
-
+              
               // map thread data,
               sams[i][low] = func_thread_map(&data, seq, index, stat, rand, opt);
               if(sams[i][low] == NULL) {
@@ -169,6 +168,7 @@ tmap_map_driver_core_worker(int32_t num_ends, tmap_seq_t ***seq_buffer, tmap_map
               if(0 < sams[i][low]->n) {
                   // mapall should have already done this!
                   if(TMAP_MAP_ALGO_MAPALL != opt->algo_id) {
+                      stat->num_with_mapping++;
                       stat->num_after_seeding += sams[i][low]->n;
 
                       // smith waterman (score only)
@@ -443,7 +443,8 @@ tmap_map_driver_core(tmap_map_driver_func_init func_init,
       n_reads_processed += seq_buffer_length;
       if(-1 != opt->reads_queue_size) {
           tmap_progress_print2("processed %d reads", n_reads_processed);
-          tmap_progress_print2("stats [%.2lf,%.2lf,%.2lf,%.2lf]",
+          tmap_progress_print2("stats [%.2lf,%.2lf,%.2lf,%.2lf,%.2lf]",
+                               stat->num_with_mapping * 100.0 / (double)stat->num_reads,
                                stat->num_after_seeding/(double)stat->num_reads,
                                stat->num_after_scoring/(double)stat->num_reads,
                                stat->num_after_rmdup/(double)stat->num_reads,
@@ -452,7 +453,8 @@ tmap_map_driver_core(tmap_map_driver_func_init func_init,
   }
   if(-1 == opt->reads_queue_size) {
       tmap_progress_print2("processed %d reads", n_reads_processed);
-      tmap_progress_print2("stats [%.2lf,%.2lf,%.2lf,%.2lf]",
+      tmap_progress_print2("stats [%.2lf,%.2lf,%.2lf,%.2lf,%.2lf]",
+                           stat->num_with_mapping * 100.0 / (double)stat->num_reads,
                            stat->num_after_seeding/(double)stat->num_reads,
                            stat->num_after_scoring/(double)stat->num_reads,
                            stat->num_after_rmdup/(double)stat->num_reads,

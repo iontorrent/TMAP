@@ -96,6 +96,8 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_index_t *index,
   // no alignments
   if(0 == sams->n) return sams;
 
+  stat->num_with_mapping++;
+
   // remove duplicates after merging
   if(0 == opt->aln_output_mode_ind) {
       stat->num_after_seeding += sams->n;

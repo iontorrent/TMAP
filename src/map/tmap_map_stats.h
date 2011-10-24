@@ -6,7 +6,8 @@
  * TODO
  */
 typedef struct {
-    uint64_t num_reads; /*!< the number of reads observed */
+    uint64_t num_reads; /*!< the number of reads with at least one mapping */
+    uint64_t num_with_mapping; /*!< the number of reads with at least one mapping */
     uint64_t num_after_seeding; /*!< the number of hits after seeding */
     uint64_t num_after_scoring; /*!< the number of hits after scoring */
     uint64_t num_after_rmdup; /*!< the number of hits after duplicate removal */

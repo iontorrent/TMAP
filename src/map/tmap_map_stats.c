@@ -24,6 +24,7 @@ void
 tmap_map_stats_add(tmap_map_stats_t *dest, tmap_map_stats_t *src)
 {
   dest->num_reads += src->num_reads;
+  dest->num_with_mapping += src->num_with_mapping;
   dest->num_after_seeding += src->num_after_seeding;
   dest->num_after_scoring += src->num_after_scoring;
   dest->num_after_rmdup += src->num_after_rmdup;
