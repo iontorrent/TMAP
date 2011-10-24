@@ -41,6 +41,7 @@ fi
 AC_ARG_ENABLE(intel64, [  --enable-intel64        optimize for Intel64 CPU such as Xeon and Core2], [extended_CFLAGS="${extended_CFLAGS} -mtune=nocona"], [])
 AC_ARG_ENABLE(bz2, [  --disable-bz2         use this option to disable bz2 support], [AC_DEFINE(DISABLE_BZ2,1,[Define 1 if we want to disable bz2 support])], [AC_CHECK_LIB([bz2], [BZ2_bzRead])])
 AC_ARG_ENABLE(debug-functions, [  --enable-debug-functions        use this option to enable debugging functions support], [AC_DEFINE(ENABLE_TMAP_DEBUG_FUNCTIONS,1,[Define 1 if we want to enable TMAP debugging functions support])], [])
+# NB: what happens if --disable-tcmalloc is used with --enable-perftools ?
 AC_ARG_ENABLE(tcmalloc, [  --disable-tcmalloc      disable tcmalloc for memory allocation], [], [AC_CHECK_LIB([tcmalloc],malloc)]) 
 AC_ARG_ENABLE(perftools, [  --enable-perftools      enable google performance tools for profiling and heap checking], [LDFLAGS="${LDFLAGS} -Wl,--no-as-needed -lprofiler"; LDADD="${LDADD} -lprofiler"], [])
 
