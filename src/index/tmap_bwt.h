@@ -54,12 +54,12 @@ typedef struct {
     uint32_t L2[5];  /*!< C(), cumulative count */
     uint32_t seq_len;  /*!< reference sequence length */
     uint32_t bwt_size;  /*!< size of bwt in bytes */
-    uint32_t occ_interval;  /*!< occurence array interval, must be a strictly positive power of 16: (16, 32, 48, ...) */
+    uint32_t occ_interval;  /*!< occurrence array interval, must be a strictly positive power of 16: (16, 32, 48, ...) */
     uint32_t *bwt;  /*!< burrows-wheeler transform */
     uint32_t cnt_table[256];  /*!< occurrence array */
     uint32_t is_rev;  /*!< 1 if the reference sequence was reversed, 0 otherwise */
-    uint32_t **hash_k;  /*!< hash of the BWT occurence array (lower bounds) */
-    uint32_t **hash_l;  /*!< hash of the BWT occurence array (upper bounds) */
+    uint32_t **hash_k;  /*!< hash of the BWT occurrence array (lower bounds) */
+    uint32_t **hash_l;  /*!< hash of the BWT occurrence array (upper bounds) */
     uint32_t hash_width;  /*!< the k-mer that is hashed */
     uint32_t is_shm;  /*!< 1 if loaded from shared memory, 0 otherwise */
 } tmap_bwt_t;
@@ -139,9 +139,9 @@ void
 tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width);
 
 /*! 
-  calculates the next occurrence given the previous occurence and the next base
+  calculates the next occurrence given the previous occurrence and the next base
   @param  bwt  pointer to the bwt structure 
-  @param  k    previous occurence
+  @param  k    previous occurrence
   @param  c    base in two-bit integer format
   @return      the next occurrence given the base
   */
@@ -149,10 +149,10 @@ inline uint32_t
 tmap_bwt_occ(const tmap_bwt_t *bwt, uint32_t k, uint8_t c);
 
 /*! 
-  calculates the next occurrences given the previous occurence for all four bases
+  calculates the next occurrences given the previous occurrence for all four bases
   @param  bwt  pointer to the bwt structure 
-  @param  k    previous occurence
-  @param  cnt  pointer to the next occurences for all four bases
+  @param  k    previous occurrence
+  @param  cnt  pointer to the next occurrences for all four bases
   */
 inline void 
 tmap_bwt_occ4(const tmap_bwt_t *bwt, uint32_t k, uint32_t cnt[4]);
@@ -160,11 +160,11 @@ tmap_bwt_occ4(const tmap_bwt_t *bwt, uint32_t k, uint32_t cnt[4]);
 /*! 
   calculates the SA interval given the previous SA interval and the next base
   @param  bwt  pointer to the bwt structure 
-  @param  k    previous lower occurence
-  @param  l    previous upper occurence
+  @param  k    previous lower occurrence
+  @param  l    previous upper occurrence
   @param  c    base in two-bit integer format
-  @param  ok   the next lower occurence
-  @param  ol   the next upper occurence
+  @param  ok   the next lower occurrence
+  @param  ol   the next upper occurrence
   @details     more efficient version of bwt_occ but requires that k <= l (not checked)
   */
 inline void 
@@ -173,17 +173,17 @@ tmap_bwt_2occ(const tmap_bwt_t *bwt, uint32_t k, uint32_t l, uint8_t c, uint32_t
 /*! 
   calculates the next SA intervals given the previous SA intervals for all four bases
   @param  bwt   pointer to the bwt structure 
-  @param  k     previous lower occurence
-  @param  l     previous upper occurence
-  @param  cntk  next upper occurences
-  @param  cntl  next lower occurences
+  @param  k     previous lower occurrence
+  @param  l     previous upper occurrence
+  @param  cntk  next upper occurrences
+  @param  cntl  next lower occurrences
   @details      more efficient version of bwt_occ4 but requires that k <= l (not checked)
   */
 inline void 
 tmap_bwt_2occ4(const tmap_bwt_t *bwt, uint32_t k, uint32_t l, uint32_t cntk[4], uint32_t cntl[4]);
 
 // TODO: document
-// Returns the index of the occurence array at or before k
+// Returns the index of the occurrence array at or before k
 #define tmap_bwt_get_occ_array_i(b, k) ((k)/(b)->occ_interval * ((b)->occ_interval/16 + 4))
 
 // TODO: document
@@ -201,14 +201,14 @@ tmap_bwt_2occ4(const tmap_bwt_t *bwt, uint32_t k, uint32_t l, uint32_t cntk[4], 
 #define tmap_bwt_B0(b, k) (tmap_bwt_get_bwt16(b, k)>>((~(k)&0xf)<<1)&3)
 
 // TODO: document
-// Returns the occurence array at or before k
+// Returns the occurrence array at or before k
 #define tmap_bwt_occ_intv(b, k) ((b)->bwt + tmap_bwt_get_occ_array_i(b, k))
 //#define tmap_bwt_occ_intv(b, k) ((b)->bwt + (k)/(b)->occ_interval*12)
 
 /*!  
   inverse Psi function
   @param  bwt  pointer to the bwt structure
-  @param  k    the occurence position 
+  @param  k    the occurrence position 
   @return      the suffix array position
   */
 #define tmap_bwt_invPsi(bwt, k)												\
