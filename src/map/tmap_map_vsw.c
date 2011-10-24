@@ -22,6 +22,7 @@
 #include "../io/tmap_seq_io.h"
 #include "../server/tmap_shm.h"
 #include "../sw/tmap_sw.h"
+#include "tmap_map_stats.h"
 #include "tmap_map_util.h"
 #include "tmap_map_driver.h"
 
@@ -85,7 +86,7 @@ tmap_map_vsw_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len,
 }
 
 static tmap_map_sams_t*
-tmap_map_vsw_thread_map(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_rand_t *rand, tmap_map_opt_t *opt)
+tmap_map_vsw_thread_map(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_map_stats_t *stat, tmap_rand_t *rand, tmap_map_opt_t *opt)
 {
   int32_t seq_len = 0;;
   tmap_seq_t *seqs[2]={NULL, NULL};

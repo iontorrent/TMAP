@@ -26,6 +26,7 @@
 #include "../server/tmap_shm.h"
 #include "../sw/tmap_sw.h"
 #include "../sw/tmap_fsw.h"
+#include "tmap_map_stats.h"
 #include "tmap_map_util.h"
 #include "tmap_map_driver.h"
 #include "tmap_map2_mempool.h"
@@ -158,7 +159,7 @@ tmap_map2_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
 }
 
 static tmap_map_sams_t*
-tmap_map2_thread_map(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_rand_t *rand, tmap_map_opt_t *opt)
+tmap_map2_thread_map(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_map_stats_t *stat, tmap_rand_t *rand, tmap_map_opt_t *opt)
 {
   tmap_map_sams_t *sams = NULL;
   tmap_seq_t *seqs[4]={NULL,NULL,NULL,NULL};

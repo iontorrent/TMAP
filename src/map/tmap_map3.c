@@ -23,6 +23,7 @@
 #include "../io/tmap_seq_io.h"
 #include "../server/tmap_shm.h"
 #include "../sw/tmap_sw.h"
+#include "tmap_map_stats.h"
 #include "tmap_map_util.h"
 #include "tmap_map_driver.h"
 #include "tmap_map3_aux.h"
@@ -33,7 +34,7 @@ tmap_map3_get_seed_length(uint64_t ref_len)
 {
   int32_t k = 0;
   while(0 < ref_len) {
-      ref_len >>= 2; // divide by two
+      ref_len >>= 2; // divide by four
       k++;
   }
   k += 2;
@@ -163,7 +164,7 @@ tmap_map3_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len, tma
 }
 
 static tmap_map_sams_t *
-tmap_map3_thread_map(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_rand_t *rand, tmap_map_opt_t *opt)
+tmap_map3_thread_map(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_map_stats_t *stat, tmap_rand_t *rand, tmap_map_opt_t *opt)
 {
   tmap_seq_t *seqs[2] = {NULL, NULL};
   tmap_map_sams_t *sams = NULL;

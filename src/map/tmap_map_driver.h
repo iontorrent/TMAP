@@ -16,7 +16,7 @@
   @param  opt     the program options
   @return         0 upon success, non-zero otherwise
  */
-typedef int32_t (*tmap_driver_func_init)(tmap_refseq_t *refseq, tmap_map_opt_t *opt);
+typedef int32_t (*tmap_map_driver_func_init)(tmap_refseq_t *refseq, tmap_map_opt_t *opt);
 
 /*!
   This function will be invoked before a thread begins process its sequences.
@@ -24,7 +24,7 @@ typedef int32_t (*tmap_driver_func_init)(tmap_refseq_t *refseq, tmap_map_opt_t *
   @param  opt   the program options
   @return       0 upon success, non-zero otherwise
  */
-typedef int32_t (*tmap_driver_func_thread_init)(void **data, tmap_map_opt_t *opt);
+typedef int32_t (*tmap_map_driver_func_thread_init)(void **data, tmap_map_opt_t *opt);
 
 /*!
   This function will be invoked to map a sequence.
@@ -33,11 +33,12 @@ typedef int32_t (*tmap_driver_func_thread_init)(void **data, tmap_map_opt_t *opt
   @param  index   the reference index
   @param  bwt     the bwt structure
   @param  sa      the sa structure
+  @param  stat    the driver statistics (for mapall only)
   @param  rand    the random number generator
   @param  opt     the program options
   @return         the mappings upon success, NULL otherwise
  */
-typedef tmap_map_sams_t* (*tmap_driver_func_thread_map)(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_rand_t *rand, tmap_map_opt_t *opt);
+typedef tmap_map_sams_t* (*tmap_map_driver_func_thread_map)(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_map_stats_t *stat, tmap_rand_t *rand, tmap_map_opt_t *opt);
 
 /*!
   This function will be invoked to give a mapping quality to a set of mappings
@@ -46,7 +47,7 @@ typedef tmap_map_sams_t* (*tmap_driver_func_thread_map)(void **data, tmap_seq_t 
   @param  opt      the program options
   @return          0 upon success, non-zero otherwise
   */
-typedef int32_t (*tmap_driver_func_mapq)(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt);
+typedef int32_t (*tmap_map_driver_func_mapq)(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt);
 
 /*!
   This function will be invoked after a thread has process all of its sequences.
@@ -54,7 +55,7 @@ typedef int32_t (*tmap_driver_func_mapq)(tmap_map_sams_t *sams, int32_t seq_len,
   @param  opt   the program options
   @return       0 upon success, non-zero otherwise
   */
-typedef int32_t (*tmap_driver_func_thread_cleanup)(void **data, tmap_map_opt_t *opt);
+typedef int32_t (*tmap_map_driver_func_thread_cleanup)(void **data, tmap_map_opt_t *opt);
 
 /*! 
   data to be passed to a thread                         
@@ -65,10 +66,11 @@ typedef struct {
     int32_t seq_buffer_length;  /*!< the buffers length */
     tmap_map_sams_t ***sams;  /*!< the alignments for each sequence */
     tmap_index_t *index;  /*!< pointer to the reference index */
-    tmap_driver_func_thread_init func_thread_init; /* this function will be run once per thread to initialize persistent data across that thread */
-    tmap_driver_func_thread_map func_thread_map; /* this function will be run once per thread per input sequence to map the sequence */
-    tmap_driver_func_mapq func_mapq; /* this function will be run to calculate the mapping quality */
-    tmap_driver_func_thread_cleanup func_thread_cleanup; /* this function will be run once per thread to cleanup/destroy any persistent data across that thread */
+    tmap_map_driver_func_thread_init func_thread_init; /*!< this function will be run once per thread to initialize persistent data across that thread */
+    tmap_map_driver_func_thread_map func_thread_map; /*!< this function will be run once per thread per input sequence to map the sequence */
+    tmap_map_driver_func_mapq func_mapq; /*!< this function will be run to calculate the mapping quality */
+    tmap_map_driver_func_thread_cleanup func_thread_cleanup; /*!< this function will be run once per thread to cleanup/destroy any persistent data across that thread */
+    tmap_map_stats_t *stat; /*!< the driver statistics */
     tmap_rand_t *rand;  /*!< the random number generator */
     int32_t tid;  /*!< the zero-based thread id */
     tmap_map_opt_t *opt;  /*!< the options to this program */    
@@ -87,6 +89,7 @@ typedef struct {
   @param  func_thread_map      the thread map function
   @param  func_mapq            the mapping quality function
   @param  func_thread_cleanup  the thread cleanup function
+  @param  stat                 the driver statistics
   @param  rand                 the random number generator
   @param  tid                  the thread ids
   @param  opt                  the program parameters 
@@ -94,10 +97,11 @@ typedef struct {
 void
 tmap_map_driver_core_worker(int32_t num_ends, tmap_seq_t **seq_buffer[2], tmap_map_sams_t **sams[2], int32_t seq_buffer_length,
                          tmap_index_t *index,
-                         tmap_driver_func_thread_init func_thread_init, 
-                         tmap_driver_func_thread_map func_thread_map, 
-                         tmap_driver_func_mapq func_mapq,
-                         tmap_driver_func_thread_cleanup func_thread_cleanup,
+                         tmap_map_driver_func_thread_init func_thread_init, 
+                         tmap_map_driver_func_thread_map func_thread_map, 
+                         tmap_map_driver_func_mapq func_mapq,
+                         tmap_map_driver_func_thread_cleanup func_thread_cleanup,
+                         tmap_map_stats_t* stat,
                          tmap_rand_t *rand,
                          int32_t tid, tmap_map_opt_t *opt);
 
@@ -119,11 +123,11 @@ tmap_map_driver_core_thread_worker(void *arg);
   @param  opt                  the program parameters 
   */
 void
-tmap_map_driver_core(tmap_driver_func_init func_init,
-                  tmap_driver_func_thread_init func_thread_init, 
-                  tmap_driver_func_thread_map func_thread_map, 
-                  tmap_driver_func_mapq func_mapq,
-                  tmap_driver_func_thread_cleanup func_thread_cleanup,
+tmap_map_driver_core(tmap_map_driver_func_init func_init,
+                  tmap_map_driver_func_thread_init func_thread_init, 
+                  tmap_map_driver_func_thread_map func_thread_map, 
+                  tmap_map_driver_func_mapq func_mapq,
+                  tmap_map_driver_func_thread_cleanup func_thread_cleanup,
                   tmap_map_opt_t *opt);
 
 #endif 

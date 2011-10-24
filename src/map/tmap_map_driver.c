@@ -25,6 +25,7 @@
 #include "../server/tmap_shm.h"
 #include "../sw/tmap_fsw.h"
 #include "../sw/tmap_sw.h"
+#include "tmap_map_stats.h"
 #include "tmap_map_util.h"
 #include "tmap_map1.h"
 #include "tmap_map1_aux.h"
@@ -120,10 +121,11 @@ tmap_map_driver_get_flow_info(tmap_seq_t *seq, tmap_map_opt_t *opt,
 void
 tmap_map_driver_core_worker(int32_t num_ends, tmap_seq_t ***seq_buffer, tmap_map_sams_t ***sams, int32_t seq_buffer_length,
                          tmap_index_t *index,
-                         tmap_driver_func_thread_init func_thread_init, 
-                         tmap_driver_func_thread_map func_thread_map, 
-                         tmap_driver_func_mapq func_mapq,
-                         tmap_driver_func_thread_cleanup func_thread_cleanup,
+                         tmap_map_driver_func_thread_init func_thread_init, 
+                         tmap_map_driver_func_thread_map func_thread_map, 
+                         tmap_map_driver_func_mapq func_mapq,
+                         tmap_map_driver_func_thread_cleanup func_thread_cleanup,
+                         tmap_map_stats_t *stat,
                          tmap_rand_t *rand,
                          int32_t tid, tmap_map_opt_t *opt)
 {
@@ -155,9 +157,11 @@ tmap_map_driver_core_worker(int32_t num_ends, tmap_seq_t ***seq_buffer, tmap_map
                   // key sequence did not match
                   continue;
               }
+              
+              stat->num_reads++;
 
               // map thread data,
-              sams[i][low] = func_thread_map(&data, seq, index, rand, opt);
+              sams[i][low] = func_thread_map(&data, seq, index, stat, rand, opt);
               if(sams[i][low] == NULL) {
                   tmap_error("the thread function did not return a mapping", Exit, OutOfRange);
               }
@@ -165,11 +169,15 @@ tmap_map_driver_core_worker(int32_t num_ends, tmap_seq_t ***seq_buffer, tmap_map
               if(0 < sams[i][low]->n) {
                   // mapall should have already done this!
                   if(TMAP_MAP_ALGO_MAPALL != opt->algo_id) {
+                      stat->num_after_seeding += sams[i][low]->n;
+
                       // smith waterman (score only)
                       sams[i][low] = tmap_map_util_sw_gen_score(index->refseq, sams[i][low], seq_buffer[i][low], rand, opt);
+                      stat->num_after_scoring += sams[i][low]->n;
 
                       // remove duplicates
                       tmap_map_util_remove_duplicates(sams[i][low], opt->dup_window, rand);
+                      stat->num_after_rmdup += sams[i][low]->n;
 
                       // mapping quality
                       func_mapq(sams[i][low], tmap_seq_get_bases(seq)->l, opt);
@@ -179,6 +187,7 @@ tmap_map_driver_core_worker(int32_t num_ends, tmap_seq_t ***seq_buffer, tmap_map
 
                       // filter alignments
                       tmap_map_sams_filter(sams[i][low], opt->aln_output_mode, rand);
+                      stat->num_after_filter += sams[i][low]->n;
 
                       // smith waterman - generate cigars
                       sams[i][low] = tmap_map_util_sw_gen_cigar(index->refseq, sams[i][low], seq_buffer[i][low], opt);
@@ -238,6 +247,7 @@ tmap_map_driver_core_thread_worker(void *arg)
                            thread_data->func_thread_map, 
                            thread_data->func_mapq, 
                            thread_data->func_thread_cleanup,
+                           thread_data->stat,
                            thread_data->rand,
                            thread_data->tid, thread_data->opt);
 
@@ -245,11 +255,11 @@ tmap_map_driver_core_thread_worker(void *arg)
 }
 
 void 
-tmap_map_driver_core(tmap_driver_func_init func_init,
-                  tmap_driver_func_thread_init func_thread_init, 
-                  tmap_driver_func_thread_map func_thread_map, 
-                  tmap_driver_func_mapq func_mapq,
-                  tmap_driver_func_thread_cleanup func_thread_cleanup,
+tmap_map_driver_core(tmap_map_driver_func_init func_init,
+                  tmap_map_driver_func_thread_init func_thread_init, 
+                  tmap_map_driver_func_thread_map func_thread_map, 
+                  tmap_map_driver_func_mapq func_mapq,
+                  tmap_map_driver_func_thread_cleanup func_thread_cleanup,
                   tmap_map_opt_t *opt)
 {
   uint32_t i, j, n_reads_processed=0;
@@ -258,8 +268,10 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
   tmap_seq_t ***seq_buffer = NULL;
   tmap_map_sams_t ***sams = NULL;
   tmap_index_t *index = NULL;
+  tmap_map_stats_t *stat = NULL;
 #ifdef HAVE_LIBPTHREAD
   tmap_rand_t **rand = NULL;
+  tmap_map_stats_t **stats = NULL;
 #else
   tmap_rand_t *rand = NULL;
 #endif
@@ -305,9 +317,12 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
       }
   }
 
+  stat = tmap_map_stats_init();
 #ifdef HAVE_LIBPTHREAD
-  rand = tmap_malloc(opt->num_threads * sizeof(tmap_rand_t), "rand");
+  stats = tmap_malloc(opt->num_threads * sizeof(tmap_map_stats_t*), "stats");
+  rand = tmap_malloc(opt->num_threads * sizeof(tmap_rand_t*), "rand");
   for(i=0;i<opt->num_threads;i++) {
+      stats[i] = tmap_map_stats_init();
       rand[i] = tmap_rand_init(i);
   }
 #else
@@ -344,6 +359,7 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
       if(1 == opt->num_threads) {
           tmap_map_driver_core_worker(num_ends, seq_buffer, sams, seq_buffer_length, index,
                                    func_thread_init, func_thread_map, func_mapq, func_thread_cleanup, 
+                                   stat,
                                    rand[0],
                                    0, opt);
       }
@@ -369,6 +385,7 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
               thread_data[i].func_mapq = func_mapq;
               thread_data[i].func_thread_cleanup = func_thread_cleanup;
               thread_data[i].tid = i;
+              thread_data[i].stat = stats[i];
               thread_data[i].rand = rand[i];
               thread_data[i].opt = opt; 
               if(0 != pthread_create(&threads[i], &attr, tmap_map_driver_core_thread_worker, &thread_data[i])) {
@@ -379,6 +396,7 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
               if(0 != pthread_join(threads[i], NULL)) {
                   tmap_error("error joining threads", Exit, ThreadError);
               }
+              tmap_map_stats_add(stat, stats[i]);
           }
 
           free(threads);
@@ -387,6 +405,7 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
 #else 
       tmap_map_driver_core_worker(num_ends, seq_buffer, sams, seq_buffer_length, index,
                                   func_thread_init, func_thread_map, func_mapq, func_thread_cleanup, 
+                                  stat,
                                   rand,
                                   0, opt);
 #endif
@@ -424,10 +443,20 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
       n_reads_processed += seq_buffer_length;
       if(-1 != opt->reads_queue_size) {
           tmap_progress_print2("processed %d reads", n_reads_processed);
+          tmap_progress_print2("stats [%.2lf,%.2lf,%.2lf,%.2lf]",
+                               stat->num_after_seeding/(double)stat->num_reads,
+                               stat->num_after_scoring/(double)stat->num_reads,
+                               stat->num_after_rmdup/(double)stat->num_reads,
+                               stat->num_after_filter/(double)stat->num_reads);
       }
   }
   if(-1 == opt->reads_queue_size) {
       tmap_progress_print2("processed %d reads", n_reads_processed);
+      tmap_progress_print2("stats [%.2lf,%.2lf,%.2lf,%.2lf]",
+                           stat->num_after_seeding/(double)stat->num_reads,
+                           stat->num_after_scoring/(double)stat->num_reads,
+                           stat->num_after_rmdup/(double)stat->num_reads,
+                           stat->num_after_filter/(double)stat->num_reads);
   }
 
   // close the input/output
@@ -446,10 +475,13 @@ tmap_map_driver_core(tmap_driver_func_init func_init,
   free(seqio);
   free(seq_buffer);
   free(sams);
+  tmap_map_stats_destroy(stat);
 #ifdef HAVE_LIBPTHREAD
   for(i=0;i<opt->num_threads;i++) {
+      tmap_map_stats_destroy(stats[i]);
       tmap_rand_destroy(rand[i]);
   }
+  free(stats);
   free(rand);
 #else
   tmap_rand_destroy(rand);

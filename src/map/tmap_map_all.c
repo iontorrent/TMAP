@@ -23,6 +23,7 @@
 #include "../io/tmap_seq_io.h"
 #include "../server/tmap_shm.h"
 #include "../sw/tmap_sw.h"
+#include "tmap_map_stats.h"
 #include "tmap_map_util.h"
 #include "tmap_map1.h"
 #include "tmap_map1_aux.h"
@@ -64,7 +65,7 @@ tmap_map_all_sams_merge_helper(tmap_map_sams_t *dest, tmap_map_sams_t *src, int3
 static tmap_map_sams_t *
 tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_index_t *index,
                         tmap_map_sams_t **sams_in, int32_t *algo_ids, int32_t n_algos,
-                        int32_t stage, tmap_rand_t *rand, tmap_map_opt_t *opt)
+                        int32_t stage, tmap_map_stats_t *stat, tmap_rand_t *rand, tmap_map_opt_t *opt)
 {
   int32_t i;
   tmap_map_sams_t *sams = NULL;
@@ -75,11 +76,15 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_index_t *index,
   // remove duplicates before merging
   if(1 == opt->aln_output_mode_ind) {
       for(i=0;i<n_algos;i++) {
+          stat->num_after_seeding += sams_in[i]->n;
+
           // smith waterman (score only)
           sams_in[i] = tmap_map_util_sw_gen_score(index->refseq, sams_in[i], seq, rand, opt);
+          stat->num_after_scoring += sams_in[i]->n;
           
           // duplicate removal
           tmap_map_util_remove_duplicates(sams_in[i], opt->dup_window, rand);
+          stat->num_after_rmdup += sams_in[i]->n;
       }
   }
 
@@ -93,11 +98,15 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_index_t *index,
 
   // remove duplicates after merging
   if(0 == opt->aln_output_mode_ind) {
+      stat->num_after_seeding += sams->n;
+
       // smith waterman (score only)
       sams = tmap_map_util_sw_gen_score(index->refseq, sams, seq, rand, opt);
+      stat->num_after_scoring += sams->n;
 
       // duplicate removal
       tmap_map_util_remove_duplicates(sams, opt->dup_window, rand);
+      stat->num_after_rmdup += sams->n;
   }
 
   // mapping quality
@@ -124,6 +133,7 @@ tmap_map_all_sams_merge(tmap_seq_t *seq, tmap_index_t *index,
           tmap_map_sams_filter1(sams, opt->aln_output_mode, algo_ids[i], rand);
       }
   }
+  stat->num_after_filter += sams->n;
   
   // generate the cigars
   sams = tmap_map_util_sw_gen_cigar(index->refseq, sams, seq, opt);
@@ -207,7 +217,7 @@ tmap_map_all_thread_init(void **data, tmap_map_opt_t *opt)
 // Note: we assume that filtering and duplicate removal will not be done but the
 // map* algorithms when their program options "algo_id != -1"
 static tmap_map_sams_t*
-tmap_map_all_thread_map(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_rand_t *rand, tmap_map_opt_t *opt)
+tmap_map_all_thread_map(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_map_stats_t *stat, tmap_rand_t *rand, tmap_map_opt_t *opt)
 {
   int32_t i, j, n_algos=4;
   tmap_map_sams_t *sams = NULL;
@@ -222,6 +232,7 @@ tmap_map_all_thread_map(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_
   tmap_seq_t *seqs_tmp[2]={NULL,NULL};
   tmap_string_t *bases[4]={NULL,NULL,NULL,NULL};
   tmap_string_t *bases_tmp[2]={NULL,NULL};
+  tmap_map_stats_t *curstat = NULL;
 
   seq_len = tmap_seq_get_bases(seq)->l; 
 
@@ -243,6 +254,8 @@ tmap_map_all_thread_map(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_
   }
       
   for(i=0;i<opt->num_stages;i++) {
+      curstat = tmap_calloc(1, sizeof(tmap_map_stats_t), "curstat");
+
       // nullify
       for(j=0;j<n_algos;j++) {
           sams_in[j] = NULL;
@@ -297,7 +310,7 @@ tmap_map_all_thread_map(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_
 
       // merge all the mappings
       // init
-      sams = tmap_map_all_sams_merge(seq, index, sams_in, algo_ids, n_algos, i+1, rand, opt);
+      sams = tmap_map_all_sams_merge(seq, index, sams_in, algo_ids, n_algos, i+1, curstat, rand, opt);
 
       // destroy the individual mappings
       for(j=0;j<n_algos;j++) {
@@ -307,12 +320,15 @@ tmap_map_all_thread_map(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_
 
       // did we find any mappings?
       if(0 < sams->n) {
+          tmap_map_stats_add(stat, curstat);
+          tmap_map_stats_destroy(curstat);
           // yes, break out
           break;
       }
       else if(i < opt->num_stages-1) { // only if we have a next stage
           tmap_map_sams_destroy(sams);
           sams=NULL;
+          tmap_map_stats_destroy(curstat);
       }
   }
       
