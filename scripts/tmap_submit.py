@@ -43,7 +43,7 @@ if __name__ == "__main__":
     parser.add_option('--redirect-stdout', help='redirects stdout of tmap to the specified file', dest="tmap_stdout")
     parser.add_option('--profile-tmap', help='profiles tmap and requires google-perftools be in your LD_LIBRARY_PATH', dest="profile_tmap")
     parser.add_option('--submit-script-name', help="name for submission script, override default", dest="fn_script")
-    parser.add_option('--additional-pbs-settings', help="comman seperated list of additioanl PBS/environemnt settings.  formating is up to you, user.", dest="pbs_settings")
+    parser.add_option('--additional-pbs-settings', help="comman seperated list of additioanl PBS/environemnt settings.  formating is up to you, user.", dest="pbs_settings", default='')
     (options, args) = parser.parse_args()
     if len(args) != 0:
         parser.print_help()
@@ -137,6 +137,7 @@ if __name__ == "__main__":
         fn_script = fn_sam[:-3] + "tmap.sh" 
     fp_script = open(fn_script, 'w')
     fp_script.write('#!/usr/bin/env bash\n')
+    print options.pbs_settings
     if '' != options.pbs_settings:
         #writes all additional pbs settings right here.
         #formatting is left up to the user
