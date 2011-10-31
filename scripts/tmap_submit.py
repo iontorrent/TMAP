@@ -18,10 +18,15 @@ def check_file(file_name):
         print 'File not found: ' + str(file_name)
         sys.exit(1)
 
-def check_dir(file_name):
-    if not os.path.isdir(file_name):
-        print 'Directory not found: ' + str(file_name)
-        sys.exit(1)
+def check_dir(dir_name):
+    if not os.path.isdir(dir_name):
+        print 'Directory not found: ' + str(dir_name)
+        print 'making directory: ' + str(dir_name)
+        try:
+            os.mkdir(dir_name)
+        except:
+            print "Directory creation failed.  You apparently don't have sufficient write permissions to: " + str(dir_name)
+            sys.exit(1)
 
 if __name__ == "__main__":
     parser = OptionParser()
@@ -33,9 +38,12 @@ if __name__ == "__main__":
     parser.add_option('--dwgsim-eval-path', help='the path to the dwgsim_eval binary (if the reads were simulated with dwgsim_eval)', dest='dwgsim_eval_path', default='')
     parser.add_option('--alignStats-path', help='the path to the alignStast binary', dest='alignStats_path', default='')
     parser.add_option('--mapping-algorithm', help='the mapping command (ex. mapall, map1, map2 map3)', dest='mapping_algorithm')
-    parser.add_option('--mapall-algorithms', help='the mapping algorithms and options for mapall (only used when --mapping-algorithm=mapall)', dest='mapall_algorithms', default=None)
+    parser.add_option('--mapall-algorithms', help='the mapping algorithms and options for mapall (only used when --mapping-algorithm=mapall)', dest='mapall_algorithms', default='')
     parser.add_option('--pbs-queue', help='the PBS queue to which to submit', default='pbs_queue')
-
+    parser.add_option('--redirect-stdout', help='redirects stdout of tmap to the specified file', dest="tmap_stdout", default='')
+    parser.add_option('--profile-tmap', help='profiles tmap and requires google-perftools be in your LD_LIBRARY_PATH', dest="profile_tmap")
+    parser.add_option('--submit-script-name', help="name for submission script, override default", dest="fn_script")
+    parser.add_option('--additional-pbs-settings', help="comman seperated list of additioanl PBS/environemnt settings.  formating is up to you, user.", dest="pbs_settings", default='')
     (options, args) = parser.parse_args()
     if len(args) != 0:
         parser.print_help()
@@ -59,7 +67,9 @@ if __name__ == "__main__":
     else:
         options.mapall_algorithms = ''
     check_option(parser, options.pbs_queue, '--pbs-queue')
-
+    
+    if options.tmap_stdout != '':
+        options.tmap_stdout = (" > %s" ) % (options.tmap_stdout)
     # Genome info file
     p = re.compile('.fasta$')
     fn_fasta_info = p.sub('.info.txt', options.fn_fasta)
@@ -69,33 +79,36 @@ if __name__ == "__main__":
     check_file(fn_fasta_info)
     check_file(options.fn_reads)
     check_dir(options.sam_dir)
-    if '/' != options.sam_dir[len(options.sam_dir)-1]:
-        options.sam_dir = options.sam_dir + '/'
     check_file(options.tmap_path)
     if '' != options.dwgsim_eval_path:
         check_file(options.dwgsim_eval_path)
     if '' != options.alignStats_path:
         check_file(options.alignStats_path)
-
+    
     # Check mapping algorithms
     if not options.mapping_algorithm in ('mapall', 'map1', 'map2', 'map3'):
-        print 'Unrecognized mapping algorithm: ' + options.mapping_algorithm
-
+        if not options.mapping_algorithm.split()[0] in ('mapall', 'map1', 'map2', 'map3'):
+            #just in case it's something like
+            #map3 --seed-length 55                                                       
+            print 'Unrecognized mapping algorithm: ' + options.mapping_algorithm
+    if '' != options.profile_tmap:
+        options.profile_tmap = "CPUPROFILE="+options.profile_tmap
     # Create the tmap command 
     p = re.compile('.*/')
     temp_mapall_algorithms = options.mapall_algorithms
     temp = '_'.join(temp_mapall_algorithms.split(' '))
-    
-    fn_sam = p.sub(options.sam_dir, options.fn_reads) + "." + temp + ".sam"
-    tmap_cmd = "time -p %s %s -f %s -r %s -n %s -v %s > %s" % (
+    fn_sam = options.sam_dir + "/" + os.path.basename(options.fn_reads) + temp +".sam"
+    tmap_cmd = "%s time -p %s %s -f %s -r %s -s %s -n %s -v %s %s" % (
+            options.profile_tmap,
             options.tmap_path,
             options.mapping_algorithm,
             options.fn_fasta,
             options.fn_reads,
+            fn_sam,
             options.num_threads,
             options.mapall_algorithms,
-            fn_sam)
-
+            options.tmap_stdout
+            )
     # Create the dwgsim_eval command
     dwgsim_eval_cmd = ''
     if '' != options.dwgsim_eval_path:
@@ -116,9 +129,17 @@ if __name__ == "__main__":
                 options.num_threads)
 
     # Create the shell script
-    fn_script = fn_sam + ".tmap.sh"
+    if options.fn_script:
+        fn_script = options.fn_script + ".tmap.sh"
+    else:
+        fn_script = fn_sam[:-3] + "tmap.sh" 
     fp_script = open(fn_script, 'w')
     fp_script.write('#!/usr/bin/env bash\n')
+    print options.pbs_settings
+    if '' != options.pbs_settings:
+        #writes all additional pbs settings right here.
+        #formatting is left up to the user
+        fp_script.write('\n'.join(options.pbs_settings.split(',')) + '\n')
     fp_script.write(
             """
 #*! @function
