@@ -834,6 +834,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   i = start = end = 0;
   best_subo = INT32_MIN;
   start_pos = end_pos = 0;
+  
   while(end < sams->n) {
       uint8_t strand, *query=NULL;
       uint32_t qlen;
@@ -841,6 +842,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
 
       // get the strand/start/end positions
       strand = sams->sams[end].strand;
+      //first pass, setup start and end
       if(start == end) {
           start_pos = sams->sams[start].pos + 1; 
           end_pos = sams->sams[start].pos + sams->sams[start].target_len; 
@@ -852,10 +854,13 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       }
 
       // check if the hits can be banded
+      //TODO fixme below
+      
       if(end + 1 < sams->n) {
-          if(sams->sams[end].strand == sams->sams[end+1].strand 
-             && sams->sams[end].seqid == sams->sams[end+1].seqid
-             && sams->sams[end+1].pos - sams->sams[end].pos <= opt->max_seed_band) {
+          if(sams->sams[end].strand == sams->sams[end+1].strand //same strand
+             && sams->sams[end].seqid == sams->sams[end+1].seqid 
+             && (sams->sams[end+1].pos - 
+                  (sams->sams[end].pos +sams->sams[end].target_len)<= opt->max_seed_band) ) {
               end++;
               if(end_pos < sams->sams[end].pos + sams->sams[end].target_len) {
                   end_pos = sams->sams[end].pos + sams->sams[end].target_len; // one-based
@@ -923,26 +928,38 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       tmp_sam.target_start = tmp_sam.target_end = 0;
 
       // NB: if match/mismatch penalties are on the opposite strands, we may
-      // have wrong scores
-      if(0 == strand) {
-          tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query, qlen,
-                                        target, tlen, 
-                                        softclip_start, softclip_end,
-                                        vsw_opt, 
-                                        &tmp_sam.score_fwd, &tmp_sam.score_rev,
-                                        &tmp_sam.query_start, &tmp_sam.query_end,
-                                        &tmp_sam.target_start, &tmp_sam.target_end,
-                                        &overflow, opt->score_thr, 0);
-      }
-      else {
-          tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query, qlen,
-                                        target, tlen, 
-                                        softclip_end, softclip_start,
-                                        vsw_opt, 
-                                        &tmp_sam.score_fwd, &tmp_sam.score_rev,
-                                        &tmp_sam.query_start, &tmp_sam.query_end,
-                                        &tmp_sam.target_start, &tmp_sam.target_end,
-                                        &overflow, opt->score_thr, 0);
+      // have wrong score
+      // NOTE:  end >(sams->n * opt->seed_freqc ) comes from 
+      /*
+       * Anatomy of a hash-based long read sequence mapping algorithm for next generation DNA sequencing
+       * Sanchit Misra, Bioinformatics, 2011
+       * "For each read, we find the maximum of the number of q-hits in 
+       * all regions, say C. We keep the cutoff as a fraction f of C. Hence, 
+       * if a region has ≥fC q-hits, only then it is processed further. "
+       */
+      if (end >(sams->n * opt->seed_freqc )){
+          if(0 == strand) {
+              tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query, qlen,
+                                            target, tlen, 
+                                            softclip_start, softclip_end,
+                                            vsw_opt, 
+                                            &tmp_sam.score_fwd, &tmp_sam.score_rev,
+                                            &tmp_sam.query_start, &tmp_sam.query_end,
+                                            &tmp_sam.target_start, &tmp_sam.target_end,
+                                            &overflow, opt->score_thr, 0);
+          }
+          else {
+              tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query, qlen,
+                                            target, tlen, 
+                                            softclip_end, softclip_start,
+                                            vsw_opt, 
+                                            &tmp_sam.score_fwd, &tmp_sam.score_rev,
+                                            &tmp_sam.query_start, &tmp_sam.query_end,
+                                            &tmp_sam.target_start, &tmp_sam.target_end,
+                                            &overflow, opt->score_thr, 0);
+          }
+      } else {
+          tmp_sam.score = INT32_MIN;
       }
       if(1 == overflow) {
           tmap_error("bug encountered", Exit, OutOfRange);
