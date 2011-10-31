@@ -158,6 +158,7 @@ typedef struct __tmap_map_opt_t {
     int32_t reads_format;  /*!< the reads file format (-i,--reads-format) */
     char *fn_sam; /*!< the output file name (-s,--fn-sam) */
     int32_t score_match;  /*!< the match score (-A,--score-match) */
+    double  seed_freqc; /*!< the minimum frequency a seed must occur in order to be considered for mapping (-S, --seed-freq-cutoff) */
     int32_t pen_mm;  /*!< the mismatch penalty (-M,--pen-mismatch) */
     int32_t pen_gapo;  /*!< the indel open penalty (-O,--pen-gap-open) */
     int32_t pen_gape;  /*!< the indel extension penalty (-E,--pen-gap-extension) */
