@@ -148,6 +148,42 @@ tmap_map_sams_destroy(tmap_map_sams_t *s)
   free(s);
 }
 
+void
+tmap_map_sams_append(tmap_map_sams_t *dest, tmap_map_sams_t *src)
+{
+  int32_t i;
+  if(0 == src->n) return; 
+  tmap_map_sams_realloc(dest, dest->n + src->n);
+  for(i=0;i<src->n;i++) {
+      dest->sams[i+src->n] = src->sams[i];
+      src->sams[i] = NULL;
+  }
+}
+
+tmap_map_record_t*
+tmap_map_record_init(int32_t num_ends)
+{
+  tmap_map_record_t *record;
+  record = tmap_calloc(1, sizeof(tmap_map_record_t), "record");
+  record->sams = tmap_calloc(record->n, sizeof(tmap_map_sams_t*), "record->sams");
+  record->n = num_ends;
+  return record;
+}
+
+void
+tmap_map_record_destroy(tmap_map_record_t *record)
+
+void
+tmap_map_record_destroy(tmap_map_record_t *record)
+{
+  int32_t i;
+  for(i=0;i<record->n;i++) {
+      tmap_map_sams_destroy(record->sams[i]);
+  }
+  free(record->sams);
+  free(record);
+}
+
 static inline void
 tmap_map_sam_copy(tmap_map_sam_t *dest, tmap_map_sam_t *src)
 {

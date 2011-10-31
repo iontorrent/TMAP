@@ -201,14 +201,18 @@ tmap_map1_thread_init(void **data, tmap_map_opt_t *opt)
 
 // reverse and reverse compliment
 tmap_map_sams_t*
-tmap_map1_thread_map_core(void **data, tmap_seq_t *seqs[2], tmap_string_t *bases[2], int32_t seq_len,
+tmap_map1_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len,
                           tmap_index_t *index, tmap_map_opt_t *opt)
 {
   tmap_map1_thread_data_t *d = (tmap_map1_thread_data_t*)(*data);
   int32_t seed2_len = 0;
   tmap_map_opt_t opt_local = (*opt); // copy over values
   tmap_map_sams_t *sams = NULL;
+  tmap_string_t *bases[2] = {NULL, NULL};
 
+  // get bases
+  bases[0] = tmap_seq_get_bases(seqs[0]);
+  bases[1] = tmap_seq_get_bases(seqs[1]);
 
   if((0 < opt->min_seq_len && seq_len < opt->min_seq_len)
      || (0 < opt->max_seq_len && opt->max_seq_len < seq_len)) {
@@ -263,7 +267,6 @@ tmap_map1_thread_map(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_map
 {
   int32_t seq_len = 0;;
   tmap_seq_t *seqs[2]={NULL, NULL};
-  tmap_string_t *bases[2]={NULL, NULL};
   tmap_map_sams_t *sams = NULL;
 
   // sequence length
@@ -291,12 +294,8 @@ tmap_map1_thread_map(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_map
   tmap_seq_to_int(seqs[0]);
   tmap_seq_to_int(seqs[1]);
 
-  // get bases
-  bases[0] = tmap_seq_get_bases(seqs[0]);
-  bases[1] = tmap_seq_get_bases(seqs[1]);
-  
   // core algorithm
-  sams = tmap_map1_thread_map_core(data, seqs, bases, seq_len, index, opt);
+  sams = tmap_map1_thread_map_core(data, seqs, seq_len, index, opt);
 
   // destroy
   tmap_seq_destroy(seqs[0]);

@@ -103,6 +103,12 @@ typedef struct {
     tmap_map_sam_t *sams; /*!< array of hits */
 } tmap_map_sams_t;
 
+// TODO
+typedef struct {
+    tmap_map_sams_t **sams; /*!< the sam records */
+    int32_t n; /*!< the number of records (multi-end) */
+} tmap_map_record_t;
+
 /*!
   allocates memory for the auxiliary data specific to the algorithm specified by algo_id
   @param  s        the mapping structurem
@@ -124,6 +130,10 @@ tmap_map_sam_destroy_aux(tmap_map_sam_t *s);
   */ 
 void
 tmap_map_sam_destroy(tmap_map_sam_t *s);
+
+// TODO
+void
+tmap_map_sams_append(tmap_map_sams_t *dest, tmap_map_sams_t *src);
 
 /*!
   allocate memory for an empty mapping structure, with no auxiliary data
@@ -147,6 +157,18 @@ tmap_map_sams_realloc(tmap_map_sams_t *s, int32_t n);
   */
 void
 tmap_map_sams_destroy(tmap_map_sams_t *s);
+
+// TODO
+void
+tmap_map_sams_destroy(tmap_map_sams_t *s);
+
+// TODO
+tmap_map_record_t*
+tmap_map_record_init(int32_t num_ends);
+
+// TODO
+void 
+tmap_map_record_destroy(tmap_map_record_t *record);
 
 /*!
   merges src into dest
