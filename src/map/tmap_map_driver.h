@@ -75,7 +75,6 @@ typedef struct {
     tmap_map_driver_func_thread_cleanup func_thread_cleanup; /*!< this function will be run once per thread to cleanup/destroy any persistent data across that thread */
     tmap_map_driver_func_cleanup func_cleanup; /*!< this function will be run once per program to cleanup/destroy any persistent data across the program */
     tmap_map_opt_t *opt; /*!< the program options specific to this algorithm */
-    void *data; /*!< persistent data across the program */
 } tmap_map_driver_algorithm_t;
 
 /*!
