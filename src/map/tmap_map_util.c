@@ -801,7 +801,8 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   tmap_vsw_opt_t *vsw_opt = NULL;
   uint32_t start_pos, end_pos;
   int32_t overflow, softclip_start, softclip_end;
-
+  int32_t sam_start=0, sam_end=0, sam_next_start=0, sam_next_end=0;
+  int32_t keep_banding = 0;
   if(0 == sams->n) {
       return sams;
   }
@@ -858,15 +859,27 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       
       if(end + 1 < sams->n) {
           if(sams->sams[end].strand == sams->sams[end+1].strand //same strand
-             && sams->sams[end].seqid == sams->sams[end+1].seqid
-             && (sams->sams[end+1].pos+sams->sams[end+1].target_len) - (sams->sams[end].pos + sams->sams[end].target_len)<= opt->max_seed_band)  {
-                end++;
-                  if(end_pos < sams->sams[end].pos + sams->sams[end].target_len) {
-                      end_pos = sams->sams[end].pos + sams->sams[end].target_len; // one-based
-                  }
-                  continue; // there may be more to add
-                }
-          
+             && sams->sams[end].seqid == sams->sams[end+1].seqid) {
+              sam_start = sams->sams[end].pos;
+              sam_end = sams->sams[end].pos + sams->sams[end].target_len;
+              sam_next_start = sams->sams[end+1].pos;
+              sam_next_end = sam_next_start + sams->sams[end+1].target_len;
+              if ( (sam_next_end > sam_end) && ((sam_next_end - sam_end) <= opt->max_seed_band) ) {
+                  end++;
+                  keep_banding = 1;
+              } else if ( sam_next_end <= sam_end ) {
+                  end++;
+                  keep_banding = 1;
+              } else {
+                  keep_banding = 0;
+              } 
+              if (keep_banding) {
+                  continue; //look for more banding opportunities
+              }
+              
+              
+          }
+            
       }
 
       // choose a random one within the window
