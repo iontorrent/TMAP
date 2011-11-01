@@ -858,15 +858,15 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       
       if(end + 1 < sams->n) {
           if(sams->sams[end].strand == sams->sams[end+1].strand //same strand
-             && sams->sams[end].seqid == sams->sams[end+1].seqid 
-             && (sams->sams[end+1].pos - 
-                  (sams->sams[end].pos +sams->sams[end].target_len)<= opt->max_seed_band) ) {
-              end++;
-              if(end_pos < sams->sams[end].pos + sams->sams[end].target_len) {
-                  end_pos = sams->sams[end].pos + sams->sams[end].target_len; // one-based
-              }
-              continue; // there may be more to add
-          }
+             && sams->sams[end].seqid == sams->sams[end+1].seqid
+             && (sams->sams[end+1].pos+sams->sams[end+1].target_len) - (sams->sams[end].pos + sams->sams[end].target_len)<= opt->max_seed_band)  {
+                end++;
+                  if(end_pos < sams->sams[end].pos + sams->sams[end].target_len) {
+                      end_pos = sams->sams[end].pos + sams->sams[end].target_len; // one-based
+                  }
+                  continue; // there may be more to add
+                }
+          
       }
 
       // choose a random one within the window
