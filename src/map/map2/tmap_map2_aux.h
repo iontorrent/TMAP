@@ -2,11 +2,11 @@
 #ifndef TMAP_MAP2_AUX_H
 #define TMAP_MAP2_AUX_H
 
-#include "../util/tmap_string.h"
-#include "../seq/tmap_seq.h"
-#include "../index/tmap_refseq.h"
-#include "../index/tmap_bwt.h"
-#include "../index/tmap_sa.h"
+#include "../../util/tmap_string.h"
+#include "../../seq/tmap_seq.h"
+#include "../../index/tmap_refseq.h"
+#include "../../index/tmap_bwt.h"
+#include "../../index/tmap_sa.h"
 #include "tmap_map2_mempool.h"
 #include "tmap_map2.h"
 

@@ -4,12 +4,12 @@
 #include <math.h>
 #include <string.h>
 #include <getopt.h>
-#include "../util/tmap_alloc.h"
-#include "../util/tmap_error.h"
-#include "../io/tmap_file.h"
-#include "../seq/tmap_seq.h"
-#include "../util/tmap_progress.h"
-#include "../util/tmap_definitions.h"
+#include "../../util/tmap_alloc.h"
+#include "../../util/tmap_error.h"
+#include "../../io/tmap_file.h"
+#include "../../seq/tmap_seq.h"
+#include "../../util/tmap_progress.h"
+#include "../../util/tmap_definitions.h"
 #include "tmap_map_opt.h"
   
 static char *tmap_map_opt_input_types[] = {"INT", "FLOAT", "NUM", "FILE", "STRING", "NONE"};
@@ -754,7 +754,6 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
 tmap_map_opt_t *
 tmap_map_opt_init(int32_t algo_id)
 {
-  int32_t i;
   tmap_map_opt_t *opt = NULL;
 
   opt = tmap_calloc(1, sizeof(tmap_map_opt_t), "opt");
@@ -846,13 +845,6 @@ tmap_map_opt_init(int32_t algo_id)
       opt->mapall_score_thr = 8;
       opt->mapall_mapq_thr = 23; // 0.5% error
       opt->mapall_keep_all = 1;
-      for(i=0;i<2;i++) {
-          opt->algos[i] = 0;
-          opt->opt_map1[i] = tmap_map_opt_init(TMAP_MAP_ALGO_MAP1);
-          opt->opt_map2[i] = tmap_map_opt_init(TMAP_MAP_ALGO_MAP2);
-          opt->opt_map3[i] = tmap_map_opt_init(TMAP_MAP_ALGO_MAP3);
-          opt->opt_map_vsw[i] = tmap_map_opt_init(TMAP_MAP_ALGO_MAPVSW);
-      }
       break;
     default:
       break;
@@ -861,7 +853,21 @@ tmap_map_opt_init(int32_t algo_id)
   // build options for parsing and printing
   tmap_map_opt_init_helper(opt);
 
+  opt->sub_opts = NULL;
+  opt->num_sub_opts = 0;
+
   return opt;
+}
+
+tmap_map_opt_t*
+tmap_map_opt_add_sub_opt(tmap_map_opt_t *opt, int32_t algo_id)
+{
+  opt->num_sub_opts++;
+  opt->sub_opts = tmap_realloc(opt->sub_opts, opt->num_sub_opts * sizeof(tmap_map_opt_t*), "opt->sub_opts");
+  opt->sub_opts[opt->num_sub_opts-1] = tmap_map_opt_init(algo_id);
+  // copy global options
+  tmap_map_opt_copy_global(opt->sub_opts[opt->num_sub_opts-1], opt);
+  return opt->sub_opts[opt->num_sub_opts-1];
 }
 
 void
@@ -880,25 +886,10 @@ tmap_map_opt_destroy(tmap_map_opt_t *opt)
   free(opt->flow_order);
   free(opt->key_seq);
 
-  switch(opt->algo_id) {
-    case TMAP_MAP_ALGO_MAP1:
-    case TMAP_MAP_ALGO_MAP2:
-    case TMAP_MAP_ALGO_MAP3:
-    case TMAP_MAP_ALGO_MAPVSW:
-      break;
-    case TMAP_MAP_ALGO_MAPALL:
-      // mapall
-      for(i=0;i<2;i++) {
-          opt->algos[i] = 0;
-          tmap_map_opt_destroy(opt->opt_map1[i]);
-          tmap_map_opt_destroy(opt->opt_map2[i]);
-          tmap_map_opt_destroy(opt->opt_map3[i]);
-          tmap_map_opt_destroy(opt->opt_map_vsw[i]);
-      }
-      break;
-    default:
-      break;
+  for(i=0;i<opt->num_sub_opts;i++) {
+      tmap_map_opt_destroy(opt->sub_opts[i]);
   }
+  free(opt->sub_opts);
 
   // destroy options for parsing and printing
   tmap_map_opt_options_destroy(opt->options);
@@ -955,25 +946,10 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
   }
 
   // print algorithm specific options
-  switch(opt->algo_id) {
-    case TMAP_MAP_ALGO_MAP1:
-    case TMAP_MAP_ALGO_MAP2:
-    case TMAP_MAP_ALGO_MAP3:
-    case TMAP_MAP_ALGO_MAPVSW:
-      tmap_map_opt_usage_algo(opt, -1);
-      break;
-    case TMAP_MAP_ALGO_MAPALL:
-      for(i=0;i<2;i++) {
-          tmap_map_opt_usage_algo(opt->opt_map1[i], i+1);
-          tmap_map_opt_usage_algo(opt->opt_map2[i], i+1);
-          tmap_map_opt_usage_algo(opt->opt_map3[i], i+1);
-          tmap_map_opt_usage_algo(opt->opt_map_vsw[i], i+1);
-      }
-      tmap_map_opt_usage_algo(opt, -1);
-      break;
-    default:
-      break;
+  for(i=0;i<opt->num_sub_opts;i++) {
+      tmap_map_opt_usage_algo(opt->sub_opts[i], opt->sub_opts[i]->algo_stage);
   }
+  tmap_map_opt_usage_algo(opt, -1);
 
   tmap_map_opt_destroy(opt);
 
@@ -1561,22 +1537,17 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       if(0 == opt->algos[0] || 0 == opt->num_stages) {
           tmap_error("no algorithms given for stage 1", Exit, CommandLineArgument);
       }
-      for(i=0;i<2;i++) {
-          // check mapping algorithm specific options
-          tmap_map_opt_check(opt->opt_map1[i]);
-          tmap_map_opt_check(opt->opt_map2[i]);
-          tmap_map_opt_check(opt->opt_map3[i]);
-          tmap_map_opt_check(opt->opt_map_vsw[i]);
-
-          // check that common values match other opt values
-          tmap_map_opt_check_common(opt, opt->opt_map1[i]);
-          tmap_map_opt_check_common(opt, opt->opt_map2[i]);
-          tmap_map_opt_check_common(opt, opt->opt_map3[i]);
-          tmap_map_opt_check_common(opt, opt->opt_map_vsw[i]);
-      }
       break;
     default:
       break;
+  }
+  // check sub-options
+  for(i=0;i<opt->num_sub_opts;i++) {
+      // check mapping algorithm specific options
+      tmap_map_opt_check(opt->sub_opts[i]);
+
+      // check that common values match other opt values
+      tmap_map_opt_check_common(opt, opt->sub_opts[i]);
   }
 }
 

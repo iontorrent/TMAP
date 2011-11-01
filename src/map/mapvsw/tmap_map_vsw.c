@@ -6,25 +6,26 @@
 #include <pthread.h>
 #endif
 #include <unistd.h>
-#include "../util/tmap_error.h"
-#include "../util/tmap_alloc.h"
-#include "../util/tmap_definitions.h"
-#include "../util/tmap_progress.h"
-#include "../util/tmap_sam_print.h"
-#include "../util/tmap_sort.h"
-#include "../seq/tmap_seq.h"
-#include "../index/tmap_refseq.h"
-#include "../index/tmap_bwt_gen.h"
-#include "../index/tmap_bwt.h"
-#include "../index/tmap_bwt_match.h"
-#include "../index/tmap_sa.h"
-#include "../index/tmap_index.h"
-#include "../io/tmap_seq_io.h"
-#include "../server/tmap_shm.h"
-#include "../sw/tmap_sw.h"
-#include "tmap_map_stats.h"
-#include "tmap_map_util.h"
-#include "tmap_map_driver.h"
+#include "../../util/tmap_error.h"
+#include "../../util/tmap_alloc.h"
+#include "../../util/tmap_definitions.h"
+#include "../../util/tmap_progress.h"
+#include "../../util/tmap_sam_print.h"
+#include "../../util/tmap_sort.h"
+#include "../../seq/tmap_seq.h"
+#include "../../index/tmap_refseq.h"
+#include "../../index/tmap_bwt_gen.h"
+#include "../../index/tmap_bwt.h"
+#include "../../index/tmap_bwt_match.h"
+#include "../../index/tmap_sa.h"
+#include "../../index/tmap_index.h"
+#include "../../io/tmap_seq_io.h"
+#include "../../server/tmap_shm.h"
+#include "../../sw/tmap_sw.h"
+#include "../util/tmap_map_stats.h"
+#include "../util/tmap_map_util.h"
+#include "../tmap_map_driver.h"
+#include "tmap_map_vsw.h"
 
 static int32_t
 tmap_map_vsw_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
@@ -34,7 +35,7 @@ tmap_map_vsw_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
 }
 
 int32_t
-tmap_map_vsw_init(tmap_refseq_t *refseq, tmap_map_opt_t *opt)
+tmap_map_vsw_init(void **data, tmap_refseq_t *refseq, tmap_map_opt_t *opt)
 {
   return 0;
 }
@@ -85,15 +86,15 @@ tmap_map_vsw_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len,
   return sams;
 }
 
-static tmap_map_sams_t*
-tmap_map_vsw_thread_map(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_map_stats_t *stat, tmap_rand_t *rand, tmap_map_opt_t *opt)
+tmap_map_sams_t*
+tmap_map_vsw_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_map_stats_t *stat, tmap_rand_t *rand, tmap_map_opt_t *opt)
 {
   int32_t seq_len = 0;;
-  tmap_seq_t *seqs[2]={NULL, NULL};
+  tmap_seq_t *seqs_tmp[2]={NULL, NULL};
   tmap_map_sams_t *sams = NULL;
 
   // sequence length
-  seq_len = tmap_seq_get_bases(seq)->l;
+  seq_len = tmap_seq_get_bases(seqs[0])->l;
 
   // sequence length not in range
   if((0 < opt->min_seq_len && seq_len < opt->min_seq_len)
@@ -102,22 +103,11 @@ tmap_map_vsw_thread_map(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_
   }
 
   // clone the sequence 
-  seqs[0] = tmap_seq_clone(seq);
-  seqs[1] = tmap_seq_clone(seq);
-
-  tmap_seq_reverse(seqs[0]); // reverse
-  tmap_seq_reverse_compliment(seqs[1]); // reverse compliment
-
-  // convert to integers
-  tmap_seq_to_int(seqs[0]);
-  tmap_seq_to_int(seqs[1]);
+  seqs_tmp[0] = seqs[0];
+  seqs_tmp[1] = seqs[1];
 
   // core algorithm
-  sams = tmap_map_vsw_thread_map_core(data, seqs, seq_len, index, opt);
-
-  // destroy
-  tmap_seq_destroy(seqs[0]);
-  tmap_seq_destroy(seqs[1]);
+  sams = tmap_map_vsw_thread_map_core(data, seqs_tmp, seq_len, index, opt);
 
   return sams;
 }
@@ -131,13 +121,25 @@ tmap_map_vsw_thread_cleanup(void **data, tmap_map_opt_t *opt)
 static void 
 tmap_map_vsw_core(tmap_map_opt_t *opt)
 {
+  tmap_map_driver_t *driver = NULL;
+
+  driver = tmap_map_driver_init();
+
+  // add this algorithm
+  tmap_map_driver_add(driver,
+                      tmap_map_vsw_init, 
+                      tmap_map_vsw_thread_init, 
+                      tmap_map_vsw_thread_map, 
+                      tmap_map_vsw_mapq,
+                      tmap_map_vsw_thread_cleanup,
+                      NULL,
+                      opt);
+  
+
   // run the driver
-  tmap_map_driver_core(tmap_map_vsw_init, 
-                       tmap_map_vsw_thread_init, 
-                       tmap_map_vsw_thread_map, 
-                       tmap_map_vsw_mapq,
-                       tmap_map_vsw_thread_cleanup,
-                       opt);
+  tmap_map_driver_run(driver);
+
+  tmap_map_driver_destroy(driver);
 }
 
 int 

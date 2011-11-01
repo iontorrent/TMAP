@@ -30,7 +30,7 @@ static char *algo_id_to_name[17] = {
     "global options"
 };
 
-char *
+char*
 tmap_algo_id_to_name(uint16_t algo_id)
 {
   int32_t i=0;
@@ -39,6 +39,18 @@ tmap_algo_id_to_name(uint16_t algo_id)
       i++;
   }
   return algo_id_to_name[i];
+}
+
+int32_t
+tmap_algo_name_to_id(char *name)
+{
+  int32_t i, id = 0;
+  for(i=0;i<15;i++) {
+      if(0 == strcmp(name, algo_id_to_name[i])) return id;
+      if(0 == i) id++;
+      else id <<= 1;
+  }
+  return -1;
 }
 
 // Input: ASCII character

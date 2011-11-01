@@ -3,9 +3,9 @@
 #define TMAP_MAP_UTIL_H
 
 #include <sys/types.h>
-#include "../util/tmap_rand.h"
-#include "../sw/tmap_fsw.h"
-#include "../sw/tmap_vsw.h"
+#include "../../util/tmap_rand.h"
+#include "../../sw/tmap_fsw.h"
+#include "../../sw/tmap_vsw.h"
 #include "tmap_map_opt.h"
 
 #define __gen_ap(par, opt) do { \
@@ -167,6 +167,14 @@ tmap_map_record_t*
 tmap_map_record_init(int32_t num_ends);
 
 // TODO
+tmap_map_record_t*
+tmap_map_record_clone(tmap_map_record_t *src);
+
+// TODO
+void
+tmap_map_record_merge(tmap_map_record_t *dest, tmap_map_record_t *src);
+
+// TODO
 void 
 tmap_map_record_destroy(tmap_map_record_t *record);
 
@@ -249,8 +257,9 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window, tmap_
  @param  sams     the sams to update
  @param  seq_len  the sequence length
  @param  opt      the program parameters
+ @return          0 upon success, non-zero otherwise
  */
-inline void
+int32_t
 tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt);
 
 /*!

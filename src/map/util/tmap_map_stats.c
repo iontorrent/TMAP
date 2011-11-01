@@ -3,9 +3,9 @@
 #include <stdlib.h>
 #include <config.h>
 #include <unistd.h>
-#include "../util/tmap_error.h"
-#include "../util/tmap_alloc.h"
-#include "../util/tmap_definitions.h"
+#include "../../util/tmap_error.h"
+#include "../../util/tmap_alloc.h"
+#include "../../util/tmap_definitions.h"
 #include "tmap_map_stats.h"
 
 tmap_map_stats_t*

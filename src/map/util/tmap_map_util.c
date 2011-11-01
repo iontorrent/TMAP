@@ -2,20 +2,20 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <math.h>
-#include "../util/tmap_alloc.h"
-#include "../util/tmap_error.h"
-#include "../util/tmap_sam_print.h"
-#include "../util/tmap_progress.h"
-#include "../util/tmap_sort.h"
-#include "../util/tmap_definitions.h"
-#include "../util/tmap_rand.h"
-#include "../seq/tmap_seq.h"
-#include "../index/tmap_refseq.h"
-#include "../index/tmap_bwt.h"
-#include "../index/tmap_sa.h"
-#include "../sw/tmap_sw.h"
-#include "../sw/tmap_fsw.h"
-#include "../sw/tmap_vsw.h"
+#include "../../util/tmap_alloc.h"
+#include "../../util/tmap_error.h"
+#include "../../util/tmap_sam_print.h"
+#include "../../util/tmap_progress.h"
+#include "../../util/tmap_sort.h"
+#include "../../util/tmap_definitions.h"
+#include "../../util/tmap_rand.h"
+#include "../../seq/tmap_seq.h"
+#include "../../index/tmap_refseq.h"
+#include "../../index/tmap_bwt.h"
+#include "../../index/tmap_sa.h"
+#include "../../sw/tmap_sw.h"
+#include "../../sw/tmap_fsw.h"
+#include "../../sw/tmap_vsw.h"
 #include "tmap_map_opt.h"
 #include "tmap_map_util.h"
 
@@ -156,7 +156,6 @@ tmap_map_sams_append(tmap_map_sams_t *dest, tmap_map_sams_t *src)
   tmap_map_sams_realloc(dest, dest->n + src->n);
   for(i=0;i<src->n;i++) {
       dest->sams[i+src->n] = src->sams[i];
-      src->sams[i] = NULL;
   }
 }
 
@@ -170,8 +169,36 @@ tmap_map_record_init(int32_t num_ends)
   return record;
 }
 
+tmap_map_record_t*
+tmap_map_record_clone(tmap_map_record_t *src)
+{
+  int32_t i;
+  tmap_map_record_t *dest = NULL;
+
+  if(NULL == src) return NULL;
+  
+  // init
+  dest = tmap_map_record_init(src->n);
+  if(0 == src->n) return dest;
+
+  // copy over data
+  for(i=0;i<src->n;i++) {
+      dest->sams[i] = tmap_map_sams_clone(src->sams[i]);
+  }
+
+  return dest;
+}
+
 void
-tmap_map_record_destroy(tmap_map_record_t *record)
+tmap_map_record_merge(tmap_map_record_t *dest, tmap_map_record_t *src) 
+{
+  int32_t i;
+  if(NULL == src || 0 == src->n || src->n != dest->n) return;
+
+  for(i=0;i<src->n;i++) {
+      tmap_map_sams_merge(dest->sams[i], src->sams[i]);
+  }
+}
 
 void
 tmap_map_record_destroy(tmap_map_record_t *record)
@@ -685,7 +712,7 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window, tmap_
   tmap_map_sams_realloc(sams, j);
 }
 
-inline void
+inline int32_t
 tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
 {
   int32_t i, best_i;
@@ -780,6 +807,7 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
           sams->sams[i].mapq = 0;
       }
   }
+  return 0;
 }
 
 #define __map_util_gen_ap(par, opt) do { \

@@ -15,7 +15,7 @@
 #include "../io/tmap_file.h"
 #include "../index/tmap_refseq.h"
 #include "tmap_sw.h"
-#include "../map/tmap_map_util.h"
+#include "../map/util/tmap_map_util.h"
 #include "tmap_fsw.h"
 
 /* TODO/IDEAS

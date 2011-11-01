@@ -3,8 +3,8 @@
 #define TMAP_MAP2_MEMPOOL_H
 
 #include <stdint.h>
-#include "../util/tmap_vec.h"
-#include "../index/tmap_bwt_match.h"
+#include "../../util/tmap_vec.h"
+#include "../../index/tmap_bwt_match.h"
 
 /*! 
   Memory Pools for Map2

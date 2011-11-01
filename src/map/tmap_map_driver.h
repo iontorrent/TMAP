@@ -30,7 +30,7 @@ typedef int32_t (*tmap_map_driver_func_thread_init)(void **data, tmap_map_opt_t 
 /*!
   This function will be invoked to map a sequence.
   @param  data    the thread persistent data
-  @param  seq     the sequence to map
+  @param  seqs    the sequence to map (forward, reverse compliment, reverse, compliment)
   @param  index   the reference index
   @param  bwt     the bwt structure
   @param  sa      the sa structure
@@ -39,7 +39,7 @@ typedef int32_t (*tmap_map_driver_func_thread_init)(void **data, tmap_map_opt_t 
   @param  opt     the program options
   @return         the mappings upon success, NULL otherwise
  */
-typedef tmap_map_sams_t* (*tmap_map_driver_func_thread_map)(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_map_stats_t *stat, tmap_rand_t *rand, tmap_map_opt_t *opt);
+typedef tmap_map_sams_t* (*tmap_map_driver_func_thread_map)(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_map_stats_t *stat, tmap_rand_t *rand, tmap_map_opt_t *opt);
 
 /*!
   This function will be invoked to give a mapping quality to a set of mappings
@@ -89,9 +89,11 @@ typedef struct {
     tmap_map_opt_t *opt; /*!< the global mapping options */
 } tmap_map_driver_t;
 
+// TODO
 tmap_map_driver_t*
-tmap_map_driver_init(tmap_map_opt_t *opt);
+tmap_map_driver_init();
 
+// TODO
 void
 tmap_map_driver_add(tmap_map_driver_t *driver,
                     tmap_map_driver_func_init func_init,
@@ -102,9 +104,11 @@ tmap_map_driver_add(tmap_map_driver_t *driver,
                     tmap_map_driver_func_cleanup func_cleanup,
                     tmap_map_opt_t *opt);
 
+// TODO
 void
 tmap_map_driver_run(tmap_map_driver_t *driver);
 
+// TODO
 void
 tmap_map_driver_destroy(tmap_map_driver_t *driver);
 
@@ -130,30 +134,24 @@ typedef struct {
   The core worker routine of mapall
   @param  num_ends             the number of ends
   @param  seq_buffer           the buffer of sequences
-  @param  sams                 the sams to return
+  @param  records              the records to return
   @param  seq_buffer_length    the number of sequences in the buffer
   @param  index                the reference index
-  @param  bwt                  the BWT indices (forward/reverse)
-  @param  sa                   the SA (forward/reverse)
-  @param  func_thread_init     the thread initialization function
-  @param  func_thread_map      the thread map function
-  @param  func_mapq            the mapping quality function
-  @param  func_thread_cleanup  the thread cleanup function
+  @param  driver               the driver
   @param  stat                 the driver statistics
   @param  rand                 the random number generator
   @param  tid                  the thread ids
-  @param  opt                  the program parameters 
  */
 void
-tmap_map_driver_core_worker(int32_t num_ends, tmap_seq_t **seq_buffer[2], tmap_map_sams_t **sams[2], int32_t seq_buffer_length,
-                         tmap_index_t *index,
-                         tmap_map_driver_func_thread_init func_thread_init, 
-                         tmap_map_driver_func_thread_map func_thread_map, 
-                         tmap_map_driver_func_mapq func_mapq,
-                         tmap_map_driver_func_thread_cleanup func_thread_cleanup,
-                         tmap_map_stats_t* stat,
-                         tmap_rand_t *rand,
-                         int32_t tid, tmap_map_opt_t *opt);
+tmap_map_driver_core_worker(int32_t num_ends, 
+                            tmap_seq_t ***seq_buffer, 
+                            tmap_map_record_t **records,
+                            int32_t seq_buffer_length,
+                            tmap_index_t *index,
+                            tmap_map_driver_t *driver,
+                            tmap_map_stats_t* stat,
+                            tmap_rand_t *rand,
+                            int32_t tid);
 
 /*!
  A wrapper around the core function of mapall
@@ -165,19 +163,9 @@ tmap_map_driver_core_thread_worker(void *arg);
 
 /*!
   the core routine for mapping data with or without threads
-  @param  func_init            the mapping algorithm initialization function
-  @param  func_thread_init     the thread initialization function
-  @param  func_thread_map      the thread map function
-  @param  func_mapq            the mapq function (optional, but the mapq must be set in another function)
-  @param  func_thread_cleanup  the thread cleanup function
-  @param  opt                  the program parameters 
+  @param  driver  the driver code
   */
 void
-tmap_map_driver_core(tmap_map_driver_func_init func_init,
-                  tmap_map_driver_func_thread_init func_thread_init, 
-                  tmap_map_driver_func_thread_map func_thread_map, 
-                  tmap_map_driver_func_mapq func_mapq,
-                  tmap_map_driver_func_thread_cleanup func_thread_cleanup,
-                  tmap_map_opt_t *opt);
+tmap_map_driver_core(tmap_map_driver_t *driver);
 
 #endif 

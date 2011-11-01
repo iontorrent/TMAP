@@ -25,14 +25,8 @@
 #include "../server/tmap_shm.h"
 #include "../sw/tmap_fsw.h"
 #include "../sw/tmap_sw.h"
-#include "tmap_map_stats.h"
-#include "tmap_map_util.h"
-#include "tmap_map1.h"
-#include "tmap_map1_aux.h"
-#include "tmap_map2.h"
-#include "tmap_map2_aux.h"
-#include "tmap_map3.h"
-#include "tmap_map3_aux.h"
+#include "util/tmap_map_stats.h"
+#include "util/tmap_map_util.h"
 #include "tmap_map_driver.h"
 
 #define __tmap_map_sam_sort_score_lt(a, b) ((a).score > (b).score)
@@ -134,13 +128,13 @@ tmap_map_driver_core_worker(int32_t num_ends,
   int32_t i, j, k, low = 0;
   int32_t flow_order_len = 0, key_seq_len = 0;
   uint8_t *flow_order = NULL, *key_seq = NULL;
-  int32_t seq_len, found;
+  int32_t found;
   tmap_fsw_flowseq_t *fs = NULL;
   tmap_seq_t ***seqs = NULL;
 
   // initialize thread data
   for(i=0;i<driver->num_algorithms;i++) {
-      if(0 != driver->algorithms[i]->func_thread_init(&driver->algorithms[i]->data, driver->opt)) {
+      if(NULL != driver->algorithms[i]->func_thread_init && 0 != driver->algorithms[i]->func_thread_init(&driver->algorithms[i]->data, driver->opt)) {
           tmap_error("the thread function could not be initialized", Exit, OutOfRange);
       }
   }
@@ -158,6 +152,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
   while(low < seq_buffer_length) {
       if(tid == (low % driver->opt->num_threads)) {
           tmap_map_stats_t *curstat = NULL;
+          tmap_map_record_t *record_prev = NULL;
 
           // init
           for(i=0;i<num_ends;i++) {
@@ -200,9 +195,9 @@ tmap_map_driver_core_worker(int32_t num_ends,
                   curstat->num_reads++;
                   for(k=0;k<driver->num_algorithms;k++) { // for each algorithm
                       tmap_map_sams_t *sams = NULL;
-                      if(i != driver->algorithms[k]->algo_stage) continue; // next algorithm
+                      if(i != driver->algorithms[k]->opt->algo_stage) continue; // next algorithm
                       // map
-                      sams = driver->algorithms[k]->func_thread_map(&driver->algorithms[k]->data, seqs, index, curstat, rand, driver->algorithms[k]->opt);
+                      sams = driver->algorithms[k]->func_thread_map(&driver->algorithms[k]->data, seqs[i], index, curstat, rand, driver->algorithms[k]->opt);
                       if(NULL == sams) {
                           tmap_error("the thread function did not return a mapping", Exit, OutOfRange);
                       }
@@ -211,38 +206,34 @@ tmap_map_driver_core_worker(int32_t num_ends,
                       // destroy
                       tmap_map_sams_destroy(sams);
                   }
-                  if(0 < records[low]->sams[j]->n) found = 1;
                   curstat->num_after_seeding += records[low]->sams[j]->n;
               }
 
-              // keep mappings for subsequent stages
-              if(1 == opt->mapall_keep_all && i < opt->num_stages-1) {
-                  if(0 == i) {
-                      // keep
-                      // TODO
-                      // Use: tmap_map_sams_clone or the record equivalent
+              // keep mappings for subsequent stages or restore mappings from
+              // previous stages
+              if(1 == driver->opt->mapall_keep_all) {
+                  // merge from the previous stage
+                  if(0 < i) {
+                      tmap_map_record_merge(records[low], record_prev);
                   }
-                  else {
-                      // merge in
-                      // TODO
-                      // Use: tmap_map_sams_merge or the record equivalent
+
+                  // keep for the next stage
+                  if(i < driver->opt->num_stages-1) { // more stages left
+                      record_prev = tmap_map_record_clone(records[low]);
                   }
               }
 
-              // check if we found...
-              if(0 == found) {
-                  // TODO: curstat
-              }
+              // TODO: curstat
 
               // generate scores with smith waterman
               for(j=0;j<num_ends;j++) { // for each end
-                  records[low]->sams[j] = tmap_map_util_sw_gen_score(index->refseq, records[low]->sams[j], seqs[j][0], rand, opt);
+                  records[low]->sams[j] = tmap_map_util_sw_gen_score(index->refseq, records[low]->sams[j], seqs[j][0], rand, driver->opt);
                   curstat->num_after_scoring += records[low]->sams[j]->n;
               }
 
               // remove duplicates
               for(j=0;j<num_ends;j++) { // for each end
-                  tmap_map_util_remove_duplicates(records[low]->sams[j], opt->dup_window, rand);
+                  tmap_map_util_remove_duplicates(records[low]->sams[j], driver->opt->dup_window, rand);
                   curstat->num_after_rmdup += records[low]->sams[j]->n;
               }
 
@@ -251,22 +242,25 @@ tmap_map_driver_core_worker(int32_t num_ends,
               // TODO: mapping quality
               //
               // TODO: filtering 
+              //
+              // TODO: if we have one end for a pair, do we go onto the second
+              // stage?
 
               // generate the cigars
               found = 0;
               for(j=0;j<num_ends;j++) { // for each end
-                  records[low]->sams[j] = tmap_map_util_sw_gen_cigar(index->refseq, records[low]->sams[j], seqs[j][0], opt);
+                  records[low]->sams[j] = tmap_map_util_sw_gen_cigar(index->refseq, records[low]->sams[j], seqs[j][0], driver->opt);
                   if(0 < records[low]->sams[j]->n) found = 1;
               }
               
               // did we find any mappings?
               // TODO:
-              if(1 == found) { // jyes
+              if(1 == found) { // yes
                   tmap_map_stats_add(stat, curstat);
                   tmap_map_stats_destroy(curstat);
                   break;
               }
-              else { // jno
+              else { // no
                   tmap_map_record_destroy(records[low]);
                   // re-init
                   records[low] = tmap_map_record_init(num_ends);
@@ -276,32 +270,37 @@ tmap_map_driver_core_worker(int32_t num_ends,
 
           // flowspace re-align and sorting
           for(i=0;i<num_ends;i++) {
-              if(0 < records[low]->sams[i][low]->n) {
+              if(0 < records[low]->sams[i][low].n) {
                   // re-align the alignments in flow-space
                   if(NULL != fs) {
                       // TODO: if this is run, we do not need to run
                       // tmap_sw_global_banded_core...
                       // NB: seq_buffer should have its key sequence if 0 <
                       // key_seq_len
-                      tmap_map_util_fsw(fs, seq,
+                      tmap_map_util_fsw(fs, seqs[i][0],
                                         flow_order, flow_order_len,
                                         key_seq, key_seq_len,
-                                        sams[i][low], index->refseq, 
+                                        &records[low]->sams[i][low], index->refseq, 
                                         driver->opt->bw, driver->opt->softclip_type, driver->opt->score_thr,
                                         driver->opt->score_match, driver->opt->pen_mm, driver->opt->pen_gapo,
                                         driver->opt->pen_gape, driver->opt->fscore, 1-driver->opt->ignore_flowgram);
                   }
 
                   // sort by alignment score
-                  if(1 < sams[i][low]->n) {
+                  if(1 < records[low]->sams[i][low].n) {
                       tmap_sort_introsort(tmap_map_sam_sort_score,
-                                          sams[i][low]->n, sams[i][low]->sams);
+                                          records[low]->sams[i][low].n, 
+                                          records[low]->sams[i][low].sams);
                   }
               }
               if(NULL == seq_buffer[i][low]) {
                   tmap_error("bug encoutereed", Exit, OutOfRange);
               }
           }
+
+          // TODO
+          // free seqs
+          // free others...
       }
       // next
       low++;
@@ -320,7 +319,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
 
   // cleanup
   for(i=0;i<driver->num_algorithms;i++) {
-      if(0 != driver->algorithms[i]->func_thread_cleanup(&driver->algorithms[i]->data, driver->opt)) {
+      if(NULL != driver->algorithms[i]->func_thread_cleanup && 0 != driver->algorithms[i]->func_thread_cleanup(&driver->algorithms[i]->data, driver->opt)) {
           tmap_error("the thread function could not be initialized", Exit, OutOfRange);
       }
   }
@@ -331,14 +330,14 @@ tmap_map_driver_core_thread_worker(void *arg)
 {
   tmap_map_driver_thread_data_t *thread_data = (tmap_map_driver_thread_data_t*)arg;
 
-  tmap_map_driver_core_worker(thread_data->num_ends, thread_data->seq_buffer, thread_data->sams, thread_data->seq_buffer_length, 
+  tmap_map_driver_core_worker(thread_data->num_ends, thread_data->seq_buffer, thread_data->records, thread_data->seq_buffer_length, 
                            thread_data->index, thread_data->driver, thread_data->stat, thread_data->rand, thread_data->tid);
 
   return arg;
 }
 
 void 
-tmap_map_driver_core(tmap_map_driver_t *driver),
+tmap_map_driver_core(tmap_map_driver_t *driver)
 {
   uint32_t i, j, n_reads_processed=0;
   int32_t seq_buffer_length=0;
@@ -372,7 +371,7 @@ tmap_map_driver_core(tmap_map_driver_t *driver),
 
   // initialize the driver->options and print any relevant information
   for(i=0;i<driver->num_algorithms;i++) {
-      if(0 != driver->algorithms[i]->func_init(&driver->data[i], index->refseq, driver->opt)) {
+      if(NULL != driver->algorithms[i]->func_init && 0 != driver->algorithms[i]->func_init(&driver->data[i], index->refseq, driver->opt)) {
           tmap_error("the main function could not be initialized", Exit, OutOfRange);
       }
   }
@@ -434,7 +433,7 @@ tmap_map_driver_core(tmap_map_driver_t *driver),
 #ifdef HAVE_LIBPTHREAD
       if(1 == driver->opt->num_threads) {
           tmap_map_driver_core_worker(num_ends, seq_buffer, records, seq_buffer_length, index,
-                                      driver, stat, rand[0], 0)
+                                      driver, stat, rand[0], 0);
       }
       else {
           pthread_attr_t attr;
@@ -533,7 +532,7 @@ tmap_map_driver_core(tmap_map_driver_t *driver),
 
   // cleanup the algorithm persistent data
   for(i=0;i<driver->num_algorithms;i++) {
-      if(0 != driver->algorithms[i]->func_cleanup(&driver->data[i])) {
+      if(NULL != driver->algorithms[i]->func_cleanup && 0 != driver->algorithms[i]->func_cleanup(&driver->data[i])) {
           tmap_error("the main function could not be cleaned up", Exit, OutOfRange);
       }
   }
@@ -617,7 +616,7 @@ tmap_map_driver_add(tmap_map_driver_t *driver,
   // TODO: check that the options match the global options
   // add a new algorithm
   driver->algorithms = tmap_realloc(driver->algorithms, sizeof(tmap_map_driver_algorithm_t*) * driver->num_algorithms, "driver->algorithms");
-  driver->algorithms[driver->algorithms] = tmap_map_driver_algorithm_init(func_init, func_thread_init, func_thread_map,
+  driver->algorithms[driver->num_algorithms] = tmap_map_driver_algorithm_init(func_init, func_thread_init, func_thread_map,
                                                                           func_mapq, func_thread_cleanup, func_cleanup, opt);
   driver->data = tmap_realloc(driver->data, sizeof(void*) * driver->num_algorithms, "driver->data");
   driver->num_algorithms++;

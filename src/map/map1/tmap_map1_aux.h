@@ -2,7 +2,7 @@
 #ifndef TMAP_MAP1_AUX_H
 #define TMAP_MAP1_AUX_H
 
-#include "../util/tmap_fibheap.h"
+#include "../../util/tmap_fibheap.h"
 #include "tmap_map1.h"
 
 /*! 

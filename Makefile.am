@@ -41,20 +41,20 @@ tmap_SOURCES = \
 			   src/sam2fs/tmap_sam2fs.h src/sam2fs/tmap_sam2fs.c \
 			   src/debug/tmap_debug_exact.h src/debug/tmap_debug_exact.c \
 			   src/index/tmap_index_speed.h src/index/tmap_index_speed.c \
-			   src/map/tmap_map_stats.h src/map/tmap_map_stats.c \
-			   src/map/tmap_map_vsw.h src/map/tmap_map_vsw.c \
-			   src/map/tmap_map_util.h src/map/tmap_map_util.c \
-			   src/map/tmap_map_opt.h src/map/tmap_map_opt.c \
-			   src/map/tmap_map1.h src/map/tmap_map1.c \
-			   src/map/tmap_map1_aux.h src/map/tmap_map1_aux.c \
-			   src/map/tmap_map2.h src/map/tmap_map2.c \
-			   src/map/tmap_map2_aux.h src/map/tmap_map2_aux.c \
-			   src/map/tmap_map2_chain.h src/map/tmap_map2_chain.c \
-			   src/map/tmap_map2_core.h src/map/tmap_map2_core.c \
-			   src/map/tmap_map2_mempool.h src/map/tmap_map2_mempool.c \
-			   src/map/tmap_map3.h src/map/tmap_map3.c \
-			   src/map/tmap_map3_aux.h src/map/tmap_map3_aux.c \
-			   src/map/tmap_map_all.h src/map/tmap_map_all.c \
+			   src/map/util/tmap_map_opt.h src/map/util/tmap_map_opt.c \
+			   src/map/util/tmap_map_stats.h src/map/util/tmap_map_stats.c \
+			   src/map/util/tmap_map_util.h src/map/util/tmap_map_util.c \
+			   src/map/map1/tmap_map1.h src/map/map1/tmap_map1.c \
+			   src/map/map1/tmap_map1_aux.h src/map/map1/tmap_map1_aux.c \
+			   src/map/map2/tmap_map2.h src/map/map2/tmap_map2.c \
+			   src/map/map2/tmap_map2_aux.h src/map/map2/tmap_map2_aux.c \
+			   src/map/map2/tmap_map2_chain.h src/map/map2/tmap_map2_chain.c \
+			   src/map/map2/tmap_map2_core.h src/map/map2/tmap_map2_core.c \
+			   src/map/map2/tmap_map2_mempool.h src/map/map2/tmap_map2_mempool.c \
+			   src/map/map3/tmap_map3.h src/map/map3/tmap_map3.c \
+			   src/map/map3/tmap_map3_aux.h src/map/map3/tmap_map3_aux.c \
+			   src/map/mapvsw/tmap_map_vsw.h src/map/mapvsw/tmap_map_vsw.c \
+			   src/map/mapall/tmap_map_all.h src/map/mapall/tmap_map_all.c \
 			   src/map/tmap_map_driver.h src/map/tmap_map_driver.c \
 			   src/tmap_main.h src/tmap_main.c
 
