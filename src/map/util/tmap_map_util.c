@@ -148,24 +148,18 @@ tmap_map_sams_destroy(tmap_map_sams_t *s)
   free(s);
 }
 
-void
-tmap_map_sams_append(tmap_map_sams_t *dest, tmap_map_sams_t *src)
-{
-  int32_t i;
-  if(0 == src->n) return; 
-  tmap_map_sams_realloc(dest, dest->n + src->n);
-  for(i=0;i<src->n;i++) {
-      dest->sams[i+src->n] = src->sams[i];
-  }
-}
-
 tmap_map_record_t*
 tmap_map_record_init(int32_t num_ends)
 {
-  tmap_map_record_t *record;
+  tmap_map_record_t *record = NULL;
+  int32_t i;
+
   record = tmap_calloc(1, sizeof(tmap_map_record_t), "record");
-  record->sams = tmap_calloc(record->n, sizeof(tmap_map_sams_t*), "record->sams");
+  record->sams = tmap_calloc(num_ends, sizeof(tmap_map_sams_t*), "record->sams");
   record->n = num_ends;
+  for(i=0;i<num_ends;i++) {
+      record->sams[i] = tmap_map_sams_init(NULL);
+  }
   return record;
 }
 
@@ -850,14 +844,13 @@ static int32_t matrix_iupac_mask[89] = {
 tmap_map_sams_t *
 tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                  tmap_map_sams_t *sams, 
-                 tmap_seq_t *seq,
+                 tmap_seq_t **seqs,
                  tmap_rand_t *rand,
                  tmap_map_opt_t *opt)
 {
   int32_t i;
   int32_t start, end;
   tmap_map_sams_t *sams_tmp = NULL;
-  tmap_seq_t *seqs[2] = {NULL, NULL};
   int32_t seq_len=0, tlen, target_mem=0;
   uint8_t *target=NULL;
   int32_t best_subo;
@@ -883,12 +876,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   vsw_opt = tmap_vsw_opt_init(opt->score_match, opt->pen_mm, opt->pen_gapo, opt->pen_gape, opt->score_thr);
 
   // init seqs
-  seq_len = tmap_seq_get_bases(seq)->l;
-  seqs[0] = tmap_seq_clone(seq); // clone
-  seqs[1] = tmap_seq_clone(seq); // clone
-  tmap_seq_reverse_compliment(seqs[1]);
-  tmap_seq_to_int(seqs[0]);
-  tmap_seq_to_int(seqs[1]);
+  seq_len = tmap_seq_get_bases_length(seqs[0]);
 
   vsw_query[0] = tmap_vsw_query_init((uint8_t*)tmap_seq_get_bases(seqs[0])->s, seq_len, 
                                      seq_len, softclip_start, softclip_end, vsw_opt);
@@ -940,7 +928,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       
       // update the query sequence
       query = (uint8_t*)tmap_seq_get_bases(seqs[strand])->s;
-      qlen = tmap_seq_get_bases(seqs[strand])->l;
+      qlen = tmap_seq_get_bases_length(seqs[strand]);
 
       // add in band width
       // one-based
@@ -1078,11 +1066,6 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   }
 
   // free memory
-  for(i=0;i<2;i++) {
-      if(NULL != seqs[i]) {
-          tmap_seq_destroy(seqs[i]);
-      }
-  }
   tmap_map_sams_destroy(sams);
   free(target);
   tmap_vsw_opt_destroy(vsw_opt);
@@ -1223,7 +1206,7 @@ static void tmap_map_util_keytrim(uint8_t *query, int32_t qlen,
 tmap_map_sams_t *
 tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
                  tmap_map_sams_t *sams, 
-                 tmap_seq_t *seq,
+                 tmap_seq_t **seqs,
                  tmap_map_opt_t *opt)
 {
   int32_t i, j, matrix[25], matrix_iupac[80];
@@ -1232,7 +1215,6 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
   tmap_sw_param_t par, par_iupac;
   tmap_sw_path_t *path = NULL;
   int32_t path_len, path_mem=0;
-  tmap_seq_t *seqs[2] = {NULL, NULL};
   int32_t seq_len=0, tlen, target_mem=0;
   uint8_t *target=NULL;
   tmap_vsw_query_t *vsw_query[2] = {NULL, NULL};
@@ -1263,12 +1245,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
   vsw_opt = tmap_vsw_opt_init(opt->score_match, opt->pen_mm, opt->pen_gapo, opt->pen_gape, opt->score_thr);
 
   // init seqs
-  seq_len = tmap_seq_get_bases(seq)->l;
-  seqs[0] = tmap_seq_clone(seq); // clone
-  seqs[1] = tmap_seq_clone(seq); // clone
-  tmap_seq_reverse_compliment(seqs[1]);
-  tmap_seq_to_int(seqs[0]);
-  tmap_seq_to_int(seqs[1]);
+  seq_len = tmap_seq_get_bases_length(seqs[0]);
 
   vsw_query[0] = tmap_vsw_query_init((uint8_t*)tmap_seq_get_bases(seqs[0])->s, seq_len, 
                                      seq_len, softclip_start, softclip_end, vsw_opt);
@@ -1281,10 +1258,10 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
           key_base = tmap_nt_char_to_int[(int)opt->key_seq[strlen(opt->key_seq)-1]]; 
       }
       else {
-          if(TMAP_SEQ_TYPE_SFF != seq->type) {
+          if(TMAP_SEQ_TYPE_SFF != seqs[0]->type) {
               tmap_error("bug encountered", Exit, OutOfRange);
           }
-          key_base = tmap_nt_char_to_int[(int)seq->data.sff->gheader->key->s[seq->data.sff->gheader->key->l-1]];
+          key_base = tmap_nt_char_to_int[(int)seqs[0]->data.sff->gheader->key->s[seqs[0]->data.sff->gheader->key->l-1]];
       }
   }
       
@@ -1513,11 +1490,6 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
   tmap_map_sams_realloc(sams_tmp, i);
 
   // free memory
-  for(i=0;i<2;i++) {
-      if(NULL != seqs[i]) {
-          tmap_seq_destroy(seqs[i]);
-      }
-  }
   tmap_map_sams_destroy(sams);
   free(path);
   free(target);

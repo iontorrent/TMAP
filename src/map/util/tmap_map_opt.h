@@ -147,7 +147,7 @@ typedef struct {
 typedef struct __tmap_map_opt_t {
     tmap_map_opt_options_t *options;
     int32_t algo_id;
-    int32_t algo_stage;
+    int32_t algo_stage; /*!< one-based algorithm stage */
 
     // global options
     char **argv;  /*!< the command line argv structure */
@@ -232,7 +232,6 @@ typedef struct __tmap_map_opt_t {
 
     // mapall options
     uint32_t algos[2];  /*!< the algorithms that should be run in stage 1 and stage 2, bit-packed */
-    int32_t aln_output_mode_ind; /*!< apply the output filter for each algorithm separately (--staged-aln-output-mode-independent) */
     int32_t num_stages;  /*!< the number of stages */ 
     int32_t mapall_score_thr;  /*!< the stage one scoring threshold (match-score-scaled) (--staged-score-thres) */
     int32_t mapall_mapq_thr;  /*!< the stage one mapping quality threshold (--staged-mapq-thres) */

@@ -334,7 +334,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
   // update the seed length based on the read length
   seed_length = opt->seed_length;
   if(0 == opt->seed_length_set) {
-      i = tmap_seq_get_bases(seq[0])->l;
+      i = tmap_seq_get_bases_length(seq[0]);
       while(0 < i) {
           seed_length++;
           i >>= 1; // divide by two

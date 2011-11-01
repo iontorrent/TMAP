@@ -179,7 +179,7 @@ tmap_map3_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_m
       }
   }
 
-  seq_len = tmap_seq_get_bases(seqs[0])->l;
+  seq_len = tmap_seq_get_bases_length(seqs[0]);
   
   if((0 < opt->min_seq_len && seq_len < opt->min_seq_len)
      || (0 < opt->max_seq_len && opt->max_seq_len < seq_len)) {
@@ -207,53 +207,48 @@ tmap_map3_thread_cleanup(void **data, tmap_map_opt_t *opt)
 }
 
 static void
-tmap_map3_core(tmap_map_opt_t *opt)
+tmap_map3_core(tmap_map_driver_t *driver)
 {
-  tmap_map_driver_t *driver = NULL;
-
-  driver = tmap_map_driver_init();
 
   // add this algorithm
   tmap_map_driver_add(driver,
                       tmap_map3_init, 
                       tmap_map3_thread_init, 
                       tmap_map3_thread_map, 
-                      tmap_map3_mapq,
                       tmap_map3_thread_cleanup,
                       NULL,
-                      opt);
+                      driver->opt);
   
 
   // run the driver
   tmap_map_driver_run(driver);
-
-  tmap_map_driver_destroy(driver);
 }
 
 int 
 tmap_map3_main(int argc, char *argv[])
 {
-  tmap_map_opt_t *opt = NULL;
+  tmap_map_driver_t *driver = NULL;
 
-  // init opt
-  opt = tmap_map_opt_init(TMAP_MAP_ALGO_MAP3);
+  // init
+  driver = tmap_map_driver_init(TMAP_MAP_ALGO_MAP3, tmap_map3_mapq);
+  driver->opt->algo_stage = 1;
 
   // get options
-  if(1 != tmap_map_opt_parse(argc, argv, opt) // options parsed successfully
+  if(1 != tmap_map_opt_parse(argc, argv, driver->opt) // options parsed successfully
      || argc != optind  // all options should be used
      || 1 == argc) { // some options should be specified
-      return tmap_map_opt_usage(opt);
+      return tmap_map_opt_usage(driver->opt);
   }
   else { 
       // check command line arguments
-      tmap_map_opt_check(opt);
+      tmap_map_opt_check(driver->opt);
   }
 
   // run map3
-  tmap_map3_core(opt);
+  tmap_map3_core(driver);
 
-  // destroy opt
-  tmap_map_opt_destroy(opt);
+  // destroy 
+  tmap_map_driver_destroy(driver);
 
   tmap_progress_print2("terminating successfully");
 

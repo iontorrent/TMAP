@@ -46,7 +46,6 @@ tmap_map_all_add_algorithm(tmap_map_driver_t *driver, tmap_map_opt_t *opt)
                           tmap_map1_init,
                           tmap_map1_thread_init,
                           tmap_map1_thread_map,
-                          tmap_map_util_mapq,
                           tmap_map1_thread_cleanup,
                           NULL,
                           opt);
@@ -57,7 +56,6 @@ tmap_map_all_add_algorithm(tmap_map_driver_t *driver, tmap_map_opt_t *opt)
                           tmap_map2_init,
                           tmap_map2_thread_init,
                           tmap_map2_thread_map,
-                          tmap_map_util_mapq,
                           tmap_map2_thread_cleanup,
                           NULL,
                           opt);
@@ -68,7 +66,6 @@ tmap_map_all_add_algorithm(tmap_map_driver_t *driver, tmap_map_opt_t *opt)
                           tmap_map3_init,
                           tmap_map3_thread_init,
                           tmap_map3_thread_map,
-                          tmap_map_util_mapq,
                           tmap_map3_thread_cleanup,
                           NULL,
                           opt);
@@ -79,7 +76,6 @@ tmap_map_all_add_algorithm(tmap_map_driver_t *driver, tmap_map_opt_t *opt)
                           tmap_map_vsw_init,
                           tmap_map_vsw_thread_init,
                           tmap_map_vsw_thread_map,
-                          tmap_map_util_mapq,
                           tmap_map_vsw_thread_cleanup,
                           NULL,
                           opt);
@@ -90,22 +86,17 @@ tmap_map_all_add_algorithm(tmap_map_driver_t *driver, tmap_map_opt_t *opt)
 }
 
 static void
-tmap_map_all_core(tmap_map_opt_t *opt)
+tmap_map_all_core(tmap_map_driver_t *driver)
 {
   int32_t i;
-  tmap_map_driver_t *driver = NULL;
-
-  driver = tmap_map_driver_init();
 
   // add the algorithms
-  for(i=0;i<opt->num_sub_opts;i++) {
-      tmap_map_all_add_algorithm(driver, opt->sub_opts[i]);
+  for(i=0;i<driver->opt->num_sub_opts;i++) {
+      tmap_map_all_add_algorithm(driver, driver->opt->sub_opts[i]);
   }
 
   // run the driver
   tmap_map_driver_run(driver);
-
-  tmap_map_driver_destroy(driver);
 }
 
 int32_t
@@ -209,27 +200,27 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
 int 
 tmap_map_all_main(int argc, char *argv[])
 {
-  tmap_map_opt_t *opt = NULL;
+  tmap_map_driver_t *driver = NULL;
 
   // init opt
-  opt = tmap_map_opt_init(TMAP_MAP_ALGO_MAPALL);
+  driver = tmap_map_driver_init(TMAP_MAP_ALGO_MAPALL, tmap_map_util_mapq);
       
   // get options
-  if(1 != tmap_map_all_opt_parse(argc, argv, opt) // options parsed successfully
+  if(1 != tmap_map_all_opt_parse(argc, argv, driver->opt) // options parsed successfully
      || argc != optind  // all options should be used
      || 1 == argc) { // some options should be specified
-      return tmap_map_opt_usage(opt);
+      return tmap_map_opt_usage(driver->opt);
   }
   else { 
       // check command line arguments
-      tmap_map_opt_check(opt);
+      tmap_map_opt_check(driver->opt);
   }
 
   // run map_all
-  tmap_map_all_core(opt);
+  tmap_map_all_core(driver);
 
-  // destroy opt
-  tmap_map_opt_destroy(opt);
+  // destroy 
+  tmap_map_driver_destroy(driver);
 
   tmap_progress_print2("terminating successfully");
 

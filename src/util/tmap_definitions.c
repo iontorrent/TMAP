@@ -190,6 +190,8 @@ tmap_get_file_name(const char *prefix, int32_t type)
 {
   char *fn = NULL;
 
+  if(NULL == prefix) return NULL;
+
   switch(type) {
     case TMAP_ANNO_FILE:
       fn = tmap_malloc(sizeof(char)*(1+strlen(prefix)+strlen(TMAP_ANNO_FILE_EXTENSION)), "fn");

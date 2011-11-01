@@ -171,7 +171,6 @@ __tmap_map_opt_option_print_func_tf_init(fwd_search)
 __tmap_map_opt_option_print_func_double_init(skip_seed_frac)
 // mapvsw options
 // mapall options
-__tmap_map_opt_option_print_func_tf_init(aln_output_mode_ind)
 __tmap_map_opt_option_print_func_int_init(mapall_score_thr)
 __tmap_map_opt_option_print_func_int_init(mapall_mapq_thr)
 __tmap_map_opt_option_print_func_tf_init(mapall_keep_all)
@@ -692,12 +691,6 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            ~TMAP_MAP_ALGO_MAPALL);
 
   // mapall options
-  tmap_map_opt_options_add(opt->options, "staged-aln-output-mode-ind", no_argument, 0, 0, 
-                           TMAP_MAP_OPT_TYPE_NONE,
-                           "apply the output filter and duplicate removal for each algorithm separately",
-                           NULL,
-                           tmap_map_opt_option_print_func_aln_output_mode_ind,
-                           TMAP_MAP_ALGO_MAPALL);
   tmap_map_opt_options_add(opt->options, "staged-score-thres", required_argument, 0, 0, 
                            TMAP_MAP_OPT_TYPE_INT,
                            "score threshold for stage one divided by the match score",
@@ -841,7 +834,6 @@ tmap_map_opt_init(int32_t algo_id)
       break;
     case TMAP_MAP_ALGO_MAPALL:
       // mapall
-      opt->aln_output_mode_ind = 0;
       opt->mapall_score_thr = 8;
       opt->mapall_mapq_thr = 23; // 0.5% error
       opt->mapall_keep_all = 1;
@@ -972,6 +964,12 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       // no need to parse
       return 1;
   }
+
+  /*
+  for(i=optind;i<argc;i++) {
+      fprintf(stderr, "i=%d argv[i]=%s\n", i, argv[i]);
+  }
+  */
 
   // allocate
   options = tmap_calloc(1, sizeof(struct option) * opt->options->n, "options");
@@ -1239,9 +1237,6 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           opt->skip_seed_frac = atof(optarg);
       }
       // MAPALL
-      else if(0 == strcmp("staged-aln-output-mode-ind", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAPALL) {
-          opt->aln_output_mode_ind = 1;
-      }
       else if(0 == strcmp("staged-score-thres", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAPALL) {
           opt->mapall_score_thr = atoi(optarg);
       }
@@ -1530,7 +1525,6 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       tmap_error_cmd_check_int(opt->skip_seed_frac, 0, 1, "--skip-seed-frac");
       break;
     case TMAP_MAP_ALGO_MAPALL:
-      tmap_error_cmd_check_int(opt->aln_output_mode_ind, 0, 1, "--staged-aln-output-mode-ind");
       tmap_error_cmd_check_int(opt->mapall_score_thr, INT32_MIN, INT32_MAX, "--staged-score-thres");
       tmap_error_cmd_check_int(opt->mapall_mapq_thr, 0, 255, "--staged-mapq-thres");
       tmap_error_cmd_check_int(opt->mapall_keep_all, 0, 1, "--staged-keep-all");
@@ -1662,7 +1656,6 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "seed_step=%d\n", opt->seed_step);
   fprintf(stderr, "fwd_search=%d\n", opt->fwd_search);
   fprintf(stderr, "skip_seed_frac=%lf\n", opt->skip_seed_frac);
-  fprintf(stderr, "aln_output_mode_ind=%d\n", opt->aln_output_mode_ind);
   fprintf(stderr, "mapall_score_thr=%d\n", opt->mapall_score_thr);
   fprintf(stderr, "mapall_mapq_thr=%d\n", opt->mapall_mapq_thr);
   fprintf(stderr, "mapall_keep_all=%d\n", opt->mapall_keep_all);

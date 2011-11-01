@@ -72,7 +72,6 @@ typedef struct {
     tmap_map_driver_func_init func_init; /*!< this function will be run once per program to initialize persistent data across the program */
     tmap_map_driver_func_thread_init func_thread_init; /*!< this function will be run once per thread to initialize persistent data across that thread */
     tmap_map_driver_func_thread_map func_thread_map; /*!< this function will be run once per thread per input sequence to map the sequence */
-    tmap_map_driver_func_mapq func_mapq; /*!< this function will be run to calculate the mapping quality */
     tmap_map_driver_func_thread_cleanup func_thread_cleanup; /*!< this function will be run once per thread to cleanup/destroy any persistent data across that thread */
     tmap_map_driver_func_cleanup func_cleanup; /*!< this function will be run once per program to cleanup/destroy any persistent data across the program */
     tmap_map_opt_t *opt; /*!< the program options specific to this algorithm */
@@ -83,6 +82,8 @@ typedef struct {
   The mapping driver object.
   */
 typedef struct {
+    // TODO: separate algorithms into stage one vs. stage two etc
+    tmap_map_driver_func_mapq func_mapq; /*!< this function will be run to calculate the mapping quality */
     tmap_map_driver_algorithm_t **algorithms; /*!< the algorithms to run */
     void **data; /*< the program persistent data for each algorithm */
     int32_t num_algorithms; /*!< the number of algorithms to run */
@@ -91,7 +92,7 @@ typedef struct {
 
 // TODO
 tmap_map_driver_t*
-tmap_map_driver_init();
+tmap_map_driver_init(int32_t algo_id, tmap_map_driver_func_mapq func_mapq);
 
 // TODO
 void
@@ -99,7 +100,6 @@ tmap_map_driver_add(tmap_map_driver_t *driver,
                     tmap_map_driver_func_init func_init,
                     tmap_map_driver_func_thread_init func_thread_init,
                     tmap_map_driver_func_thread_map func_thread_map,
-                    tmap_map_driver_func_mapq func_mapq,
                     tmap_map_driver_func_thread_cleanup func_thread_cleanup,
                     tmap_map_driver_func_cleanup func_cleanup,
                     tmap_map_opt_t *opt);

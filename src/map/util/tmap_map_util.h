@@ -131,10 +131,6 @@ tmap_map_sam_destroy_aux(tmap_map_sam_t *s);
 void
 tmap_map_sam_destroy(tmap_map_sam_t *s);
 
-// TODO
-void
-tmap_map_sams_append(tmap_map_sams_t *dest, tmap_map_sams_t *src);
-
 /*!
   allocate memory for an empty mapping structure, with no auxiliary data
   @param   prev  copies over the max from prev
@@ -267,15 +263,15 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt);
   @details              only fills in the score, start and end of the alignments
   @param  refseq        the reference sequence
   @param  sams          the seeded sams
-  @param  seq           the query sequence
-  @param  rand             the random number generator
+  @param  seq           the query sequence (forward, reverse compliment, reverse, and compliment)
+  @param  rand          the random number generator
   @param  opt           the program parameters
   @return               the locally aligned sams
   */
 tmap_map_sams_t *
 tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                  tmap_map_sams_t *sams,
-                 tmap_seq_t *seq,
+                 tmap_seq_t **seqs,
                  tmap_rand_t *rand,
                  tmap_map_opt_t *opt);
 
@@ -284,14 +280,14 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   @details              generates the cigar after tmap_map_util_sw_gen_score has been called
   @param  refseq        the reference sequence
   @param  sams          the seeded sams
-  @param  seq           the query sequence
+  @param  seq           the query sequence (forward, reverse compliment, reverse, and compliment)
   @param  opt           the program parameters
   @return               the locally aligned sams
   */
 tmap_map_sams_t *
 tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
                  tmap_map_sams_t *sams, 
-                 tmap_seq_t *seq,
+                 tmap_seq_t **seqs,
                  tmap_map_opt_t *opt);
 
 /*!
