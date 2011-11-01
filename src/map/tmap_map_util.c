@@ -864,10 +864,10 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
               sam_end = sams->sams[end].pos + sams->sams[end].target_len;
               sam_next_start = sams->sams[end+1].pos;
               sam_next_end = sam_next_start + sams->sams[end+1].target_len;
-              if ( (sam_next_end > sam_end) && ((sam_next_end - sam_end) <= opt->max_seed_band) ) {
+              if ( (sam_next_start > sam_end) && ((sam_next_start - sam_end) <= opt->max_seed_band) ) {
                   end++;
                   keep_banding = 1;
-              } else if ( sam_next_end <= sam_end ) {
+              } else if ( sam_next_start <= sam_end ) {
                   end++;
                   keep_banding = 1;
               } else {
