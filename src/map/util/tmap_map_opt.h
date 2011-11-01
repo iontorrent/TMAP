@@ -231,7 +231,6 @@ typedef struct __tmap_map_opt_t {
     // None
 
     // mapall options
-    uint32_t algos[2];  /*!< the algorithms that should be run in stage 1 and stage 2, bit-packed */
     int32_t num_stages;  /*!< the number of stages */ 
     int32_t mapall_score_thr;  /*!< the stage one scoring threshold (match-score-scaled) (--staged-score-thres) */
     int32_t mapall_mapq_thr;  /*!< the stage one mapping quality threshold (--staged-mapq-thres) */

@@ -95,6 +95,14 @@ tmap_map_all_core(tmap_map_driver_t *driver)
       tmap_map_all_add_algorithm(driver, driver->opt->sub_opts[i]);
   }
 
+  /*
+  for(i=0;i<driver->num_algorithms;i++) {
+      fprintf(stderr, "Algorithm: %s Stage: %d\n", 
+              tmap_algo_id_to_name(driver->algorithms[i]->opt->algo_id),
+              driver->algorithms[i]->opt->algo_stage);
+  }
+  */
+
   // run the driver
   tmap_map_driver_run(driver);
 }
@@ -104,7 +112,7 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
 {
   int32_t i, j, start, opt_id, opt_next_id, opt_stage, opt_next_stage;
   char *name = NULL;
-  tmap_map_opt_t *opt_next = NULL;
+  tmap_map_opt_t *opt_cur= NULL;
 
   // parse common options as well as map1/map2/map3/mapvsw commands
   start = 0;
@@ -153,6 +161,7 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           optind=1; // needed for getopt_long
 
           /*
+          fprintf(stderr, "Algorithm: %s\n", tmap_algo_id_to_name(opt_next_id));
           int j;
           for(j=0;j<i-start;j++) {
               fprintf(stderr, "j=%d arg=%s\n", j, argv[j+start]);
@@ -167,13 +176,12 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           }
           else {
               // get a sub-opt
-              opt_next = tmap_map_opt_add_sub_opt(opt, opt_next_id);
-              // set id and stage
-              opt_next->algo_id = opt_next_id;
-              opt_next->algo_stage = opt_next_stage;
+              opt_cur= tmap_map_opt_add_sub_opt(opt, opt_id);
+              // set stage
+              opt_cur->algo_stage = opt_next_stage;
               // parse common options
               if(0 < i - start) {
-                  if(0 == tmap_map_opt_parse(i-start, argv+start, opt_next)) {
+                  if(0 == tmap_map_opt_parse(i-start, argv+start, opt_cur)) {
                       return 0;
                   }
               }

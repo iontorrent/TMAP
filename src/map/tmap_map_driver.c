@@ -114,9 +114,10 @@ tmap_map_driver_core_worker(int32_t num_ends,
   void **data = NULL; // one per algorithm
 
   // initialize thread data
-  data = tmap_malloc(sizeof(void*) * driver->num_algorithms, "data");
+  data = tmap_calloc(driver->num_algorithms, sizeof(void*), "data");
   for(i=0;i<driver->num_algorithms;i++) {
-      if(NULL != driver->algorithms[i]->func_thread_init && 0 != driver->algorithms[i]->func_thread_init(&data[i], driver->opt)) {
+      if(NULL != driver->algorithms[i]->func_thread_init 
+         && 0 != driver->algorithms[i]->func_thread_init(&data[i], driver->algorithms[i]->opt)) {
           tmap_error("the thread function could not be initialized", Exit, OutOfRange);
       }
   }
@@ -175,14 +176,13 @@ tmap_map_driver_core_worker(int32_t num_ends,
           for(i=0;i<driver->opt->num_stages;i++) { // for each stage
               curstat = tmap_calloc(1, sizeof(tmap_map_stats_t), "curstat");
               // seed
-              found = 0;
               for(j=0;j<num_ends;j++) { // for each end
                   curstat->num_reads++;
                   for(k=0;k<driver->num_algorithms;k++) { // for each algorithm
                       tmap_map_sams_t *sams = NULL;
                       if(i+1 != driver->algorithms[k]->opt->algo_stage) continue; // next algorithm
                       // map
-                      sams = driver->algorithms[k]->func_thread_map(&data[k], seqs[i], index, curstat, rand, driver->algorithms[k]->opt);
+                      sams = driver->algorithms[k]->func_thread_map(&data[k], seqs[j], index, curstat, rand, driver->algorithms[k]->opt);
                       if(NULL == sams) {
                           tmap_error("the thread function did not return a mapping", Exit, OutOfRange);
                       }
@@ -329,7 +329,8 @@ tmap_map_driver_core_worker(int32_t num_ends,
 
   // cleanup
   for(i=0;i<driver->num_algorithms;i++) {
-      if(NULL != driver->algorithms[i]->func_thread_cleanup && 0 != driver->algorithms[i]->func_thread_cleanup(&data[i], driver->opt)) {
+      if(NULL != driver->algorithms[i]->func_thread_cleanup 
+         && 0 != driver->algorithms[i]->func_thread_cleanup(&data[i], driver->algorithms[i]->opt)) {
           tmap_error("the thread function could not be initialized", Exit, OutOfRange);
       }
   }
@@ -385,7 +386,8 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
 
   // initialize the driver->options and print any relevant information
   for(i=0;i<driver->num_algorithms;i++) {
-      if(NULL != driver->algorithms[i]->func_init && 0 != driver->algorithms[i]->func_init(&driver->data[i], index->refseq, driver->opt)) {
+      if(NULL != driver->algorithms[i]->func_init 
+         && 0 != driver->algorithms[i]->func_init(&driver->data[i], index->refseq, driver->algorithms[i]->opt)) {
           tmap_error("the main function could not be initialized", Exit, OutOfRange);
       }
   }
@@ -545,7 +547,8 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
 
   // cleanup the algorithm persistent data
   for(i=0;i<driver->num_algorithms;i++) {
-      if(NULL != driver->algorithms[i]->func_cleanup && 0 != driver->algorithms[i]->func_cleanup(&driver->data[i])) {
+      if(NULL != driver->algorithms[i]->func_cleanup 
+         && 0 != driver->algorithms[i]->func_cleanup(&driver->data[i])) {
           tmap_error("the main function could not be cleaned up", Exit, OutOfRange);
       }
   }

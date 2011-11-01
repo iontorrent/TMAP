@@ -225,7 +225,7 @@ tmap_map1_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len,
       return tmap_map_sams_init(NULL);
   }
 
-  if(opt->seed2_length < 0 || bases[0]->l < opt->seed2_length) {
+  if(opt->seed2_length < 0 || seq_len < opt->seed2_length) {
       seed2_len = seq_len;
       // remember to round up
       opt_local.max_mm = (opt->max_mm < 0) ? (int)(0.99 + opt->max_mm_frac * seed2_len) : opt->max_mm; 
@@ -256,7 +256,6 @@ tmap_map1_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len,
       tmap_bwt_match_cal_width_reverse(index->bwt[1], opt->seed_length, bases[1]->s + (seq_len - opt->seed_length), d->seed_width[1]);
   }
 
-  // map
   sams = tmap_map1_aux_core(seqs, index->refseq, index->bwt, index->sa, d->width, (0 < opt_local.seed_length) ? d->seed_width : NULL, &opt_local, d->stack, seed2_len);
 
   return sams;
