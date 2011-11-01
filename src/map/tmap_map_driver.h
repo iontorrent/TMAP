@@ -75,17 +75,26 @@ typedef struct {
     tmap_map_driver_func_thread_cleanup func_thread_cleanup; /*!< this function will be run once per thread to cleanup/destroy any persistent data across that thread */
     tmap_map_driver_func_cleanup func_cleanup; /*!< this function will be run once per program to cleanup/destroy any persistent data across the program */
     tmap_map_opt_t *opt; /*!< the program options specific to this algorithm */
+    void *data; /*< the program persistent data for the algorithm */
+    void **thread_data; /*< the thread persistent data for the algorithm */
 } tmap_map_driver_algorithm_t;
+
+/*!
+  TODO
+  */
+typedef struct {
+    int32_t stage; /*!< the stage for these algorithms (one-based) */
+    tmap_map_driver_algorithm_t **algorithms; /*!< the algorithms to run */
+    int32_t num_algorithms; /*!< the number of algorithms to run */
+} tmap_map_driver_stage_t;
 
 /*!
   The mapping driver object.
   */
 typedef struct {
-    // TODO: separate algorithms into stage one vs. stage two etc
+    tmap_map_driver_stage_t **stages; /*!< the stages for the algorithms */
+    int32_t num_stages; /*< the number of stages */
     tmap_map_driver_func_mapq func_mapq; /*!< this function will be run to calculate the mapping quality */
-    tmap_map_driver_algorithm_t **algorithms; /*!< the algorithms to run */
-    void **data; /*< the program persistent data for each algorithm */
-    int32_t num_algorithms; /*!< the number of algorithms to run */
     tmap_map_opt_t *opt; /*!< the global mapping options */
 } tmap_map_driver_t;
 

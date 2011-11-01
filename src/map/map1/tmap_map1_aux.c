@@ -51,6 +51,7 @@ tmap_map1_aux_stack_cmp(void *a, void *b)
 }
 */
 
+/*
 static void
 tmap_map1_aux_stack_entry_print(tmap_file_t *fp, tmap_map1_aux_stack_entry_t *e)
 {
@@ -58,6 +59,7 @@ tmap_map1_aux_stack_entry_print(tmap_file_t *fp, tmap_map1_aux_stack_entry_t *e)
   //tmap_file_fprintf(fp, "score=%u, n_mm=%u, n_gapo=%d, n_gape=%d, state=%u, strand=%u, offset=%d, last_diff_offset=%d, k=%u, l=%u, i=%u, prev_i=%d\n",
                     e->score, e->n_mm, e->n_gapo, e->n_gape, e->state, e->strand, e->offset, e->last_diff_offset, e->match_sa.k, e->match_sa.l, e->i, e->prev_i);
 }
+*/
 
 tmap_map1_aux_stack_t *
 tmap_map1_aux_stack_init()
