@@ -218,9 +218,7 @@ tmap_map_all_main(int argc, char *argv[])
   if(1 != tmap_map_all_opt_parse(argc, argv, driver->opt) // options parsed successfully
      || argc != optind  // all options should be used
      || 1 == argc) { // some options should be specified
-      // HERE
-      exit(1);
-      //return tmap_map_opt_usage(driver->opt);
+      return tmap_map_opt_usage(driver->opt);
   }
   else { 
       // check command line arguments
