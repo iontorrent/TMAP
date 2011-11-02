@@ -417,13 +417,19 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
 #endif
   int32_t seq_type, reads_queue_size, num_ends;
 
-  // HERE
-  //tmap_map_opt_print(driver->opt);
-
   if(NULL == driver->opt->fn_reads) {
       tmap_progress_set_verbosity(0); 
   }
   
+  // print out the algorithms and stages
+  for(i=0;i<driver->num_stages;i++) {
+      for(j=0;j<driver->stages[i]->num_algorithms;j++) {
+          tmap_progress_print2("%s will be run in stage %d", 
+                               tmap_algo_id_to_name(driver->stages[i]->algorithms[j]->opt->algo_id),
+                               driver->stages[i]->algorithms[j]->opt->algo_stage);
+      }
+  }
+
   // open the reads file for reading
   seq_type = tmap_reads_format_to_seq_type(driver->opt->reads_format); 
   num_ends = (0 == driver->opt->fn_reads_num) ? 0 : driver->opt->fn_reads_num;
