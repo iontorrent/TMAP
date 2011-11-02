@@ -425,7 +425,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
 
                   // save the hit
                   s->algo_id = TMAP_MAP_ALGO_MAP3;
-                  s->algo_stage = 0;
+                  s->algo_stage = opt->algo_stage;
                   s->strand = i;
                   s->seqid = seqid;
                   s->pos = pos;

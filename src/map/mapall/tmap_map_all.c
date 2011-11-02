@@ -110,7 +110,7 @@ tmap_map_all_core(tmap_map_driver_t *driver)
 int32_t
 tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
 {
-  int32_t i, j, start, opt_id, opt_next_id, opt_stage, opt_next_stage;
+  int32_t i, j, start, opt_id, opt_next_id, opt_stage, opt_next_stage, cur_id, cur_stage;
   char *name = NULL;
   tmap_map_opt_t *opt_cur= NULL;
 
@@ -126,34 +126,33 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
       else {
           // get the algorithm type and stage
-          opt_next_stage = 1;
+          cur_stage = 1;
           name = tmap_strdup(argv[i]); // copy the command line option
-          while(opt_next_stage <= 2) { // while it could be the first or second stage
-              j = tmap_algo_name_to_id(name); // get the algorithm id
-              if(0 < j) { // found!
-                  opt_next_id = j;
-                  if(opt_next_stage-1 == opt->num_stages) opt->num_stages++;
+          while(cur_stage <= 2) { // while it could be the first or second stage
+              cur_id = tmap_algo_name_to_id(name); // get the algorithm id
+              if(0 < cur_id) { // found!
+                  opt_next_id = cur_id;
+                  opt_next_stage = cur_stage;
                   break;
               }
-              if(1 == opt_next_stage) {
+              if(1 == cur_stage) {
                   // convert to lower case
                   for(j=0;j<strlen(name);j++) {
                       name[j] = tolower(name[j]);
                   }
               }
-              opt_next_stage++;
+              cur_stage++;
           }
-          if(2 < opt_next_stage) opt_next_stage = 0;
           free(name);
       }
       
       /*
-      fprintf(stderr, "i=%d start=%d argc=%d opt_id=%d name=%s opt_next_id=%d name=%s argv[%d]=%s argc=%d\n",
+      fprintf(stderr, "ITER i=%d start=%d argc=%d opt_id=%d name=%s opt_stage=%d opt_next_id=%d name=%s opt_next_stage=%d argv[%d]=%s argc=%d\n",
               i, start, argc, 
-              opt_id, tmap_algo_id_to_name(opt_id),
-              opt_next_id, tmap_algo_id_to_name(opt_next_id), 
-              i, argv[i], argc);
-              */
+              opt_id, tmap_algo_id_to_name(opt_id), opt_stage,
+              opt_next_id, tmap_algo_id_to_name(opt_next_id), opt_next_stage, 
+              i, (i < argc) ? argv[i] : NULL, argc);
+      */
       
       if(opt_id != opt_next_id // new type
          || opt_stage != opt_next_stage // new stage
@@ -161,12 +160,14 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           optind=1; // needed for getopt_long
 
           /*
-          fprintf(stderr, "Algorithm: %s\n", tmap_algo_id_to_name(opt_next_id));
+          fprintf(stderr, "Algorithm: %s start=%d i=%d\n", tmap_algo_id_to_name(opt_id), start, i);
           int j;
           for(j=0;j<i-start;j++) {
               fprintf(stderr, "j=%d arg=%s\n", j, argv[j+start]);
           }
           */
+
+          if(opt->num_stages < opt_stage) opt->num_stages = opt_stage;
 
           if(TMAP_MAP_ALGO_NONE == opt_id) {
               // parse common options
@@ -178,7 +179,7 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
               // get a sub-opt
               opt_cur= tmap_map_opt_add_sub_opt(opt, opt_id);
               // set stage
-              opt_cur->algo_stage = opt_next_stage;
+              opt_cur->algo_stage = opt_stage;
               // parse common options
               if(0 < i - start) {
                   if(0 == tmap_map_opt_parse(i-start, argv+start, opt_cur)) {
@@ -217,7 +218,9 @@ tmap_map_all_main(int argc, char *argv[])
   if(1 != tmap_map_all_opt_parse(argc, argv, driver->opt) // options parsed successfully
      || argc != optind  // all options should be used
      || 1 == argc) { // some options should be specified
-      return tmap_map_opt_usage(driver->opt);
+      // HERE
+      exit(1);
+      //return tmap_map_opt_usage(driver->opt);
   }
   else { 
       // check command line arguments

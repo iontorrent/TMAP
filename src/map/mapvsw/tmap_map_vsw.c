@@ -72,7 +72,7 @@ tmap_map_vsw_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len,
 
       // save the hit
       s->algo_id = TMAP_MAP_ALGO_MAPVSW;
-      s->algo_stage = 0;
+      s->algo_stage = opt->algo_stage;
       s->strand = i & 1;
       s->seqid = i >> 1;
       s->pos = 0;

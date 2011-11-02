@@ -379,7 +379,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
           if(0 < tmap_refseq_pac2real(refseq, pacpos, aln_ref, &seqid, &pos)) {
               // copy over previous parameters
               sam_cur->algo_id = TMAP_MAP_ALGO_MAP1;
-              sam_cur->algo_stage = 0;
+              sam_cur->algo_stage = opt->algo_stage;
               sam_cur->strand = strand;
               sam_cur->seqid = seqid;
               sam_cur->pos = pos-1; // adjust to zero-based
