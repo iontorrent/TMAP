@@ -66,8 +66,8 @@ typedef int32_t (*tmap_map_driver_func_thread_cleanup)(void **data, tmap_map_opt
 typedef int32_t (*tmap_map_driver_func_cleanup)(void **data);
 
 /*!
-  TODO
-  */
+  A mapping algorithm with associate functions and workspace.
+ */
 typedef struct {
     tmap_map_driver_func_init func_init; /*!< this function will be run once per program to initialize persistent data across the program */
     tmap_map_driver_func_thread_init func_thread_init; /*!< this function will be run once per thread to initialize persistent data across that thread */
@@ -80,8 +80,8 @@ typedef struct {
 } tmap_map_driver_algorithm_t;
 
 /*!
-  TODO
-  */
+  A collection of mapping algorithms to be applied in a specific stage.
+ */
 typedef struct {
     int32_t stage; /*!< the stage for these algorithms (one-based) */
     tmap_map_driver_algorithm_t **algorithms; /*!< the algorithms to run */
@@ -89,7 +89,7 @@ typedef struct {
 } tmap_map_driver_stage_t;
 
 /*!
-  The mapping driver object.
+  The mapping driver object, composed of multiple stages of algorithms.
   */
 typedef struct {
     tmap_map_driver_stage_t **stages; /*!< the stages for the algorithms */
@@ -98,11 +98,23 @@ typedef struct {
     tmap_map_opt_t *opt; /*!< the global mapping options */
 } tmap_map_driver_t;
 
-// TODO
+/*! 
+  @param  algo_id    the one-base algorithm identifier
+  @param  func_mapq  the mapping quality function to apply
+  @return            a new mapping driver.
+  */
 tmap_map_driver_t*
 tmap_map_driver_init(int32_t algo_id, tmap_map_driver_func_mapq func_mapq);
 
-// TODO
+/*!
+  @param  driver              the mapping driver.
+  @param  func_init           this function will be run once per program to initialize persistent data across the program 
+  @param  func_thread_init    this function will be run once per thread to initialize persistent data across that thread 
+  @param  func_thread_map     this function will be run once per thread per input sequence to map the sequence 
+  @param  func_thread_cleanup this function will be run once per thread to cleanup/destroy any persistent data across that thread 
+  @param  func_cleanup        this function will be run once per program to cleanup/destroy any persistent data across the program 
+  @details                    the option structure should identify the algorithm identifier and algorithm stage, and all functions except func_thread_map can be NULL
+ */
 void
 tmap_map_driver_add(tmap_map_driver_t *driver,
                     tmap_map_driver_func_init func_init,
@@ -112,19 +124,22 @@ tmap_map_driver_add(tmap_map_driver_t *driver,
                     tmap_map_driver_func_cleanup func_cleanup,
                     tmap_map_opt_t *opt);
 
-// TODO
+/*!
+  Run the mapping algorithms 
+  @param  driver  the mapping driver
+ */
 void
 tmap_map_driver_run(tmap_map_driver_t *driver);
 
-// TODO
+/*!
+  Destroy the mapping driver.
+  @param  driver  the mapping driver
+ */
 void
 tmap_map_driver_destroy(tmap_map_driver_t *driver);
 
-
-// TODO: below
-
 /*! 
-  data to be passed to a thread                         
+  Driver data to be passed to a thread                         
   */
 typedef struct {                                            
     int32_t num_ends;  /*!< the number of mates (one for fragments) */

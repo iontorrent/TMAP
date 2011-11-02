@@ -103,7 +103,10 @@ enum {
 char *
 tmap_algo_id_to_name(uint16_t algo_id);
 
-// TODO
+/*!
+  @param  name  the algorithm name
+  @return       the algorithm identifier, -1 if not found
+  */
 int32_t
 tmap_algo_name_to_id(char *name);
 

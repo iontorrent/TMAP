@@ -319,7 +319,6 @@ tmap_map_driver_core_worker(int32_t num_ends,
               }
 
               // did we find any mappings?
-              // TODO:
               if(1 == found) { // yes
                   tmap_map_stats_add(stat, curstat);
                   tmap_map_stats_destroy(curstat);
@@ -338,10 +337,8 @@ tmap_map_driver_core_worker(int32_t num_ends,
               if(0 < records[low]->sams[i]->n) {
                   // re-align the alignments in flow-space
                   if(NULL != fs) {
-                      // TODO: if this is run, we do not need to run
-                      // tmap_sw_global_banded_core...
-                      // NB: seq_buffer should have its key sequence if 0 <
-                      // key_seq_len
+                      // TODO: if this is run, we do not need to run tmap_sw_global_banded_core...
+                      // NB: seq_buffer should have its key sequence if 0 < key_seq_len
                       tmap_map_util_fsw(fs, seqs[i][0],
                                         flow_order, flow_order_len,
                                         key_seq, key_seq_len,
@@ -370,8 +367,6 @@ tmap_map_driver_core_worker(int32_t num_ends,
                   seqs[i][j] = NULL;
               }
           }
-          // TODO
-          // free other things?
       }
       // next
       low++;
@@ -562,9 +557,8 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
                                     driver->opt->sam_sff_tags);
               }
           }
-
           // free alignments
-          tmap_map_record_destroy(records[i]); // TODO: needs implementing
+          tmap_map_record_destroy(records[i]); 
           records[i] = NULL;
       }
       if(-1 == driver->opt->reads_queue_size) {
@@ -637,6 +631,12 @@ tmap_map_driver_algorithm_init(tmap_map_driver_func_init func_init,
                     tmap_map_opt_t *opt)
 {
   tmap_map_driver_algorithm_t *algorithm = NULL;
+
+  // the only necessary function is func_thread_map
+  if(func_thread_map == NULL ) {
+      tmap_error("func_thread_map cannot be null", Exit, OutOfRange);
+  }
+
   algorithm = tmap_calloc(1, sizeof(tmap_map_driver_algorithm_t), "algorithm");
   algorithm->func_init = func_init;
   algorithm->func_thread_init = func_thread_init;
