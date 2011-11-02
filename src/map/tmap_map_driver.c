@@ -208,6 +208,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
           for(i=0;i<num_ends;i++) {
               tmap_seq_t *seq = NULL;
               seq = seq_buffer[i][low];
+              stat->num_reads++;
               // init seqs
               for(j=0;j<4;j++) {
                   // TODO: only if necessary
@@ -235,7 +236,6 @@ tmap_map_driver_core_worker(int32_t num_ends,
               curstat = tmap_calloc(1, sizeof(tmap_map_stats_t), "curstat");
               // seed
               for(j=0;j<num_ends;j++) { // for each end
-                  curstat->num_reads++;
                   for(k=0;k<stage->num_algorithms;k++) { // for each algorithm
                       tmap_map_driver_algorithm_t *algorithm = stage->algorithms[k];
                       tmap_map_sams_t *sams = NULL;
@@ -313,7 +313,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
               for(j=0;j<num_ends;j++) { // for each end
                   records[low]->sams[j] = tmap_map_util_sw_gen_cigar(index->refseq, records[low]->sams[j], seqs[j], driver->opt);
                   if(0 < records[low]->sams[j]->n) {
-                      curstat->num_with_mapping++;
+                      //curstat->num_with_mapping++;
                       found = 1;
                   }
               }
@@ -335,6 +335,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
           // flowspace re-align and sorting
           for(i=0;i<num_ends;i++) {
               if(0 < records[low]->sams[i]->n) {
+                  stat->num_with_mapping++;
                   // re-align the alignments in flow-space
                   if(NULL != fs) {
                       // TODO: if this is run, we do not need to run tmap_sw_global_banded_core...
