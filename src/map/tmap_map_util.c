@@ -806,7 +806,6 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   if(0 == sams->n) {
       return sams;
   }
-
   // the final mappings will go here 
   sams_tmp = tmap_map_sams_init(sams);
   tmap_map_sams_realloc(sams_tmp, sams->n);
@@ -835,7 +834,9 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   i = start = end = 0;
   best_subo = INT32_MIN;
   start_pos = end_pos = 0;
-  
+  char* seq_name = tmap_seq_get_name(seqs[0])->s;
+  printf("\ntotal seeds: %d for %s opt->seed_length: %d\n", sams->n, seq_name, opt->seed_length);
+
   while(end < sams->n) {
       uint8_t strand, *query=NULL;
       uint32_t qlen;
@@ -860,10 +861,14 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       if(end + 1 < sams->n) {
           if(sams->sams[end].strand == sams->sams[end+1].strand //same strand
              && sams->sams[end].seqid == sams->sams[end+1].seqid) {
+              //set all seed coord values
               sam_start = sams->sams[end].pos;
               sam_end = sams->sams[end].pos + sams->sams[end].target_len;
               sam_next_start = sams->sams[end+1].pos;
               sam_next_end = sam_next_start + sams->sams[end+1].target_len;
+              //print debug info
+              printf("%s seed start: %d end: %d next start: %d  next end: %d ", seq_name, sam_start, sam_end, sam_next_start, sam_next_end);
+              printf("\n\tstart_pos: %d \tend_pos:%d\t", start_pos, end_pos);
               if ( (sam_next_start > sam_end) && ((sam_next_start - sam_end) <= opt->max_seed_band) ) {
                   end++;
                   keep_banding = 1;
@@ -874,14 +879,15 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                   keep_banding = 0;
               } 
               if (keep_banding) {
+                  printf(" -- banded\n");
                   continue; //look for more banding opportunities
               }
-              
+              printf(" -- not banded\n");
               
           }
             
       }
-
+      printf("%s final seed start: %d end: %d\n\n", seq_name, start_pos, end_pos);
       // choose a random one within the window
       if(start == end) {
           tmp_sam = sams->sams[start];
@@ -944,13 +950,14 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       // have wrong score
       // NOTE:  end >(sams->n * opt->seed_freqc ) comes from 
       /*
-       * Anatomy of a hash-based long read sequence mapping algorithm for next generation DNA sequencing
+       * Anatomy of a hash-based long read sequence mapping algorithm for next 
+       * generation DNA sequencing
        * Sanchit Misra, Bioinformatics, 2011
        * "For each read, we find the maximum of the number of q-hits in 
        * all regions, say C. We keep the cutoff as a fraction f of C. Hence, 
        * if a region has ≥fC q-hits, only then it is processed further. "
        */
-      if (end >(sams->n * opt->seed_freqc )){
+      if ( end >( sams->n * opt->seed_freqc) ) {
           if(0 == strand) {
               tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query, qlen,
                                             target, tlen, 
