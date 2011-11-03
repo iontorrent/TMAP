@@ -6,25 +6,25 @@
 #include <pthread.h>
 #endif
 #include <unistd.h>
-#include "../util/tmap_error.h"
-#include "../util/tmap_alloc.h"
-#include "../util/tmap_definitions.h"
-#include "../util/tmap_progress.h"
-#include "../util/tmap_sam_print.h"
-#include "../util/tmap_sort.h"
-#include "../seq/tmap_seq.h"
-#include "../index/tmap_refseq.h"
-#include "../index/tmap_bwt_gen.h"
-#include "../index/tmap_bwt.h"
-#include "../index/tmap_bwt_match.h"
-#include "../index/tmap_sa.h"
-#include "../index/tmap_index.h"
-#include "../io/tmap_seq_io.h"
-#include "../server/tmap_shm.h"
-#include "../sw/tmap_sw.h"
-#include "tmap_map_stats.h"
-#include "tmap_map_util.h"
-#include "tmap_map_driver.h"
+#include "../../util/tmap_error.h"
+#include "../../util/tmap_alloc.h"
+#include "../../util/tmap_definitions.h"
+#include "../../util/tmap_progress.h"
+#include "../../util/tmap_sam_print.h"
+#include "../../util/tmap_sort.h"
+#include "../../seq/tmap_seq.h"
+#include "../../index/tmap_refseq.h"
+#include "../../index/tmap_bwt_gen.h"
+#include "../../index/tmap_bwt.h"
+#include "../../index/tmap_bwt_match.h"
+#include "../../index/tmap_sa.h"
+#include "../../index/tmap_index.h"
+#include "../../io/tmap_seq_io.h"
+#include "../../server/tmap_shm.h"
+#include "../../sw/tmap_sw.h"
+#include "../util/tmap_map_stats.h"
+#include "../util/tmap_map_util.h"
+#include "../tmap_map_driver.h"
 #include "tmap_map1_aux.h"
 #include "tmap_map1.h"
 
@@ -164,7 +164,7 @@ typedef struct {
 } tmap_map1_thread_data_t;
 
 int32_t
-tmap_map1_init(tmap_refseq_t *refseq, tmap_map_opt_t *opt)
+tmap_map1_init(void **data, tmap_refseq_t *refseq, tmap_map_opt_t *opt)
 {
   tmap_map1_print_max_diff(opt, opt->algo_stage);
   opt->score_thr *= opt->score_match;
@@ -201,14 +201,18 @@ tmap_map1_thread_init(void **data, tmap_map_opt_t *opt)
 
 // reverse and reverse compliment
 tmap_map_sams_t*
-tmap_map1_thread_map_core(void **data, tmap_seq_t *seqs[2], tmap_string_t *bases[2], int32_t seq_len,
+tmap_map1_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len,
                           tmap_index_t *index, tmap_map_opt_t *opt)
 {
   tmap_map1_thread_data_t *d = (tmap_map1_thread_data_t*)(*data);
   int32_t seed2_len = 0;
   tmap_map_opt_t opt_local = (*opt); // copy over values
   tmap_map_sams_t *sams = NULL;
+  tmap_string_t *bases[2] = {NULL, NULL};
 
+  // get bases
+  bases[0] = tmap_seq_get_bases(seqs[0]);
+  bases[1] = tmap_seq_get_bases(seqs[1]);
 
   if((0 < opt->min_seq_len && seq_len < opt->min_seq_len)
      || (0 < opt->max_seq_len && opt->max_seq_len < seq_len)) {
@@ -221,7 +225,7 @@ tmap_map1_thread_map_core(void **data, tmap_seq_t *seqs[2], tmap_string_t *bases
       return tmap_map_sams_init(NULL);
   }
 
-  if(opt->seed2_length < 0 || bases[0]->l < opt->seed2_length) {
+  if(opt->seed2_length < 0 || seq_len < opt->seed2_length) {
       seed2_len = seq_len;
       // remember to round up
       opt_local.max_mm = (opt->max_mm < 0) ? (int)(0.99 + opt->max_mm_frac * seed2_len) : opt->max_mm; 
@@ -252,22 +256,20 @@ tmap_map1_thread_map_core(void **data, tmap_seq_t *seqs[2], tmap_string_t *bases
       tmap_bwt_match_cal_width_reverse(index->bwt[1], opt->seed_length, bases[1]->s + (seq_len - opt->seed_length), d->seed_width[1]);
   }
 
-  // map
   sams = tmap_map1_aux_core(seqs, index->refseq, index->bwt, index->sa, d->width, (0 < opt_local.seed_length) ? d->seed_width : NULL, &opt_local, d->stack, seed2_len);
 
   return sams;
 }
 
-static tmap_map_sams_t*
-tmap_map1_thread_map(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_map_stats_t *stat, tmap_rand_t *rand, tmap_map_opt_t *opt)
+tmap_map_sams_t*
+tmap_map1_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_map_stats_t *stat, tmap_rand_t *rand, tmap_map_opt_t *opt)
 {
   int32_t seq_len = 0;;
-  tmap_seq_t *seqs[2]={NULL, NULL};
-  tmap_string_t *bases[2]={NULL, NULL};
   tmap_map_sams_t *sams = NULL;
+  tmap_seq_t *seqs_tmp[2];
 
   // sequence length
-  seq_len = tmap_seq_get_bases(seq)->l;
+  seq_len = tmap_seq_get_bases_length(seqs[0]);
 
   // sequence length not in range
   if((0 < opt->min_seq_len && seq_len < opt->min_seq_len)
@@ -280,27 +282,12 @@ tmap_map1_thread_map(void **data, tmap_seq_t *seq, tmap_index_t *index, tmap_map
       return tmap_map_sams_init(NULL);
   }
 
-  // clone the sequence 
-  seqs[0] = tmap_seq_clone(seq);
-  seqs[1] = tmap_seq_clone(seq);
+  // massage the structure
+  seqs_tmp[0] = seqs[2]; // reverse
+  seqs_tmp[1] = seqs[1]; // reverse compliment
 
-  tmap_seq_reverse(seqs[0]); // reverse
-  tmap_seq_reverse_compliment(seqs[1]); // reverse compliment
-
-  // convert to integers
-  tmap_seq_to_int(seqs[0]);
-  tmap_seq_to_int(seqs[1]);
-
-  // get bases
-  bases[0] = tmap_seq_get_bases(seqs[0]);
-  bases[1] = tmap_seq_get_bases(seqs[1]);
-  
   // core algorithm
-  sams = tmap_map1_thread_map_core(data, seqs, bases, seq_len, index, opt);
-
-  // destroy
-  tmap_seq_destroy(seqs[0]);
-  tmap_seq_destroy(seqs[1]);
+  sams = tmap_map1_thread_map_core(data, seqs_tmp, seq_len, index, opt);
 
   return sams;
 }
@@ -321,41 +308,47 @@ tmap_map1_thread_cleanup(void **data, tmap_map_opt_t *opt)
 }
 
 static void 
-tmap_map1_core(tmap_map_opt_t *opt)
+tmap_map1_core(tmap_map_driver_t *driver)
 {
+  // add this algorithm
+  tmap_map_driver_add(driver,
+                      tmap_map1_init, 
+                      tmap_map1_thread_init, 
+                      tmap_map1_thread_map, 
+                      tmap_map1_thread_cleanup,
+                      NULL,
+                      driver->opt);
+  
+
   // run the driver
-  tmap_map_driver_core(tmap_map1_init, 
-                       tmap_map1_thread_init, 
-                       tmap_map1_thread_map, 
-                       tmap_map1_mapq,
-                       tmap_map1_thread_cleanup,
-                       opt);
+  tmap_map_driver_run(driver);
 }
 
 int 
 tmap_map1_main(int argc, char *argv[])
 {
-  tmap_map_opt_t *opt = NULL;
-
-  // init opt
-  opt = tmap_map_opt_init(TMAP_MAP_ALGO_MAP1);
+  tmap_map_driver_t *driver = NULL;
+  
+  // init
+  driver = tmap_map_driver_init(TMAP_MAP_ALGO_MAP1, tmap_map1_mapq);
+  driver->opt->algo_stage = 1;
 
   // get options
-  if(1 != tmap_map_opt_parse(argc, argv, opt) // options parsed successfully
+  if(1 != tmap_map_opt_parse(argc, argv, driver->opt) // options parsed successfully
      || argc != optind  // all options should be used
      || 1 == argc) { // some options should be specified
-      return tmap_map_opt_usage(opt);
+      return tmap_map_opt_usage(driver->opt);
   }
   else { 
       // check command line arguments
-      tmap_map_opt_check(opt);
+      tmap_map_opt_check(driver->opt);
   }
 
   // run map1
-  tmap_map1_core(opt);
+  tmap_map1_core(driver);
 
-  // destroy opt
-  tmap_map_opt_destroy(opt);
+  // destroy 
+  tmap_map_driver_destroy(driver);
 
   tmap_progress_print2("terminating successfully");
 

@@ -1,14 +1,14 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
 #include <stdlib.h>
-#include "../util/tmap_alloc.h"
-#include "../seq/tmap_seq.h"
-#include "../index/tmap_refseq.h"
-#include "../index/tmap_bwt.h"
-#include "../index/tmap_sa.h"
-#include "../index/tmap_index.h"
-#include "../index/tmap_bwt_match.h"
-#include "../sw/tmap_sw.h"
-#include "tmap_map_util.h"
+#include "../../util/tmap_alloc.h"
+#include "../../seq/tmap_seq.h"
+#include "../../index/tmap_refseq.h"
+#include "../../index/tmap_bwt.h"
+#include "../../index/tmap_sa.h"
+#include "../../index/tmap_index.h"
+#include "../../index/tmap_bwt_match.h"
+#include "../../sw/tmap_sw.h"
+#include "../util/tmap_map_util.h"
 #include "tmap_map3.h"
 #include "tmap_map3_aux.h"
 
@@ -334,7 +334,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
   // update the seed length based on the read length
   seed_length = opt->seed_length;
   if(0 == opt->seed_length_set) {
-      i = tmap_seq_get_bases(seq[0])->l;
+      i = tmap_seq_get_bases_length(seq[0]);
       while(0 < i) {
           seed_length++;
           i >>= 1; // divide by two
@@ -425,7 +425,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
 
                   // save the hit
                   s->algo_id = TMAP_MAP_ALGO_MAP3;
-                  s->algo_stage = 0;
+                  s->algo_stage = opt->algo_stage;
                   s->strand = i;
                   s->seqid = seqid;
                   s->pos = pos;

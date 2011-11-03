@@ -8,18 +8,18 @@
 #ifdef HAVE_PTHREAD
 #include <pthread.h>
 #endif
-#include "../util/tmap_alloc.h"
-#include "../util/tmap_sort.h"
-#include "../util/tmap_rand.h"
-#include "../seq/tmap_seq.h"
-#include "../index/tmap_refseq.h"
-#include "../index/tmap_bwtl.h"
-#include "../index/tmap_bwt.h"
-#include "../index/tmap_sa.h"
-#include "../index/tmap_index.h"
-#include "../sw/tmap_sw.h"
-#include "../sw/tmap_fsw.h"
-#include "tmap_map_util.h"
+#include "../../util/tmap_alloc.h"
+#include "../../util/tmap_sort.h"
+#include "../../util/tmap_rand.h"
+#include "../../seq/tmap_seq.h"
+#include "../../index/tmap_refseq.h"
+#include "../../index/tmap_bwtl.h"
+#include "../../index/tmap_bwt.h"
+#include "../../index/tmap_sa.h"
+#include "../../index/tmap_index.h"
+#include "../../sw/tmap_sw.h"
+#include "../../sw/tmap_fsw.h"
+#include "../util/tmap_map_util.h"
 #include "tmap_map2.h"
 #include "tmap_map2_core.h"
 #include "tmap_map2_chain.h"
@@ -368,7 +368,7 @@ tmap_map2_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
       sam->seqid = seqid;
       sam->pos = coor-1; // make it zero-based
       sam->algo_id = TMAP_MAP_ALGO_MAP2;
-      sam->algo_stage = 0;
+      sam->algo_stage = opt->algo_stage;
       sam->score = p->G;
       sam->score_subo = p->G2;
       sam->target_len = (seq_len < p->tlen) ? p->tlen : seq_len;

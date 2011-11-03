@@ -4,7 +4,7 @@
 
 #include <sys/types.h>
 #include <getopt.h>
-#include "../sw/tmap_vsw.h"
+#include "../../sw/tmap_vsw.h"
 
 // TODO: document
 
@@ -147,7 +147,7 @@ typedef struct {
 typedef struct __tmap_map_opt_t {
     tmap_map_opt_options_t *options;
     int32_t algo_id;
-    int32_t algo_stage;
+    int32_t algo_stage; /*!< one-based algorithm stage */
 
     // global options
     char **argv;  /*!< the command line argv structure */
@@ -232,17 +232,14 @@ typedef struct __tmap_map_opt_t {
     // None
 
     // mapall options
-    uint32_t algos[2];  /*!< the algorithms that should be run in stage 1 and stage 2, bit-packed */
-    int32_t aln_output_mode_ind; /*!< apply the output filter for each algorithm separately (--staged-aln-output-mode-independent) */
     int32_t num_stages;  /*!< the number of stages */ 
     int32_t mapall_score_thr;  /*!< the stage one scoring threshold (match-score-scaled) (--staged-score-thres) */
     int32_t mapall_mapq_thr;  /*!< the stage one mapping quality threshold (--staged-mapq-thres) */
     int32_t mapall_keep_all;  /*!< keep mappings that do not pass the first stage threshold for the next stage (--staged-keep-all) */
-    // stage 1/2 mapping algorithm specific options
-    struct __tmap_map_opt_t *opt_map1[2]; /*!< map 1 options */
-    struct __tmap_map_opt_t *opt_map2[2]; /*!< map 2 options */
-    struct __tmap_map_opt_t *opt_map3[2]; /*!< map 3 options */
-    struct __tmap_map_opt_t *opt_map_vsw[2]; /*!< map vsw options */
+
+    // sub-options
+   struct __tmap_map_opt_t **sub_opts; /*!< sub-options, for multi-stage and multi-mapping */
+   int32_t num_sub_opts; /*!< the number of sub-options */
 } tmap_map_opt_t;
 
 /*!
@@ -251,6 +248,10 @@ typedef struct __tmap_map_opt_t {
   */
 tmap_map_opt_t *
 tmap_map_opt_init();
+
+// HERE
+tmap_map_opt_t*
+tmap_map_opt_add_sub_opt(tmap_map_opt_t *opt, int32_t algo_id);
 
 /*!
   Destroys the memory associated with these options

@@ -115,6 +115,13 @@ tmap_seq_get_bases(tmap_seq_t *seq);
 
 /*! 
   @param  seq  pointer to the structure 
+  @return      the sequence length
+  */
+inline int32_t
+tmap_seq_get_bases_length(tmap_seq_t *seq);
+
+/*! 
+  @param  seq  pointer to the structure 
   @return      a pointer to the quality string
   */
 inline tmap_string_t *

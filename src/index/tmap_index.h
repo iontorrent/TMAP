@@ -12,17 +12,30 @@
   @details  Constructs the packed reference sequence, BWT string, and Suffix Array.
   */
 
+/*!
+  The reference sequence data structure.
+ */
 typedef struct {
-    tmap_refseq_t *refseq;
-    tmap_bwt_t *bwt[2];
-    tmap_sa_t *sa[2];
-    tmap_shm_t *shm;
-    key_t shm_key;
+    tmap_refseq_t *refseq; /*!< the packed reference sequence */
+    tmap_bwt_t *bwt[2]; /*!< the forward and reverse FM-indexes */
+    tmap_sa_t *sa[2]; /*!< the forward and reverse suffix arrays */
+    tmap_shm_t *shm; /*!< the shared memory location if loaded from shared memory */
+    key_t shm_key; /*!< the shared memory key, zero if not loaded from shared memory */
 } tmap_index_t;
 
+/*!
+  Initializes the full reference data from file or shared memory.
+  @param  fn_fasta  the FASTA file name
+  @param  shm_key   the shared memory key, or zero if we are to read in from file
+  @return           the full reference index
+ */
 tmap_index_t*
 tmap_index_init(const char *fn_fasta, key_t shm_key);
 
+/*!
+  Destroys the index data.
+  @param  index  the reference index to destroy
+ */
 void
 tmap_index_destroy(tmap_index_t *index);
 

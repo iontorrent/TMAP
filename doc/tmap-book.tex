@@ -450,10 +450,6 @@ Notice how the global options \TT{-g 1 -M 3} are applied to all the algorithms w
 It is possible to have a given algorithm run in both stages with different options.
 
 \subsection{Usage}
-\subsubsection{\TT{--staged-aln-output-mode-ind}}
-Specifies to apply the output filter (\TT{-a}) and duplicate removal (\TT{-W}) separately for each algorithm.
-This is useful for comparing the mappings across all the algorithms.
-
 \subsubsection{\TT{--staged-score-thres INT}}
 Specifies the number of multiples of the match score (\TT{-A}) for the minimum scoring threshold for the first stage.
 An alignment is filtered in the first stage if it has an alignment score less than this threshold, and there are algorithms in the second stage.

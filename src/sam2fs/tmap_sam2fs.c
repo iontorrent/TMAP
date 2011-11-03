@@ -22,7 +22,7 @@
 #include "../io/tmap_file.h"
 #include "../sw/tmap_fsw.h"
 #include "../sw/tmap_sw.h"
-#include "../map/tmap_map_util.h"
+#include "../map/util/tmap_map_util.h"
 #include "tmap_sam2fs_aux.h"
 #include "tmap_sam2fs.h"
 

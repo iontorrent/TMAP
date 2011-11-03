@@ -87,4 +87,5 @@ performance on large genomes (hg19) is recommended.
   Further implementation improvements or parameter tuning could be made to make
     the lookups in the FM-index/BWT faster.  This includes the occurrence 
 	interval, the suffix array interval, and the k-mer occurence hash.  Caching
-	these results may also make sense.
+	these results may also make sense when examining the same sub-strings across
+	multiple algorithms.

@@ -1,18 +1,18 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
 #include <stdlib.h>
 
-#include "../util/tmap_error.h"
-#include "../util/tmap_alloc.h"
-#include "../util/tmap_fibheap.h"
-#include "../util/tmap_definitions.h"
-#include "../seq/tmap_seq.h"
-#include "../index/tmap_refseq.h"
-#include "../index/tmap_bwt.h"
-#include "../index/tmap_bwt_match.h"
-#include "../index/tmap_sa.h"
-#include "../index/tmap_index.h"
-#include "../sw/tmap_sw.h"
-#include "tmap_map_util.h"
+#include "../../util/tmap_error.h"
+#include "../../util/tmap_alloc.h"
+#include "../../util/tmap_fibheap.h"
+#include "../../util/tmap_definitions.h"
+#include "../../seq/tmap_seq.h"
+#include "../../index/tmap_refseq.h"
+#include "../../index/tmap_bwt.h"
+#include "../../index/tmap_bwt_match.h"
+#include "../../index/tmap_sa.h"
+#include "../../index/tmap_index.h"
+#include "../../sw/tmap_sw.h"
+#include "../util/tmap_map_util.h"
 #include "tmap_map1.h"
 #include "tmap_map1_aux.h"
 
@@ -379,7 +379,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
           if(0 < tmap_refseq_pac2real(refseq, pacpos, aln_ref, &seqid, &pos)) {
               // copy over previous parameters
               sam_cur->algo_id = TMAP_MAP_ALGO_MAP1;
-              sam_cur->algo_stage = 0;
+              sam_cur->algo_stage = opt->algo_stage;
               sam_cur->strand = strand;
               sam_cur->seqid = seqid;
               sam_cur->pos = pos-1; // adjust to zero-based

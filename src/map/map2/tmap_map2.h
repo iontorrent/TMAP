@@ -4,6 +4,7 @@
 
 #include <stdlib.h>
 #include <sys/types.h>
+#include "../util/tmap_map_stats.h"
 
 /*! 
   The BWA-like (long-read) Mapping Algorithm
@@ -11,12 +12,13 @@
 
 /*!
  initializes the mapping routine
+ @param  data    pointer to the mapping data pointer
  @param  refseq  the reference sequence
  @param  opt     the program options
  @return         0 if successful, non-zero otherwise
  */
 int32_t
-tmap_map2_init(tmap_refseq_t *refseq, tmap_map_opt_t *opt);
+tmap_map2_init(void **data, tmap_refseq_t *refseq, tmap_map_opt_t *opt);
 
 /*!
  initializes the mapping routine for a given thread
@@ -39,6 +41,12 @@ tmap_map2_thread_init(void **data, tmap_map_opt_t *opt);
  */
 tmap_map_sams_t*
 tmap_map2_thread_map_core(void **data, tmap_seq_t *seqs[4], int32_t seq_len, tmap_index_t *index, tmap_rand_t *rand, tmap_map_opt_t *opt);
+
+// TODO
+tmap_map_sams_t*
+tmap_map2_thread_map(void **data, tmap_seq_t **seqs, 
+                     tmap_index_t *index, tmap_map_stats_t *stat, tmap_rand_t *rand, 
+                     tmap_map_opt_t *opt);
 
 /*!
  cleans up the mapping routine for a given thread

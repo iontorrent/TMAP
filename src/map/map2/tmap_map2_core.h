@@ -2,9 +2,9 @@
 #ifndef TMAP_MAP2_CORE_H
 #define TMAP_MAP2_CORE_H
 
-#include "../index/tmap_bwtl.h"
-#include "../index/tmap_bwt.h"
-#include "../index/tmap_sa.h"
+#include "../../index/tmap_bwtl.h"
+#include "../../index/tmap_bwt.h"
+#include "../../index/tmap_sa.h"
 #include "tmap_map2_mempool.h"
 #include "tmap_map2_aux.h"
 #include "tmap_map2.h"

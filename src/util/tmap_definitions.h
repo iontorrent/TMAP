@@ -103,6 +103,13 @@ enum {
 char *
 tmap_algo_id_to_name(uint16_t algo_id);
 
+/*!
+  @param  name  the algorithm name
+  @return       the algorithm identifier, -1 if not found
+  */
+int32_t
+tmap_algo_name_to_id(char *name);
+
 /*! tmap_nt_char_to_int
   @details  converts a DNA base in ASCII format to its 2-bit format [0-4]. 
   */

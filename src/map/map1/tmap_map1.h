@@ -4,6 +4,7 @@
 
 #include <config.h>
 #include <sys/types.h>
+#include "../util/tmap_map_stats.h"
 
 /*! 
   BWA-like (short-read) Mapping Algorithm
@@ -30,12 +31,13 @@ tmap_map1_print_max_diff(tmap_map_opt_t *opt, int32_t stage);
 
 /*!
  initializes the mapping routine
+ @param  data    pointer to the mapping data pointer
  @param  refseq  the reference sequence
  @param  opt     the program options
  @return         0 if successful, non-zero otherwise
  */
 int32_t
-tmap_map1_init(tmap_refseq_t *refseq, tmap_map_opt_t *opt);
+tmap_map1_init(void **data, tmap_refseq_t *refseq, tmap_map_opt_t *opt);
 
 /*!
  initializes the mapping routine for a given thread
@@ -50,15 +52,20 @@ tmap_map1_thread_init(void **data, tmap_map_opt_t *opt);
  runs the mapping routine for a given thread
  @param  data     pointer to the mapping data pointer
  @param  seqs     the sequence to map (reverse and reverse compliment in integer format)
- @param  bases    the bases to map (reverse and reverse compliment in integer format)
  @param  seq_len  the sequence lenth
  @param  index    the reference index
  @param  opt      the program options
  @return          the mappings, NULL otherwise
  */
 tmap_map_sams_t*
-tmap_map1_thread_map_core(void **data, tmap_seq_t *seqs[2], tmap_string_t *bases[2], int32_t seq_len,
+tmap_map1_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len,
                           tmap_index_t *index, tmap_map_opt_t *opt);
+
+// TODO
+tmap_map_sams_t*
+tmap_map1_thread_map(void **data, tmap_seq_t **seqs, 
+                     tmap_index_t *index, tmap_map_stats_t *stat, tmap_rand_t *rand, 
+                     tmap_map_opt_t *opt);
 
 /*!
  cleans up the mapping routine for a given thread

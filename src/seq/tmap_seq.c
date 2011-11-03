@@ -267,6 +267,12 @@ tmap_seq_get_bases(tmap_seq_t *seq)
   return NULL;
 }
 
+inline int32_t
+tmap_seq_get_bases_length(tmap_seq_t *seq)
+{
+  return tmap_seq_get_bases(seq)->l;
+}
+
 inline tmap_string_t *
 tmap_seq_get_qualities(tmap_seq_t *seq)
 {
