@@ -38,10 +38,11 @@ if __name__ == "__main__":
     parser.add_option('--dwgsim-eval-path', help='the path to the dwgsim_eval binary (if the reads were simulated with dwgsim_eval)', dest='dwgsim_eval_path', default='')
     parser.add_option('--alignStats-path', help='the path to the alignStast binary', dest='alignStats_path', default='')
     parser.add_option('--mapping-algorithm', help='the mapping command (ex. mapall, map1, map2 map3)', dest='mapping_algorithm')
-    parser.add_option('--mapall-algorithms', help='the mapping algorithms and options for mapall (only used when --mapping-algorithm=mapall)', dest='mapall_algorithms', default='')
-    parser.add_option('--pbs-queue', help='the PBS queue to which to submit', default='pbs_queue')
+    parser.add_option('--mapall-algorithms', help='the mapping algorithms and options for mapall (only used when --mapping-algorithm=mapall)', dest='mapall_algorithms')
+    parser.add_option('--sam-sff-tags', help='include SFF specific SAM tags', action="store_true", default=False, dest='sam_sff_tags')
+    parser.add_option('--pbs-queue', help='the PBS queue to which to submit')
     parser.add_option('--redirect-stdout', help='redirects stdout of tmap to the specified file', dest="tmap_stdout", default='')
-    parser.add_option('--profile-tmap', help='profiles tmap and requires google-perftools be in your LD_LIBRARY_PATH', dest="profile_tmap")
+    parser.add_option('--profile-tmap', help='profiles tmap and requires google-perftools be in your LD_LIBRARY_PATH', default='', dest="profile_tmap")
     parser.add_option('--submit-script-name', help="name for submission script, override default", dest="fn_script")
     parser.add_option('--additional-pbs-settings', help="comman seperated list of additioanl PBS/environemnt settings.  formating is up to you, user.", dest="pbs_settings", default='')
     (options, args) = parser.parse_args()
@@ -97,8 +98,12 @@ if __name__ == "__main__":
     p = re.compile('.*/')
     temp_mapall_algorithms = options.mapall_algorithms
     temp = '_'.join(temp_mapall_algorithms.split(' '))
-    fn_sam = options.sam_dir + "/" + os.path.basename(options.fn_reads) + temp +".sam"
-    tmap_cmd = "%s time -p %s %s -f %s -r %s -s %s -n %s -v %s %s" % (
+    fn_sam = options.sam_dir + "/" + os.path.basename(options.fn_reads) + "." + temp + ".sam"
+    sam_sff_tags = ''
+    if options.sam_sff_tags:
+        # TODO: check that it is an SFF
+        sam_sff_tags = '-Y'
+    tmap_cmd = "%s time -p %s %s -f %s -r %s -s %s -n %s -v %s %s %s" % (
             options.profile_tmap,
             options.tmap_path,
             options.mapping_algorithm,
@@ -106,6 +111,7 @@ if __name__ == "__main__":
             options.fn_reads,
             fn_sam,
             options.num_threads,
+            sam_sff_tags,
             options.mapall_algorithms,
             options.tmap_stdout
             )
