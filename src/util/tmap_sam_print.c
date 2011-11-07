@@ -265,7 +265,7 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
   }
   // bases and qual
   tmap_file_fprintf(fp, "\t%s\t%s",
-                    bases->s, (0 == qualities->l) ? "*" : qualities->s);
+                    (0 == bases->l) ? "*" : bases->s, (0 == qualities->l) ? "*" : qualities->s);
   // optional tags
   tmap_file_fprintf(fp, "\tRG:Z:%s\tPG:Z:%s",
                     tmap_sam_rg_id,
