@@ -41,7 +41,7 @@ if __name__ == "__main__":
     parser.add_option('--mapall-algorithms', help='the mapping algorithms and options for mapall (only used when --mapping-algorithm=mapall)', dest='mapall_algorithms', default='')
     parser.add_option('--pbs-queue', help='the PBS queue to which to submit', default='pbs_queue')
     parser.add_option('--redirect-stdout', help='redirects stdout of tmap to the specified file', dest="tmap_stdout", default='')
-    parser.add_option('--profile-tmap', help='profiles tmap and requires google-perftools be in your LD_LIBRARY_PATH', dest="profile_tmap")
+    parser.add_option('--profile-tmap', help='profiles tmap and requires google-perftools be in your LD_LIBRARY_PATH', dest="profile_tmap", default='')
     parser.add_option('--submit-script-name', help="name for submission script, override default", dest="fn_script")
     parser.add_option('--additional-pbs-settings', help="comman seperated list of additioanl PBS/environemnt settings.  formating is up to you, user.", dest="pbs_settings", default='')
     (options, args) = parser.parse_args()
@@ -91,7 +91,7 @@ if __name__ == "__main__":
             #just in case it's something like
             #map3 --seed-length 55                                                       
             print 'Unrecognized mapping algorithm: ' + options.mapping_algorithm
-    if '' != options.profile_tmap:
+    if '' != options.profile_tmap and options.profile_tmap is not None:
         options.profile_tmap = "CPUPROFILE="+options.profile_tmap
     # Create the tmap command 
     p = re.compile('.*/')
