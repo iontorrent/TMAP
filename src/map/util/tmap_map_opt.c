@@ -797,6 +797,7 @@ tmap_map_opt_init(int32_t algo_id)
     case TMAP_MAP_ALGO_MAP1:
       // map1
       opt->seed_length = 32;
+      opt->seed_length_set = 1;
       opt->seed_max_diff = 2;
       opt->seed2_length = 48;
       opt->max_diff = -1; opt->max_diff_fnr = 0.04;
@@ -1165,6 +1166,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       // MAP1/MAP3
       else if(0 == strcmp("seed-length", options[option_index].name) && (opt->algo_id == TMAP_MAP_ALGO_MAP1 || opt->algo_id == TMAP_MAP_ALGO_MAP3)) {
           opt->seed_length = atoi(optarg);
+          opt->seed_length_set = 1;
       }
       // MAP1
       else if(0 == strcmp("seed-max-diff", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP1) {
