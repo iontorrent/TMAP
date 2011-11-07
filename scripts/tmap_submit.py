@@ -91,7 +91,7 @@ if __name__ == "__main__":
             #just in case it's something like
             #map3 --seed-length 55                                                       
             print 'Unrecognized mapping algorithm: ' + options.mapping_algorithm
-    if '' != options.profile_tmap:
+    if '' != options.profile_tmap and options.profile_tmap is not None:
         options.profile_tmap = "CPUPROFILE="+options.profile_tmap
     # Create the tmap command 
     p = re.compile('.*/')
