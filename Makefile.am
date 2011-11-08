@@ -44,6 +44,7 @@ tmap_SOURCES = \
 			   src/map/util/tmap_map_opt.h src/map/util/tmap_map_opt.c \
 			   src/map/util/tmap_map_stats.h src/map/util/tmap_map_stats.c \
 			   src/map/util/tmap_map_util.h src/map/util/tmap_map_util.c \
+			   src/map/pairing/tmap_map_pairing.h src/map/pairing/tmap_map_pairing.c \
 			   src/map/map1/tmap_map1.h src/map/map1/tmap_map1.c \
 			   src/map/map1/tmap_map1_aux.h src/map/map1/tmap_map1_aux.c \
 			   src/map/map2/tmap_map2.h src/map/map2/tmap_map2.c \

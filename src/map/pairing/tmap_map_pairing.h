@@ -1,0 +1,18 @@
+/* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
+#ifndef TMAP_MAP_PAIRING_H
+#define TMAP_MAP_PAIRING_H
+
+// TODO
+enum {
+    TMAP_MAP_PAIRING_SAME_STRAND=0,
+    TMAP_MAP_PAIRING_OPPOSITE_STRAND=1
+};
+
+// TODO
+enum {
+    TMAP_MAP_PAIRING_POSITIONING_AB=0,
+    TMAP_MAP_PAIRING_POSITIONING_BA,
+    TMAP_MAP_PAIRING_POSITIONING_NONE
+};
+
+#endif
