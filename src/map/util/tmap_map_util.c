@@ -914,19 +914,24 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
               if (strand == 0) {
                 if (sams->sams[end+1].pos - (sams->sams[end].pos + seq_len) <= opt->max_seed_band) {
                         end++;
+                        if(end_pos < sams->sams[end].pos + seq_len) {
+                                end_pos = sams->sams[end].pos + seq_len + 1; // one-based
+                        }
                 }
               }
               else {
               //reverse
                 if (sams->sams[end+1].pos - (sams->sams[end].pos - seq_len) <= opt->max_seed_band) {
                         end++;
+                        if(end_pos < sams->sams[end].pos + seq_len) {
+                                end_pos = sams->sams[end].pos - seq_len + 1; // one-based
+                                
+                        }
+                       
                 }   
              }
           
-              //printf(" -- banded\n");
-              if(end_pos < sams->sams[end].pos + seq_len) {
-                  end_pos = sams->sams[end].pos + seq_len + 1; // one-based
-              }
+              
               continue; // there may be more to add
           }
           //printf(" -- failed if statement\n");
