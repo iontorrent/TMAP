@@ -917,6 +917,8 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                         if(end_pos < sams->sams[end].pos + seq_len) {
                                 end_pos = sams->sams[end].pos + seq_len + 1; // one-based
                         }
+                        continue; // there may be more to add
+
                 }
               }
               else {
@@ -927,12 +929,12 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                                 end_pos = sams->sams[end].pos - seq_len + 1; // one-based
                                 
                         }
-                       
+                        continue; // there may be more to add
+
                 }   
-             }
+             }  
           
               
-              continue; // there may be more to add
           }
           //printf(" -- failed if statement\n");
         
