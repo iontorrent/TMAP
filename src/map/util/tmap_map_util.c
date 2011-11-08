@@ -909,9 +909,20 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       if(end + 1 < sams->n) {              
           //printf("%s seed start: %d end: %d next start: %d  next end: %d ", seq_name, sams->sams[end].pos, (sams->sams[end].pos + sams->sams[end].target_len), sams->sams[end+1].pos, (sams->sams[end+1].pos + sams->sams[end+1].target_len));
           if(sams->sams[end].strand == sams->sams[end+1].strand 
-             && sams->sams[end].seqid == sams->sams[end+1].seqid
-             && sams->sams[end+1].pos - (sams->sams[end].pos + seq_len) <= opt->max_seed_band) {
-              end++;
+             && sams->sams[end].seqid == sams->sams[end+1].seqid) {
+              //forward
+              if (strand == 0) {
+                if (sams->sams[end+1].pos - (sams->sams[end].pos + seq_len) <= opt->max_seed_band) {
+                        end++;
+                }
+              }
+              else {
+              //reverse
+                if (sams->sams[end+1].pos - (sams->sams[end].pos - seq_len) <= opt->max_seed_band) {
+                        end++;
+                }   
+             }
+          
               //printf(" -- banded\n");
               if(end_pos < sams->sams[end].pos + seq_len) {
                   end_pos = sams->sams[end].pos + seq_len + 1; // one-based
