@@ -905,9 +905,11 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           best_subo = sams->sams[end].score_subo;
       }
 
+      //debugging prints
+      
       // check if the hits can be banded
       if(end + 1 < sams->n) {              
-          //printf("%s seed start: %d end: %d next start: %d  next end: %d ", seq_name, sams->sams[end].pos, (sams->sams[end].pos + sams->sams[end].target_len), sams->sams[end+1].pos, (sams->sams[end+1].pos + sams->sams[end+1].target_len));
+          printf("%s seed start: %d end: %d next start: %d  next end: %d ", seq_name, sams->sams[end].pos, (sams->sams[end].pos + sams->sams[end].target_len), sams->sams[end+1].pos, (sams->sams[end+1].pos + sams->sams[end+1].target_len));
           if(sams->sams[end].strand == sams->sams[end+1].strand 
              && sams->sams[end].seqid == sams->sams[end+1].seqid) {
               //forward
@@ -940,7 +942,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
         
       }
       //printf(" -- not banded\n");
-      //printf("%s final seed start: %d end: %d\n\n", seq_name, start_pos, end_pos);
+      printf("%s final seed start: %d end: %d\n\n", seq_name, start_pos, end_pos);
 
       // choose a random one within the window
       if(start == end) {
