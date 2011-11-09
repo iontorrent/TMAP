@@ -65,13 +65,7 @@ def main(options):
                     continue
                 if not diff_field( getattr(sam1.records[ read ], field), getattr(sam2.records[ read ], field) ):
                     diff_str = "%s -- %s[%s]=%s %s[%s]=%s" % (diff_str, sam1.sam, field, str(attr1), sam2.sam, field, str(attr2))
-                    """
-                    print "Different at field: ", field
-                    print sam1.sam, getattr(sam1.records[ read ], field)
-                    print sam2.sam, getattr(sam2.records[ read ], field)
-                    print sam1.sam,": ", str(sam1.records[read])
-                    print sam2.sam,": ", str(sam2.records[read])
-                    """
+                    
             if len(diff_str) > len(read) + 2:
                 print diff_str
 
@@ -81,9 +75,11 @@ if __name__ == '__main__':
     parser = OptionParser()
     parser.add_option('--sam1', help="first sam file to diff.  will be called sam1 in diff out", dest='sam1')
     parser.add_option('--sam2', help="second sam file to diff.  will be called sam2 in diff out", dest='sam2')
-    parser.add_option('--fields', help="""comma seperated list of fields to diff between the sam records.  
-                                          use names from the same spec.  for optional tags, use their 2 letter 
-                                          abbreviation""", dest='fields', default=[])
+    parser.add_option('--fields',
+                      help="comma seperated list of fields:%s\t\t\t\t\t to diff between the"
+                      "sam records use names from the same spec. for optional tags"
+                      "use their 2 letter abbreviation.  Default:  pos" % (str(fields)),
+                      dest='fields', default=['pos'])
     options, args = parser.parse_args()
     
     main(options)
