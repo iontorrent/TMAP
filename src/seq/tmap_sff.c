@@ -422,7 +422,7 @@ tmap_sff_to_int(tmap_sff_t *sff)
 {
   int32_t i;
   if(1 == sff->is_int) return;
-  for(i=0;i<sff->read->bases->l;i++) {
+  for(i=0;i<tmap_sff_get_bases(sff)->l;i++) {
       sff->read->bases->s[i] = tmap_nt_char_to_int[(int)sff->read->bases->s[i]];
   }
   sff->is_int = 1;
@@ -468,7 +468,7 @@ tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping, uint8_t *
       }
       // NB: key_seq and sff must be in integer format
       for(i=0;i<key_seq_len;i++) {
-          if(sff->read->bases->s[i] != key_seq[i]) {
+          if(sff->read->bases->l <= i || sff->read->bases->s[i] != key_seq[i]) {
               key_match = 0;
               break;
           }
@@ -527,8 +527,14 @@ tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping, uint8_t *
       sff->read->bases->s[i] = sff->read->bases->s[i+left];
       sff->read->quality->s[i] = sff->read->quality->s[i+left];
   }
-  sff->read->bases->l = (right-left+1);
-  sff->read->quality->l = (right-left+1);
+  if(0 < right-left+1) {
+      sff->read->bases->l = (right-left+1);
+      sff->read->quality->l = (right-left+1);
+  }
+  else {
+      sff->read->bases->l = 0;
+      sff->read->quality->l = 0;
+  }
   if(0 == sff->is_int) {
       sff->read->bases->s[sff->read->bases->l] = '\0';
       sff->read->quality->s[sff->read->quality->l] = '\0';
