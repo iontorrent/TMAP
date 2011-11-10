@@ -74,6 +74,8 @@ typedef struct {
     int16_t mapq; /*!< the mapping quality */
     int32_t score; /*!< the alignment score */
     int32_t ascore;  /*!< the base alignment score (SFF only) */
+    int32_t pscore;  /*!< the pairing base alignment score (pairing only) */
+    int16_t pmapq; /*!< the pairing mapping quality */
     int32_t score_subo; /*!< the alignment score of the sub-optimal hit */
     int32_t n_cigar; /*!< the number of cigar operators */
     uint32_t *cigar; /*!< the cigar operator array */
@@ -247,6 +249,18 @@ tmap_map_sams_filter2(tmap_map_sams_t *sams, int32_t score_thr, int32_t mapq_thr
   */
 void
 tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window, tmap_rand_t *rand);
+
+/*!
+ Computes the mapping quality score from a small set of summary statistics.
+ @param  seq_len          the sequence length
+ @param  n_best           the number of best scores
+ @param  best_score       the best score
+ @param  n_best_subo      the number of best suboptimal scores
+ @param  best_score_subo  the best suboptimal score
+ @param  opt              the program parameters
+ */
+int32_t
+tmap_map_util_mapq_score(int32_t seq_len, int32_t n_best, int32_t best_score, int32_t n_best_subo, int32_t best_subo_score, tmap_map_opt_t *opt);
 
 /*!
  Computes the mapping quality from the mappings of multiple algorithms

@@ -427,7 +427,7 @@ tmap_map_sams_filter1(tmap_map_sams_t *sams, int32_t aln_output_mode, int32_t al
   int32_t i, j, k;
   int32_t n_best = 0;
   int32_t best_score, cur_score;
-  int32_t best_subo;
+  int32_t best_subo_score;
 
   if(sams->n <= 1) {
       return;
@@ -443,7 +443,7 @@ tmap_map_sams_filter1(tmap_map_sams_t *sams, int32_t aln_output_mode, int32_t al
       return;
   }
 
-  best_score = best_subo = INT32_MIN;
+  best_score = best_subo_score = INT32_MIN;
   n_best = 0;
   for(i=0;i<sams->n;i++) {
       if(TMAP_MAP_ALGO_NONE == algo_id
@@ -451,24 +451,24 @@ tmap_map_sams_filter1(tmap_map_sams_t *sams, int32_t aln_output_mode, int32_t al
           cur_score = sams->sams[i].score;
           if(best_score < cur_score) {
               if(0 < n_best) {
-                  best_subo = best_score;
+                  best_subo_score = best_score;
               }
               best_score = cur_score;
               n_best = 1;
           }
           else if(!(cur_score < best_score)) { // equal
-              best_subo = best_score; // more than one mapping
+              best_subo_score = best_score; // more than one mapping
               n_best++;
           }
-          else if(best_subo < cur_score) {
-              best_subo = cur_score;
+          else if(best_subo_score < cur_score) {
+              best_subo_score = cur_score;
           }
           // check sub-optimal
           if(TMAP_MAP_ALGO_MAP2 == sams->sams[i].algo_id
              || TMAP_MAP_ALGO_MAP3 == sams->sams[i].algo_id) {
               cur_score = sams->sams[i].score_subo;
-              if(best_subo < cur_score) {
-                  best_subo = cur_score;
+              if(best_subo_score < cur_score) {
+                  best_subo_score = cur_score;
               }
           }
 
@@ -499,7 +499,7 @@ tmap_map_sams_filter1(tmap_map_sams_t *sams, int32_t aln_output_mode, int32_t al
   // adjust suboptimal
   if(TMAP_MAP_ALGO_NONE == algo_id) {
       for(i=0;i<sams->n;i++) {
-          sams->sams[i].score_subo = best_subo;
+          sams->sams[i].score_subo = best_subo_score;
       }
   }
 
@@ -707,11 +707,40 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window, tmap_
 }
 
 inline int32_t
+tmap_map_util_mapq_score(int32_t seq_len, int32_t n_best, int32_t best_score, int32_t n_best_subo, int32_t best_subo_score, tmap_map_opt_t *opt)
+{
+  int32_t mapq;
+
+  if(0 == n_best_subo) {
+      n_best_subo = 1;
+      best_subo_score = opt->score_thr; 
+  }
+  /*
+     fprintf(stderr, "n_best=%d n_best_subo=%d\n",
+     n_best, n_best_subo);
+     fprintf(stderr, "best_score=%d best_subo=%d\n",
+     best_score, best_subo);
+     */
+  // Note: this is the old calculationg, based on BWA-long
+  //mapq = (int32_t)((n_best / (1.0 * n_best_subo)) * (best_score - best_subo) * (250.0 / best_score + 0.03 / opt->score_match) + .499);
+  //
+  double sf = 0.4; // initial scaling factor.  Note: 250 * sf is the maximum mapping quality.
+  sf *= 250.0 / ((double)opt->score_match * seq_len); // scale based on the best possible alignment score
+  sf *= (n_best / (1.0 * n_best_subo)); // scale based on number of sub-optimal mappings
+  sf *= (double)(best_score - best_subo_score + 1 ); // scale based on distance to the sub-optimal mapping
+  //sf *= (seq_len < 10) ? 1.0 : log10(seq_len); // scale based on longer reads having more information content
+  mapq = (int32_t)(sf + 0.99999);
+  if(mapq > 250) mapq = 250;
+  if(mapq <= 0) mapq = 1;
+  return mapq;
+}
+
+inline int32_t
 tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
 {
   int32_t i, best_i;
   int32_t n_best = 0, n_best_subo = 0;
-  int32_t best_score, cur_score, best_subo, best_subo2;
+  int32_t best_score, cur_score, best_subo_score, best_subo_score2;
   int32_t mapq;
   int32_t stage = -1;
   int32_t algo_id = TMAP_MAP_ALGO_NONE; 
@@ -720,13 +749,13 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
   // estimate mapping quality TODO: this needs to be refined
   best_i = 0;
   best_score = INT32_MIN;
-  best_subo = best_subo2 = opt->score_thr;
+  best_subo_score = best_subo_score2 = opt->score_thr;
   n_best = n_best_subo = 0;
   for(i=0;i<sams->n;i++) {
       cur_score = sams->sams[i].score;
       if(best_score < cur_score) {
           // save sub-optimal
-          best_subo = best_score;
+          best_subo_score = best_score;
           n_best_subo = n_best;
           // update
           best_score = cur_score;
@@ -748,11 +777,11 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
           n_best++;
       }
       else {
-          if(best_subo < cur_score) {
-              best_subo = cur_score;
+          if(best_subo_score < cur_score) {
+              best_subo_score = cur_score;
               n_best_subo = 1;
           }
-          else if(best_subo == cur_score) {
+          else if(best_subo_score == cur_score) {
               n_best_subo++;
           }
       }
@@ -761,36 +790,16 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
       if(INT32_MIN == cur_score) {
           // ignore
       }
-      else if(best_subo < cur_score) {
-          best_subo2 = cur_score;
+      else if(best_subo_score < cur_score) {
+          best_subo_score2 = cur_score;
       }
   }
-  if(best_subo < best_subo2) best_subo = best_subo2;
-  if(1 < n_best || best_score <= best_subo || 0 < best_repetitive) {
+  if(best_subo_score < best_subo_score2) best_subo_score = best_subo_score2;
+  if(1 < n_best || best_score <= best_subo_score || 0 < best_repetitive) {
       mapq = 0;
   }
   else {
-      if(0 == n_best_subo) {
-          n_best_subo = 1;
-          best_subo = opt->score_thr; 
-      }
-      /*
-         fprintf(stderr, "n_best=%d n_best_subo=%d\n",
-         n_best, n_best_subo);
-         fprintf(stderr, "best_score=%d best_subo=%d\n",
-         best_score, best_subo);
-         */
-      // Note: this is the old calculationg, based on BWA-long
-      //mapq = (int32_t)((n_best / (1.0 * n_best_subo)) * (best_score - best_subo) * (250.0 / best_score + 0.03 / opt->score_match) + .499);
-      //
-      double sf = 0.4; // initial scaling factor.  Note: 250 * sf is the maximum mapping quality.
-      sf *= 250.0 / ((double)opt->score_match * seq_len); // scale based on the best possible alignment score
-      sf *= (n_best / (1.0 * n_best_subo)); // scale based on number of sub-optimal mappings
-      sf *= (double)(best_score - best_subo + 1 ); // scale based on distance to the sub-optimal mapping
-      //sf *= (seq_len < 10) ? 1.0 : log10(seq_len); // scale based on longer reads having more information content
-      mapq = (int32_t)(sf + 0.99999);
-      if(mapq > 250) mapq = 250;
-      if(mapq <= 0) mapq = 1;
+      mapq = tmap_map_util_mapq_score(seq_len, n_best, best_score, n_best_subo, best_subo_score, opt);
   }
   for(i=0;i<sams->n;i++) {
       cur_score = sams->sams[i].score;
@@ -853,7 +862,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   tmap_map_sams_t *sams_tmp = NULL;
   int32_t seq_len=0, tlen, target_mem=0;
   uint8_t *target=NULL;
-  int32_t best_subo;
+  int32_t best_subo_score;
   tmap_vsw_query_t *vsw_query[2] = {NULL, NULL};
   tmap_vsw_opt_t *vsw_opt = NULL;
   uint32_t start_pos, end_pos;
@@ -884,7 +893,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                                      seq_len, softclip_start, softclip_end, vsw_opt);
 
   i = start = end = 0;
-  best_subo = INT32_MIN;
+  best_subo_score = INT32_MIN;
   start_pos = end_pos = 0;
   while(end < sams->n) {
       uint8_t strand, *query=NULL;
@@ -899,8 +908,8 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       }
 
       // sub-optimal score
-      if(best_subo < sams->sams[end].score_subo) {
-          best_subo = sams->sams[end].score_subo;
+      if(best_subo_score < sams->sams[end].score_subo) {
+          best_subo_score = sams->sams[end].score_subo;
       }
 
       // check if the hits can be banded
@@ -1062,7 +1071,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
 
   // update the sub-optimal
   for(i=0;i<sams_tmp->n;i++) {
-      sams_tmp->sams[i].score_subo = best_subo;
+      sams_tmp->sams[i].score_subo = best_subo_score;
   }
 
   // free memory

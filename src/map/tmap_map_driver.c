@@ -286,27 +286,32 @@ tmap_map_driver_core_worker(int32_t num_ends,
                   driver->func_mapq(records[low]->sams[j], tmap_seq_get_bases_length(seqs[j][0]), driver->opt);
               }
 
-              // filter if we have more stages
-              if(i < driver->num_stages-1) {
+              if(2 == num_ends && 0 < records[low]->sams[0]->n && 0 < records[low]->sams[1]->n) { // pairs of reads!
+                  // TODO
+                  //
+                  // TODO: PAIRING HERE
+                  //
+                  // TODO: mapping quality
+                  //
+                  // TODO: filtering 
+                  //
+                  // TODO: if we have one end for a pair, do we go onto the second
+                  // stage?
+              }
+              else {
+                  // filter if we have more stages
+                  if(i < driver->num_stages-1) {
+                      for(j=0;j<num_ends;j++) { // for each end
+                          tmap_map_sams_filter2(records[low]->sams[j], driver->opt->mapall_score_thr, driver->opt->mapall_mapq_thr);
+                      }
+                  }
+
+                  // choose alignments
                   for(j=0;j<num_ends;j++) { // for each end
-                      tmap_map_sams_filter2(records[low]->sams[j], driver->opt->mapall_score_thr, driver->opt->mapall_mapq_thr);
+                      tmap_map_sams_filter1(records[low]->sams[j], driver->opt->aln_output_mode, TMAP_MAP_ALGO_NONE, rand);
+                      curstat->num_after_filter += records[low]->sams[j]->n;
                   }
               }
-
-              // choose alignments
-              for(j=0;j<num_ends;j++) { // for each end
-                  tmap_map_sams_filter1(records[low]->sams[j], driver->opt->aln_output_mode, TMAP_MAP_ALGO_NONE, rand);
-                  curstat->num_after_filter += records[low]->sams[j]->n;
-              }
-
-              // TODO: PAIRING HERE
-              //
-              // TODO: mapping quality
-              //
-              // TODO: filtering 
-              //
-              // TODO: if we have one end for a pair, do we go onto the second
-              // stage?
 
               // generate the cigars
               found = 0;
