@@ -902,8 +902,8 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
               start_pos = sams->sams[start].pos + 1; 
               end_pos = sams->sams[start].pos + sams->sams[start].target_len; 
           } else {
-              start_pos = sams->sams[start].pos - seq_len + 1;
-              end_pos = sams->sams[start].pos;
+              start_pos = sams->sams[start].pos + 1;
+              end_pos = sams->sams[start].pos + seq_len;
           }
       }
 
@@ -932,10 +932,10 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
               }
               else {
               //reverse
-                if (sams->sams[end+1].pos - (sams->sams[end].pos) <= opt->max_seed_band) {
+                if (sams->sams[end+1].pos - (sams->sams[end].pos + seq_len) <= opt->max_seed_band) {
                         end++;
-                        if(end_pos < sams->sams[end].pos) {
-                                end_pos = sams->sams[end].pos + 1; // one-based
+                        if(end_pos < sams->sams[end].pos + seq_len) {
+                                end_pos = sams->sams[end].pos + seq_len + 1; // one-based
                                 
                         }
                         continue; // there may be more to add
