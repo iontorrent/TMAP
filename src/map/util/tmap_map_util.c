@@ -377,9 +377,11 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
                                 mate_strand, mate_seqid, mate_pos, mate_tlen,
                                 sam->mapq, sam->cigar, sam->n_cigar,
                                 sam->score, sam->ascore, nh, sam->algo_id, sam->algo_stage, 
-                                "\tXS:i:%d\tXT:i:%d",
+                                "\tXS:i:%d\tXT:i:%d\tZS:i:%d\tZE:i:%d",
                                 sam->score_subo,
-                                sam->n_seeds);
+                                sam->n_seeds,
+                                sam->seed_start,
+                                sam->seed_end);
           break;
         case TMAP_MAP_ALGO_MAPVSW:
           tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, refseq, 
@@ -946,6 +948,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           //printf(" -- failed if statement\n");
         
       }
+      
       //printf(" -- not banded\n");
       //printf("%s final seed start: %d end: %d\n\n", seq_name, start_pos, end_pos);
 
@@ -1058,7 +1061,9 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
 
           // # of seeds
           s->n_seeds = (end - start + 1);
-
+          //seed start and stop
+          s->seed_start = start_pos;
+          s->seed_end = end_pos;
           // update aux data
           tmap_map_sam_malloc_aux(s, s->algo_id);
           switch(s->algo_id) {

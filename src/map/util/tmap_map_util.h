@@ -92,6 +92,8 @@ typedef struct {
     int16_t query_end; /*!< the query end position in the alignment (0-based) */ 
     int16_t target_start; /*!< the target start position in the alignment (0-based) */ 
     int16_t target_end; /*!< the target end position in the alignment (0-based) */ 
+    uint32_t seed_start; /*!< the start of the seed in genomic coordinates used to map this read */
+    uint32_t seed_end; /*!< the end of the seed in genomic coordinates used to map this read */
 } tmap_map_sam_t;
 
 /*!
