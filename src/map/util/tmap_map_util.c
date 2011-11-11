@@ -888,8 +888,8 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   i = start = end = 0;
   best_subo = INT32_MIN;
   start_pos = end_pos = 0;
-  char* seq_name = tmap_seq_get_name(seqs[0])->s;
-  printf("\ntotal seeds: %d for %s opt->seed_length: %d\n", sams->n, seq_name, opt->seed_length);
+  //char* seq_name = tmap_seq_get_name(seqs[0])->s;
+  //printf("\ntotal seeds: %d for %s opt->seed_length: %d\n", sams->n, seq_name, opt->seed_length);
   while(end < sams->n) {
       uint8_t strand, *query=NULL;
       uint32_t qlen;
