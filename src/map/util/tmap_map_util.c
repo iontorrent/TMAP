@@ -896,8 +896,13 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       // get the strand/start/end positions
       strand = sams->sams[end].strand;
       if(start == end) {
-          start_pos = sams->sams[start].pos + 1; 
-          end_pos = sams->sams[start].pos + sams->sams[start].target_len; 
+          if (strand == 0) {
+              start_pos = sams->sams[start].pos + 1; 
+              end_pos = sams->sams[start].pos + sams->sams[start].target_len; 
+          } else {
+              start_pos = sams->sams[start].pos - seq_len + 1;
+              end_pos = sams->sams[start].pos;
+          }
       }
 
       // sub-optimal score
@@ -909,7 +914,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       
       // check if the hits can be banded
       if(end + 1 < sams->n) {              
-          printf("%s seed start: %d end: %d next start: %d  next end: %d ", seq_name, sams->sams[end].pos, (sams->sams[end].pos + sams->sams[end].target_len), sams->sams[end+1].pos, (sams->sams[end+1].pos + sams->sams[end+1].target_len));
+         // printf("%s seed start: %d end: %d next start: %d  next end: %d\n", seq_name, sams->sams[end].pos, (sams->sams[end].pos + sams->sams[end].target_len), sams->sams[end+1].pos, (sams->sams[end+1].pos + sams->sams[end+1].target_len));
           if(sams->sams[end].strand == sams->sams[end+1].strand 
              && sams->sams[end].seqid == sams->sams[end+1].seqid) {
               //forward
@@ -925,10 +930,10 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
               }
               else {
               //reverse
-                if (sams->sams[end+1].pos - (sams->sams[end].pos - seq_len) <= opt->max_seed_band) {
+                if (sams->sams[end+1].pos - (sams->sams[end].pos) <= opt->max_seed_band) {
                         end++;
-                        if(end_pos < sams->sams[end].pos - seq_len) {
-                                end_pos = sams->sams[end].pos - seq_len - 1; // one-based
+                        if(end_pos < sams->sams[end].pos) {
+                                end_pos = sams->sams[end].pos + 1; // one-based
                                 
                         }
                         continue; // there may be more to add
@@ -942,7 +947,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
         
       }
       //printf(" -- not banded\n");
-      printf("%s final seed start: %d end: %d\n\n", seq_name, start_pos, end_pos);
+      //printf("%s final seed start: %d end: %d\n\n", seq_name, start_pos, end_pos);
 
       // choose a random one within the window
       if(start == end) {
