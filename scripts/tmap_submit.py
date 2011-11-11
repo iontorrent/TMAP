@@ -100,7 +100,7 @@ if __name__ == "__main__":
         temp_mapall_algorithms = options.mapall_algorithms
         temp = 'mapall_' + ('_'.join(temp_mapall_algorithms.split(' ')))
     else:
-        temp_mapping_algorithm = options.mapping_algorithms
+        temp_mapping_algorithm = options.mapping_algorithm
         temp = temp_mapping_algorithm.split()[0] + ('_'.join(temp_mapping_algorithm.split(' ')[1:]))
     fn_sam = options.sam_dir + "/" + os.path.basename(options.fn_reads) + "." + temp + ".sam"
     fn_script = options.submit_script_dir + "/" + os.path.basename(options.fn_reads) + "." + temp + ".sh"
