@@ -113,6 +113,7 @@ __tmap_map_opt_option_print_func_fns_init(fn_reads, fn_reads_num)
 __tmap_map_opt_option_print_func_reads_format_init(reads_format)
 __tmap_map_opt_option_print_func_chars_init(fn_sam, "stdout")
 __tmap_map_opt_option_print_func_int_init(score_match)
+__tmap_map_opt_option_print_func_double_init(seed_freqc)
 __tmap_map_opt_option_print_func_int_init(pen_mm)
 __tmap_map_opt_option_print_func_int_init(pen_gapo)
 __tmap_map_opt_option_print_func_int_init(pen_gape)
@@ -259,6 +260,15 @@ tmap_map_opt_options_init()
   return tmap_calloc(1, sizeof(tmap_map_opt_options_t), "");
 }
 
+/*
+  tmap_map_opt_options_add(opt->options, "seed-length", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the k-mer length to seed CALs (-1 to disable)",
+                           NULL,
+                           tmap_map_opt_option_print_func_seed_length,
+                           TMAP_MAP_ALGO_MAP1 | TMAP_MAP_ALGO_MAP3);
+*/
+
 static void
 tmap_map_opt_options_add(tmap_map_opt_options_t *options, const char *name, 
                          int32_t has_arg, int32_t *flag, int32_t val, int32_t type, 
@@ -369,6 +379,12 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            "score for a match",
                            NULL,
                            tmap_map_opt_option_print_func_score_match,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "seed-freq-cutoff", required_argument, 0, 'C',
+                           TMAP_MAP_OPT_TYPE_FLOAT,
+                           "the minimum frequency of a seed to be considered for mapping",
+                           NULL,
+                           tmap_map_opt_option_print_func_seed_freqc,
                            TMAP_MAP_ALGO_GLOBAL);
   tmap_map_opt_options_add(opt->options, "pen-mismatch", required_argument, 0, 'M', 
                            TMAP_MAP_OPT_TYPE_INT,
@@ -764,6 +780,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->reads_format = TMAP_READS_FORMAT_UNKNOWN;
   opt->fn_sam = NULL;
   opt->score_match = TMAP_MAP_OPT_SCORE_MATCH;
+  opt->seed_freqc = 0.0; //all-pass filter as default
   opt->pen_mm = TMAP_MAP_OPT_PEN_MM;
   opt->pen_gapo = TMAP_MAP_OPT_PEN_GAPO;
   opt->pen_gape = TMAP_MAP_OPT_PEN_GAPE;
@@ -1031,6 +1048,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
       else if(c == 'M' || (0 == c && 0 == strcmp("pen-mismatch", options[option_index].name))) {       
           opt->pen_mm = atoi(optarg);
+      }
+      else if(c == 'C' || (0 == c && 0 == strcmp("seed-freq-cutoff", options[option_index].name))) {
+          opt->seed_freqc = atoi(optarg);
       }
       else if(c == 'O' || (0 == c && 0 == strcmp("pen-gap-open", options[option_index].name))) {       
           opt->pen_gapo = atoi(optarg);
@@ -1313,6 +1333,9 @@ tmap_map_opt_check_common(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
     if(opt_a->pen_mm != opt_b->pen_mm) {
         tmap_error("option -M was specified outside of the common options", Exit, CommandLineArgument);
     }
+    if(opt_a->seed_freqc != opt_b->seed_freqc) {
+        tmap_error("option -S was specified outside of the common options", Exit, CommandLineArgument);
+    }
     if(opt_a->pen_gapo != opt_b->pen_gapo) {
         tmap_error("option -O was specified outside of the common options", Exit, CommandLineArgument);
     }
@@ -1423,6 +1446,9 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->pen_gapo, 0, INT32_MAX, "-O");
   tmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
   tmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
+  if(0 < opt->seed_freqc) {
+      tmap_error("-S must be greater than or equal to 0", Exit, CommandLineArgument);
+  }
   if(NULL != opt->flow_order) {
       if(0 == strcmp("file", opt->flow_order) || 0 == strcmp("FILE", opt->flow_order)) {
           if(TMAP_READS_FORMAT_SFF != opt->reads_format) {
@@ -1563,6 +1589,7 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->fn_sam = tmap_strdup(opt_src->fn_sam);
     opt_dest->score_match = opt_src->score_match;
     opt_dest->pen_mm = opt_src->pen_mm;
+    opt_dest->seed_freqc = opt_src->seed_freqc;
     opt_dest->pen_gapo = opt_src->pen_gapo;
     opt_dest->pen_gape = opt_src->pen_gape;
     opt_dest->bw = opt_src->bw;
@@ -1605,6 +1632,7 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "reads_format=%d\n", opt->reads_format);
   fprintf(stderr, "score_match=%d\n", opt->score_match);
   fprintf(stderr, "pen_mm=%d\n", opt->pen_mm);
+  fprintf(stderr, "seed_freqc=%.2f\n", opt->seed_freqc);
   fprintf(stderr, "pen_gapo=%d\n", opt->pen_gapo);
   fprintf(stderr, "pen_gape=%d\n", opt->pen_gape);
   fprintf(stderr, "fscore=%d\n", opt->fscore);
