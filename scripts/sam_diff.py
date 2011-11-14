@@ -52,17 +52,26 @@ def main(options):
         else:
             diff_str = "[%s]" % (read)
             for field in fields:
-                
+                cont = [False, False] #var to track these 2 exceptions below to see which one failed
                 try:
                     attr1 = getattr( sam1.records[ read ], field )
                 except:
-                    print sam1.sam, read, "doesn't have the: ", field, " tag"
-                    continue
+                    #print sam1.sam, read, "doesn't have the: ", field, " tag"
+                    cont[0] = True
+                    
                 try:
                     attr2 = getattr( sam2.records[ read ], field )
                 except:
-                    print sam2.sam, read, "doesn't have the: ", field, " tag"
+                    cont[1] = True
+                if cont[0] and cont[1]:
                     continue
+                elif cont[0] and not cont[1]:
+                    print read, sam1.sam, "has the field: ", field, " and", sam2.sam, "does not"
+                    continue
+                elif not cont[0] and cont[1]:
+                    print read, sam2.sam, "has the field: ", field, " and", sam1.sam, "does not"
+                    continue
+                    
                 if not diff_field( getattr(sam1.records[ read ], field), getattr(sam2.records[ read ], field) ):
                     diff_str = "%s -- %s[%s]=%s %s[%s]=%s" % (diff_str, sam1.sam, field, str(attr1), sam2.sam, field, str(attr2))
                     
