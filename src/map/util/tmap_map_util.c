@@ -1045,6 +1045,8 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                                             &overflow, opt->score_thr, 0);
           }
       } else {
+          //might need to add a function to set all the sam values appropriately 
+          overflow = 0; //uh, wat
           tmp_sam.score = INT32_MIN;
       }
       if(1 == overflow) {
