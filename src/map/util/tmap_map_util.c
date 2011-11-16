@@ -923,7 +923,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           if(sams->sams[end].strand == sams->sams[end+1].strand 
              && sams->sams[end].seqid == sams->sams[end+1].seqid) {
              im_nuts = (sams->sams[end+1].pos - (sams->sams[end].pos + seq_len));
-             printf("im_nuts: %d im_nuts <= opt->max_seed_band: %d", im_nuts, (im_nuts <= opt->max_seed_band));
+             printf("im_nuts: %d im_nuts <= opt->max_seed_band: %d\n", im_nuts, (im_nuts <= opt->max_seed_band));
              if (im_nuts <= opt->max_seed_band) {
                  printf("my if:  end+1 pos: %d end pos: %d seq_len: %d\n", sams->sams[end+1].pos, sams->sams[end].pos, seq_len);
                   end++;
