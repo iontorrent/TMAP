@@ -952,8 +952,8 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                 }   
              }  
           
-              
-          }*/
+              */
+          }
           //printf(" -- failed if statement\n");
         
       }
