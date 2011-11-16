@@ -920,47 +920,33 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       if(end + 1 < sams->n) {              
          // printf("%s seed start: %d end: %d next start: %d  next end: %d\n", seq_name, sams->sams[end].pos, (sams->sams[end].pos + sams->sams[end].target_len), sams->sams[end+1].pos, (sams->sams[end+1].pos + sams->sams[end+1].target_len));
           if(sams->sams[end].strand == sams->sams[end+1].strand 
-             && sams->sams[end].seqid == sams->sams[end+1].seqid
-             &&(sams->sams[end+1].pos - (sams->sams[end].pos + seq_len) <= opt->max_seed_band)) {
-              end++;
-              if(end_pos < sams->sams[end].pos + seq_len) {
-                end_pos = sams->sams[end].pos + seq_len + 1; // one-based
-              }
-              continue; // there may be more to add
-              /*
-              //forward
-              if (strand == 0) {
-                if (sams->sams[end+1].pos - (sams->sams[end].pos + seq_len) <= opt->max_seed_band) {
-                        end++;
-                        if(end_pos < sams->sams[end].pos + seq_len) {
-                                end_pos = sams->sams[end].pos + seq_len + 1; // one-based
-                        }
-                        continue; // there may be more to add
-
-                }
-              }
-              else {
-              //reverse
-                if (sams->sams[end+1].pos - (sams->sams[end].pos + seq_len) <= opt->max_seed_band) {
-                        end++;
-                        if(end_pos < sams->sams[end].pos + seq_len) {
-                                end_pos = sams->sams[end].pos + seq_len + 1; // one-based
-                                
-                        }
-                        continue; // there may be more to add
-
-                }   
-             }  
+             && sams->sams[end].seqid == sams->sams[end+1].seqid) {
+             if ((sams->sams[end+1].pos - (sams->sams[end].pos + seq_len) <= opt->max_seed_band)) {
+                 printf("my if:  end+1 pos: %d end pos: %d seq_len: %d", sams->sams[end+1].pos, sams->sams[end].pos, seq_len);
+                  end++;
+                  if(end_pos < sams->sams[end].pos + seq_len) {
+                    end_pos = sams->sams[end].pos + seq_len + 1; // one-based
+                  }
+            
+                  continue; // there may be more to add
+             
+             } 
+             else if((sams->sams[end+1].pos - (sams->sams[end].pos) <= opt->max_seed_band)) {
+                  printf("ms if:  end+1 pos: %d end pos: %d seq_len: %d", sams->sams[end+1].pos, sams->sams[end].pos, seq_len);
+                  end++;
+                  if(end_pos < sams->sams[end].pos) {
+                    end_pos = sams->sams[end].pos + seq_len + 1; // one-based
+                  }
+            
+                  continue; // there may be more to add
+             }
           
-              */
+              
           }
-          //printf(" -- failed if statement\n");
         
       }
       
-      //printf(" -- not banded\n");
-      //printf("%s final seed start: %d end: %d\n\n", seq_name, start_pos, end_pos);
-
+     
       // choose a random one within the window
       if(start == end) {
           tmp_sam = sams->sams[start];
@@ -1030,7 +1016,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
        * all regions, say C. We keep the cutoff as a fraction f of C. Hence, 
        * if a region has ≥fC q-hits, only then it is processed further. "
        */
-      if ( end >( sams->n * opt->seed_freqc) ) {
+      if ( end > ( sams->n * opt->seed_freqc) ) {
           if(0 == strand) {
               tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query, qlen,
                                             target, tlen, 
