@@ -1044,68 +1044,65 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                                             &tmp_sam.target_start, &tmp_sam.target_end,
                                             &overflow, opt->score_thr, 0);
           }
-      } else {
-          //might need to add a function to set all the sam values appropriately 
-          overflow = 0; //uh, wat
-          tmp_sam.score = INT32_MIN;
-      }
-      if(1 == overflow) {
-          tmap_error("bug encountered", Exit, OutOfRange);
-      }
-
-      if(opt->score_thr <= tmp_sam.score) {
-          tmap_map_sam_t *s = &sams_tmp->sams[i];
-          // shallow copy previous data 
-          (*s) = tmp_sam; 
-
-          // nullify the cigar
-          s->n_cigar = 0;
-          s->cigar = NULL;
-
-          // adjust target length and position NB: query length is implicitly
-          // stored in s->query_end (consider on the next pass)
-          s->pos = start_pos - 1; // zero-based
-          s->target_len = s->target_end + 1;
-          /*
-             fprintf(stderr, "strand=%d\n", strand);
-             fprintf(stderr, "%d-%d %d-%d %d\n",
-             s->query_start,
-             s->query_end,
-             s->target_start,
-             s->target_end,
-             s->target_len);
-             */
-
-          // # of seeds
-          s->n_seeds = (end - start + 1);
-          //seed start and stop
-          s->seed_start = start_pos;
-          s->seed_end = end_pos;
-          // update aux data
-          tmap_map_sam_malloc_aux(s, s->algo_id);
-          switch(s->algo_id) {
-            case TMAP_MAP_ALGO_MAP1:
-              (*s->aux.map1_aux) = (*tmp_sam.aux.map1_aux);
-              break;
-            case TMAP_MAP_ALGO_MAP2:
-              (*s->aux.map2_aux) = (*tmp_sam.aux.map2_aux);
-              break;
-            case TMAP_MAP_ALGO_MAP3:
-              (*s->aux.map3_aux) = (*tmp_sam.aux.map3_aux);
-              break;
-            case TMAP_MAP_ALGO_MAPVSW:
-              (*s->aux.map_vsw_aux) = (*tmp_sam.aux.map_vsw_aux);
-              break;
-            default:
+      //} 
+          if(1 == overflow) {
               tmap_error("bug encountered", Exit, OutOfRange);
-              break;
           }
 
-          i++;
-      }
-      else {
-          tmp_sam.score = INT32_MIN;
-      }
+          if(opt->score_thr <= tmp_sam.score) {
+              tmap_map_sam_t *s = &sams_tmp->sams[i];
+              // shallow copy previous data 
+              (*s) = tmp_sam; 
+
+              // nullify the cigar
+              s->n_cigar = 0;
+              s->cigar = NULL;
+
+              // adjust target length and position NB: query length is implicitly
+              // stored in s->query_end (consider on the next pass)
+              s->pos = start_pos - 1; // zero-based
+              s->target_len = s->target_end + 1;
+              /*
+                 fprintf(stderr, "strand=%d\n", strand);
+                 fprintf(stderr, "%d-%d %d-%d %d\n",
+                 s->query_start,
+                 s->query_end,
+                 s->target_start,
+                 s->target_end,
+                 s->target_len);
+                 */
+
+              // # of seeds
+              s->n_seeds = (end - start + 1);
+              //seed start and stop
+              s->seed_start = start_pos;
+              s->seed_end = end_pos;
+              // update aux data
+              tmap_map_sam_malloc_aux(s, s->algo_id);
+              switch(s->algo_id) {
+                case TMAP_MAP_ALGO_MAP1:
+                  (*s->aux.map1_aux) = (*tmp_sam.aux.map1_aux);
+                  break;
+                case TMAP_MAP_ALGO_MAP2:
+                  (*s->aux.map2_aux) = (*tmp_sam.aux.map2_aux);
+                  break;
+                case TMAP_MAP_ALGO_MAP3:
+                  (*s->aux.map3_aux) = (*tmp_sam.aux.map3_aux);
+                  break;
+                case TMAP_MAP_ALGO_MAPVSW:
+                  (*s->aux.map_vsw_aux) = (*tmp_sam.aux.map_vsw_aux);
+                  break;
+                default:
+                  tmap_error("bug encountered", Exit, OutOfRange);
+                  break;
+              }
+
+              i++;
+          }
+          else {
+              tmp_sam.score = INT32_MIN;
+          }
+      }//end seed freq filter if
 
       // update start/end
       end++;
