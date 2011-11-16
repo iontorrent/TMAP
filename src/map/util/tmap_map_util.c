@@ -922,7 +922,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           if(sams->sams[end].strand == sams->sams[end+1].strand 
              && sams->sams[end].seqid == sams->sams[end+1].seqid) {
              if ((sams->sams[end+1].pos - (sams->sams[end].pos + seq_len) <= opt->max_seed_band)) {
-                 printf("my if:  end+1 pos: %d end pos: %d seq_len: %d", sams->sams[end+1].pos, sams->sams[end].pos, seq_len);
+                 printf("my if:  end+1 pos: %d end pos: %d seq_len: %d\n", sams->sams[end+1].pos, sams->sams[end].pos, seq_len);
                   end++;
                   if(end_pos < sams->sams[end].pos + seq_len) {
                     end_pos = sams->sams[end].pos + seq_len + 1; // one-based
@@ -932,7 +932,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
              
              } 
              else if((sams->sams[end+1].pos - (sams->sams[end].pos) <= opt->max_seed_band)) {
-                  printf("ms if:  end+1 pos: %d end pos: %d seq_len: %d", sams->sams[end+1].pos, sams->sams[end].pos, seq_len);
+                  printf("ms if:  end+1 pos: %d end pos: %d seq_len: %d\n", sams->sams[end+1].pos, sams->sams[end].pos, seq_len);
                   end++;
                   if(end_pos < sams->sams[end].pos) {
                     end_pos = sams->sams[end].pos + seq_len + 1; // one-based
