@@ -938,13 +938,15 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
              }
              else if(sams->sams[end+1].pos >= (sams->sams[end].pos + seq_len)) {
                  printf("my if2:  end+1 pos: %d end pos: %d seq_len: %d\n", sams->sams[end+1].pos, sams->sams[end].pos, seq_len);
-                 end++;
                  if ((sams->sams[end+1].pos - (sams->sams[end].pos + seq_len)) <= opt->max_seed_band) {
+                     end++;
+
                      if(end_pos < sams->sams[end].pos + seq_len) {
                         end_pos = sams->sams[end].pos + seq_len + 1; // one-based
                      }
+                     continue;
                  }
-             }
+             }/*
              else if((sams->sams[end+1].pos - (sams->sams[end].pos) <= opt->max_seed_band)) {
                   printf("ms if0:  end+1 pos: %d end pos: %d seq_len: %d\n", sams->sams[end+1].pos, sams->sams[end].pos, seq_len);
                   printf("\tmy if math %d - (%d + %d) = %d && <= %d\n", 
@@ -959,7 +961,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                   }
             
                   continue; // there may be more to add
-             }
+             }*/
           
               
           }
