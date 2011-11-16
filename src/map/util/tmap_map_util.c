@@ -862,6 +862,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   int32_t overflow, softclip_start, softclip_end;
   int32_t sam_start=0, sam_end=0, sam_next_start=0, sam_next_end=0;
   int32_t keep_banding = 0;
+  int32_t im_nuts = 0;
   if(0 == sams->n) {
       return sams;
   }
@@ -921,7 +922,9 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
          // printf("%s seed start: %d end: %d next start: %d  next end: %d\n", seq_name, sams->sams[end].pos, (sams->sams[end].pos + sams->sams[end].target_len), sams->sams[end+1].pos, (sams->sams[end+1].pos + sams->sams[end+1].target_len));
           if(sams->sams[end].strand == sams->sams[end+1].strand 
              && sams->sams[end].seqid == sams->sams[end+1].seqid) {
-             if ((sams->sams[end+1].pos - (sams->sams[end].pos + seq_len)) <= opt->max_seed_band) {
+             im_nuts = (sams->sams[end+1].pos - (sams->sams[end].pos + seq_len));
+             printf("im_nuts: %d im_nuts <= opt->max_seed_band: %d", im_nuts, (im_nuts <= opt->max_seed_band));
+             if (im_nuts <= opt->max_seed_band) {
                  printf("my if:  end+1 pos: %d end pos: %d seq_len: %d\n", sams->sams[end+1].pos, sams->sams[end].pos, seq_len);
                   end++;
                   if(end_pos < sams->sams[end].pos + seq_len) {
