@@ -1049,6 +1049,10 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
        * all regions, say C. We keep the cutoff as a fraction f of C. Hence, 
        * if a region has ≥fC q-hits, only then it is processed further. "
        */
+      printf("seed filter: end=%d sams->n=%d opt->seed_freqc=%.2f", 
+              end, sams->n, opt->seed_freqc);
+      printf(" end > ( sams->n * opt->seed_freqc)=%d", ( end > ( sams->n * opt->seed_freqc) ) );
+      printf(" ( sams->n * opt->seed_freqc)=%0.2f\n", ( sams->n * opt->seed_freqc));
       if ( end > ( sams->n * opt->seed_freqc) ) {
           if(0 == strand) {
               tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query, qlen,
