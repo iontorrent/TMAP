@@ -1051,7 +1051,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
        */
       printf("\n%s seed:  start=%d  stop=%d\n", seq_name, start_pos, end_pos);
       printf("\tseed filter: banded seeds=%d total_seeds=%d opt->seed_freqc=%.2f", 
-              end, (end - start + 1), opt->seed_freqc);
+              end, sams->n, opt->seed_freqc);
       printf(" (end - start + 1) > ( sams->n * opt->seed_freqc)=%d", ( (end - start + 1) > ( sams->n * opt->seed_freqc) ) );
       printf(" ( sams->n * opt->seed_freqc)=%0.2f\n", ( sams->n * opt->seed_freqc));
       if ( (end - start + 1) > ( sams->n * opt->seed_freqc) ) {
