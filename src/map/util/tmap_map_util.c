@@ -936,7 +936,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                   }
                   printf("im_nuts: sams->sams[end].pos: %d start_pos: %d end_pos"
                           ": %d im_nuts: %d\n", 
-                          sams->sams[end].pos, start_pos, im_nuts);
+                          sams->sams[end].pos, start_pos, end_pos, im_nuts);
 
                   continue; // there may be more to add
                 
@@ -954,7 +954,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                      }
                      printf("im_nuts: sams->sams[end].pos: %d start_pos: %d end_pos"
                           ": %d im_nuts: %d\n", 
-                          sams->sams[end].pos, start_pos, im_nuts);                     
+                          sams->sams[end].pos, start_pos, end_pos, im_nuts);                     
                     continue;
                  }
              }/*
