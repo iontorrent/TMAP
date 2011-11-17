@@ -1048,7 +1048,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
       else if(c == 'M' || (0 == c && 0 == strcmp("pen-mismatch", options[option_index].name))) {       
           opt->pen_mm = atoi(optarg);
-      }                                           s
+      }                                           
       else if(c == 'C' || (0 == c && 0 == strcmp("seed-freq-cutoff", options[option_index].name))) {
           opt->seed_freqc = atof(optarg);
       }
