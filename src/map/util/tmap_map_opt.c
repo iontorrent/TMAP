@@ -1048,9 +1048,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
       else if(c == 'M' || (0 == c && 0 == strcmp("pen-mismatch", options[option_index].name))) {       
           opt->pen_mm = atoi(optarg);
-      }
+      }                                           s
       else if(c == 'C' || (0 == c && 0 == strcmp("seed-freq-cutoff", options[option_index].name))) {
-          opt->seed_freqc = atoi(optarg);
+          opt->seed_freqc = atof(optarg);
       }
       else if(c == 'O' || (0 == c && 0 == strcmp("pen-gap-open", options[option_index].name))) {       
           opt->pen_gapo = atoi(optarg);
@@ -1334,7 +1334,7 @@ tmap_map_opt_check_common(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
         tmap_error("option -M was specified outside of the common options", Exit, CommandLineArgument);
     }
     if(opt_a->seed_freqc != opt_b->seed_freqc) {
-        tmap_error("option -S was specified outside of the common options", Exit, CommandLineArgument);
+        tmap_error("option -C was specified outside of the common options", Exit, CommandLineArgument);
     }
     if(opt_a->pen_gapo != opt_b->pen_gapo) {
         tmap_error("option -O was specified outside of the common options", Exit, CommandLineArgument);
