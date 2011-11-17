@@ -1446,8 +1446,8 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->pen_gapo, 0, INT32_MAX, "-O");
   tmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
   tmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
-  if(0 < opt->seed_freqc) {
-      tmap_error("-S must be greater than or equal to 0", Exit, CommandLineArgument);
+  if(0 > opt->seed_freqc) {
+      tmap_error("-C must be greater than or equal to 0", Exit, CommandLineArgument);
   }
   if(NULL != opt->flow_order) {
       if(0 == strcmp("file", opt->flow_order) || 0 == strcmp("FILE", opt->flow_order)) {
