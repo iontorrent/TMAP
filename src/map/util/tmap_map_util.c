@@ -889,9 +889,9 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   i = start = end = 0;
   best_subo = INT32_MIN;
   start_pos = end_pos = 0;
-  char* seq_name = tmap_seq_get_name(seqs[0])->s;
+  /*char* seq_name = tmap_seq_get_name(seqs[0])->s;
   printf("\ntotal seeds: %d for %s opt->seed_length: %d\n", sams->n, seq_name, opt->seed_length);
-
+   */
   while(end < sams->n) {
       uint8_t strand, *query=NULL;
       uint32_t qlen;
@@ -934,10 +934,10 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                   if (strand == 1) {
                       im_nuts = sams->sams[end].pos - seq_len + 1;
                   }
-                  printf("im_nuts: sams->sams[end].pos: %d start_pos: %d end_pos"
+                  /*printf("im_nuts: sams->sams[end].pos: %d start_pos: %d end_pos"
                           ": %d im_nuts: %d\n", 
                           sams->sams[end].pos, start_pos, end_pos, im_nuts);
-
+                   */
                   continue; // there may be more to add
                 
              }
@@ -952,9 +952,10 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                      if (strand == 1) {
                         im_nuts = sams->sams[end].pos - seq_len + 1;
                      }
-                     printf("im_nuts: sams->sams[end].pos: %d start_pos: %d end_pos"
+                     /*printf("im_nuts: sams->sams[end].pos: %d start_pos: %d end_pos"
                           ": %d im_nuts: %d\n", 
                           sams->sams[end].pos, start_pos, end_pos, im_nuts);                     
+                      */
                     continue;
                  }
              }/*
@@ -1049,11 +1050,11 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
        * all regions, say C. We keep the cutoff as a fraction f of C. Hence, 
        * if a region has ≥fC q-hits, only then it is processed further. "
        */
-      printf("\n%s seed:  start=%d  stop=%d\n", seq_name, start_pos, end_pos);
+      /*printf("\n%s seed:  start=%d  stop=%d\n", seq_name, start_pos, end_pos);
       printf("\tseed filter: banded seeds=%d total_seeds=%d opt->seed_freqc=%.2f", 
               end, sams->n, opt->seed_freqc);
       printf(" (end - start + 1) > ( sams->n * opt->seed_freqc)=%d", ( (end - start + 1) > ( sams->n * opt->seed_freqc) ) );
-      printf(" ( sams->n * opt->seed_freqc)=%0.2f\n", ( sams->n * opt->seed_freqc));
+      printf(" ( sams->n * opt->seed_freqc)=%0.2f\n", ( sams->n * opt->seed_freqc));*/
       if ( (end - start + 1) > ( sams->n * opt->seed_freqc) ) {
           if(0 == strand) {
               tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query, qlen,
