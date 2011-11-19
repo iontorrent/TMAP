@@ -321,31 +321,6 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
           h = __tmap_vsw_mm_load_si128(H0 + j); // h=H(i-1,j)
       }
       
-      // Farrar's Lazy F-loop evaluation
-      f = __tmap_vsw16_mm_set1_epi16(query->min_aln_score);
-      f = __tmap_vsw_mm_slli_si128(f, tmap_vsw16_shift_bytes); // since x86 is little endian
-      f = __tmap_vsw16_mm_insert_epi16(f, query->min_aln_score, 0); // set F(i-1,-1)[0] as negative infinity (normalized)
-      k = 0;
-      while(TMAP_VSW_UNLIKELY(k < tmap_vsw16_values_per_128_bits)) { // do not need so many iterations
-          // check if h will be changed
-          h = __tmap_vsw_mm_load_si128(H1 + j); // h=H(i,j)
-          h = __tmap_vsw16_mm_subs_epi16(h, pen_gapoe); // h=H(i,j)-gapo
-          cmp = __tmap_vsw16_mm_movemask_epi16(__tmap_vsw16_mm_cmplt_epi16(f, h));
-          if (TMAP_VSW_UNLIKELY(cmp == 0xffff)) break; // h is not changed
-          // changed, so save
-          __tmap_vsw_mm_store_si128(H1 + j, f); // save h to H(i,j) 
-          f = __tmap_vsw16_mm_subs_epi16(f, pen_gape); // f=F(i,j)-pen_gape
-          f = __tmap_vsw16_mm_max_epi16(f, h); // f=F(i,j+1) = max{F(i,j)-pen_gape, H(i,j)-pen_gapoe}
-          f = __tmap_vsw16_mm_max_epi16(f, negative_infinity_mm); // bound with -inf
-          j++;
-          if(TMAP_VSW_UNLIKELY(slen == j)) { // entire segment has been processed
-              f = __tmap_vsw_mm_slli_si128(f, tmap_vsw16_shift_bytes); // since x86 is little endian
-              f = __tmap_vsw16_mm_insert_epi16(f, query->min_aln_score, 0); // set F(i-1,-1)[0] as negative infinity (normalized)
-              j = 0;
-              k++;
-          }
-      }
-      /*
       // NB: we do not need to set E(i,j) as we disallow adjacent insertion and then deletion
       // iterate through each value stored in a stripe
       f = __tmap_vsw16_mm_set1_epi16(query->min_aln_score);
@@ -360,25 +335,16 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
               __tmap_vsw_mm_store_si128(H1 + j, h); // save h to H(i,j) 
               h = __tmap_vsw16_mm_subs_epi16(h, pen_gapoe); // h=H(i,j)-gapo
               f = __tmap_vsw16_mm_subs_epi16(f, pen_gape); // f=F(i,j)-pen_gape
-              f = __tmap_vsw16_mm_max_epi16(f, h); // f=F(i,j+1) = max{F(i,j)-pen_gape, H(i,j)-pen_gapoe}
               f = __tmap_vsw16_mm_max_epi16(f, negative_infinity_mm); // bound with -inf
               // check to see if h could have been updated by f?
               // NB: the comparison below will have some false positives, in
               // other words h == f a priori, but this is rare.
-              uint16_t cmp_old, cmp_new;
-              cmp_old = __tmap_vsw16_mm_movemask_epi16(__tmap_vsw16_mm_cmpeq_epi16(__tmap_vsw16_mm_subs_epi16(f, h), zero_mm));
-              cmp_new = __tmap_vsw16_mm_movemask_epi16(__tmap_vsw16_mm_cmpeq_epi16(f, h));
-              if(cmp_old != cmp_new) {
-                  fprintf(stderr, "cmp=[%d,%d]\n", cmp_old, cmp_new);
-                  tmap_error("bug encountered", Exit, OutOfRange);
-              }
-              cmp = cmp_old;
-              if (TMAP_VSW_UNLIKELY(cmp == 0xffff)) goto end_loop; // ACK: goto statement
+              cmp = __tmap_vsw16_mm_movemask_epi16(__tmap_vsw16_mm_cmpgt_epi16(f, h));
+              if (TMAP_VSW_LIKELY(cmp = 0x0000)) goto end_loop; // ACK: goto statement
+              f = __tmap_vsw16_mm_max_epi16(f, h); // f=F(i,j+1) = max{F(i,j)-pen_gape, H(i,j)-pen_gapoe}
           }
-          *?
       }
 end_loop:
-      */
 #ifdef TMAP_VSW_DEBUG 
       fprintf(stderr, "H1 i=%d target[i]=%d", i, target[i]);
       for(k = l = 0; k < tmap_vsw16_values_per_128_bits; k++) { // for each start position in the stripe
