@@ -10,7 +10,7 @@ tmap_bwt_match_occ(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8_t c,
   uint32_t offset;
   offset = (NULL == prev) ? 0 : prev->offset;
   if(bwt->hash_width <= offset) { // do not use the hash
-      uint32_t prev_k;
+      tmap_bwt_int_t prev_k;
       prev_k = (NULL == prev) ? 0 : prev->k;
       next->k = tmap_bwt_occ(bwt, prev_k-1, c) + bwt->L2[c] + 1;
       next->offset = offset + 1;
@@ -32,7 +32,7 @@ tmap_bwt_match_2occ(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8_t c
   uint32_t offset;
   offset = (NULL == prev) ? 0 : prev->offset;
   if(bwt->hash_width <= offset) { // do not use the hash
-      uint32_t prev_k, prev_l;
+      tmap_bwt_int_t prev_k, prev_l;
       prev_k = (NULL == prev) ? 0 : prev->k;
       prev_l = (NULL == prev) ? bwt->seq_len : prev->l;
       tmap_bwt_2occ(bwt, prev_k-1, prev_l, c, &next->k, &next->l);
@@ -56,8 +56,8 @@ tmap_bwt_match_occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, tmap_bwt_
   uint32_t i, offset;
   offset = (NULL == prev) ? 0 : prev->offset;
   if(bwt->hash_width <= offset) { // do not use the hash
-      uint32_t cntk[4];
-      uint32_t prev_k;
+      tmap_bwt_int_t cntk[4];
+      tmap_bwt_int_t prev_k;
       prev_k = (NULL == prev) ? 0 : prev->k;
       tmap_bwt_occ4(bwt, prev_k-1, cntk);
       for(i=0;i<4;i++) {
@@ -84,8 +84,8 @@ tmap_bwt_match_2occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, tmap_bwt
   uint32_t i, offset;
   offset = (NULL == prev) ? 0 : prev->offset;
   if(bwt->hash_width <= offset) { // do not use the hash
-      uint32_t cntk[4], cntl[4];
-      uint32_t prev_k, prev_l;
+      tmap_bwt_int_t cntk[4], cntl[4];
+      tmap_bwt_int_t prev_k, prev_l;
       prev_k = (NULL == prev) ? 0 : prev->k;
       prev_l = (NULL == prev) ? bwt->seq_len : prev->l;
       tmap_bwt_2occ4(bwt, prev_k-1, prev_l, cntk, cntl);
@@ -111,7 +111,7 @@ void
 tmap_bwt_match_cal_width_forward(const tmap_bwt_t *bwt, int len, const char *str, tmap_bwt_match_width_t *width)
 {
   // 'width[i]' is the lower bound of the number of differences in str[i,len]
-  uint32_t k, l, ok, ol;
+  tmap_bwt_int_t k, l, ok, ol;
   int i, bid;
 
   bid = 0;
@@ -137,7 +137,7 @@ void
 tmap_bwt_match_cal_width_reverse(const tmap_bwt_t *bwt, int len, const char *str, tmap_bwt_match_width_t *width)
 {
   // 'width[i]' is the lower bound of the number of differences in str[0,i]
-  uint32_t k, l, ok, ol;
+  tmap_bwt_int_t k, l, ok, ol;
   int i, bid;
 
   bid = 0;
@@ -161,7 +161,7 @@ tmap_bwt_match_cal_width_reverse(const tmap_bwt_t *bwt, int len, const char *str
   width[len].bid = ++bid;
 }
 
-uint32_t
+tmap_bwt_int_t
 tmap_bwt_match_exact(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa)
 {
   int32_t i;
@@ -190,7 +190,7 @@ tmap_bwt_match_exact(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bw
   return prev.l - prev.k + 1;
 }
 
-uint32_t
+tmap_bwt_int_t
 tmap_bwt_match_exact_reverse(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa)
 {
   int32_t i;
@@ -219,7 +219,7 @@ tmap_bwt_match_exact_reverse(const tmap_bwt_t *bwt, int len, const uint8_t *str,
   return prev.l - prev.k + 1;
 }
 
-uint32_t
+tmap_bwt_int_t
 tmap_bwt_match_exact_alt(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa)
 {
   int i;
@@ -235,7 +235,7 @@ tmap_bwt_match_exact_alt(const tmap_bwt_t *bwt, int len, const uint8_t *str, tma
   return match_sa->l - match_sa->k + 1;
 }
 
-uint32_t
+tmap_bwt_int_t
 tmap_bwt_match_exact_alt_reverse(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa)
 {
   int i;

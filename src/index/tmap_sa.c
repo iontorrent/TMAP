@@ -25,9 +25,9 @@ tmap_sa_read(const char *fn_fasta, uint32_t is_rev)
 
   sa = tmap_calloc(1, sizeof(tmap_sa_t), "sa");
 
-  if(1 != tmap_file_fread(&sa->primary, sizeof(uint32_t), 1, fp_sa)
-     || 1 != tmap_file_fread(&sa->sa_intv, sizeof(uint32_t), 1, fp_sa)
-     || 1 != tmap_file_fread(&sa->seq_len, sizeof(uint32_t), 1, fp_sa)
+  if(1 != tmap_file_fread(&sa->primary, sizeof(tmap_bwt_int_t), 1, fp_sa)
+     || 1 != tmap_file_fread(&sa->sa_intv, sizeof(tmap_bwt_int_t), 1, fp_sa)
+     || 1 != tmap_file_fread(&sa->seq_len, sizeof(tmap_bwt_int_t), 1, fp_sa)
      || 1 != tmap_file_fread(&sa->is_rev, sizeof(uint32_t), 1, fp_sa)) {
       tmap_error(NULL, Exit, ReadFileError);
   }
@@ -37,10 +37,10 @@ tmap_sa_read(const char *fn_fasta, uint32_t is_rev)
   }
 
   sa->n_sa = (sa->seq_len + sa->sa_intv) / sa->sa_intv;
-  sa->sa = tmap_calloc(sa->n_sa, sizeof(uint32_t), "sa->sa");
+  sa->sa = tmap_calloc(sa->n_sa, sizeof(tmap_bwt_int_t), "sa->sa");
   sa->sa[0] = -1;
 
-  if(sa->n_sa-1 != tmap_file_fread(sa->sa + 1, sizeof(uint32_t), sa->n_sa - 1, fp_sa)) {
+  if(sa->n_sa-1 != tmap_file_fread(sa->sa + 1, sizeof(tmap_bwt_int_t), sa->n_sa - 1, fp_sa)) {
       tmap_error(NULL, Exit, ReadFileError);
   }
 
@@ -65,11 +65,11 @@ tmap_sa_write(const char *fn_fasta, tmap_sa_t *sa, uint32_t is_rev)
   fn_sa = tmap_get_file_name(fn_fasta, (0 == is_rev) ? TMAP_SA_FILE : TMAP_REV_SA_FILE);
   fp_sa = tmap_file_fopen(fn_sa, "wb", (0 == is_rev) ? TMAP_SA_COMPRESSION : TMAP_REV_SA_COMPRESSION);
 
-  if(1 != tmap_file_fwrite(&sa->primary, sizeof(uint32_t), 1, fp_sa)
-     || 1 != tmap_file_fwrite(&sa->sa_intv, sizeof(uint32_t), 1, fp_sa) 
-     || 1 != tmap_file_fwrite(&sa->seq_len, sizeof(uint32_t), 1, fp_sa)
+  if(1 != tmap_file_fwrite(&sa->primary, sizeof(tmap_bwt_int_t), 1, fp_sa)
+     || 1 != tmap_file_fwrite(&sa->sa_intv, sizeof(tmap_bwt_int_t), 1, fp_sa) 
+     || 1 != tmap_file_fwrite(&sa->seq_len, sizeof(tmap_bwt_int_t), 1, fp_sa)
      || 1 != tmap_file_fwrite(&sa->is_rev, sizeof(uint32_t), 1, fp_sa)
-     || sa->n_sa-1 != tmap_file_fwrite(sa->sa+1, sizeof(uint32_t), sa->n_sa-1, fp_sa)) {
+     || sa->n_sa-1 != tmap_file_fwrite(sa->sa+1, sizeof(tmap_bwt_int_t), sa->n_sa-1, fp_sa)) {
       tmap_error(NULL, Exit, WriteFileError);
   }
 
@@ -83,12 +83,12 @@ tmap_sa_shm_num_bytes(tmap_sa_t *sa)
   // returns the number of bytes to allocate for shared memory
   size_t n = 0;
   
-  n += sizeof(uint32_t); // primary
-  n += sizeof(uint32_t); // sa_intv
-  n += sizeof(uint32_t); // seq_len
+  n += sizeof(tmap_bwt_int_t); // primary
+  n += sizeof(tmap_bwt_int_t); // sa_intv
+  n += sizeof(tmap_bwt_int_t); // seq_len
   n += sizeof(uint32_t); // is_rev
-  n += sizeof(uint32_t); // n_sa
-  n += sizeof(uint32_t)*sa->n_sa; // sa
+  n += sizeof(tmap_bwt_int_t); // n_sa
+  n += sizeof(tmap_bwt_int_t)*sa->n_sa; // sa
 
   return n;
 }
@@ -106,9 +106,9 @@ tmap_sa_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev)
 
   sa = tmap_calloc(1, sizeof(tmap_sa_t), "sa");
 
-  if(1 != tmap_file_fread(&sa->primary, sizeof(uint32_t), 1, fp_sa)
-     || 1 != tmap_file_fread(&sa->sa_intv, sizeof(uint32_t), 1, fp_sa)
-     || 1 != tmap_file_fread(&sa->seq_len, sizeof(uint32_t), 1, fp_sa)
+  if(1 != tmap_file_fread(&sa->primary, sizeof(tmap_bwt_int_t), 1, fp_sa)
+     || 1 != tmap_file_fread(&sa->sa_intv, sizeof(tmap_bwt_int_t), 1, fp_sa)
+     || 1 != tmap_file_fread(&sa->seq_len, sizeof(tmap_bwt_int_t), 1, fp_sa)
      || 1 != tmap_file_fread(&sa->is_rev, sizeof(uint32_t), 1, fp_sa)) {
       tmap_error(NULL, Exit, ReadFileError);
   }
@@ -139,13 +139,13 @@ uint8_t *
 tmap_sa_shm_pack(tmap_sa_t *sa, uint8_t *buf)
 {
   // fixed length data
-  memcpy(buf, &sa->primary, sizeof(uint32_t)); buf += sizeof(uint32_t);
-  memcpy(buf, &sa->sa_intv, sizeof(uint32_t)); buf += sizeof(uint32_t);
-  memcpy(buf, &sa->seq_len, sizeof(uint32_t)); buf += sizeof(uint32_t);
+  memcpy(buf, &sa->primary, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
+  memcpy(buf, &sa->sa_intv, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
+  memcpy(buf, &sa->seq_len, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
   memcpy(buf, &sa->is_rev, sizeof(uint32_t)); buf += sizeof(uint32_t);
-  memcpy(buf, &sa->n_sa, sizeof(uint32_t)); buf += sizeof(uint32_t);
+  memcpy(buf, &sa->n_sa, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
   // variable length data
-  memcpy(buf, sa->sa, sa->n_sa*sizeof(uint32_t)); buf += sa->n_sa*sizeof(uint32_t);
+  memcpy(buf, sa->sa, sa->n_sa*sizeof(tmap_bwt_int_t)); buf += sa->n_sa*sizeof(tmap_bwt_int_t);
 
   return buf;
 }
@@ -160,14 +160,14 @@ tmap_sa_shm_unpack(uint8_t *buf)
   sa = tmap_calloc(1, sizeof(tmap_sa_t), "sa");
 
   // fixed length data
-  memcpy(&sa->primary, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
-  memcpy(&sa->sa_intv, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
-  memcpy(&sa->seq_len, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
+  memcpy(&sa->primary, buf, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
+  memcpy(&sa->sa_intv, buf, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
+  memcpy(&sa->seq_len, buf, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
   memcpy(&sa->is_rev, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
-  memcpy(&sa->n_sa, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
+  memcpy(&sa->n_sa, buf, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
   // variable length data
-  sa->sa = (uint32_t*)buf;
-  buf += sa->n_sa*sizeof(uint32_t);
+  sa->sa = (tmap_bwt_int_t*)buf;
+  buf += sa->n_sa*sizeof(tmap_bwt_int_t);
   
   sa->is_shm = 1;
 
@@ -186,10 +186,10 @@ tmap_sa_destroy(tmap_sa_t *sa)
   }
 }
 
-uint32_t 
-tmap_sa_pac_pos(const tmap_sa_t *sa, const tmap_bwt_t *bwt, uint32_t k)
+tmap_bwt_int_t 
+tmap_sa_pac_pos(const tmap_sa_t *sa, const tmap_bwt_t *bwt, tmap_bwt_int_t k)
 {
-  uint32_t s = 0;
+  tmap_bwt_int_t s = 0;
 
   while (k % sa->sa_intv != 0) {
       ++s;
@@ -230,7 +230,7 @@ tmap_sa_bwt2sa(const char *fn_fasta, uint32_t intv)
       sa->n_sa = (bwt->seq_len + intv) / intv;
       
       // calculate SA value
-      sa->sa = tmap_calloc(sa->n_sa, sizeof(uint32_t), "sa->sa");
+      sa->sa = tmap_calloc(sa->n_sa, sizeof(tmap_bwt_int_t), "sa->sa");
       isa = 0; s = bwt->seq_len;
       for(i = 0; i < bwt->seq_len; ++i) {
           if(isa % intv == 0) sa->sa[isa/intv] = s;
@@ -238,7 +238,7 @@ tmap_sa_bwt2sa(const char *fn_fasta, uint32_t intv)
           isa = tmap_bwt_invPsi(bwt, isa);
       }
       if(isa % intv == 0) sa->sa[isa/intv] = s;
-      sa->sa[0] = (uint32_t)-1; // before this line, bwt->sa[0] = bwt->seq_len
+      sa->sa[0] = (tmap_bwt_int_t)-1; // before this line, bwt->sa[0] = bwt->seq_len
 
       tmap_sa_write(fn_fasta, sa, is_rev);
 
@@ -284,6 +284,13 @@ tmap_sa_bwt2sa(const char *fn_fasta, uint32_t intv)
    No warrenty is given regarding the quality of the modifications.
 
 */
+
+#define BITS_IN_WORD 32
+
+#define min(value1, value2)						( ((value1) < (value2)) ? (value1) : (value2) )
+#define max(value1, value2)						( ((value1) > (value2)) ? (value1) : (value2) )
+#define med3(a, b, c)							( a<b ? (b<c ? b : a<c ? c : a) : (b>c ? b : a>c ? c : a))
+#define swap(a, b, t);							t = a; a = b; b = t;
 
 // Static functions
 static void QSufSortSortSplit(int* __restrict V, int* __restrict I, const int32_t lowestPos, 
@@ -419,7 +426,7 @@ static void QSufSortSortSplit(int* __restrict V, int* __restrict I, const int32_
     a = b = lowestPos;
     c = d = highestPos;
 
-    while (TRUE) {
+    while (1) {
         while (c >= b && (f = KEY(V, I, b, numSortedChar)) <= v) {
             if (f == v) {
                 swap(I[a], I[b], tmp);
@@ -667,15 +674,17 @@ INT_MAX, the maximum number of symbols are aggregated into one.
 Output: Returns an integer j in the range 1...q representing the size of the
 new alphabet. If j<=n+1, the alphabet is compacted. The global variable r is
 set to the number of old symbols grouped into one. Only x[n] is 0.*/
-static int32_t QSufSortTransform(int* __restrict V, int* __restrict I, const int32_t numChar, const int32_t largestInputSymbol, 
-                                 const int32_t smallestInputSymbol, const int32_t maxNewAlphabetSize, int32_t *numSymbolAggregated) {
+static tmap_bwt_sint_t 
+QSufSortTransform(tmap_bwt_sint_t* __restrict V, tmap_bwt_sint_t* __restrict I, const tmap_bwt_sint_t numChar, const tmap_bwt_sint_t largestInputSymbol, 
+                                 const tmap_bwt_sint_t smallestInputSymbol, const tmap_bwt_sint_t maxNewAlphabetSize, tmap_bwt_sint_t *numSymbolAggregated) 
+{
 
-    int32_t c, i, j;
-    int32_t a;	// numSymbolAggregated
-    int32_t mask;
-    int32_t minSymbolInChunk = 0, maxSymbolInChunk = 0;
-    int32_t newAlphabetSize;
-    int32_t maxNumInputSymbol, maxNumBit, maxSymbol;
+    tmap_bwt_sint_t c, i, j;
+    tmap_bwt_sint_t a;	// numSymbolAggregated
+    tmap_bwt_sint_t mask;
+    tmap_bwt_sint_t minSymbolInChunk = 0, maxSymbolInChunk = 0;
+    tmap_bwt_sint_t newAlphabetSize;
+    tmap_bwt_sint_t maxNumInputSymbol, maxNumBit, maxSymbol;
 
     maxNumInputSymbol = largestInputSymbol - smallestInputSymbol + 1;
 

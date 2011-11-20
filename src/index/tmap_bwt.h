@@ -28,14 +28,13 @@
    */
 
 #include <stdint.h>
+#include "../util/tmap_definitions.h"
 
-// TODO: parameterize the SA size (uint32_t vs. uint64_t).  NB: be careful about
-// where uint32_t is assumed...
 // requirement: ((b)->occ_interval%16 == 0)
 
 #ifndef TMAP_UBYTE
 #define TMAP_UBYTE
-typedef unsigned char uint8_t;
+typedef uint8_t ubyte_t;
 #endif
 
 /*! 
@@ -52,17 +51,17 @@ typedef unsigned char uint8_t;
   */
 typedef struct {
     uint32_t version_id;  /*!< the version id of this file */
-    uint32_t primary;  /*!< S^{-1}(0), or the primary index of BWT */
-    uint32_t L2[5];  /*!< C(), cumulative count */
-    uint32_t seq_len;  /*!< reference sequence length */
-    uint32_t bwt_size;  /*!< size of bwt in bytes */
-    uint32_t occ_interval;  /*!< occurrence array interval, must be a strictly positive power of 16: (16, 32, 48, ...) */
-    uint32_t *bwt;  /*!< burrows-wheeler transform */
-    uint32_t cnt_table[256];  /*!< occurrence array */
+    tmap_bwt_int_t primary;  /*!< S^{-1}(0), or the primary index of BWT */
+    tmap_bwt_int_t L2[5];  /*!< C(), cumulative count */
+    tmap_bwt_int_t seq_len;  /*!< reference sequence length */
+    tmap_bwt_int_t bwt_size;  /*!< size of bwt in bytes */
+    tmap_bwt_int_t occ_interval;  /*!< occurrence array interval, must be a strictly positive power of 16: (16, 32, 48, ...) */
+    tmap_bwt_int_t *bwt;  /*!< burrows-wheeler transform */
+    tmap_bwt_int_t cnt_table[256];  /*!< occurrence array */
     uint32_t is_rev;  /*!< 1 if the reference sequence was reversed, 0 otherwise */
-    uint32_t **hash_k;  /*!< hash of the BWT occurrence array (lower bounds) */
-    uint32_t **hash_l;  /*!< hash of the BWT occurrence array (upper bounds) */
-    uint32_t hash_width;  /*!< the k-mer that is hashed */
+    tmap_bwt_int_t **hash_k;  /*!< hash of the BWT occurrence array (lower bounds) */
+    tmap_bwt_int_t **hash_l;  /*!< hash of the BWT occurrence array (upper bounds) */
+    uint64_t hash_width;  /*!< the k-mer that is hashed */
     uint32_t is_shm;  /*!< 1 if loaded from shared memory, 0 otherwise */
 } tmap_bwt_t;
 
@@ -123,7 +122,7 @@ tmap_bwt_destroy(tmap_bwt_t *bwt);
   @param  occ_interval  the new occurrence interval
   */
 void 
-tmap_bwt_update_occ_interval(tmap_bwt_t *bwt, uint32_t occ_interval);
+tmap_bwt_update_occ_interval(tmap_bwt_t *bwt, tmap_bwt_int_t occ_interval);
 
 /*! 
   generates the occurrence array
@@ -138,7 +137,7 @@ tmap_bwt_gen_cnt_table(tmap_bwt_t *bwt);
   @param  hash_width  the k-mer length to hash
   */
 void
-tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width);
+tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint64_t hash_width);
 
 /*! 
   calculates the next occurrence given the previous occurrence and the next base
@@ -147,8 +146,8 @@ tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width);
   @param  c    base in two-bit integer format
   @return      the next occurrence given the base
   */
-inline uint32_t 
-tmap_bwt_occ(const tmap_bwt_t *bwt, uint32_t k, uint8_t c);
+inline tmap_bwt_int_t 
+tmap_bwt_occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, uint8_t c);
 
 /*! 
   calculates the next occurrences given the previous occurrence for all four bases
@@ -157,7 +156,7 @@ tmap_bwt_occ(const tmap_bwt_t *bwt, uint32_t k, uint8_t c);
   @param  cnt  pointer to the next occurrences for all four bases
   */
 inline void 
-tmap_bwt_occ4(const tmap_bwt_t *bwt, uint32_t k, uint32_t cnt[4]);
+tmap_bwt_occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t cnt[4]);
 
 /*! 
   calculates the SA interval given the previous SA interval and the next base
@@ -170,7 +169,7 @@ tmap_bwt_occ4(const tmap_bwt_t *bwt, uint32_t k, uint32_t cnt[4]);
   @details     more efficient version of bwt_occ but requires that k <= l (not checked)
   */
 inline void 
-tmap_bwt_2occ(const tmap_bwt_t *bwt, uint32_t k, uint32_t l, uint8_t c, uint32_t *ok, uint32_t *ol);
+tmap_bwt_2occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, uint8_t c, tmap_bwt_int_t *ok, tmap_bwt_int_t *ol);
 
 /*! 
   calculates the next SA intervals given the previous SA intervals for all four bases
@@ -182,15 +181,15 @@ tmap_bwt_2occ(const tmap_bwt_t *bwt, uint32_t k, uint32_t l, uint8_t c, uint32_t
   @details      more efficient version of bwt_occ4 but requires that k <= l (not checked)
   */
 inline void 
-tmap_bwt_2occ4(const tmap_bwt_t *bwt, uint32_t k, uint32_t l, uint32_t cntk[4], uint32_t cntl[4]);
+tmap_bwt_2occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, tmap_bwt_int_t cntk[4], tmap_bwt_int_t cntl[4]);
 
 // TODO: document
 // Returns the index of the occurrence array at or before k
-#define tmap_bwt_get_occ_array_i(b, k) ((k)/(b)->occ_interval * ((b)->occ_interval/(sizeof(uint32_t)*8/2) + sizeof(uint32_t)/4*4))
+#define tmap_bwt_get_occ_array_i(b, k) ((k)/(b)->occ_interval * ((b)->occ_interval/(sizeof(tmap_bwt_int_t)*8/2) + sizeof(tmap_bwt_int_t)/4*4))
 
 // TODO: document
 // Returns the array of 16 bases at [(k-(k%16),k+(16-(k%16))-1]
-#define tmap_bwt_get_bwt16(b, k) ((b)->bwt[tmap_bwt_get_occ_array_i(b, k) + sizeof(uint32_t)/4*4 + (k)%(b)->occ_interval/16])
+#define tmap_bwt_get_bwt16(b, k) ((b)->bwt[tmap_bwt_get_occ_array_i(b, k) + sizeof(tmap_bwt_int_t)/4*4 + (k)%(b)->occ_interval/16])
 //#define tmap_bwt_get_bwt16(b, k) ((b)->bwt[(k)/(b)->occ_interval*12 + 4 + (k)%(b)->occ_interval/16])
 
 /*! 

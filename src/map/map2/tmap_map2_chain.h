@@ -10,8 +10,8 @@
   structure to resolve chaining for Smith-Waterman extension
   */
 typedef struct {
-    uint32_t tbeg;  /*!< the lower suffix array interval for the target */
-    uint32_t tend;  /*!< the upper suffix array interval for the target */
+    tmap_bwt_int_t tbeg;  /*!< the lower suffix array interval for the target */
+    tmap_bwt_int_t tend;  /*!< the upper suffix array interval for the target */
     int qbeg;  /*!< the lower suffix array interval for the query */
     int qend;  /*!< the upper suffix array interval for the query */
     uint32_t flag:1;  /*!< the origin of the chain (forward/reverse bwt) */

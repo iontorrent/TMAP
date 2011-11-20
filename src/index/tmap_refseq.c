@@ -73,7 +73,7 @@ tmap_refseq_write_header(tmap_file_t *fp, tmap_refseq_t *refseq)
   if(1 != tmap_file_fwrite(&refseq->version_id, sizeof(uint64_t), 1, fp) 
      || 1 != tmap_file_fwrite(&refseq->package_version->l, sizeof(size_t), 1, fp)
      || refseq->package_version->l+1 != tmap_file_fwrite(refseq->package_version->s, sizeof(char), refseq->package_version->l+1, fp)
-     || 1 != tmap_file_fwrite(&refseq->num_annos, sizeof(uint32_t), 1, fp)
+     || 1 != tmap_file_fwrite(&refseq->num_annos, sizeof(uint64_t), 1, fp)
      || 1 != tmap_file_fwrite(&refseq->len, sizeof(uint64_t), 1, fp)) {
       tmap_error(NULL, Exit, WriteFileError);
   }
@@ -135,7 +135,7 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   tmap_refseq_t *refseq = NULL;
   char *fn_pac = NULL, *fn_anno = NULL;
   uint8_t buffer[TMAP_REFSEQ_BUFFER_SIZE];
-  int32_t i, j, l, buffer_length;
+  uint64_t i, j, l, buffer_length;
   uint32_t num_IUPAC_found= 0, amb_bases_mem = 0;
   uint8_t x = 0;
   uint64_t ref_len;
@@ -323,7 +323,8 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
 void
 tmap_refseq_pac2revpac(const char *fn_fasta)
 {
-  uint32_t i, j, c;
+  uint64_t i, j;
+  uint8_t c;
   tmap_refseq_t *refseq=NULL, *refseq_rev=NULL;
 
   tmap_progress_print("reversing the packed reference FASTA");
@@ -693,7 +694,7 @@ tmap_refseq_destroy(tmap_refseq_t *refseq)
 
 // zero-based
 static inline int32_t
-tmap_refseq_get_seqid1(const tmap_refseq_t *refseq, uint32_t pacpos)
+tmap_refseq_get_seqid1(const tmap_refseq_t *refseq, tmap_bwt_int_t pacpos)
 {
   int32_t left, right, mid;
 
@@ -720,7 +721,7 @@ tmap_refseq_get_seqid1(const tmap_refseq_t *refseq, uint32_t pacpos)
 
 // zero-based
 static inline int32_t
-tmap_refseq_get_seqid(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_len)
+tmap_refseq_get_seqid(const tmap_refseq_t *refseq, tmap_bwt_int_t pacpos, uint32_t aln_len)
 {
   int32_t seqid_left, seqid_right;
 
@@ -735,14 +736,14 @@ tmap_refseq_get_seqid(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln
 
 // zero-based
 static inline uint32_t
-tmap_refseq_get_pos(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t seqid)
+tmap_refseq_get_pos(const tmap_refseq_t *refseq, tmap_bwt_int_t pacpos, uint32_t seqid)
 {
   // note: offset is zero-based
   return pacpos - refseq->annos[seqid].offset;
 }
 
 inline uint32_t
-tmap_refseq_pac2real(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos)
+tmap_refseq_pac2real(const tmap_refseq_t *refseq, tmap_bwt_int_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos)
 {
   (*seqid) = tmap_refseq_get_seqid(refseq, pacpos, aln_length);
   if((*seqid) == (uint32_t)-1) {
@@ -755,9 +756,10 @@ tmap_refseq_pac2real(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_
 }
 
 inline int32_t
-tmap_refseq_subseq(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t length, uint8_t *target)
+tmap_refseq_subseq(const tmap_refseq_t *refseq, tmap_bwt_int_t pacpos, uint32_t length, uint8_t *target)
 {
-  uint32_t k, l, pacpos_upper;
+  tmap_bwt_int_t k, pacpos_upper;
+  uint32_t l;
   if(0 == length) {
       return 0;
   }

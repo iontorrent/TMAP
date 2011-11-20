@@ -14,12 +14,12 @@
 /*! 
   */
 typedef struct {
-    uint32_t primary;  /*!< S^{-1}(0), or the primary index of BWT */
+    tmap_bwt_int_t primary;  /*!< S^{-1}(0), or the primary index of BWT */
     uint32_t sa_intv;  /*!< the suffix array interval (sampled) */
-    uint32_t seq_len;  /*!< the length of the reference sequence */
+    tmap_bwt_int_t seq_len;  /*!< the length of the reference sequence */
     uint32_t is_rev;  /*!< 1 if the reference sequence was reversed, 0 otherwise */
-    uint32_t n_sa;  /*!< number of suffix array entries */
-    uint32_t *sa;  /*!< pointer to the suffix array entries */
+    tmap_bwt_int_t n_sa;  /*!< number of suffix array entries */
+    tmap_bwt_int_t *sa;  /*!< pointer to the suffix array entries */
     uint32_t is_shm;  /*!< 1 if loaded from shared memory, 0 otherwise */
 } tmap_sa_t;
 
@@ -82,8 +82,8 @@ tmap_sa_destroy(tmap_sa_t *sa);
   @param  k    the suffix array position
   @return      the pac position
 */
-uint32_t 
-tmap_sa_pac_pos(const tmap_sa_t *sa, const tmap_bwt_t *bwt, uint32_t k);
+tmap_bwt_int_t
+tmap_sa_pac_pos(const tmap_sa_t *sa, const tmap_bwt_t *bwt, tmap_bwt_int_t k);
 
 /*! 
   @param  fn_fasta  the FASTA file name

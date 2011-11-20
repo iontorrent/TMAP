@@ -12,10 +12,10 @@
   UINT32_MAX then that value is unavailable. 
   */
 typedef struct {
-    uint32_t offset;  /*!< the number of (read) bases used so far in this search (one-based) */
     uint64_t hi;  /*!< the hash index of the SA interval if the offset is less than or equal to the hash width */
-    uint32_t k;  /*!< the lower occurrence of the SA interval */
-    uint32_t l;  /*!< the upper occurrence of the SA interval */
+    tmap_bwt_int_t k;  /*!< the lower occurrence of the SA interval */
+    tmap_bwt_int_t l;  /*!< the upper occurrence of the SA interval */
+    uint32_t offset;  /*!< the number of (read) bases used so far in this search (one-based) */
 } tmap_bwt_match_occ_t;
 
 /*! 
@@ -62,7 +62,7 @@ tmap_bwt_match_2occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, tmap_bwt
   stores the lower bound of the number of mismatches in the string from [i,len-1].
   */
 typedef struct {
-    uint32_t w;  /*!< the maximum number of occurrences */
+    tmap_bwt_int_t w;  /*!< the maximum number of occurrences */
     int32_t bid;  /*!< the minimum number of mismatches */
 } tmap_bwt_match_width_t;
 
@@ -94,7 +94,7 @@ tmap_bwt_match_cal_width_reverse(const tmap_bwt_t *bwt, int len, const char *str
   @param  match_sa  pointer to the match structure to be returned
   @return           the size of the SA interval, 0 if none found
   */
-uint32_t
+tmap_bwt_int_t
 tmap_bwt_match_exact(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa);
 
 /*! 
@@ -106,7 +106,7 @@ tmap_bwt_match_exact(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bw
   @return           the size of the SA interval, 0 if none found
   @details          the search will be started at SA interval [k0,l0], with the results returned as [k0,l0]
   */
-uint32_t
+tmap_bwt_int_t
 tmap_bwt_match_exact_alt(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa);
 
 /*! 
@@ -118,7 +118,7 @@ tmap_bwt_match_exact_alt(const tmap_bwt_t *bwt, int len, const uint8_t *str, tma
   @return           the size of the SA interval, 0 if none found
   @details          the search will be started at SA interval [k0,l0], with the results returned as [k0,l0]
   */
-uint32_t
+tmap_bwt_int_t
 tmap_bwt_match_exact_alt_reverse(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa);
 
 #endif

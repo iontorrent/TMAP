@@ -22,8 +22,8 @@ tmap_index_speed_test(tmap_index_t *index, clock_t *total_clock, tmap_index_spee
 {
   tmap_rand_t *rand;
   int32_t i, j, num_found, found;
-  uint32_t k;
-  uint32_t pacpos;
+  tmap_bwt_int_t k;
+  tmap_bwt_int_t pacpos;
   uint8_t *seq = NULL;
   tmap_bwt_match_occ_t cur;
   clock_t start_clock = 0;
@@ -43,7 +43,7 @@ tmap_index_speed_test(tmap_index_t *index, clock_t *total_clock, tmap_index_spee
       }
       else {
           // get a position
-          pacpos = (uint32_t)(tmap_rand_get(rand) * index->refseq->len);
+          pacpos = (tmap_bwt_int_t)(tmap_rand_get(rand) * index->refseq->len);
           if(0 == tmap_refseq_subseq(index->refseq, pacpos, opt->kmer_length, seq)) {
               i--;
               continue;

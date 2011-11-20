@@ -392,7 +392,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
   for(i=n=0;i<2;i++) { // forward/reverse-compliment
       for(j=0;j<n_seeds[i];j++) { // go through all seeds
           uint32_t seqid, pos;
-          uint32_t k, pacpos;
+          tmap_bwt_int_t k, pacpos;
           uint8_t seed_length_ext = seeds[i][j].seed_length;
           for(k=seeds[i][j].k;k<=seeds[i][j].l;k++) { // through all occurrences
               tmap_map_sam_t *s = NULL;

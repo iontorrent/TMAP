@@ -25,8 +25,8 @@ tmap_map2_chain_chaining(const tmap_map_opt_t *opt, int shift, int n, tmap_map2_
       tmap_map2_chain_t *p = z + j;
       for (k = m - 1; k >= 0; --k) {
           tmap_map2_chain_t *q = chain + k;
-          int x = p->qbeg - q->qbeg; // always positive
-          int y = p->tbeg - q->tbeg;
+          tmap_bwt_int_t x = p->qbeg - q->qbeg; // always positive
+          tmap_bwt_int_t y = p->tbeg - q->tbeg;
           if (y > 0 && x - y <= opt->bw && y - x <= opt->bw) {
               if (p->qend > q->qend) q->qend = p->qend;
               if (p->tend > q->tend) q->tend = p->tend;

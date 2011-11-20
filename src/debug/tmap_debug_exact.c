@@ -19,9 +19,9 @@
 
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
 static int32_t 
-tmap_debug_exact_print_sam(tmap_refseq_t *refseq, tmap_fq_t *seq, uint32_t pacpos, uint8_t strand)
+tmap_debug_exact_print_sam(tmap_refseq_t *refseq, tmap_fq_t *seq, tmp_bwt_int_t pacpos, uint8_t strand)
 {
-  uint32_t pos, seqid;
+  tmp_bwt_int_t pos, seqid;
   uint16_t flag = 0;
 
   if(0 < tmap_refseq_pac2real(refseq, pacpos, seq->seq->l, &seqid, &pos)) {
@@ -46,7 +46,8 @@ static void
 tmap_debug_exact_core_worker(tmap_refseq_t *refseq, tmap_bwt_t *bwt, tmap_sa_t *sa, tmap_seq_t *orig_seq, int32_t n_only)
 {
   uint32_t i, count = 0;
-  uint32_t mapped = 0, pacpos = 0;
+  uint32_t mapped = 0;
+  tmp_bwt_int_t pacpos = 0;
   tmap_fq_t *seq=NULL, *rseq=NULL;
   tmap_bwt_match_occ_t cur;
 

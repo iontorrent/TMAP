@@ -259,7 +259,7 @@ tmap_map1_aux_stack_size(tmap_map1_aux_stack_t *stack)
 }
 
 static inline void 
-tmap_map1_aux_stack_shadow(uint32_t x, uint32_t max, 
+tmap_map1_aux_stack_shadow(tmap_bwt_int_t x, tmap_bwt_int_t max, 
                            int32_t last_diff_offset, tmap_bwt_match_width_t *w)
 {
   int32_t i, j;
@@ -449,7 +449,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
   tmap_string_t *bases[2]={NULL,NULL};
   tmap_map_sams_t *sams = NULL;
   int32_t max_diff, best_diff;
-  uint32_t k, l;
+  tmap_bwt_int_t k, l;
 
   /*
   for(i=0;i<bwt[0]->seq_len;i++) {

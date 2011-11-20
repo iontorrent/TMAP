@@ -39,20 +39,100 @@
 #include "tmap_sa.h"
 #include "tmap_bwt_gen.h"
 
-static uint32_t 
-TextLengthFromBytePacked(uint32_t bytePackedLength, uint32_t bitPerChar,
+/*
+typedef int64_t tmap_bwt_gen_int_t;
+typedef uint64_t tmap_bwt_gen_uint_t;
+*/
+typedef tmap_bwt_sint_t tmap_bwt_gen_int_t;
+typedef tmap_bwt_int_t tmap_bwt_gen_uint_t;
+
+#define ALPHABET_SIZE				4
+#define BIT_PER_CHAR				2
+#define CHAR_PER_WORD				16
+#define CHAR_PER_BYTE				4
+
+#define BITS_IN_WORD 32
+#define BITS_IN_BYTE 8
+#define BYTES_IN_WORD 4
+
+#define ALL_ONE_MASK 0xFFFFFFFF
+#define DNA_OCC_CNT_TABLE_SIZE_IN_WORD	65536
+
+#define BITS_PER_OCC_VALUE			16
+#define OCC_VALUE_PER_WORD			2
+#define OCC_INTERVAL				256
+#define OCC_INTERVAL_MAJOR			65536
+
+#define TRUE    1
+#define FALSE   0
+
+#define BWTINC_INSERT_SORT_NUM_ITEM 7
+
+#define MIN_AVAILABLE_WORD 0x10000
+
+#define average(value1, value2)					( ((value1) & (value2)) + ((value1) ^ (value2)) / 2 )
+#define min(value1, value2)						( ((value1) < (value2)) ? (value1) : (value2) )
+#define truncateLeft(value, offset)				( (value) << (offset) >> (offset) )
+#define truncateRight(value, offset)			( (value) >> (offset) << (offset) )
+#define DNA_OCC_SUM_EXCEPTION(sum)			((sum & 0xfefefeff) == 0)
+
+/*!
+ Structure used to generate large BWT strings
+ */
+typedef struct {
+    tmap_bwt_gen_uint_t textLength;  /*!<  length of the text */
+    tmap_bwt_gen_uint_t inverseSa0;  /*!<  SA-1[0] */
+    tmap_bwt_gen_uint_t *cumulativeFreq;  /*!<  cumulative frequency */
+    uint32_t *bwtCode;  /*!<  BWT code */
+    uint32_t *occValue;  /*!<  Occurrence values stored explicitly */
+    tmap_bwt_gen_uint_t *occValueMajor;  /*!<  Occurrence values stored explicitly */
+    uint32_t *decodeTable;  /*!<  For decoding BWT by table lookup */
+    tmap_bwt_gen_uint_t bwtSizeInWord;  /*!<  Temporary variable to hold the memory allocated */
+    tmap_bwt_gen_uint_t occSizeInWord;  /*!<  Temporary variable to hold the memory allocated */
+    tmap_bwt_gen_uint_t occMajorSizeInWord; /*!< Temporary variable to hold the memory allocated */
+} tmap_bwt_gen_t;
+
+/*!
+ Structure used to generate large BWT strings; for each iteration
+ */
+typedef struct {
+    tmap_bwt_gen_t *bwt;
+    uint32_t numberOfIterationDone;
+    tmap_bwt_gen_uint_t *cumulativeCountInCurrentBuild;
+    tmap_bwt_gen_uint_t availableWord;
+    tmap_bwt_gen_uint_t buildSize;
+    tmap_bwt_gen_uint_t initialMaxBuildSize;
+    tmap_bwt_gen_uint_t incMaxBuildSize;
+    uint32_t firstCharInLastIteration;
+    uint32_t *workingMemory;
+    uint32_t *packedText;
+    uint8_t *textBuffer;
+    uint32_t *packedShift;
+} tmap_bwt_gen_inc_t;
+
+static tmap_bwt_gen_uint_t
+TextLengthFromBytePacked(tmap_bwt_gen_uint_t bytePackedLength, uint32_t bitPerChar,
                          uint32_t lastByteLength)
 {
+  /*
   if (bytePackedLength > ALL_ONE_MASK / (BITS_IN_BYTE / bitPerChar)) {
       tmap_error("TextLengthFromBytePacked(): text length > 2^32", Exit, OutOfRange);
   }
+  */
   return (bytePackedLength - 1) * (BITS_IN_BYTE / bitPerChar) + lastByteLength;
 }
 
 static void 
-initializeVAL(uint32_t *startAddr, const uint32_t length, const uint32_t initValue)
+initializeVAL(uint32_t *startAddr, const tmap_bwt_gen_uint_t length, const uint32_t initValue)
 {
-  uint32_t i;
+  tmap_bwt_gen_uint_t i;
+  for (i=0; i<length; i++) startAddr[i] = initValue;
+}
+
+static void 
+initializeVALBIG(tmap_bwt_gen_uint_t *startAddr, const tmap_bwt_gen_uint_t length, const tmap_bwt_gen_uint_t initValue)
+{
+  tmap_bwt_gen_uint_t i;
   for (i=0; i<length; i++) startAddr[i] = initValue;
 }
 
@@ -74,10 +154,10 @@ GenerateDNAOccCountTable(uint32_t *dnaDecodeTable)
 }
 
 // for BWTIncCreate()
-static uint32_t 
-BWTOccValueMajorSizeInWord(const uint32_t numChar)
+static tmap_bwt_gen_uint_t 
+BWTOccValueMajorSizeInWord(const tmap_bwt_gen_uint_t numChar)
 {
-  uint32_t numOfOccValue;
+  tmap_bwt_gen_uint_t numOfOccValue;
   uint32_t numOfOccIntervalPerMajor;
   numOfOccValue = (numChar + OCC_INTERVAL - 1) / OCC_INTERVAL + 1; // Value at both end for bi-directional encoding
   numOfOccIntervalPerMajor = OCC_INTERVAL_MAJOR / OCC_INTERVAL;
@@ -85,19 +165,19 @@ BWTOccValueMajorSizeInWord(const uint32_t numChar)
 }
 
 // for BWTIncCreate()
-static uint32_t 
-BWTOccValueMinorSizeInWord(const uint32_t numChar)
+static tmap_bwt_gen_uint_t 
+BWTOccValueMinorSizeInWord(const tmap_bwt_gen_uint_t numChar)
 {
-  uint32_t numOfOccValue;
+  tmap_bwt_gen_uint_t numOfOccValue;
   numOfOccValue = (numChar + OCC_INTERVAL - 1) / OCC_INTERVAL + 1;		// Value at both end for bi-directional encoding
   return (numOfOccValue + OCC_VALUE_PER_WORD - 1) / OCC_VALUE_PER_WORD * ALPHABET_SIZE;
 }
 
 // for BWTIncCreate()
-static uint32_t 
-BWTResidentSizeInWord(const uint32_t numChar) {
+static tmap_bwt_gen_uint_t 
+BWTResidentSizeInWord(const tmap_bwt_gen_uint_t numChar) {
 
-    uint32_t numCharRoundUpToOccInterval;
+    tmap_bwt_gen_uint_t numCharRoundUpToOccInterval;
 
     // The $ in BWT at the position of inverseSa0 is not encoded
     numCharRoundUpToOccInterval = (numChar + OCC_INTERVAL - 1) / OCC_INTERVAL * OCC_INTERVAL;
@@ -109,13 +189,13 @@ BWTResidentSizeInWord(const uint32_t numChar) {
 static void 
 BWTIncSetBuildSizeAndTextAddr(tmap_bwt_gen_inc_t *bwtInc)
 {
-  uint32_t maxBuildSize;
+  tmap_bwt_gen_uint_t maxBuildSize;
 
   if (bwtInc->bwt->textLength == 0) {
       // initial build
       // Minus 2 because n+1 entries of seq and rank needed for n char
-      maxBuildSize = (bwtInc->availableWord - 2 - OCC_INTERVAL / CHAR_PER_WORD)
-        / (2 * CHAR_PER_WORD + 1) * CHAR_PER_WORD;
+      maxBuildSize = (bwtInc->availableWord - (2 + OCC_INTERVAL / CHAR_PER_WORD) * (sizeof(tmap_bwt_gen_uint_t) / 4))
+        / (2 * CHAR_PER_WORD + 1) * CHAR_PER_WORD / (sizeof(tmap_bwt_gen_uint_t) / 4);
       if (bwtInc->initialMaxBuildSize > 0) {
           bwtInc->buildSize = min(bwtInc->initialMaxBuildSize, maxBuildSize);
       } else {
@@ -124,9 +204,10 @@ BWTIncSetBuildSizeAndTextAddr(tmap_bwt_gen_inc_t *bwtInc)
   } else {
       // Minus 3 because n+1 entries of sorted rank, seq and rank needed for n char
       // Minus numberOfIterationDone because bwt slightly shift to left in each iteration
-      maxBuildSize = (bwtInc->availableWord - bwtInc->bwt->bwtSizeInWord - bwtInc->bwt->occSizeInWord - 3
-                      - bwtInc->numberOfIterationDone * OCC_INTERVAL / BIT_PER_CHAR) 
-        / 3;
+      maxBuildSize = (bwtInc->availableWord - bwtInc->bwt->bwtSizeInWord - bwtInc->bwt->occSizeInWord
+                      - (3 + bwtInc->numberOfIterationDone * OCC_INTERVAL / BIT_PER_CHAR) * (sizeof(tmap_bwt_gen_uint_t) / 4))
+        / 3 / (sizeof(tmap_bwt_gen_uint_t) / 4);
+
       if (maxBuildSize < CHAR_PER_WORD) {
           tmap_error("BWTIncSetBuildSizeAndTextAddr(): Not enough space allocated to continue construction", Exit, OutOfRange);
       }
@@ -146,9 +227,8 @@ BWTIncSetBuildSizeAndTextAddr(tmap_bwt_gen_inc_t *bwtInc)
 
   bwtInc->buildSize = bwtInc->buildSize / CHAR_PER_WORD * CHAR_PER_WORD;
 
-  bwtInc->packedText = bwtInc->workingMemory + 2 * (bwtInc->buildSize + 1);
-  bwtInc->textBuffer = (uint8_t*)(bwtInc->workingMemory + bwtInc->buildSize + 1);
-
+  bwtInc->packedText = bwtInc->workingMemory + 2 * (bwtInc->buildSize + 1) * (sizeof(tmap_bwt_gen_uint_t) / 4);
+  bwtInc->textBuffer = (unsigned char*)(bwtInc->workingMemory + (bwtInc->buildSize + 1) * (sizeof(tmap_bwt_gen_uint_t) / 4));
 }
 
 // for ceilLog2()
@@ -212,17 +292,17 @@ BitPerWordPackedChar(const uint32_t alphabetSize)
 
 static void 
 ConvertBytePackedToWordPacked(const  uint8_t *input, uint32_t *output, const uint32_t alphabetSize,
-                              const uint32_t textLength)
+                              const tmap_bwt_gen_uint_t textLength)
 {
-  uint32_t i, j, k;
-  uint32_t c;
+  tmap_bwt_gen_uint_t i;
+  uint32_t j, k, c;
   uint32_t bitPerBytePackedChar;
   uint32_t bitPerWordPackedChar;
   uint32_t charPerWord;
   uint32_t charPerByte;
   uint32_t bytePerIteration;
-  uint32_t byteProcessed = 0;
-  uint32_t wordProcessed = 0;
+  tmap_bwt_gen_uint_t byteProcessed = 0;
+  tmap_bwt_gen_uint_t wordProcessed = 0;
   uint32_t mask, shift;
 
   uint32_t buffer[BITS_IN_WORD];
@@ -277,17 +357,16 @@ ConvertBytePackedToWordPacked(const  uint8_t *input, uint32_t *output, const uin
 }
 
 tmap_bwt_gen_t *
-BWTCreate(const uint32_t textLength, uint32_t *decodeTable)
+BWTCreate(const tmap_bwt_gen_uint_t textLength, uint32_t *decodeTable)
 {
   tmap_bwt_gen_t *bwt;
 
   bwt = tmap_calloc(1, sizeof(tmap_bwt_gen_t), "bwt");
 
   bwt->textLength = 0;
-  bwt->inverseSa = 0;
 
-  bwt->cumulativeFreq = tmap_calloc((ALPHABET_SIZE + 1), sizeof(uint32_t), "bwt->cumulativeFreq");
-  initializeVAL(bwt->cumulativeFreq, ALPHABET_SIZE + 1, 0);
+  bwt->cumulativeFreq = tmap_calloc((ALPHABET_SIZE + 1), sizeof(tmap_bwt_gen_uint_t), "bwt->cumulativeFreq");
+  initializeVALBIG(bwt->cumulativeFreq, ALPHABET_SIZE + 1, 0);
 
   bwt->bwtSizeInWord = 0;
 
@@ -299,35 +378,29 @@ BWTCreate(const uint32_t textLength, uint32_t *decodeTable)
       bwt->decodeTable = decodeTable;
   }
 
-  bwt->occValueMajor = tmap_calloc(BWTOccValueMajorSizeInWord(textLength), sizeof(uint32_t), "bwt->occValueMajor");
+  bwt->occValueMajor = tmap_calloc(BWTOccValueMajorSizeInWord(textLength), sizeof(tmap_bwt_gen_uint_t), "bwt->occValueMajor");
 
   bwt->occSizeInWord = 0;
   bwt->occValue = NULL;
 
-  bwt->inverseSa = NULL;
 
   return bwt;
 }
 
 tmap_bwt_gen_inc_t *
-BWTIncCreate(const uint32_t textLength, const float targetNBit,
+BWTIncCreate(const tmap_bwt_gen_uint_t textLength, 
              const uint32_t initialMaxBuildSize, const uint32_t incMaxBuildSize)
 {
   tmap_bwt_gen_inc_t *bwtInc;
-  uint32_t i;
-
-  if (targetNBit == 0) {
-      tmap_error("BWTIncCreate() : targetNBit = 0", Exit, OutOfRange);
-  }
+  uint32_t i, n_iter;
 
   bwtInc = tmap_calloc(1, sizeof(tmap_bwt_gen_inc_t), "bwtInc");
   bwtInc->numberOfIterationDone = 0;
   bwtInc->bwt = BWTCreate(textLength, NULL);
   bwtInc->initialMaxBuildSize = initialMaxBuildSize;
   bwtInc->incMaxBuildSize = incMaxBuildSize;
-  bwtInc->targetNBit = targetNBit;
-  bwtInc->cumulativeCountInCurrentBuild = tmap_calloc((ALPHABET_SIZE + 1), sizeof(uint32_t), "bwtInc->cumumlativeCountInCurrentBuild");
-  initializeVAL(bwtInc->cumulativeCountInCurrentBuild, ALPHABET_SIZE + 1, 0);
+  bwtInc->cumulativeCountInCurrentBuild = tmap_calloc((ALPHABET_SIZE + 1), sizeof(tmap_bwt_gen_uint_t), "bwtInc->cumumlativeCountInCurrentBuild");
+  initializeVALBIG(bwtInc->cumulativeCountInCurrentBuild, ALPHABET_SIZE + 1, 0);
 
   // Build frequently accessed data
   bwtInc->packedShift = tmap_calloc(CHAR_PER_WORD, sizeof(uint32_t), "bwtInc->packedShift");
@@ -335,27 +408,28 @@ BWTIncCreate(const uint32_t textLength, const float targetNBit,
       bwtInc->packedShift[i] = BITS_IN_WORD - (i+1) * BIT_PER_CHAR;
   }
 
-  bwtInc->targetTextLength = textLength;
-  bwtInc->availableWord = (uint32_t)((textLength + OCC_INTERVAL - 1) / OCC_INTERVAL * OCC_INTERVAL / BITS_IN_WORD * bwtInc->targetNBit);
-  if (bwtInc->availableWord < BWTResidentSizeInWord(textLength) + BWTOccValueMinorSizeInWord(textLength)) {
-      tmap_error("BWTIncCreate() : targetNBit is too low", Exit, OutOfRange);
-  }
-  bwtInc->workingMemory = tmap_calloc(bwtInc->availableWord, BYTES_IN_WORD, "bwtInc->workingMemory");
+  n_iter = (textLength - initialMaxBuildSize) / incMaxBuildSize + 1;
+  bwtInc->availableWord = BWTResidentSizeInWord(textLength) + BWTOccValueMinorSizeInWord(textLength) // minimal memory requirement
+    + OCC_INTERVAL / BIT_PER_CHAR * n_iter * 2 * (sizeof(tmap_bwt_gen_uint_t) / 4) // buffer at the end of occ array 
+    + incMaxBuildSize/5 * 3 * (sizeof(tmap_bwt_gen_uint_t) / 4); // space for the 3 temporary arrays in each iteration
+  if (bwtInc->availableWord < MIN_AVAILABLE_WORD) bwtInc->availableWord = MIN_AVAILABLE_WORD; // lh3: otherwise segfault when availableWord is too small
+  //fprintf(stderr, "[%s] textLength=%ld, availableWord=%ld\n", __func__, (long)textLength, (long)bwtInc->availableWord);
+  bwtInc->workingMemory = (unsigned*)calloc(bwtInc->availableWord, BYTES_IN_WORD);
 
   return bwtInc;
-
 }
 
 // for BWTIncConstruct()
 static void 
-BWTIncPutPackedTextToRank(const uint32_t *packedText, uint32_t* __restrict rank,
-                          uint32_t* __restrict cumulativeCount, const uint32_t numChar)
+BWTIncPutPackedTextToRank(const uint32_t *packedText, tmap_bwt_gen_uint_t* __restrict rank,
+                          tmap_bwt_gen_uint_t* __restrict cumulativeCount, const tmap_bwt_gen_uint_t numChar)
 {
-  uint32_t i, j;
+  tmap_bwt_gen_uint_t i;
+  uint32_t j;
   uint32_t c, t;
   uint32_t packedMask;
-  uint32_t rankIndex;
-  uint32_t lastWord, numCharInLastWord;
+  tmap_bwt_gen_uint_t rankIndex, lastWord;
+  uint32_t numCharInLastWord;
 
   lastWord = (numChar - 1) / CHAR_PER_WORD;
   numCharInLastWord = numChar - lastWord * CHAR_PER_WORD;
@@ -390,16 +464,17 @@ BWTIncPutPackedTextToRank(const uint32_t *packedText, uint32_t* __restrict rank,
 }
 
 static void 
-ForwardDNAAllOccCountNoLimit(const uint32_t*  dna, const uint32_t index,
-                             uint32_t* __restrict occCount, const uint32_t*  dnaDecodeTable)
+ForwardDNAAllOccCountNoLimit(const uint32_t*  dna, const tmap_bwt_gen_uint_t index,
+                             tmap_bwt_gen_uint_t* __restrict occCount, const uint32_t*  dnaDecodeTable)
 {
   static const uint32_t truncateRightMask[16] = { 0x00000000, 0xC0000000, 0xF0000000, 0xFC000000,
       0xFF000000, 0xFFC00000, 0xFFF00000, 0xFFFC0000,
       0xFFFF0000, 0xFFFFC000, 0xFFFFF000, 0xFFFFFC00,
       0xFFFFFF00, 0xFFFFFFC0, 0xFFFFFFF0, 0xFFFFFFFC };
 
-  uint32_t iteration, wordToCount, charToCount;
-  uint32_t i, j, c;
+  tmap_bwt_gen_uint_t iteration, i;
+  uint32_t wordToCount, charToCount;
+  uint32_t j, c;
   uint32_t sum;
 
   occCount[0] = 0;
@@ -463,13 +538,14 @@ ForwardDNAAllOccCountNoLimit(const uint32_t*  dna, const uint32_t index,
 }
 
 static void 
-BWTIncBuildPackedBwt(const uint32_t *relativeRank, uint32_t* __restrict bwt, const uint32_t numChar,
-                     const uint32_t *cumulativeCount, const uint32_t *packedShift) {
+BWTIncBuildPackedBwt(const tmap_bwt_gen_uint_t *relativeRank, uint32_t* __restrict bwt, const tmap_bwt_gen_uint_t numChar,
+                     const tmap_bwt_gen_uint_t *cumulativeCount, const uint32_t *packedShift) {
 
-    uint32_t i, c, r;
-    uint32_t previousRank, currentRank;
-    uint32_t wordIndex, charIndex;
-    uint32_t inverseSa0;
+    tmap_bwt_gen_uint_t i, r;
+    uint32_t c;
+    tmap_bwt_gen_uint_t previousRank, currentRank;
+    tmap_bwt_gen_uint_t wordIndex, charIndex;
+    tmap_bwt_gen_uint_t inverseSa0;
 
     inverseSa0 = previousRank = relativeRank[0];
 
@@ -494,11 +570,11 @@ BWTIncBuildPackedBwt(const uint32_t *relativeRank, uint32_t* __restrict bwt, con
     }
 }
 
-static inline uint32_t 
-BWTOccValueExplicit(const tmap_bwt_gen_t *bwt, const uint32_t occIndexExplicit,
+static inline tmap_bwt_gen_uint_t
+BWTOccValueExplicit(const tmap_bwt_gen_t *bwt, const tmap_bwt_gen_uint_t occIndexExplicit,
                     const uint32_t character)
 {
-  uint32_t occIndexMajor;
+  tmap_bwt_gen_uint_t occIndexMajor;
 
   occIndexMajor = occIndexExplicit * OCC_INTERVAL / OCC_INTERVAL_MAJOR;
 
@@ -579,11 +655,11 @@ BackwardDNAOccCount(const uint32_t*  dna, const uint32_t index, const uint32_t c
 
 }
 
-uint32_t 
-BWTOccValue(const tmap_bwt_gen_t *bwt, uint32_t index, const uint32_t character) {
+tmap_bwt_gen_uint_t
+BWTOccValue(const tmap_bwt_gen_t *bwt, tmap_bwt_gen_uint_t index, const uint32_t character) {
 
-    uint32_t occValue;
-    uint32_t occExplicitIndex, occIndex;
+    tmap_bwt_gen_uint_t occValue;
+    tmap_bwt_gen_uint_t occExplicitIndex, occIndex;
 
     // $ is supposed to be positioned at inverseSa0 but it is not encoded
     // therefore index is subtracted by 1 for adjustment
@@ -607,20 +683,20 @@ BWTOccValue(const tmap_bwt_gen_t *bwt, uint32_t index, const uint32_t character)
 
 }
 
-static uint32_t 
-BWTIncGetAbsoluteRank(tmap_bwt_gen_t *bwt, uint32_t* __restrict absoluteRank, uint32_t* __restrict seq,
-                      const uint32_t *packedText, const uint32_t numChar,
-                      const uint32_t* cumulativeCount, const uint32_t firstCharInLastIteration)
+static tmap_bwt_gen_uint_t 
+BWTIncGetAbsoluteRank(tmap_bwt_gen_t *bwt, tmap_bwt_gen_uint_t* __restrict absoluteRank, tmap_bwt_gen_uint_t* __restrict seq,
+                      const uint32_t *packedText, const tmap_bwt_gen_uint_t numChar,
+                      const tmap_bwt_gen_uint_t* cumulativeCount, const uint32_t firstCharInLastIteration)
 {
-  uint32_t saIndex;
-  uint32_t lastWord;
+  tmap_bwt_gen_uint_t saIndex;
+  tmap_bwt_gen_uint_t lastWord;
   uint32_t packedMask;
-  uint32_t i, j;
-  uint32_t c, t;
-  uint32_t rankIndex;
+  tmap_bwt_gen_uint_t i;
+  uint32_t c, t, j;
+  tmap_bwt_gen_uint_t rankIndex;
   uint32_t shift;
-  uint32_t seqIndexFromStart[ALPHABET_SIZE];
-  uint32_t seqIndexFromEnd[ALPHABET_SIZE];
+  tmap_bwt_gen_uint_t seqIndexFromStart[ALPHABET_SIZE];
+  tmap_bwt_gen_uint_t seqIndexFromEnd[ALPHABET_SIZE];
 
   for (i=0; i<ALPHABET_SIZE; i++) {
       seqIndexFromStart[i] = cumulativeCount[i];
@@ -661,7 +737,7 @@ BWTIncGetAbsoluteRank(tmap_bwt_gen_t *bwt, uint32_t* __restrict absoluteRank, ui
 }
 
 static void 
-BWTIncSortKey(uint32_t* __restrict key, uint32_t* __restrict seq, const uint32_t numItem)
+BWTIncSortKey(tmap_bwt_gen_uint_t* __restrict key, tmap_bwt_gen_uint_t* __restrict seq, const tmap_bwt_gen_uint_t numItem)
 {
 #define EQUAL_KEY_THRESHOLD	4	// Partition for equal key if data array size / the number of data with equal value with pivot < EQUAL_KEY_THRESHOLD
 
@@ -670,7 +746,7 @@ BWTIncSortKey(uint32_t* __restrict key, uint32_t* __restrict seq, const uint32_t
   uint32_t lowStack[32], highStack[32];
   uint32_t stackDepth;
   uint32_t i, j;
-  uint32_t tempSeq, tempKey;
+  tmap_bwt_gen_uint_t tempSeq, tempKey;
   uint32_t numberOfEqualKey;
 
   if (numItem < 2) return;
@@ -839,15 +915,15 @@ BWTIncSortKey(uint32_t* __restrict key, uint32_t* __restrict seq, const uint32_t
 }
 
 static void 
-BWTIncBuildRelativeRank(uint32_t* __restrict sortedRank, uint32_t* __restrict seq,
-                        uint32_t* __restrict relativeRank, const uint32_t numItem,
-                        uint32_t oldInverseSa0, const uint32_t *cumulativeCount)
+BWTIncBuildRelativeRank(tmap_bwt_gen_uint_t* __restrict sortedRank, tmap_bwt_gen_uint_t* __restrict seq,
+                        tmap_bwt_gen_uint_t* __restrict relativeRank, const tmap_bwt_gen_uint_t numItem,
+                        tmap_bwt_gen_uint_t oldInverseSa0, const tmap_bwt_gen_uint_t *cumulativeCount)
 {
-  uint32_t i, c;
-  uint32_t s, r;
-  uint32_t lastRank, lastIndex;
-  uint32_t oldInverseSa0RelativeRank = 0;
-  uint32_t freq;
+  tmap_bwt_gen_uint_t i, c;
+  tmap_bwt_gen_uint_t s, r;
+  tmap_bwt_gen_uint_t lastRank, lastIndex;
+  tmap_bwt_gen_uint_t oldInverseSa0RelativeRank = 0;
+  tmap_bwt_gen_uint_t freq;
 
   lastIndex = numItem;
   lastRank = sortedRank[numItem];
@@ -882,10 +958,10 @@ BWTIncBuildRelativeRank(uint32_t* __restrict sortedRank, uint32_t* __restrict se
           relativeRank[s] = lastIndex;
       } else {
           if (i == lastIndex - 1) {
-              if (lastIndex < numItem && (int)seq[lastIndex + 1] < 0) {
+              if (lastIndex < numItem && (tmap_bwt_gen_int_t)seq[lastIndex + 1] < 0) {
                   seq[lastIndex] = seq[lastIndex + 1] - 1;
               } else {
-                  seq[lastIndex] = (uint32_t)-1;
+                  seq[lastIndex] = (tmap_bwt_gen_uint_t)-1;
               }
           }
           lastIndex = i;
@@ -902,11 +978,11 @@ BWTIncBuildRelativeRank(uint32_t* __restrict sortedRank, uint32_t* __restrict se
 }
 
 static void 
-BWTIncBuildBwt(uint32_t*  seq, const uint32_t *relativeRank, const uint32_t numChar,
-               const uint32_t *cumulativeCount)
+BWTIncBuildBwt(uint32_t*  seq, const tmap_bwt_gen_uint_t *relativeRank, const tmap_bwt_gen_uint_t numChar,
+               const tmap_bwt_gen_uint_t *cumulativeCount)
 {
-  uint32_t i, c;
-  uint32_t previousRank, currentRank;
+  uint32_t c;
+  tmap_bwt_gen_uint_t i, previousRank, currentRank;
 
   previousRank = relativeRank[0];
 
@@ -920,15 +996,15 @@ BWTIncBuildBwt(uint32_t*  seq, const uint32_t *relativeRank, const uint32_t numC
 }
 
 static void 
-BWTIncMergeBwt(const uint32_t *sortedRank, const uint32_t* oldBwt, const uint32_t *insertBwt,
-               uint32_t* __restrict mergedBwt, const uint32_t numOldBwt, const uint32_t numInsertBwt)
+BWTIncMergeBwt(const tmap_bwt_gen_uint_t* sortedRank, const uint32_t* oldBwt, const uint32_t *insertBwt,
+               uint32_t* __restrict mergedBwt, const tmap_bwt_gen_uint_t numOldBwt, const tmap_bwt_gen_uint_t numInsertBwt)
 {
   uint32_t bitsInWordMinusBitPerChar;
-  uint32_t leftShift, rightShift;
-  uint32_t o;
-  uint32_t oIndex, iIndex, mIndex;
-  uint32_t mWord, mChar, oWord, oChar;
-  uint32_t numInsert;
+  tmap_bwt_gen_uint_t leftShift, rightShift;
+  tmap_bwt_gen_uint_t o;
+  tmap_bwt_gen_uint_t oIndex, iIndex, mIndex;
+  tmap_bwt_gen_uint_t mWord, mChar, oWord, oChar;
+  tmap_bwt_gen_uint_t numInsert;
 
   bitsInWordMinusBitPerChar = BITS_IN_WORD - BIT_PER_CHAR;
 
@@ -1036,9 +1112,9 @@ BWTIncMergeBwt(const uint32_t *sortedRank, const uint32_t* oldBwt, const uint32_
 void 
 BWTClearTrailingBwtCode(tmap_bwt_gen_t *bwt)
 {
-  uint32_t bwtResidentSizeInWord;
-  uint32_t wordIndex, offset;
-  uint32_t i;
+  tmap_bwt_gen_uint_t bwtResidentSizeInWord;
+  tmap_bwt_gen_uint_t wordIndex, offset;
+  tmap_bwt_gen_uint_t i;
 
   bwtResidentSizeInWord = BWTResidentSizeInWord(bwt->textLength);
 
@@ -1060,18 +1136,18 @@ BWTClearTrailingBwtCode(tmap_bwt_gen_t *bwt)
 
 void 
 BWTGenerateOccValueFromBwt(const uint32_t*  bwt, uint32_t* __restrict occValue,
-                           uint32_t* __restrict occValueMajor,
-                           const uint32_t textLength, const uint32_t*  decodeTable)
+                           tmap_bwt_gen_uint_t* __restrict occValueMajor,
+                           const tmap_bwt_gen_uint_t textLength, const uint32_t*  decodeTable)
 {
-  uint32_t numberOfOccValueMajor, numberOfOccValue;
+  tmap_bwt_gen_uint_t numberOfOccValueMajor, numberOfOccValue;
   uint32_t wordBetweenOccValue;
-  uint32_t numberOfOccIntervalPerMajor;
+  tmap_bwt_gen_uint_t numberOfOccIntervalPerMajor;
   uint32_t c;
-  uint32_t i, j;
-  uint32_t occMajorIndex;
-  uint32_t occIndex, bwtIndex;
-  uint32_t sum;
-  uint32_t tempOccValue0[ALPHABET_SIZE], tempOccValue1[ALPHABET_SIZE];
+  tmap_bwt_gen_uint_t i, j;
+  tmap_bwt_gen_uint_t occMajorIndex;
+  tmap_bwt_gen_uint_t occIndex, bwtIndex;
+  tmap_bwt_gen_uint_t sum;
+  tmap_bwt_gen_uint_t tempOccValue0[ALPHABET_SIZE], tempOccValue1[ALPHABET_SIZE];
 
   wordBetweenOccValue = OCC_INTERVAL / CHAR_PER_WORD;
 
@@ -1273,14 +1349,15 @@ BWTGenerateOccValueFromBwt(const uint32_t*  bwt, uint32_t* __restrict occValue,
 }
 
 static void 
-BWTIncConstruct(tmap_bwt_gen_inc_t *bwtInc, const uint32_t numChar)
+BWTIncConstruct(tmap_bwt_gen_inc_t *bwtInc, const tmap_bwt_gen_uint_t numChar)
 {
   uint32_t i;
-  uint32_t mergedBwtSizeInWord, mergedOccSizeInWord;
+  tmap_bwt_gen_uint_t mergedBwtSizeInWord, mergedOccSizeInWord;
   uint32_t firstCharInThisIteration;
 
-  uint32_t *relativeRank, *seq, *sortedRank, *insertBwt, *mergedBwt;
-  uint32_t newInverseSa0RelativeRank, oldInverseSa0RelativeRank, newInverseSa0;
+  tmap_bwt_gen_uint_t *relativeRank, *seq, *sortedRank;
+  uint32_t *insertBwt, *mergedBwt;
+  tmap_bwt_gen_uint_t newInverseSa0RelativeRank, oldInverseSa0RelativeRank, newInverseSa0;
 
 #ifdef DEBUG
   if (numChar > bwtInc->buildSize) {
@@ -1291,14 +1368,21 @@ BWTIncConstruct(tmap_bwt_gen_inc_t *bwtInc, const uint32_t numChar)
   mergedBwtSizeInWord = BWTResidentSizeInWord(bwtInc->bwt->textLength + numChar);
   mergedOccSizeInWord = BWTOccValueMinorSizeInWord(bwtInc->bwt->textLength + numChar);
 
-  initializeVAL(bwtInc->cumulativeCountInCurrentBuild, ALPHABET_SIZE + 1, 0);
+  initializeVALBIG(bwtInc->cumulativeCountInCurrentBuild, ALPHABET_SIZE + 1, 0);
 
   if (bwtInc->bwt->textLength == 0) {		// Initial build
 
       // Set address
-      seq = bwtInc->workingMemory;
+      seq = (tmap_bwt_gen_uint_t*)bwtInc->workingMemory;
       relativeRank = seq + bwtInc->buildSize + 1;
       mergedBwt = insertBwt = bwtInc->workingMemory + bwtInc->availableWord - mergedBwtSizeInWord;	// build in place
+
+      if((void*)(relativeRank + bwtInc->buildSize + 1) > (void*)bwtInc->packedText) {
+          tmap_error("build error", Exit, OutOfRange);
+      }
+      if((void*)(relativeRank + bwtInc->buildSize + 1) > (void*)mergedBwt) {
+          tmap_error("build error", Exit, OutOfRange);
+      }
 
       BWTIncPutPackedTextToRank(bwtInc->packedText, relativeRank, bwtInc->cumulativeCountInCurrentBuild, numChar);
 
@@ -1306,7 +1390,7 @@ BWTIncConstruct(tmap_bwt_gen_inc_t *bwtInc, const uint32_t numChar)
       relativeRank[numChar] = 0;
 
       // Sort suffix
-      QSufSortSuffixSort((int*)relativeRank, (int*)seq, (int)numChar, (int)ALPHABET_SIZE - 1, 0, FALSE);
+      QSufSortSuffixSort((tmap_bwt_sint_t*)relativeRank, (tmap_bwt_sint_t*)seq, (tmap_bwt_sint_t)numChar, (tmap_bwt_sint_t)ALPHABET_SIZE - 1, 0, FALSE);
       newInverseSa0 = relativeRank[0];
 
       // Clear BWT area
@@ -1320,7 +1404,7 @@ BWTIncConstruct(tmap_bwt_gen_inc_t *bwtInc, const uint32_t numChar)
 
   } else {		// Incremental build
       // Set address
-      sortedRank = bwtInc->workingMemory;
+      sortedRank = (tmap_bwt_gen_uint_t*)bwtInc->workingMemory;
       seq = sortedRank + bwtInc->buildSize + 1;
       insertBwt = seq;
       relativeRank = seq + bwtInc->buildSize + 1;
@@ -1366,7 +1450,7 @@ BWTIncConstruct(tmap_bwt_gen_inc_t *bwtInc, const uint32_t numChar)
 #endif
 
       // Sort suffix
-      QSufSortSuffixSort((int*)relativeRank, (int*)seq, (int)numChar, (int)numChar, 1, TRUE);
+      QSufSortSuffixSort((tmap_bwt_sint_t*)relativeRank, (tmap_bwt_sint_t*)seq, (tmap_bwt_sint_t)numChar, (tmap_bwt_sint_t)numChar, 1, TRUE);
 
       newInverseSa0RelativeRank = relativeRank[0];
       newInverseSa0 = sortedRank[newInverseSa0RelativeRank] + newInverseSa0RelativeRank;
@@ -1378,7 +1462,10 @@ BWTIncConstruct(tmap_bwt_gen_inc_t *bwtInc, const uint32_t numChar)
 
       // Merge BWT
       mergedBwt = bwtInc->workingMemory + bwtInc->availableWord - mergedBwtSizeInWord 
-        - bwtInc->numberOfIterationDone * OCC_INTERVAL / BIT_PER_CHAR;
+        - bwtInc->numberOfIterationDone * OCC_INTERVAL / BIT_PER_CHAR * sizeof(tmap_bwt_gen_uint_t) / 4;
+      if(mergedBwt < insertBwt + numChar) {
+          tmap_error("build error", Exit, OutOfRange);
+      }
       // minus numberOfIteration * occInterval to create a buffer for merging
       BWTIncMergeBwt(sortedRank, bwtInc->bwt->bwtCode, insertBwt, mergedBwt, bwtInc->bwt->textLength, numChar);
 
@@ -1415,15 +1502,15 @@ BWTIncConstruct(tmap_bwt_gen_inc_t *bwtInc, const uint32_t numChar)
 }
 
 tmap_bwt_gen_inc_t *
-BWTIncConstructFromPacked(const char *inputFileName, const float targetNBit,
-                          const uint32_t initialMaxBuildSize, const uint32_t incMaxBuildSize)
+BWTIncConstructFromPacked(const char *inputFileName, 
+                          const tmap_bwt_gen_uint_t initialMaxBuildSize, const tmap_bwt_gen_uint_t incMaxBuildSize)
 {
 
   FILE *packedFile;
-  uint32_t packedFileLen;
-  uint32_t totalTextLength;
-  uint32_t textToLoad, textSizeInByte;
-  uint32_t processedTextLength;
+  tmap_bwt_gen_uint_t packedFileLen;
+  tmap_bwt_gen_uint_t totalTextLength;
+  tmap_bwt_gen_uint_t textToLoad, textSizeInByte;
+  tmap_bwt_gen_uint_t processedTextLength;
   char lastByteLength;
 
   tmap_bwt_gen_inc_t *bwtInc;
@@ -1439,12 +1526,12 @@ BWTIncConstructFromPacked(const char *inputFileName, const float targetNBit,
   if ((int)packedFileLen < 0) {
       tmap_error("BWTIncConstructFromPacked: Cannot determine file length", Exit, OutOfRange);
   }
-  if(1 != fread(&lastByteLength, sizeof( char), 1, packedFile)) {
+  if(1 != fread(&lastByteLength, sizeof(uint8_t), 1, packedFile)) {
       tmap_error(NULL, Exit, ReadFileError);
   }
   totalTextLength = TextLengthFromBytePacked(packedFileLen, BIT_PER_CHAR, lastByteLength);
 
-  bwtInc = BWTIncCreate(totalTextLength, targetNBit, initialMaxBuildSize, incMaxBuildSize);
+  bwtInc = BWTIncCreate(totalTextLength, initialMaxBuildSize, incMaxBuildSize);
 
   BWTIncSetBuildSizeAndTextAddr(bwtInc);
 
@@ -1493,10 +1580,9 @@ BWTFree(tmap_bwt_gen_t *bwt)
 {
   if (bwt == 0) return;
   free(bwt->cumulativeFreq);
-  //free(bwt->bwtCode); // not allocated
-  //free(bwt->occValue); // not allocated
+  //free(bwt->bwtCode); // not allocated?
+  //free(bwt->occValue); // not allocated?
   free(bwt->occValueMajor);
-  free(bwt->inverseSa);
   free(bwt->decodeTable);
   free(bwt);
 }
@@ -1512,8 +1598,8 @@ BWTIncFree(tmap_bwt_gen_inc_t *bwtInc)
   free(bwtInc);
 }
 
-static uint32_t 
-BWTFileSizeInWord(const uint32_t numChar)
+static tmap_bwt_gen_uint_t 
+BWTFileSizeInWord(const tmap_bwt_gen_uint_t numChar)
 {
   // The $ in BWT at the position of inverseSa0 is not encoded
   return (numChar + CHAR_PER_WORD - 1) / CHAR_PER_WORD;
@@ -1552,12 +1638,13 @@ BWTSaveBwtCodeAndOcc(tmap_bwt_t *bwt_out, const tmap_bwt_gen_t *bwt, const char 
 }
 
 void 
-tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, uint32_t hash_width)
+tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, int32_t hash_width)
 {
   tmap_bwt_gen_inc_t *bwtInc=NULL;
   tmap_bwt_t *bwt=NULL;
   uint8_t *buf=NULL;
-  uint32_t i, is_rev;
+  tmap_bwt_gen_int_t i;
+  uint32_t is_rev;
   char *fn_pac=NULL;
   tmap_refseq_t *refseq=NULL;
 
@@ -1584,7 +1671,7 @@ tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, 
           if(TMAP_PAC_COMPRESSION != TMAP_FILE_NO_COMPRESSION) { // the below uses fseek
               tmap_error("PAC compression not supported", Exit, OutOfRange);
           }
-          bwtInc = BWTIncConstructFromPacked(fn_pac, 2.5, 10000000, 10000000);
+          bwtInc = BWTIncConstructFromPacked(fn_pac, 10000000, 10000000);
           BWTSaveBwtCodeAndOcc(bwt, bwtInc->bwt, fn_fasta, occ_interval, is_rev);
           BWTIncFree(bwtInc);
           free(fn_pac);
@@ -1607,7 +1694,7 @@ tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, 
 
           // Burrows-Wheeler Transform
           bwt->primary = tmap_bwt_gen_short(buf, bwt->seq_len);
-          bwt->bwt = tmap_calloc(bwt->bwt_size, sizeof(uint32_t), "bwt->bwt");
+          bwt->bwt = tmap_calloc(bwt->bwt_size, sizeof(tmap_bwt_gen_int_t), "bwt->bwt");
           for(i=0;i<bwt->seq_len;i++) {
               // 2-bit packing for DNA
               bwt->bwt[i>>4] |= buf[i] << ((15 - (i&15)) << 1);

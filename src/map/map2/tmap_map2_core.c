@@ -161,7 +161,7 @@ static void
 tmap_map2_core_save_hits(const tmap_bwtl_t *bwtl, int32_t thres, tmap_map2_hit_t *hits, tmap_map2_entry_t *u)
 {
   int32_t i;
-  uint32_t k;
+  tmap_bwt_int_t k;
   for(i = 0; i < u->n; ++i) {
       tmap_map2_cell_t *p = u->array + i;
       if(p->G < thres) continue;
@@ -285,7 +285,7 @@ tmap_map2_core_aln(const tmap_map_opt_t *opt, const tmap_bwtl_t *target,
   while(!tmap_map2_stack_isempty(stack)) {
       int32_t old_n, tj;
       tmap_map2_entry_t *v;
-      uint32_t k, l, tcntk[4], tcntl[4];
+      tmap_bwt_int_t k, l, tcntk[4], tcntl[4];
 
       v = tmap_map2_stack_pop(stack); old_n = v->n;
       n_tot += v->n;

@@ -20,8 +20,8 @@
   stores an alignment hit
   */
 typedef struct {
-    uint32_t k;  /*!< the lower suffix array interval, or suffix array position  */
-    uint32_t l;  /*!< the upper suffix array interval, or 0 when k is the suffix array position */
+    tmap_bwt_int_t k;  /*!< the lower suffix array interval, or suffix array position  */
+    tmap_bwt_int_t l;  /*!< the upper suffix array interval, or 0 when k is the suffix array position */
     uint32_t flag:18;  /*!< records the origin of the hit (forward/reverse bwt in the 17th/18th bit respectively); the strand in the 5th bit; the first bit stores if the hit was repetitive */
     uint32_t n_seeds:14;  /*!< the number of seeds used in the forward alignment */
     int32_t qlen;  /*!< the length of the query in the alignment */
@@ -37,7 +37,7 @@ typedef struct {
   */
 typedef struct {
     int32_t n;  /*!< the number of hits */
-    int32_t max;  /*!< the memory allocateed for the hits */
+    int32_t max;  /*!< the memory allocated for the hits */
     tmap_map2_hit_t *hits;  /*!< the hits */
 } tmap_map2_aln_t;
 

@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include "../util/tmap_string.h"
+#include "../util/tmap_definitions.h"
 #include "../io/tmap_file.h"
 
 /*! 
@@ -68,7 +69,7 @@ typedef struct {
     tmap_string_t *package_version;  /*!< the package version */
     uint8_t *seq;  /*!< the packed nucleotide sequence, with contigs concatenated */
     tmap_anno_t *annos;  /*!< the annotations about the contigs */
-    uint32_t num_annos;  /*!< the number of contigs (and annotations) */
+    int32_t num_annos;  /*!< the number of contigs (and annotations) */
     uint64_t len;  /*!< the total length of the reference sequence */
     uint32_t is_rev;  /*!< 1 if the reference sequence was reversed, 0 otherwise */
     uint32_t is_shm;  /*!< 1 if loaded from shared memory, 0 otherwise */
@@ -157,8 +158,8 @@ tmap_refseq_destroy(tmap_refseq_t *refseq);
   @param  pos         the one-based position to be returned
   @return             the one-based position, 0 if not found (i.e. overlaps two chromosomes)
   */
-inline uint32_t
-tmap_refseq_pac2real(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos);
+inline tmap_bwt_int_t
+tmap_refseq_pac2real(const tmap_refseq_t *refseq, tmap_bwt_int_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos);
 
 /*! 
   Retrieves a subsequence of the reference in 2-bit format

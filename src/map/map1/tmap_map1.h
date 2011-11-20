@@ -52,7 +52,7 @@ tmap_map1_thread_init(void **data, tmap_map_opt_t *opt);
  runs the mapping routine for a given thread
  @param  data     pointer to the mapping data pointer
  @param  seqs     the sequence to map (reverse and reverse compliment in integer format)
- @param  seq_len  the sequence lenth
+ @param  seq_len  the sequence length
  @param  index    the reference index
  @param  opt      the program options
  @return          the mappings, NULL otherwise

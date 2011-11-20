@@ -5,6 +5,7 @@
 #include "../util/tmap_error.h"
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_progress.h"
+#include "../util/tmap_definitions.h"
 #include "../server/tmap_shm.h"
 #include "tmap_refseq.h"
 #include "tmap_bwt_gen.h"

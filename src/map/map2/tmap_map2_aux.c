@@ -61,7 +61,7 @@ tmap_map2_aux_resolve_duphits(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_m
       for(i = j = 0; i < tmp_b->n; ++i) {
           tmap_map2_hit_t *p = tmp_b->hits + i;
           if(p->l - p->k + 1 <= IS && TMAP_MAP2_MINUS_INF < p->G) {
-              uint32_t k;
+              tmap_bwt_int_t k;
               for(k = p->k; k <= p->l; ++k) {
                   b->hits[j] = *p;
                   b->hits[j].k = tmap_sa_pac_pos(sa, bwt, k);
@@ -316,7 +316,7 @@ tmap_map2_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
 
   for(i=j=0;i<aln->n;i++) {
       tmap_map2_hit_t *p = aln->hits + i;
-      uint32_t seqid = 0, coor = 0;
+      uint32_t seqid = 0, pos = 0;
       int32_t beg, strand;
       tmap_map_sam_t *sam = &sams->sams[j];
 
@@ -333,9 +333,9 @@ tmap_map2_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
       }
 
       // adjust for contig boundaries
-      if(tmap_refseq_pac2real(refseq, p->k, p->tlen, &seqid, &coor) <= 0) {
+      if(tmap_refseq_pac2real(refseq, p->k, p->tlen, &seqid, &pos) <= 0) {
           if(1 == strand) { // reverse
-              if(tmap_refseq_pac2real(refseq, p->k + p->tlen - 1, 1, &seqid, &coor) <= 0) {
+              if(tmap_refseq_pac2real(refseq, p->k + p->tlen - 1, 1, &seqid, &pos) <= 0) {
                   continue;
               }
               else {
@@ -345,7 +345,7 @@ tmap_map2_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
               }
           }
           else {
-              if(tmap_refseq_pac2real(refseq, p->k, 1, &seqid, &coor) <= 0) {
+              if(tmap_refseq_pac2real(refseq, p->k, 1, &seqid, &pos) <= 0) {
                   continue;
               }
               else {
@@ -358,7 +358,7 @@ tmap_map2_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
 
       // adjust based on where the hit was in the read
       beg = (1 == strand) ? (seq_len - p->end) : p->beg;
-      coor = (coor <= beg) ? 1 : (coor - beg); // adjust coor
+      pos = (pos <= beg) ? 1 : (pos - beg); // adjust pos
 
       if((p->flag & 0x1)) {
           p->G2 = p->G; // Note: the flag indicates a repetitive match, so we need to update the sub-optimal score
@@ -366,7 +366,7 @@ tmap_map2_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
 
       sam->strand = strand;
       sam->seqid = seqid;
-      sam->pos = coor-1; // make it zero-based
+      sam->pos = pos-1; // make it zero-based
       sam->algo_id = TMAP_MAP_ALGO_MAP2;
       sam->algo_stage = opt->algo_stage;
       sam->score = p->G;

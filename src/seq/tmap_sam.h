@@ -6,6 +6,7 @@
 #ifdef HAVE_SAMTOOLS
 #include <bam.h>
 #endif
+#include "../util/tmap_definitions.h"
 #include "../index/tmap_refseq.h"
 #include "../io/tmap_file.h"
 
