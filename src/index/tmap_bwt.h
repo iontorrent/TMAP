@@ -61,7 +61,7 @@ typedef struct {
     uint32_t is_rev;  /*!< 1 if the reference sequence was reversed, 0 otherwise */
     tmap_bwt_int_t **hash_k;  /*!< hash of the BWT occurrence array (lower bounds) */
     tmap_bwt_int_t **hash_l;  /*!< hash of the BWT occurrence array (upper bounds) */
-    uint64_t hash_width;  /*!< the k-mer that is hashed */
+    uint32_t hash_width;  /*!< the k-mer that is hashed */
     uint32_t is_shm;  /*!< 1 if loaded from shared memory, 0 otherwise */
 } tmap_bwt_t;
 
@@ -137,7 +137,7 @@ tmap_bwt_gen_cnt_table(tmap_bwt_t *bwt);
   @param  hash_width  the k-mer length to hash
   */
 void
-tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint64_t hash_width);
+tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width);
 
 /*! 
   calculates the next occurrence given the previous occurrence and the next base

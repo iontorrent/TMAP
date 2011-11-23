@@ -40,7 +40,7 @@
 #include "tmap_bwt.h"
 #include "tmap_bwt_match.h"
 
-static uint64_t
+static inline uint64_t
 tmap_bwt_get_hash_length(uint64_t i)
 {
   return ((uint64_t)1) << (i << 1); // 4^{hash_width} entries
@@ -69,7 +69,7 @@ tmap_bwt_read(const char *fn_fasta, uint32_t is_rev)
 
   bwt->bwt = tmap_calloc(bwt->bwt_size, sizeof(tmap_bwt_int_t), "bwt->bwt");
 
-  if(1 != tmap_file_fread(&bwt->hash_width, sizeof(uint64_t), 1, fp_bwt)
+  if(1 != tmap_file_fread(&bwt->hash_width, sizeof(uint32_t), 1, fp_bwt)
      || 1 != tmap_file_fread(&bwt->primary, sizeof(tmap_bwt_int_t), 1, fp_bwt)
      || 4 != tmap_file_fread(bwt->L2+1, sizeof(tmap_bwt_int_t), 4, fp_bwt)
      || 1 != tmap_file_fread(&bwt->occ_interval, sizeof(tmap_bwt_int_t), 1, fp_bwt)
@@ -80,7 +80,7 @@ tmap_bwt_read(const char *fn_fasta, uint32_t is_rev)
   }
 
   if(0 < bwt->hash_width) {
-      uint64_t i;
+      uint32_t i;
       bwt->hash_k = tmap_malloc(bwt->hash_width*sizeof(tmap_bwt_int_t*), "bwt->hash_k");
       bwt->hash_l = tmap_malloc(bwt->hash_width*sizeof(tmap_bwt_int_t*), "bwt->hash_l");
       for(i=1;i<=bwt->hash_width;i++) {
@@ -126,7 +126,7 @@ tmap_bwt_write(const char *fn_fasta, tmap_bwt_t *bwt, uint32_t is_rev)
 
   if(1 != tmap_file_fwrite(&bwt->version_id, sizeof(uint32_t), 1, fp_bwt)
      || 1 != tmap_file_fwrite(&bwt->bwt_size, sizeof(tmap_bwt_int_t), 1, fp_bwt)
-     || 1 != tmap_file_fwrite(&bwt->hash_width, sizeof(uint64_t), 1, fp_bwt)
+     || 1 != tmap_file_fwrite(&bwt->hash_width, sizeof(uint32_t), 1, fp_bwt)
      || 1 != tmap_file_fwrite(&bwt->primary, sizeof(tmap_bwt_int_t), 1, fp_bwt) 
      || 4 != tmap_file_fwrite(bwt->L2+1, sizeof(tmap_bwt_int_t), 4, fp_bwt)
      || 1 != tmap_file_fwrite(&bwt->occ_interval, sizeof(tmap_bwt_int_t), 1, fp_bwt)
@@ -136,7 +136,7 @@ tmap_bwt_write(const char *fn_fasta, tmap_bwt_t *bwt, uint32_t is_rev)
       tmap_error(NULL, Exit, WriteFileError);
   }
   if(0 < bwt->hash_width) {
-      uint64_t i;
+      uint32_t i;
       for(i=1;i<=bwt->hash_width;i++) {
           uint64_t hash_length = tmap_bwt_get_hash_length(i);
           if(hash_length != tmap_file_fwrite(bwt->hash_k[i-1], sizeof(tmap_bwt_int_t), hash_length, fp_bwt)
@@ -154,7 +154,7 @@ size_t
 tmap_bwt_shm_num_bytes(tmap_bwt_t *bwt)
 {
   // returns the number of bytes to allocate for shared memory
-  uint64_t i;
+  uint32_t i;
   size_t n = 0;
 
   // fixed length data
@@ -166,7 +166,7 @@ tmap_bwt_shm_num_bytes(tmap_bwt_t *bwt)
   n += sizeof(tmap_bwt_int_t); // occ_interval
   n += 256*sizeof(tmap_bwt_int_t); // cnt_table[256]
   n += sizeof(uint32_t); // is_rev
-  n += sizeof(uint64_t); // hash_width
+  n += sizeof(uint32_t); // hash_width
 
   //variable length data
   n += sizeof(tmap_bwt_int_t)*bwt->bwt_size; // bwt
@@ -201,7 +201,7 @@ tmap_bwt_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev)
       tmap_error("version id did not match", Exit, ReadFileError);
   }
 
-  if(1 != tmap_file_fread(&bwt->hash_width, sizeof(uint64_t), 1, fp_bwt)
+  if(1 != tmap_file_fread(&bwt->hash_width, sizeof(uint32_t), 1, fp_bwt)
      || 1 != tmap_file_fread(&bwt->primary, sizeof(tmap_bwt_int_t), 1, fp_bwt)
      || 4 != tmap_file_fread(bwt->L2+1, sizeof(tmap_bwt_int_t), 4, fp_bwt)
      || 1 != tmap_file_fread(&bwt->occ_interval, sizeof(tmap_bwt_int_t), 1, fp_bwt)
@@ -234,7 +234,7 @@ tmap_bwt_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev)
 uint8_t *
 tmap_bwt_shm_pack(tmap_bwt_t *bwt, uint8_t *buf)
 {
-  uint64_t i;
+  uint32_t i;
   // fixed length data
   memcpy(buf, &bwt->version_id, sizeof(uint32_t)); buf += sizeof(uint32_t);
   memcpy(buf, &bwt->primary, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
@@ -244,7 +244,7 @@ tmap_bwt_shm_pack(tmap_bwt_t *bwt, uint8_t *buf)
   memcpy(buf, &bwt->occ_interval, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
   memcpy(buf, bwt->cnt_table, 256*sizeof(tmap_bwt_int_t)); buf += 256*sizeof(tmap_bwt_int_t);
   memcpy(buf, &bwt->is_rev, sizeof(uint32_t)); buf += sizeof(uint32_t);
-  memcpy(buf, &bwt->hash_width, sizeof(uint64_t)); buf += sizeof(uint64_t);
+  memcpy(buf, &bwt->hash_width, sizeof(uint32_t)); buf += sizeof(uint32_t);
   // variable length data
   memcpy(buf, bwt->bwt, bwt->bwt_size*sizeof(tmap_bwt_int_t)); buf += bwt->bwt_size*sizeof(tmap_bwt_int_t);
   for(i=1;i<=bwt->hash_width;i++) {
@@ -259,7 +259,7 @@ tmap_bwt_t *
 tmap_bwt_shm_unpack(uint8_t *buf)
 {
   tmap_bwt_t *bwt = NULL;
-  int32_t i;
+  uint32_t i;
 
   if(NULL == buf) return NULL;
 
@@ -274,7 +274,7 @@ tmap_bwt_shm_unpack(uint8_t *buf)
   memcpy(&bwt->occ_interval, buf, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
   memcpy(bwt->cnt_table, buf, 256*sizeof(tmap_bwt_int_t)); buf += 256*sizeof(tmap_bwt_int_t);
   memcpy(&bwt->is_rev, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
-  memcpy(&bwt->hash_width, buf, sizeof(uint64_t)); buf += sizeof(uint64_t);
+  memcpy(&bwt->hash_width, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
 
   // allocate memory 
   bwt->hash_k = tmap_calloc(bwt->hash_width, sizeof(tmap_bwt_int_t*), "bwt->hash_k");
@@ -296,7 +296,7 @@ tmap_bwt_shm_unpack(uint8_t *buf)
 void 
 tmap_bwt_destroy(tmap_bwt_t *bwt)
 {
-  uint64_t i;
+  uint32_t i;
   if(bwt == 0) return;
   if(1 == bwt->is_shm) {
       free(bwt->hash_k);
@@ -447,9 +447,9 @@ tmap_bwt_gen_hash_helper(tmap_bwt_t *bwt, tmap_bwt_int_t len)
 }
 
 void
-tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint64_t hash_width)
+tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width)
 {
-  uint64_t i;
+  uint32_t i;
 
   tmap_progress_print("constructing the occurrence hash for the BWT string");
 
@@ -655,13 +655,13 @@ int
 tmap_bwt_pac2bwt_main(int argc, char *argv[])
 {
   int c, is_large = 0, occ_interval = TMAP_BWT_OCC_INTERVAL, help = 0;
-  uint64_t hash_width = TMAP_BWT_HASH_WIDTH;
+  uint32_t hash_width = TMAP_BWT_HASH_WIDTH;
 
   while((c = getopt(argc, argv, "o:lw:vh")) >= 0) {
       switch(c) {
         case 'l': is_large = 1; break;
         case 'o': occ_interval = atoi(optarg); break;
-        case 'w': hash_width = (uint64_t)atoi(optarg); break;
+        case 'w': hash_width = atoi(optarg); break;
         case 'v': tmap_progress_set_verbosity(1); break;
         case 'h': help = 1; break;
         default: return 1;
