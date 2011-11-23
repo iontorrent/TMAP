@@ -170,7 +170,7 @@ tmap_refseq_pac2real(const tmap_refseq_t *refseq, tmap_bwt_int_t pacpos, uint32_
   @return         the length retrieved
   */
 inline int32_t
-tmap_refseq_subseq(const tmap_refseq_t *refseq, uint32_t pacpos, uint32_t length, uint8_t *target);
+tmap_refseq_subseq(const tmap_refseq_t *refseq, tmap_bwt_int_t pacpos, uint32_t length, uint8_t *target);
 
 /*! 
   Retrieves a subsequence of the reference in 2-bit format

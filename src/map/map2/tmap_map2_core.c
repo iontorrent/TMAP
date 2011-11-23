@@ -285,7 +285,8 @@ tmap_map2_core_aln(const tmap_map_opt_t *opt, const tmap_bwtl_t *target,
   while(!tmap_map2_stack_isempty(stack)) {
       int32_t old_n, tj;
       tmap_map2_entry_t *v;
-      tmap_bwt_int_t k, l, tcntk[4], tcntl[4];
+      tmap_bwt_int_t k, l;
+      uint32_t tcntk[4], tcntl[4];
 
       v = tmap_map2_stack_pop(stack); old_n = v->n;
       n_tot += v->n;

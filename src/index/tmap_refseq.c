@@ -742,7 +742,7 @@ tmap_refseq_get_pos(const tmap_refseq_t *refseq, tmap_bwt_int_t pacpos, uint32_t
   return pacpos - refseq->annos[seqid].offset;
 }
 
-inline uint32_t
+inline tmap_bwt_int_t 
 tmap_refseq_pac2real(const tmap_refseq_t *refseq, tmap_bwt_int_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos)
 {
   (*seqid) = tmap_refseq_get_seqid(refseq, pacpos, aln_length);

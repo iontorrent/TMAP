@@ -293,21 +293,21 @@ tmap_sa_bwt2sa(const char *fn_fasta, uint32_t intv)
 #define swap(a, b, t);							t = a; a = b; b = t;
 
 // Static functions
-static void QSufSortSortSplit(int* __restrict V, int* __restrict I, const int32_t lowestPos, 
-                              const int32_t highestPos, const int32_t numSortedChar);
-static int32_t QSufSortChoosePivot(int* __restrict V, int* __restrict I, const int32_t lowestPos, 
-                                   const int32_t highestPos, const int32_t numSortedChar);
-static void QSufSortInsertSortSplit(int* __restrict V, int* __restrict I, const int32_t lowestPos, 
-                                    const int32_t highestPos, const int32_t numSortedChar);
-static void QSufSortBucketSort(int* __restrict V, int* __restrict I, const int32_t numChar, const int32_t alphabetSize);
-static int32_t QSufSortTransform(int* __restrict V, int* __restrict I, const int32_t numChar, const int32_t largestInputSymbol, 
-                                 const int32_t smallestInputSymbol, const int32_t maxNewAlphabetSize, int32_t *numSymbolAggregated);
+static void QSufSortSortSplit(tmap_bwt_sint_t* __restrict V, tmap_bwt_sint_t* __restrict I, const tmap_bwt_sint_t lowestPos, 
+                              const tmap_bwt_sint_t highestPos, const tmap_bwt_sint_t numSortedChar);
+static tmap_bwt_sint_t QSufSortChoosePivot(tmap_bwt_sint_t* __restrict V, tmap_bwt_sint_t* __restrict I, const tmap_bwt_sint_t lowestPos, 
+                                   const tmap_bwt_sint_t highestPos, const tmap_bwt_sint_t numSortedChar);
+static void QSufSortInsertSortSplit(tmap_bwt_sint_t* __restrict V, tmap_bwt_sint_t* __restrict I, const tmap_bwt_sint_t lowestPos, 
+                                    const tmap_bwt_sint_t highestPos, const tmap_bwt_sint_t numSortedChar);
+static void QSufSortBucketSort(tmap_bwt_sint_t* __restrict V, tmap_bwt_sint_t* __restrict I, const tmap_bwt_sint_t numChar, const tmap_bwt_sint_t alphabetSize);
+static tmap_bwt_sint_t QSufSortTransform(tmap_bwt_sint_t* __restrict V, tmap_bwt_sint_t* __restrict I, const tmap_bwt_sint_t numChar, const tmap_bwt_sint_t largestInputSymbol, 
+                                 const tmap_bwt_sint_t smallestInputSymbol, const tmap_bwt_sint_t maxNewAlphabetSize, tmap_bwt_sint_t *numSymbolAggregated);
 
 // from MiscUtilities.c
-static uint32_t leadingZero(const uint32_t input) {
+static tmap_bwt_sint_t leadingZero(const tmap_bwt_sint_t input) {
 
-    uint32_t l;
-    const static uint32_t leadingZero8bit[256] = {8,7,6,6,5,5,5,5,4,4,4,4,4,4,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,
+    tmap_bwt_sint_t l;
+    const static tmap_bwt_sint_t leadingZero8bit[256] = {8,7,6,6,5,5,5,5,4,4,4,4,4,4,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,
         2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
         1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
         1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -337,15 +337,15 @@ static uint32_t leadingZero(const uint32_t input) {
    n+1. Contents of x[0...n-1] are integers in the range l...k-1. Original
    contents of x[n] is disregarded, the n-th symbol being regarded as
    end-of-string smaller than all other symbols.*/
-void QSufSortSuffixSort(int32_t* __restrict V, int32_t* __restrict I, const int32_t numChar, const int32_t largestInputSymbol, 
-                        const int32_t smallestInputSymbol, const int32_t skipTransform) {
+void QSufSortSuffixSort(tmap_bwt_sint_t* __restrict V, tmap_bwt_sint_t* __restrict I, const tmap_bwt_sint_t numChar, const tmap_bwt_sint_t largestInputSymbol, 
+                        const tmap_bwt_sint_t smallestInputSymbol, const tmap_bwt_sint_t skipTransform) {
 
-    int32_t i, j;
-    int32_t s, negatedSortedGroupLength;
-    int32_t numSymbolAggregated;
-    int32_t maxNumInputSymbol;
-    int32_t numSortedPos = 1;
-    int32_t newAlphabetSize;
+    tmap_bwt_sint_t i, j;
+    tmap_bwt_sint_t s, negatedSortedGroupLength;
+    tmap_bwt_sint_t numSymbolAggregated;
+    tmap_bwt_sint_t maxNumInputSymbol;
+    tmap_bwt_sint_t numSortedPos = 1;
+    tmap_bwt_sint_t newAlphabetSize;
 
     maxNumInputSymbol = largestInputSymbol - smallestInputSymbol + 1;
 
@@ -359,7 +359,7 @@ void QSufSortSuffixSort(int32_t* __restrict V, int32_t* __restrict I, const int3
         numSortedPos = numSymbolAggregated;
     }
 
-    while ((int)(I[0]) >= -(int)numChar) {
+    while ((tmap_bwt_sint_t)(I[0]) >= -(tmap_bwt_sint_t)numChar) {
         i = 0;
         negatedSortedGroupLength = 0;
         do {
@@ -385,9 +385,9 @@ void QSufSortSuffixSort(int32_t* __restrict V, int32_t* __restrict I, const int3
     }
 
 }
-void QSufSortGenerateSaFromInverse(const int32_t* V, int32_t* __restrict I, const int32_t numChar) {
+void QSufSortGenerateSaFromInverse(const tmap_bwt_sint_t* V, tmap_bwt_sint_t* __restrict I, const tmap_bwt_sint_t numChar) {
 
-    int32_t i;
+    tmap_bwt_sint_t i;
     for (i=0; i<=numChar; i++) {
         I[V[i]] = i + 1;
     }
@@ -399,14 +399,14 @@ void QSufSortGenerateSaFromInverse(const int32_t* V, int32_t* __restrict I, cons
    quicksort taken from Bentley & McIlroy, "Engineering a Sort Function",
    Software -- Practice and Experience 23(11), 1249-1265 (November 1993). This
    function is based on Program 7.*/
-static void QSufSortSortSplit(int* __restrict V, int* __restrict I, const int32_t lowestPos, 
-                              const int32_t highestPos, const int32_t numSortedChar) {
+static void QSufSortSortSplit(tmap_bwt_sint_t* __restrict V, tmap_bwt_sint_t* __restrict I, const tmap_bwt_sint_t lowestPos, 
+                              const tmap_bwt_sint_t highestPos, const tmap_bwt_sint_t numSortedChar) {
 
-    int32_t a, b, c, d;
-    int32_t l, m;
-    int32_t f, v, s, t;
-    int32_t tmp;
-    int32_t numItem;
+    tmap_bwt_sint_t a, b, c, d;
+    tmap_bwt_sint_t l, m;
+    tmap_bwt_sint_t f, v, s, t;
+    tmap_bwt_sint_t tmp;
+    tmap_bwt_sint_t numItem;
 
 #ifdef DEBUG
     if (lowestPos > highestPos) {
@@ -490,14 +490,14 @@ static void QSufSortSortSplit(int* __restrict V, int* __restrict I, const int32_
 }
 
 /* Algorithm by Bentley & McIlroy.*/
-static int32_t QSufSortChoosePivot(int* __restrict V, int* __restrict I, const int32_t lowestPos, 
-                                   const int32_t highestPos, const int32_t numSortedChar) {
+static tmap_bwt_sint_t QSufSortChoosePivot(tmap_bwt_sint_t* __restrict V, tmap_bwt_sint_t* __restrict I, const tmap_bwt_sint_t lowestPos, 
+                                   const tmap_bwt_sint_t highestPos, const tmap_bwt_sint_t numSortedChar) {
 
-    int32_t m;
-    int32_t keyl, keym, keyn;
-    int32_t key1, key2, key3;
-    int32_t s;
-    int32_t numItem;
+    tmap_bwt_sint_t m;
+    tmap_bwt_sint_t keyl, keym, keyn;
+    tmap_bwt_sint_t key1, key2, key3;
+    tmap_bwt_sint_t s;
+    tmap_bwt_sint_t numItem;
 
 #ifdef DEBUG
     if (lowestPos > highestPos) {
@@ -535,15 +535,15 @@ static int32_t QSufSortChoosePivot(int* __restrict V, int* __restrict I, const i
 }
 
 /* Quadratic sorting method to use for small subarrays. */
-static void QSufSortInsertSortSplit(int* __restrict V, int* __restrict I, const int32_t lowestPos, 
-                                    const int32_t highestPos, const int32_t numSortedChar) {
+static void QSufSortInsertSortSplit(tmap_bwt_sint_t* __restrict V, tmap_bwt_sint_t* __restrict I, const tmap_bwt_sint_t lowestPos, 
+                                    const tmap_bwt_sint_t highestPos, const tmap_bwt_sint_t numSortedChar) {
 
-    int32_t i, j;
-    int32_t tmpKey, tmpPos;
-    int32_t numItem;
-    int32_t key[INSERT_SORT_NUM_ITEM], pos[INSERT_SORT_NUM_ITEM];
-    int32_t negativeSortedLength;
-    int32_t groupNum;
+    tmap_bwt_sint_t i, j;
+    tmap_bwt_sint_t tmpKey, tmpPos;
+    tmap_bwt_sint_t numItem;
+    tmap_bwt_sint_t key[INSERT_SORT_NUM_ITEM], pos[INSERT_SORT_NUM_ITEM];
+    tmap_bwt_sint_t negativeSortedLength;
+    tmap_bwt_sint_t groupNum;
 
 #ifdef DEBUG
     if (lowestPos > highestPos) {
@@ -616,12 +616,12 @@ must be at most n+1. p is array of size n+1 whose contents are disregarded.
 Output: x is V and p is I after the initial sorting stage of the refined
 suffix sorting algorithm.*/
 
-static void QSufSortBucketSort(int32_t* __restrict V, int32_t* __restrict I, const int32_t numChar, const int32_t alphabetSize) {
+static void QSufSortBucketSort(tmap_bwt_sint_t* __restrict V, tmap_bwt_sint_t* __restrict I, const tmap_bwt_sint_t numChar, const tmap_bwt_sint_t alphabetSize) {
 
-    int32_t i, c;
-    int32_t d;
-    int32_t groupNum;
-    int32_t currentIndex;
+    tmap_bwt_sint_t i, c;
+    tmap_bwt_sint_t d;
+    tmap_bwt_sint_t groupNum;
+    tmap_bwt_sint_t currentIndex;
 
     // mark linked list empty
     for (i=0; i<alphabetSize; i++) {
@@ -631,14 +631,14 @@ static void QSufSortBucketSort(int32_t* __restrict V, int32_t* __restrict I, con
     // insert to linked list
     for (i=0; i<=numChar; i++) {
         c = V[i];
-        V[i] = (int)(I[c]);
+        V[i] = (tmap_bwt_sint_t)(I[c]);
         I[c] = i;
     }
 
     currentIndex = numChar;
     for (i=alphabetSize; i>0; i--) {
         c = I[i-1];
-        d = (int)(V[c]);
+        d = (tmap_bwt_sint_t)(V[c]);
         groupNum = currentIndex;
         V[c] = groupNum;
         if (d >= 0) {

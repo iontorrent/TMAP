@@ -48,6 +48,6 @@ tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, 
   @return    the primary index if no error occurred, -1 or -2 otherwise
   */
 uint32_t 
-tmap_bwt_gen_short(uint8_t *T, tmap_bwt_int_t n);
+tmap_bwt_gen_short(uint8_t *T, uint32_t n);
 
 #endif

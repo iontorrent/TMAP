@@ -100,6 +100,12 @@ typedef uint32_t tmap_bwt_int_t;
 #define TMAP_BWT_INT_MAX UINT32_MAX 
 typedef int32_t tmap_bwt_sint_t;
 #define TMAP_BWT_SINT_MAX INT32_MAX 
+/*
+typedef uint64_t tmap_bwt_int_t;
+#define TMAP_BWT_INT_MAX UINT64_MAX 
+typedef int64_t tmap_bwt_sint_t;
+#define TMAP_BWT_SINT_MAX INT64_MAX 
+*/
 
 /*! 
   @param  algo_id  the algorithm identifier

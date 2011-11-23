@@ -1406,7 +1406,7 @@ BWTIncConstruct(tmap_bwt_gen_inc_t *bwtInc, const tmap_bwt_gen_uint_t numChar)
       // Set address
       sortedRank = (tmap_bwt_gen_uint_t*)bwtInc->workingMemory;
       seq = sortedRank + bwtInc->buildSize + 1;
-      insertBwt = seq;
+      insertBwt = (unsigned*)seq;
       relativeRank = seq + bwtInc->buildSize + 1;
 
       // Store the first character of this iteration
@@ -1457,8 +1457,8 @@ BWTIncConstruct(tmap_bwt_gen_inc_t *bwtInc, const tmap_bwt_gen_uint_t numChar)
 
       sortedRank[newInverseSa0RelativeRank] = 0;	// a special value so that this is skipped in the merged bwt
 
-      // Build BWT
-      BWTIncBuildBwt(seq, relativeRank, numChar, bwtInc->cumulativeCountInCurrentBuild);
+      // Build BWT;  seq is overwritten by insertBwt
+      BWTIncBuildBwt(insertBwt, relativeRank, numChar, bwtInc->cumulativeCountInCurrentBuild);
 
       // Merge BWT
       mergedBwt = bwtInc->workingMemory + bwtInc->availableWord - mergedBwtSizeInWord 
@@ -1608,7 +1608,7 @@ BWTFileSizeInWord(const tmap_bwt_gen_uint_t numChar)
 void 
 BWTSaveBwtCodeAndOcc(tmap_bwt_t *bwt_out, const tmap_bwt_gen_t *bwt, const char *fn_fasta, int32_t occ_interval, uint32_t is_rev) 
 {
-  uint32_t i;
+  tmap_bwt_int_t i;
   tmap_bwt_t *bwt_tmp=NULL;
 
   // Move over to bwt data structure
@@ -1619,7 +1619,11 @@ BWTSaveBwtCodeAndOcc(tmap_bwt_t *bwt_out, const tmap_bwt_gen_t *bwt, const char 
   for(i=0;i<1+ALPHABET_SIZE;i++) {
       bwt_out->L2[i] = bwt->cumulativeFreq[i];
   }
-  bwt_out->bwt = bwt->bwtCode; // shallow copy
+  //bwt_out->bwt = bwt->bwtCode; // shallow copy
+  bwt_out->bwt = tmap_calloc(bwt_out->bwt_size, sizeof(tmap_bwt_int_t), "bwt->bwt");
+  for(i=0;i<bwt_out->bwt_size;i++) {
+      bwt_out->bwt[i] = bwt->bwtCode[i];
+  }
   bwt_out->occ_interval = OCC_INTERVAL;
 
   // write
@@ -1627,7 +1631,8 @@ BWTSaveBwtCodeAndOcc(tmap_bwt_t *bwt_out, const tmap_bwt_gen_t *bwt, const char 
   bwt_out->hash_width = 0; // none yet
   tmap_bwt_write(fn_fasta, bwt_out, is_rev);
 
-  // nullify
+  // free and nullify
+  free(bwt_out->bwt);
   bwt_out->bwt = NULL;
 
   // update occurrence interval
