@@ -135,7 +135,7 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   tmap_refseq_t *refseq = NULL;
   char *fn_pac = NULL, *fn_anno = NULL;
   uint8_t buffer[TMAP_REFSEQ_BUFFER_SIZE];
-  uint64_t i, j, l, buffer_length;
+  int64_t i, j, l, buffer_length;
   uint32_t num_IUPAC_found= 0, amb_bases_mem = 0;
   uint8_t x = 0;
   uint64_t ref_len;
@@ -167,6 +167,7 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   while(0 <= (l = tmap_seq_io_read(seqio, seq))) {
       tmap_anno_t *anno = NULL;
       tmap_progress_print2("packing contig [%s:1-%d]", seq->data.fq->name->s, l);
+
 
       refseq->num_annos++;
       refseq->annos = tmap_realloc(refseq->annos, sizeof(tmap_anno_t)*refseq->num_annos, "refseq->annos");
