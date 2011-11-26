@@ -73,7 +73,7 @@ tmap_refseq_write_header(tmap_file_t *fp, tmap_refseq_t *refseq)
   if(1 != tmap_file_fwrite(&refseq->version_id, sizeof(uint64_t), 1, fp) 
      || 1 != tmap_file_fwrite(&refseq->package_version->l, sizeof(size_t), 1, fp)
      || refseq->package_version->l+1 != tmap_file_fwrite(refseq->package_version->s, sizeof(char), refseq->package_version->l+1, fp)
-     || 1 != tmap_file_fwrite(&refseq->num_annos, sizeof(uint64_t), 1, fp)
+     || 1 != tmap_file_fwrite(&refseq->num_annos, sizeof(uint32_t), 1, fp)
      || 1 != tmap_file_fwrite(&refseq->len, sizeof(uint64_t), 1, fp)) {
       tmap_error(NULL, Exit, WriteFileError);
   }
@@ -446,7 +446,7 @@ tmap_refseq_read_annos(tmap_file_t *fp, tmap_anno_t *anno)
       if(anno->num_amb != tmap_file_fread(anno->amb_positions_start, sizeof(uint32_t), anno->num_amb, fp)
          || anno->num_amb != tmap_file_fread(anno->amb_positions_end, sizeof(uint32_t), anno->num_amb, fp)
          || anno->num_amb != tmap_file_fread(anno->amb_bases, sizeof(uint8_t), anno->num_amb, fp)) {
-          tmap_error(NULL, Exit, WriteFileError);
+          tmap_error(NULL, Exit, ReadFileError);
       }
   }
   else {

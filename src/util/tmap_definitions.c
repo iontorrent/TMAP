@@ -8,8 +8,13 @@
 #include "../io/tmap_file.h"
 #include "tmap_definitions.h"
 
-// Algorithm IDs
+#ifdef TMAP_BWT_32_BIT
+#warning "Using 32-bit SA intervals; Genome sizes limited to 4Gb"
+#else
+#warning "Using 64-bit SA intervals; Genome sizes greater than 4Gb are supported"
+#endif
 
+// Algorithm IDs
 static char *algo_id_to_name[17] = {
     "none",
     "map1", 

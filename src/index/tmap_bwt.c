@@ -75,7 +75,7 @@ tmap_bwt_read(const char *fn_fasta, uint32_t is_rev)
      || 1 != tmap_file_fread(&bwt->occ_interval, sizeof(tmap_bwt_int_t), 1, fp_bwt)
      || 1 != tmap_file_fread(&bwt->seq_len, sizeof(tmap_bwt_int_t), 1, fp_bwt)
      || 1 != tmap_file_fread(&bwt->is_rev, sizeof(uint32_t), 1, fp_bwt)
-     || bwt->bwt_size != tmap_file_fread(bwt->bwt, sizeof(tmap_bwt_int_t), bwt->bwt_size, fp_bwt)) {
+     || bwt->bwt_size != tmap_file_fread(bwt->bwt, sizeof(uint32_t), bwt->bwt_size, fp_bwt)) {
       tmap_error(NULL, Exit, ReadFileError);
   }
 
@@ -132,7 +132,7 @@ tmap_bwt_write(const char *fn_fasta, tmap_bwt_t *bwt, uint32_t is_rev)
      || 1 != tmap_file_fwrite(&bwt->occ_interval, sizeof(tmap_bwt_int_t), 1, fp_bwt)
      || 1 != tmap_file_fwrite(&bwt->seq_len, sizeof(tmap_bwt_int_t), 1, fp_bwt)
      || 1 != tmap_file_fwrite(&bwt->is_rev, sizeof(uint32_t), 1, fp_bwt)
-     || bwt->bwt_size != tmap_file_fwrite(bwt->bwt, sizeof(tmap_bwt_int_t), bwt->bwt_size, fp_bwt)) {
+     || bwt->bwt_size != tmap_file_fwrite(bwt->bwt, sizeof(uint32_t), bwt->bwt_size, fp_bwt)) {
       tmap_error(NULL, Exit, WriteFileError);
   }
   if(0 < bwt->hash_width) {
@@ -164,12 +164,12 @@ tmap_bwt_shm_num_bytes(tmap_bwt_t *bwt)
   n += sizeof(tmap_bwt_int_t); // seq_len
   n += sizeof(tmap_bwt_int_t); // bwt_size;
   n += sizeof(tmap_bwt_int_t); // occ_interval
-  n += 256*sizeof(tmap_bwt_int_t); // cnt_table[256]
+  n += 256*sizeof(uint32_t); // cnt_table[256]
   n += sizeof(uint32_t); // is_rev
   n += sizeof(uint32_t); // hash_width
 
   //variable length data
-  n += sizeof(tmap_bwt_int_t)*bwt->bwt_size; // bwt
+  n += sizeof(uint32_t)*bwt->bwt_size; // bwt
   for(i=1;i<=bwt->hash_width;i++) {
       uint64_t hash_length = tmap_bwt_get_hash_length(i);
       n += sizeof(tmap_bwt_int_t)*hash_length; // hash_k[i-1]
@@ -242,11 +242,11 @@ tmap_bwt_shm_pack(tmap_bwt_t *bwt, uint8_t *buf)
   memcpy(buf, &bwt->seq_len, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
   memcpy(buf, &bwt->bwt_size, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
   memcpy(buf, &bwt->occ_interval, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
-  memcpy(buf, bwt->cnt_table, 256*sizeof(tmap_bwt_int_t)); buf += 256*sizeof(tmap_bwt_int_t);
+  memcpy(buf, bwt->cnt_table, 256*sizeof(uint32_t)); buf += 256*sizeof(uint32_t);
   memcpy(buf, &bwt->is_rev, sizeof(uint32_t)); buf += sizeof(uint32_t);
   memcpy(buf, &bwt->hash_width, sizeof(uint32_t)); buf += sizeof(uint32_t);
   // variable length data
-  memcpy(buf, bwt->bwt, bwt->bwt_size*sizeof(tmap_bwt_int_t)); buf += bwt->bwt_size*sizeof(tmap_bwt_int_t);
+  memcpy(buf, bwt->bwt, bwt->bwt_size*sizeof(uint32_t)); buf += bwt->bwt_size*sizeof(uint32_t);
   for(i=1;i<=bwt->hash_width;i++) {
       uint64_t hash_length = tmap_bwt_get_hash_length(i);
       memcpy(buf, bwt->hash_k[i-1], hash_length*sizeof(tmap_bwt_int_t)); buf += hash_length*sizeof(tmap_bwt_int_t);
@@ -272,7 +272,7 @@ tmap_bwt_shm_unpack(uint8_t *buf)
   memcpy(&bwt->seq_len, buf, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
   memcpy(&bwt->bwt_size, buf, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
   memcpy(&bwt->occ_interval, buf, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
-  memcpy(bwt->cnt_table, buf, 256*sizeof(tmap_bwt_int_t)); buf += 256*sizeof(tmap_bwt_int_t);
+  memcpy(bwt->cnt_table, buf, 256*sizeof(uint32_t)); buf += 256*sizeof(uint32_t);
   memcpy(&bwt->is_rev, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
   memcpy(&bwt->hash_width, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
 
@@ -281,7 +281,7 @@ tmap_bwt_shm_unpack(uint8_t *buf)
   bwt->hash_l = tmap_calloc(bwt->hash_width, sizeof(tmap_bwt_int_t*), "bwt->hash_l");
 
   // variable length data
-  bwt->bwt = (tmap_bwt_int_t*)buf; buf += bwt->bwt_size*sizeof(tmap_bwt_int_t);
+  bwt->bwt = (uint32_t*)buf; buf += bwt->bwt_size*sizeof(uint32_t);
   for(i=1;i<=bwt->hash_width;i++) {
       uint64_t hash_length = tmap_bwt_get_hash_length(i);
       bwt->hash_k[i-1] = (tmap_bwt_int_t*)buf; buf += hash_length*sizeof(tmap_bwt_int_t);
@@ -324,8 +324,9 @@ tmap_bwt_destroy(tmap_bwt_t *bwt)
 void
 tmap_bwt_update_occ_interval(tmap_bwt_t *bwt, tmap_bwt_int_t occ_interval)
 {
-  tmap_bwt_int_t i, k, c[4], n_occ;
-  tmap_bwt_int_t *buf = NULL;
+  tmap_bwt_int_t i, k, n_occ;
+  uint32_t *buf = NULL;
+  uint32_t c[4];
 
   // 2-bit DNA packed
 #define bwt_B00(b, k) ((b)->bwt[(k)>>4]>>((~(k)&0xf)<<1)&3)
@@ -337,12 +338,12 @@ tmap_bwt_update_occ_interval(tmap_bwt_t *bwt, tmap_bwt_int_t occ_interval)
   n_occ = ((bwt->seq_len + occ_interval - 1) / occ_interval) + 1; // the number of occurrences to store, on top of the bwt string
   bwt->occ_interval = occ_interval;
   bwt->bwt_size += n_occ * 4; // the new size
-  buf = tmap_calloc(bwt->bwt_size, sizeof(tmap_bwt_int_t), "buf"); // will be the new bwt
+  buf = tmap_calloc(bwt->bwt_size, sizeof(uint32_t), "buf"); // will be the new bwt
   c[0] = c[1] = c[2] = c[3] = 0;
   for (i = k = 0; i < bwt->seq_len; ++i) {
       // store the occurrences
       if (i % occ_interval == 0) {
-          memcpy(buf + k, c, sizeof(tmap_bwt_int_t) * 4);
+          memcpy(buf + k, c, sizeof(uint32_t) * 4);
           k += 4;
       }
       // store the bwt string
@@ -350,7 +351,7 @@ tmap_bwt_update_occ_interval(tmap_bwt_t *bwt, tmap_bwt_int_t occ_interval)
       ++c[bwt_B00(bwt, i)];
   }
   // the last element
-  memcpy(buf + k, c, sizeof(tmap_bwt_int_t) * 4);
+  memcpy(buf + k, c, sizeof(uint32_t) * 4);
   if(k + 4 != bwt->bwt_size) {
       tmap_error(NULL, Exit, OutOfRange);
   }
@@ -361,9 +362,9 @@ tmap_bwt_update_occ_interval(tmap_bwt_t *bwt, tmap_bwt_int_t occ_interval)
 void 
 tmap_bwt_gen_cnt_table(tmap_bwt_t *bwt)
 {
-  int i, j;
+  int32_t i, j;
   for(i = 0; i != 256; ++i) {
-      tmap_bwt_int_t x = 0;
+      uint32_t x = 0;
       for(j = 0; j != 4; ++j)
         x |= (((i&3) == j) + ((i>>2&3) == j) + ((i>>4&3) == j) + (i>>6 == j)) << (j<<3);
       bwt->cnt_table[i] = x;
@@ -373,12 +374,13 @@ tmap_bwt_gen_cnt_table(tmap_bwt_t *bwt)
 static void
 tmap_bwt_gen_hash_helper(tmap_bwt_t *bwt, tmap_bwt_int_t len)
 {
-  tmap_bwt_int_t i, n;
+  tmap_bwt_sint_t i;
+  tmap_bwt_int_t n;
   uint8_t *seq = NULL;
   tmap_bwt_match_occ_t match_sa;
   tmap_bwt_int_t sum = 0;
-  tmap_bwt_int_t hash_i = 0, low, high;
-
+  uint64_t hash_i = 0, low, high;
+  
   seq = tmap_calloc(len, sizeof(uint8_t), "seq");
 
   i = 0; // length of the current k-mer
@@ -388,10 +390,10 @@ tmap_bwt_gen_hash_helper(tmap_bwt_t *bwt, tmap_bwt_int_t len)
           tmap_error("ABORT", Exit, OutOfRange);
       }
       if(i == len) {
-          // test
           n = tmap_bwt_match_exact(bwt, len, seq, &match_sa);
           bwt->hash_k[len-1][hash_i] = match_sa.k;
           bwt->hash_l[len-1][hash_i] = match_sa.l;
+
           if(match_sa.k <= match_sa.l) {
               sum += n;
           }
@@ -437,9 +439,9 @@ tmap_bwt_gen_hash_helper(tmap_bwt_t *bwt, tmap_bwt_int_t len)
           }
       }
   }
-      
-  //fprintf(stderr, "sum=%d (bwt->seq_len - len + 1)=%d\n", sum, bwt->seq_len - len + 1);
+
   if(sum != bwt->seq_len - len + 1) {
+      //fprintf(stderr, "sum=%lld (bwt->seq_len - len + 1)=%lld\n", (long long int)sum, (long long int)(bwt->seq_len - len + 1));
       tmap_error("sum != bwt->seq_len - len + 1", Exit, OutOfRange);
   }
   
@@ -451,7 +453,12 @@ tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width)
 {
   uint32_t i;
 
-  tmap_progress_print("constructing the occurrence hash for the BWT string");
+  if(0 == bwt->is_rev) {
+      tmap_progress_print("constructing the occurrence hash for the BWT string");
+  }
+  else {
+      tmap_progress_print("constructing the occurrence hash for the reverse BWT string");
+  }
 
   if(bwt->seq_len < hash_width) {
       tmap_error("Hash width was greater than the sequence length, defaulting to the sequence length", Warn, OutOfRange);
@@ -461,7 +468,6 @@ tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width)
   if(TMAP_BWT_INT_MAX <= (1 << (2 * bwt->hash_width)) - 1) {
       tmap_error("Hash width is too great to fit in memory", Exit, OutOfRange);
   }
-
 
   // memory for each level
   bwt->hash_k = tmap_malloc(sizeof(tmap_bwt_int_t*)*hash_width, "bwt->hash_k");
@@ -508,28 +514,27 @@ inline tmap_bwt_int_t
 tmap_bwt_occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, uint8_t c)
 {
   tmap_bwt_int_t n, j, l;
-  tmap_bwt_int_t *p;
+  uint32_t *p;
 
   if(k == bwt->seq_len) return bwt->L2[c+1] - bwt->L2[c];
   if(TMAP_BWT_INT_MAX == k) return 0;
   if(k >= bwt->primary) --k; // because $ is not in bwt
 
   // retrieve Occ at k/bwt->occ_interval
-  n = (p = tmap_bwt_occ_intv(bwt, k))[c];
-  p += 4; // jump to the start of the first BWT cell
+  n = (tmap_bwt_int_t)(p = tmap_bwt_occ_intv(bwt, k))[c];
+  p += sizeof(tmap_bwt_int_t); // jump to the start of the first BWT cell
 
   // calculate Occ
+  /*
   j = k >> 4 << 4; // divide by 16, then multiply by 16, to subtract k % 16.
   for(l = (k/bwt->occ_interval)*bwt->occ_interval; l < j; l += 16, p++) {
       n += __occ_aux16(p[0], c);
   }
   n += __occ_aux16(p[0] & ~((1ul<<((~k&15)<<1)) - 1), c);
   if(c == 0) n -= ~k&15; // corrected for the masked bits
+  */
 
-  /*
   // calculate Occ up to the last k/32
-  n = (p = tmap_bwt_occ_intv(bwt, k))[c];
-  p += 4; // jump to the start of the first BWT cell
   j = k >> 5 << 5;
   for(l = k/bwt->occ_interval*bwt->occ_interval; l < j; l += 32, p += 2) {
       n += __occ_aux32((uint64_t)p[0]<<32 | p[1], c);
@@ -537,7 +542,6 @@ tmap_bwt_occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, uint8_t c)
   // calculate Occ
   n += __occ_aux32(((uint64_t)p[0]<<32 | p[1]) & ~((1ull<<((~k&31)<<1)) - 1), c);
   if(c == 0) n -= ~k&31; // corrected for the masked bits
-  */
 
   return n;
 }
@@ -559,12 +563,13 @@ tmap_bwt_2occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, uint8_t
       *ol = tmap_bwt_occ(bwt, l, c);
   } else {
       tmap_bwt_int_t m, n, i, j;
-      tmap_bwt_int_t *p;
+      uint32_t *p;
       if(k >= bwt->primary) --k;
       if(l >= bwt->primary) --l;
       n = (p = tmap_bwt_occ_intv(bwt, k))[c];
-      p += 4;
+      p += sizeof(tmap_bwt_int_t);
       // calculate *ok
+      /*
       j = k >> 4 << 4; // divide by 16, then multiply by 16, to subtract k % 16.
       for(i = (k/bwt->occ_interval)*bwt->occ_interval; i < j; i += 16, p++) {
           n += __occ_aux16(p[0], c);
@@ -572,27 +577,42 @@ tmap_bwt_2occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, uint8_t
       m = n; // save for ol
       n += __occ_aux16(p[0] & ~((1ul<<((~k&15)<<1)) - 1), c);
       if(c == 0) n -= ~k&15; // corrected for the masked bits
+      */
+      j = k >> 5 << 5; // divide by 32, then multiply by 32, to subtract k % 32
+      for(i = (k/bwt->occ_interval)*bwt->occ_interval; i < j; i += 32, p+=2) {
+          n += __occ_aux32(p[0], c);
+      }
+      m = n; // save for ol
+      n += __occ_aux32(((uint64_t)p[0]<<32 | p[1]) & ~((1ull<<((~k&31)<<1)) - 1), c);
+      if (c == 0) n -= ~k&31; // corrected for the masked bits
       *ok = n;
       // calculate *ol
+      /*
       j = l >> 4 << 4;
       for(; i < j; i += 16, p += 1) {
           m += __occ_aux16(p[0], c);
       }
       m += __occ_aux16(p[0] & ~((1ul<<((~l&15)<<1)) - 1), c);
       if(c == 0) m -= ~l&15; // corrected for the masked bits
+      */
+      j = l >> 5 << 5;
+      for (; i < j; i += 32, p += 2)
+        m += __occ_aux32((uint64_t)p[0]<<32 | p[1], c);
+      m += __occ_aux32(((uint64_t)p[0]<<32 | p[1]) & ~((1ull<<((~l&31)<<1)) - 1), c);
+      if (c == 0) m -= ~l&31; // corrected for the masked bits
       *ol = m;
   }
 }
 
 #define __occ_aux4(bwt, b)											\
   ((bwt)->cnt_table[(b)&0xff] + (bwt)->cnt_table[(b)>>8&0xff]		\
-   + (bwt)->cnt_table[(b)>>16&0xff] + (bwt)->cnt_table[(b)>>24])
+   + (bwt)->cnt_table[(b)>>16&0xff] + (bwt)->cnt_table[(b)>>24&0xff])
 
 inline void 
 tmap_bwt_occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t cnt[4])
 {
   tmap_bwt_int_t l, j, x;
-  tmap_bwt_int_t *p;
+  uint32_t *p;
   if(TMAP_BWT_INT_MAX == k) {
       memset(cnt, 0, 4 * sizeof(tmap_bwt_int_t));
       return;
@@ -600,7 +620,8 @@ tmap_bwt_occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t cnt[4])
   if(k >= bwt->primary) --k; // because $ is not in bwt
   p = tmap_bwt_occ_intv(bwt, k);
   memcpy(cnt, p, 4 * sizeof(tmap_bwt_int_t));
-  p += 4; // move to the first bwt cell
+  p += sizeof(tmap_bwt_int_t); // move to the first bwt cell
+
   j = (k >> 4) << 4;
   for(l = (k / bwt->occ_interval) * bwt->occ_interval, x = 0; l < j; l += 16, ++p) {
     x += __occ_aux4(bwt, *p);
@@ -627,17 +648,15 @@ tmap_bwt_2occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, tmap_b
       tmap_bwt_occ4(bwt, l, cntl);
   } else {
       tmap_bwt_int_t i, j, x, y;
-      tmap_bwt_int_t *p;
-      int cl[4];
+      uint32_t *p;
       if(k >= bwt->primary) --k; // because $ is not in bwt
       if(l >= bwt->primary) --l;
-      cl[0] = cl[1] = cl[2] = cl[3] = 0;
       p = tmap_bwt_occ_intv(bwt, k);
       memcpy(cntk, p, 4 * sizeof(tmap_bwt_int_t));
-      p += 4;
+      p += sizeof(tmap_bwt_int_t);
       // prepare cntk[]
       j = k >> 4 << 4;
-      for(i = k / bwt->occ_interval * bwt->occ_interval, x = 0; i < j; i += 16, ++p)
+      for(i = k / bwt->occ_interval * bwt->occ_interval, x = 0; i < j; i += 16, ++p) 
         x += __occ_aux4(bwt, *p);
       y = x;
       x += __occ_aux4(bwt, *p & ~((1U<<((~k&15)<<1)) - 1)) - (~k&15);

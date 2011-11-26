@@ -25,7 +25,7 @@ AC_GNU_SOURCE
 
 # set CFLAGS and CXXFLAGS
 default_CFLAGS="-Wall -g -O3 -pthread -msse2";# "-Wall -g -O3 -pthread -msse2";
-extended_CFLAGS="";# "-m64 -D_FILE_OFFSET_BITS=64";
+extended_CFLAGS="-DTMAP_BWT_32_BIT";# "-m64 -D_FILE_OFFSET_BITS=64";
 
 AC_MSG_CHECKING(whether this is a git repository)
 gitrev="`git log 2>/dev/null | grep -m 1 commit | awk '{print $2}'`";

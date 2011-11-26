@@ -56,8 +56,8 @@ typedef struct {
     tmap_bwt_int_t seq_len;  /*!< reference sequence length */
     tmap_bwt_int_t bwt_size;  /*!< size of bwt in bytes */
     tmap_bwt_int_t occ_interval;  /*!< occurrence array interval, must be a strictly positive power of 16: (16, 32, 48, ...) */
-    tmap_bwt_int_t *bwt;  /*!< burrows-wheeler transform */
-    tmap_bwt_int_t cnt_table[256];  /*!< occurrence array */
+    uint32_t *bwt;  /*!< burrows-wheeler transform */
+    uint32_t cnt_table[256];  /*!< occurrence array */
     uint32_t is_rev;  /*!< 1 if the reference sequence was reversed, 0 otherwise */
     tmap_bwt_int_t **hash_k;  /*!< hash of the BWT occurrence array (lower bounds) */
     tmap_bwt_int_t **hash_l;  /*!< hash of the BWT occurrence array (upper bounds) */
@@ -185,12 +185,13 @@ tmap_bwt_2occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, tmap_b
 
 // TODO: document
 // Returns the index of the occurrence array at or before k
-#define tmap_bwt_get_occ_array_i(b, k) ((k)/(b)->occ_interval * ((b)->occ_interval/(sizeof(tmap_bwt_int_t)*8/2) + sizeof(tmap_bwt_int_t)/4*4))
+//#define tmap_bwt_get_occ_array_i(b, k) ((k)/(b)->occ_interval * ((b)->occ_interval/16 + 4))
+#define tmap_bwt_get_occ_array_i(b, k) ((k)/(b)->occ_interval * ((b)->occ_interval/(sizeof(tmap_bwt_int_t)*8/2) + sizeof(tmap_bwt_int_t)*4/4))
 
 // TODO: document
 // Returns the array of 16 bases at [(k-(k%16),k+(16-(k%16))-1]
-#define tmap_bwt_get_bwt16(b, k) ((b)->bwt[tmap_bwt_get_occ_array_i(b, k) + sizeof(tmap_bwt_int_t)/4*4 + (k)%(b)->occ_interval/16])
-//#define tmap_bwt_get_bwt16(b, k) ((b)->bwt[(k)/(b)->occ_interval*12 + 4 + (k)%(b)->occ_interval/16])
+//#define tmap_bwt_get_bwt16(b, k) ((b)->bwt[tmap_bwt_get_occ_array_i(b, k) + 4 + ((k)%(b)->occ_interval)/16])
+#define tmap_bwt_get_bwt16(b, k) ((b)->bwt[tmap_bwt_get_occ_array_i(b, k) + sizeof(tmap_bwt_int_t)*4/4 + (k)%(b)->occ_interval/16])
 
 /*! 
   @param  b   pointer to the bwt structure

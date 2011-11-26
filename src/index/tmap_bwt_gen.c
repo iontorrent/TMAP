@@ -1619,11 +1619,7 @@ BWTSaveBwtCodeAndOcc(tmap_bwt_t *bwt_out, const tmap_bwt_gen_t *bwt, const char 
   for(i=0;i<1+ALPHABET_SIZE;i++) {
       bwt_out->L2[i] = bwt->cumulativeFreq[i];
   }
-  //bwt_out->bwt = bwt->bwtCode; // shallow copy
-  bwt_out->bwt = tmap_calloc(bwt_out->bwt_size, sizeof(tmap_bwt_int_t), "bwt->bwt");
-  for(i=0;i<bwt_out->bwt_size;i++) {
-      bwt_out->bwt[i] = bwt->bwtCode[i];
-  }
+  bwt_out->bwt = bwt->bwtCode; // shallow copy
   bwt_out->occ_interval = OCC_INTERVAL;
 
   // write
@@ -1632,7 +1628,6 @@ BWTSaveBwtCodeAndOcc(tmap_bwt_t *bwt_out, const tmap_bwt_gen_t *bwt, const char 
   tmap_bwt_write(fn_fasta, bwt_out, is_rev);
 
   // free and nullify
-  free(bwt_out->bwt);
   bwt_out->bwt = NULL;
 
   // update occurrence interval
@@ -1699,7 +1694,7 @@ tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, 
 
           // Burrows-Wheeler Transform
           bwt->primary = tmap_bwt_gen_short(buf, bwt->seq_len);
-          bwt->bwt = tmap_calloc(bwt->bwt_size, sizeof(tmap_bwt_gen_int_t), "bwt->bwt");
+          bwt->bwt = tmap_calloc(bwt->bwt_size, sizeof(uint32_t), "bwt->bwt");
           for(i=0;i<bwt->seq_len;i++) {
               // 2-bit packing for DNA
               bwt->bwt[i>>4] |= buf[i] << ((15 - (i&15)) << 1);
