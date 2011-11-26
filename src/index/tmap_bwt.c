@@ -525,15 +525,14 @@ tmap_bwt_occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, uint8_t c)
   p += sizeof(tmap_bwt_int_t); // jump to the start of the first BWT cell
 
   // calculate Occ
-  /*
   j = k >> 4 << 4; // divide by 16, then multiply by 16, to subtract k % 16.
   for(l = (k/bwt->occ_interval)*bwt->occ_interval; l < j; l += 16, p++) {
       n += __occ_aux16(p[0], c);
   }
   n += __occ_aux16(p[0] & ~((1ul<<((~k&15)<<1)) - 1), c);
   if(c == 0) n -= ~k&15; // corrected for the masked bits
-  */
 
+  /*
   // calculate Occ up to the last k/32
   j = k >> 5 << 5;
   for(l = k/bwt->occ_interval*bwt->occ_interval; l < j; l += 32, p += 2) {
@@ -542,6 +541,7 @@ tmap_bwt_occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, uint8_t c)
   // calculate Occ
   n += __occ_aux32(((uint64_t)p[0]<<32 | p[1]) & ~((1ull<<((~k&31)<<1)) - 1), c);
   if(c == 0) n -= ~k&31; // corrected for the masked bits
+  */
 
   return n;
 }
@@ -569,7 +569,6 @@ tmap_bwt_2occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, uint8_t
       n = (p = tmap_bwt_occ_intv(bwt, k))[c];
       p += sizeof(tmap_bwt_int_t);
       // calculate *ok
-      /*
       j = k >> 4 << 4; // divide by 16, then multiply by 16, to subtract k % 16.
       for(i = (k/bwt->occ_interval)*bwt->occ_interval; i < j; i += 16, p++) {
           n += __occ_aux16(p[0], c);
@@ -577,7 +576,7 @@ tmap_bwt_2occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, uint8_t
       m = n; // save for ol
       n += __occ_aux16(p[0] & ~((1ul<<((~k&15)<<1)) - 1), c);
       if(c == 0) n -= ~k&15; // corrected for the masked bits
-      */
+      /*
       j = k >> 5 << 5; // divide by 32, then multiply by 32, to subtract k % 32
       for(i = (k/bwt->occ_interval)*bwt->occ_interval; i < j; i += 32, p+=2) {
           n += __occ_aux32(p[0], c);
@@ -585,21 +584,22 @@ tmap_bwt_2occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, uint8_t
       m = n; // save for ol
       n += __occ_aux32(((uint64_t)p[0]<<32 | p[1]) & ~((1ull<<((~k&31)<<1)) - 1), c);
       if (c == 0) n -= ~k&31; // corrected for the masked bits
+      */
       *ok = n;
       // calculate *ol
-      /*
       j = l >> 4 << 4;
       for(; i < j; i += 16, p += 1) {
           m += __occ_aux16(p[0], c);
       }
       m += __occ_aux16(p[0] & ~((1ul<<((~l&15)<<1)) - 1), c);
       if(c == 0) m -= ~l&15; // corrected for the masked bits
-      */
+      /*
       j = l >> 5 << 5;
       for (; i < j; i += 32, p += 2)
         m += __occ_aux32((uint64_t)p[0]<<32 | p[1], c);
       m += __occ_aux32(((uint64_t)p[0]<<32 | p[1]) & ~((1ull<<((~l&31)<<1)) - 1), c);
       if (c == 0) m -= ~l&31; // corrected for the masked bits
+      */
       *ol = m;
   }
 }
