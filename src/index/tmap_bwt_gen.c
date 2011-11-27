@@ -1704,7 +1704,7 @@ tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, 
 
           // update occurrence interval
           tmap_bwt_update_occ_interval(bwt, occ_interval);
-
+          
           bwt->is_rev = is_rev;
           bwt->hash_width = 0; // none yet
           tmap_bwt_write(fn_fasta, bwt, is_rev);

@@ -1,7 +1,6 @@
 /* Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved */
 #include <stdlib.h>
 #include <unistd.h>
-#include <stdio.h> // HERE
 #include "tmap_bwt.h"
 #include "tmap_bwt_match.h"
 
@@ -173,15 +172,6 @@ tmap_bwt_match_exact(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bw
   prev.offset = 0;
   prev.hi = 0;
 
-  // HERE
-  /*
-  fprintf(stderr, "SEARCHING FOR ");
-  for(i=0;i<len;i++) {
-      fputc("ACGTN"[str[i]], stderr);
-  }
-  fputc('\n', stderr);
-  */
-
   for(i=0;i<len;i++) {
       c = str[i];
       if(3 < c) { 
@@ -190,8 +180,6 @@ tmap_bwt_match_exact(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bw
           break;
       }
       tmap_bwt_match_2occ(bwt, &prev, c, &next);
-      // HERE
-      //fprintf(stderr, "next.k=%u next.l=%u\n", next.k, next.l);
       prev = next;
       if(next.k > next.l) break; // no match
   }

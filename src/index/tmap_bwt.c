@@ -40,6 +40,8 @@
 #include "tmap_bwt.h"
 #include "tmap_bwt_match.h"
 
+#define TMAP_BWT_BY_FIVE
+
 static inline uint64_t
 tmap_bwt_get_hash_length(uint64_t i)
 {
@@ -324,9 +326,8 @@ tmap_bwt_destroy(tmap_bwt_t *bwt)
 void
 tmap_bwt_update_occ_interval(tmap_bwt_t *bwt, tmap_bwt_int_t occ_interval)
 {
-  tmap_bwt_int_t i, k, n_occ;
+  tmap_bwt_int_t i, k, c[4], n_occ;
   uint32_t *buf = NULL;
-  uint32_t c[4];
 
   // 2-bit DNA packed
 #define bwt_B00(b, k) ((b)->bwt[(k)>>4]>>((~(k)&0xf)<<1)&3)
@@ -337,22 +338,22 @@ tmap_bwt_update_occ_interval(tmap_bwt_t *bwt, tmap_bwt_int_t occ_interval)
 
   n_occ = ((bwt->seq_len + occ_interval - 1) / occ_interval) + 1; // the number of occurrences to store, on top of the bwt string
   bwt->occ_interval = occ_interval;
-  bwt->bwt_size += n_occ * 4; // the new size
+  bwt->bwt_size += n_occ * sizeof(tmap_bwt_int_t); // the new size
   buf = tmap_calloc(bwt->bwt_size, sizeof(uint32_t), "buf"); // will be the new bwt
   c[0] = c[1] = c[2] = c[3] = 0;
   for (i = k = 0; i < bwt->seq_len; ++i) {
       // store the occurrences
       if (i % occ_interval == 0) {
-          memcpy(buf + k, c, sizeof(uint32_t) * 4);
-          k += 4;
+          memcpy(buf + k, c, sizeof(tmap_bwt_int_t) * 4);
+          k += sizeof(tmap_bwt_int_t);
       }
       // store the bwt string
       if (i % 16 == 0) buf[k++] = bwt->bwt[i>>4];
       ++c[bwt_B00(bwt, i)];
   }
   // the last element
-  memcpy(buf + k, c, sizeof(uint32_t) * 4);
-  if(k + 4 != bwt->bwt_size) {
+  memcpy(buf + k, c, sizeof(tmap_bwt_int_t) * 4);
+  if(k + sizeof(tmap_bwt_int_t) != bwt->bwt_size) {
       tmap_error(NULL, Exit, OutOfRange);
   }
   // update bwt
@@ -441,7 +442,7 @@ tmap_bwt_gen_hash_helper(tmap_bwt_t *bwt, tmap_bwt_int_t len)
   }
 
   if(sum != bwt->seq_len - len + 1) {
-      //fprintf(stderr, "sum=%lld (bwt->seq_len - len + 1)=%lld\n", (long long int)sum, (long long int)(bwt->seq_len - len + 1));
+      //fprintf(stderr, "len=%d sum=%lld (bwt->seq_len - len + 1)=%lld\n", len, (long long int)sum, (long long int)(bwt->seq_len - len + 1));
       tmap_error("sum != bwt->seq_len - len + 1", Exit, OutOfRange);
   }
   
@@ -488,8 +489,8 @@ tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width)
   tmap_progress_print2("constructed the occurrence hash for the BWT string");
 }
 
-static inline int 
-__occ_aux32(uint64_t y, int c)
+static inline int32_t
+__occ_aux32(uint64_t y, int32_t c)
 {
   // reduce nucleotide counting to bits counting
   y = ((c&2)? y : ~y) >> 1 & ((c&1)? y : ~y) & 0x5555555555555555ull;
@@ -498,7 +499,7 @@ __occ_aux32(uint64_t y, int c)
   return ((y + (y >> 4)) & 0xf0f0f0f0f0f0f0full) * 0x101010101010101ull >> 56;
 }
 
-static inline int 
+static inline uint32_t
 __occ_aux16(uint32_t y, int c)
 {
   // reduce nucleotide counting to bits counting
@@ -521,9 +522,10 @@ tmap_bwt_occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, uint8_t c)
   if(k >= bwt->primary) --k; // because $ is not in bwt
 
   // retrieve Occ at k/bwt->occ_interval
-  n = (tmap_bwt_int_t)(p = tmap_bwt_occ_intv(bwt, k))[c];
+  n = ((tmap_bwt_int_t*)(p = tmap_bwt_occ_intv(bwt, k)))[c];
   p += sizeof(tmap_bwt_int_t); // jump to the start of the first BWT cell
 
+#ifndef TMAP_BWT_BY_FIVE
   // calculate Occ
   j = k >> 4 << 4; // divide by 16, then multiply by 16, to subtract k % 16.
   for(l = (k/bwt->occ_interval)*bwt->occ_interval; l < j; l += 16, p++) {
@@ -531,8 +533,7 @@ tmap_bwt_occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, uint8_t c)
   }
   n += __occ_aux16(p[0] & ~((1ul<<((~k&15)<<1)) - 1), c);
   if(c == 0) n -= ~k&15; // corrected for the masked bits
-
-  /*
+#else
   // calculate Occ up to the last k/32
   j = k >> 5 << 5;
   for(l = k/bwt->occ_interval*bwt->occ_interval; l < j; l += 32, p += 2) {
@@ -541,7 +542,7 @@ tmap_bwt_occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, uint8_t c)
   // calculate Occ
   n += __occ_aux32(((uint64_t)p[0]<<32 | p[1]) & ~((1ull<<((~k&31)<<1)) - 1), c);
   if(c == 0) n -= ~k&31; // corrected for the masked bits
-  */
+#endif
 
   return n;
 }
@@ -566,9 +567,10 @@ tmap_bwt_2occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, uint8_t
       uint32_t *p;
       if(k >= bwt->primary) --k;
       if(l >= bwt->primary) --l;
-      n = (p = tmap_bwt_occ_intv(bwt, k))[c];
+      n = ((tmap_bwt_int_t*)(p = tmap_bwt_occ_intv(bwt, k)))[c];
       p += sizeof(tmap_bwt_int_t);
       // calculate *ok
+#ifndef TMAP_BWT_BY_FIVE
       j = k >> 4 << 4; // divide by 16, then multiply by 16, to subtract k % 16.
       for(i = (k/bwt->occ_interval)*bwt->occ_interval; i < j; i += 16, p++) {
           n += __occ_aux16(p[0], c);
@@ -576,37 +578,39 @@ tmap_bwt_2occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, uint8_t
       m = n; // save for ol
       n += __occ_aux16(p[0] & ~((1ul<<((~k&15)<<1)) - 1), c);
       if(c == 0) n -= ~k&15; // corrected for the masked bits
-      /*
+#else
       j = k >> 5 << 5; // divide by 32, then multiply by 32, to subtract k % 32
       for(i = (k/bwt->occ_interval)*bwt->occ_interval; i < j; i += 32, p+=2) {
-          n += __occ_aux32(p[0], c);
+          n += __occ_aux32((uint64_t)p[0]<<32 | p[1], c);
       }
       m = n; // save for ol
       n += __occ_aux32(((uint64_t)p[0]<<32 | p[1]) & ~((1ull<<((~k&31)<<1)) - 1), c);
       if (c == 0) n -= ~k&31; // corrected for the masked bits
-      */
+#endif
       *ok = n;
       // calculate *ol
+#ifndef TMAP_BWT_BY_FIVE
       j = l >> 4 << 4;
       for(; i < j; i += 16, p += 1) {
           m += __occ_aux16(p[0], c);
       }
       m += __occ_aux16(p[0] & ~((1ul<<((~l&15)<<1)) - 1), c);
       if(c == 0) m -= ~l&15; // corrected for the masked bits
-      /*
+#else
       j = l >> 5 << 5;
-      for (; i < j; i += 32, p += 2)
-        m += __occ_aux32((uint64_t)p[0]<<32 | p[1], c);
+      for (; i < j; i += 32, p += 2) {
+          m += __occ_aux32((uint64_t)p[0]<<32 | p[1], c);
+      }
       m += __occ_aux32(((uint64_t)p[0]<<32 | p[1]) & ~((1ull<<((~l&31)<<1)) - 1), c);
       if (c == 0) m -= ~l&31; // corrected for the masked bits
-      */
+#endif
       *ol = m;
   }
 }
 
 #define __occ_aux4(bwt, b)											\
   ((bwt)->cnt_table[(b)&0xff] + (bwt)->cnt_table[(b)>>8&0xff]		\
-   + (bwt)->cnt_table[(b)>>16&0xff] + (bwt)->cnt_table[(b)>>24&0xff])
+   + (bwt)->cnt_table[(b)>>16&0xff] + (bwt)->cnt_table[(b)>>24])
 
 inline void 
 tmap_bwt_occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t cnt[4])
