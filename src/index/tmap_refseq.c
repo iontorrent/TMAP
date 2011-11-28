@@ -298,12 +298,13 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression, int32_t fwd_onl
           tmap_anno_t *anno_fwd = NULL;
           tmap_anno_t *anno_rev = NULL;
           
-          anno_fwd = &refseq->annos[a];
-          tmap_progress_print2("packing contig [%s:1-%d] (reverse)", anno_fwd->name->s, anno_fwd->len);
-          
           refseq->num_annos++;
           refseq->annos = tmap_realloc(refseq->annos, sizeof(tmap_anno_t)*refseq->num_annos, "refseq->annos");
+          
+          anno_fwd = &refseq->annos[a];
           anno_rev = &refseq->annos[refseq->num_annos-1];
+
+          tmap_progress_print2("packing contig [%s:1-%d] (reverse)", anno_fwd->name->s, anno_fwd->len);
 
           // clone the annotations
           tmap_refseq_anno_clone(anno_rev, anno_fwd, 1);
