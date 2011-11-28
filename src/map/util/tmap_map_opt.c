@@ -113,7 +113,6 @@ __tmap_map_opt_option_print_func_fns_init(fn_reads, fn_reads_num)
 __tmap_map_opt_option_print_func_reads_format_init(reads_format)
 __tmap_map_opt_option_print_func_chars_init(fn_sam, "stdout")
 __tmap_map_opt_option_print_func_int_init(score_match)
-__tmap_map_opt_option_print_func_double_init(seed_freqc)
 __tmap_map_opt_option_print_func_int_init(pen_mm)
 __tmap_map_opt_option_print_func_int_init(pen_gapo)
 __tmap_map_opt_option_print_func_int_init(pen_gape)
@@ -175,6 +174,7 @@ __tmap_map_opt_option_print_func_double_init(skip_seed_frac)
 __tmap_map_opt_option_print_func_int_init(mapall_score_thr)
 __tmap_map_opt_option_print_func_int_init(mapall_mapq_thr)
 __tmap_map_opt_option_print_func_tf_init(mapall_keep_all)
+__tmap_map_opt_option_print_func_int_init(seed_freqc)
 
 static int32_t
 tmap_map_opt_option_flag_length(tmap_map_opt_option_t *opt)
@@ -379,12 +379,6 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            "score for a match",
                            NULL,
                            tmap_map_opt_option_print_func_score_match,
-                           TMAP_MAP_ALGO_GLOBAL);
-  tmap_map_opt_options_add(opt->options, "seed-freq-cutoff", required_argument, 0, 'C',
-                           TMAP_MAP_OPT_TYPE_FLOAT,
-                           "the minimum frequency of a seed to be considered for mapping",
-                           NULL,
-                           tmap_map_opt_option_print_func_seed_freqc,
                            TMAP_MAP_ALGO_GLOBAL);
   tmap_map_opt_options_add(opt->options, "pen-mismatch", required_argument, 0, 'M', 
                            TMAP_MAP_OPT_TYPE_INT,
@@ -725,6 +719,12 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_mapall_keep_all,
                            TMAP_MAP_ALGO_MAPALL);
+  tmap_map_opt_options_add(opt->options, "seed-freq-cutoff", no_argument, 0, 0,
+                           TMAP_MAP_OPT_TYPE_FLOAT,
+                           "the minimum frequency of a seed to be considered for mapping",
+                           NULL,
+                           tmap_map_opt_option_print_func_seed_freqc,
+                           TMAP_MAP_ALGO_MAPALL);
 
   /*
   // Prints out all single-flag command line options
@@ -780,7 +780,6 @@ tmap_map_opt_init(int32_t algo_id)
   opt->reads_format = TMAP_READS_FORMAT_UNKNOWN;
   opt->fn_sam = NULL;
   opt->score_match = TMAP_MAP_OPT_SCORE_MATCH;
-  opt->seed_freqc = 0.0; //all-pass filter as default
   opt->pen_mm = TMAP_MAP_OPT_PEN_MM;
   opt->pen_gapo = TMAP_MAP_OPT_PEN_GAPO;
   opt->pen_gape = TMAP_MAP_OPT_PEN_GAPE;
@@ -855,6 +854,8 @@ tmap_map_opt_init(int32_t algo_id)
       opt->mapall_score_thr = 8;
       opt->mapall_mapq_thr = 23; // 0.5% error
       opt->mapall_keep_all = 1;
+      opt->seed_freqc = 0.0; //all-pass filter as default
+
       break;
     default:
       break;
@@ -1049,9 +1050,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(c == 'M' || (0 == c && 0 == strcmp("pen-mismatch", options[option_index].name))) {       
           opt->pen_mm = atoi(optarg);
       }                                           
-      else if(c == 'C' || (0 == c && 0 == strcmp("seed-freq-cutoff", options[option_index].name))) {
-          opt->seed_freqc = atof(optarg);
-      }
+    
       else if(c == 'O' || (0 == c && 0 == strcmp("pen-gap-open", options[option_index].name))) {       
           opt->pen_gapo = atoi(optarg);
       }
@@ -1268,6 +1267,11 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(0 == strcmp("staged-keep-all", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAPALL) {
           opt->mapall_keep_all = 1;
       }
+      
+      else if(0 == strcmp("seed-freq-cutoff", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAPALL ) {
+          opt->seed_freqc = atof(optarg);
+      }
+      
       else {
           break;
       }
@@ -1332,9 +1336,6 @@ tmap_map_opt_check_common(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
     }
     if(opt_a->pen_mm != opt_b->pen_mm) {
         tmap_error("option -M was specified outside of the common options", Exit, CommandLineArgument);
-    }
-    if(opt_a->seed_freqc != opt_b->seed_freqc) {
-        tmap_error("option -C was specified outside of the common options", Exit, CommandLineArgument);
     }
     if(opt_a->pen_gapo != opt_b->pen_gapo) {
         tmap_error("option -O was specified outside of the common options", Exit, CommandLineArgument);
@@ -1446,9 +1447,6 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->pen_gapo, 0, INT32_MAX, "-O");
   tmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
   tmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
-  if(0 > opt->seed_freqc) {
-      tmap_error("-C must be greater than or equal to 0", Exit, CommandLineArgument);
-  }
   if(NULL != opt->flow_order) {
       if(0 == strcmp("file", opt->flow_order) || 0 == strcmp("FILE", opt->flow_order)) {
           if(TMAP_READS_FORMAT_SFF != opt->reads_format) {
@@ -1556,9 +1554,11 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       tmap_error_cmd_check_int(opt->mapall_score_thr, INT32_MIN, INT32_MAX, "--staged-score-thres");
       tmap_error_cmd_check_int(opt->mapall_mapq_thr, 0, 255, "--staged-mapq-thres");
       tmap_error_cmd_check_int(opt->mapall_keep_all, 0, 1, "--staged-keep-all");
+      tmap_error_cmd_check_int(opt->seed_freqc, 0, 1, "--seed_freqc");
       if(0 == opt->num_sub_opts || 0 == opt->num_stages) {
           tmap_error("no algorithms given for stage 1", Exit, CommandLineArgument);
       }
+      
       break;
     default:
       break;
@@ -1589,7 +1589,6 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->fn_sam = tmap_strdup(opt_src->fn_sam);
     opt_dest->score_match = opt_src->score_match;
     opt_dest->pen_mm = opt_src->pen_mm;
-    opt_dest->seed_freqc = opt_src->seed_freqc;
     opt_dest->pen_gapo = opt_src->pen_gapo;
     opt_dest->pen_gape = opt_src->pen_gape;
     opt_dest->bw = opt_src->bw;
@@ -1632,7 +1631,6 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "reads_format=%d\n", opt->reads_format);
   fprintf(stderr, "score_match=%d\n", opt->score_match);
   fprintf(stderr, "pen_mm=%d\n", opt->pen_mm);
-  fprintf(stderr, "seed_freqc=%.2f\n", opt->seed_freqc);
   fprintf(stderr, "pen_gapo=%d\n", opt->pen_gapo);
   fprintf(stderr, "pen_gape=%d\n", opt->pen_gape);
   fprintf(stderr, "fscore=%d\n", opt->fscore);
@@ -1689,4 +1687,6 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "mapall_score_thr=%d\n", opt->mapall_score_thr);
   fprintf(stderr, "mapall_mapq_thr=%d\n", opt->mapall_mapq_thr);
   fprintf(stderr, "mapall_keep_all=%d\n", opt->mapall_keep_all);
+  fprintf(stderr, "seed_freqc=%.2f\n", opt->seed_freqc);
+
 }
