@@ -1554,7 +1554,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       tmap_error_cmd_check_int(opt->mapall_score_thr, INT32_MIN, INT32_MAX, "--staged-score-thres");
       tmap_error_cmd_check_int(opt->mapall_mapq_thr, 0, 255, "--staged-mapq-thres");
       tmap_error_cmd_check_int(opt->mapall_keep_all, 0, 1, "--staged-keep-all");
-      tmap_error_cmd_check_int(opt->seed_freqc, 0, 1, "--seed_freqc");
+      tmap_error_cmd_check_int(opt->seed_freqc, 0, 1, "--seed-freq-cutoff");
       if(0 == opt->num_sub_opts || 0 == opt->num_stages) {
           tmap_error("no algorithms given for stage 1", Exit, CommandLineArgument);
       }
