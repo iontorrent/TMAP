@@ -453,11 +453,13 @@ tmap_map1_aux_core(tmap_seq_t *seq, tmap_index_t *index,
   //if(max_edit_score < opt->pen_gape) max_edit_score = opt->pen_gape;
 
   bases = tmap_seq_get_bases(seq);
+  /*
   fputc('\n', stderr);
   for(i=0;i<bases->l;i++) {
       fputc("ACGTN"[(int)bases->s[i]], stderr);
   }
   fputc('\n', stderr);
+  */
   
   // the maximum # of differences
   if(bases->l <= TMAP_MAP_OPT_MAX_DIFF_READ_LENGTH) {
