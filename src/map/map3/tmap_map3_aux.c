@@ -389,29 +389,24 @@ tmap_map3_aux_core(tmap_seq_t *seq,
       uint8_t strand;
       for(k=seeds[j].k;k<=seeds[j].l;k++) { // through all occurrences
           tmap_map_sam_t *s = NULL;
-          pacpos = tmap_sa_pac_pos(sa, bwt, k);
-          if(bwt->seq_len < pacpos + seeds[j].start + 1) { // before the beginning of the reference sequence
-              pacpos = 0;
+          pacpos = bwt->seq_len - tmap_sa_pac_pos(sa, bwt, k);
+          // adjust based on the the number of bases seeded
+          if(pacpos <= seed_length_ext-1) { // before the beginning of the reference sequence
+              pacpos = 1;
           }
           else {
-              pacpos = bwt->seq_len - pacpos - seeds[j].start - 1;
+              pacpos -= (seed_length_ext-1);
           }
           if(0 < tmap_refseq_pac2real(refseq, pacpos, 1, &seqid, &pos, &strand)) {
-              uint32_t tmp_seqid, tmp_pos;
-              uint8_t tmp_strand;
               // we need to check if we crossed contig boundaries
-              if(0 < tmap_refseq_pac2real(refseq, pacpos + seeds[j].start, 1, &tmp_seqid, &tmp_pos, &tmp_strand) &&
-                 seqid < tmp_seqid && strand == tmp_strand) {
-                  seqid = tmp_seqid;
+              if(pos < seed_length_ext) {
+                  if(0 < seqid && seed_length / 2.0 < pos) {
+                      seqid--;
+                  }
                   pos = 0;
               }
               else {
-                  if(pos < seed_length_ext - 1 ) {
-                      pos = 0;
-                  }
-                  else {
-                      pos -= seed_length_ext - 1;
-                  }
+                  pos -= seed_length_ext;
               }
 
               // save

@@ -366,7 +366,12 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases, int32_t seed2
           // NB: addressing the symptom, not the problem
           // This happens when we are at the end of the reference on the reverse
           // strand
-          if(refseq->len * 2 < pacpos + aln_ref - 1) aln_ref = refseq->len - pacpos + 1;
+          if(pacpos <= refseq->len && refseq->len < pacpos + aln_ref - 1) {
+              aln_ref = refseq->len - pacpos + 1;
+          }
+          else if(refseq->len * 2 < pacpos + aln_ref - 1) {
+              aln_ref = (refseq->len * 2) - pacpos + 1;
+          }
           
           // save the hit
           if(0 < tmap_refseq_pac2real(refseq, pacpos, aln_ref, &seqid, &pos, &strand)) {

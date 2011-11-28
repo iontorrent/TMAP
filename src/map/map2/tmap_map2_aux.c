@@ -322,6 +322,7 @@ tmap_map2_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
       tmap_map_sam_t *sam = &sams->sams[j];
 
       //strand = (p->flag & 0x10) ? 1 : 0;
+      //
 
       // skip over duplicate hits, or sub-optimal hits to the same location
       if(0 < i) {
@@ -475,7 +476,7 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
   for(k = 0; k < b[0]->n; ++k) {
       if(b[0]->hits[k].n_seeds < opt.seeds_rev) break;
   } 
-  if(k < b[0]->n) {
+  if(1 == 1 || k < b[0]->n) {
       b[1] = tmap_map2_aux_aln(&opt, bwt, sa, rseq, 1, pool);
       for(i = 0; i < b[1]->n; ++i) {
           tmap_map2_hit_t *p = b[1]->hits + i;
@@ -483,9 +484,8 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
           p->beg = l - p->end;
           p->end = l - x;
           if(p->l == 0) {
-              // TODO
-              if(refseq->len < (p->k + p->tlen)) p->k = 0;
-              else p->k = refseq->len - (p->k + p->tlen);
+              if(refseq->len * 2 < (p->k + p->tlen)) p->k = 0;
+              else p->k = 2 * refseq->len - (p->k + p->tlen);
           }
       }
       tmap_map2_aux_merge_hits(b, l, 0);
@@ -496,8 +496,10 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
   
   // tlen may overestimated due to not counting insertions properly, bound it!
   for(i = 0; i < b[0]->n; ++i) {
-      // TODO
-      if(refseq->len <= b[0]->hits[i].k + b[0]->hits[i].tlen) {
+      if(refseq->len * 2 <= b[0]->hits[i].k + b[0]->hits[i].tlen) {
+          b[0]->hits[i].tlen = (refseq->len * 2) - b[0]->hits[i].k;
+      }
+      else if(b[0]->hits[i].k < refseq->len && refseq->len <= b[0]->hits[i].k + b[0]->hits[i].tlen) {
           b[0]->hits[i].tlen = refseq->len - b[0]->hits[i].k;
       }
   }
