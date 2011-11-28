@@ -174,7 +174,7 @@ __tmap_map_opt_option_print_func_double_init(skip_seed_frac)
 __tmap_map_opt_option_print_func_int_init(mapall_score_thr)
 __tmap_map_opt_option_print_func_int_init(mapall_mapq_thr)
 __tmap_map_opt_option_print_func_tf_init(mapall_keep_all)
-__tmap_map_opt_option_print_func_int_init(seed_freqc)
+__tmap_map_opt_option_print_func_double_init(mapall_seed_freqc)
 
 static int32_t
 tmap_map_opt_option_flag_length(tmap_map_opt_option_t *opt)
@@ -719,11 +719,11 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_mapall_keep_all,
                            TMAP_MAP_ALGO_MAPALL);
-  tmap_map_opt_options_add(opt->options, "seed-freq-cutoff", no_argument, 0, 0,
+  tmap_map_opt_options_add(opt->options, "seed-freq-cutoff", required_argument, 0, 0,
                            TMAP_MAP_OPT_TYPE_FLOAT,
                            "the minimum frequency of a seed to be considered for mapping",
                            NULL,
-                           tmap_map_opt_option_print_func_seed_freqc,
+                           tmap_map_opt_option_print_func_mapall_seed_freqc,
                            TMAP_MAP_ALGO_MAPALL);
 
   /*
@@ -854,7 +854,7 @@ tmap_map_opt_init(int32_t algo_id)
       opt->mapall_score_thr = 8;
       opt->mapall_mapq_thr = 23; // 0.5% error
       opt->mapall_keep_all = 1;
-      opt->seed_freqc = 0.0; //all-pass filter as default
+      opt->mapall_seed_freqc = 0.0; //all-pass filter as default
 
       break;
     default:
@@ -1269,7 +1269,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
       
       else if(0 == strcmp("seed-freq-cutoff", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAPALL ) {
-          opt->seed_freqc = atof(optarg);
+          opt->mapall_seed_freqc = atof(optarg);
       }
       
       else {
@@ -1554,7 +1554,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       tmap_error_cmd_check_int(opt->mapall_score_thr, INT32_MIN, INT32_MAX, "--staged-score-thres");
       tmap_error_cmd_check_int(opt->mapall_mapq_thr, 0, 255, "--staged-mapq-thres");
       tmap_error_cmd_check_int(opt->mapall_keep_all, 0, 1, "--staged-keep-all");
-      tmap_error_cmd_check_int(opt->seed_freqc, 0, 1, "--seed-freq-cutoff");
+      tmap_error_cmd_check_int(opt->mapall_seed_freqc, 0.0, 1.0, "--seed-freq-cutoff");
       if(0 == opt->num_sub_opts || 0 == opt->num_stages) {
           tmap_error("no algorithms given for stage 1", Exit, CommandLineArgument);
       }
@@ -1687,6 +1687,6 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "mapall_score_thr=%d\n", opt->mapall_score_thr);
   fprintf(stderr, "mapall_mapq_thr=%d\n", opt->mapall_mapq_thr);
   fprintf(stderr, "mapall_keep_all=%d\n", opt->mapall_keep_all);
-  fprintf(stderr, "seed_freqc=%.2f\n", opt->seed_freqc);
+  fprintf(stderr, "mapall_seed_freqc=%.2f\n", opt->mapall_seed_freqc);
 
 }

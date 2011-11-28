@@ -235,7 +235,7 @@ typedef struct __tmap_map_opt_t {
     int32_t mapall_score_thr;  /*!< the stage one scoring threshold (match-score-scaled) (--staged-score-thres) */
     int32_t mapall_mapq_thr;  /*!< the stage one mapping quality threshold (--staged-mapq-thres) */
     int32_t mapall_keep_all;  /*!< keep mappings that do not pass the first stage threshold for the next stage (--staged-keep-all) */
-    double  seed_freqc; /*!< the minimum frequency a seed must occur in order to be considered for mapping (--seed-freq-cutoff) */
+    double  mapall_seed_freqc; /*!< the minimum frequency a seed must occur in order to be considered for mapping (--seed-freq-cutoff) */
 
     // sub-options
    struct __tmap_map_opt_t **sub_opts; /*!< sub-options, for multi-stage and multi-mapping */
