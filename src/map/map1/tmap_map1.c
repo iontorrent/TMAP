@@ -198,9 +198,8 @@ tmap_map1_thread_init(void **data, tmap_map_opt_t *opt)
   return 0;
 }
 
-// forward compliment
 tmap_map_sams_t*
-tmap_map1_thread_map_core(void **data, tmap_seq_t *seq, int32_t seq_len,
+tmap_map1_thread_map_core(void **data, tmap_seq_t *seqs[4], int32_t seq_len,
                           tmap_index_t *index, tmap_map_opt_t *opt)
 {
   tmap_map1_thread_data_t *d = (tmap_map1_thread_data_t*)(*data);
@@ -208,9 +207,6 @@ tmap_map1_thread_map_core(void **data, tmap_seq_t *seq, int32_t seq_len,
   tmap_map_opt_t opt_local = (*opt); // copy over values
   tmap_map_sams_t *sams = NULL;
   tmap_string_t *bases = NULL;
-
-  // get bases
-  bases = tmap_seq_get_bases(seq);
 
   if((0 < opt->min_seq_len && seq_len < opt->min_seq_len)
      || (0 < opt->max_seq_len && opt->max_seq_len < seq_len)) {
@@ -236,6 +232,9 @@ tmap_map1_thread_map_core(void **data, tmap_seq_t *seq, int32_t seq_len,
       opt_local.max_gapo = d->max_gapo;
       opt_local.max_gape = d->max_gape;
   }
+  
+  // get bases for the reversed sequence
+  bases = tmap_seq_get_bases(seqs[2]);	
 
   // primary width, use seed2 length
   if(d->width_length < seed2_len) {
@@ -250,7 +249,8 @@ tmap_map1_thread_map_core(void **data, tmap_seq_t *seq, int32_t seq_len,
       tmap_bwt_match_cal_width_reverse(index->bwt, opt->seed_length, bases->s + (seq_len - opt->seed_length), d->seed_width);
   }
 
-  sams = tmap_map1_aux_core(seq, index, d->width, (0 < opt_local.seed_length) ? d->seed_width : NULL, &opt_local, d->stack, seed2_len);
+  // use the reverse complimented
+  sams = tmap_map1_aux_core(seqs[1], index, d->width, (0 < opt_local.seed_length) ? d->seed_width : NULL, &opt_local, d->stack, seed2_len);
 
   return sams;
 }
@@ -276,7 +276,7 @@ tmap_map1_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_m
   }
 
   // core algorithm; use the reverse
-  sams = tmap_map1_thread_map_core(data, seqs[2], seq_len, index, opt);
+  sams = tmap_map1_thread_map_core(data, seqs, seq_len, index, opt);
 
   return sams;
 }

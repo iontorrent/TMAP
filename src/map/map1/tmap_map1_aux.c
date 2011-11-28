@@ -55,9 +55,10 @@ tmap_map1_aux_stack_cmp(void *a, void *b)
 static void
 tmap_map1_aux_stack_entry_print(tmap_file_t *fp, tmap_map1_aux_stack_entry_t *e)
 {
-  fprintf(stderr, "score=%u, n_mm=%u, n_gapo=%d, n_gape=%d, state=%u, offset=%d, last_diff_offset=%d, k=%u, l=%u, i=%u, prev_i=%d\n",
-  //tmap_file_fprintf(fp, "score=%u, n_mm=%u, n_gapo=%d, n_gape=%d, state=%u, offset=%d, last_diff_offset=%d, k=%u, l=%u, i=%u, prev_i=%d\n",
-                    e->score, e->n_mm, e->n_gapo, e->n_gape, e->state, e->offset, e->last_diff_offset, e->match_sa.k, e->match_sa.l, e->i, e->prev_i);
+  fprintf(stderr, "score=%u, n_mm=%u, n_gapo=%d, n_gape=%d, state=%u, offset=%d, last_diff_offset=%d, k=%llu, l=%llu, i=%u, prev_i=%d\n",
+  //tmap_file_fprintf(fp, "score=%u, n_mm=%u, n_gapo=%d, n_gape=%d, state=%u, offset=%d, last_diff_offset=%d, k=%llu, l=%llu, i=%u, prev_i=%d\n",
+                    e->score, e->n_mm, e->n_gapo, e->n_gape, e->state, e->offset, e->last_diff_offset, 
+                    (unsigned long long int)e->match_sa.k, (unsigned long long int)e->match_sa.l, e->i, e->prev_i);
 }
 */
 
@@ -446,20 +447,17 @@ tmap_map1_aux_core(tmap_seq_t *seq, tmap_index_t *index,
   tmap_bwt_t *bwt = index->bwt;
   tmap_sa_t *sa = index->sa;
 
-  /*
-  for(i=0;i<bwt[0]->seq_len;i++) {
-      for(j=0;j<4;j++) {
-          fprintf(stderr, "i=%u j=%u tmap_bwt_occ=%u\n",
-                  i, j, tmap_bwt_occ(bwt[0], i, j));
-      }
-  }
-  */
-      
+
   max_edit_score = opt->pen_mm;
   //if(max_edit_score < opt->pen_gapo + opt->pen_gape) max_edit_score = opt->pen_gapo + opt->pen_gape;
   //if(max_edit_score < opt->pen_gape) max_edit_score = opt->pen_gape;
 
   bases = tmap_seq_get_bases(seq);
+  fputc('\n', stderr);
+  for(i=0;i<bases->l;i++) {
+      fputc("ACGTN"[(int)bases->s[i]], stderr);
+  }
+  fputc('\n', stderr);
   
   // the maximum # of differences
   if(bases->l <= TMAP_MAP_OPT_MAX_DIFF_READ_LENGTH) {
