@@ -240,7 +240,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
                       tmap_map_driver_algorithm_t *algorithm = stage->algorithms[k];
                       tmap_map_sams_t *sams = NULL;
                       if(i+1 != algorithm->opt->algo_stage) {
-                          tmap_error("bug encountered", Exit, OutOfRange);
+                          tmap_bug();
                       }
                       // map
                       sams = algorithm->func_thread_map(&algorithm->thread_data[tid], seqs[j], index, rand, algorithm->opt);

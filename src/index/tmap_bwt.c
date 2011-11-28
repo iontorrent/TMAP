@@ -315,7 +315,7 @@ tmap_bwt_update_occ_interval(tmap_bwt_t *bwt, tmap_bwt_int_t occ_interval)
 #define bwt_B00(b, k) ((b)->bwt[(k)>>4]>>((~(k)&0xf)<<1)&3)
 
   if(occ_interval < 16 || 0 != occ_interval % 16) {
-      tmap_error("bug encountered", Exit, OutOfRange);
+      tmap_bug();
   }
 
   n_occ = ((bwt->seq_len + occ_interval - 1) / occ_interval) + 1; // the number of occurrences to store, on top of the bwt string

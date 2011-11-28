@@ -33,7 +33,7 @@ tmap_refseq_get_version_format(const char *v)
       }
   }
   if(i < 0) {
-      tmap_error("bug encountered", Exit, OutOfRange);
+      tmap_bug();
   }
 
   return tmap_index_versions[i];
@@ -269,7 +269,7 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression, int32_t fwd_onl
               c = j & 3; // Note: Ns will go to As
           }
           if(3 < c) {
-              tmap_error("bug encountered", Exit, OutOfRange);
+              tmap_bug();
           }
           if(buffer_length == (TMAP_REFSEQ_BUFFER_SIZE << 2)) { // 2-bit
               if(tmap_refseq_seq_memory(buffer_length) != tmap_file_fwrite(buffer, sizeof(uint8_t), tmap_refseq_seq_memory(buffer_length), fp_pac)) {
@@ -385,14 +385,14 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression, int32_t fwd_onl
           for(k=0;k<anno_fwd->len;k++,len_fwd--,len_rev++) { // reverse
               uint8_t c = tmap_refseq_seq_i(refseq, len_fwd); 
               if(3 < c) {
-                  tmap_error("bug encountered", Exit, OutOfRange);
+                  tmap_bug();
               }
               c = 3 - c; // compliment
               tmap_refseq_seq_store_i(refseq, len_rev, c);
           }
       }
       if(len_rev != refseq->len) {
-          tmap_error("bug encountered", Exit, OutOfRange);
+          tmap_bug();
       }
 
       // write

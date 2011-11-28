@@ -41,6 +41,7 @@ enum {
     SharedMemoryControl, /*!< could not control the shared memory */
     SharedMemoryDetach, /*!< could not detach the shared memory */
     SharedMemoryListing, /*!< could not find the listing in shared memory */
+    BugEncountered, /*<! a unrecoverable bug was encountered */
     LastErrorType, /*!< dummy error type  */
 };
 
@@ -54,6 +55,12 @@ enum {
   */
 void
 tmap_error_cmd_check_int(int32_t val, int32_t lower, int32_t upper, char *option);
+
+/*! 
+  process a bug
+  */
+#define tmap_bug() \
+  (tmap_error_full(__FILE__, __LINE__, __func__, "bug encountered", Exit, BugEncountered))
 
 /*! 
   process an error based on the given action

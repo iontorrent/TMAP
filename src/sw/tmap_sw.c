@@ -1082,7 +1082,7 @@ tmap_sw_global_banded_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t l
           fputc("ACGTN"[seq1[i]], stderr);
       }
       fputc('\n', stderr);
-      tmap_error("bug encountered", Exit, OutOfRange);
+      tmap_bug();
       */
       return score_gb;
   }

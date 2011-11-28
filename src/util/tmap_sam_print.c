@@ -308,11 +308,11 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
       
   target = tmap_refseq_subseq2(refseq, seqid+1, ref_start, ref_end, NULL, 0, NULL);
   if(NULL == target) {
-      tmap_error("bug encountered", Exit, OutOfRange);
+      tmap_bug();
   }
 
   if(0 == n_cigar) {
-      tmap_error("bug encountered", Exit, OutOfRange);
+      tmap_bug();
   }
 
   read_i = ref_i = 0;

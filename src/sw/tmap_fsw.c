@@ -215,7 +215,7 @@ tmap_fsw_sub_core(uint8_t *seq, int32_t len,
       // factor out extra match scores for over calls.  Is this correct?
       //if(base_call < i) flow_score += mat[flow_base] * (i - base_call);
       //fprintf(stderr, "flow_score=%d i=%d\n", flow_score, i);
-      if(flow_score < 0) tmap_error("bug encountered", Exit, OutOfRange); // we will subtract it
+      if(flow_score < 0) tmap_bug(); // we will subtract it
       for(j=0;j<=len;j++) { // for each col
           TMAP_FSW_ADD_FSCORE(sub_dpscore[i][j], flow_score);
           /*
@@ -295,9 +295,9 @@ tmap_fsw_sub_core(uint8_t *seq, int32_t len,
       //fprintf(stderr, "  START sub_core i=%d j=%d ctype=%d\n", i, j, ctype);
       while(TMAP_FSW_FROM_S != ctype && 0 < i) {
           //fprintf(stderr, "  sub_core i=%d j=%d ctype=%d\n", i, j, ctype);
-          if(i < 0 || j < 0) tmap_error("bug encountered", Exit, OutOfRange);
+          if(i < 0 || j < 0) tmap_bug();
           // is there enough path
-          if(*path_len < p - path) tmap_error("bug encountered", Exit, OutOfRange);
+          if(*path_len < p - path) tmap_bug();
 
           switch(ctype) { 
             case TMAP_FSW_FROM_M: 
@@ -399,19 +399,19 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
 
       switch(ctype) { 
         case TMAP_FSW_FROM_M: 
-          if(i < 0 || j < 0) tmap_error("bug encountered", Exit, OutOfRange);
+          if(i < 0 || j < 0) tmap_bug();
           base_call = dpcell[i][j].match_bc;
           col_offset = dpcell[i][j].match_from >> 2;
           ctype_next = dpcell[i][j].match_from & 0x3;
           break;
         case TMAP_FSW_FROM_I: 
-          if(i < 0 || j < 0) tmap_error("bug encountered", Exit, OutOfRange);
+          if(i < 0 || j < 0) tmap_bug();
           base_call = dpcell[i][j].ins_bc;
           col_offset = dpcell[i][j].ins_from >> 2;
           ctype_next = dpcell[i][j].ins_from & 0x3;
           break;
         case TMAP_FSW_FROM_D: 
-          if(i < 0 || j < 0) tmap_error("bug encountered", Exit, OutOfRange);
+          if(i < 0 || j < 0) tmap_bug();
           base_call = dpcell[i][j].del_bc;
           col_offset = dpcell[i][j].del_from >> 2;
           ctype_next = dpcell[i][j].del_from & 0x3;
@@ -441,14 +441,14 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
               p->j = j-1;
               p->ctype = TMAP_FSW_FROM_I;
               p++;
-              if(*path_len <= p - path) tmap_error("bug encountered", Exit, OutOfRange);
+              if(*path_len <= p - path) tmap_bug();
           }
           for(k=base_call_diff;k<0;k++) {
               p->i = i-1;
               p->j = j-1;
               p->ctype = TMAP_FSW_FROM_D;
               p++;
-              if(*path_len <= p - path) tmap_error("bug encountered", Exit, OutOfRange);
+              if(*path_len <= p - path) tmap_bug();
           }
           //fprintf(stderr, "base_call=%d base_calls[%d]=%d base_call_diff=%d\n", base_call, i-1, base_calls[i-1], base_call_diff);
           i--;
@@ -459,7 +459,7 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
           p->j = j-1;
           p->ctype = TMAP_FSW_FROM_D;
           p++;
-          if(*path_len <= p - path) tmap_error("bug encountered", Exit, OutOfRange);
+          if(*path_len <= p - path) tmap_bug();
           j--;
       }
       else if(0 == base_call) {
@@ -469,7 +469,7 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
                   p->i = i - 1;
                   p->ctype = TMAP_FSW_FROM_HP_MINUS;
                   p++;
-                  if(*path_len <= p - path) tmap_error("bug encountered", Exit, OutOfRange);
+                  if(*path_len <= p - path) tmap_bug();
               }
           }
           i--;
@@ -487,7 +487,7 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
           ap_tmp.offset = 0; // no offset, since we will use the previous base call
 
           // solve the sub-problem and get the path
-          if(j - col_offset < 0) tmap_error("bug encountered", Exit, OutOfRange);
+          if(j - col_offset < 0) tmap_bug();
           tmap_fsw_sub_core(seq, j,
                             flow_order[(i-1) % flow_order_len], base_call, flowgram[i-1], 
                             &ap_tmp,
@@ -527,14 +527,14 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
                   p->i = i - 1;
                   p->j = j - 1; // is this correct ? 
                   p++;
-                  if(*path_len <= p - path) tmap_error("bug encountered", Exit, OutOfRange);
+                  if(*path_len <= p - path) tmap_bug();
                   base_call_diff++;
               }
               for(l=0;l<sub_path_len;l++) {
                   (*p) = sub_path[l]; // store p->j and p->ctype
                   p->i = i - 1; // same flow index
                   p++;
-                  if(*path_len <= p - path) tmap_error("bug encountered", Exit, OutOfRange);
+                  if(*path_len <= p - path) tmap_bug();
               }
           }
           else {
@@ -552,7 +552,7 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
                   p->i = i - 1; // same flow index
                   k = p->j; // for base_call_diff < 0
                   p++;
-                  if(*path_len <= p - path) tmap_error("bug encountered", Exit, OutOfRange);
+                  if(*path_len <= p - path) tmap_bug();
               }
               // add deletions after storing the path
               while(base_call_diff < 0) { // there are bases left that were deleted
@@ -560,12 +560,12 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
                   p->i = i - 1;
                   p->j = k; // is this correct ? 
                   p++;
-                  if(*path_len <= p - path) tmap_error("bug encountered", Exit, OutOfRange);
+                  if(*path_len <= p - path) tmap_bug();
                   base_call_diff++;
               }
           }
           if(0 != base_call_diff) {
-              tmap_error("bug encountered", Exit, OutOfRange);
+              tmap_bug();
           }
 
           // move the row and column (as necessary)
@@ -965,7 +965,7 @@ tmap_fsw_path2cigar(const tmap_fsw_path_t *path, int32_t path_len, int32_t *n_ci
           }
       }
       if(n+1 != (*n_cigar)) {
-          tmap_error("bug encountered", Exit, OutOfRange);
+          tmap_bug();
       }
   }
 
@@ -1202,7 +1202,7 @@ tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow
   
   // base sequence
   bases = tmap_seq_get_bases(seq);
-  if(0 == bases->l) tmap_error("bug encountered", Exit, OutOfRange);
+  if(0 == bases->l) tmap_bug();
 
   // convert bases to integers
   was_int = tmap_seq_is_int(seq);
@@ -1337,7 +1337,7 @@ tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow
           tmap_print_debug_int(j);
           tmap_print_debug_string(tmap_seq_get_name(seq)->s);
           tmap_print_debug_int(((int)tmap_seq_get_bases(seq)->l));
-          tmap_error("bug encountered", Exit, OutOfRange);
+          tmap_bug();
       }
       // NB: do not include the key sequence in the key bases
   }
@@ -1355,7 +1355,7 @@ tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow
   while(i < bases->l) {
       while(bases->s[i] != fs->flow_order[j % flow_order_len]) {
           if(fs->num_flows <= j) {
-              tmap_error("bug encountered", Exit, OutOfRange);
+              tmap_bug();
           }
           if(1 == to_fill) {
               fs->flowgram[j] = 0;
@@ -1369,7 +1369,7 @@ tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow
       fs->base_calls[j] = 0;
       while(i < bases->l && bases->s[i] == fs->flow_order[j % flow_order_len]) {
           if(fs->num_flows <= j) {
-              tmap_error("bug encountered", Exit, OutOfRange);
+              tmap_bug();
           }
           if(1 == to_fill) {
               fs->flowgram[j] += 100;
@@ -1380,7 +1380,7 @@ tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow
       j++;
   }
   if(j != fs->num_flows) {
-      tmap_error("bug encountered", Exit, OutOfRange);
+      tmap_bug();
   }
   // key sequence in the flowgram
   if(1 == to_fill) {

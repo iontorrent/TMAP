@@ -135,7 +135,7 @@ tmap_vsw_sse2(tmap_vsw_query_t *vsw_query,
           found_forward = 0;
       }
       else if(-1 == (*query_end)) {
-          tmap_error("bug encountered", Exit, OutOfRange);
+          tmap_bug();
       }
 
       // return if we found no legal/good forward results
@@ -211,7 +211,7 @@ tmap_vsw_sse2(tmap_vsw_query_t *vsw_query,
                   (*target_start), (*target_end));
           fprintf(stderr, "(*score_fwd)=%d (*score_rev)=%d\n",
                   (*score_fwd), (*score_rev));
-          tmap_error("bug encountered", Exit, OutOfRange);
+          tmap_bug();
       }
 
 #ifdef TMAP_VSW_DEBUG

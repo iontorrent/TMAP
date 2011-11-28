@@ -58,7 +58,7 @@ tmap_map3_aux_core_seed_helper(uint8_t *query,
 
   if(query_length <= offset) return;
   if(flow_order[flow_i] != query[offset]) {
-      tmap_error("bug encountered", Exit, OutOfRange);
+      tmap_bug();
   }
 
   // initialize prev
@@ -141,7 +141,7 @@ tmap_map3_aux_core_seed_helper(uint8_t *query,
       prev_sa = next_sa;
   }
 
-  if(i - offset < seed_length) tmap_error("bug encountered", Exit, OutOfRange);
+  if(i - offset < seed_length) tmap_bug();
 
   // add in the seed with no hp indels
   if((next_sa.l - next_sa.k + 1) <= opt->max_seed_hits) {
@@ -174,7 +174,7 @@ tmap_map3_aux_core_seed(uint8_t *query,
               flow_i = (flow_i + 1) & 3;
               // sanity check
               j++;
-              if(4 <= j) tmap_error("bug encountered", Exit, OutOfRange);
+              if(4 <= j) tmap_bug();
           }
 
           // add seeds
@@ -314,7 +314,7 @@ tmap_map3_aux_core(tmap_seq_t *seq,
   if(0 < opt->hp_diff) {
       // set up the flow order to be used
       if(NULL == flow_order) {
-          tmap_error("bug encountered", Exit, OutOfRange);
+          tmap_bug();
       }
       else {
           flow = tmap_malloc(sizeof(uint8_t)*flow_order_len, "flow[0]");

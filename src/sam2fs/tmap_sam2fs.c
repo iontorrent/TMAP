@@ -161,7 +161,7 @@ tmap_sam2fs_get_flow_order_start_index(char *flow_order, char *key_sequence)
       while(tmap_nt_char_to_int[(int)flow_order[j]] != tmap_nt_char_to_int[(int)key_sequence[i]]) {
           j = (j + 1) % l;
           if(j == k) {
-              tmap_error("bug encountered", Exit, OutOfRange);
+              tmap_bug();
           }
       }
   }

@@ -85,7 +85,7 @@ tmap_map2_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
   num_best = 0;
   for(i=0;i<sams->n;i++) {
       if(0 < i && sams->sams[i-1].score < sams->sams[i].score) { // check assumption
-          tmap_error("bug encountered", Exit, OutOfRange);
+          tmap_bug();
       }
       if(sams->sams[i].score < sams->sams[0].score) {
           break;

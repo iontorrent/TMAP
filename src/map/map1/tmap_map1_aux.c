@@ -179,7 +179,7 @@ tmap_map1_aux_stack_push(tmap_map1_aux_stack_t *stack,
   }
 
   if(stack->n_bins <= entry->score) {
-      tmap_error("bug encountered", Exit, OutOfRange);
+      tmap_bug();
   }
   bin = &stack->bins[entry->score];
   
@@ -226,7 +226,7 @@ tmap_map1_aux_stack_pop(tmap_map1_aux_stack_t *stack)
   // remove from the appropriate bin
   bin = &stack->bins[stack->best_score];
   if(0 == bin->n_entries) {
-      tmap_error("bug encountered", Exit, OutOfRange);
+      tmap_bug();
   }
   best = bin->entries[bin->n_entries-1];
   bin->entries[bin->n_entries-1] = NULL;
@@ -244,7 +244,7 @@ tmap_map1_aux_stack_pop(tmap_map1_aux_stack_t *stack)
           }
       }
       if(i == stack->n_bins) {
-          tmap_error("bug encountered", Exit, OutOfRange);
+          tmap_bug();
       }
   }
 

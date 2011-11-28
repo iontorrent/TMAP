@@ -356,7 +356,7 @@ end_loop:
 #endif
       __tmap_vsw16_max(imax, max); // imax is the maximum number in max
       if(query->max_aln_score - query->max_edit_score < imax) { // overflow
-          tmap_error("bug encountered", Exit, OutOfRange);
+          tmap_bug();
       }
       if(imax > gmax) { 
           gmax = imax; // global maximum score 
@@ -395,7 +395,7 @@ end_loop:
                   }
               }
               if(-1 == *query_end) {
-                  tmap_error("bug encountered", Exit, OutOfRange);
+                  tmap_bug();
               }
               //fprintf(stderr, "FOUND B i=%d imax=%d best=%d query_end=%d target_end=%d\n", i, imax-zero, best-zero, *query_end, *target_end);
           }
@@ -420,7 +420,7 @@ end_loop:
       // check for underflow
       __tmap_vsw16_min(imin, min); // imin is the minimum number in min
       if(imin < tmap_vsw16_min_value - query->min_edit_score) {
-          tmap_error("bug encountered", Exit, OutOfRange);
+          tmap_bug();
       }
       S = H1; H1 = H0; H0 = S; // swap H0 and H1
   }

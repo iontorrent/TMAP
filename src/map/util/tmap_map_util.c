@@ -597,7 +597,7 @@ tmap_map_sams_filter1(tmap_map_sams_t *sams, int32_t aln_output_mode, int32_t al
       // do nothing
   }
   else {
-      tmap_error("bug encountered", Exit, OutOfRange);
+      tmap_bug();
   }
 }
 
@@ -952,7 +952,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       }
       // NB: IUPAC codes are turned into mismatches
       if(NULL == tmap_refseq_subseq2(refseq, sams->sams[end].seqid+1, start_pos, end_pos, target, 1, NULL)) {
-          tmap_error("bug encountered", Exit, OutOfRange);
+          tmap_bug();
       }
 
 
@@ -997,7 +997,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                                         &overflow, opt->score_thr, 0);
       }
       if(1 == overflow) {
-          tmap_error("bug encountered", Exit, OutOfRange);
+          tmap_bug();
       }
 
       if(opt->score_thr <= tmp_sam.score) {
@@ -1042,7 +1042,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
               (*s->aux.map_vsw_aux) = (*tmp_sam.aux.map_vsw_aux);
               break;
             default:
-              tmap_error("bug encountered", Exit, OutOfRange);
+              tmap_bug();
               break;
           }
 
@@ -1259,7 +1259,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       }
       else {
           if(TMAP_SEQ_TYPE_SFF != seqs[0]->type) {
-              tmap_error("bug encountered", Exit, OutOfRange);
+              tmap_bug();
           }
           key_base = tmap_nt_char_to_int[(int)seqs[0]->data.sff->gheader->key->s[seqs[0]->data.sff->gheader->key->l-1]];
       }
@@ -1297,7 +1297,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       }
       // NB: IUPAC codes are turned into mismatches
       if(NULL == tmap_refseq_subseq2(refseq, sams->sams[end].seqid+1, start_pos, end_pos, target, 1, &conv)) {
-          tmap_error("bug encountered", Exit, OutOfRange);
+          tmap_bug();
       }
       
       /**
@@ -1327,7 +1327,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
                                         &overflow, opt->score_thr, 1);
       }
       if(1 == overflow) {
-          tmap_error("bug encountered", Exit, OutOfRange);
+          tmap_bug();
       }
 
       /*
@@ -1362,7 +1362,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
           // NB: IUPAC codes are turned into mismatches
           start_pos += tmp_sam.target_start;
           if(NULL == tmap_refseq_subseq2(refseq, sams->sams[end].seqid+1, start_pos, end_pos, target, 0, NULL)) {
-              tmap_error("bug encountered", Exit, OutOfRange);
+              tmap_bug();
           }
       }
 
@@ -1421,7 +1421,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       }
       s->cigar = tmap_sw_path2cigar(path, path_len, &s->n_cigar);
       if(0 == s->n_cigar) {
-          tmap_error("bug encountered", Exit, OutOfRange);
+          tmap_bug();
       }
 
       s->target_len = 0;
@@ -1469,7 +1469,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
           (*s->aux.map_vsw_aux) = (*tmp_sam.aux.map_vsw_aux);
           break;
         default:
-          tmap_error("bug encountered", Exit, OutOfRange);
+          tmap_bug();
           break;
       }
 
@@ -1602,7 +1602,7 @@ tmap_map_util_fsw(tmap_fsw_flowseq_t *fseq, tmap_seq_t *seq,
       /*
       // NB: IUPAC codes are turned into mismatches
       if(NULL == tmap_refseq_subseq2(refseq, sams->sams[end].seqid+1, start_pos, end_pos, target, 1, NULL)) {
-          tmap_error("bug encountered", Exit, OutOfRange);
+          tmap_bug();
       }
       */
 
@@ -1694,7 +1694,7 @@ tmap_map_util_fsw(tmap_fsw_flowseq_t *fseq, tmap_seq_t *seq,
               }
           }
           if(refseq->len < s->pos) {
-              tmap_error("bug encountered", Exit, OutOfRange);
+              tmap_bug();
           }
 
 
