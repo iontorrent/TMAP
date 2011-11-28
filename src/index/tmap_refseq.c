@@ -162,7 +162,7 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression, int32_t fwd_onl
   tmap_refseq_t *refseq = NULL;
   char *fn_pac = NULL, *fn_anno = NULL;
   uint8_t buffer[TMAP_REFSEQ_BUFFER_SIZE];
-  int64_t a, i, j, l, n, buffer_length;
+  int64_t i, j, k, l, buffer_length;
   uint32_t num_IUPAC_found= 0, amb_bases_mem = 0;
   uint8_t x = 0;
   uint64_t ref_len;
@@ -290,46 +290,6 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression, int32_t fwd_onl
           anno->amb_bases = tmap_realloc(anno->amb_bases, sizeof(uint8_t) * amb_bases_mem, "anno->amb_bases");
       }
   }
-  // pack the reverse compliment
-  if(0 == fwd_only) {
-      n = refseq->num_annos; // since this will change
-      l = refseq->len-1;
-      for(a=n-1;0<=a;a--) {
-          tmap_anno_t *anno_fwd = NULL;
-          tmap_anno_t *anno_rev = NULL;
-          
-          refseq->num_annos++;
-          refseq->annos = tmap_realloc(refseq->annos, sizeof(tmap_anno_t)*refseq->num_annos, "refseq->annos");
-          
-          anno_fwd = &refseq->annos[a];
-          anno_rev = &refseq->annos[refseq->num_annos-1];
-
-          tmap_progress_print2("packing contig [%s:1-%d] (reverse)", anno_fwd->name->s, anno_fwd->len);
-
-          // clone the annotations
-          tmap_refseq_anno_clone(anno_rev, anno_fwd, 1);
-          anno_rev->offset = (1 == refseq->num_annos) ? 0 : refseq->annos[refseq->num_annos-2].offset + refseq->annos[refseq->num_annos-2].len;
-
-          // fill the buffer
-          for(i=0;i<anno_fwd->len;i++,l--) { // reverse
-              uint8_t c = tmap_refseq_seq_i(refseq, l); 
-              if(3 < c) {
-                  tmap_error("bug encountered", Exit, OutOfRange);
-              }
-              c = 3 - c; // compliment
-              if(buffer_length == (TMAP_REFSEQ_BUFFER_SIZE << 2)) { // 2-bit
-                  if(tmap_refseq_seq_memory(buffer_length) != tmap_file_fwrite(buffer, sizeof(uint8_t), tmap_refseq_seq_memory(buffer_length), fp_pac)) {
-                      tmap_error(fn_pac, Exit, WriteFileError);
-                  }
-                  memset(buffer, 0, TMAP_REFSEQ_BUFFER_SIZE);
-                  buffer_length = 0;
-              }
-              tmap_refseq_seq_store_i(refseq, buffer_length, c);
-              buffer_length++;
-          }
-          refseq->len += anno_fwd->len;
-      }
-  }
   // write out the buffer
   if(tmap_refseq_seq_memory(buffer_length) != tmap_file_fwrite(buffer, sizeof(uint8_t), tmap_refseq_seq_memory(buffer_length), fp_pac)) {
       tmap_error(fn_pac, Exit, WriteFileError);
@@ -385,6 +345,62 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression, int32_t fwd_onl
   tmap_seq_destroy(seq);
   free(fn_pac);
   free(fn_anno);
+  
+  // pack the reverse compliment
+  if(0 == fwd_only) {
+      int32_t num_annos;
+      uint64_t len;
+      uint64_t len_fwd, len_rev;
+  
+      tmap_progress_print2("packing the reverse compliment FASTA for BWT/SA creation");
+
+      refseq = tmap_refseq_read(fn_fasta);
+
+      // original length
+      num_annos = refseq->num_annos;
+      len = refseq->len;
+          
+      // more annotations
+      refseq->num_annos *= 2;
+      refseq->annos = tmap_realloc(refseq->annos, sizeof(tmap_anno_t)*refseq->num_annos, "refseq->annos");
+
+      // allocate more memory for the sequence
+      refseq->len *= 2;
+      refseq->seq = tmap_realloc(refseq->seq, sizeof(uint8_t) * tmap_refseq_seq_memory(refseq->len), "refseq->seq");
+      memset(refseq->seq + tmap_refseq_seq_memory(len), 0, 
+             (tmap_refseq_seq_memory(refseq->len) - tmap_refseq_seq_memory(len)) * sizeof(uint8_t));
+
+      for(i=0,j=num_annos-1,len_fwd=len-1,len_rev=len;i<num_annos;i++,j--) {
+          tmap_anno_t *anno_fwd = NULL;
+          tmap_anno_t *anno_rev = NULL;
+          
+          anno_fwd = &refseq->annos[j]; // source
+          anno_rev = &refseq->annos[i+num_annos]; // destination
+
+          // clone the annotations
+          tmap_refseq_anno_clone(anno_rev, anno_fwd, 1);
+          anno_rev->offset = refseq->annos[i+num_annos-1].offset + refseq->annos[i+num_annos-1].len;
+
+          // fill the buffer
+          for(k=0;k<anno_fwd->len;k++,len_fwd--,len_rev++) { // reverse
+              uint8_t c = tmap_refseq_seq_i(refseq, len_fwd); 
+              if(3 < c) {
+                  tmap_error("bug encountered", Exit, OutOfRange);
+              }
+              c = 3 - c; // compliment
+              tmap_refseq_seq_store_i(refseq, len_rev, c);
+          }
+      }
+      if(len_rev != refseq->len) {
+          tmap_error("bug encountered", Exit, OutOfRange);
+      }
+
+      // write
+      tmap_refseq_write(refseq, fn_fasta);
+      
+      // free memory
+      tmap_refseq_destroy(refseq);
+  }
 
   tmap_progress_print2("packed the reference FASTA");
 

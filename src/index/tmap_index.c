@@ -82,11 +82,11 @@ static void tmap_index_core(tmap_index_opt_t *opt)
   if(opt->is_large < 0) {
       if(TMAP_INDEX_LARGE_GENOME <= ref_len) { 
           opt->is_large = 1;
-          tmap_progress_print("defaulting to \"bwtsw\" bwt construction algorithm");
+          tmap_progress_print("defaulting to \"bwtsw\" BWT construction algorithm");
       }
       else {
           opt->is_large = 0;
-          tmap_progress_print("defaulting to \"is\" bwt construction algorithm");
+          tmap_progress_print("defaulting to \"is\" BWT construction algorithm");
       }
   }
 

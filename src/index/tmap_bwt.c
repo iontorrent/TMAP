@@ -281,7 +281,7 @@ void
 tmap_bwt_destroy(tmap_bwt_t *bwt)
 {
   uint32_t i;
-  if(bwt == 0) return;
+  if(bwt == NULL) return;
   if(1 == bwt->is_shm) {
       free(bwt->hash_k);
       free(bwt->hash_l);
