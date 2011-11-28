@@ -25,11 +25,8 @@
   */
 enum {
     TMAP_SHM_LISTING_REFSEQ     = 0x1, /*!< the forward packed reference sequence  */
-    TMAP_SHM_LISTING_REV_REFSEQ = 0x2, /*!< the forward packed reference sequence  */
-    TMAP_SHM_LISTING_BWT        = 0x4, /*!< the forward BWT string */
-    TMAP_SHM_LISTING_REV_BWT    = 0x8, /*!< the reverse BWT string */
-    TMAP_SHM_LISTING_SA         = 0x10, /*!< the forward SA string */
-    TMAP_SHM_LISTING_REV_SA     = 0x20 /*!< the reverse SA string */
+    TMAP_SHM_LISTING_BWT        = 0x2, /*!< the BWT string */
+    TMAP_SHM_LISTING_SA         = 0x4, /*!< the SA string */
 };
 
 /*! 

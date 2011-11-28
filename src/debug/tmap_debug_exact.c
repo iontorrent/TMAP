@@ -19,23 +19,23 @@
 
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
 static int32_t 
-tmap_debug_exact_print_sam(tmap_refseq_t *refseq, tmap_fq_t *seq, tmp_bwt_int_t pacpos, uint8_t strand)
+tmap_debug_exact_print_sam(tmap_refseq_t *refseq, tmap_seq_t *seq, tmap_bwt_int_t pacpos)
 {
-  tmp_bwt_int_t pos, seqid;
+  uint32_t pos, seqid;
   uint16_t flag = 0;
+  uint8_t strand;
 
-  if(0 < tmap_refseq_pac2real(refseq, pacpos, seq->seq->l, &seqid, &pos)) {
+  if(0 < tmap_refseq_pac2real(refseq, pacpos, tmap_seq_get_bases_length(seq), &seqid, &pos, &strand)) {
       if(1 == strand) { // reverse for the output
           flag |= 0x0010;
-          tmap_string_reverse_compliment(seq->seq, seq->is_int);
-          tmap_string_reverse(seq->qual);
+          tmap_seq_reverse_compliment(seq);
       }
       tmap_file_fprintf(tmap_file_stdout, "%s\t%u\t%s\t%u\t%u\t%dM\t*\t0\t0\t%s\t%s\n",
-                        seq->name->s, flag, refseq->annos[seqid].name->s,
-                        pos, 255, (int)seq->seq->l, seq->seq->s, seq->qual->s);
+                        tmap_seq_get_name(seq)->s, flag, refseq->annos[seqid].name->s,
+                        pos, 255, (int)tmap_seq_get_bases_length(seq), 
+                        tmap_seq_get_bases(seq)->s, tmap_seq_get_qualities(seq)->s);
       if(1 == strand) { // reverse back
-          tmap_string_reverse_compliment(seq->seq, seq->is_int);
-          tmap_string_reverse(seq->qual);
+          tmap_seq_reverse_compliment(seq);
       }
       return 1;
   }
@@ -45,43 +45,34 @@ tmap_debug_exact_print_sam(tmap_refseq_t *refseq, tmap_fq_t *seq, tmp_bwt_int_t 
 static void 
 tmap_debug_exact_core_worker(tmap_refseq_t *refseq, tmap_bwt_t *bwt, tmap_sa_t *sa, tmap_seq_t *orig_seq, int32_t n_only)
 {
-  uint32_t i, count = 0;
+  uint32_t i, j, count = 0;
   uint32_t mapped = 0;
-  tmp_bwt_int_t pacpos = 0;
-  tmap_fq_t *seq=NULL, *rseq=NULL;
+  tmap_bwt_int_t pacpos = 0;
+  tmap_seq_t *seqs[2]={NULL,NULL};
   tmap_bwt_match_occ_t cur;
 
-  seq = tmap_fq_clone(orig_seq->data.fq);
-  tmap_fq_to_int(seq);
-
-  rseq = tmap_fq_clone(orig_seq->data.fq);
-  tmap_fq_to_int(rseq);
-  tmap_string_reverse_compliment(rseq->seq, 1);
-
-  if(0 < tmap_bwt_match_exact(bwt, seq->seq->l, (uint8_t*)seq->seq->s, &cur)) {
-      if(0 == n_only) {
-          for(i=cur.k;i<=cur.l;i++) {
-              pacpos = bwt->seq_len - tmap_sa_pac_pos(sa, bwt, i) - seq->seq->l + 1;
-              if(0 != tmap_debug_exact_print_sam(refseq, orig_seq->data.fq, pacpos, 0)) {
-                  mapped = 1;
-              }
-          }
-      }
-      else {
-          count += cur.l - cur.k + 1;
+  for(i=0;i<2;i++) {
+      seqs[i] = tmap_seq_clone(orig_seq);
+      tmap_seq_to_int(seqs[i]);
+      if(1 == i) {
+          tmap_seq_reverse_compliment(seqs[i]);
       }
   }
-  if(0 < tmap_bwt_match_exact(bwt, seq->seq->l, (uint8_t*)rseq->seq->s, &cur)) {
-      if(0 == n_only) {
-          for(i=cur.k;i<=cur.l;i++) {
-              pacpos = bwt->seq_len - tmap_sa_pac_pos(sa, bwt, i) - seq->seq->l + 1;
-              if(0 != tmap_debug_exact_print_sam(refseq, orig_seq->data.fq, pacpos, 1)) {
-                  mapped = 1;
+
+  for(i=0;i<2;i++) {
+      tmap_string_t *bases = tmap_seq_get_bases(seqs[i]);
+      if(0 < tmap_bwt_match_exact(bwt, bases->l, (uint8_t*)bases->s, &cur)) {
+          if(0 == n_only) {
+              for(j=cur.k;j<=cur.l;j++) {
+                  pacpos = bwt->seq_len - tmap_sa_pac_pos(sa, bwt, j) - bases->l + 1;
+                  if(0 != tmap_debug_exact_print_sam(refseq, orig_seq, pacpos)) {
+                      mapped = 1;
+                  }
               }
           }
-      }
-      else {
-          count += cur.l - cur.k + 1;
+          else {
+              count += cur.l - cur.k + 1;
+          }
       }
   }
 
@@ -91,13 +82,14 @@ tmap_debug_exact_core_worker(tmap_refseq_t *refseq, tmap_bwt_t *bwt, tmap_sa_t *
       }
   }
   else {
-      tmap_fq_to_char(seq);
       tmap_file_fprintf(tmap_file_stdout, "%s\t%s\t%u\n",
-                        seq->name->s, seq->seq->s, count);
+                        tmap_seq_get_name(orig_seq)->s, tmap_seq_get_bases(orig_seq)->s, count);
   }
-
-  tmap_fq_destroy(seq);
-  tmap_fq_destroy(rseq);
+  
+  // destroy
+  for(i=0;i<2;i++) {
+      tmap_seq_destroy(seqs[i]);
+  }
 }
 
 static void 
@@ -109,13 +101,13 @@ tmap_debug_exact_core(tmap_debug_exact_opt_t *opt)
   tmap_seq_io_t *seqio=NULL;
   tmap_seq_t *seq=NULL;
   
-  seqio = tmap_seq_io_init(opt->fn_reads, 1, TMAP_SEQ_TYPE_FQ, TMAP_FILE_NO_COMPRESSION);
+  seqio = tmap_seq_io_init(opt->fn_reads, TMAP_SEQ_TYPE_FQ, 0, TMAP_FILE_NO_COMPRESSION);
   seq = tmap_seq_init(TMAP_SEQ_TYPE_FQ);
 
-  bwt = tmap_bwt_read(opt->fn_fasta, 1);
+  bwt = tmap_bwt_read(opt->fn_fasta);
   if(0 == opt->n_only) {
-      refseq = tmap_refseq_read(opt->fn_fasta, 0);
-      sa = tmap_sa_read(opt->fn_fasta, 1);
+      refseq = tmap_refseq_read(opt->fn_fasta);
+      sa = tmap_sa_read(opt->fn_fasta);
       tmap_sam_print_header(tmap_file_stdout, refseq, seqio, NULL, NULL, NULL, 0, opt->argc, opt->argv);
   }
 
@@ -184,6 +176,9 @@ tmap_debug_exact(int argc, char *argv[])
 
   // Note: 'tmap_file_stdout' should not have been previously modified
   tmap_file_stdout = tmap_file_fdopen(fileno(stdout), "wb", TMAP_FILE_NO_COMPRESSION);
+
+  opt.argv = argv;
+  opt.argc = argc;
 
   tmap_debug_exact_core(&opt);
 

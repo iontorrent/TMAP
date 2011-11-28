@@ -50,19 +50,17 @@ tmap_index_speed_test(tmap_index_t *index, clock_t *total_clock, tmap_index_spee
           }
       }
       found = 0;
-      for(j=0;j<2;j++) {
-          start_clock = clock();
-          if(0 < tmap_bwt_match_exact(index->bwt[j], opt->kmer_length, seq, &cur)) {
-              if(0 <= opt->enum_max_hits && (cur.l - cur.k + 1) <= opt->enum_max_hits) {
-                  for(k=cur.k;k<=cur.l;k++) {
-                      // retrieve the packed position
-                      pacpos = index->bwt[j]->seq_len - tmap_sa_pac_pos(index->sa[j], index->bwt[j], k) - opt->kmer_length + 1;
-                  }
+      start_clock = clock();
+      if(0 < tmap_bwt_match_exact(index->bwt, opt->kmer_length, seq, &cur)) {
+          if(0 <= opt->enum_max_hits && (cur.l - cur.k + 1) <= opt->enum_max_hits) {
+              for(k=cur.k;k<=cur.l;k++) {
+                  // retrieve the packed position
+                  pacpos = index->bwt->seq_len - tmap_sa_pac_pos(index->sa, index->bwt, k) - opt->kmer_length + 1;
               }
-              found = 1;
           }
-          (*total_clock) += clock() - start_clock;
+          found = 1;
       }
+      (*total_clock) += clock() - start_clock;
       if(0 < found) {
           num_found++;
       }
@@ -88,11 +86,10 @@ tmap_index_speed_core(tmap_index_speed_opt_t *opt)
 
   // modify the hash width
   if(0 <= opt->hash_width) {
-      if(index->bwt[0]->hash_width < opt->hash_width || index->bwt[1]->hash_width < opt->hash_width) {
+      if(index->bwt->hash_width < opt->hash_width) {
           tmap_error("the hash width too large (-w)", Exit, CommandLineArgument);
       }
-      index->bwt[0]->hash_width = opt->hash_width;
-      index->bwt[1]->hash_width = opt->hash_width;
+      index->bwt->hash_width = opt->hash_width;
   }
 
   // clock on

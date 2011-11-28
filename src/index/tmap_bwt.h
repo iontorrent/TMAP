@@ -58,7 +58,6 @@ typedef struct {
     tmap_bwt_int_t occ_interval;  /*!< occurrence array interval, must be a strictly positive power of 16: (16, 32, 48, ...) */
     uint32_t *bwt;  /*!< burrows-wheeler transform */
     uint32_t cnt_table[256];  /*!< occurrence array */
-    uint32_t is_rev;  /*!< 1 if the reference sequence was reversed, 0 otherwise */
     tmap_bwt_int_t **hash_k;  /*!< hash of the BWT occurrence array (lower bounds) */
     tmap_bwt_int_t **hash_l;  /*!< hash of the BWT occurrence array (upper bounds) */
     uint32_t hash_width;  /*!< the k-mer that is hashed */
@@ -67,19 +66,17 @@ typedef struct {
 
 /*! 
   @param  fn_fasta  the FASTA file name
-  @param  is_rev    0 if to read the reverse packed sequence, 1 otherwise
   @return           pointer to the bwt structure 
   */
 tmap_bwt_t *
-tmap_bwt_read(const char *fn_fasta, uint32_t is_rev);
+tmap_bwt_read(const char *fn_fasta);
 
 /*! 
   @param  fn_fasta  the FASTA file name
-  @param  is_rev    0 if to write the reverse packed sequence, 1 otherwise
   @param  bwt       the bwt structure to write
   */
 void 
-tmap_bwt_write(const char *fn_fasta, tmap_bwt_t *bwt, uint32_t is_rev);
+tmap_bwt_write(const char *fn_fasta, tmap_bwt_t *bwt);
 
 /*! 
   @param  bwt  the bwt structure 
@@ -90,11 +87,10 @@ tmap_bwt_shm_num_bytes(tmap_bwt_t *bwt);
 
 /*! 
   @param  fn_fasta  the FASTA file name
-  @param  is_rev    0 if to write the reverse packed sequence, 1 otherwise
   @return      the number of bytes required for this bwt in shared memory
   */
 size_t
-tmap_bwt_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev);
+tmap_bwt_shm_read_num_bytes(const char *fn_fasta);
 
 /*! 
   @param  bwt  the bwt structure to pack 

@@ -17,7 +17,6 @@ typedef struct {
     tmap_bwt_int_t primary;  /*!< S^{-1}(0), or the primary index of BWT */
     uint32_t sa_intv;  /*!< the suffix array interval (sampled) */
     tmap_bwt_int_t seq_len;  /*!< the length of the reference sequence */
-    uint32_t is_rev;  /*!< 1 if the reference sequence was reversed, 0 otherwise */
     tmap_bwt_int_t n_sa;  /*!< number of suffix array entries */
     tmap_bwt_int_t *sa;  /*!< pointer to the suffix array entries */
     uint32_t is_shm;  /*!< 1 if loaded from shared memory, 0 otherwise */
@@ -25,19 +24,17 @@ typedef struct {
 
 /*! 
   @param  fn_fasta  the FASTA file name
-  @param  is_rev    0 if to read the reverse packed sequence, 1 otherwise
   @return           pointer to the sa structure 
   */
 tmap_sa_t *
-tmap_sa_read(const char *fn_fasta, uint32_t is_rev);
+tmap_sa_read(const char *fn_fasta);
 
 /*! 
   @param  fn_fasta  the FASTA file name
-  @param  is_rev    0 if to write the reverse packed sequence, 1 otherwise
   @param  sa        the sa structure to write
   */
 void
-tmap_sa_write(const char *fn_fasta, tmap_sa_t *sa, uint32_t is_rev);
+tmap_sa_write(const char *fn_fasta, tmap_sa_t *sa);
 
 /*! 
   @param  sa  the sa structure 
@@ -48,11 +45,10 @@ tmap_sa_shm_num_bytes(tmap_sa_t *sa);
 
 /*! 
   @param  fn_fasta  the FASTA file name
-  @param  is_rev    0 if to write the reverse packed sequence, 1 otherwise
   @return     the number of bytes required for this sa in shared memory
   */
 size_t
-tmap_sa_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev);
+tmap_sa_shm_read_num_bytes(const char *fn_fasta);
 
 /*! 
   @param  sa  the sa structure to pack 

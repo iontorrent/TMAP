@@ -234,7 +234,7 @@ tmap_map2_aux_merge_hits(tmap_map2_aln_t *b[2], int32_t l, int32_t is_reverse)
           int32_t x = p->beg;
           p->beg = l - p->end;
           p->end = l - x;
-          p->flag |= 0x10;
+          //p->flag |= 0x10;
       }
   }
   b[0]->n += b[1]->n;
@@ -243,7 +243,7 @@ tmap_map2_aux_merge_hits(tmap_map2_aln_t *b[2], int32_t l, int32_t is_reverse)
 }
 
 static tmap_map2_aln_t *
-tmap_map2_aux_aln(tmap_map_opt_t *opt, tmap_refseq_t *refseq, 
+tmap_map2_aux_aln(tmap_map_opt_t *opt, 
                   tmap_bwt_t *target_bwt, tmap_sa_t *target_sa,
                   tmap_string_t *seq[2], int32_t is_rev, tmap_map2_global_mempool_t *pool)
 {
@@ -317,10 +317,11 @@ tmap_map2_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
   for(i=j=0;i<aln->n;i++) {
       tmap_map2_hit_t *p = aln->hits + i;
       uint32_t seqid = 0, pos = 0;
-      int32_t beg, strand;
+      uint8_t strand;
+      int32_t beg;
       tmap_map_sam_t *sam = &sams->sams[j];
 
-      strand = (p->flag & 0x10) ? 1 : 0;
+      //strand = (p->flag & 0x10) ? 1 : 0;
 
       // skip over duplicate hits, or sub-optimal hits to the same location
       if(0 < i) {
@@ -333,9 +334,9 @@ tmap_map2_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
       }
 
       // adjust for contig boundaries
-      if(tmap_refseq_pac2real(refseq, p->k, p->tlen, &seqid, &pos) <= 0) {
+      if(tmap_refseq_pac2real(refseq, p->k, p->tlen, &seqid, &pos, &strand) <= 0) {
           if(1 == strand) { // reverse
-              if(tmap_refseq_pac2real(refseq, p->k + p->tlen - 1, 1, &seqid, &pos) <= 0) {
+              if(tmap_refseq_pac2real(refseq, p->k + p->tlen - 1, 1, &seqid, &pos, &strand) <= 0) {
                   continue;
               }
               else {
@@ -345,7 +346,7 @@ tmap_map2_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
               }
           }
           else {
-              if(tmap_refseq_pac2real(refseq, p->k, 1, &seqid, &pos) <= 0) {
+              if(tmap_refseq_pac2real(refseq, p->k, 1, &seqid, &pos, &strand) <= 0) {
                   continue;
               }
               else {
@@ -397,8 +398,8 @@ tmap_map_sams_t *
 tmap_map2_aux_core(tmap_map_opt_t *_opt,
                    tmap_seq_t *seqs[4],
                    tmap_refseq_t *refseq,
-                   tmap_bwt_t *bwt[2],
-                   tmap_sa_t *sa[2],
+                   tmap_bwt_t *bwt,
+                   tmap_sa_t *sa,
                    tmap_rand_t *rand,
                    tmap_map2_global_mempool_t *pool)
 {
@@ -470,18 +471,19 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
   }
 
   // alignment
-  b[0] = tmap_map2_aux_aln(&opt, refseq, bwt[0], sa[0], seq, 0, pool);
+  b[0] = tmap_map2_aux_aln(&opt, bwt, sa, seq, 0, pool);
   for(k = 0; k < b[0]->n; ++k) {
       if(b[0]->hits[k].n_seeds < opt.seeds_rev) break;
   } 
   if(k < b[0]->n) {
-      b[1] = tmap_map2_aux_aln(&opt, refseq, bwt[1], sa[1], rseq, 1, pool);
+      b[1] = tmap_map2_aux_aln(&opt, bwt, sa, rseq, 1, pool);
       for(i = 0; i < b[1]->n; ++i) {
           tmap_map2_hit_t *p = b[1]->hits + i;
           int x = p->beg;
           p->beg = l - p->end;
           p->end = l - x;
           if(p->l == 0) {
+              // TODO
               if(refseq->len < (p->k + p->tlen)) p->k = 0;
               else p->k = refseq->len - (p->k + p->tlen);
           }
@@ -494,6 +496,7 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
   
   // tlen may overestimated due to not counting insertions properly, bound it!
   for(i = 0; i < b[0]->n; ++i) {
+      // TODO
       if(refseq->len <= b[0]->hits[i].k + b[0]->hits[i].tlen) {
           b[0]->hits[i].tlen = refseq->len - b[0]->hits[i].k;
       }

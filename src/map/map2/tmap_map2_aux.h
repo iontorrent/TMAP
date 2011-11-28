@@ -78,8 +78,8 @@ tmap_map_sams_t *
 tmap_map2_aux_core(tmap_map_opt_t *_opt,
                    tmap_seq_t *seqs[4],
                    tmap_refseq_t *refseq,
-                   tmap_bwt_t *bwt[2],
-                   tmap_sa_t *sa[2],
+                   tmap_bwt_t *bwt,
+                   tmap_sa_t *sa,
                    tmap_rand_t *rand,
                    tmap_map2_global_mempool_t *pool);
 #endif

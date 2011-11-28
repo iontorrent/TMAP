@@ -126,8 +126,35 @@ tmap_refseq_write_anno(tmap_file_t *fp, tmap_refseq_t *refseq)
   }
 }
 
+static inline void
+tmap_refseq_anno_clone(tmap_anno_t *dest, tmap_anno_t *src, int32_t reverse) 
+{
+  int32_t i;
+  dest->name = tmap_string_clone(src->name);
+  dest->len = src->len;
+  dest->offset = src->offset;
+  dest->num_amb = src->num_amb;
+  dest->amb_positions_start = tmap_malloc(sizeof(uint32_t) * dest->num_amb, "dest->amb_positions_start");
+  dest->amb_positions_end = tmap_malloc(sizeof(uint32_t) * dest->num_amb, "dest->amb_positions_end");
+  dest->amb_bases = tmap_malloc(sizeof(uint8_t) * dest->num_amb, "dest->amb_bases");
+  if(0 == reverse) {
+      for(i=0;i<dest->num_amb;i++) {
+          dest->amb_positions_start[i] = src->amb_positions_start[dest->num_amb-i-1];
+          dest->amb_positions_end[i] = src->amb_positions_end[dest->num_amb-i-1];
+          dest->amb_bases[i] = src->amb_bases[dest->num_amb-i-1];
+      }
+  }
+  else { 
+      for(i=0;i<dest->num_amb;i++) {
+          dest->amb_positions_start[i] = src->amb_positions_start[i];
+          dest->amb_positions_end[i] = src->amb_positions_end[i];
+          dest->amb_bases[i] = src->amb_bases[i];
+      }
+  }
+}
+
 uint64_t
-tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
+tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression, int32_t fwd_only)
 {
   tmap_file_t *fp_pac = NULL, *fp_anno = NULL;
   tmap_seq_io_t *seqio = NULL;
@@ -135,12 +162,17 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   tmap_refseq_t *refseq = NULL;
   char *fn_pac = NULL, *fn_anno = NULL;
   uint8_t buffer[TMAP_REFSEQ_BUFFER_SIZE];
-  int64_t i, j, l, buffer_length;
+  int64_t a, i, j, l, n, buffer_length;
   uint32_t num_IUPAC_found= 0, amb_bases_mem = 0;
   uint8_t x = 0;
   uint64_t ref_len;
 
-  tmap_progress_print("packing the reference FASTA");
+  if(0 == fwd_only) {
+      tmap_progress_print("packing the reference FASTA");
+  }
+  else {
+      tmap_progress_print("packing the reference FASTA (forward only)");
+  }
 
   refseq = tmap_calloc(1, sizeof(tmap_refseq_t), "refseq");
 
@@ -150,7 +182,6 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   refseq->annos = NULL;
   refseq->num_annos = 0;
   refseq->len = 0;
-  refseq->is_rev = 0;
   refseq->is_shm = 0;
   memset(buffer, 0, TMAP_REFSEQ_BUFFER_SIZE);
   buffer_length = 0;
@@ -167,7 +198,6 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   while(0 <= (l = tmap_seq_io_read(seqio, seq))) {
       tmap_anno_t *anno = NULL;
       tmap_progress_print2("packing contig [%s:1-%d]", seq->data.fq->name->s, l);
-
 
       refseq->num_annos++;
       refseq->annos = tmap_realloc(refseq->annos, sizeof(tmap_anno_t)*refseq->num_annos, "refseq->annos");
@@ -252,12 +282,51 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
           buffer_length++;
       }
       refseq->len += l;
-      // re-size the amibiguous bases
+      // re-size the ambiguous bases
       if(anno->num_amb < amb_bases_mem) {
           amb_bases_mem = anno->num_amb;
           anno->amb_positions_start = tmap_realloc(anno->amb_positions_start, sizeof(uint32_t) * amb_bases_mem, "anno->amb_positions_start");
           anno->amb_positions_end = tmap_realloc(anno->amb_positions_end, sizeof(uint32_t) * amb_bases_mem, "anno->amb_positions_end");
           anno->amb_bases = tmap_realloc(anno->amb_bases, sizeof(uint8_t) * amb_bases_mem, "anno->amb_bases");
+      }
+  }
+  // pack the reverse compliment
+  if(0 == fwd_only) {
+      n = refseq->num_annos; // since this will change
+      l = refseq->len-1;
+      for(a=n-1;0<=a;a--) {
+          tmap_anno_t *anno_fwd = NULL;
+          tmap_anno_t *anno_rev = NULL;
+          
+          anno_fwd = &refseq->annos[a];
+          tmap_progress_print2("packing contig [%s:1-%d] (reverse)", anno_fwd->name->s, anno_fwd->len);
+          
+          refseq->num_annos++;
+          refseq->annos = tmap_realloc(refseq->annos, sizeof(tmap_anno_t)*refseq->num_annos, "refseq->annos");
+          anno_rev = &refseq->annos[refseq->num_annos-1];
+
+          // clone the annotations
+          tmap_refseq_anno_clone(anno_rev, anno_fwd, 1);
+          anno_rev->offset = (1 == refseq->num_annos) ? 0 : refseq->annos[refseq->num_annos-2].offset + refseq->annos[refseq->num_annos-2].len;
+
+          // fill the buffer
+          for(i=0;i<anno_fwd->len;i++,l--) { // reverse
+              uint8_t c = tmap_refseq_seq_i(refseq, l); 
+              if(3 < c) {
+                  tmap_error("bug encountered", Exit, OutOfRange);
+              }
+              c = 3 - c; // compliment
+              if(buffer_length == (TMAP_REFSEQ_BUFFER_SIZE << 2)) { // 2-bit
+                  if(tmap_refseq_seq_memory(buffer_length) != tmap_file_fwrite(buffer, sizeof(uint8_t), tmap_refseq_seq_memory(buffer_length), fp_pac)) {
+                      tmap_error(fn_pac, Exit, WriteFileError);
+                  }
+                  memset(buffer, 0, TMAP_REFSEQ_BUFFER_SIZE);
+                  buffer_length = 0;
+              }
+              tmap_refseq_seq_store_i(refseq, buffer_length, c);
+              buffer_length++;
+          }
+          refseq->len += anno_fwd->len;
       }
   }
   // write out the buffer
@@ -297,8 +366,10 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
   tmap_file_fclose(fp_anno);
 
   // check sequence name uniqueness
-  for(i=0;i<refseq->num_annos;i++) {
-      for(j=i+1;j<refseq->num_annos;j++) {
+  l = refseq->num_annos;
+  if(0 == fwd_only) l /= 2; // only check the fwd
+  for(i=0;i<l;i++) {
+      for(j=i+1;j<l;j++) {
           if(0 == strcmp(refseq->annos[i].name->s, refseq->annos[j].name->s)) {
               tmap_file_fprintf(tmap_file_stderr, "Contigs have the same name: #%d [%s] and #%d [%s]\n",
                                 i+1, refseq->annos[i].name->s, 
@@ -316,65 +387,26 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression)
 
   tmap_progress_print2("packed the reference FASTA");
 
-  tmap_refseq_pac2revpac(fn_fasta);
-
   return ref_len;
 }
 
-void
-tmap_refseq_pac2revpac(const char *fn_fasta)
-{
-  uint64_t i, j;
-  uint8_t c;
-  tmap_refseq_t *refseq=NULL, *refseq_rev=NULL;
-
-  tmap_progress_print("reversing the packed reference FASTA");
-
-  refseq = tmap_refseq_read(fn_fasta, 0);
-
-  // shallow copy
-  refseq_rev = tmap_calloc(1, sizeof(tmap_refseq_t), "refseq_rev");
-  (*refseq_rev) = (*refseq);
-
-  // update sequence
-  refseq_rev->seq = NULL;
-  refseq_rev->seq = tmap_calloc(tmap_refseq_seq_memory(refseq->len), sizeof(uint8_t), "refseq_rev->seq");
-  for(i=0;i<refseq->len;i++) {
-      c = tmap_refseq_seq_i(refseq, i);
-      j = refseq->len - i - 1;
-      tmap_refseq_seq_store_i(refseq_rev, j, c);
-  }
-
-  // write
-  tmap_refseq_write(refseq_rev, fn_fasta, 1);
-
-  // free
-  free(refseq_rev->seq);
-  free(refseq_rev);
-  tmap_refseq_destroy(refseq);
-
-  tmap_progress_print2("reversed the packed reference FASTA");
-}
-
 void 
-tmap_refseq_write(tmap_refseq_t *refseq, const char *fn_fasta, uint32_t is_rev)
+tmap_refseq_write(tmap_refseq_t *refseq, const char *fn_fasta)
 {
   tmap_file_t *fp_pac = NULL, *fp_anno = NULL;
   char *fn_pac = NULL, *fn_anno = NULL;
   uint8_t x = 0;
 
   // write annotation file
-  if(0 == is_rev) {
-      fn_anno = tmap_get_file_name(fn_fasta, TMAP_ANNO_FILE);
-      fp_anno = tmap_file_fopen(fn_anno, "wb", TMAP_ANNO_COMPRESSION);
-      tmap_refseq_write_anno(fp_anno, refseq); 
-      tmap_file_fclose(fp_anno);
-      free(fn_anno);
-  }
+  fn_anno = tmap_get_file_name(fn_fasta, TMAP_ANNO_FILE);
+  fp_anno = tmap_file_fopen(fn_anno, "wb", TMAP_ANNO_COMPRESSION);
+  tmap_refseq_write_anno(fp_anno, refseq); 
+  tmap_file_fclose(fp_anno);
+  free(fn_anno);
 
   // write the sequence
-  fn_pac = tmap_get_file_name(fn_fasta, (0 == is_rev) ? TMAP_PAC_FILE : TMAP_REV_PAC_FILE);
-  fp_pac = tmap_file_fopen(fn_pac, "wb", (0 == is_rev) ? TMAP_PAC_COMPRESSION : TMAP_REV_PAC_COMPRESSION);
+  fn_pac = tmap_get_file_name(fn_fasta, TMAP_PAC_FILE);
+  fp_pac = tmap_file_fopen(fn_pac, "wb", TMAP_PAC_COMPRESSION);
   if(tmap_refseq_seq_memory(refseq->len) != tmap_file_fwrite(refseq->seq, sizeof(uint8_t), tmap_refseq_seq_memory(refseq->len), fp_pac)) {
       tmap_error(NULL, Exit, WriteFileError);
   }
@@ -471,7 +503,7 @@ tmap_refseq_read_anno(tmap_file_t *fp, tmap_refseq_t *refseq)
 }
 
 tmap_refseq_t *
-tmap_refseq_read(const char *fn_fasta, uint32_t is_rev)
+tmap_refseq_read(const char *fn_fasta)
 {
   tmap_file_t *fp_pac = NULL, *fp_anno = NULL;
   char *fn_pac = NULL, *fn_anno = NULL;
@@ -479,7 +511,6 @@ tmap_refseq_read(const char *fn_fasta, uint32_t is_rev)
 
   // allocate some memory 
   refseq = tmap_calloc(1, sizeof(tmap_refseq_t), "refseq");
-  refseq->is_rev = is_rev;
   refseq->is_shm = 0;
 
   // read annotation file
@@ -490,8 +521,8 @@ tmap_refseq_read(const char *fn_fasta, uint32_t is_rev)
   free(fn_anno);
 
   // read the sequence
-  fn_pac = tmap_get_file_name(fn_fasta, (0 == is_rev) ? TMAP_PAC_FILE : TMAP_REV_PAC_FILE);
-  fp_pac = tmap_file_fopen(fn_pac, "rb", (0 == is_rev) ? TMAP_PAC_COMPRESSION : TMAP_REV_PAC_COMPRESSION);
+  fn_pac = tmap_get_file_name(fn_fasta, TMAP_PAC_FILE);
+  fp_pac = tmap_file_fopen(fn_pac, "rb", TMAP_PAC_COMPRESSION);
   refseq->seq = tmap_malloc(sizeof(uint8_t)*tmap_refseq_seq_memory(refseq->len), "refseq->seq"); // allocate
   if(tmap_refseq_seq_memory(refseq->len) 
      != tmap_file_fread(refseq->seq, sizeof(uint8_t), tmap_refseq_seq_memory(refseq->len), fp_pac)) {
@@ -515,7 +546,6 @@ tmap_refseq_shm_num_bytes(tmap_refseq_t *refseq)
   n += sizeof(size_t); // package_version->l
   n += sizeof(uint32_t); // annos
   n += sizeof(uint64_t); // len
-  n += sizeof(uint32_t); // is_rev
   n += sizeof(char)*(refseq->package_version->l+1); // package_version->s
   n += sizeof(uint8_t)*tmap_refseq_seq_memory(refseq->len); // seq 
   for(i=0;i<refseq->num_annos;i++) {
@@ -533,7 +563,7 @@ tmap_refseq_shm_num_bytes(tmap_refseq_t *refseq)
 }
 
 size_t
-tmap_refseq_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev)
+tmap_refseq_shm_read_num_bytes(const char *fn_fasta)
 {
   size_t n = 0;
   tmap_file_t *fp_anno = NULL;
@@ -542,7 +572,6 @@ tmap_refseq_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev)
 
   // allocate some memory 
   refseq = tmap_calloc(1, sizeof(tmap_refseq_t), "refseq");
-  refseq->is_rev = is_rev;
   refseq->is_shm = 0;
 
   // read the annotation file
@@ -574,7 +603,6 @@ tmap_refseq_shm_pack(tmap_refseq_t *refseq, uint8_t *buf)
   memcpy(buf, &refseq->package_version->l, sizeof(size_t)); buf += sizeof(size_t);
   memcpy(buf, &refseq->num_annos, sizeof(uint32_t)); buf += sizeof(uint32_t);
   memcpy(buf, &refseq->len, sizeof(uint64_t)); buf += sizeof(uint64_t);
-  memcpy(buf, &refseq->is_rev, sizeof(uint32_t)); buf += sizeof(uint32_t);
   // variable length data
   memcpy(buf, refseq->package_version->s, sizeof(char)*(refseq->package_version->l+1));
   buf += sizeof(char)*(refseq->package_version->l+1); 
@@ -623,7 +651,6 @@ tmap_refseq_shm_unpack(uint8_t *buf)
   memcpy(&refseq->package_version->l, buf, sizeof(size_t)); buf += sizeof(size_t);
   memcpy(&refseq->num_annos, buf, sizeof(uint32_t)) ; buf += sizeof(uint32_t);
   memcpy(&refseq->len, buf, sizeof(uint64_t)) ; buf += sizeof(uint64_t);
-  memcpy(&refseq->is_rev, buf, sizeof(uint32_t)) ; buf += sizeof(uint32_t);
 
   // variable length data
   refseq->package_version->s = (char*)buf;
@@ -744,13 +771,32 @@ tmap_refseq_get_pos(const tmap_refseq_t *refseq, tmap_bwt_int_t pacpos, uint32_t
 }
 
 inline tmap_bwt_int_t 
-tmap_refseq_pac2real(const tmap_refseq_t *refseq, tmap_bwt_int_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos)
+tmap_refseq_pac2real(const tmap_refseq_t *refseq, tmap_bwt_int_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos, uint8_t *strand)
 {
+  // strand
+  if(refseq->len < pacpos) {
+      (*strand) = 1;
+      pacpos = pacpos - refseq->len; // between [1, refseq->len]
+      pacpos = refseq->len - pacpos + 1; // reverse around
+      // adjust based on the opposite strand
+      if(pacpos < aln_length) {
+          aln_length = pacpos;
+          pacpos = 1;
+      }
+      else {
+          pacpos -= aln_length-1;
+      }
+  }
+  else {
+      (*strand) = 0;
+  }
+  // seqid
   (*seqid) = tmap_refseq_get_seqid(refseq, pacpos, aln_length);
   if((*seqid) == (uint32_t)-1) {
       (*pos) = (uint32_t)-1;
       return 0;
   }
+  // position
   (*pos) = tmap_refseq_get_pos(refseq, pacpos, (*seqid));
 
   return (*pos);
@@ -854,21 +900,22 @@ tmap_refseq_amb_bases(const tmap_refseq_t *refseq, uint32_t seqid, uint32_t star
 int
 tmap_refseq_fasta2pac_main(int argc, char *argv[])
 {
-  int c, help=0;
+  int c, help=0, fwd_only=0;
 
-  while((c = getopt(argc, argv, "vh")) >= 0) {
+  while((c = getopt(argc, argv, "fvh")) >= 0) {
       switch(c) {
         case 'v': tmap_progress_set_verbosity(1); break;
+        case 'f': fwd_only = 1; break;
         case 'h': help = 1; break;
         default: return 1;
       }
   }
   if(1 != argc - optind || 1 == help) {
-      tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [-vh] <in.fasta>\n", PACKAGE, argv[0]);
+      tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [-fvh] <in.fasta>\n", PACKAGE, argv[0]);
       return 1;
   }
 
-  tmap_refseq_fasta2pac(argv[optind], TMAP_FILE_NO_COMPRESSION);
+  tmap_refseq_fasta2pac(argv[optind], TMAP_FILE_NO_COMPRESSION, fwd_only);
 
   return 0;
 }
@@ -900,7 +947,6 @@ tmap_refseq_refinfo_main(int argc, char *argv[])
 
   // allocate some memory 
   refseq = tmap_calloc(1, sizeof(tmap_refseq_t), "refseq");
-  refseq->is_rev = 0;
   refseq->is_shm = 0;
 
   // read the annotation file
@@ -952,7 +998,7 @@ tmap_refseq_pac2fasta_main(int argc, char *argv[])
   tmap_file_stdout = tmap_file_fdopen(fileno(stdout), "wb", TMAP_FILE_NO_COMPRESSION);
 
   // read in the reference sequence
-  refseq = tmap_refseq_read(fn_fasta, 0);
+  refseq = tmap_refseq_read(fn_fasta);
 
   for(i=0;i<refseq->num_annos;i++) {
       tmap_file_fprintf(tmap_file_stdout, ">%s", refseq->annos[i].name->s); // new line handled later

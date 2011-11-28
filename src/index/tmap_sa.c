@@ -14,26 +14,21 @@
 #include "tmap_sa.h"
 
 tmap_sa_t *
-tmap_sa_read(const char *fn_fasta, uint32_t is_rev)
+tmap_sa_read(const char *fn_fasta)
 {
   char *fn_sa = NULL;
   tmap_file_t *fp_sa = NULL;
   tmap_sa_t *sa = NULL;
 
-  fn_sa = tmap_get_file_name(fn_fasta, (0 == is_rev) ? TMAP_SA_FILE : TMAP_REV_SA_FILE);
-  fp_sa = tmap_file_fopen(fn_sa, "rb", (0 == is_rev) ? TMAP_SA_COMPRESSION : TMAP_REV_SA_COMPRESSION);
+  fn_sa = tmap_get_file_name(fn_fasta, TMAP_SA_FILE);
+  fp_sa = tmap_file_fopen(fn_sa, "rb", TMAP_SA_COMPRESSION);
 
   sa = tmap_calloc(1, sizeof(tmap_sa_t), "sa");
 
   if(1 != tmap_file_fread(&sa->primary, sizeof(tmap_bwt_int_t), 1, fp_sa)
      || 1 != tmap_file_fread(&sa->sa_intv, sizeof(tmap_bwt_int_t), 1, fp_sa)
-     || 1 != tmap_file_fread(&sa->seq_len, sizeof(tmap_bwt_int_t), 1, fp_sa)
-     || 1 != tmap_file_fread(&sa->is_rev, sizeof(uint32_t), 1, fp_sa)) {
+     || 1 != tmap_file_fread(&sa->seq_len, sizeof(tmap_bwt_int_t), 1, fp_sa)) {
       tmap_error(NULL, Exit, ReadFileError);
-  }
-
-  if(is_rev != sa->is_rev) {
-      tmap_error("is_rev != sa->is_rev", Exit, OutOfRange);
   }
 
   sa->n_sa = (sa->seq_len + sa->sa_intv) / sa->sa_intv;
@@ -53,22 +48,17 @@ tmap_sa_read(const char *fn_fasta, uint32_t is_rev)
 }
 
 void 
-tmap_sa_write(const char *fn_fasta, tmap_sa_t *sa, uint32_t is_rev)
+tmap_sa_write(const char *fn_fasta, tmap_sa_t *sa)
 {
   char *fn_sa = NULL;
   tmap_file_t *fp_sa = NULL;
   
-  if(is_rev != sa->is_rev) {
-      tmap_error("is_rev != sa->is_rev", Exit, OutOfRange);
-  }
-
-  fn_sa = tmap_get_file_name(fn_fasta, (0 == is_rev) ? TMAP_SA_FILE : TMAP_REV_SA_FILE);
-  fp_sa = tmap_file_fopen(fn_sa, "wb", (0 == is_rev) ? TMAP_SA_COMPRESSION : TMAP_REV_SA_COMPRESSION);
+  fn_sa = tmap_get_file_name(fn_fasta, TMAP_SA_FILE);
+  fp_sa = tmap_file_fopen(fn_sa, "wb", TMAP_SA_COMPRESSION);
 
   if(1 != tmap_file_fwrite(&sa->primary, sizeof(tmap_bwt_int_t), 1, fp_sa)
      || 1 != tmap_file_fwrite(&sa->sa_intv, sizeof(tmap_bwt_int_t), 1, fp_sa) 
      || 1 != tmap_file_fwrite(&sa->seq_len, sizeof(tmap_bwt_int_t), 1, fp_sa)
-     || 1 != tmap_file_fwrite(&sa->is_rev, sizeof(uint32_t), 1, fp_sa)
      || sa->n_sa-1 != tmap_file_fwrite(sa->sa+1, sizeof(tmap_bwt_int_t), sa->n_sa-1, fp_sa)) {
       tmap_error(NULL, Exit, WriteFileError);
   }
@@ -86,7 +76,6 @@ tmap_sa_shm_num_bytes(tmap_sa_t *sa)
   n += sizeof(tmap_bwt_int_t); // primary
   n += sizeof(tmap_bwt_int_t); // sa_intv
   n += sizeof(tmap_bwt_int_t); // seq_len
-  n += sizeof(uint32_t); // is_rev
   n += sizeof(tmap_bwt_int_t); // n_sa
   n += sizeof(tmap_bwt_int_t)*sa->n_sa; // sa
 
@@ -94,27 +83,22 @@ tmap_sa_shm_num_bytes(tmap_sa_t *sa)
 }
 
 size_t
-tmap_sa_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev)
+tmap_sa_shm_read_num_bytes(const char *fn_fasta)
 {
   size_t n = 0;
   char *fn_sa = NULL;
   tmap_file_t *fp_sa = NULL;
   tmap_sa_t *sa = NULL;
 
-  fn_sa = tmap_get_file_name(fn_fasta, (0 == is_rev) ? TMAP_SA_FILE : TMAP_REV_SA_FILE);
-  fp_sa = tmap_file_fopen(fn_sa, "rb", (0 == is_rev) ? TMAP_SA_COMPRESSION : TMAP_REV_SA_COMPRESSION);
+  fn_sa = tmap_get_file_name(fn_fasta, TMAP_SA_FILE);
+  fp_sa = tmap_file_fopen(fn_sa, "rb", TMAP_SA_COMPRESSION);
 
   sa = tmap_calloc(1, sizeof(tmap_sa_t), "sa");
 
   if(1 != tmap_file_fread(&sa->primary, sizeof(tmap_bwt_int_t), 1, fp_sa)
      || 1 != tmap_file_fread(&sa->sa_intv, sizeof(tmap_bwt_int_t), 1, fp_sa)
-     || 1 != tmap_file_fread(&sa->seq_len, sizeof(tmap_bwt_int_t), 1, fp_sa)
-     || 1 != tmap_file_fread(&sa->is_rev, sizeof(uint32_t), 1, fp_sa)) {
+     || 1 != tmap_file_fread(&sa->seq_len, sizeof(tmap_bwt_int_t), 1, fp_sa)) {
       tmap_error(NULL, Exit, ReadFileError);
-  }
-
-  if(is_rev != sa->is_rev) {
-      tmap_error("is_rev != sa->is_rev", Exit, OutOfRange);
   }
 
   sa->n_sa = (sa->seq_len + sa->sa_intv) / sa->sa_intv;
@@ -142,7 +126,6 @@ tmap_sa_shm_pack(tmap_sa_t *sa, uint8_t *buf)
   memcpy(buf, &sa->primary, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
   memcpy(buf, &sa->sa_intv, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
   memcpy(buf, &sa->seq_len, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
-  memcpy(buf, &sa->is_rev, sizeof(uint32_t)); buf += sizeof(uint32_t);
   memcpy(buf, &sa->n_sa, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
   // variable length data
   memcpy(buf, sa->sa, sa->n_sa*sizeof(tmap_bwt_int_t)); buf += sa->n_sa*sizeof(tmap_bwt_int_t);
@@ -163,7 +146,6 @@ tmap_sa_shm_unpack(uint8_t *buf)
   memcpy(&sa->primary, buf, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
   memcpy(&sa->sa_intv, buf, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
   memcpy(&sa->seq_len, buf, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
-  memcpy(&sa->is_rev, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
   memcpy(&sa->n_sa, buf, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
   // variable length data
   sa->sa = (tmap_bwt_int_t*)buf;
@@ -209,51 +191,37 @@ tmap_sa_bwt2sa(const char *fn_fasta, uint32_t intv)
   int64_t isa, s, i; // S(isa) = sa
   tmap_bwt_t *bwt = NULL;
   tmap_sa_t *sa = NULL;
-  uint32_t is_rev;
 
-  for(is_rev=0;is_rev<=1;is_rev++) {
-      if(is_rev == 0) {
-          tmap_progress_print("constructing the SA from the BWT string");
-      }
-      else {
-          tmap_progress_print("constructing the reverse SA from the reverse BWT string");
-      }
+  tmap_progress_print("constructing the SA from the BWT string");
 
-      bwt = tmap_bwt_read(fn_fasta, is_rev);
+  bwt = tmap_bwt_read(fn_fasta);
 
-      sa = tmap_calloc(1, sizeof(tmap_sa_t), "sa");
+  sa = tmap_calloc(1, sizeof(tmap_sa_t), "sa");
 
-      sa->primary = bwt->primary;
-      sa->sa_intv = intv;
-      sa->seq_len = bwt->seq_len;
-      sa->is_rev = is_rev;
-      sa->n_sa = (bwt->seq_len + intv) / intv;
-      
-      // calculate SA value
-      sa->sa = tmap_calloc(sa->n_sa, sizeof(tmap_bwt_int_t), "sa->sa");
-      isa = 0; s = bwt->seq_len;
-      for(i = 0; i < bwt->seq_len; ++i) {
-          if(isa % intv == 0) sa->sa[isa/intv] = s;
-          --s;
-          isa = tmap_bwt_invPsi(bwt, isa);
-      }
+  sa->primary = bwt->primary;
+  sa->sa_intv = intv;
+  sa->seq_len = bwt->seq_len;
+  sa->n_sa = (bwt->seq_len + intv) / intv;
+
+  // calculate SA value
+  sa->sa = tmap_calloc(sa->n_sa, sizeof(tmap_bwt_int_t), "sa->sa");
+  isa = 0; s = bwt->seq_len;
+  for(i = 0; i < bwt->seq_len; ++i) {
       if(isa % intv == 0) sa->sa[isa/intv] = s;
-      sa->sa[0] = (tmap_bwt_int_t)-1; // before this line, bwt->sa[0] = bwt->seq_len
-
-      tmap_sa_write(fn_fasta, sa, is_rev);
-
-      tmap_bwt_destroy(bwt);
-      tmap_sa_destroy(sa);
-      sa=NULL;
-      bwt=NULL;
-
-      if(is_rev == 0) {
-          tmap_progress_print2("constructed the SA from the BWT string");
-      }
-      else {
-          tmap_progress_print2("constructed the reverse SA from the reverse BWT string");
-      }
+      --s;
+      isa = tmap_bwt_invPsi(bwt, isa);
   }
+  if(isa % intv == 0) sa->sa[isa/intv] = s;
+  sa->sa[0] = (tmap_bwt_int_t)-1; // before this line, bwt->sa[0] = bwt->seq_len
+
+  tmap_sa_write(fn_fasta, sa);
+
+  tmap_bwt_destroy(bwt);
+  tmap_sa_destroy(sa);
+  sa=NULL;
+  bwt=NULL;
+
+  tmap_progress_print2("constructed the SA from the BWT string");
 }
 
 /* 

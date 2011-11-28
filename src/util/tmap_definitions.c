@@ -208,30 +208,15 @@ tmap_get_file_name(const char *prefix, int32_t type)
       strcpy(fn, prefix);
       strcat(fn, TMAP_PAC_FILE_EXTENSION);
       break;
-    case TMAP_REV_PAC_FILE:
-      fn = tmap_malloc(sizeof(char)*(1+strlen(prefix)+strlen(TMAP_REV_PAC_FILE_EXTENSION)), "fn");
-      strcpy(fn, prefix);
-      strcat(fn, TMAP_REV_PAC_FILE_EXTENSION);
-      break;
     case TMAP_BWT_FILE:
       fn = tmap_malloc(sizeof(char)*(1+strlen(prefix)+strlen(TMAP_BWT_FILE_EXTENSION)), "fn");
       strcpy(fn, prefix);
       strcat(fn, TMAP_BWT_FILE_EXTENSION);
       break;
-    case TMAP_REV_BWT_FILE:
-      fn = tmap_malloc(sizeof(char)*(1+strlen(prefix)+strlen(TMAP_REV_BWT_FILE_EXTENSION)), "fn");
-      strcpy(fn, prefix);
-      strcat(fn, TMAP_REV_BWT_FILE_EXTENSION);
-      break;
     case TMAP_SA_FILE:
       fn = tmap_malloc(sizeof(char)*(1+strlen(prefix)+strlen(TMAP_SA_FILE_EXTENSION)), "fn");
       strcpy(fn, prefix);
       strcat(fn, TMAP_SA_FILE_EXTENSION);
-      break;
-    case TMAP_REV_SA_FILE:
-      fn = tmap_malloc(sizeof(char)*(1+strlen(prefix)+strlen(TMAP_REV_SA_FILE_EXTENSION)), "fn");
-      strcpy(fn, prefix);
-      strcat(fn, TMAP_REV_SA_FILE_EXTENSION);
       break;
     default:
       return NULL;

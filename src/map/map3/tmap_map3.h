@@ -56,14 +56,14 @@ tmap_map3_thread_init(void **data, tmap_map_opt_t *opt);
 /*!
  runs the mapping routine for a given thread
  @param  data     pointer to the mapping data pointer
- @param  seqs     the sequence to map (forward and reverse compliment)
+ @param  seq      the sequence to map (forward)
  @param  seq_len  the sequence length
  @param  index    the reference index
  @param  opt      the program options
  @return          the mappings, NULL otherwise
  */
 tmap_map_sams_t*
-tmap_map3_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len, tmap_index_t *index, tmap_map_opt_t *opt);
+tmap_map3_thread_map_core(void **data, tmap_seq_t *seq, int32_t seq_len, tmap_index_t *index, tmap_map_opt_t *opt);
 
 // TODO
 tmap_map_sams_t*

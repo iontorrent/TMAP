@@ -294,7 +294,7 @@ tmap_map3_aux_core_seed(uint8_t *query,
 
 // TODO: memory pools?
 tmap_map_sams_t *
-tmap_map3_aux_core(tmap_seq_t *seq[2], 
+tmap_map3_aux_core(tmap_seq_t *seq, 
                    uint8_t *flow_order,
                    int32_t flow_order_len,
                    tmap_refseq_t *refseq,
@@ -303,14 +303,12 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
                    tmap_map_opt_t *opt)
 {
   int32_t i, j, n, seed_length;
-  int32_t seq_len[2];
+  int32_t seq_len;
   tmap_string_t *bases;
   uint8_t *query;
-  uint8_t *flow[2];
-
-  tmap_map3_aux_seed_t *seeds[2];
-  int32_t m_seeds[2], n_seeds[2];
-
+  uint8_t *flow=NULL;
+  tmap_map3_aux_seed_t *seeds;
+  int32_t m_seeds, n_seeds;
   tmap_map_sams_t *sams = NULL;
 
   if(0 < opt->hp_diff) {
@@ -319,11 +317,9 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
           tmap_error("bug encountered", Exit, OutOfRange);
       }
       else {
-          flow[0] = tmap_malloc(sizeof(uint8_t)*flow_order_len, "flow[0]");
-          flow[1] = tmap_malloc(sizeof(uint8_t)*flow_order_len, "flow[0]");
+          flow = tmap_malloc(sizeof(uint8_t)*flow_order_len, "flow[0]");
           for(i=0;i<flow_order_len;i++) {
-              flow[0][i] = flow_order[i]; // forward
-              flow[1][flow_order_len-1-i] = 3 - flow_order[i]; // reverse complimenmt
+              flow[i] = flow_order[i]; // forward
           }
       }
   }
@@ -334,112 +330,108 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
   // update the seed length based on the read length
   seed_length = opt->seed_length;
   if(0 == opt->seed_length_set) {
-      i = tmap_seq_get_bases_length(seq[0]);
+      i = tmap_seq_get_bases_length(seq);
       while(0 < i) {
           seed_length++;
           i >>= 1; // divide by two
       }
   }
   
-  // check that the sequences are long enough
-  for(i=0;i<2;i++) { // forward/reverse-compliment
-      bases = tmap_seq_get_bases(seq[i]);
-      seq_len[i] = bases->l;
-      if(seq_len[i] - seed_length < 0) {
-          return sams;
-      }
+  // check that the sequence is long enough
+  bases = tmap_seq_get_bases(seq);
+  seq_len = bases->l;
+  if(seq_len - seed_length < 0) {
+      return sams;
   }
 
   // seeds
-  for(i=n=0;i<2;i++) { // forward/reverse-compliment
-      bases = tmap_seq_get_bases(seq[i]);
-      seq_len[i] = bases->l;
-      query = (uint8_t*)bases->s;
+  bases = tmap_seq_get_bases(seq);
+  query = (uint8_t*)bases->s;
 
-      n_seeds[i] = 0;
-      // pre-allocate mmemory
-      if(0 < opt->seed_step) {
-          m_seeds[i] = 0;
-          int32_t k;
-          for(j=seed_length,k=0;j<=seq_len[i];j+=opt->seed_step,k++) {
-              if(UINT8_MAX < k) {
-                  tmap_error("seed step out of range", Warn, OutOfRange);
-                  break;
-              }
-              m_seeds[i] += seq_len[i] - j + 1; // maximum number of seeds possible
+  n_seeds = 0;
+  // pre-allocate mmemory
+  if(0 < opt->seed_step) {
+      m_seeds = 0;
+      int32_t k;
+      for(j=seed_length,k=0;j<=seq_len;j+=opt->seed_step,k++) {
+          if(UINT8_MAX < k) {
+              tmap_error("seed step out of range", Warn, OutOfRange);
+              break;
           }
+          m_seeds += seq_len - j + 1; // maximum number of seeds possible
       }
-      else {
-          m_seeds[i] = seq_len[i] - seed_length + 1; // maximum number of seeds possible
-      }
-      seeds[i] = tmap_malloc(m_seeds[i]*sizeof(tmap_map3_aux_seed_t), "seeds[i]");
+  }
+  else {
+      m_seeds = seq_len - seed_length + 1; // maximum number of seeds possible
+  }
+  seeds = tmap_malloc(m_seeds*sizeof(tmap_map3_aux_seed_t), "seeds");
 
-      // seed the alignment
-      tmap_map3_aux_core_seed(query, seq_len[i], flow[i],
-                              refseq, bwt, sa, opt, &seeds[i], &n_seeds[i], &m_seeds[i],
-                              seed_length, opt->seed_step);
+  // seed the alignment
+  tmap_map3_aux_core_seed(query, seq_len, flow,
+                          refseq, bwt, sa, opt, &seeds, &n_seeds, &m_seeds,
+                          seed_length, opt->seed_step);
 
-      // for SAM storage
-      for(j=0;j<n_seeds[i];j++) {
-          n += seeds[i][j].l - seeds[i][j].k + 1;
-      }
+  // for SAM storage
+  n = 0;
+  for(j=0;j<n_seeds;j++) {
+      n += seeds[j].l - seeds[j].k + 1;
   }
 
   // make enough room
   tmap_map_sams_realloc(sams, n);
   
   // convert seeds to chr/pos
-  for(i=n=0;i<2;i++) { // forward/reverse-compliment
-      for(j=0;j<n_seeds[i];j++) { // go through all seeds
-          uint32_t seqid, pos;
-          tmap_bwt_int_t k, pacpos;
-          uint8_t seed_length_ext = seeds[i][j].seed_length;
-          for(k=seeds[i][j].k;k<=seeds[i][j].l;k++) { // through all occurrences
-              tmap_map_sam_t *s = NULL;
-              pacpos = tmap_sa_pac_pos(sa, bwt, k);
-              if(bwt->seq_len < pacpos + seeds[i][j].start + 1) { // before the beginning of the reference sequence
-                  pacpos = 0;
+  for(j=0;j<n_seeds;j++) { // go through all seeds
+      uint32_t seqid, pos;
+      tmap_bwt_int_t k, pacpos;
+      uint8_t seed_length_ext = seeds[j].seed_length;
+      uint8_t strand;
+      for(k=seeds[j].k;k<=seeds[j].l;k++) { // through all occurrences
+          tmap_map_sam_t *s = NULL;
+          pacpos = tmap_sa_pac_pos(sa, bwt, k);
+          if(bwt->seq_len < pacpos + seeds[j].start + 1) { // before the beginning of the reference sequence
+              pacpos = 0;
+          }
+          else {
+              pacpos = bwt->seq_len - pacpos - seeds[j].start - 1;
+          }
+          if(0 < tmap_refseq_pac2real(refseq, pacpos, 1, &seqid, &pos, &strand)) {
+              uint32_t tmp_seqid, tmp_pos;
+              uint8_t tmp_strand;
+              // we need to check if we crossed contig boundaries
+              if(0 < tmap_refseq_pac2real(refseq, pacpos + seeds[j].start, 1, &tmp_seqid, &tmp_pos, &tmp_strand) &&
+                 seqid < tmp_seqid && strand == tmp_strand) {
+                  seqid = tmp_seqid;
+                  pos = 0;
               }
               else {
-                  pacpos = bwt->seq_len - pacpos - seeds[i][j].start - 1;
-              }
-              if(0 < tmap_refseq_pac2real(refseq, pacpos, 1, &seqid, &pos)) {
-                  uint32_t tmp_seqid, tmp_pos;
-                  // we need to check if we crossed contig boundaries
-                  if(0 < tmap_refseq_pac2real(refseq, pacpos + seeds[i][j].start, 1, &tmp_seqid, &tmp_pos) &&
-                     seqid < tmp_seqid) {
-                      seqid = tmp_seqid;
+                  if(pos < seed_length_ext - 1 ) {
                       pos = 0;
                   }
                   else {
-                      if(pos < seed_length_ext - 1 ) {
-                          pos = 0;
-                      }
-                      else {
-                          pos -= seed_length_ext - 1;
-                      }
+                      pos -= seed_length_ext - 1;
                   }
-
-                  // save
-                  s = &sams->sams[n];
-
-                  // save the hit
-                  s->algo_id = TMAP_MAP_ALGO_MAP3;
-                  s->algo_stage = opt->algo_stage;
-                  s->strand = i;
-                  s->seqid = seqid;
-                  s->pos = pos;
-                  s->target_len = seq_len[i]; 
-                  if(refseq->annos[seqid].len < s->target_len) {
-                      s->target_len = refseq->annos[seqid].len;
-                  }
-                  s->score_subo = INT32_MIN;
-
-                  // map3 aux data
-                  tmap_map_sam_malloc_aux(s, TMAP_MAP_ALGO_MAP3);
-
-                  n++;
               }
+
+              // save
+              s = &sams->sams[n];
+
+              // save the hit
+              s->algo_id = TMAP_MAP_ALGO_MAP3;
+              s->algo_stage = opt->algo_stage;
+              s->strand = strand;
+              s->seqid = seqid;
+              s->pos = pos;
+              s->target_len = seq_len; 
+              if(refseq->annos[seqid].len < s->target_len) {
+                  s->target_len = refseq->annos[seqid].len;
+              }
+              s->score_subo = INT32_MIN;
+
+              // map3 aux data
+              tmap_map_sam_malloc_aux(s, TMAP_MAP_ALGO_MAP3);
+
+              n++;
           }
       }
   }
@@ -448,15 +440,12 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
   tmap_map_sams_realloc(sams, n);
 
   // free the seeds
-  for(i=0;i<2;i++) {
-      free(seeds[i]);
-      seeds[i]=NULL;
-  }
+  free(seeds);
+  seeds=NULL;
 
   // free
   if(0 < opt->hp_diff) {
-      free(flow[0]);
-      free(flow[1]);
+      free(flow);
   }
 
   return sams;

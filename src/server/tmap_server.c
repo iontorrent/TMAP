@@ -46,7 +46,6 @@ tmap_server_set_sigint(tmap_shm_t *shm)
 void
 tmap_server_start(char *fn_fasta, key_t key, uint32_t listing)
 {
-  int32_t i;
   tmap_shm_t *shm = NULL;
   tmap_refseq_t *refseq = NULL;
   tmap_bwt_t *bwt = NULL;
@@ -60,22 +59,13 @@ tmap_server_start(char *fn_fasta, key_t key, uint32_t listing)
   // get data size
   n_bytes = 0;
   if(listing & TMAP_SHM_LISTING_REFSEQ) {
-      n_bytes += tmap_refseq_shm_read_num_bytes(fn_fasta, 0);
-  }
-  if(listing & TMAP_SHM_LISTING_REV_REFSEQ) {
-      n_bytes += tmap_refseq_shm_read_num_bytes(fn_fasta, 1);
+      n_bytes += tmap_refseq_shm_read_num_bytes(fn_fasta);
   }
   if(listing & TMAP_SHM_LISTING_BWT) {
-      n_bytes += tmap_bwt_shm_read_num_bytes(fn_fasta, 0);
-  }
-  if(listing & TMAP_SHM_LISTING_REV_BWT) {
-      n_bytes += tmap_bwt_shm_read_num_bytes(fn_fasta, 1);
+      n_bytes += tmap_bwt_shm_read_num_bytes(fn_fasta);
   }
   if(listing & TMAP_SHM_LISTING_SA) {
-      n_bytes += tmap_sa_shm_read_num_bytes(fn_fasta, 0);
-  }
-  if(listing & TMAP_SHM_LISTING_REV_SA) {
-      n_bytes += tmap_sa_shm_read_num_bytes(fn_fasta, 1);
+      n_bytes += tmap_sa_shm_read_num_bytes(fn_fasta);
   }
 
   // get shared memory
@@ -91,46 +81,40 @@ tmap_server_start(char *fn_fasta, key_t key, uint32_t listing)
   buf = (uint8_t*)shm->buf;
 
   // pack the reference sequence
-  for(i=0;i<2;i++) { // forward/reverse
-      cur_listing = (0 == i) ? TMAP_SHM_LISTING_REFSEQ : TMAP_SHM_LISTING_REV_REFSEQ;
-      if(listing & cur_listing) {
-          tmap_progress_print("packing %s reference", (0 == i) ? "forward" : "reverse");
-          refseq = tmap_refseq_read(fn_fasta, i);
-          cur_bytes = tmap_refseq_shm_num_bytes(refseq);
-          tmap_refseq_shm_pack(refseq, buf);
-          tmap_shm_add_listing(shm, cur_listing, cur_bytes); 
-          buf += cur_bytes;
-          tmap_refseq_destroy(refseq);
-      } 
-  }
+  cur_listing = TMAP_SHM_LISTING_REFSEQ;
+  if(listing & cur_listing) {
+      tmap_progress_print("packing the reference");
+      refseq = tmap_refseq_read(fn_fasta);
+      cur_bytes = tmap_refseq_shm_num_bytes(refseq);
+      tmap_refseq_shm_pack(refseq, buf);
+      tmap_shm_add_listing(shm, cur_listing, cur_bytes); 
+      buf += cur_bytes;
+      tmap_refseq_destroy(refseq);
+  } 
 
   // pack the bwt 
-  for(i=0;i<2;i++) { // forward/reverse
-      cur_listing = (0 == i) ? TMAP_SHM_LISTING_BWT : TMAP_SHM_LISTING_REV_BWT;
-      if(listing & cur_listing) {
-          tmap_progress_print("packing %s bwt", (0 == i) ? "forward" : "reverse");
-          bwt = tmap_bwt_read(fn_fasta, i);
-          cur_bytes = tmap_bwt_shm_num_bytes(bwt);
-          tmap_bwt_shm_pack(bwt, buf);
-          tmap_shm_add_listing(shm, cur_listing, cur_bytes); 
-          buf += cur_bytes;
-          tmap_bwt_destroy(bwt);
-      } 
-  }
+  cur_listing = TMAP_SHM_LISTING_BWT;
+  if(listing & cur_listing) {
+      tmap_progress_print("packing the bwt");
+      bwt = tmap_bwt_read(fn_fasta);
+      cur_bytes = tmap_bwt_shm_num_bytes(bwt);
+      tmap_bwt_shm_pack(bwt, buf);
+      tmap_shm_add_listing(shm, cur_listing, cur_bytes); 
+      buf += cur_bytes;
+      tmap_bwt_destroy(bwt);
+  } 
 
   // pack the SA
-  for(i=0;i<2;i++) { // forward/reverse
-      cur_listing = (0 == i) ? TMAP_SHM_LISTING_SA : TMAP_SHM_LISTING_REV_SA;
-      if(listing & cur_listing) {
-          tmap_progress_print("packing %s sa", (0 == i) ? "forward" : "reverse");
-          sa = tmap_sa_read(fn_fasta, i);
-          cur_bytes = tmap_sa_shm_num_bytes(sa);
-          tmap_sa_shm_pack(sa, buf);
-          tmap_shm_add_listing(shm, cur_listing, cur_bytes); 
-          buf += cur_bytes;
-          tmap_sa_destroy(sa);
-      } 
-  }
+  cur_listing = TMAP_SHM_LISTING_SA;
+  if(listing & cur_listing) {
+      tmap_progress_print("packing the s sa");
+      sa = tmap_sa_read(fn_fasta);
+      cur_bytes = tmap_sa_shm_num_bytes(sa);
+      tmap_sa_shm_pack(sa, buf);
+      tmap_shm_add_listing(shm, cur_listing, cur_bytes); 
+      buf += cur_bytes;
+      tmap_sa_destroy(sa);
+  } 
 
   tmap_progress_print2("shared memory packed");
 
@@ -200,12 +184,9 @@ usage()
   tmap_file_fprintf(tmap_file_stderr, "         -c STRING   server command [start|stop|kill]\n");
   tmap_file_fprintf(tmap_file_stderr, "         -k INT      the server key\n");
   tmap_file_fprintf(tmap_file_stderr, "         -a          load all\n");
-  tmap_file_fprintf(tmap_file_stderr, "         -r          load the forward packed reference\n");
-  tmap_file_fprintf(tmap_file_stderr, "         -R          load the reverse packed reference\n");
-  tmap_file_fprintf(tmap_file_stderr, "         -b          load the forward bwt\n");
-  tmap_file_fprintf(tmap_file_stderr, "         -B          load the reverse bwt\n");
-  tmap_file_fprintf(tmap_file_stderr, "         -s          load the forward SA\n");
-  tmap_file_fprintf(tmap_file_stderr, "         -S          load the reverse SA\n");
+  tmap_file_fprintf(tmap_file_stderr, "         -r          load the packed reference\n");
+  tmap_file_fprintf(tmap_file_stderr, "         -b          load the bwt\n");
+  tmap_file_fprintf(tmap_file_stderr, "         -s          load the SA\n");
   tmap_file_fprintf(tmap_file_stderr, "         -v          print verbose progress information\n");
   tmap_file_fprintf(tmap_file_stderr, "         -h          print this message\n");
   tmap_file_fprintf(tmap_file_stderr, "\n");
@@ -229,15 +210,12 @@ tmap_server_main(int argc, char *argv[])
   key_t key=13;
   uint32_t listing = 0;
 
-  while((c = getopt(argc, argv, "f:c:k:arRbBsSvh")) >= 0) {
+  while((c = getopt(argc, argv, "f:c:k:arbsvh")) >= 0) {
       switch(c) {
         case 'a':
           listing |= TMAP_SHM_LISTING_REFSEQ;
-          listing |= TMAP_SHM_LISTING_REV_REFSEQ;
           listing |= TMAP_SHM_LISTING_BWT;
-          listing |= TMAP_SHM_LISTING_REV_BWT;
           listing |= TMAP_SHM_LISTING_SA;
-          listing |= TMAP_SHM_LISTING_REV_SA;
           break;
         case 'f':
           fn_fasta = tmap_strdup(optarg); break;
@@ -247,16 +225,10 @@ tmap_server_main(int argc, char *argv[])
           key = atoi(optarg); break;
         case 'r':
           listing |= TMAP_SHM_LISTING_REFSEQ; break;
-        case 'R':
-          listing |= TMAP_SHM_LISTING_REV_REFSEQ; break;
         case 'b':
           listing |= TMAP_SHM_LISTING_BWT; break;
-        case 'B':
-          listing |= TMAP_SHM_LISTING_REV_BWT; break;
         case 's':
           listing |= TMAP_SHM_LISTING_SA; break;
-        case 'S':
-          listing |= TMAP_SHM_LISTING_REV_SA; break;
         case 'v': 
           tmap_progress_set_verbosity(1); break;
         case 'h': 

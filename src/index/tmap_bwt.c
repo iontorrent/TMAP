@@ -49,14 +49,14 @@ tmap_bwt_get_hash_length(uint64_t i)
 }
 
 tmap_bwt_t *
-tmap_bwt_read(const char *fn_fasta, uint32_t is_rev)
+tmap_bwt_read(const char *fn_fasta)
 {
   tmap_bwt_t *bwt = NULL;
   char *fn_bwt = NULL;
   tmap_file_t *fp_bwt = NULL;
 
-  fn_bwt = tmap_get_file_name(fn_fasta, (0 == is_rev) ? TMAP_BWT_FILE : TMAP_REV_BWT_FILE);
-  fp_bwt = tmap_file_fopen(fn_bwt, "rb", (0 == is_rev) ? TMAP_BWT_COMPRESSION : TMAP_REV_BWT_COMPRESSION);
+  fn_bwt = tmap_get_file_name(fn_fasta, TMAP_BWT_FILE);
+  fp_bwt = tmap_file_fopen(fn_bwt, "rb", TMAP_BWT_COMPRESSION);
 
   bwt = tmap_calloc(1, sizeof(tmap_bwt_t), "bwt");
 
@@ -76,7 +76,6 @@ tmap_bwt_read(const char *fn_fasta, uint32_t is_rev)
      || 4 != tmap_file_fread(bwt->L2+1, sizeof(tmap_bwt_int_t), 4, fp_bwt)
      || 1 != tmap_file_fread(&bwt->occ_interval, sizeof(tmap_bwt_int_t), 1, fp_bwt)
      || 1 != tmap_file_fread(&bwt->seq_len, sizeof(tmap_bwt_int_t), 1, fp_bwt)
-     || 1 != tmap_file_fread(&bwt->is_rev, sizeof(uint32_t), 1, fp_bwt)
      || bwt->bwt_size != tmap_file_fread(bwt->bwt, sizeof(uint32_t), bwt->bwt_size, fp_bwt)) {
       tmap_error(NULL, Exit, ReadFileError);
   }
@@ -101,10 +100,6 @@ tmap_bwt_read(const char *fn_fasta, uint32_t is_rev)
 
   tmap_bwt_gen_cnt_table(bwt);
 
-  if(is_rev != bwt->is_rev) {
-      tmap_error("is_rev != bwt->is_rev", Exit, OutOfRange);
-  }
-
   tmap_file_fclose(fp_bwt);
   free(fn_bwt);
 
@@ -114,17 +109,13 @@ tmap_bwt_read(const char *fn_fasta, uint32_t is_rev)
 }
 
 void 
-tmap_bwt_write(const char *fn_fasta, tmap_bwt_t *bwt, uint32_t is_rev)
+tmap_bwt_write(const char *fn_fasta, tmap_bwt_t *bwt)
 {
   char *fn_bwt = NULL;
   tmap_file_t *fp_bwt = NULL;
 
-  if(is_rev != bwt->is_rev) {
-      tmap_error("is_rev != bwt->is_rev", Exit, OutOfRange);
-  }
-
-  fn_bwt = tmap_get_file_name(fn_fasta, (0 == is_rev) ? TMAP_BWT_FILE : TMAP_REV_BWT_FILE);
-  fp_bwt = tmap_file_fopen(fn_bwt, "wb", (0 == is_rev) ? TMAP_BWT_COMPRESSION : TMAP_REV_BWT_COMPRESSION);
+  fn_bwt = tmap_get_file_name(fn_fasta, TMAP_BWT_FILE);
+  fp_bwt = tmap_file_fopen(fn_bwt, "wb", TMAP_BWT_COMPRESSION);
 
   if(1 != tmap_file_fwrite(&bwt->version_id, sizeof(uint32_t), 1, fp_bwt)
      || 1 != tmap_file_fwrite(&bwt->bwt_size, sizeof(tmap_bwt_int_t), 1, fp_bwt)
@@ -133,7 +124,6 @@ tmap_bwt_write(const char *fn_fasta, tmap_bwt_t *bwt, uint32_t is_rev)
      || 4 != tmap_file_fwrite(bwt->L2+1, sizeof(tmap_bwt_int_t), 4, fp_bwt)
      || 1 != tmap_file_fwrite(&bwt->occ_interval, sizeof(tmap_bwt_int_t), 1, fp_bwt)
      || 1 != tmap_file_fwrite(&bwt->seq_len, sizeof(tmap_bwt_int_t), 1, fp_bwt)
-     || 1 != tmap_file_fwrite(&bwt->is_rev, sizeof(uint32_t), 1, fp_bwt)
      || bwt->bwt_size != tmap_file_fwrite(bwt->bwt, sizeof(uint32_t), bwt->bwt_size, fp_bwt)) {
       tmap_error(NULL, Exit, WriteFileError);
   }
@@ -167,7 +157,6 @@ tmap_bwt_shm_num_bytes(tmap_bwt_t *bwt)
   n += sizeof(tmap_bwt_int_t); // bwt_size;
   n += sizeof(tmap_bwt_int_t); // occ_interval
   n += 256*sizeof(uint32_t); // cnt_table[256]
-  n += sizeof(uint32_t); // is_rev
   n += sizeof(uint32_t); // hash_width
 
   //variable length data
@@ -182,15 +171,15 @@ tmap_bwt_shm_num_bytes(tmap_bwt_t *bwt)
 }
 
 size_t
-tmap_bwt_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev)
+tmap_bwt_shm_read_num_bytes(const char *fn_fasta)
 {
   size_t n = 0;
   tmap_bwt_t *bwt = NULL;
   char *fn_bwt = NULL;
   tmap_file_t *fp_bwt = NULL;
 
-  fn_bwt = tmap_get_file_name(fn_fasta, (0 == is_rev) ? TMAP_BWT_FILE : TMAP_REV_BWT_FILE);
-  fp_bwt = tmap_file_fopen(fn_bwt, "rb", (0 == is_rev) ? TMAP_BWT_COMPRESSION : TMAP_REV_BWT_COMPRESSION);
+  fn_bwt = tmap_get_file_name(fn_fasta, TMAP_BWT_FILE);
+  fp_bwt = tmap_file_fopen(fn_bwt, "rb", TMAP_BWT_COMPRESSION);
 
   bwt = tmap_calloc(1, sizeof(tmap_bwt_t), "bwt");
 
@@ -207,18 +196,13 @@ tmap_bwt_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev)
      || 1 != tmap_file_fread(&bwt->primary, sizeof(tmap_bwt_int_t), 1, fp_bwt)
      || 4 != tmap_file_fread(bwt->L2+1, sizeof(tmap_bwt_int_t), 4, fp_bwt)
      || 1 != tmap_file_fread(&bwt->occ_interval, sizeof(tmap_bwt_int_t), 1, fp_bwt)
-     || 1 != tmap_file_fread(&bwt->seq_len, sizeof(tmap_bwt_int_t), 1, fp_bwt)
-     || 1 != tmap_file_fread(&bwt->is_rev, sizeof(uint32_t), 1, fp_bwt)) {
+     || 1 != tmap_file_fread(&bwt->seq_len, sizeof(tmap_bwt_int_t), 1, fp_bwt)) {
       tmap_error(NULL, Exit, ReadFileError);
   }
 
   // No need to read in bwt->bwt, bwt->hash_k, bwt->hash_l
   bwt->bwt = NULL;
   bwt->hash_k = bwt->hash_l = NULL;
-
-  if(is_rev != bwt->is_rev) {
-      tmap_error("is_rev != bwt->is_rev", Exit, OutOfRange);
-  }
 
   tmap_file_fclose(fp_bwt);
   free(fn_bwt);
@@ -245,7 +229,6 @@ tmap_bwt_shm_pack(tmap_bwt_t *bwt, uint8_t *buf)
   memcpy(buf, &bwt->bwt_size, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
   memcpy(buf, &bwt->occ_interval, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
   memcpy(buf, bwt->cnt_table, 256*sizeof(uint32_t)); buf += 256*sizeof(uint32_t);
-  memcpy(buf, &bwt->is_rev, sizeof(uint32_t)); buf += sizeof(uint32_t);
   memcpy(buf, &bwt->hash_width, sizeof(uint32_t)); buf += sizeof(uint32_t);
   // variable length data
   memcpy(buf, bwt->bwt, bwt->bwt_size*sizeof(uint32_t)); buf += bwt->bwt_size*sizeof(uint32_t);
@@ -275,7 +258,6 @@ tmap_bwt_shm_unpack(uint8_t *buf)
   memcpy(&bwt->bwt_size, buf, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
   memcpy(&bwt->occ_interval, buf, sizeof(tmap_bwt_int_t)); buf += sizeof(tmap_bwt_int_t);
   memcpy(bwt->cnt_table, buf, 256*sizeof(uint32_t)); buf += 256*sizeof(uint32_t);
-  memcpy(&bwt->is_rev, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
   memcpy(&bwt->hash_width, buf, sizeof(uint32_t)); buf += sizeof(uint32_t);
 
   // allocate memory 
@@ -454,12 +436,7 @@ tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width)
 {
   uint32_t i;
 
-  if(0 == bwt->is_rev) {
-      tmap_progress_print("constructing the occurrence hash for the BWT string");
-  }
-  else {
-      tmap_progress_print("constructing the occurrence hash for the reverse BWT string");
-  }
+  tmap_progress_print("constructing the occurrence hash for the BWT string");
 
   if(bwt->seq_len < hash_width) {
       tmap_error("Hash width was greater than the sequence length, defaulting to the sequence length", Warn, OutOfRange);

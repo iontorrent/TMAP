@@ -25,36 +25,21 @@
   the file extension for the packed forward reference sequence
   */
 #define TMAP_PAC_FILE_EXTENSION ".tmap.pac"
-/*! d TMAP_REV_PAC_FILE_EXTENSION
-  the file extension for the packed reverse reference sequence
-  */
-#define TMAP_REV_PAC_FILE_EXTENSION ".tmap.rpac"
 /*! d TMAP_BWT_FILE_EXTENSION
-  the file extension for the forward BWT structure
+  the file extension for the BWT structure
   */
 #define TMAP_BWT_FILE_EXTENSION ".tmap.bwt"
-/*! d TMAP_REV_BWT_FILE_EXTENSION
-  the file extension for the reverse BWT structure
-  */
-#define TMAP_REV_BWT_FILE_EXTENSION ".tmap.rbwt"
 /*! d TMAP_SA_FILE_EXTENSION
-  the file extension for the forward SA structure
+  the file extension for the SA structure
   */
 #define TMAP_SA_FILE_EXTENSION ".tmap.sa"
-/*! d TMAP_REV_SA_FILE_EXTENSION
-  the file extension for the reverse SA structure
-  */
-#define TMAP_REV_SA_FILE_EXTENSION ".tmap.rsa"
 
 // The default compression types for each file
 // Note: the implementation relies on no compression
 #define TMAP_ANNO_COMPRESSION TMAP_FILE_NO_COMPRESSION 
 #define TMAP_PAC_COMPRESSION TMAP_FILE_NO_COMPRESSION 
-#define TMAP_REV_PAC_COMPRESSION TMAP_FILE_NO_COMPRESSION 
 #define TMAP_BWT_COMPRESSION TMAP_FILE_NO_COMPRESSION 
-#define TMAP_REV_BWT_COMPRESSION TMAP_FILE_NO_COMPRESSION 
 #define TMAP_SA_COMPRESSION TMAP_FILE_NO_COMPRESSION
-#define TMAP_REV_SA_COMPRESSION TMAP_FILE_NO_COMPRESSION
 
 /*
    CIGAR operations, from samtools.
@@ -76,11 +61,8 @@
 enum {
     TMAP_ANNO_FILE     = 0, /*!< the reference sequence annotation file */
     TMAP_PAC_FILE      = 1, /*!< the packed forward reference sequence file */
-    TMAP_REV_PAC_FILE  = 2, /*!< the packed reverse reference sequence file */
-    TMAP_BWT_FILE      = 3, /*!< the packed forward BWT file */
-    TMAP_REV_BWT_FILE  = 4, /*!< the packed reverse BWT file */
-    TMAP_SA_FILE       = 5, /*!< the packed forward SA file */
-    TMAP_REV_SA_FILE   = 6 /*!< the packed reverse SA file */
+    TMAP_BWT_FILE      = 2, /*!< the packed BWT file */
+    TMAP_SA_FILE       = 3, /*!< the packed SA file */
 };
 
 /*! 

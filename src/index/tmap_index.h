@@ -3,8 +3,13 @@
 #define TMAP_INDEX_H
 
 #define TMAP_INDEX_LARGE_GENOME 0x1000000
+#ifdef TMAP_BWT_32_BIT
 // (2^32) - 1
 #define TMAP_INDEX_TOO_BIG_GENOME 0xFFFFFFFF
+#else
+// (2^64) - 1
+#define TMAP_INDEX_TOO_BIG_GENOME 0xFFFFFFFFFFFFFFFF
+#endif
 
 #include "../server/tmap_shm.h"
 
@@ -17,8 +22,8 @@
  */
 typedef struct {
     tmap_refseq_t *refseq; /*!< the packed reference sequence */
-    tmap_bwt_t *bwt[2]; /*!< the forward and reverse FM-indexes */
-    tmap_sa_t *sa[2]; /*!< the forward and reverse suffix arrays */
+    tmap_bwt_t *bwt; /*!< the forward and reverse FM-indexes */
+    tmap_sa_t *sa; /*!< the forward and reverse suffix arrays */
     tmap_shm_t *shm; /*!< the shared memory location if loaded from shared memory */
     key_t shm_key; /*!< the shared memory key, zero if not loaded from shared memory */
 } tmap_index_t;

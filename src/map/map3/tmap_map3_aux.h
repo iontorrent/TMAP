@@ -16,18 +16,18 @@ typedef struct {
 
 /*!
   Core mapping routine
-  @param  seq            the sequence to align (forward/reverse-compliment)
+  @param  seq            the sequence to align (forward)
   @param  flow_order      the flow order in integer format
   @param  flow_order_len  the flow order length
   @param  refseq         the reference sequence structure (forward)
-  @param  bwt            the BWT structure (reverse)
-  @param  sa             the SA structure (reverse)
+  @param  bwt            the BWT structure 
+  @param  sa             the SA structure 
   @param  opt            the program options
   @return                the alignments
   the sequences should be in 2-bit format
   */
 tmap_map_sams_t *
-tmap_map3_aux_core(tmap_seq_t *seq[2],
+tmap_map3_aux_core(tmap_seq_t *seq,
                    uint8_t *flow_order,
                    int32_t flow_order_len,
                    tmap_refseq_t *refseq,

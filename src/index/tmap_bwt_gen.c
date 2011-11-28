@@ -1606,7 +1606,7 @@ BWTFileSizeInWord(const tmap_bwt_gen_uint_t numChar)
 }
 
 void 
-BWTSaveBwtCodeAndOcc(tmap_bwt_t *bwt_out, const tmap_bwt_gen_t *bwt, const char *fn_fasta, int32_t occ_interval, uint32_t is_rev) 
+BWTSaveBwtCodeAndOcc(tmap_bwt_t *bwt_out, const tmap_bwt_gen_t *bwt, const char *fn_fasta, int32_t occ_interval) 
 {
   tmap_bwt_int_t i;
   tmap_bwt_t *bwt_tmp=NULL;
@@ -1623,17 +1623,16 @@ BWTSaveBwtCodeAndOcc(tmap_bwt_t *bwt_out, const tmap_bwt_gen_t *bwt, const char 
   bwt_out->occ_interval = OCC_INTERVAL;
 
   // write
-  bwt_out->is_rev = is_rev;
   bwt_out->hash_width = 0; // none yet
-  tmap_bwt_write(fn_fasta, bwt_out, is_rev);
+  tmap_bwt_write(fn_fasta, bwt_out);
 
   // free and nullify
   bwt_out->bwt = NULL;
 
   // update occurrence interval
-  bwt_tmp = tmap_bwt_read(fn_fasta, is_rev);
+  bwt_tmp = tmap_bwt_read(fn_fasta);
   tmap_bwt_update_occ_interval(bwt_tmp, occ_interval);
-  tmap_bwt_write(fn_fasta, bwt_tmp, is_rev);
+  tmap_bwt_write(fn_fasta, bwt_tmp);
   tmap_bwt_destroy(bwt_tmp);
 }
 
@@ -1644,86 +1643,75 @@ tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, 
   tmap_bwt_t *bwt=NULL;
   uint8_t *buf=NULL;
   tmap_bwt_gen_int_t i;
-  uint32_t is_rev;
   char *fn_pac=NULL;
   tmap_refseq_t *refseq=NULL;
 
-  for(is_rev=0;is_rev<=1;is_rev++) { // forward/reverse
+  tmap_progress_print("constructing the BWT string from the packed FASTA");
 
-      if(0 == is_rev) {
-          tmap_progress_print("constructing the BWT string from the packed FASTA");
+  // read in packed FASTA
+  refseq = tmap_refseq_read(fn_fasta);
+
+  // initialization
+  bwt = tmap_calloc(1, sizeof(tmap_bwt_t), "bwt");
+  bwt->seq_len = refseq->len;
+  bwt->bwt_size = (bwt->seq_len + 15) >> 4; // 2-bit packed
+  bwt->version_id = TMAP_VERSION_ID;
+
+  if(1 == is_large) {
+      // destroy the reference sequence
+      tmap_refseq_destroy(refseq);
+      // create the bwt
+      fn_pac = tmap_get_file_name(fn_fasta, TMAP_PAC_FILE);
+      if(TMAP_PAC_COMPRESSION != TMAP_FILE_NO_COMPRESSION) { // the below uses fseek
+          tmap_error("PAC compression not supported", Exit, OutOfRange);
       }
-      else {
-          tmap_progress_print("constructing the reverse BWT string from the reversed packed FASTA");
+      bwtInc = BWTIncConstructFromPacked(fn_pac, 10000000, 10000000);
+      BWTSaveBwtCodeAndOcc(bwt, bwtInc->bwt, fn_fasta, occ_interval);
+      BWTIncFree(bwtInc);
+      free(fn_pac);
+  }
+  else {
+      // From bwtmisc.c at http://bio-bwa.sf.net
+
+      // prepare sequence
+      for(i=0;i<ALPHABET_SIZE+1;i++) {
+          bwt->L2[i]=0;
       }
-
-      // read in packed FASTA
-      refseq = tmap_refseq_read(fn_fasta, is_rev);
-
-      // initialization
-      bwt = tmap_calloc(1, sizeof(tmap_bwt_t), "bwt");
-      bwt->seq_len = refseq->len;
-      bwt->bwt_size = (bwt->seq_len + 15) >> 4; // 2-bit packed
-      bwt->version_id = TMAP_VERSION_ID;
-
-      if(1 == is_large) {
-          fn_pac = tmap_get_file_name(fn_fasta, (0 == is_rev) ? TMAP_PAC_FILE : TMAP_REV_PAC_FILE);
-          if(TMAP_PAC_COMPRESSION != TMAP_FILE_NO_COMPRESSION) { // the below uses fseek
-              tmap_error("PAC compression not supported", Exit, OutOfRange);
-          }
-          bwtInc = BWTIncConstructFromPacked(fn_pac, 10000000, 10000000);
-          BWTSaveBwtCodeAndOcc(bwt, bwtInc->bwt, fn_fasta, occ_interval, is_rev);
-          BWTIncFree(bwtInc);
-          free(fn_pac);
+      buf = tmap_calloc(bwt->seq_len + 1, sizeof(uint8_t), "buf");
+      for(i=0;i<bwt->seq_len;i++) {
+          buf[i] = tmap_refseq_seq_i(refseq, i);
+          ++bwt->L2[1+buf[i]];
       }
-      else {
-          // From bwtmisc.c at http://bio-bwa.sf.net
-
-          // prepare sequence
-          for(i=0;i<ALPHABET_SIZE+1;i++) {
-              bwt->L2[i]=0;
-          }
-          buf = tmap_calloc(bwt->seq_len + 1, sizeof(uint8_t), "buf");
-          for(i=0;i<bwt->seq_len;i++) {
-              buf[i] = tmap_refseq_seq_i(refseq, i);
-              ++bwt->L2[1+buf[i]];
-          }
-          for(i=2;i<ALPHABET_SIZE+1;i++) {
-              bwt->L2[i] += bwt->L2[i-1];
-          }
-
-          // Burrows-Wheeler Transform
-          bwt->primary = tmap_bwt_gen_short(buf, bwt->seq_len);
-          bwt->bwt = tmap_calloc(bwt->bwt_size, sizeof(uint32_t), "bwt->bwt");
-          for(i=0;i<bwt->seq_len;i++) {
-              // 2-bit packing for DNA
-              bwt->bwt[i>>4] |= buf[i] << ((15 - (i&15)) << 1);
-          }
-          free(buf);
-          bwt->occ_interval = 1; 
-
-          // update occurrence interval
-          tmap_bwt_update_occ_interval(bwt, occ_interval);
-          
-          bwt->is_rev = is_rev;
-          bwt->hash_width = 0; // none yet
-          tmap_bwt_write(fn_fasta, bwt, is_rev);
+      for(i=2;i<ALPHABET_SIZE+1;i++) {
+          bwt->L2[i] += bwt->L2[i-1];
       }
-      tmap_bwt_destroy(bwt);
+      // destroy the reference sequence
       tmap_refseq_destroy(refseq);
 
-      if(0 == is_rev) {
-          tmap_progress_print2("constructed the BWT string from the packed FASTA");
+      // Burrows-Wheeler Transform
+      bwt->primary = tmap_bwt_gen_short(buf, bwt->seq_len);
+      bwt->bwt = tmap_calloc(bwt->bwt_size, sizeof(uint32_t), "bwt->bwt");
+      for(i=0;i<bwt->seq_len;i++) {
+          // 2-bit packing for DNA
+          bwt->bwt[i>>4] |= buf[i] << ((15 - (i&15)) << 1);
       }
-      else {
-          tmap_progress_print2("constructed the reverse BWT string from the reversed packed FASTA");
-      }
+      free(buf);
+      bwt->occ_interval = 1; 
 
-      bwt = tmap_bwt_read(fn_fasta, is_rev);
-      tmap_bwt_gen_hash(bwt, hash_width);
-      tmap_bwt_write(fn_fasta, bwt, is_rev);
-      tmap_bwt_destroy(bwt);
+      // update occurrence interval
+      tmap_bwt_update_occ_interval(bwt, occ_interval);
+
+      bwt->hash_width = 0; // none yet
+      tmap_bwt_write(fn_fasta, bwt);
   }
+  tmap_bwt_destroy(bwt);
+
+  tmap_progress_print2("constructed the BWT string from the packed FASTA");
+
+  bwt = tmap_bwt_read(fn_fasta); 
+  tmap_bwt_gen_hash(bwt, hash_width);
+  tmap_bwt_write(fn_fasta, bwt);
+  tmap_bwt_destroy(bwt);
 }
 
 /*

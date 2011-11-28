@@ -71,7 +71,6 @@ typedef struct {
     tmap_anno_t *annos;  /*!< the annotations about the contigs */
     int32_t num_annos;  /*!< the number of contigs (and annotations) */
     uint64_t len;  /*!< the total length of the reference sequence */
-    uint32_t is_rev;  /*!< 1 if the reference sequence was reversed, 0 otherwise */
     uint32_t is_shm;  /*!< 1 if loaded from shared memory, 0 otherwise */
 } tmap_refseq_t;
 
@@ -86,10 +85,11 @@ tmap_refseq_get_version_format(const char *v);
 /*! 
   @param  fn_fasta     the file name of the fasta file
   @param  compression  the type of compression, if any to be used
+  @param  fwd_only     1 if to pack the forward sequence only, 0 otherwise
   @return              the length of the reference sequence
   */
 uint64_t
-tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression);
+tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression, int32_t fwd_only);
 
 /*! 
   @param  fn_fasta     the file name of the fasta file
@@ -100,19 +100,16 @@ tmap_refseq_pac2revpac(const char *fn_fasta);
 /*! 
   @param  refseq    pointer to the structure in which to store the data 
   @param  fn_fasta  the fn_fasta of the file to be written, usually the fasta file name 
-  @param  is_rev    0 if to write the reverse packed sequence, 1 otherwise
-  @details          this will not overwrite the annotation file if "is_rev" is 1
   */
 void
-tmap_refseq_write(tmap_refseq_t *refseq, const char *fn_fasta, uint32_t is_rev);
+tmap_refseq_write(tmap_refseq_t *refseq, const char *fn_fasta);
 
 /*! 
   @param  fn_fasta  the fn_fasta of the file to be read, usually the fasta file name 
-  @param  is_rev    0 if to read the reverse packed sequence, 1 otherwise
   @return           a pointer to the initialized memory
   */
 tmap_refseq_t *
-tmap_refseq_read(const char *fn_fasta, uint32_t is_rev);
+tmap_refseq_read(const char *fn_fasta);
 
 /*! 
   @param  refseq  the refseq structure 
@@ -123,11 +120,10 @@ tmap_refseq_shm_num_bytes(tmap_refseq_t *refseq);
 
 /*! 
   @param  fn_fasta  the fn_fasta of the file to be read, usually the fasta file name 
-  @param  is_rev    0 if to read the reverse packed sequence, 1 otherwise
   @return           the number of bytes required for this bwt in shared memory
   */
 size_t
-tmap_refseq_shm_read_num_bytes(const char *fn_fasta, uint32_t is_rev);
+tmap_refseq_shm_read_num_bytes(const char *fn_fasta);
 
 /*! 
   @param  refseq  the refseq structure to pack 
@@ -156,10 +152,11 @@ tmap_refseq_destroy(tmap_refseq_t *refseq);
   @param  aln_length  the alignment length
   @param  seqid       the zero-based sequence index to be returned
   @param  pos         the one-based position to be returned
+  @param  strand      the strand (0 - forward, 1 - reverse)
   @return             the one-based position, 0 if not found (i.e. overlaps two chromosomes)
   */
 inline tmap_bwt_int_t
-tmap_refseq_pac2real(const tmap_refseq_t *refseq, tmap_bwt_int_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos);
+tmap_refseq_pac2real(const tmap_refseq_t *refseq, tmap_bwt_int_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos, uint8_t *strand);
 
 /*! 
   Retrieves a subsequence of the reference in 2-bit format
