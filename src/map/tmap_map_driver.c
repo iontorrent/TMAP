@@ -243,7 +243,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
                           tmap_error("bug encountered", Exit, OutOfRange);
                       }
                       // map
-                      sams = algorithm->func_thread_map(&algorithm->thread_data[tid], seqs[j], index, curstat, rand, algorithm->opt);
+                      sams = algorithm->func_thread_map(&algorithm->thread_data[tid], seqs[j], index, rand, algorithm->opt);
                       if(NULL == sams) {
                           tmap_error("the thread function did not return a mapping", Exit, OutOfRange);
                       }

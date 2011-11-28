@@ -98,6 +98,17 @@ tmap_bwt_int_t
 tmap_bwt_match_exact(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa);
 
 /*! 
+  computes the SA interval for the given sequence (if any), using reverse search
+  @param  bwt       pointer to the bwt structure 
+  @param  len       the length of the sequence
+  @param  str       the DNA sequence in 2-bit format
+  @param  match_sa  pointer to the match structure to be returned
+  @return           the size of the SA interval, 0 if none found
+  */
+tmap_bwt_int_t
+tmap_bwt_match_exact_reverse(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa);
+
+/*! 
   computes the SA interval for the given sequence (if any), using forward search
   @param  bwt       pointer to the bwt structure 
   @param  len       the length of the sequence
@@ -110,7 +121,7 @@ tmap_bwt_int_t
 tmap_bwt_match_exact_alt(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa);
 
 /*! 
-  computes the SA interval for the given sequence (if any), using forward search
+  computes the SA interval for the given sequence (if any), using reverse search
   @param  bwt       pointer to the bwt structure 
   @param  len       the length of the sequence
   @param  str       the DNA sequence in 2-bit format

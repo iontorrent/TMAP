@@ -381,6 +381,7 @@ tmap_map3_aux_core(tmap_seq_t *seq,
   tmap_map_sams_realloc(sams, n);
   
   // convert seeds to chr/pos
+  n = 0;
   for(j=0;j<n_seeds;j++) { // go through all seeds
       uint32_t seqid, pos;
       tmap_bwt_int_t k, pacpos;

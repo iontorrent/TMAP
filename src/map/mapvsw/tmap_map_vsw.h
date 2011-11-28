@@ -28,20 +28,15 @@ tmap_map_vsw_thread_init(void **data, tmap_map_opt_t *opt);
 /*!
  runs the mapping routine for a given thread
  @param  data     pointer to the mapping data pointer
- @param  seqs     the sequence to map (forward, reverse compliment, reverse, and compliment)
- @param  seq_len  the sequence lenth
+ @param  seqs     the sequence to map (forward, reverse compliment, reverse, compliment)
  @param  index    the reference index
+ @param  rand     the random number generator to use
  @param  opt      the program options
  @return          the mappings, NULL otherwise
  */
 tmap_map_sams_t*
-tmap_map_vsw_thread_map_core(void **data, tmap_seq_t **seqs, int32_t seq_len,
-                             tmap_index_t *index, tmap_map_opt_t *opt);
-
-// TODO
-tmap_map_sams_t*
 tmap_map_vsw_thread_map(void **data, tmap_seq_t **seqs, 
-                     tmap_index_t *index, tmap_map_stats_t *stat, tmap_rand_t *rand, 
+                     tmap_index_t *index, tmap_rand_t *rand, 
                      tmap_map_opt_t *opt);
 
 /*!

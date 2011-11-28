@@ -146,25 +146,8 @@ tmap_map3_thread_init(void **data, tmap_map_opt_t *opt)
   return 0;
 }
 
-tmap_map_sams_t*
-tmap_map3_thread_map_core(void **data, tmap_seq_t *seq, int32_t seq_len, tmap_index_t *index, tmap_map_opt_t *opt)
-{
-  tmap_map_sams_t *sams = NULL;
-  tmap_map3_thread_data_t *d = (tmap_map3_thread_data_t*)(*data);
-  
-  if((0 < opt->min_seq_len && seq_len < opt->min_seq_len)
-     || (0 < opt->max_seq_len && opt->max_seq_len < seq_len)) {
-      return tmap_map_sams_init(NULL);
-  }
-
-  // align
-  sams = tmap_map3_aux_core(seq, d->flow_order, d->flow_order_len, index->refseq, index->bwt, index->sa, opt);
-
-  return sams;
-}
-
 tmap_map_sams_t *
-tmap_map3_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_map_stats_t *stat, tmap_rand_t *rand, tmap_map_opt_t *opt)
+tmap_map3_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_rand_t *rand, tmap_map_opt_t *opt)
 {
   tmap_map_sams_t *sams = NULL;
   int32_t i, seq_len;
@@ -186,7 +169,7 @@ tmap_map3_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_m
   }
   
   // align
-  sams = tmap_map3_aux_core(seqs[0], d->flow_order, d->flow_order_len, index->refseq, index->bwt, index->sa, opt);
+  sams = tmap_map3_aux_core(seqs[3], d->flow_order, d->flow_order_len, index->refseq, index->bwt, index->sa, opt);
 
   return sams;
 }

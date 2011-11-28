@@ -47,20 +47,22 @@ tmap_map_vsw_thread_init(void **data, tmap_map_opt_t *opt)
   return 0;
 }
 
-// reverse and reverse compliment
 tmap_map_sams_t*
-tmap_map_vsw_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len,
-                             tmap_index_t *index, tmap_map_opt_t *opt)
+tmap_map_vsw_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_rand_t *rand, tmap_map_opt_t *opt)
 {
-  int32_t i;
+  int32_t i, seq_len = 0;;
   tmap_map_sams_t *sams = NULL;
 
+  // sequence length
+  seq_len = tmap_seq_get_bases_length(seqs[0]);
+
+  // sequence length not in range
   if((0 < opt->min_seq_len && seq_len < opt->min_seq_len)
      || (0 < opt->max_seq_len && opt->max_seq_len < seq_len)) {
-      // go to the next loop
       return tmap_map_sams_init(NULL);
   }
 
+  // core algorithm
   sams = tmap_map_sams_init(NULL);
   tmap_map_sams_realloc(sams, index->refseq->num_annos<<1); // one for each contig and strand
 
@@ -82,32 +84,6 @@ tmap_map_vsw_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len,
       // mapvswaux data
       tmap_map_sam_malloc_aux(s, TMAP_MAP_ALGO_MAPVSW);
   }
-
-  return sams;
-}
-
-tmap_map_sams_t*
-tmap_map_vsw_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_map_stats_t *stat, tmap_rand_t *rand, tmap_map_opt_t *opt)
-{
-  int32_t seq_len = 0;;
-  tmap_seq_t *seqs_tmp[2]={NULL, NULL};
-  tmap_map_sams_t *sams = NULL;
-
-  // sequence length
-  seq_len = tmap_seq_get_bases_length(seqs[0]);
-
-  // sequence length not in range
-  if((0 < opt->min_seq_len && seq_len < opt->min_seq_len)
-     || (0 < opt->max_seq_len && opt->max_seq_len < seq_len)) {
-      return tmap_map_sams_init(NULL);
-  }
-
-  // clone the sequence 
-  seqs_tmp[0] = seqs[0];
-  seqs_tmp[1] = seqs[1];
-
-  // core algorithm
-  sams = tmap_map_vsw_thread_map_core(data, seqs_tmp, seq_len, index, opt);
 
   return sams;
 }

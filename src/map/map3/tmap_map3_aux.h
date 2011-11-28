@@ -16,7 +16,7 @@ typedef struct {
 
 /*!
   Core mapping routine
-  @param  seq            the sequence to align (forward)
+  @param  seq            the sequence to align (complimented)
   @param  flow_order      the flow order in integer format
   @param  flow_order_len  the flow order length
   @param  refseq         the reference sequence structure (forward)
