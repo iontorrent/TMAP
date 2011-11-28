@@ -61,7 +61,7 @@ tmap_debug_exact_core_worker(tmap_refseq_t *refseq, tmap_bwt_t *bwt, tmap_sa_t *
 
   for(i=0;i<2;i++) {
       tmap_string_t *bases = tmap_seq_get_bases(seqs[i]);
-      if(0 < tmap_bwt_match_exact(bwt, bases->l, (uint8_t*)bases->s, &cur)) {
+      if(0 < tmap_bwt_match_exact_reverse(bwt, bases->l, (uint8_t*)bases->s, &cur)) {
           if(0 == n_only) {
               for(j=cur.k;j<=cur.l;j++) {
                   pacpos = bwt->seq_len - tmap_sa_pac_pos(sa, bwt, j) - bases->l + 1;
