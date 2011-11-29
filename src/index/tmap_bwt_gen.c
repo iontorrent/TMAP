@@ -1548,12 +1548,13 @@ BWTIncConstructFromPacked(const char *inputFileName,
       tmap_error(NULL, Exit, ReadFileError);
   }
   fseek(packedFile, -((long)textSizeInByte + 1), SEEK_CUR);
-
+  
+  // base case
   ConvertBytePackedToWordPacked(bwtInc->textBuffer, bwtInc->packedText, ALPHABET_SIZE, textToLoad);
   BWTIncConstruct(bwtInc, textToLoad);
 
+  // iterate
   processedTextLength = textToLoad;
-
   while (processedTextLength < totalTextLength) {
       textToLoad = bwtInc->buildSize / CHAR_PER_WORD * CHAR_PER_WORD;
       if (textToLoad > totalTextLength - processedTextLength) {
@@ -1569,10 +1570,17 @@ BWTIncConstructFromPacked(const char *inputFileName,
       BWTIncConstruct(bwtInc, textToLoad);
       processedTextLength += textToLoad;
       if (bwtInc->numberOfIterationDone % 10 == 0) {
-          tmap_progress_print2("%llu iterations done with %llu bases processed", 
+          tmap_progress_print2("%.2lf%% complete with %llu iterations done and %llu bases processed", 
+                               100.0 * processedTextLength / (double)totalTextLength,
                                (unsigned long long int)bwtInc->numberOfIterationDone, 
                                (unsigned long long int)processedTextLength);
       }
+  }
+  if (bwtInc->numberOfIterationDone % 10 != 0) {
+      tmap_progress_print2("%.2lf%% complete with %llu iterations done and %llu bases processed", 
+                           100.0 * processedTextLength / (double)totalTextLength,
+                           (unsigned long long int)bwtInc->numberOfIterationDone, 
+                           (unsigned long long int)processedTextLength);
   }
   return bwtInc;
 }
