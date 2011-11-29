@@ -41,14 +41,13 @@
   @param  prev              the previous vectorized query sequence, NULL otherwise
   @param  query             the query sequence
   @param  qlen              the query sequence length
-  @param  tlen              the target sequence length
   @param  query_start_clip  1 if we are to clip the start of the query, 0 otherwise
   @param  query_end_clip    1 if we are to clip the end of the query, 0 otherwise
   @param  opt               the previous alignment parameters, NULL if none exist
   @return                   the query sequence in vectorized form
   */
 tmap_vsw16_query_t *
-tmap_vsw16_query_init(tmap_vsw16_query_t *prev, const uint8_t *query, int32_t qlen, int32_t tlen, 
+tmap_vsw16_query_init(tmap_vsw16_query_t *prev, const uint8_t *query, int32_t qlen, 
                               int32_t query_start_clip, int32_t query_end_clip,
                               tmap_vsw_opt_t *opt);
 

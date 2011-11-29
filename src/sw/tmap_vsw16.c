@@ -59,7 +59,7 @@ tmap_vsw16_query_print_query_profile(tmap_vsw16_query_t *query)
 */
 
 tmap_vsw16_query_t *
-tmap_vsw16_query_init(tmap_vsw16_query_t *prev, const uint8_t *query, int32_t qlen, int32_t tlen, 
+tmap_vsw16_query_init(tmap_vsw16_query_t *prev, const uint8_t *query, int32_t qlen, 
                               int32_t query_start_clip, int32_t query_end_clip,
                               tmap_vsw_opt_t *opt)
 {

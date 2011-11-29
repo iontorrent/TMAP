@@ -112,10 +112,9 @@ typedef struct {
 /*!
   allocates memory for the auxiliary data specific to the algorithm specified by algo_id
   @param  s        the mapping structurem
-  @param  algo_id  the algorithm identifier
   */
 void
-tmap_map_sam_malloc_aux(tmap_map_sam_t *s, int32_t algo_id);
+tmap_map_sam_malloc_aux(tmap_map_sam_t *s);
 
 /*!
   destroys auxiliary data for the given mapping structure

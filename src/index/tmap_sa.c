@@ -189,7 +189,8 @@ tmap_sa_pac_pos(const tmap_sa_t *sa, const tmap_bwt_t *bwt, tmap_bwt_int_t k)
 {
 
   //return tmap_sa_pac_pos_orig(sa, bwt, k);
-  tmap_bwt_int_t orig, opt;
+  //tmap_bwt_int_t orig, opt;
+  tmap_bwt_int_t orig;
 
   // Original
   orig = tmap_sa_pac_pos_orig(sa, bwt, k);
@@ -212,7 +213,8 @@ extern int32_t debug_on;
 void
 tmap_sa_bwt2sa(const char *fn_fasta, uint32_t intv)
 {
-  int64_t isa, s, i; // S(isa) = sa
+  int64_t isa, s; // S(isa) = sa
+  uint64_t i;
   tmap_bwt_t *bwt = NULL;
   tmap_sa_t *sa = NULL;
 
@@ -299,7 +301,7 @@ static tmap_bwt_sint_t QSufSortTransform(tmap_bwt_sint_t* __restrict V, tmap_bwt
 static tmap_bwt_sint_t leadingZero(const tmap_bwt_sint_t input) {
 
     tmap_bwt_sint_t l;
-    const static tmap_bwt_sint_t leadingZero8bit[256] = {8,7,6,6,5,5,5,5,4,4,4,4,4,4,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,
+    static const tmap_bwt_sint_t leadingZero8bit[256] = {8,7,6,6,5,5,5,5,4,4,4,4,4,4,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,
         2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
         1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
         1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -921,7 +923,7 @@ tmap_sa_sais_main(const unsigned char *T, int32_t *SA, int32_t fs, int32_t n, in
 uint32_t 
 tmap_sa_gen_short(const uint8_t *T, int32_t *SA, uint32_t n)
 {
-  if ((T == NULL) || (SA == NULL) || (n < 0)) return -1;
+  if ((T == NULL) || (SA == NULL)) return -1;
   SA[0] = n;
   if (n <= 1) {
       if (n == 1) SA[1] = 0;

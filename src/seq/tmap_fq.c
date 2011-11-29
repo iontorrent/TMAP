@@ -68,7 +68,7 @@ tmap_fq_compliment(tmap_fq_t *fq)
 void
 tmap_fq_to_int(tmap_fq_t *fq)
 {
-  int i;
+  uint32_t i;
   if(1 == fq->is_int) return;
   for(i=0;i<fq->seq->l;i++) {
       fq->seq->s[i] = tmap_nt_char_to_int[(int)fq->seq->s[i]];
@@ -79,7 +79,7 @@ tmap_fq_to_int(tmap_fq_t *fq)
 void
 tmap_fq_to_char(tmap_fq_t *fq)
 {
-  int i;
+  uint32_t i;
   if(0 == fq->is_int) return;
   for(i=0;i<fq->seq->l;i++) {
       fq->seq->s[i] = "ACGTN"[(int)fq->seq->s[i]];

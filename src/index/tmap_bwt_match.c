@@ -14,15 +14,15 @@ tmap_bwt_match_occ(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8_t c,
       prev_k = (NULL == prev) ? 0 : prev->k;
       next->k = tmap_bwt_occ(bwt, prev_k-1, c) + bwt->L2[c] + 1;
       next->offset = offset + 1;
-      next->hi = UINT32_MAX;
-      next->l = UINT32_MAX; 
+      next->hi = TMAP_BWT_INT_MAX;
+      next->l = TMAP_BWT_INT_MAX; 
   }
   else { // use the hash
       uint64_t prev_hi = (NULL == prev) ? 0 : prev->hi;
       next->offset = offset + 1;
       next->hi = (prev_hi << 2) + c;
       next->k = bwt->hash_k[next->offset-1][next->hi];
-      next->l = UINT32_MAX; 
+      next->l = TMAP_BWT_INT_MAX; 
   }
 }
 
@@ -37,7 +37,7 @@ tmap_bwt_match_2occ(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8_t c
       prev_l = (NULL == prev) ? bwt->seq_len : prev->l;
       tmap_bwt_2occ(bwt, prev_k-1, prev_l, c, &next->k, &next->l);
       next->offset = offset + 1;
-      next->hi = UINT32_MAX;
+      next->hi = TMAP_BWT_INT_MAX;
       next->k += bwt->L2[c] + 1;
       next->l += bwt->L2[c];
   }
@@ -62,9 +62,9 @@ tmap_bwt_match_occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, tmap_bwt_
       tmap_bwt_occ4(bwt, prev_k-1, cntk);
       for(i=0;i<4;i++) {
           next[i].offset = offset + 1;
-          next[i].hi = UINT32_MAX;
+          next[i].hi = TMAP_BWT_INT_MAX;
           next[i].k = cntk[i] + bwt->L2[i] + 1;
-          next[i].l = UINT32_MAX;
+          next[i].l = TMAP_BWT_INT_MAX;
       }
   }
   else { // use the hash
@@ -73,7 +73,7 @@ tmap_bwt_match_occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, tmap_bwt_
           next[i].offset = offset + 1;
           next[i].hi = (prev_hi << 2) + i;
           next[i].k = bwt->hash_k[next[i].offset-1][next[i].hi];
-          next[i].l = UINT32_MAX;
+          next[i].l = TMAP_BWT_INT_MAX;
       }
   }
 }
@@ -91,7 +91,7 @@ tmap_bwt_match_2occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, tmap_bwt
       tmap_bwt_2occ4(bwt, prev_k-1, prev_l, cntk, cntl);
       for(i=0;i<4;i++) {
           next[i].offset = offset + 1;
-          next[i].hi = UINT32_MAX;
+          next[i].hi = TMAP_BWT_INT_MAX;
           next[i].k = cntk[i] + bwt->L2[i] + 1;
           next[i].l = cntl[i] + bwt->L2[i];
       }
@@ -181,12 +181,12 @@ tmap_bwt_match_exact(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bw
       }
       tmap_bwt_match_2occ(bwt, &prev, c, &next);
       prev = next;
-      if(next.k > next.l) break; // no match
+      if(TMAP_BWT_INT_MAX == next.k || next.k > next.l) break; // no match
   }
   if(NULL != match_sa) {
       (*match_sa) = prev;
   }
-  if(TMAP_UNLIKELY(3 < c) || prev.k > prev.l) return 0; // no match
+  if(TMAP_BWT_INT_MAX == prev.k || TMAP_UNLIKELY(3 < c) || prev.k > prev.l) return 0; // no match
   return prev.l - prev.k + 1;
 }
 
@@ -210,12 +210,12 @@ tmap_bwt_match_exact_reverse(const tmap_bwt_t *bwt, int len, const uint8_t *str,
       }
       tmap_bwt_match_2occ(bwt, &prev, c, &next);
       prev = next;
-      if(next.k > next.l) break; // no match
+      if(TMAP_BWT_INT_MAX == next.k || next.k > next.l) break; // no match
   }
   if(NULL != match_sa) {
       (*match_sa) = prev;
   }
-  if(TMAP_UNLIKELY(3 < c) || prev.k > prev.l) return 0; // no match
+  if(TMAP_BWT_INT_MAX == prev.k || TMAP_UNLIKELY(3 < c) || prev.k > prev.l) return 0; // no match
   return prev.l - prev.k + 1;
 }
 
@@ -230,7 +230,7 @@ tmap_bwt_match_exact_alt(const tmap_bwt_t *bwt, int len, const uint8_t *str, tma
       if(TMAP_UNLIKELY(c > 3)) return 0; // there is an N here. no match
       tmap_bwt_match_2occ(bwt, match_sa, c, &next);
       (*match_sa) = next;
-      if(next.k > next.l) return 0; // no match
+      if(TMAP_BWT_INT_MAX == next.k || next.k > next.l) return 0; // no match
   }
   return match_sa->l - match_sa->k + 1;
 }
@@ -246,7 +246,7 @@ tmap_bwt_match_exact_alt_reverse(const tmap_bwt_t *bwt, int len, const uint8_t *
       if(TMAP_UNLIKELY(c > 3)) return 0; // there is an N here. no match
       tmap_bwt_match_2occ(bwt, match_sa, c, &next);
       (*match_sa) = next;
-      if(next.k > next.l) return 0; // no match
+      if(TMAP_BWT_INT_MAX == next.k || next.k > next.l) return 0; // no match
   }
   return match_sa->l - match_sa->k + 1;
 }

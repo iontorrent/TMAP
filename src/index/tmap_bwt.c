@@ -356,10 +356,10 @@ tmap_bwt_gen_cnt_table(tmap_bwt_t *bwt)
 }
 
 static void
-tmap_bwt_gen_hash_helper(tmap_bwt_t *bwt, tmap_bwt_int_t len)
+tmap_bwt_gen_hash_helper(tmap_bwt_t *bwt, uint32_t len)
 {
   tmap_bwt_sint_t i;
-  tmap_bwt_int_t n;
+  tmap_bwt_sint_t n;
   uint8_t *seq = NULL;
   tmap_bwt_match_occ_t match_sa;
   tmap_bwt_int_t sum = 0;
@@ -378,7 +378,7 @@ tmap_bwt_gen_hash_helper(tmap_bwt_t *bwt, tmap_bwt_int_t len)
           bwt->hash_k[len-1][hash_i] = match_sa.k;
           bwt->hash_l[len-1][hash_i] = match_sa.l;
 
-          if(match_sa.k <= match_sa.l) {
+          if(TMAP_BWT_INT_MAX != match_sa.k && match_sa.k <= match_sa.l) {
               sum += n;
           }
 
@@ -425,8 +425,23 @@ tmap_bwt_gen_hash_helper(tmap_bwt_t *bwt, tmap_bwt_int_t len)
   }
 
   if(sum != bwt->seq_len - len + 1) {
-      //fprintf(stderr, "len=%d sum=%lld (bwt->seq_len - len + 1)=%lld\n", len, (long long int)sum, (long long int)(bwt->seq_len - len + 1));
       tmap_error("sum != bwt->seq_len - len + 1", Exit, OutOfRange);
+      /*
+      tmap_error("Found an inconsitency in the BWT", Warn, OutOfRange);
+  // HERE
+  fprintf(stderr, "len=%u sum=%lld (bwt->seq_len - len + 1)=%lld\n", 
+          len, (long long int)sum, (long long int)(bwt->seq_len - len + 1));
+  for(i=1;i<=len;i++) {
+      uint64_t hash_length = tmap_bwt_get_hash_length(i);
+      for(hash_i=0;hash_i<hash_length;hash_i++) {
+          fprintf(stderr, "i=%lld hash_i=%llu hash_k=%llu hash_l=%llu\n", 
+                  i,
+                  hash_i,
+                  bwt->hash_k[i-1][hash_i],
+                  bwt->hash_l[i-1][hash_i]);
+      }
+  }
+      */
   }
   
   free(seq);
@@ -444,7 +459,7 @@ tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width)
       hash_width = bwt->seq_len;
   }
 
-  if(TMAP_BWT_INT_MAX <= (1 << (2 * bwt->hash_width)) - 1) {
+  if(TMAP_BWT_INT_MAX <= (tmap_bwt_int_t)((1 << (2 * ((tmap_bwt_int_t)bwt->hash_width))) - 1)) {
       tmap_error("Hash width is too great to fit in memory", Exit, OutOfRange);
   }
 
@@ -455,6 +470,8 @@ tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width)
   bwt->hash_width = 0;
   for(i=1;i<=hash_width;i++) {
       uint64_t hash_length = tmap_bwt_get_hash_length(i);
+  
+      tmap_progress_print2("constructing %u-mer hash", i);
       
       // allocate memory for this level
       bwt->hash_k[i-1] = tmap_malloc(sizeof(tmap_bwt_int_t)*hash_length, "bwt->hash_k[i-1]");
@@ -594,7 +611,7 @@ tmap_bwt_2occ_orig(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, ui
 inline void 
 tmap_bwt_2occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, uint8_t c, tmap_bwt_int_t *ok, tmap_bwt_int_t *ol)
 {
-  tmap_bwt_int_t aux_ok, aux_ol; 
+  //tmap_bwt_int_t aux_ok, aux_ol; 
 
   // Original
   tmap_bwt_2occ_orig(bwt, k, l, c, ok, ol);

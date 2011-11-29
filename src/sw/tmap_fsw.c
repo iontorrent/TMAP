@@ -135,13 +135,12 @@ tmap_fsw_sub_core(uint8_t *seq, int32_t len,
                   const tmap_fsw_param_t *ap,
                   tmap_fsw_dpcell_t **sub_dpcell,
                   tmap_fsw_dpscore_t **sub_dpscore, 
-                  tmap_fsw_dpcell_t *dpcell_last,
                   tmap_fsw_dpscore_t *dpscore_last,
                   tmap_fsw_dpcell_t *dpcell_curr,
                   tmap_fsw_dpscore_t *dpscore_curr,
                   tmap_fsw_path_t *path, int32_t *path_len, int32_t best_ctype,
                   uint8_t key_bases,
-                  int32_t flowseq_start_clip, int32_t flowseq_end_clip)
+                  int32_t flowseq_start_clip)
 {
   register int32_t i, j;
   int32_t low_offset, high_offset, flow_score;
@@ -350,7 +349,6 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
                   tmap_fsw_dpscore_t **sub_dpscore, 
                   const tmap_fsw_param_t *ap,
                   int32_t best_i, int32_t best_j, uint8_t best_ctype, 
-                  int32_t flowseq_start_clip, int32_t flowseq_end_clip,
                   int32_t right_j,
                   tmap_fsw_path_t *path, int32_t *path_len)
 {
@@ -492,11 +490,11 @@ tmap_fsw_get_path(uint8_t *seq, uint8_t *flow_order, int32_t flow_order_len, uin
                             flow_order[(i-1) % flow_order_len], base_call, flowgram[i-1], 
                             &ap_tmp,
                             sub_dpcell, sub_dpscore,
-                            dpcell[i-1], dpscore[i-1],
+                            dpscore[i-1],
                             NULL, NULL, // do not update
                             sub_path, &sub_path_len, ctype, // get the path
                             ((key_index+1) == i) ? key_bases : 0,
-                            0, 0);
+                            0);
 
           // if base_call_diff > 0, add insertions (more read bases than reference bases)
           // if base_call_diff < 0, add deletions (fewer read bases than reference bases)
@@ -716,11 +714,11 @@ tmap_fsw_clipping_core(uint8_t *seq, int32_t len,
                         flowseq->flowgram[i-1], 
                         ap,
                         sub_dpcell, sub_dpscore,
-                        dpcell[i-1], dpscore[i-1],
+                        dpscore[i-1],
                         dpcell[i], dpscore[i],
                         NULL, NULL, 0,
                         ((flowseq->key_index+1) == i) ? flowseq->key_bases : 0,
-                        flowseq_start_clip, flowseq_end_clip);
+                        flowseq_start_clip);
 
       // deal with start clipping
       if(1 == flowseq_start_clip) {
@@ -785,7 +783,6 @@ tmap_fsw_clipping_core(uint8_t *seq, int32_t len,
                         sub_dpcell, sub_dpscore, 
                         ap, 
                         best_i, best_j, best_ctype, 
-                        flowseq_start_clip, flowseq_end_clip,
                         right_j,
                         path, path_len);
   }
@@ -1287,11 +1284,11 @@ tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow
 
   // find the flowgram length
   i = num_flows = 0;
-  while(i < bases->l) {
+  while(i < (int32_t)bases->l) {
       while(bases->s[i] != fs->flow_order[num_flows % flow_order_len]) {
           num_flows++;
       }
-      while(i < bases->l && bases->s[i] == fs->flow_order[num_flows % flow_order_len]) {
+      while(i < (int32_t)bases->l && bases->s[i] == fs->flow_order[num_flows % flow_order_len]) {
           i++;
       }
       num_flows++;
@@ -1352,7 +1349,7 @@ tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow
   i = 0;
   j = 0;
   // last key base and first base
-  while(i < bases->l) {
+  while(i < (int32_t)bases->l) {
       while(bases->s[i] != fs->flow_order[j % flow_order_len]) {
           if(fs->num_flows <= j) {
               tmap_bug();
@@ -1367,7 +1364,7 @@ tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow
           fs->flowgram[j] = 0;
       }
       fs->base_calls[j] = 0;
-      while(i < bases->l && bases->s[i] == fs->flow_order[j % flow_order_len]) {
+      while(i < (int32_t)bases->l && bases->s[i] == fs->flow_order[j % flow_order_len]) {
           if(fs->num_flows <= j) {
               tmap_bug();
           }

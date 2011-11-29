@@ -205,8 +205,6 @@ tmap_sw_global_banded_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t l
   @param  ap          the alignment parameters
   @param  path        the Smith-Waterman alignment path
   @param  path_len    the Smith-Waterman alignment path length
-  @param  prev_score  the initial alignment score
-  @param  _mem        allocated memory with size of (len1+2)*(ap->row+1)*4
   @param  right_j     0 if we are to left-justify indels, 1 otherwise
   @return             the alignment score, 0 if none was found
   */
@@ -215,7 +213,6 @@ tmap_sw_extend_core(uint8_t *seq1, int32_t len1,
                     uint8_t *seq2, int32_t len2, 
                     const tmap_sw_param_t *ap,
                     tmap_sw_path_t *path, int32_t *path_len, 
-                    int32_t prev_score, uint8_t *_mem, 
                     int32_t right_j);
 
 /*!
@@ -227,8 +224,6 @@ tmap_sw_extend_core(uint8_t *seq1, int32_t len1,
   @param  ap          the alignment parameters
   @param  path        the Smith-Waterman alignment path
   @param  path_len    the Smith-Waterman alignment path length
-  @param  prev_score  the initial alignment score
-  @param  _mem        allocated memory with size of (len1+2)*(ap->row+1)*4
   @param  right_j     0 if we are to left-justify indels, 1 otherwise
   @return             the alignment score, 0 if none was found
   @details            actually, it performs it with banding.
@@ -238,7 +233,6 @@ tmap_sw_extend_fitting_core(uint8_t *seq1, int32_t len1,
                     uint8_t *seq2, int32_t len2, 
                     const tmap_sw_param_t *ap,
                     tmap_sw_path_t *path, int32_t *path_len, 
-                    int32_t prev_score, uint8_t *_mem,
                     int32_t right_j);
 
 /*!

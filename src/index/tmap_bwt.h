@@ -213,8 +213,8 @@ tmap_bwt_2occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, tmap_b
   @return      the suffix array position
   */
 #define tmap_bwt_invPsi(bwt, k)												\
-  (((k) == (bwt)->primary)? 0 :										\
-   ((k) < (bwt)->primary)?											\
+  (((tmap_bwt_int_t)(k) == (bwt)->primary)? 0 :										\
+   ((tmap_bwt_int_t)(k) < (bwt)->primary)?											\
    (bwt)->L2[tmap_bwt_B0(bwt, k)] + tmap_bwt_occ(bwt, k, tmap_bwt_B0(bwt, k))		\
    : (bwt)->L2[tmap_bwt_B0(bwt, (k)-1)] + tmap_bwt_occ(bwt, k, tmap_bwt_B0(bwt, (k)-1)))
 

@@ -962,7 +962,7 @@ tmap_sw_kmp_search(uint8_t *seq1, int32_t len1, uint8_t *seq2, uint32_t len2)
   while(i + m < len1) {
       if(seq1[m+i] == seq2[i]) {
           i++;
-          if(i == len2) {
+          if(i == (int32_t)len2) {
               r = m;
               break;
           }
@@ -1405,14 +1405,14 @@ tmap_sw_clipping_core2(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2,
 
 int32_t 
 tmap_sw_extend_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
-                    tmap_sw_path_t *path, int32_t *path_len, int32_t prev_score, uint8_t *_mem, int32_t right_justify)
+                    tmap_sw_path_t *path, int32_t *path_len, int32_t right_justify)
 {
   return tmap_sw_clipping_core2(seq1, len1, seq2, len2, ap, 0, 0, 1, path, path_len, right_justify);
 }
 
 int32_t 
 tmap_sw_extend_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
-                            tmap_sw_path_t *path, int32_t *path_len, int32_t prev_score, uint8_t *_mem, int32_t right_justify)
+                            tmap_sw_path_t *path, int32_t *path_len, int32_t right_justify)
 {
   return tmap_sw_clipping_core2(seq1, len1, seq2, len2, ap, 0, 0, 0, path, path_len, right_justify);
 }

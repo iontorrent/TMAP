@@ -165,7 +165,6 @@ tmap_fsw_flowseq_destroy(tmap_fsw_flowseq_t *flowseq);
   @param  ap                 the alignment parameters
   @param  sub_dpcell         pre-allocated DP cells of minimum dimensions [base_call+2*(ap->offset+1),len+1]
   @param  sub_score          pre-allocated DP scores of minimum dimensions [base_call+2*(ap->offset+1),len+1]
-  @param  dpcell_last        the last cell row in the DP matrix
   @param  score_last         the last score row in the DP matrix
   @param  dpcell_curr        the current cell row in the DP matrix
   @param  score_curr         the current score row in the DP matrix
@@ -174,7 +173,6 @@ tmap_fsw_flowseq_destroy(tmap_fsw_flowseq_t *flowseq);
   @param  best_ctype         the sub-cell from which to backtrace if path is not NULL
   @param  key_bases          the number of key bases that are part of this flow
   @param  flowseq_start_clip  1 to allow clipping at the start of the flow sequence, 0 otherwise
-  @param  flowseq_end_clip    1 to allow clipping at the end of the flow sequence, 0 otherwise
   @details                   this assumes that the ap parameter scores have been multiplied by 100; only include non-key flows
   */
 inline void
@@ -183,13 +181,12 @@ tmap_fsw_sub_core(uint8_t *seq, int32_t len,
                   const tmap_fsw_param_t *ap,
                   tmap_fsw_dpcell_t **sub_dpcell,
                   tmap_fsw_dpscore_t **sub_score,
-                  tmap_fsw_dpcell_t *dpcell_last,
                   tmap_fsw_dpscore_t *score_last,
                   tmap_fsw_dpcell_t *dpcell_curr,
                   tmap_fsw_dpscore_t *score_curr,
                   tmap_fsw_path_t *path, int32_t *path_len, int32_t best_ctype,
                   uint8_t key_bases,
-                  int32_t flowseq_start_clip, int32_t flowseq_end_clip);
+                  int32_t flowseq_start_clip);
 
 /*!
   Performs flow-space Smith-Waterman alignment extension

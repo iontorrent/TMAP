@@ -153,8 +153,8 @@ typedef struct {
 typedef struct {
     int32_t score_match; /*!< the match score */
     int32_t pen_mm; /*!< the mismatch penalty */
-    uint32_t pen_gapo; /*!< the gap open penalty */
-    uint32_t pen_gape; /*!< the gap extension penalty */
+    int32_t pen_gapo; /*!< the gap open penalty */
+    int32_t pen_gape; /*!< the gap extension penalty */
     int32_t score_thres; /*!< the minimum scoring threshold (inclusive) */
 } tmap_vsw_opt_t;
 

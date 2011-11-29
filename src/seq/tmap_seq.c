@@ -319,7 +319,7 @@ tmap_seq_sff2fq(tmap_seq_t *seq)
   ret->data.fq->is_int = seq->data.sff->is_int; // is in integer format
 
   // remove key sequence
-  for(i=0;i<ret->data.fq->seq->l - seq->data.sff->gheader->key_length;i++) {
+  for(i=0;i<(int32_t)ret->data.fq->seq->l - seq->data.sff->gheader->key_length;i++) {
       ret->data.fq->seq->s[i] = ret->data.fq->seq->s[i + seq->data.sff->gheader->key_length];
       ret->data.fq->qual->s[i] = ret->data.fq->qual->s[i + seq->data.sff->gheader->key_length];
   }

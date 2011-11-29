@@ -47,13 +47,13 @@ tmap_refseq_supported(tmap_refseq_t *refseq)
   char *tmap_v = PACKAGE_VERSION;
 
   // sanity check on version names
-  for(i=j=0;i<strlen(refseq_v);i++) {
+  for(i=j=0;i<(int32_t)strlen(refseq_v);i++) {
       if('.' == refseq_v[i]) j++;
   }
   if(2 != j) {
       tmap_error("did not find three version numbers", Exit, OutOfRange);
   }
-  for(i=j=0;i<strlen(tmap_v);i++) {
+  for(i=j=0;i<(int32_t)strlen(tmap_v);i++) {
       if('.' == tmap_v[i]) j++;
   }
   if(2 != j) {
@@ -82,7 +82,7 @@ tmap_refseq_write_header(tmap_file_t *fp, tmap_refseq_t *refseq)
 static inline void 
 tmap_refseq_print_header(tmap_file_t *fp, tmap_refseq_t *refseq)
 {
-  uint32_t i;
+  int32_t i;
   tmap_file_fprintf(fp, "version id:\t%llu\n", (unsigned long long int)refseq->version_id);
   tmap_file_fprintf(fp, "format:\t%s\n", tmap_refseq_get_version_format(refseq->package_version->s));
   tmap_file_fprintf(fp, "package version:\t%s\n", refseq->package_version->s);
@@ -117,7 +117,7 @@ tmap_refseq_write_annos(tmap_file_t *fp, tmap_anno_t *anno)
 static inline void
 tmap_refseq_write_anno(tmap_file_t *fp, tmap_refseq_t *refseq)
 {
-  uint32_t i;
+  int32_t i;
 
   // write annotation file
   tmap_refseq_write_header(fp, refseq); // write the header
@@ -129,7 +129,7 @@ tmap_refseq_write_anno(tmap_file_t *fp, tmap_refseq_t *refseq)
 static inline void
 tmap_refseq_anno_clone(tmap_anno_t *dest, tmap_anno_t *src, int32_t reverse) 
 {
-  int32_t i;
+  uint32_t i;
   dest->name = tmap_string_clone(src->name);
   dest->len = src->len;
   dest->offset = src->offset;
@@ -162,10 +162,10 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression, int32_t fwd_onl
   tmap_refseq_t *refseq = NULL;
   char *fn_pac = NULL, *fn_anno = NULL;
   uint8_t buffer[TMAP_REFSEQ_BUFFER_SIZE];
-  int64_t i, j, k, l, buffer_length;
+  int64_t i, j, l, buffer_length;
   uint32_t num_IUPAC_found= 0, amb_bases_mem = 0;
   uint8_t x = 0;
-  uint64_t ref_len;
+  uint64_t k, ref_len;
 
   if(0 == fwd_only) {
       tmap_progress_print("packing the reference FASTA");
@@ -510,7 +510,7 @@ tmap_refseq_read_annos(tmap_file_t *fp, tmap_anno_t *anno)
 static inline void
 tmap_refseq_read_anno(tmap_file_t *fp, tmap_refseq_t *refseq)
 {
-  uint32_t i;
+  int32_t i;
   // read annotation file
   tmap_refseq_read_header(fp, refseq); // read the header
   refseq->annos = tmap_calloc(refseq->num_annos, sizeof(tmap_anno_t), "refseq->annos"); // allocate memory
@@ -713,7 +713,7 @@ tmap_refseq_shm_unpack(uint8_t *buf)
 void
 tmap_refseq_destroy(tmap_refseq_t *refseq)
 {
-  uint32_t i;
+  int32_t i;
 
   if(1 == refseq->is_shm) {
       free(refseq->package_version);
@@ -845,14 +845,14 @@ tmap_refseq_subseq2(const tmap_refseq_t *refseq, uint32_t seqid, uint32_t start,
 {
   uint32_t i, j;
 
-  if(0 == seqid || refseq->num_annos < seqid || end < start) {
+  if(0 == seqid || (uint32_t)refseq->num_annos < seqid || end < start) {
       return NULL;
   }
 
   if(NULL == target) { 
       target = tmap_malloc(sizeof(char) * (end - start + 1), "target");
   }
-  if((end - start + 1) != tmap_refseq_subseq(refseq, refseq->annos[seqid-1].offset + start, end - start + 1, target)) {
+  if((end - start + 1) != (uint32_t)tmap_refseq_subseq(refseq, refseq->annos[seqid-1].offset + start, end - start + 1, target)) {
       free(target);
       return NULL;
   }
@@ -992,7 +992,8 @@ int
 tmap_refseq_pac2fasta_main(int argc, char *argv[])
 {
   int c, help=0, amb=0;
-  uint32_t i, j, k;
+  int32_t i;
+  uint32_t j, k;
   char *fn_fasta = NULL;
   tmap_refseq_t *refseq = NULL;
 

@@ -82,7 +82,7 @@ tmap_map_vsw_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tma
       s->score_subo = INT32_MIN;
       
       // mapvswaux data
-      tmap_map_sam_malloc_aux(s, TMAP_MAP_ALGO_MAPVSW);
+      tmap_map_sam_malloc_aux(s);
   }
 
   return sams;

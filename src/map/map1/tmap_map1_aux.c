@@ -408,7 +408,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases, int32_t seed2
               }
 
               // aux
-              tmap_map_sam_malloc_aux(sam_cur, TMAP_MAP_ALGO_MAP1);
+              tmap_map_sam_malloc_aux(sam_cur);
               sam_cur->aux.map1_aux->n_mm = sam->aux.map1_aux->n_mm;
               sam_cur->aux.map1_aux->n_gapo = sam->aux.map1_aux->n_gapo;
               sam_cur->aux.map1_aux->n_gape = sam->aux.map1_aux->n_gape;
@@ -646,7 +646,7 @@ tmap_map1_aux_core(tmap_seq_t *seq, tmap_index_t *index,
               l = sam->pos = match_sa_cur.l;
 
               // aux data
-              tmap_map_sam_malloc_aux(sam, TMAP_MAP_ALGO_MAP1);
+              tmap_map_sam_malloc_aux(sam);
               sam->aux.map1_aux->n_mm = e->n_mm;
               sam->aux.map1_aux->n_gapo = e->n_gapo;
               sam->aux.map1_aux->n_gape = e->n_gape;

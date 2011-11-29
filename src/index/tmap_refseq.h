@@ -21,7 +21,7 @@
   @param  _len  the number of bases stored 
   @return       the number of bytes allocated
   */
-#define tmap_refseq_seq_memory(_len) ((((_len)-1) >> 2) + 1)
+#define tmap_refseq_seq_memory(_len) ((size_t)((((_len)-1) >> 2) + 1))
 
 /*! 
   @param  _i  the 0-based base position 
