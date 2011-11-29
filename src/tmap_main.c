@@ -66,6 +66,7 @@ static int usage()
   fprintf(stderr, "         exact          perform simple exact matching\n");
   fprintf(stderr, "         fsw            perform flow Smith-Waterman\n");
   fprintf(stderr, "         indexspeed     index performance benchmarks\n");
+  fprintf(stderr, "         bwtcheck       check the consistency of the BWT\n");
 #endif
   return 1;
 }
@@ -102,6 +103,7 @@ int main(int argc, char *argv[])
       else if (0 == strcmp("exact", argv[1])) ret = tmap_debug_exact(argc-1, argv+1);
       else if (0 == strcmp("fsw", argv[1])) ret = tmap_fsw_main(argc-1, argv+1);
       else if (0 == strcmp("indexspeed", argv[1])) ret = tmap_index_speed(argc-1, argv+1);
+      else if (0 == strcmp("bwtcheck", argv[1])) ret = tmap_bwt_check(argc-1, argv+1);
 #endif
       else if (0 == strcmp("--version", argv[1]) || 0 == strcmp("-v", argv[1])) ret = version();
       else if (0 == strcmp("--help", argv[1]) || 0 == strcmp("-h", argv[1])) ret = usage();
