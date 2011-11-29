@@ -1567,9 +1567,12 @@ BWTIncConstructFromPacked(const char *inputFileName,
       fseek(packedFile, -((int)textSizeInByte), SEEK_CUR);
       ConvertBytePackedToWordPacked(bwtInc->textBuffer, bwtInc->packedText, ALPHABET_SIZE, textToLoad);
       BWTIncConstruct(bwtInc, textToLoad);
+      fprintf(stderr, "textToLoad=%llu\n", textToLoad); // HERE
       processedTextLength += textToLoad;
       if (bwtInc->numberOfIterationDone % 10 == 0) {
-          tmap_progress_print2("%u iterations done with %u bases processed", bwtInc->numberOfIterationDone, processedTextLength);
+          tmap_progress_print2("%llu iterations done with %llu bases processed", 
+                               (unsigned long long int)bwtInc->numberOfIterationDone, 
+                               (unsigned long long int)processedTextLength);
       }
   }
   return bwtInc;

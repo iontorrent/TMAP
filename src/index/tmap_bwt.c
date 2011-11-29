@@ -38,7 +38,7 @@
 #include "../io/tmap_file.h"
 #include "tmap_bwt_gen.h"
 #include "tmap_bwt.h"
-#include "tmap_bwt_aux.h"
+//#include "tmap_bwt_aux.h"
 #include "tmap_bwt_match.h"
 
 #define TMAP_BWT_BY_FIVE
@@ -599,6 +599,7 @@ tmap_bwt_2occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, uint8_t
   // Original
   tmap_bwt_2occ_orig(bwt, k, l, c, ok, ol);
 
+  /*
   // Optimized (?)
   aux_ol = l;
   aux_ok = tmap_bwt_aux_2occ(bwt, k, &aux_ol, c);
@@ -610,6 +611,7 @@ tmap_bwt_2occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, uint8_t
   if(aux_ol != *ol) {
       tmap_bug();
   }
+  */
 }
 
 #define __occ_aux4(bwt, b)											\
