@@ -9,6 +9,7 @@
 
 #include "../util/tmap_error.h"
 #include "../util/tmap_alloc.h"
+#include "../io/tmap_file.h"
 #include "tmap_bwt.h"
 #include "tmap_bwt_match.h"
 
@@ -37,13 +38,13 @@ tmap_bwa_check_core(const char *fn_fasta, int32_t length, int32_t print_sa, int3
   n = tmap_bwt_match_exact(bwt, 2, seqs[0], &sa);
   int k;
   for(k=0;k<2;k++) {
-      fputc("ACGTN"[seqs[0][k]], stderr);
+      fputc("ACGTN"[seqs[0][k]], tmap_file_stderr);
   }
   if(0 < n && sa.k <= sa.l) {
-      fprintf(stderr, " %llu %llu %d\n", sa.k, sa.l, n);
+      tmap_file_fprintf(tmap_file_stderr, " %llu %llu %d\n", sa.k, sa.l, n);
   }
   else {
-      fprintf(stderr, " NA NA NA\n");
+      tmap_file_fprintf(tmap_file_stderr, " NA NA NA\n");
   }
   free(seqs[0]);
   */
@@ -59,20 +60,25 @@ tmap_bwa_check_core(const char *fn_fasta, int32_t length, int32_t print_sa, int3
       hash_j = sum = 0;
       while(1) {
           if(i == j) {
+              for(k=0;k<i;k++) {
+                  seqs[1][k] = 3 - seqs[0][i-k-1];
+              }
               for(k=0;k<2;k++) {
-                  n[k] = tmap_bwt_match_exact(bwt, 2, seqs[k], &sa);
-                  if(0 < n[k] && sa.k <= sa.l) {
-                      sum += n[k];
-                  }
-                  if(1 == print_sa) {
-                      for(l=0;l<i;l++) {
-                          fputc("ACGTN"[seqs[k][l]], stderr);
-                      }
+                  n[k] = tmap_bwt_match_exact(bwt, i, seqs[k], &sa);
+                  if(0 == k) {
                       if(0 < n[k] && sa.k <= sa.l) {
-                          fprintf(stderr, " %llu %llu %d\n", sa.k, sa.l, n[k]);
+                          sum += n[k];
                       }
-                      else {
-                          fprintf(stderr, " NA NA NA\n");
+                      if(1 == print_sa) {
+                          for(l=0;l<i;l++) {
+                              tmap_file_fprintf(tmap_file_stderr, "%c", "ACGTN"[seqs[k][l]]);
+                          }
+                          if(0 < n[k] && sa.k <= sa.l) {
+                              tmap_file_fprintf(tmap_file_stderr, "\t%llu\t%llu\t%d\n", sa.k, sa.l, n[k]);
+                          }
+                          else {
+                              tmap_file_fprintf(tmap_file_stderr, "\tNA\tNA\tNA\n");
+                          }
                       }
                   }
               }
@@ -84,16 +90,13 @@ tmap_bwa_check_core(const char *fn_fasta, int32_t length, int32_t print_sa, int3
               j--;
               while(0 <= j && 3 == seqs[0][j]) {
                   seqs[0][j] = 0;
-                  seqs[1][i-j-1] = 3;
                   hash_j >>= 2;
                   j--;
               }
               if(j < 0) break;
               seqs[0][j]++;
-              seqs[1][i-j-1]--;
               hash_j++;
               j++;
-              if(seqs[0][0] == 2) break; // symmetry
           }
           else {
               hash_j <<= 2;
@@ -104,7 +107,7 @@ tmap_bwa_check_core(const char *fn_fasta, int32_t length, int32_t print_sa, int3
       free(seqs[0]);
       free(seqs[1]);
 
-      fprintf(stderr, "kmer:%d sum=%llu expected sum:%llu difference:%lld matched:%s\n",
+      tmap_file_fprintf(tmap_file_stderr, "kmer:%d sum=%llu expected sum:%llu difference:%lld matched:%s\n",
               i,
               sum,
               bwt->seq_len - i + 1,
@@ -133,12 +136,12 @@ tmap_bwt_check(int argc, char *argv[])
 	}
 
 	if (optind + 1 > argc) {
-		fprintf(stderr, "\n");
-		fprintf(stderr, "Usage:   bwa check [options] <prefix>\n\n");
-		fprintf(stderr, "Options: -l INT    the kmer length to check\n");
-		fprintf(stderr, "Options: -p        print out the SA intervals for each kmer\n");
-		fprintf(stderr, "Options: -H        use the hash to compute the SA intervals\n");
-		fprintf(stderr, "\n");
+                tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [options] <in.fasta>\n", PACKAGE, argv[0]);
+		tmap_file_fprintf(tmap_file_stderr, "Options:\n");
+		tmap_file_fprintf(tmap_file_stderr, "         -l INT    the kmer length to check\n");
+		tmap_file_fprintf(tmap_file_stderr, "         -p        print out the SA intervals for each kmer\n");
+		tmap_file_fprintf(tmap_file_stderr, "         -H        use the hash to compute the SA intervals\n");
+		tmap_file_fprintf(tmap_file_stderr, "\n");
 		return 1;
 	}
 	tmap_bwa_check_core(argv[optind], length, print_sa, use_hash);
