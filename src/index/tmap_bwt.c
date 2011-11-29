@@ -38,6 +38,7 @@
 #include "../io/tmap_file.h"
 #include "tmap_bwt_gen.h"
 #include "tmap_bwt.h"
+#include "tmap_bwt_aux.h"
 #include "tmap_bwt_match.h"
 
 #define TMAP_BWT_BY_FIVE
@@ -466,6 +467,10 @@ tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width)
   tmap_progress_print2("constructed the occurrence hash for the BWT string");
 }
 
+/**
+ * Main BWT API
+ */
+
 static inline int32_t
 __occ_aux32(uint64_t y, int32_t c)
 {
@@ -525,8 +530,8 @@ tmap_bwt_occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, uint8_t c)
 }
 
 // an analogy to tmap_bwt_occ() but more efficient, requiring k <= l
-inline void 
-tmap_bwt_2occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, uint8_t c, tmap_bwt_int_t *ok, tmap_bwt_int_t *ol)
+static inline void 
+tmap_bwt_2occ_orig(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, uint8_t c, tmap_bwt_int_t *ok, tmap_bwt_int_t *ol)
 {
   tmap_bwt_int_t _k, _l;
   if(k == l) {
@@ -582,6 +587,28 @@ tmap_bwt_2occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, uint8_t
       if (c == 0) m -= ~l&31; // corrected for the masked bits
 #endif
       *ol = m;
+  }
+}
+
+// TODO:
+inline void 
+tmap_bwt_2occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, uint8_t c, tmap_bwt_int_t *ok, tmap_bwt_int_t *ol)
+{
+  tmap_bwt_int_t aux_ok, aux_ol; 
+
+  // Original
+  tmap_bwt_2occ_orig(bwt, k, l, c, ok, ol);
+
+  // Optimized (?)
+  aux_ol = l;
+  aux_ok = tmap_bwt_aux_2occ(bwt, k, &aux_ol, c);
+  
+  // Test
+  if(aux_ok != *ok) {
+      tmap_bug();
+  }
+  if(aux_ol != *ol) {
+      tmap_bug();
   }
 }
 

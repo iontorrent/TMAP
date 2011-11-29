@@ -36,15 +36,6 @@
 
 //#define TMAP_VSW_DEBUG 1
 
-/* For branch prediction */
-#ifdef __GNUC__
-#define TMAP_VSW_LIKELY(x) __builtin_expect((x),1)
-#define TMAP_VSW_UNLIKELY(x) __builtin_expect((x),0)
-#else
-#define TMAP_VSW_LIKELY(x) (x)
-#define TMAP_VSW_UNLIKELY(x) (x)
-#endif
-
 // Gives the # of bytes to align the memory in 16-byte increments
 #define __tmap_vsw_16(_val) (((_val) + 15) >> 4 << 4)
 

@@ -90,6 +90,15 @@ typedef int64_t tmap_bwt_sint_t;
 #define TMAP_BWT_SINT_MAX INT64_MAX 
 #endif
 
+/* For branch prediction */
+#ifdef __GNUC__
+#define TMAP_LIKELY(x) __builtin_expect((x),1)
+#define TMAP_UNLIKELY(x) __builtin_expect((x),0)
+#else
+#define TMAP_LIKELY(x) (x)
+#define TMAP_UNLIKELY(x) (x)
+#endif
+
 /*! 
   @param  algo_id  the algorithm identifier
   @return          algorithm name

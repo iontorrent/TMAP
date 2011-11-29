@@ -232,7 +232,7 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
   
       // load H(i-1,-1)
       h = __tmap_vsw_mm_load_si128(H0 + slen - 1); // the last stripe, which holds the j-1 
-      if(TMAP_VSW_UNLIKELY(0 < i)) { // only if we have previous results
+      if(TMAP_UNLIKELY(0 < i)) { // only if we have previous results
           h = __tmap_vsw_mm_slli_si128(h, tmap_vsw16_shift_bytes); // shift left since x64 is little endian
       }
       h = __tmap_vsw16_mm_insert_epi16(h, zero, 0);
@@ -246,14 +246,14 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
       if(0 == query_start_clip) { 
           g = __tmap_vsw16_mm_set1_epi16(query->min_aln_score);
           g = __tmap_vsw16_mm_insert_epi16(g, -opt->pen_gapo + opt->pen_gape + zero, 0);
-          for(j = 1; TMAP_VSW_LIKELY(j < tmap_vsw16_values_per_128_bits); j++) {
+          for(j = 1; TMAP_LIKELY(j < tmap_vsw16_values_per_128_bits); j++) {
               // NB: do not include the gap extend, that will be added below
               // BEFORE considering H
               g = __tmap_vsw16_mm_insert(g, -opt->pen_gapo + (-opt->pen_gape * (j * slen - 1)) + zero, j);
           }
       }
               
-      for(j = 0; TMAP_VSW_LIKELY(j < slen); ++j) { // for each stripe in the query
+      for(j = 0; TMAP_LIKELY(j < slen); ++j) { // for each stripe in the query
           // NB: at the beginning, 
           // h=H(i-1,j-1)
           // e=E(i,j)
@@ -325,10 +325,10 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
       // iterate through each value stored in a stripe
       f = __tmap_vsw16_mm_set1_epi16(query->min_aln_score);
       // we require at most 'tmap_vsw16_values_per_128_bits' iterations to guarantee F propagation
-      for(k = 0; TMAP_VSW_LIKELY(k < tmap_vsw16_values_per_128_bits); ++k) { // this block mimics SWPS3; NB: H(i,j) updated in the lazy-F loop cannot exceed max
+      for(k = 0; TMAP_LIKELY(k < tmap_vsw16_values_per_128_bits); ++k) { // this block mimics SWPS3; NB: H(i,j) updated in the lazy-F loop cannot exceed max
           f = __tmap_vsw_mm_slli_si128(f, tmap_vsw16_shift_bytes); // since x86 is little endian
           f = __tmap_vsw16_mm_insert_epi16(f, query->min_aln_score, 0); // set F(i-1,-1)[0] as negative infinity (normalized)
-          for(j = 0; TMAP_VSW_LIKELY(j < slen); ++j) { 
+          for(j = 0; TMAP_LIKELY(j < slen); ++j) { 
               h = __tmap_vsw_mm_load_si128(H1 + j); // h=H(i,j)
               h = __tmap_vsw16_mm_max_epi16(h, f); // h=H(i,j) = max{H(i,j), F(i,j)}
               h = __tmap_vsw16_mm_max_epi16(h, negative_infinity_mm); // bound with -inf
@@ -340,7 +340,7 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
               // NB: the comparison below will have some false positives, in
               // other words h == f a priori, but this is rare.
               cmp = __tmap_vsw16_mm_movemask_epi16(__tmap_vsw16_mm_cmpgt_epi16(f, h));
-              if (TMAP_VSW_LIKELY(cmp = 0x0000)) goto end_loop; // ACK: goto statement
+              if (TMAP_LIKELY(cmp = 0x0000)) goto end_loop; // ACK: goto statement
               f = __tmap_vsw16_mm_max_epi16(f, h); // f=F(i,j+1) = max{F(i,j)-pen_gape, H(i,j)-pen_gapoe}
           }
       }
@@ -383,7 +383,7 @@ end_loop:
           else { // check all
               t = (tmap_vsw16_int_t*)H1;
               (*target_end) = i;
-              for(j = 0, *query_end = -1; TMAP_VSW_LIKELY(j < slen); ++j) { // for each stripe in the query
+              for(j = 0, *query_end = -1; TMAP_LIKELY(j < slen); ++j) { // for each stripe in the query
                   for(k = 0; k < tmap_vsw16_values_per_128_bits; k++, t++) { // for each cell in the stripe
                       if((int32_t)*t > best || (1 == direction && (int32_t)*t== best)) { // found
                           best = *t;
@@ -410,7 +410,7 @@ end_loop:
           sum += tmap_vsw16_mid_value; 
           if(query->min_aln_score + tmap_vsw16_mid_value < gmax) gmax -= tmap_vsw16_mid_value;
           else gmax = query->min_aln_score;
-          for(j = 0; TMAP_VSW_LIKELY(j < slen); ++j) {
+          for(j = 0; TMAP_LIKELY(j < slen); ++j) {
               h = __tmap_vsw16_mm_subs_epi16(__tmap_vsw_mm_load_si128(H1 + j), reduce_mm);
               __tmap_vsw_mm_store_si128(H1 + j, h);
               e = __tmap_vsw16_mm_subs_epi16(__tmap_vsw_mm_load_si128(E + j), reduce_mm);

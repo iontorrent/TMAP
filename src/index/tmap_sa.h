@@ -98,7 +98,6 @@ tmap_sa_bwt2sa(const char *fn_fasta, uint32_t intv);
 uint32_t 
 tmap_sa_gen_short(const uint8_t *T, int32_t *SA, uint32_t n);
 
-
 /*! 
   main-like function for 'tmap bwt2sa'
   @param  argc  the number of arguments

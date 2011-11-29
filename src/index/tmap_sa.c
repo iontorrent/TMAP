@@ -12,6 +12,7 @@
 #include "tmap_bwt.h"
 #include "tmap_bwt_gen.h"
 #include "tmap_sa.h"
+#include "tmap_sa_aux.h"
 
 tmap_sa_t *
 tmap_sa_read(const char *fn_fasta)
@@ -168,8 +169,8 @@ tmap_sa_destroy(tmap_sa_t *sa)
   }
 }
 
-tmap_bwt_int_t 
-tmap_sa_pac_pos(const tmap_sa_t *sa, const tmap_bwt_t *bwt, tmap_bwt_int_t k)
+static tmap_bwt_int_t 
+tmap_sa_pac_pos_orig(const tmap_sa_t *sa, const tmap_bwt_t *bwt, tmap_bwt_int_t k)
 {
   tmap_bwt_int_t s = 0;
 
@@ -181,6 +182,27 @@ tmap_sa_pac_pos(const tmap_sa_t *sa, const tmap_bwt_t *bwt, tmap_bwt_int_t k)
      changed to (s + bwt->sa[k/bwt->sa_intv]) % (bwt->seq_len + 1)
      */
   return s + sa->sa[k/sa->sa_intv];
+}
+
+tmap_bwt_int_t 
+tmap_sa_pac_pos(const tmap_sa_t *sa, const tmap_bwt_t *bwt, tmap_bwt_int_t k)
+{
+
+  //return tmap_sa_pac_pos_orig(sa, bwt, k);
+  tmap_bwt_int_t orig, opt;
+
+  // Original
+  orig = tmap_sa_pac_pos_orig(sa, bwt, k);
+
+  // Optimized
+  opt = tmap_sa_pac_pos_aux(sa, bwt, k);
+
+  // Test
+  if(orig != opt) {
+      tmap_bug();
+  }
+
+  return orig;
 }
 
 extern int32_t debug_on;

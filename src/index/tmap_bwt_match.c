@@ -174,7 +174,7 @@ tmap_bwt_match_exact(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bw
 
   for(i=0;i<len;i++) {
       c = str[i];
-      if(3 < c) { 
+      if(TMAP_UNLIKELY(3 < c)) { 
           prev.offset++;
           prev.k = prev.l + 1;
           break;
@@ -186,7 +186,7 @@ tmap_bwt_match_exact(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bw
   if(NULL != match_sa) {
       (*match_sa) = prev;
   }
-  if(3 < c || prev.k > prev.l) return 0; // no match
+  if(TMAP_UNLIKELY(3 < c) || prev.k > prev.l) return 0; // no match
   return prev.l - prev.k + 1;
 }
 
@@ -203,7 +203,7 @@ tmap_bwt_match_exact_reverse(const tmap_bwt_t *bwt, int len, const uint8_t *str,
 
   for(i=len-1;0<=i;i--) {
       c = str[i];
-      if(3 < c) { 
+      if(TMAP_UNLIKELY(3 < c)) { 
           prev.offset++; 
           prev.k = prev.l + 1;
           break;
@@ -215,7 +215,7 @@ tmap_bwt_match_exact_reverse(const tmap_bwt_t *bwt, int len, const uint8_t *str,
   if(NULL != match_sa) {
       (*match_sa) = prev;
   }
-  if(3 < c || prev.k > prev.l) return 0; // no match
+  if(TMAP_UNLIKELY(3 < c) || prev.k > prev.l) return 0; // no match
   return prev.l - prev.k + 1;
 }
 
@@ -227,7 +227,7 @@ tmap_bwt_match_exact_alt(const tmap_bwt_t *bwt, int len, const uint8_t *str, tma
 
   for(i=0;i<len;i++) {
       uint8_t c = str[i];
-      if(c > 3) return 0; // there is an N here. no match
+      if(TMAP_UNLIKELY(c > 3)) return 0; // there is an N here. no match
       tmap_bwt_match_2occ(bwt, match_sa, c, &next);
       (*match_sa) = next;
       if(next.k > next.l) return 0; // no match
@@ -243,7 +243,7 @@ tmap_bwt_match_exact_alt_reverse(const tmap_bwt_t *bwt, int len, const uint8_t *
 
   for(i=len-1;0<=i;i--) {
       uint8_t c = str[i];
-      if(c > 3) return 0; // there is an N here. no match
+      if(TMAP_UNLIKELY(c > 3)) return 0; // there is an N here. no match
       tmap_bwt_match_2occ(bwt, match_sa, c, &next);
       (*match_sa) = next;
       if(next.k > next.l) return 0; // no match
