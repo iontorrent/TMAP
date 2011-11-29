@@ -741,13 +741,13 @@ BWTIncSortKey(tmap_bwt_gen_uint_t* __restrict key, tmap_bwt_gen_uint_t* __restri
 {
 #define EQUAL_KEY_THRESHOLD	4	// Partition for equal key if data array size / the number of data with equal value with pivot < EQUAL_KEY_THRESHOLD
 
-  uint32_t lowIndex, highIndex, midIndex;
-  uint32_t lowPartitionIndex, highPartitionIndex;
-  uint32_t lowStack[32], highStack[32];
+  int64_t lowIndex, highIndex, midIndex;
+  int64_t lowPartitionIndex, highPartitionIndex;
+  int64_t lowStack[32], highStack[32];
   uint32_t stackDepth;
-  uint32_t i, j;
+  int64_t i, j;
   tmap_bwt_gen_uint_t tempSeq, tempKey;
-  uint32_t numberOfEqualKey;
+  int64_t numberOfEqualKey;
 
   if (numItem < 2) return;
 
@@ -1523,7 +1523,7 @@ BWTIncConstructFromPacked(const char *inputFileName,
 
   fseek(packedFile, -1, SEEK_END);
   packedFileLen = ftell(packedFile);
-  if ((int)packedFileLen < 0) {
+  if ((long)packedFileLen < 0) {
       tmap_error("BWTIncConstructFromPacked: Cannot determine file length", Exit, OutOfRange);
   }
   if(1 != fread(&lastByteLength, sizeof(uint8_t), 1, packedFile)) {
@@ -1543,11 +1543,11 @@ BWTIncConstructFromPacked(const char *inputFileName,
   textSizeInByte = textToLoad / CHAR_PER_BYTE;	// excluded the odd byte
 
   fseek(packedFile, -2, SEEK_CUR);
-  fseek(packedFile, -((int)textSizeInByte), SEEK_CUR);
-  if(textSizeInByte + 1 != fread(bwtInc->textBuffer, sizeof( char), textSizeInByte + 1, packedFile)) {
+  fseek(packedFile, -((long)textSizeInByte), SEEK_CUR);
+  if(textSizeInByte + 1 != fread(bwtInc->textBuffer, sizeof(uint8_t), textSizeInByte + 1, packedFile)) {
       tmap_error(NULL, Exit, ReadFileError);
   }
-  fseek(packedFile, -((int)textSizeInByte + 1), SEEK_CUR);
+  fseek(packedFile, -((long)textSizeInByte + 1), SEEK_CUR);
 
   ConvertBytePackedToWordPacked(bwtInc->textBuffer, bwtInc->packedText, ALPHABET_SIZE, textToLoad);
   BWTIncConstruct(bwtInc, textToLoad);
@@ -1560,11 +1560,11 @@ BWTIncConstructFromPacked(const char *inputFileName,
           textToLoad = totalTextLength - processedTextLength;
       }
       textSizeInByte = textToLoad / CHAR_PER_BYTE;
-      fseek(packedFile, -((int)textSizeInByte), SEEK_CUR);
+      fseek(packedFile, -((long)textSizeInByte), SEEK_CUR);
       if(textSizeInByte != fread(bwtInc->textBuffer, sizeof( char), textSizeInByte, packedFile)) {
           tmap_error(NULL, Exit, ReadFileError);
       }
-      fseek(packedFile, -((int)textSizeInByte), SEEK_CUR);
+      fseek(packedFile, -((long)textSizeInByte), SEEK_CUR);
       ConvertBytePackedToWordPacked(bwtInc->textBuffer, bwtInc->packedText, ALPHABET_SIZE, textToLoad);
       BWTIncConstruct(bwtInc, textToLoad);
       processedTextLength += textToLoad;
@@ -1644,7 +1644,7 @@ tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, 
   tmap_bwt_gen_inc_t *bwtInc=NULL;
   tmap_bwt_t *bwt=NULL;
   uint8_t *buf=NULL;
-  tmap_bwt_gen_int_t i;
+  tmap_bwt_gen_uint_t i;
   char *fn_pac=NULL;
   tmap_refseq_t *refseq=NULL;
 
