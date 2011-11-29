@@ -19,7 +19,7 @@ tmap_bwa_check_core(const char *fn_fasta, int32_t length, int32_t print_sa, int3
 {
   tmap_bwt_t *bwt;
   uint8_t *seqs[2] = {NULL,NULL};
-  int32_t i, n[2], hash_width = 0, asymmetric = 0, k, l;
+  int32_t i, n[2], hash_width = 0, asymmetric, k, l;
   uint64_t hash_j;
   int64_t sum, j;
   tmap_bwt_match_occ_t sa;
@@ -56,6 +56,7 @@ tmap_bwa_check_core(const char *fn_fasta, int32_t length, int32_t print_sa, int3
           seqs[1][j] = 3;
       }
 
+      asymmetric = 0;
       j = 0;
       hash_j = sum = 0;
       while(1) {
