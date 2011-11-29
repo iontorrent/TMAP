@@ -44,7 +44,7 @@
 #define TMAP_BWT_BY_FIVE
 
 // Debug
-//#define TMAP_BWT_DEBUG
+#define TMAP_BWT_DEBUG
 
 static inline uint64_t
 tmap_bwt_get_hash_length(uint64_t i)
@@ -430,6 +430,7 @@ tmap_bwt_gen_hash_helper(tmap_bwt_t *bwt, uint32_t len)
   if(sum != bwt->seq_len - len + 1) {
 #ifdef TMAP_BWT_DEBUG
       tmap_error("Found an inconsitency in the BWT", Warn, OutOfRange);
+      /*
       fprintf(stderr, "len=%u sum=%lld (bwt->seq_len - len + 1)=%lld\n", 
               len, (long long int)sum, (long long int)(bwt->seq_len - len + 1));
       for(i=1;i<=len;i++) {
@@ -442,6 +443,7 @@ tmap_bwt_gen_hash_helper(tmap_bwt_t *bwt, uint32_t len)
                       bwt->hash_l[i-1][hash_i]);
           }
       }
+      */
 #else
       tmap_error("sum != bwt->seq_len - len + 1", Exit, OutOfRange);
 #endif
