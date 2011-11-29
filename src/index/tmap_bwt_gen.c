@@ -1567,7 +1567,6 @@ BWTIncConstructFromPacked(const char *inputFileName,
       fseek(packedFile, -((int)textSizeInByte), SEEK_CUR);
       ConvertBytePackedToWordPacked(bwtInc->textBuffer, bwtInc->packedText, ALPHABET_SIZE, textToLoad);
       BWTIncConstruct(bwtInc, textToLoad);
-      fprintf(stderr, "textToLoad=%llu\n", textToLoad); // HERE
       processedTextLength += textToLoad;
       if (bwtInc->numberOfIterationDone % 10 == 0) {
           tmap_progress_print2("%llu iterations done with %llu bases processed", 
