@@ -43,6 +43,9 @@
 
 #define TMAP_BWT_BY_FIVE
 
+// Debug
+//#define TMAP_BWT_DEBUG
+
 static inline uint64_t
 tmap_bwt_get_hash_length(uint64_t i)
 {
@@ -425,23 +428,23 @@ tmap_bwt_gen_hash_helper(tmap_bwt_t *bwt, uint32_t len)
   }
 
   if(sum != bwt->seq_len - len + 1) {
-      tmap_error("sum != bwt->seq_len - len + 1", Exit, OutOfRange);
-      /*
+#ifdef TMAP_BWT_DEBUG
       tmap_error("Found an inconsitency in the BWT", Warn, OutOfRange);
-  // HERE
-  fprintf(stderr, "len=%u sum=%lld (bwt->seq_len - len + 1)=%lld\n", 
-          len, (long long int)sum, (long long int)(bwt->seq_len - len + 1));
-  for(i=1;i<=len;i++) {
-      uint64_t hash_length = tmap_bwt_get_hash_length(i);
-      for(hash_i=0;hash_i<hash_length;hash_i++) {
-          fprintf(stderr, "i=%lld hash_i=%llu hash_k=%llu hash_l=%llu\n", 
-                  i,
-                  hash_i,
-                  bwt->hash_k[i-1][hash_i],
-                  bwt->hash_l[i-1][hash_i]);
+      fprintf(stderr, "len=%u sum=%lld (bwt->seq_len - len + 1)=%lld\n", 
+              len, (long long int)sum, (long long int)(bwt->seq_len - len + 1));
+      for(i=1;i<=len;i++) {
+          uint64_t hash_length = tmap_bwt_get_hash_length(i);
+          for(hash_i=0;hash_i<hash_length;hash_i++) {
+              fprintf(stderr, "i=%lld hash_i=%llu hash_k=%llu hash_l=%llu\n", 
+                      i,
+                      hash_i,
+                      bwt->hash_k[i-1][hash_i],
+                      bwt->hash_l[i-1][hash_i]);
+          }
       }
-  }
-      */
+#else
+      tmap_error("sum != bwt->seq_len - len + 1", Exit, OutOfRange);
+#endif
   }
   
   free(seq);
