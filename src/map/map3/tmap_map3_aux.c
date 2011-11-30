@@ -425,7 +425,7 @@ tmap_map3_aux_core(tmap_seq_t *seq,
               s->score_subo = INT32_MIN;
 
               // map3 aux data
-              tmap_map_sam_malloc_aux(s, TMAP_MAP_ALGO_MAP3);
+              tmap_map_sam_malloc_aux(s);
 
               n++;
           }

@@ -8,8 +8,8 @@
   */
 
 /*! 
-  @details hi is set to UINT32_MAX if the offset is greater than the hash width.  If l is set to
-  UINT32_MAX then that value is unavailable. 
+  @details hi is set to TMAP_BWT_INT_MAX if the offset is greater than the hash width.  If l is set to
+  TMAP_BWT_INT_MAX then that value is unavailable. 
   */
 typedef struct {
     uint64_t hi;  /*!< the hash index of the SA interval if the offset is less than or equal to the hash width */

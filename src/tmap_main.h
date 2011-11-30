@@ -43,6 +43,8 @@ extern int
 tmap_fsw_main(int argc, char *argv[]);
 extern int 
 tmap_index_speed(int argc, char *argv[]);
+extern int
+tmap_bwt_check(int argc, char *argv[]);
 #endif
 
 #endif

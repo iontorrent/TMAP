@@ -66,7 +66,7 @@ tmap_vsw_query_init(const uint8_t *query, int32_t qlen,
 {
   tmap_vsw_query_t *vsw_query;
   vsw_query = tmap_calloc(1, sizeof(tmap_vsw_query_t), "query");
-  vsw_query->query16 = tmap_vsw16_query_init(vsw_query->query16, query, qlen, tlen, query_start_clip, query_end_clip, opt);
+  vsw_query->query16 = tmap_vsw16_query_init(vsw_query->query16, query, qlen, query_start_clip, query_end_clip, opt);
   return vsw_query;
 }
 
@@ -115,7 +115,7 @@ tmap_vsw_sse2(tmap_vsw_query_t *vsw_query,
 
   if(0 == is_rev) {
       // init forward
-      vsw_query->query16 = tmap_vsw16_query_init(vsw_query->query16, query, qlen, tlen, query_start_clip, query_end_clip, opt);
+      vsw_query->query16 = tmap_vsw16_query_init(vsw_query->query16, query, qlen, query_start_clip, query_end_clip, opt);
 
       // run forward
       (*score_fwd) = tmap_vsw16_sse2_forward(vsw_query->query16, target, tlen,
@@ -183,7 +183,7 @@ tmap_vsw_sse2(tmap_vsw_query_t *vsw_query,
 
       // init reverse
       // NB: reverse the clipping
-      vsw_query->query16 = tmap_vsw16_query_init(vsw_query->query16, query, qlen, tlen, query_end_clip, query_start_clip, opt);
+      vsw_query->query16 = tmap_vsw16_query_init(vsw_query->query16, query, qlen, query_end_clip, query_start_clip, opt);
 
       // run the reverse
       // NB: we do not start clip since we know here the alignment should begin on

@@ -307,7 +307,7 @@ static tmap_sff_read_t *
 tmap_sff_read_clone(tmap_sff_read_t *r, tmap_sff_header_t *gh, tmap_sff_read_header_t *rh)
 {
   tmap_sff_read_t *ret = NULL;
-  int32_t i;
+  uint32_t i;
 
   ret = tmap_calloc(1, sizeof(tmap_sff_read_t), "r");
 
@@ -367,7 +367,7 @@ tmap_sff_clone(tmap_sff_t *sff)
 void
 tmap_sff_reverse(tmap_sff_t *sff)
 {
-  int32_t i;
+  uint32_t i;
 
   // reverse flowgram
   for(i=0;i<(sff->gheader->flow_length>>1);i++) {
@@ -390,7 +390,7 @@ tmap_sff_reverse(tmap_sff_t *sff)
 void
 tmap_sff_reverse_compliment(tmap_sff_t *sff)
 {
-  int32_t i;
+  uint32_t i;
 
   // reverse flowgram
   for(i=0;i<(sff->gheader->flow_length>>1);i++) {
@@ -420,7 +420,7 @@ tmap_sff_compliment(tmap_sff_t *sff)
 void
 tmap_sff_to_int(tmap_sff_t *sff)
 {
-  int32_t i;
+  uint32_t i;
   if(1 == sff->is_int) return;
   for(i=0;i<tmap_sff_get_bases(sff)->l;i++) {
       sff->read->bases->s[i] = tmap_nt_char_to_int[(int)sff->read->bases->s[i]];
@@ -431,7 +431,7 @@ tmap_sff_to_int(tmap_sff_t *sff)
 void
 tmap_sff_to_char(tmap_sff_t *sff)
 {
-  int32_t i;
+  uint32_t i;
   if(0 == sff->is_int) return;
   for(i=0;i<sff->read->bases->l;i++) {
       sff->read->bases->s[i] = "ACGTN"[(int)sff->read->bases->s[i]];
@@ -468,7 +468,7 @@ tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping, uint8_t *
       }
       // NB: key_seq and sff must be in integer format
       for(i=0;i<key_seq_len;i++) {
-          if(sff->read->bases->l <= i || sff->read->bases->s[i] != key_seq[i]) {
+          if((int32_t)sff->read->bases->l <= i || sff->read->bases->s[i] != key_seq[i]) {
               key_match = 0;
               break;
           }

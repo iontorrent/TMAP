@@ -35,7 +35,7 @@ tmap_string_destroy(tmap_string_t *str)
 inline void
 tmap_string_copy(tmap_string_t *dest, tmap_string_t *src)
 {
-  int32_t i;
+  uint32_t i;
   if(dest->m < src->m) {
       dest->m = src->m;
       dest->s = tmap_realloc(dest->s, sizeof(char)*dest->m, "dest->s");
@@ -49,7 +49,7 @@ tmap_string_copy(tmap_string_t *dest, tmap_string_t *src)
 inline tmap_string_t *
 tmap_string_clone(tmap_string_t *str)
 {
-  int32_t i;
+  uint32_t i;
   tmap_string_t *ret = NULL;
   
   ret = tmap_string_init(str->m);
@@ -108,7 +108,7 @@ tmap_string_reverse(tmap_string_t *str)
 void
 tmap_string_reverse_compliment(tmap_string_t *str, int32_t is_int)
 {
-  int i;
+  unsigned int i;
 
   if(1 == is_int) { // bases are integer values
       for(i = 0; i < (str->l >> 1); ++i) {
@@ -128,7 +128,7 @@ tmap_string_reverse_compliment(tmap_string_t *str, int32_t is_int)
 void
 tmap_string_compliment(tmap_string_t *str, int32_t is_int)
 {
-  int i;
+  unsigned int i;
 
   if(1 == is_int) { // bases are integer values
       for(i = 0; i < str->l; ++i) {

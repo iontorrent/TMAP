@@ -48,7 +48,7 @@
 #define tmap_fibheap_element_destroy(x) free((x))
 
 static inline int
-ceillog2(unsigned int a)
+ceillog2(int a)
 {
   int oa;
   int i;
@@ -94,7 +94,7 @@ tmap_fibheap_removerootlist(tmap_fibheap_t *h, tmap_fibheap_element_t *x);
 static void
 tmap_fibheap_consolidate(tmap_fibheap_t *h);
 static void
-tmap_fibheap_heaplink(tmap_fibheap_t *h, tmap_fibheap_element_t *y, tmap_fibheap_element_t *x);
+tmap_fibheap_heaplink(tmap_fibheap_element_t *y, tmap_fibheap_element_t *x);
 static void
 tmap_fibheap_cut(tmap_fibheap_t *h, tmap_fibheap_element_t *x, tmap_fibheap_element_t *y);
 static void
@@ -262,7 +262,7 @@ tmap_fibheap_consolidate(tmap_fibheap_t *h)
           y = a[d];
           if(tmap_fibheap_compare(h, x, y) > 0)
             swap(tmap_fibheap_element_t *, x, y);
-          tmap_fibheap_heaplink(h, y, x);
+          tmap_fibheap_heaplink(y, x);
           a[d] = NULL;
           d++;
       }
@@ -279,7 +279,7 @@ tmap_fibheap_consolidate(tmap_fibheap_t *h)
 }
 
 static void
-tmap_fibheap_heaplink(tmap_fibheap_t *h, tmap_fibheap_element_t *y, tmap_fibheap_element_t *x)
+tmap_fibheap_heaplink(tmap_fibheap_element_t *y, tmap_fibheap_element_t *x)
 {
   /* make y a child of x */
   if(x->tmap_fibheap_element_child == NULL)

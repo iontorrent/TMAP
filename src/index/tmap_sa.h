@@ -111,7 +111,7 @@ tmap_sa_bwt2sa_main(int argc, char *argv[]);
 #define INSERT_SORT_NUM_ITEM    16
 
 void QSufSortSuffixSort(tmap_bwt_sint_t* __restrict V, tmap_bwt_sint_t* __restrict I, const tmap_bwt_sint_t numChar, const tmap_bwt_sint_t largestInputSymbol,
-                                                                        const tmap_bwt_sint_t smallestInputSymbol, const tmap_bwt_sint_t skipTransform);
+                                                                        const tmap_bwt_sint_t smallestInputSymbol, const int skipTransform);
 void QSufSortGenerateSaFromInverse(const tmap_bwt_sint_t *V, tmap_bwt_sint_t* __restrict I, const tmap_bwt_sint_t numChar);
 
 #endif

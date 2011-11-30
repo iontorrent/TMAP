@@ -148,7 +148,7 @@ tmap_stream_getuntil(tmap_stream_t *ks, int delimiter, tmap_string_t *str, int *
           for (i = ks->begin; i < ks->end; ++i)
             if (isspace(ks->buf[i])) break;
       }
-      if (str->m - str->l < i - ks->begin + 1) {
+      if ((int)(str->m - str->l) < (int)(i - ks->begin + 1)) {
           str->m = str->l + (i - ks->begin) + 1;
           tmap_roundup32(str->m);
           str->s = tmap_realloc(str->s, str->m, "str->s");

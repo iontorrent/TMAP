@@ -49,7 +49,7 @@ TMAP_SORT_INIT(tmap_map_sam_sort_coord_end, tmap_map_sam_t, __tmap_map_sam_sort_
 TMAP_SORT_INIT(tmap_map_sam_sort_coord_score, tmap_map_sam_t, __tmap_map_sam_sort_coord_score_lt)
 
 void
-tmap_map_sam_malloc_aux(tmap_map_sam_t *s, int32_t algo_id)
+tmap_map_sam_malloc_aux(tmap_map_sam_t *s)
 {
   switch(s->algo_id) {
     case TMAP_MAP_ALGO_MAP1:
@@ -212,7 +212,7 @@ tmap_map_sam_copy(tmap_map_sam_t *dest, tmap_map_sam_t *src)
   // shallow copy
   (*dest) = (*src);
   // aux data
-  tmap_map_sam_malloc_aux(dest, src->algo_id);
+  tmap_map_sam_malloc_aux(dest);
   switch(src->algo_id) {
     case TMAP_MAP_ALGO_MAP1:
       (*dest->aux.map1_aux) = (*src->aux.map1_aux);
@@ -299,7 +299,7 @@ static void
 tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, int32_t sam_sff_tags, 
                    int32_t nh, int32_t aln_num, int32_t end_num, int32_t mate_unmapped, tmap_map_sam_t *mate)
 {
-  uint32_t mate_strand, mate_seqid, mate_pos, mate_tlen;
+  int64_t mate_strand, mate_seqid, mate_pos, mate_tlen;
   // mate info
   mate_strand = mate_seqid = mate_pos = mate_tlen = 0;
   if(NULL != mate && 0 == mate_unmapped) {
@@ -907,7 +907,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       if(end + 1 < sams->n) {
           if(sams->sams[end].strand == sams->sams[end+1].strand 
              && sams->sams[end].seqid == sams->sams[end+1].seqid
-             && sams->sams[end+1].pos - sams->sams[end].pos <= opt->max_seed_band) {
+             && (int32_t)(sams->sams[end+1].pos - sams->sams[end].pos) <= opt->max_seed_band) {
               end++;
               if(end_pos < sams->sams[end].pos + sams->sams[end].target_len) {
                   end_pos = sams->sams[end].pos + sams->sams[end].target_len; // one-based
@@ -932,7 +932,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
 
       // add in band width
       // one-based
-      if(start_pos < opt->bw) {
+      if(start_pos < (uint32_t)opt->bw) {
           start_pos = 1;
       }
       else {
@@ -1027,7 +1027,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           s->n_seeds = (end - start + 1);
 
           // update aux data
-          tmap_map_sam_malloc_aux(s, s->algo_id);
+          tmap_map_sam_malloc_aux(s);
           switch(s->algo_id) {
             case TMAP_MAP_ALGO_MAP1:
               (*s->aux.map1_aux) = (*tmp_sam.aux.map1_aux);
@@ -1454,7 +1454,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       }
 
       // update aux data
-      tmap_map_sam_malloc_aux(s, s->algo_id);
+      tmap_map_sam_malloc_aux(s);
       switch(s->algo_id) {
         case TMAP_MAP_ALGO_MAP1:
           (*s->aux.map1_aux) = (*tmp_sam.aux.map1_aux);

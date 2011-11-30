@@ -376,7 +376,7 @@ tmap_map2_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
       sam->target_len = (seq_len < p->tlen) ? p->tlen : seq_len;
 
       // auxiliary data
-      tmap_map_sam_malloc_aux(sam, TMAP_MAP_ALGO_MAP2);
+      tmap_map_sam_malloc_aux(sam);
       sam->aux.map2_aux->XE = p->n_seeds;
       sam->aux.map2_aux->XF = p->flag >> 16;
       if(p->l) {

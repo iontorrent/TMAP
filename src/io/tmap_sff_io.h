@@ -16,7 +16,7 @@
 typedef struct {
     tmap_file_t *fp;  /*!< pointer to the file structure */
     tmap_sff_header_t *gheader;  /*!< pointer to the global SFF header */
-    int32_t n_read;  /*!< the number of SFF reads read */
+    uint32_t n_read;  /*!< the number of SFF reads read */
 } tmap_sff_io_t;
 
 /*! 

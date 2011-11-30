@@ -12,7 +12,7 @@
 #include "tmap_bwt.h"
 #include "tmap_bwt_gen.h"
 #include "tmap_sa.h"
-#include "tmap_sa_aux.h"
+//#include "tmap_sa_aux.h"
 
 tmap_sa_t *
 tmap_sa_read(const char *fn_fasta)
@@ -189,11 +189,13 @@ tmap_sa_pac_pos(const tmap_sa_t *sa, const tmap_bwt_t *bwt, tmap_bwt_int_t k)
 {
 
   //return tmap_sa_pac_pos_orig(sa, bwt, k);
-  tmap_bwt_int_t orig, opt;
+  //tmap_bwt_int_t orig, opt;
+  tmap_bwt_int_t orig;
 
   // Original
   orig = tmap_sa_pac_pos_orig(sa, bwt, k);
 
+  /*
   // Optimized
   opt = tmap_sa_pac_pos_aux(sa, bwt, k);
 
@@ -201,6 +203,7 @@ tmap_sa_pac_pos(const tmap_sa_t *sa, const tmap_bwt_t *bwt, tmap_bwt_int_t k)
   if(orig != opt) {
       tmap_bug();
   }
+  */
 
   return orig;
 }
@@ -210,7 +213,8 @@ extern int32_t debug_on;
 void
 tmap_sa_bwt2sa(const char *fn_fasta, uint32_t intv)
 {
-  int64_t isa, s, i; // S(isa) = sa
+  int64_t isa, s; // S(isa) = sa
+  uint64_t i;
   tmap_bwt_t *bwt = NULL;
   tmap_sa_t *sa = NULL;
 
@@ -293,42 +297,12 @@ static void QSufSortBucketSort(tmap_bwt_sint_t* __restrict V, tmap_bwt_sint_t* _
 static tmap_bwt_sint_t QSufSortTransform(tmap_bwt_sint_t* __restrict V, tmap_bwt_sint_t* __restrict I, const tmap_bwt_sint_t numChar, const tmap_bwt_sint_t largestInputSymbol, 
                                  const tmap_bwt_sint_t smallestInputSymbol, const tmap_bwt_sint_t maxNewAlphabetSize, tmap_bwt_sint_t *numSymbolAggregated);
 
-// from MiscUtilities.c
-static tmap_bwt_sint_t leadingZero(const tmap_bwt_sint_t input) {
-
-    tmap_bwt_sint_t l;
-    const static tmap_bwt_sint_t leadingZero8bit[256] = {8,7,6,6,5,5,5,5,4,4,4,4,4,4,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,
-        2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
-        1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-        1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-
-    if (input & 0xFFFF0000) {
-        if (input & 0xFF000000) {
-            l = leadingZero8bit[input >> 24];
-        } else {
-            l = 8 + leadingZero8bit[input >> 16];
-        }
-    } else {
-        if (input & 0x0000FF00) {
-            l = 16 + leadingZero8bit[input >> 8];
-        } else {
-            l = 24 + leadingZero8bit[input];
-        }
-    }
-    return l;
-
-}
-
 /* Makes suffix array p of x. x becomes inverse of p. p and x are both of size
    n+1. Contents of x[0...n-1] are integers in the range l...k-1. Original
    contents of x[n] is disregarded, the n-th symbol being regarded as
    end-of-string smaller than all other symbols.*/
 void QSufSortSuffixSort(tmap_bwt_sint_t* __restrict V, tmap_bwt_sint_t* __restrict I, const tmap_bwt_sint_t numChar, const tmap_bwt_sint_t largestInputSymbol, 
-                        const tmap_bwt_sint_t smallestInputSymbol, const tmap_bwt_sint_t skipTransform) {
+                        const tmap_bwt_sint_t smallestInputSymbol, const int skipTransform) {
 
     tmap_bwt_sint_t i, j;
     tmap_bwt_sint_t s, negatedSortedGroupLength;
@@ -678,8 +652,8 @@ QSufSortTransform(tmap_bwt_sint_t* __restrict V, tmap_bwt_sint_t* __restrict I, 
 
     maxNumInputSymbol = largestInputSymbol - smallestInputSymbol + 1;
 
-    maxNumBit = BITS_IN_WORD - leadingZero(maxNumInputSymbol);
-    maxSymbol = INT_MAX >> maxNumBit;
+    for (maxNumBit = 0, i = maxNumInputSymbol; i; i >>= 1) ++maxNumBit;
+    maxSymbol = TMAP_BWT_SINT_MAX >> maxNumBit;
 
     c = maxNumInputSymbol;
     for (a = 0; a < numChar && maxSymbolInChunk <= maxSymbol && c <= maxNewAlphabetSize; a++) {
@@ -919,7 +893,7 @@ tmap_sa_sais_main(const unsigned char *T, int32_t *SA, int32_t fs, int32_t n, in
 uint32_t 
 tmap_sa_gen_short(const uint8_t *T, int32_t *SA, uint32_t n)
 {
-  if ((T == NULL) || (SA == NULL) || (n < 0)) return -1;
+  if ((T == NULL) || (SA == NULL)) return -1;
   SA[0] = n;
   if (n <= 1) {
       if (n == 1) SA[1] = 0;

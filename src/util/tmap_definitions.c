@@ -558,7 +558,7 @@ tmap_compare_versions(const char *v1, const char *v2)
 int32_t
 tmap_validate_flow_order(const char *flow_order)
 {
-  int32_t i, j;
+  uint32_t i, j;
   tmap_error_cmd_check_int(strlen(flow_order), 4, INT32_MAX, "-x");
   for(i=j=0;i<strlen(flow_order);i++) { // each base must be used
       switch(tolower(flow_order[i])) {
@@ -578,7 +578,7 @@ tmap_validate_flow_order(const char *flow_order)
 int32_t
 tmap_validate_key_seq(const char *key_seq)
 {
-  int32_t i;
+  uint32_t i;
   tmap_error_cmd_check_int(strlen(key_seq), 4, INT32_MAX, "-x");
   for(i=0;i<strlen(key_seq);i++) { // each base must be used
       switch(tolower(key_seq[i])) {
