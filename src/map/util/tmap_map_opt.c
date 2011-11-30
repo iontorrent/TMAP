@@ -984,11 +984,11 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       return 1;
   }
 
-  /*
+  
   for(i=optind;i<argc;i++) {
       fprintf(stderr, "i=%d argv[i]=%s\n", i, argv[i]);
   }
-  */
+  
 
   // allocate
   options = tmap_calloc(1, sizeof(struct option) * opt->options->n, "options");
@@ -1029,7 +1029,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       tmap_error("unrecognized algorithm", Exit, OutOfRange);
       break;
   }
-
+  
   while((c = getopt_long(argc, argv, getopt_format, options, &option_index)) >= 0) {
       // Global options
       if(c == '?') {
