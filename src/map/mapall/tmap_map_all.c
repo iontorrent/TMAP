@@ -117,6 +117,7 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   int32_t n_stages, n, stage_starts_index, stage_stops_index;
   int32_t* stage_starts;
   int32_t* stage_stops;
+  int32_t mapall_id;
   // parse common options as well as map1/map2/map3/mapvsw commands
   start = 0;
   i = 1;
@@ -158,8 +159,9 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   } else { // what the hell do i do here?
       
   }
+  
   for (n=0; n < n_stages; n++) {
-      printf("stage: %d  start: %d  stop: %d \n\t", n, stage_starts[n], stage_stops[n]);
+      printf("stage: %d  start: %d  stop: %d argc: %d\n\t", n, stage_starts[n], stage_stops[n], argc);
       for(i=stage_starts[n]; i <= stage_stops[n]; i++){
           printf("%s ", argv[i]);
       }
@@ -182,6 +184,7 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   for(z = 0; z < n_stages; z++) { //z is the stage
 
       cur_stage = atoi(argv[stage_starts[z]+1]);
+      printf("stage_starts[%d]=%s  stage_stops[%d]=%s\n", z, argv[stage_starts[z]], z, argv[stage_stops[z]]);
       for(i = stage_starts[z] + 2; i <= stage_stops[z]; i++) {
 
           printf("argv[%d]: %s\n", i, argv[i]);
@@ -192,20 +195,15 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           //if it's a mapping algo
           if(0 < cur_id) { // found!
               start = i;
-              opt_next_id = cur_id;
+              printf("argv[start:%d]: %s\n", start, argv[start]);
+
+              opt_id = cur_id;
               i++; //advance i
-              while ( 0 > tmap_algo_name_to_id( argv[i] ) && i <= stage_stops[z] ) {
+              while ( i <= stage_stops[z] && 0 > tmap_algo_name_to_id( argv[i] ) ) {
                   i++;
                   
               }
-              /*
-              if (start != 0) {
-                  //left off here.  need to anchor at start of map3
-                  //and end at start of next map,stage name
-              }*/
              
-              //opt_next_stage = cur_stage;
-              
           }//we're not on an algorithm
           //else
           
@@ -235,33 +233,24 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
               opt->num_stages = cur_stage;
               
           }
-          /*
-          if(TMAP_MAP_ALGO_NONE == opt_id) {
-              // parse common options
-              printf("i: %d start: %d\n", i, start);
-              if(0 == tmap_map_opt_parse(stage_stops[z] - i, argv+i, opt)) {
-                  return 0;
-              }
-              
-          }*/
-          //else {
-              // get a sub-opt
-
+        
               opt_cur= tmap_map_opt_add_sub_opt(opt, opt_id);
 
               // set stage
               opt_cur->algo_stage = cur_stage;
+              //set algo id
+              opt_cur->algo_id = opt_id;
               // parse common options
               if(0 < i - start) {
+                  printf("algo_id: %d argv[i:%d]: %s  argv[start:%d]: %s  i - start: %d\n", opt_cur->algo_id,i,argv[i], start,argv[start], i - start);
+                  
                   if(0 == tmap_map_opt_parse(i-start, argv+start, opt_cur)) {
                       return 0;
                   }
               }
-          //}
 
-          // update next
-          opt_id = opt_next_id;
-          //start = i;
+       
+              i--;
       }
 
     }//end for over stage start/stop range
@@ -274,6 +263,7 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   
   // do this after parsing
   opt->argc = argc; opt->argv = argv;
+  printf("returning?\n");
   return 1;
 }
 
