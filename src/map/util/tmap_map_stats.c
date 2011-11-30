@@ -35,10 +35,10 @@ tmap_map_stats_add(tmap_map_stats_t *dest, tmap_map_stats_t *src)
 void
 tmap_map_stats_print(tmap_map_stats_t *s)
 {
-  fprintf(stderr, "num_reads=%lld\n", s->num_reads);
-  fprintf(stderr, "num_with_mapping=%lld\n", s->num_with_mapping);
-  fprintf(stderr, "num_after_seeding=%lld\n", s->num_after_seeding);
-  fprintf(stderr, "num_after_scoring=%lld\n", s->num_after_scoring);
-  fprintf(stderr, "num_after_rmdup=%lld\n", s->num_after_rmdup);
-  fprintf(stderr, "num_after_filter=%lld\n", s->num_after_filter);
+  fprintf(stderr, "num_reads=%lu\n", s->num_reads);
+  fprintf(stderr, "num_with_mapping=%lu\n", s->num_with_mapping);
+  fprintf(stderr, "num_after_seeding=%lu\n", s->num_after_seeding);
+  fprintf(stderr, "num_after_scoring=%lu\n", s->num_after_scoring);
+  fprintf(stderr, "num_after_rmdup=%lu\n", s->num_after_rmdup);
+  fprintf(stderr, "num_after_filter=%lu\n", s->num_after_filter);
 }
