@@ -28,17 +28,19 @@
 #define __left_lt(a, b) ((a).end > (b).end)
 TMAP_SORT_INIT(hit, tmap_map2_hit_t, __left_lt)
 
-#define __hitG_lt(a, b) ((a).G > (b).G)
+#define __hitG_lt(a, b) (((a).G + ((int)(a).n_seeds<<2)) > (b).G + ((int)(b).n_seeds<<2))
 TMAP_SORT_INIT(hitG, tmap_map2_hit_t, __hitG_lt)
 
 #define TMAP_MAP2_AUX_IS 0
 
 int32_t
-tmap_map2_aux_resolve_duphits(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_map2_aln_t *b, int32_t IS, int32_t min_as)
+tmap_map2_aux_resolve_duphits(const tmap_refseq_t *refseq, const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_map2_aln_t *b, int32_t IS, int32_t min_as)
 {
   int32_t i, j, n;
+  uint32_t seqid, pos;
+  uint8_t is_rev;
   if(b->n == 0) return 0;
-  if(NULL != bwt) { // convert to chromosomal coordinates if suitable
+  if(NULL != bwt && NULL != sa) { // convert to chromosomal coordinates if suitable
       tmap_map2_aln_t *tmp_b;
       // copy over
       tmp_b = tmap_map2_aln_init();
@@ -60,19 +62,23 @@ tmap_map2_aux_resolve_duphits(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_m
       // copy over
       for(i = j = 0; i < tmp_b->n; ++i) {
           tmap_map2_hit_t *p = tmp_b->hits + i;
-          if(p->l - p->k + 1 <= IS && TMAP_MAP2_MINUS_INF < p->G) {
+          if(0 != p->k && 0 != p->l && 0 != p->qlen && p->l - p->k + 1 <= IS && TMAP_MAP2_MINUS_INF < p->G) {
               tmap_bwt_int_t k;
               for(k = p->k; k <= p->l; ++k) {
                   b->hits[j] = *p;
-                  b->hits[j].k = tmap_sa_pac_pos(sa, bwt, k);
+                  b->hits[j].k = tmap_refseq_pac2real(refseq, tmap_sa_pac_pos(sa, bwt, k), 1, &seqid, &pos, &is_rev);
                   b->hits[j].l = 0;
+                  b->hits[j].is_rev = is_rev;
+                  if (is_rev) b->hits[j].k -= p->qlen - 1;
                   ++j;
               }
           } else if(p->G > min_as) {
               b->hits[j] = *p;
-              b->hits[j].k = tmap_sa_pac_pos(sa, bwt, p->k);
+              b->hits[j].k = tmap_refseq_pac2real(refseq, tmap_sa_pac_pos(sa, bwt, p->k), 1, &seqid, &pos, &is_rev);
               b->hits[j].l = 0;
+              b->hits[j].is_rev = is_rev;
               b->hits[j].flag |= 0x1;
+              if (is_rev) b->hits[j].k -= p->qlen - 1;
               ++j;
           }
       }
@@ -86,6 +92,7 @@ tmap_map2_aux_resolve_duphits(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_m
           tmap_map2_hit_t *q = b->hits + j;
           int32_t compatible = 1;
           if(q->G == 0) continue;
+          if (p->is_rev != q->is_rev) continue; // hits from opposite strands are not duplicates
           if(p->l == 0 && q->l == 0) {
               int32_t qol = (p->end < q->end? p->end : q->end) - (p->beg > q->beg? p->beg : q->beg);
               if(qol < 0) qol = 0;
@@ -244,22 +251,48 @@ tmap_map2_aux_merge_hits(tmap_map2_aln_t *b[2], int32_t l, int32_t is_reverse)
 
 static tmap_map2_aln_t *
 tmap_map2_aux_aln(tmap_map_opt_t *opt, 
+                  tmap_refseq_t *target_refseq,
                   tmap_bwt_t *target_bwt, tmap_sa_t *target_sa,
                   tmap_string_t *seq[2], int32_t is_rev, tmap_map2_global_mempool_t *pool)
 {
-  tmap_map2_aln_t *b[2], **bb[2];
-  int32_t k;
+  tmap_map2_aln_t *b[2], **bb[2], **_b, *p;
+  int32_t j, k;
+      
+  tmap_bwtl_t *query = tmap_bwtl_seq2bwtl(seq[0]->l, (uint8_t*)seq[0]->s);
+  _b = tmap_map2_core_aln(opt, query, target_refseq, target_bwt, target_sa, pool);
+  tmap_bwtl_destroy(query);
 
   for(k = 0; k < 2; ++k) {
-      tmap_bwtl_t *query = tmap_bwtl_seq2bwtl(seq[k]->l, (uint8_t*)seq[k]->s);
-      bb[k] = tmap_map2_core_aln(opt, query, target_bwt, target_sa, pool);
-      tmap_map2_aux_resolve_duphits(target_bwt, target_sa, bb[k][0], opt->max_seed_intv, 0);
-      tmap_map2_aux_resolve_duphits(target_bwt, target_sa, bb[k][1], opt->max_seed_intv, 0);
-      tmap_bwtl_destroy(query);
+      bb[k] = tmap_calloc(2, sizeof(void*), "bb[k]");
+      bb[k][0] = tmap_calloc(1, sizeof(tmap_map2_aln_t), "bb[k][0]");
+      bb[k][1] = tmap_calloc(1, sizeof(tmap_map2_aln_t), "bb[k][1]");
+
+  }
+
+  for(k = 0; k < 2; ++k) { // separate _b into bb[2] based on the strand
+      for(j = 0; j < _b[k]->n; ++j) {
+          tmap_map2_hit_t *q;
+          p = bb[_b[k]->hits[j].is_rev][k];
+          if (p->n == p->max) {
+              p->max = p->max? p->max<<1 : 8;
+              p->hits = tmap_realloc(p->hits, p->max * sizeof(tmap_map2_hit_t), "p->hits");
+          }
+          q = &p->hits[p->n++];
+          *q = _b[k]->hits[j];
+          if (_b[k]->hits[j].is_rev) {
+              int32_t x = q->beg;
+              q->beg = seq[0]->l - q->end;
+              q->end = seq[0]->l - x;
+          }
+      }
+  }
+  // resolve duplicates
+  for(k = 0; k < 2; ++k) {
+      tmap_map2_aux_resolve_duphits(target_refseq, target_bwt, target_sa, bb[k][0], opt->max_seed_intv, 0);
   }
   b[0] = bb[0][1]; b[1] = bb[1][1]; // bb[*][1] are "narrow SA hits"
   tmap_map2_chain_filter(opt, seq[0]->l, b);
-  
+
   // merge all hits
   for(k = 0; k < 2; ++k) {
       tmap_map2_aux_merge_hits(bb[k], seq[k]->l, 0); // bb[k][1] and bb[k][0] are merged into bb[k][0]
@@ -465,22 +498,25 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
               c = (int)(tmap_rand_get(rand) * 4); // FIXME: ambiguous bases are not properly handled
               seq[0]->s[i] = c; // original
               seq[1]->s[l-1-i] = 3 - c; // reverse compliment
-              rseq[0]->s[l-1-i] = c; // reverse 
-              rseq[1]->s[i] = 3 - c; // compliment
+              rseq[0]->s[l-1-i] = 3 - c; // reverse compliment
+              rseq[1]->s[i] = c; // original
+              //rseq[0]->s[l-1-i] = c; // reverse 
+              //rseq[1]->s[i] = 3 - c; // compliment
           }
       }
   }
 
   // alignment
-  b[0] = tmap_map2_aux_aln(&opt, bwt, sa, seq, 0, pool);
+  b[0] = tmap_map2_aux_aln(&opt, refseq, bwt, sa, seq, 0, pool);
   for(k = 0; k < b[0]->n; ++k) {
       if(b[0]->hits[k].n_seeds < opt.seeds_rev) break;
   } 
-  if(1 == 1 || k < b[0]->n) {
-      b[1] = tmap_map2_aux_aln(&opt, bwt, sa, rseq, 1, pool);
+  if(k < b[0]->n) {
+      b[1] = tmap_map2_aux_aln(&opt, refseq, bwt, sa, rseq, 1, pool);
       for(i = 0; i < b[1]->n; ++i) {
           tmap_map2_hit_t *p = b[1]->hits + i;
           int x = p->beg;
+          p->flag ^= 0x10, p->is_rev ^= 1; // flip the strand
           p->beg = l - p->end;
           p->end = l - x;
           if(p->l == 0) {
@@ -524,8 +560,10 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
           if(c >= 4) { 
               seq[0]->s[i] = c; // original
               seq[1]->s[l-1-i] = 3 - c; // reverse compliment
-              rseq[0]->s[l-1-i] = c; // reverse 
-              rseq[1]->s[i] = 3 - c; // compliment
+              rseq[0]->s[l-1-i] = 3 - c; // reverse compliment
+              rseq[1]->s[i] = c; // original
+              //rseq[0]->s[l-1-i] = c; // reverse 
+              //rseq[1]->s[i] = 3 - c; // compliment
           }
       }
       tmap_seq_destroy(orig_seq);

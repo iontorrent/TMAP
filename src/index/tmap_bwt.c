@@ -330,7 +330,7 @@ tmap_bwt_update_occ_interval(tmap_bwt_t *bwt, tmap_bwt_int_t occ_interval)
   for (i = k = 0; i < bwt->seq_len; ++i) {
       // store the occurrences
       if (i % occ_interval == 0) {
-          memcpy(buf + k, c, sizeof(tmap_bwt_int_t) * 4);
+          memcpy(buf + k, c, sizeof(tmap_bwt_int_t) * 4); // in fact: sizeof(tmap_bwt_int_t) = 4*(sizeof(tmap_bwt_int_t)/4)
           k += sizeof(tmap_bwt_int_t);
       }
       // store the bwt string

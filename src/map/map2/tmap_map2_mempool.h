@@ -32,8 +32,8 @@ typedef struct {
 typedef struct {
   int32_t n;  /*!< the index of the next cell */
   int32_t max;  /*!< the number of cells allocated */
-  tmap_bwt_int_t tk;  /*!< lower suffix array interval of the target */
-  tmap_bwt_int_t tl;  /*!< upper suffix array interval of the target  */
+  uint32_t tk;  /*!< lower suffix array interval of the target */
+  uint32_t tl;  /*!< upper suffix array interval of the target  */
   tmap_map2_cell_t *array;  /*!< the array of cells */
 } tmap_map2_entry_t, *tmap_map2_entry_p;
 /*! 

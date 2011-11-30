@@ -157,7 +157,6 @@ __tmap_map_opt_option_print_func_int_init(indel_ends_bound)
 __tmap_map_opt_option_print_func_int_init(max_best_cals)
 __tmap_map_opt_option_print_func_int_init(max_entries)
 // map2 options
-//__tmap_map_opt_option_print_func_double_init(yita)
 __tmap_map_opt_option_print_func_double_init(length_coef)
 __tmap_map_opt_option_print_func_int_init(max_seed_intv)
 __tmap_map_opt_option_print_func_int_init(z_best)
@@ -812,7 +811,6 @@ tmap_map_opt_init(int32_t algo_id)
       break;
     case TMAP_MAP_ALGO_MAP2:
       // map2
-      opt->yita = 5.5f;
       //opt->mask_level = 0.50; 
       opt->length_coef = 5.5f;
       opt->max_seed_intv = 3; 
@@ -1647,7 +1645,6 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "indel_ends_bound=%d\n", opt->indel_ends_bound);
   fprintf(stderr, "max_best_cals=%d\n", opt->max_best_cals);
   fprintf(stderr, "max_entries=%d\n", opt->max_entries);
-  fprintf(stderr, "yita=%lf\n", opt->yita);
   fprintf(stderr, "length_coef=%lf\n", opt->length_coef);
   fprintf(stderr, "max_seed_intv=%d\n", opt->max_seed_intv);
   fprintf(stderr, "z_best=%d\n", opt->z_best);

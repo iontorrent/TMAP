@@ -20,7 +20,15 @@
 #include "tmap_map2_aux.h"
 #include "tmap_map2_core.h"
 
+typedef struct {
+    tmap_bwt_int_t k, l;
+} tmap_map2_qintv_t;
+
+#define qintv_eq(a, b) ((a).k == (b).k && (a).l == (b).l)
+#define qintv_hash(a) ((a).k>>7^(a).l<<17)
+
 // for hashing
+TMAP_HASH_INIT(tmap_map2_qintv, tmap_map2_qintv_t, uint64_t, 1, qintv_hash, qintv_eq)
 TMAP_HASH_MAP_INIT_INT64(64, uint64_t)
 
 // for sorting generically
@@ -95,17 +103,17 @@ tmap_map2_core_cut_tail(tmap_map2_entry_t *u, int32_t T, tmap_map2_entry_t *aux)
 }
 // remove duplicated cells
 static inline void 
-tmap_map2_core_remove_duplicate(tmap_map2_entry_t *u, tmap_hash_t(64) *hash)
+tmap_map2_core_remove_duplicate(tmap_map2_entry_t *u, tmap_hash_t(tmap_map2_qintv) *hash)
 {
   int32_t i, ret, j;
   tmap_hash_iter_t k;
-  uint64_t key;
-  tmap_hash_clear(64, hash);
+  tmap_map2_qintv_t key;
+  tmap_hash_clear(tmap_map2_qintv, hash);
   for(i = 0; i != u->n; ++i) {
       tmap_map2_cell_t *p = u->array + i;
       if(p->match_sa.l== 0) continue;
-      key = (uint64_t)p->match_sa.k << 32 | p->match_sa.l;
-      k = tmap_hash_put(64, hash, key, &ret);
+      key.k = p->match_sa.k; key.l = p->match_sa.l;
+      k = tmap_hash_put(tmap_map2_qintv, hash, key, &ret);
       j = -1;
       if(ret == 0) {
           if((uint32_t)tmap_hash_value(hash, k) >= p->G) j = i;
@@ -161,7 +169,7 @@ static void
 tmap_map2_core_save_hits(const tmap_bwtl_t *bwtl, int32_t thres, tmap_map2_hit_t *hits, tmap_map2_entry_t *u)
 {
   int32_t i;
-  tmap_bwt_int_t k;
+  uint32_t k; // for the target
   for(i = 0; i < u->n; ++i) {
       tmap_map2_cell_t *p = u->array + i;
       if(p->G < thres) continue;
@@ -252,13 +260,14 @@ Note: tlen may be over-estimated!
  */
 tmap_map2_aln_t **
 tmap_map2_core_aln(const tmap_map_opt_t *opt, const tmap_bwtl_t *target, 
-               const tmap_bwt_t *query_bwt, const tmap_sa_t *query_sa, 
+               const tmap_refseq_t *refseq, const tmap_bwt_t *query_bwt, const tmap_sa_t *query_sa, 
                tmap_map2_global_mempool_t *pool)
 {
   tmap_map2_stack_t *stack = (tmap_map2_stack_t*)pool->stack;
   tmap_map2_aln_t *b, *b1, **b_ret;
   int32_t i, j, score_mat[16], *heap, heap_size, n_tot = 0;
-  tmap_hash_t(64) *rhash, *chash;
+  tmap_hash_t(tmap_map2_qintv) *rhash;
+  tmap_hash_t(64) *chash;
 
   // initialize connectivity hash (chash)
   chash = tmap_map2_core_connectivity(target);
@@ -267,7 +276,7 @@ tmap_map2_core_aln(const tmap_map_opt_t *opt, const tmap_bwtl_t *target,
     for(j = 0; j != 4; ++j)
       score_mat[i<<2|j] = (i == j)? opt->score_match : -opt->pen_mm;
   // initialize other variables
-  rhash = tmap_hash_init(64);
+  rhash = tmap_hash_init(tmap_map2_qintv);
   tmap_map2_core_init(target, query_bwt, stack);
   heap_size = opt->z_best;
   heap = tmap_calloc(heap_size, sizeof(int32_t), "heap");
@@ -415,7 +424,7 @@ tmap_map2_core_aln(const tmap_map_opt_t *opt, const tmap_bwtl_t *target,
   } // while(top)
   // free
   free(heap);
-  tmap_hash_destroy(64, rhash);
+  tmap_hash_destroy(tmap_map2_qintv, rhash);
   tmap_hash_destroy(64, chash);
   stack->pending.n = stack->stack0.n = 0;
 
