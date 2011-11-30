@@ -48,6 +48,7 @@ tmap_bwa_check_core(const char *fn_fasta, int32_t length, int32_t print_sa, int3
   }
   free(seqs[0]);
   */
+  //tmap_file_fprintf(tmap_file_stderr, "primary=%llu\n", bwt->primary);
 
   for(i=1;i<=length;i++) {
       seqs[0] = tmap_calloc(i, sizeof(uint8_t), "seqs[0]");
@@ -65,6 +66,7 @@ tmap_bwa_check_core(const char *fn_fasta, int32_t length, int32_t print_sa, int3
                   seqs[1][k] = 3 - seqs[0][i-k-1];
               }
               for(k=0;k<2;k++) {
+                  //n[k] = tmap_bwt_match_exact(bwt, i, seqs[k], &sa);
                   n[k] = tmap_bwt_match_exact_reverse(bwt, i, seqs[k], &sa);
                   if(0 == k) {
                       if(0 < n[k] && sa.k <= sa.l) {
