@@ -43,6 +43,14 @@ void
 tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, int32_t hash_width);
 
 /*! 
+  updates a bwt FASTA file for a new hash width
+  @param  fn_fasta      file name of the FASTA file
+  @param  hash_width    the desired k-mer hash width
+  */
+void 
+tmap_bwt_update_hash(const char *fn_fasta, int32_t hash_width);
+
+/*! 
   @param  T  the input string
   @param  n  the length of the input string
   @return    the primary index if no error occurred, -1 or -2 otherwise

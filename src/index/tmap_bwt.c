@@ -730,3 +730,26 @@ tmap_bwt_pac2bwt_main(int argc, char *argv[])
 
   return 0;
 }
+
+int
+tmap_bwt_bwtupdate_main(int argc, char *argv[])
+{
+  int c, help = 0;
+  uint32_t hash_width = TMAP_BWT_HASH_WIDTH;
+
+  while((c = getopt(argc, argv, "w:vh")) >= 0) {
+      switch(c) {
+        case 'w': hash_width = atoi(optarg); break;
+        case 'v': tmap_progress_set_verbosity(1); break;
+        case 'h': help = 1; break;
+        default: return 1;
+      }
+  }
+  if(1 != argc - optind || 1 == help) {
+      tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [-l -o INT -w INT -v -h] <in.fasta>\n", PACKAGE, argv[0]);
+      return 1;
+  }
+  tmap_bwt_update_hash(argv[optind], hash_width);
+
+  return 0;
+}

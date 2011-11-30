@@ -32,6 +32,8 @@ extern int
 tmap_refseq_refinfo_main(int argc, char *argv[]);
 extern int
 tmap_refseq_pac2fasta_main(int argc, char *argv[]);
+extern int
+tmap_bwt_bwtupdate_main(int argc, char *argv[]);
 #ifdef HAVE_SAMTOOLS
 extern int
 tmap_sam2fs_main(int argc, char *argv[]);
