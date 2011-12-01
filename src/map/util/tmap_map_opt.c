@@ -1271,6 +1271,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
       
       else if(0 == strcmp("seed-freq-cutoff", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAPALL ) {
+          printf("hi\n");
           opt->mapall_seed_freqc = atof(optarg);
       }
       

@@ -260,9 +260,7 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
                   //printf("rewind!\n");
               }
               printf("argc[ (i+1)-start ]=%d argv[ argv+start-1 ]=%s\n", (i+1)-start, argv[start]);
-              printf("optind: %d\n", optind);
               optind=1;
-              printf("optind should now be 1.  optind=%d\n", optind);
               tmap_map_opt_parse((i+1)-start, argv+start-1, mapall_ops);
                 //return 0;
               
