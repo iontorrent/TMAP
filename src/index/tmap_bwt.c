@@ -38,7 +38,8 @@
 #include "../io/tmap_file.h"
 #include "tmap_bwt_gen.h"
 #include "tmap_bwt.h"
-//#include "tmap_bwt_aux.h"
+#include "tmap_bwt_aux.h"
+#include "tmap_bwt_check.h"
 #include "tmap_bwt_match.h"
 
 #define TMAP_BWT_BY_FIVE
@@ -485,6 +486,10 @@ tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width)
       tmap_bwt_gen_hash_helper(bwt, i);
       bwt->hash_width = i; // updated the hash width
   }
+
+  // test the BWT hash
+  tmap_progress_print2("testing the BWT hash");
+  tmap_bwt_check_core2(bwt, bwt->hash_width, 1, 0, 1);
   
   tmap_progress_print2("constructed the occurrence hash for the BWT string");
 }

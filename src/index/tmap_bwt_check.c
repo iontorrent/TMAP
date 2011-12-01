@@ -9,46 +9,21 @@
 
 #include "../util/tmap_error.h"
 #include "../util/tmap_alloc.h"
+#include "../util/tmap_progress.h"
 #include "../io/tmap_file.h"
 #include "tmap_bwt.h"
 #include "tmap_bwt_match.h"
-
+#include "tmap_bwt_check.h"
 
 void 
-tmap_bwa_check_core(const char *fn_fasta, int32_t length, int32_t print_sa, int32_t use_hash)
+tmap_bwt_check_core2(tmap_bwt_t *bwt, int32_t length, int32_t print_msg, int32_t print_sa, int32_t warn)
 {
-  tmap_bwt_t *bwt;
   uint8_t *seqs[2] = {NULL,NULL};
-  int32_t i, n[2], hash_width = 0, asymmetric, k, l;
+  int32_t i, n[2], asymmetric, k, l;
   uint64_t hash_j;
   int64_t sum, j;
   tmap_bwt_match_occ_t sa;
 
-  bwt = tmap_bwt_read(fn_fasta);
-
-  if(0 == use_hash) {
-      hash_width = bwt->hash_width;
-      bwt->hash_width = 0;
-  }
-  
-  /*
-  seqs[0] = tmap_calloc(2, sizeof(uint8_t), "seqs[0]");
-  seqs[0][0] = 0;
-  seqs[0][1] = 1;
-  n = tmap_bwt_match_exact(bwt, 2, seqs[0], &sa);
-  int k;
-  for(k=0;k<2;k++) {
-      fputc("ACGTN"[seqs[0][k]], tmap_file_stderr);
-  }
-  if(0 < n && sa.k <= sa.l) {
-      tmap_file_fprintf(tmap_file_stderr, " %llu %llu %d\n", sa.k, sa.l, n);
-  }
-  else {
-      tmap_file_fprintf(tmap_file_stderr, " NA NA NA\n");
-  }
-  free(seqs[0]);
-  */
-  //tmap_file_fprintf(tmap_file_stderr, "primary=%llu\n", bwt->primary);
 
   for(i=1;i<=length;i++) {
       seqs[0] = tmap_calloc(i, sizeof(uint8_t), "seqs[0]");
@@ -72,15 +47,15 @@ tmap_bwa_check_core(const char *fn_fasta, int32_t length, int32_t print_sa, int3
                       if(0 < n[k] && sa.k <= sa.l) {
                           sum += n[k];
                       }
-                      if(1 == print_sa) {
+                      if(1 == print_msg && 1 == print_sa) {
                           for(l=0;l<i;l++) {
-                              tmap_file_fprintf(tmap_file_stderr, "%c", "ACGTN"[seqs[k][l]]);
+                              tmap_progress_print2("%c", "ACGTN"[seqs[k][l]]);
                           }
                           if(0 < n[k] && sa.k <= sa.l) {
-                              tmap_file_fprintf(tmap_file_stderr, "\t%llu\t%llu\t%d\n", sa.k, sa.l, n[k]);
+                              tmap_progress_print2("\t%llu\t%llu\t%d\n", sa.k, sa.l, n[k]);
                           }
                           else {
-                              tmap_file_fprintf(tmap_file_stderr, "\tNA\tNA\tNA\n");
+                              tmap_progress_print2("\tNA\tNA\tNA\n");
                           }
                       }
                   }
@@ -110,13 +85,31 @@ tmap_bwa_check_core(const char *fn_fasta, int32_t length, int32_t print_sa, int3
       free(seqs[0]);
       free(seqs[1]);
 
-      tmap_file_fprintf(tmap_file_stderr, "kmer:%d sum=%llu expected sum:%llu difference:%lld matched:%s\n",
-              i,
-              sum,
-              bwt->seq_len - i + 1,
-              sum - (bwt->seq_len - i + 1),
-              sum == (bwt->seq_len - i + 1) ? "true" : "false");
+      j = (sum == (bwt->seq_len - i + 1)) ? 0 : 1; // j==1 on fail
+      if(1 == print_msg) {
+          if(0 == j) tmap_progress_print2("%d-mer validation passed", i);
+          else tmap_progress_print2("%d-mer validation failed: observed (%llu) != expected (%llu)\n", i, sum, bwt->seq_len - i + 1);
+      }
+      if(0 == warn && 1 == j) {
+          tmap_error("inconsistency found in the BWT", Exit, OutOfRange);
+      }
   }
+}
+
+void 
+tmap_bwt_check_core(const char *fn_fasta, int32_t length, int32_t print_sa, int32_t use_hash)
+{
+  tmap_bwt_t *bwt;
+  int32_t hash_width = 0;
+
+  bwt = tmap_bwt_read(fn_fasta);
+
+  if(0 == use_hash) {
+      hash_width = bwt->hash_width;
+      bwt->hash_width = 0;
+  }
+
+  tmap_bwt_check_core2(bwt, length, 1, print_sa, 1);
 
   if(0 == use_hash) {
       bwt->hash_width = hash_width;
@@ -128,6 +121,8 @@ int
 tmap_bwt_check(int argc, char *argv[])
 {
 	int c, length = 12, print_sa = 0, use_hash = 0;
+
+        tmap_progress_set_verbosity(1); 
 
 	while ((c = getopt(argc, argv, "l:pH")) >= 0) {
 		switch (c) {
@@ -147,6 +142,6 @@ tmap_bwt_check(int argc, char *argv[])
 		tmap_file_fprintf(tmap_file_stderr, "\n");
 		return 1;
 	}
-	tmap_bwa_check_core(argv[optind], length, print_sa, use_hash);
+	tmap_bwt_check_core(argv[optind], length, print_sa, use_hash);
 	return 0;
 }
