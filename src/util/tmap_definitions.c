@@ -11,11 +11,11 @@
 // Algorithm IDs
 
 static char *algo_id_to_name[17] = {
-    "none",
+    "none", 
     "map1", 
     "map2", 
     "map3", 
-    "dummy4",
+    "dummy4", 
     "dummy5",
     "dummy6",
     "dummy7",

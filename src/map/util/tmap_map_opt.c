@@ -984,10 +984,11 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       return 1;
   }
 
-  printf("argc: %d optind: %d\n", argc, optind);
-  for(i=optind;i<argc;i++) {
+  //printf("argc: %d optind: %d\n", argc, optind);
+  
+  /*for(i=optind;i<argc;i++) {
       fprintf(stderr, "i=%d argv[i]=%s\n", i, argv[i]);
-  }
+  }*/
   
 
   // allocate
