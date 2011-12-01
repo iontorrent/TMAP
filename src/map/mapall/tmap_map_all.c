@@ -217,14 +217,16 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       tmap_map_all_default_opts(mapall_ops);
       cur_stage = atoi(argv[stage_starts[z]+1]);
       printf("n_stages: %d argv: %s ", n_stages, argv[stage_starts[z]+1]);
-      printf("cur_stage: %d stage_starts[%d]=%s  stage_stops[%d]=%s\n", cur_stage, z, argv[stage_starts[z]], z, argv[stage_stops[z]]);
+      printf("cur_stage: %d stage_starts[%d]=%s  stage_stops[%d]=%s\n", 
+              cur_stage, z, argv[stage_starts[z]], z, argv[stage_stops[z]]);
       for(i = stage_starts[z] + 2; i <= stage_stops[z]; i++) {
 
-          //printf("argv[%d]: %s\n", i, argv[i]);
           // get the algorithm type and stage
           name = tmap_strdup(argv[i]); // copy the command line option
           
           cur_id = tmap_algo_name_to_id(name); // get the algorithm id
+          printf("cur_id: %d argv[%d]: %s\n", cur_id, i, argv[i] );
+
           //if it's a mapping algo
           if(0 < cur_id) { // found!
               start = i;
@@ -235,6 +237,8 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
                   printf("if: argv[i:%d] %s\n", i, argv[i]);
                   i++;                  
               }
+              
+              
           }//we're not on an algorithm
           else {
               start = i;
@@ -246,8 +250,12 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
                   i++;
               }
               //rewind to the map algo name
-              if (i !=stage_stops[z] ) i--;
-              
+              printf("i: %d  stage_stops[z]: %d\n", i, stage_stops[z]);
+              if (i !=stage_stops[z] + 1){
+                  i--;
+                  printf("rewind!\n");
+              }
+              continue; //next iteration of for loop
           }
           
           free(name);
@@ -260,8 +268,8 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
               i, (i < argc) ? argv[i] : NULL, argc);
       */
       
-      if(opt_id != opt_next_id // new type
-         || i == argc) { // end of command line arguments
+      /*if(opt_id != opt_next_id // new type
+         || i == argc) { // end of command line arguments*/
           optind=1; // needed for getopt_long
           /*
           fprintf(stderr, "Algorithm: %s start=%d i=%d\n", tmap_algo_id_to_name(opt_id), start, i);
@@ -270,6 +278,7 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
               fprintf(stderr, "j=%d arg=%s\n", j, argv[j+start]);
           }
           */
+          if (opt_id != mapall_id) {
           printf("in lower if\n");
           if(opt->num_stages < cur_stage) { 
               opt->num_stages = cur_stage;
@@ -280,14 +289,15 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
               if (opt_id == mapall_id) {
                   //optind=0;
                   //printf("argv+start=%s \n", *(argv+start) );
-                  
+
                   if(0 == tmap_map_opt_parse((i+1)-start, argv+start-1, mapall_ops)) {
                     return 0;
                   }
               }
               else{
-                // printf("algo_id: %d argv[i:%d]: %s  argv[start:%d]: %s  i - start: %d\n", opt_cur->algo_id,i,argv[i], start,argv[start], i - start);
 
+                // printf("algo_id: %d argv[i:%d]: %s  argv[start:%d]: %s  i - start: %d\n", opt_cur->algo_id,i,argv[i], start,argv[start], i - start);
+                  printf("argv[lawl i: %d] %s\n", i, argv[i]);
                   opt_cur= tmap_map_opt_add_sub_opt(opt, opt_id);
 
                   // set stage
@@ -323,7 +333,7 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   for(i=0; i<opt->num_sub_opts; i++){
       printf("sub opt algo_id: %d stage: %d\n", opt->sub_opts[i]->algo_id, opt->sub_opts[i]->algo_stage);
   }
-  free(mapall_ops);
+  //free(mapall_ops);
   return 1;
 }
 
