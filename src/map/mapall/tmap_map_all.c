@@ -211,7 +211,7 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
         return 0;
   }
   
-
+  
   optind=1;
 
   for(z=0; z < n_stages; z++) { //z is the stage
@@ -282,23 +282,13 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
               i, (i < argc) ? argv[i] : NULL, argc);
       */
       
-      /*if(opt_id != opt_next_id // new type
-         || i == argc) { // end of command line arguments*/
-          //eoptind=1; // needed for getopt_long
-          /*
-          fprintf(stderr, "Algorithm: %s start=%d i=%d\n", tmap_algo_id_to_name(opt_id), start, i);
-          int j;
-          for(j=0;j<i-start;j++) {
-              fprintf(stderr, "j=%d arg=%s\n", j, argv[j+start]);
-          }
-          */
-          if (opt_id != mapall_id) {
+        if (opt_id != mapall_id) {
           if(opt->num_stages < cur_stage) { 
               opt->num_stages = cur_stage;
               
           }
 
-          if(0 < i - start) {
+          if(0 < i - start ) {
               if (opt_id == mapall_id) {
                   //optind=0;
                   //printf("argv+start=%s \n", *(argv+start) );
@@ -308,10 +298,10 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
                   }
                   printf("mapall_seed_freqc: %.2f=\n", mapall_ops->mapall_seed_freqc);
               }
-              else if (i < argc) {
-
+              else  {
+                  optind=1;
                 // printf("algo_id: %d argv[i:%d]: %s  argv[start:%d]: %s  i - start: %d\n", opt_cur->algo_id,i,argv[i], start,argv[start], i - start);
-                  printf("argv[lawl i: %d] %s\n", i, argv[i]);
+                  printf("start=%d argv[lawl i: %d]=%s\n", start, i, argv[i]);
                   opt_cur= tmap_map_opt_add_sub_opt(opt, opt_id);
 
                   // set stage
@@ -319,10 +309,18 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
                   //set algo id
                   opt_cur->algo_id = opt_id;
                   // parse common options
-                  if( 0 == tmap_map_opt_parse(i-start, argv+start, opt_cur) ) {
-                    return 0;
-                  } else {
-                      tmap_map_all_copy_stage_opts(mapall_ops, opt_cur);
+                  
+                  if (i < argc) {
+                      //nothing
+                      if (0 > tmap_algo_name_to_id(argv[i - start]) ) {
+                          
+                          if( 0 == tmap_map_opt_parse(i-start, argv+start, opt_cur) ) {
+                            return 0;
+                          } else {
+                              tmap_map_all_copy_stage_opts(mapall_ops, opt_cur);
+                          }
+                      }
+
                   }
               }
           }
