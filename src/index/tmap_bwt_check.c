@@ -19,6 +19,7 @@ void
 tmap_bwt_check_core2(tmap_bwt_t *bwt, int32_t length, int32_t print_msg, int32_t print_sa, int32_t warn)
 {
   uint8_t *seqs[2] = {NULL,NULL};
+  char *str = NULL;
   int32_t i, n[2], asymmetric, k, l;
   uint64_t hash_j;
   int64_t sum, j;
@@ -28,6 +29,7 @@ tmap_bwt_check_core2(tmap_bwt_t *bwt, int32_t length, int32_t print_msg, int32_t
   for(i=1;i<=length;i++) {
       seqs[0] = tmap_calloc(i, sizeof(uint8_t), "seqs[0]");
       seqs[1] = tmap_calloc(i, sizeof(uint8_t), "seqs[1]");
+      str = tmap_calloc(i+1, sizeof(char), "str");
       for(j=0;j<i;j++) {
           seqs[1][j] = 3;
       }
@@ -49,13 +51,13 @@ tmap_bwt_check_core2(tmap_bwt_t *bwt, int32_t length, int32_t print_msg, int32_t
                       }
                       if(1 == print_msg && 1 == print_sa) {
                           for(l=0;l<i;l++) {
-                              tmap_progress_print2("%c", "ACGTN"[seqs[k][l]]);
+                              str[l] = "ACGTN"[seqs[k][l]];
                           }
                           if(0 < n[k] && sa.k <= sa.l) {
-                              tmap_progress_print2("\t%llu\t%llu\t%d\n", sa.k, sa.l, n[k]);
+                              tmap_progress_print2("%s\t%llu\t%llu\t%d", str, sa.k, sa.l, n[k]);
                           }
                           else {
-                              tmap_progress_print2("\tNA\tNA\tNA\n");
+                              tmap_progress_print2("%s\tNA\tNA\tNA", str);
                           }
                       }
                   }
@@ -84,6 +86,7 @@ tmap_bwt_check_core2(tmap_bwt_t *bwt, int32_t length, int32_t print_msg, int32_t
 
       free(seqs[0]);
       free(seqs[1]);
+      free(str);
 
       j = (sum == (bwt->seq_len - i + 1)) ? 0 : 1; // j==1 on fail
       if(1 == print_msg) {
