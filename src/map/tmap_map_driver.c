@@ -427,6 +427,7 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
           tmap_progress_print2("%s will be run in stage %d", 
                                tmap_algo_id_to_name(driver->stages[i]->algorithms[j]->opt->algo_id),
                                driver->stages[i]->algorithms[j]->opt->algo_stage);
+          tmap_progress_print2("\t with seed mapall_seed_freqc=%.2f", driver->stages[i]->algorithms[j]->opt->mapall_seed_freqc);
       }
   }
 

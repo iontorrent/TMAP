@@ -981,14 +981,15 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   
   if(argc == optind) {
       // no need to parse
+      fprintf(stderr, "\n[opt_parse] argc==optind.  no need to parse\n");
       return 1;
   }
 
-  //printf("argc: %d optind: %d\n", argc, optind);
+  fprintf(stderr, "\nargc: %d optind: %d\n", argc, optind);
   
-  /*for(i=optind;i<argc;i++) {
-      fprintf(stderr, "i=%d argv[i]=%s\n", i, argv[i]);
-  }*/
+  for(i=optind;i<argc;i++) {
+      fprintf(stderr, "[opt_parse] i=%d argv[i]=%s\n", i, argv[i]);
+  }
   
 
   // allocate

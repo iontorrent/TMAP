@@ -107,8 +107,8 @@ tmap_map_all_core(tmap_map_driver_t *driver)
   tmap_map_driver_run(driver);
 }
 
-void
-tmap_map_all_default_opts(tmap_map_opt_t* opt) {
+tmap_map_opt_t*
+tmap_map_all_default_opts() {
     /*
      * int32_t num_stages;  !< the number of stages 
     int32_t mapall_score_thr;  !< the stage one scoring threshold (match-score-scaled) (--staged-score-thres) 
@@ -116,11 +116,13 @@ tmap_map_all_default_opts(tmap_map_opt_t* opt) {
     int32_t mapall_keep_all;  !< keep mappings that do not pass the first stage threshold for the next stage (--staged-keep-all) 
     double  mapall_seed_freqc; !< the minimum frequency a seed must occur in order to be considered for mapping (--seed-freq-cutoff) 
      */
-    
+    tmap_map_opt_t* opt = tmap_map_opt_init(tmap_algo_name_to_id("mapall"));
+    /*opt->algo_stage = 0;
     opt->mapall_score_thr = 8;
     opt->mapall_mapq_thr = 23;
     opt->mapall_keep_all = 1;
-    opt->mapall_seed_freqc = 0.0;
+    opt->mapall_seed_freqc = 0.0;*/
+    return opt;
 }
 
 void
@@ -210,17 +212,18 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   }
   
 
-  
+  optind=1;
+
   for(z=0; z < n_stages; z++) { //z is the stage
+
       printf("z: %d ", z);
-      mapall_ops = tmap_malloc(sizeof(tmap_map_opt_t), "mapall_ops");
-      tmap_map_all_default_opts(mapall_ops);
+      mapall_ops = tmap_map_all_default_opts();
       cur_stage = atoi(argv[stage_starts[z]+1]);
       printf("n_stages: %d argv: %s ", n_stages, argv[stage_starts[z]+1]);
       printf("cur_stage: %d stage_starts[%d]=%s  stage_stops[%d]=%s\n", 
               cur_stage, z, argv[stage_starts[z]], z, argv[stage_stops[z]]);
       for(i = stage_starts[z] + 2; i <= stage_stops[z]; i++) {
-
+          
           // get the algorithm type and stage
           name = tmap_strdup(argv[i]); // copy the command line option
           
@@ -242,6 +245,7 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           }//we're not on an algorithm
           else {
               start = i;
+              //optind=0;
               //printf("else argv[start:%d]: %s\n", start, argv[start]);
               //opt_id = mapall_id;
               
@@ -250,11 +254,21 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
                   i++;
               }
               //rewind to the map algo name
-              printf("i: %d  stage_stops[z]: %d\n", i, stage_stops[z]);
+             // printf("i: %d  stage_stops[z]: %d\n", i, stage_stops[z]);
               if (i !=stage_stops[z] + 1){
                   i--;
-                  printf("rewind!\n");
+                  //printf("rewind!\n");
               }
+              printf("argc[ (i+1)-start ]=%d argv[ argv+start-1 ]=%s\n", (i+1)-start, argv[start]);
+              printf("optind: %d\n", optind);
+              optind=1;
+              printf("optind should now be 1.  optind=%d\n", optind);
+              tmap_map_opt_parse((i+1)-start, argv+start-1, mapall_ops);
+                //return 0;
+              
+              printf("mapall_seed_freqc=%.2f\n", mapall_ops->mapall_seed_freqc);
+
+              
               continue; //next iteration of for loop
           }
           
@@ -270,7 +284,7 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       
       /*if(opt_id != opt_next_id // new type
          || i == argc) { // end of command line arguments*/
-          optind=1; // needed for getopt_long
+          //eoptind=1; // needed for getopt_long
           /*
           fprintf(stderr, "Algorithm: %s start=%d i=%d\n", tmap_algo_id_to_name(opt_id), start, i);
           int j;
@@ -279,7 +293,6 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           }
           */
           if (opt_id != mapall_id) {
-          printf("in lower if\n");
           if(opt->num_stages < cur_stage) { 
               opt->num_stages = cur_stage;
               
@@ -293,8 +306,9 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
                   if(0 == tmap_map_opt_parse((i+1)-start, argv+start-1, mapall_ops)) {
                     return 0;
                   }
+                  printf("mapall_seed_freqc: %.2f=\n", mapall_ops->mapall_seed_freqc);
               }
-              else{
+              else if (i < argc) {
 
                 // printf("algo_id: %d argv[i:%d]: %s  argv[start:%d]: %s  i - start: %d\n", opt_cur->algo_id,i,argv[i], start,argv[start], i - start);
                   printf("argv[lawl i: %d] %s\n", i, argv[i]);
