@@ -39,10 +39,6 @@
 #include "tmap_sa.h"
 #include "tmap_bwt_gen.h"
 
-// DEBUG
-typedef uint64_t bgint_t;
-typedef int64_t sbgint_t;
-
 #define ALPHABET_SIZE				4
 #define BIT_PER_CHAR				2
 #define CHAR_PER_WORD				16
@@ -1612,50 +1608,11 @@ BWTFileSizeInWord(const tmap_bwt_int_t numChar)
   return (numChar + CHAR_PER_WORD - 1) / CHAR_PER_WORD;
 }
 
-void BWTSaveBwtCodeAndOccDebug(const tmap_bwt_gen_t *bwt, const char *fn_fasta)
-{
-        FILE *bwtFile;
-/*      FILE *occValueFile; */
-        bgint_t bwtLength;
-        char *fn_bwt_debug = NULL;
-
-        fn_bwt_debug = tmap_malloc(sizeof(char) * (1 + strlen(fn_fasta) + strlen(".tmap.bwt.debug")), "fn_bwt_debug");
-        strcpy(fn_bwt_debug, fn_fasta);
-        strcat(fn_bwt_debug, ".tmap.bwt.debug");
-
-        bwtFile = (FILE*)fopen(fn_bwt_debug, "wb");
-        if (bwtFile == NULL) {
-                fprintf(stderr, "BWTSaveBwtCodeAndOcc(): Cannot open BWT code file!\n");
-                exit(1);
-        }
-
-        bwtLength = BWTFileSizeInWord(bwt->textLength);
-        fprintf(stderr, "WRITING!\n");
-        fprintf(stderr, "sizeof(bgint_t)=%d\n", (int)sizeof(bgint_t));
-        fprintf(stderr, "bwtLength=%llu\n", (unsigned long long int)bwtLength); 
-        int i;
-        for(i=0;i<ALPHABET_SIZE+1;i++) {
-            fprintf(stderr, "bwt->cumulativeFreq[%d]=%llu\n", i, (unsigned long long int)bwt->cumulativeFreq[i]);
-        }
-        for(i=bwtLength-10;i<bwtLength;i++) {
-            fprintf(stderr, "bwt->bwtCode[%d]=%u\n", i, bwt->bwtCode[i]);
-        }
-        fwrite(&bwt->inverseSa0, sizeof(bgint_t), 1, bwtFile);
-        fwrite(bwt->cumulativeFreq + 1, sizeof(bgint_t), ALPHABET_SIZE, bwtFile);
-        fwrite(bwt->bwtCode, sizeof(unsigned int), bwtLength, bwtFile);
-        fclose(bwtFile);
-
-        free(fn_bwt_debug);
-}
-
 void 
 BWTSaveBwtCodeAndOcc(tmap_bwt_t *bwt_out, const tmap_bwt_gen_t *bwt, const char *fn_fasta, int32_t occ_interval) 
 {
   tmap_bwt_int_t i;
   tmap_bwt_t *bwt_tmp=NULL;
-
-  // DEBUG
-  BWTSaveBwtCodeAndOccDebug(bwt, fn_fasta);
 
   // Move over to bwt data structure
   if(bwt_out->bwt_size != BWTFileSizeInWord(bwt->textLength)) {
