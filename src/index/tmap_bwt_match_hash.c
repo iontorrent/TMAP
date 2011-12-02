@@ -86,7 +86,8 @@ tmap_bwt_match_occ_hash(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8
       uint32_t prev_k, found_k;
       prev_k = (NULL == prev) ? 0 : prev->k;
       // test the user "hash"
-      next->k = tmap_bwt_match_hash_get(hash, prev_k-1, c, &found_k);
+      if(NULL == hash) found_k = 0;
+      else next->k = tmap_bwt_match_hash_get(hash, prev_k-1, c, &found_k);
       // compute the k, value, if necessary
       if(0 == found_k) {
           next->k = tmap_bwt_occ(bwt, prev_k-1, c) + bwt->L2[c] + 1;
@@ -116,20 +117,31 @@ tmap_bwt_match_2occ_hash(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint
       uint32_t prev_k, prev_l, found_k, found_l;
       prev_k = (NULL == prev) ? 0 : prev->k;
       prev_l = (NULL == prev) ? bwt->seq_len : prev->l;
-      // test the user "hash"
-      next->k = tmap_bwt_match_hash_get(hash, prev_k-1, c, &found_k); // compute k
-      next->l = tmap_bwt_match_hash_get(hash, prev_l, c, &found_l); // compute -l
-      // compute the k value, if necessary
-      if(0 == found_k) { // for k
-          next->k = tmap_bwt_occ(bwt, prev_k-1, c) + bwt->L2[c] + 1;
-          // put it in the hash
-          tmap_bwt_match_hash_put(hash, prev_k-1, c, next->k);
+      if(NULL == hash) {
+          tmap_bwt_2occ(bwt, prev_k-1, prev_l, c, &next->k, &next->l); 
+          next->k += bwt->L2[c] + 1;
+          next->l += bwt->L2[c];
       }
-      // compute the l value, if necessary
-      if(0 == found_l) { // for l
-          next->l = tmap_bwt_occ(bwt, prev_l, c) + bwt->L2[c];
-          // put it in the hash
-          tmap_bwt_match_hash_put(hash, prev_l, c, next->l);
+      else { // test the user "hash"
+          next->k = tmap_bwt_match_hash_get(hash, prev_k-1, c, &found_k); // compute k
+          // compute the k value, if necessary
+          if(0 == found_k) { 
+              tmap_bwt_2occ(bwt, prev_k-1, prev_l, c, &next->k, &next->l); 
+              next->k += bwt->L2[c] + 1;
+              next->l += bwt->L2[c];
+              // put it in the hash
+              tmap_bwt_match_hash_put(hash, prev_k-1, c, next->k);
+              tmap_bwt_match_hash_put(hash, prev_l, c, next->l);
+          }
+          else {
+              next->l = tmap_bwt_match_hash_get(hash, prev_l, c, &found_l); // compute -l
+              // compute the l value, if necessary
+              if(0 == found_l) { // for l
+                  next->l = tmap_bwt_occ(bwt, prev_l, c) + bwt->L2[c];
+                  // put it in the hash
+                  tmap_bwt_match_hash_put(hash, prev_l, c, next->l);
+              }
+          }
       }
       next->offset = offset + 1;
       next->hi = UINT32_MAX;
@@ -153,27 +165,37 @@ tmap_bwt_match_occ4_hash(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev,
       uint32_t cntk[4];
       uint32_t prev_k, found_k;
       prev_k = (NULL == prev) ? 0 : prev->k;
-      // test the user "hash" for k
-      for(i=0;i<4;i++) {
-          next[i].k = tmap_bwt_match_hash_get(hash, prev_k-1, i, &found_k); // compute k
-          if(0 == found_k) { // for k
-              break;
-          }
-      } // TODO: should we use tmap_bwt_occ if we break out of this loop?
-      // compute the k value, if necessary
-      if(0 == found_k) {
+      if(NULL == hash) {
           tmap_bwt_occ4(bwt, prev_k-1, cntk);
           for(i=0;i<4;i++) {
+              next[i].offset = offset + 1;
+              next[i].hi = UINT32_MAX;
               next[i].k = cntk[i] + bwt->L2[i] + 1;
-              // put it in the hash
-              tmap_bwt_match_hash_put(hash, prev_k-1, i, next[i].k);
+              next[i].l = UINT32_MAX;
           }
       }
-      for(i=0;i<4;i++) {
-          next[i].offset = offset + 1;
-          next[i].hi = UINT32_MAX;
-          // ignore k;
-          next[i].l = UINT32_MAX;
+      else { // test the user "hash" for k
+          for(i=0;i<4;i++) {
+              next[i].k = tmap_bwt_match_hash_get(hash, prev_k-1, i, &found_k); // compute k
+              if(0 == found_k) { // for k
+                  break;
+              }
+          } // TODO: should we use tmap_bwt_occ if we break out of this loop?
+          // compute the k value, if necessary
+          if(0 == found_k) {
+              tmap_bwt_occ4(bwt, prev_k-1, cntk);
+              for(i=0;i<4;i++) {
+                  next[i].k = cntk[i] + bwt->L2[i] + 1;
+                  // put it in the hash
+                  tmap_bwt_match_hash_put(hash, prev_k-1, i, next[i].k);
+              }
+          }
+          for(i=0;i<4;i++) {
+              next[i].offset = offset + 1;
+              next[i].hi = UINT32_MAX;
+              // ignore k;
+              next[i].l = UINT32_MAX;
+          }
       }
   }
   else { // use the bwt hash
@@ -198,32 +220,42 @@ tmap_bwt_match_2occ4_hash(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev,
       uint32_t prev_k, prev_l, found_k, found_l;
       prev_k = (NULL == prev) ? 0 : prev->k;
       prev_l = (NULL == prev) ? bwt->seq_len : prev->l;
-      // test the user "hash" for k
-      for(i=0;i<4;i++) {
-          next[i].k = tmap_bwt_match_hash_get(hash, prev_k-1, i, &found_k); // compute k
-          if(0 == found_k) { // for k
-              break;
-          }
-          next[i].l = tmap_bwt_match_hash_get(hash, prev_l, i, &found_l); // compute k
-          if(0 == found_l) { // for l
-              break;
-          }
-      } // TODO: should we use tmap_bwt_occ if we break out of this loop?
-      // compute the k value, if necessary
-      if(0 == found_k || 0 == found_l) {
+      if(NULL == hash) {
           tmap_bwt_2occ4(bwt, prev_k-1, prev_l, cntk, cntl);
           for(i=0;i<4;i++) {
-              next[i].k = cntk[i] + bwt->L2[i] + 1;
-              next[i].l = cntl[i] + bwt->L2[i];
-              // put it in the hash
-              tmap_bwt_match_hash_put(hash, prev_k-1, i, next[i].k);
-              tmap_bwt_match_hash_put(hash, prev_l, i, next[i].l);
+              next[i].offset = offset + 1;
+              next[i].hi = UINT32_MAX;
+              next[i].k += bwt->L2[i] + 1;
+              next[i].l += bwt->L2[i];
           }
       }
-      for(i=0;i<4;i++) {
-          next[i].offset = offset + 1;
-          next[i].hi = UINT32_MAX;
-          // ignore k and l
+      else { // test the user "hash" for k
+          for(i=0;i<4;i++) {
+              next[i].k = tmap_bwt_match_hash_get(hash, prev_k-1, i, &found_k); // compute k
+              if(0 == found_k) { // for k
+                  break;
+              }
+              next[i].l = tmap_bwt_match_hash_get(hash, prev_l, i, &found_l); // compute k
+              if(0 == found_l) { // for l
+                  break;
+              }
+          } // TODO: should we use tmap_bwt_occ if we break out of this loop?
+          // compute the k value, if necessary
+          if(0 == found_k || 0 == found_l) {
+              tmap_bwt_2occ4(bwt, prev_k-1, prev_l, cntk, cntl);
+              for(i=0;i<4;i++) {
+                  next[i].k = cntk[i] + bwt->L2[i] + 1;
+                  next[i].l = cntl[i] + bwt->L2[i];
+                  // put it in the hash
+                  tmap_bwt_match_hash_put(hash, prev_k-1, i, next[i].k);
+                  tmap_bwt_match_hash_put(hash, prev_l, i, next[i].l);
+              }
+          }
+          for(i=0;i<4;i++) {
+              next[i].offset = offset + 1;
+              next[i].hi = UINT32_MAX;
+              // ignore k and l
+          }
       }
   }
   else { // use the bwt hash
