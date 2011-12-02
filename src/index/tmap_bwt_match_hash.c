@@ -9,34 +9,43 @@ TMAP_HASH_MAP_INIT_INT(tmap_bwt_match_hash, uint32_t)
 tmap_bwt_match_hash_t*
 tmap_bwt_match_hash_init()
 {
+  int32_t i;
   tmap_bwt_match_hash_t *h = NULL;
   h = tmap_calloc(sizeof(tmap_bwt_match_hash_t), 1, "hash");
-  h->hash = (void*)tmap_hash_init(tmap_bwt_match_hash);
+  for(i=0;i<4;i++) {
+      h->hash[i] = (void*)tmap_hash_init(tmap_bwt_match_hash);
+  }
   return h;
 }
 
 void
 tmap_bwt_match_hash_destroy(tmap_bwt_match_hash_t *h)
 {
-  tmap_hash_t(tmap_bwt_match_hash) *hash = (tmap_hash_t(tmap_bwt_match_hash)*)(h->hash);
-  tmap_hash_destroy(tmap_bwt_match_hash, hash); 
+  int32_t i;
+  for(i=0;i<4;i++) {
+      tmap_hash_t(tmap_bwt_match_hash) *hash = (tmap_hash_t(tmap_bwt_match_hash)*)(h->hash[i]);
+      tmap_hash_destroy(tmap_bwt_match_hash, hash); 
+  }
   free(h);
 }
 
 void
 tmap_bwt_match_hash_clear(tmap_bwt_match_hash_t *h)
 {
-  tmap_hash_t(tmap_bwt_match_hash) *hash = (tmap_hash_t(tmap_bwt_match_hash)*)(h->hash);
-  tmap_hash_clear(tmap_bwt_match_hash, hash); 
+  int32_t i;
+  for(i=0;i<4;i++) {
+      tmap_hash_t(tmap_bwt_match_hash) *hash = (tmap_hash_t(tmap_bwt_match_hash)*)(h->hash[i]);
+      tmap_hash_clear(tmap_bwt_match_hash, hash); 
+  }
   free(h);
 }
 
 int32_t
-tmap_bwt_match_hash_put(tmap_bwt_match_hash_t *h, uint32_t key, uint32_t val)
+tmap_bwt_match_hash_put(tmap_bwt_match_hash_t *h, uint32_t key, uint8_t c, uint32_t val)
 {
   int32_t ret;
   tmap_hash_int_t iter;
-  tmap_hash_t(tmap_bwt_match_hash) *hash = (tmap_hash_t(tmap_bwt_match_hash)*)(h->hash);
+  tmap_hash_t(tmap_bwt_match_hash) *hash = (tmap_hash_t(tmap_bwt_match_hash)*)(h->hash[c]);
   // get the iter
   iter = tmap_hash_put(tmap_bwt_match_hash, hash, key, &ret); 
   // set the value
@@ -45,10 +54,10 @@ tmap_bwt_match_hash_put(tmap_bwt_match_hash_t *h, uint32_t key, uint32_t val)
 }
 
 uint32_t
-tmap_bwt_match_hash_get(tmap_bwt_match_hash_t *h, uint32_t key)
+tmap_bwt_match_hash_get(tmap_bwt_match_hash_t *h, uint32_t key, uint8_t c)
 {
   tmap_hash_int_t iter;
-  tmap_hash_t(tmap_bwt_match_hash) *hash = (tmap_hash_t(tmap_bwt_match_hash)*)(h->hash);
+  tmap_hash_t(tmap_bwt_match_hash) *hash = (tmap_hash_t(tmap_bwt_match_hash)*)(h->hash[c]);
   // get the iter
   iter = tmap_hash_get(tmap_bwt_match_hash, hash, key); 
   // check it was found

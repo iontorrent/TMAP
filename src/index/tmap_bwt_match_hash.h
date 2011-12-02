@@ -5,7 +5,7 @@
   The BWT hash wrapper
  */
 typedef struct {
-   void *hash; /*! the hash used by bwt match, the type is defined in the source */ 
+   void *hash[4]; /*! the hash used by bwt match for each possible next base, the type is defined in the source */ 
 } tmap_bwt_match_hash_t;
 
 /*!
@@ -29,19 +29,21 @@ tmap_bwt_match_hash_clear(tmap_bwt_match_hash_t *h);
 /*!
   @param  h  the hash 
   @param  key  the hash key
+  @param  c    the base in integer format
   @param  val  the hash value
   @return  0 if the key is present in the hash table; 1 if the bucket is empty (never used); 2 if the element in the bucket has been deleted 
   @details  this does not check if the value is overwritten
  */
 int32_t
-tmap_bwt_match_hash_put(tmap_bwt_match_hash_t *h, uint32_t key, uint32_t val);
+tmap_bwt_match_hash_put(tmap_bwt_match_hash_t *h, uint32_t key, uint8_t c, uint32_t val);
 
 /*!
   @param  h  the hash 
   @param  key  the hash key
+  @param  c    the base in integer format
   @return the hash value, or UINT32_MAX if not found
  */
 uint32_t
-tmap_bwt_match_hash_get(tmap_bwt_match_hash_t *h, uint32_t);
+tmap_bwt_match_hash_get(tmap_bwt_match_hash_t *h, uint32_t key, uint8_t c);
 
 #endif
