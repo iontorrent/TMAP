@@ -44,7 +44,6 @@ tmap_bwt_match_hash_clear(tmap_bwt_match_hash_t *h)
       tmap_hash_t(tmap_bwt_match_hash) *hash = (tmap_hash_t(tmap_bwt_match_hash)*)(h->hash[i]);
       tmap_hash_clear(tmap_bwt_match_hash, hash); 
   }
-  free(h);
 }
 
 int32_t
@@ -88,14 +87,17 @@ tmap_bwt_match_hash_occ(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8
   if(bwt->hash_width <= offset) { // do not use the bwt hash
       uint32_t prev_k, found_k;
       prev_k = (NULL == prev) ? 0 : prev->k;
-      // test the user "hash"
-      if(NULL == hash) found_k = 0;
-      else next->k = tmap_bwt_match_hash_get(hash, prev_k-1, c, &found_k);
-      // compute the k, value, if necessary
-      if(0 == found_k) {
+      if(NULL == hash) {
           next->k = tmap_bwt_occ(bwt, prev_k-1, c) + bwt->L2[c] + 1;
-          // put it in the hash
-          tmap_bwt_match_hash_put(hash, prev_k-1, c, next->k);
+      }
+      else { // test the user "hash"
+          next->k = tmap_bwt_match_hash_get(hash, prev_k-1, c, &found_k);
+          // compute the k, value, if necessary
+          if(0 == found_k) {
+              next->k = tmap_bwt_occ(bwt, prev_k-1, c) + bwt->L2[c] + 1;
+              // put it in the hash
+              tmap_bwt_match_hash_put(hash, prev_k-1, c, next->k);
+          }
       }
       next->offset = offset + 1;
       next->hi = UINT32_MAX;
@@ -441,7 +443,7 @@ tmap_bwt_match_hash_invPsi(const tmap_bwt_t *bwt, uint32_t sa_intv, uint32_t k, 
   prev.l = UINT32_MAX;
   prev.offset = UINT32_MAX; // do not use the bwt hash
   prev.hi = UINT32_MAX;
-  while(0 != prev.k % sa_intv) {
+  while(0 != (prev.k % sa_intv)) {
       (*s)++;
       if(prev.k != bwt->primary) { // likely
           if(prev.k < bwt->primary) {
@@ -450,9 +452,10 @@ tmap_bwt_match_hash_invPsi(const tmap_bwt_t *bwt, uint32_t sa_intv, uint32_t k, 
           else {
               b0 = tmap_bwt_B0(bwt, prev.k-1);
           }
+
           prev.k++; // since k-1 will be used in tmap_bwt_match_hash_occ
           tmap_bwt_match_hash_occ(bwt, &prev, b0, &next, hash); 
-          prev.k = bwt->L2[b0] + next.k; 
+          prev.k = next.k - 1; // since there was an extra one added in tmap_bwt_match_hash_occ
       }
       else {
           prev.k = 0;

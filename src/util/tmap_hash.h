@@ -86,7 +86,7 @@ static inline void tmap_hash_destroy_##name(tmap_hash_##name##_t *h) \
 } \
 static inline void tmap_hash_clear_##name(tmap_hash_##name##_t *h) \
 { \
-  if (h && h->flags) { \
+  if (h && NULL != h->flags) { \
       memset(h->flags, 0xaa, ((h->n_buckets>>4) + 1) * sizeof(tmap_hash_int32_t)); \
       h->size = h->n_occupied = 0; \
   } \

@@ -175,9 +175,14 @@ tmap_map_driver_core_worker(int32_t num_ends,
   int32_t found;
   tmap_fsw_flowseq_t *fs = NULL;
   tmap_seq_t ***seqs = NULL;
+  tmap_bwt_match_hash_t *hash[2] = {NULL, NULL};
 
   // initialize thread data
   tmap_map_driver_do_threads_init(driver, tid);
+          
+  // init the occurence hash
+  hash[0] = tmap_bwt_match_hash_init(); 
+  hash[1] = tmap_bwt_match_hash_init(); 
 
   // initialize flow space info
   if(0 < seq_buffer_length) {
@@ -194,12 +199,10 @@ tmap_map_driver_core_worker(int32_t num_ends,
       if(tid == (low % driver->opt->num_threads)) {
           tmap_map_stats_t *curstat = NULL;
           tmap_map_record_t *record_prev = NULL;
-          tmap_bwt_match_hash_t *hash[2] = {NULL, NULL};
           
-          // init the occurence hash
           // TODO: should we hash each read, or across the thread?
-          hash[0] = tmap_bwt_match_hash_init(); 
-          hash[1] = tmap_bwt_match_hash_init(); 
+          tmap_bwt_match_hash_clear(hash[0]);
+          tmap_bwt_match_hash_clear(hash[1]);
               
           // remove key sequences
           for(i=0;i<num_ends;i++) {
@@ -375,9 +378,6 @@ tmap_map_driver_core_worker(int32_t num_ends,
                   seqs[i][j] = NULL;
               }
           }
-          // free hash
-          tmap_bwt_match_hash_destroy(hash[0]);
-          tmap_bwt_match_hash_destroy(hash[1]);
       }
       // next
       low++;
@@ -396,6 +396,9 @@ tmap_map_driver_core_worker(int32_t num_ends,
 
   // cleanup
   tmap_map_driver_do_threads_cleanup(driver, tid);
+  // free hash
+  tmap_bwt_match_hash_destroy(hash[0]);
+  tmap_bwt_match_hash_destroy(hash[1]);
 }
 
 void *
