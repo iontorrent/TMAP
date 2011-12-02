@@ -19,6 +19,7 @@
 #include "../index/tmap_bwt_gen.h"
 #include "../index/tmap_bwt.h"
 #include "../index/tmap_bwt_match.h"
+#include "../index/tmap_bwt_match_hash.h"
 #include "../index/tmap_sa.h"
 #include "../index/tmap_index.h"
 #include "../io/tmap_seq_io.h"
@@ -193,6 +194,12 @@ tmap_map_driver_core_worker(int32_t num_ends,
       if(tid == (low % driver->opt->num_threads)) {
           tmap_map_stats_t *curstat = NULL;
           tmap_map_record_t *record_prev = NULL;
+          tmap_bwt_match_hash_t *hash[2] = {NULL, NULL};
+          
+          // init the occurence hash
+          // TODO: should we hash each read, or across the thread?
+          hash[0] = tmap_bwt_match_hash_init(); 
+          hash[1] = tmap_bwt_match_hash_init(); 
               
           // remove key sequences
           for(i=0;i<num_ends;i++) {
@@ -243,7 +250,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
                           tmap_error("bug encountered", Exit, OutOfRange);
                       }
                       // map
-                      sams = algorithm->func_thread_map(&algorithm->thread_data[tid], seqs[j], index, curstat, rand, algorithm->opt);
+                      sams = algorithm->func_thread_map(&algorithm->thread_data[tid], seqs[j], index, curstat, rand, hash, algorithm->opt);
                       if(NULL == sams) {
                           tmap_error("the thread function did not return a mapping", Exit, OutOfRange);
                       }
@@ -368,6 +375,9 @@ tmap_map_driver_core_worker(int32_t num_ends,
                   seqs[i][j] = NULL;
               }
           }
+          // free hash
+          tmap_bwt_match_hash_destroy(hash[0]);
+          tmap_bwt_match_hash_destroy(hash[1]);
       }
       // next
       low++;
