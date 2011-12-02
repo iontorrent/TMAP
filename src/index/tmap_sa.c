@@ -10,6 +10,8 @@
 #include "../util/tmap_definitions.h"
 #include "../io/tmap_file.h"
 #include "tmap_bwt.h"
+#include "tmap_bwt_match.h"
+#include "tmap_bwt_match_hash.h"
 #include "tmap_bwt_gen.h"
 #include "tmap_sa.h"
 
@@ -187,19 +189,20 @@ tmap_sa_destroy(tmap_sa_t *sa)
 }
 
 uint32_t 
-tmap_sa_pac_pos(const tmap_sa_t *sa, const tmap_bwt_t *bwt, uint32_t k)
+tmap_sa_pac_pos_hash(const tmap_sa_t *sa, const tmap_bwt_t *bwt, uint32_t k, tmap_bwt_match_hash_t *hash)
 {
   uint32_t s = 0;
-  //tmap_bwt_match_occ_t prev_k, next_k;
-
-  while (k % sa->sa_intv != 0) {
-      ++s;
-      k = tmap_bwt_invPsi(bwt, k);
-  }
+  k = tmap_bwt_match_hash_invPsi(bwt, sa->sa_intv, k, &s, hash);
   /* without setting bwt->sa[0] = -1, the following line should be
      changed to (s + bwt->sa[k/bwt->sa_intv]) % (bwt->seq_len + 1)
      */
   return s + sa->sa[k/sa->sa_intv];
+}
+
+inline uint32_t 
+tmap_sa_pac_pos(const tmap_sa_t *sa, const tmap_bwt_t *bwt, uint32_t k)
+{
+  return tmap_sa_pac_pos_hash(sa, bwt, k, NULL);
 }
 
 extern int32_t debug_on;
