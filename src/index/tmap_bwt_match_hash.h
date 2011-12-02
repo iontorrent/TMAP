@@ -63,7 +63,7 @@ tmap_bwt_match_hash_get(tmap_bwt_match_hash_t *h, uint32_t key, uint8_t c, uint3
   @details         this will not set the upper occurrence of the SA interval
   */
 inline void
-tmap_bwt_match_occ_hash(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8_t c, tmap_bwt_match_occ_t *next, tmap_bwt_match_hash_t *hash);
+tmap_bwt_match_hash_occ(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8_t c, tmap_bwt_match_occ_t *next, tmap_bwt_match_hash_t *hash);
 
 /*! 
   analagous function to tmap_bwt_2occ but using a hash
@@ -75,7 +75,7 @@ tmap_bwt_match_occ_hash(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8
   @details         this will not set the upper occurrences of the SA interval
   */
 inline void
-tmap_bwt_match_2occ_hash(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8_t c, tmap_bwt_match_occ_t *next, tmap_bwt_match_hash_t *hash);
+tmap_bwt_match_hash_2occ(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8_t c, tmap_bwt_match_occ_t *next, tmap_bwt_match_hash_t *hash);
 
 /*! 
   analagous function to tmap_bwt_occ4 but using a hash
@@ -85,7 +85,7 @@ tmap_bwt_match_2occ_hash(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint
   @param  hash     a occurence array hash
   */
 inline void
-tmap_bwt_match_occ4_hash(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, tmap_bwt_match_occ_t next[4], tmap_bwt_match_hash_t *hash);
+tmap_bwt_match_hash_occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, tmap_bwt_match_occ_t next[4], tmap_bwt_match_hash_t *hash);
 
 /*! 
   analagous function to tmap_bwt_2occ4 but using a hash
@@ -94,7 +94,7 @@ tmap_bwt_match_occ4_hash(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, tmap
   @param  next     pointer to the next match structure
   */
 inline void
-tmap_bwt_match_2occ4_hash(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, tmap_bwt_match_occ_t next[4], tmap_bwt_match_hash_t *hash);
+tmap_bwt_match_hash_2occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, tmap_bwt_match_occ_t next[4], tmap_bwt_match_hash_t *hash);
 
 /*! 
   calculates a lower bound on the number of mismatches in the string for each interval [i,len-1]
@@ -105,7 +105,7 @@ tmap_bwt_match_2occ4_hash(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, tma
   @param  hash   a occurence array hash
 */
 void
-tmap_bwt_match_cal_width_forward_hash(const tmap_bwt_t *bwt, int len, const char *str, tmap_bwt_match_width_t *width, tmap_bwt_match_hash_t *hash);
+tmap_bwt_match_hash_cal_width_forward(const tmap_bwt_t *bwt, int len, const char *str, tmap_bwt_match_width_t *width, tmap_bwt_match_hash_t *hash);
 
 /*! 
   calculates a lower bound on the number of mismatches in the string for each interval [0,i]
@@ -116,7 +116,7 @@ tmap_bwt_match_cal_width_forward_hash(const tmap_bwt_t *bwt, int len, const char
   @param  hash   a occurence array hash
 */
 void
-tmap_bwt_match_cal_width_reverse_hash(const tmap_bwt_t *bwt, int len, const char *str, tmap_bwt_match_width_t *width, tmap_bwt_match_hash_t *hash);
+tmap_bwt_match_hash_cal_width_reverse(const tmap_bwt_t *bwt, int len, const char *str, tmap_bwt_match_width_t *width, tmap_bwt_match_hash_t *hash);
 
 /*! 
   computes the SA interval for the given sequence (if any), using forward search
@@ -128,7 +128,19 @@ tmap_bwt_match_cal_width_reverse_hash(const tmap_bwt_t *bwt, int len, const char
   @return           the size of the SA interval, 0 if none found
   */
 uint32_t
-tmap_bwt_match_exact_hash(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa, tmap_bwt_match_hash_t *hash);
+tmap_bwt_match_hash_exact(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa, tmap_bwt_match_hash_t *hash);
+
+/*! 
+  computes the SA interval for the given sequence (if any), using reverse search
+  @param  bwt       pointer to the bwt structure 
+  @param  len       the length of the sequence
+  @param  str       the DNA sequence in 2-bit format
+  @param  match_sa  pointer to the match structure to be returned
+  @param  hash      a occurence array hash
+  @return           the size of the SA interval, 0 if none found
+  */
+uint32_t
+tmap_bwt_match_hash_exact_reverse(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa, tmap_bwt_match_hash_t *hash);
 
 /*! 
   computes the SA interval for the given sequence (if any), using forward search
@@ -141,10 +153,10 @@ tmap_bwt_match_exact_hash(const tmap_bwt_t *bwt, int len, const uint8_t *str, tm
   @details          the search will be started at SA interval [k0,l0], with the results returned as [k0,l0]
   */
 uint32_t
-tmap_bwt_match_exact_alt_hash(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa, tmap_bwt_match_hash_t *hash);
+tmap_bwt_match_hash_exact_alt(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa, tmap_bwt_match_hash_t *hash);
 
 /*! 
-  computes the SA interval for the given sequence (if any), using forward search
+  computes the SA interval for the given sequence (if any), using reverse search
   @param  bwt       pointer to the bwt structure 
   @param  len       the length of the sequence
   @param  str       the DNA sequence in 2-bit format
@@ -154,6 +166,18 @@ tmap_bwt_match_exact_alt_hash(const tmap_bwt_t *bwt, int len, const uint8_t *str
   @details          the search will be started at SA interval [k0,l0], with the results returned as [k0,l0]
   */
 uint32_t
-tmap_bwt_match_exact_alt_reverse_hash(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa, tmap_bwt_match_hash_t *hash);
+tmap_bwt_match_hash_exact_alt_reverse(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa, tmap_bwt_match_hash_t *hash);
+
+/*!  
+  inverse Psi function
+  @param  bwt  pointer to the bwt structure
+  @param  sa_intv  the SA interval
+  @param  k  the occurrence position 
+  @param  s  the loop counter to return
+  @param  hash  a occurence array hash
+  @return  the suffix array position
+  */
+uint32_t
+tmap_bwt_match_hash_invPsi(const tmap_bwt_t *bwt, uint32_t sa_intv, uint32_t k, uint32_t *s, tmap_bwt_match_hash_t *hash);
 
 #endif

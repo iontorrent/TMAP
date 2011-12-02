@@ -4,8 +4,11 @@
 #include <unistd.h>
 #include "tmap_bwt.h"
 #include "../util/tmap_hash.h"
+#include "../util/tmap_definitions.h"
 #include "tmap_bwt_match.h"
 #include "tmap_bwt_match_hash.h"
+
+// TODO: use the register keyword on pointers
 
 // TODO: change this if the size of the pacpos
 TMAP_HASH_MAP_INIT_INT(tmap_bwt_match_hash, uint32_t) 
@@ -77,7 +80,7 @@ tmap_bwt_match_hash_get(tmap_bwt_match_hash_t *h, uint32_t key, uint8_t c, uint3
 }
 
 inline void
-tmap_bwt_match_occ_hash(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8_t c, 
+tmap_bwt_match_hash_occ(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8_t c, 
                           tmap_bwt_match_occ_t *next, tmap_bwt_match_hash_t *hash)
 {
   uint32_t offset;
@@ -108,7 +111,7 @@ tmap_bwt_match_occ_hash(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8
 }
 
 inline void
-tmap_bwt_match_2occ_hash(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8_t c, 
+tmap_bwt_match_hash_2occ(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8_t c, 
                     tmap_bwt_match_occ_t *next, tmap_bwt_match_hash_t *hash)
 {
   uint32_t offset;
@@ -156,7 +159,7 @@ tmap_bwt_match_2occ_hash(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint
 }
 
 inline void
-tmap_bwt_match_occ4_hash(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, 
+tmap_bwt_match_hash_occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, 
                     tmap_bwt_match_occ_t next[4], tmap_bwt_match_hash_t *hash)
 {
   uint32_t i, offset;
@@ -210,7 +213,7 @@ tmap_bwt_match_occ4_hash(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev,
 }
 
 inline void
-tmap_bwt_match_2occ4_hash(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, 
+tmap_bwt_match_hash_2occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, 
                             tmap_bwt_match_occ_t next[4], tmap_bwt_match_hash_t *hash)
 {
   uint32_t i, offset;
@@ -270,7 +273,7 @@ tmap_bwt_match_2occ4_hash(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev,
 }
 
 void
-tmap_bwt_match_cal_width_forward_hash(const tmap_bwt_t *bwt, int len, const char *str, 
+tmap_bwt_match_hash_cal_width_forward(const tmap_bwt_t *bwt, int len, const char *str, 
                                       tmap_bwt_match_width_t *width, tmap_bwt_match_hash_t *hash)
 {
   // 'width[i]' is the lower bound of the number of differences in str[i,len]
@@ -285,7 +288,7 @@ tmap_bwt_match_cal_width_forward_hash(const tmap_bwt_t *bwt, int len, const char
   for(i=len-1;0<=i;i--) {
       uint8_t c = (int)str[i];
       if(c < 4) {
-          tmap_bwt_match_2occ_hash(bwt, &prev, c, &next, hash);
+          tmap_bwt_match_hash_2occ(bwt, &prev, c, &next, hash);
       }
       if(next.l < next.k || 3 < c) { // new width
           next.k = 0;
@@ -301,7 +304,7 @@ tmap_bwt_match_cal_width_forward_hash(const tmap_bwt_t *bwt, int len, const char
 }
 
 void
-tmap_bwt_match_cal_width_reverse_hash(const tmap_bwt_t *bwt, int len, const char *str, 
+tmap_bwt_match_hash_cal_width_reverse(const tmap_bwt_t *bwt, int len, const char *str, 
                                  tmap_bwt_match_width_t *width, tmap_bwt_match_hash_t *hash)
 {
   // 'width[i]' is the lower bound of the number of differences in str[0,i]
@@ -316,7 +319,7 @@ tmap_bwt_match_cal_width_reverse_hash(const tmap_bwt_t *bwt, int len, const char
   for(i=0;i<len;i++) {
       uint8_t c = (int)str[i];
       if(c < 4) {
-          tmap_bwt_match_2occ_hash(bwt, &prev, c, &next, hash);
+          tmap_bwt_match_hash_2occ(bwt, &prev, c, &next, hash);
       }
       if(next.l < next.k || 3 < c) { // new width
           next.k = 0;
@@ -334,7 +337,7 @@ tmap_bwt_match_cal_width_reverse_hash(const tmap_bwt_t *bwt, int len, const char
 }
 
 uint32_t
-tmap_bwt_match_exact_hash(const tmap_bwt_t *bwt, int len, const uint8_t *str, 
+tmap_bwt_match_hash_exact(const tmap_bwt_t *bwt, int len, const uint8_t *str, 
                           tmap_bwt_match_occ_t *match_sa, tmap_bwt_match_hash_t *hash)
 {
   int32_t i;
@@ -352,7 +355,7 @@ tmap_bwt_match_exact_hash(const tmap_bwt_t *bwt, int len, const uint8_t *str,
           prev.k = prev.l + 1;
           break;
       }
-      tmap_bwt_match_2occ_hash(bwt, &prev, c, &next, hash);
+      tmap_bwt_match_hash_2occ(bwt, &prev, c, &next, hash);
       prev = next;
       if(next.k > next.l) break; // no match
   }
@@ -364,7 +367,7 @@ tmap_bwt_match_exact_hash(const tmap_bwt_t *bwt, int len, const uint8_t *str,
 }
 
 uint32_t
-tmap_bwt_match_exact_reverse_hash(const tmap_bwt_t *bwt, int len, const uint8_t *str, 
+tmap_bwt_match_hash_exact_reverse(const tmap_bwt_t *bwt, int len, const uint8_t *str, 
                              tmap_bwt_match_occ_t *match_sa, tmap_bwt_match_hash_t *hash)
 {
   int32_t i;
@@ -382,7 +385,7 @@ tmap_bwt_match_exact_reverse_hash(const tmap_bwt_t *bwt, int len, const uint8_t 
           prev.k = prev.l + 1;
           break;
       }
-      tmap_bwt_match_2occ_hash(bwt, &prev, c, &next, hash);
+      tmap_bwt_match_hash_2occ(bwt, &prev, c, &next, hash);
       prev = next;
       if(next.k > next.l) break; // no match
   }
@@ -394,7 +397,7 @@ tmap_bwt_match_exact_reverse_hash(const tmap_bwt_t *bwt, int len, const uint8_t 
 }
 
 uint32_t
-tmap_bwt_match_exact_alt_hash(const tmap_bwt_t *bwt, int len, const uint8_t *str, 
+tmap_bwt_match_hash_exact_alt(const tmap_bwt_t *bwt, int len, const uint8_t *str, 
                          tmap_bwt_match_occ_t *match_sa, tmap_bwt_match_hash_t *hash)
 {
   int i;
@@ -403,7 +406,7 @@ tmap_bwt_match_exact_alt_hash(const tmap_bwt_t *bwt, int len, const uint8_t *str
   for(i=0;i<len;i++) {
       uint8_t c = str[i];
       if(c > 3) return 0; // there is an N here. no match
-      tmap_bwt_match_2occ_hash(bwt, match_sa, c, &next, hash);
+      tmap_bwt_match_hash_2occ(bwt, match_sa, c, &next, hash);
       (*match_sa) = next;
       if(next.k > next.l) return 0; // no match
   }
@@ -411,7 +414,7 @@ tmap_bwt_match_exact_alt_hash(const tmap_bwt_t *bwt, int len, const uint8_t *str
 }
 
 uint32_t
-tmap_bwt_match_exact_alt_reverse_hash(const tmap_bwt_t *bwt, int len, const uint8_t *str, 
+tmap_bwt_match_hash_exact_alt_reverse(const tmap_bwt_t *bwt, int len, const uint8_t *str, 
                                  tmap_bwt_match_occ_t *match_sa, tmap_bwt_match_hash_t *hash)
 {
   int i;
@@ -420,9 +423,41 @@ tmap_bwt_match_exact_alt_reverse_hash(const tmap_bwt_t *bwt, int len, const uint
   for(i=len-1;0<=i;i--) {
       uint8_t c = str[i];
       if(c > 3) return 0; // there is an N here. no match
-      tmap_bwt_match_2occ_hash(bwt, match_sa, c, &next, hash);
+      tmap_bwt_match_hash_2occ(bwt, match_sa, c, &next, hash);
       (*match_sa) = next;
       if(next.k > next.l) return 0; // no match
   }
   return match_sa->l - match_sa->k + 1;
+}
+
+uint32_t
+tmap_bwt_match_hash_invPsi(const tmap_bwt_t *bwt, uint32_t sa_intv, uint32_t k, uint32_t *s, tmap_bwt_match_hash_t *hash)
+{
+  uint8_t b0;
+  tmap_bwt_match_occ_t prev, next;
+
+  *s = 0;
+  prev.k = k;
+  prev.l = UINT32_MAX;
+  prev.offset = UINT32_MAX; // do not use the bwt hash
+  prev.hi = UINT32_MAX;
+  while(0 != prev.k % sa_intv) {
+      (*s)++;
+      if(prev.k != bwt->primary) { // likely
+          if(prev.k < bwt->primary) {
+              b0 = tmap_bwt_B0(bwt, prev.k);
+          }
+          else {
+              b0 = tmap_bwt_B0(bwt, prev.k-1);
+          }
+          prev.k++; // since k-1 will be used in tmap_bwt_match_hash_occ
+          tmap_bwt_match_hash_occ(bwt, &prev, b0, &next, hash); 
+          prev.k = bwt->L2[b0] + next.k; 
+      }
+      else {
+          prev.k = 0;
+      }
+  }
+
+  return prev.k;
 }

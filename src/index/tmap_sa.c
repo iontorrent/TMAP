@@ -190,6 +190,7 @@ uint32_t
 tmap_sa_pac_pos(const tmap_sa_t *sa, const tmap_bwt_t *bwt, uint32_t k)
 {
   uint32_t s = 0;
+  //tmap_bwt_match_occ_t prev_k, next_k;
 
   while (k % sa->sa_intv != 0) {
       ++s;
