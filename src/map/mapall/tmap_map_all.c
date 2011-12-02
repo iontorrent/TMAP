@@ -189,7 +189,7 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       // parse the stage options
       // from i to k
       stage_opt = tmap_map_opt_init(TMAP_MAP_ALGO_STAGE);
-      // copy mapall opt to stage_opt
+      // copy global options to the stage options
       tmap_map_opt_copy_global(stage_opt, opt);
       optind = 1; 
       if(1 != tmap_map_opt_parse(k - i, argv + i, stage_opt)) {
@@ -204,9 +204,9 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           algo_opt = tmap_map_opt_add_sub_opt(opt, cur_id);
           algo_opt->algo_stage = cur_stage;
 
-          // copy global options
+          // copy global options to the algorithm options
           tmap_map_opt_copy_stage(algo_opt, opt);
-          // copy stage options
+          // copy stage options to the algorithm options
           tmap_map_opt_copy_stage(algo_opt, stage_opt);
           
           // check that the algorithm has not been specified
