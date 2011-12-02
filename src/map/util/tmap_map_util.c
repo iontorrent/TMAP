@@ -860,9 +860,6 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   tmap_vsw_opt_t *vsw_opt = NULL;
   uint32_t start_pos, end_pos;
   int32_t overflow, softclip_start, softclip_end;
-  int32_t sam_start=0, sam_end=0, sam_next_start=0, sam_next_end=0;
-  int32_t keep_banding = 0;
-  int32_t im_nuts = 0;
   if(0 == sams->n) {
       return sams;
   }
@@ -924,20 +921,12 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
              && sams->sams[end].seqid == sams->sams[end+1].seqid) {
              /*&& (sams->sams[end+1].pos <= (sams->sams[end].pos + seq_len) ) //check for unsigned int underflow
              && ((sams->sams[end+1].pos - (sams->sams[end].pos + seq_len)) <= opt->max_seed_band ) ) {*/
-             //im_nuts = ((sams->sams[end+1].pos - (sams->sams[end].pos + seq_len));// <= opt->max_seed_band) ? 1:0;
              if (sams->sams[end+1].pos <= (sams->sams[end].pos + seq_len)) { //check for unsigned int underflow     
                  //printf("my if1:  end+1 pos: %d end pos: %d seq_len: %d\n", sams->sams[end+1].pos, sams->sams[end].pos, seq_len);
                   end++;
                   if(end_pos < sams->sams[end].pos + seq_len) {
                     end_pos = sams->sams[end].pos + seq_len + 1; // one-based
                   }
-                  if (strand == 1) {
-                      im_nuts = sams->sams[end].pos - seq_len + 1;
-                  }
-                  /*printf("im_nuts: sams->sams[end].pos: %d start_pos: %d end_pos"
-                          ": %d im_nuts: %d\n", 
-                          sams->sams[end].pos, start_pos, end_pos, im_nuts);
-                   */
                   continue; // there may be more to add
                 
              }
@@ -949,13 +938,6 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                      if(end_pos < sams->sams[end].pos + seq_len) {
                         end_pos = sams->sams[end].pos + seq_len + 1; // one-based
                      }
-                     if (strand == 1) {
-                        im_nuts = sams->sams[end].pos - seq_len + 1;
-                     }
-                     /*printf("im_nuts: sams->sams[end].pos: %d start_pos: %d end_pos"
-                          ": %d im_nuts: %d\n", 
-                          sams->sams[end].pos, start_pos, end_pos, im_nuts);                     
-                      */
                     continue;
                  }
              }/*
@@ -1055,7 +1037,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
               end, sams->n, opt->seed_freqc);
       printf(" (end - start + 1) > ( sams->n * opt->seed_freqc)=%d", ( (end - start + 1) > ( sams->n * opt->seed_freqc) ) );
       printf(" ( sams->n * opt->seed_freqc)=%0.2f\n", ( sams->n * opt->seed_freqc));*/
-      if ( (end - start + 1) > ( sams->n * opt->mapall_seed_freqc) ) {
+      if ( (end - start + 1) > ( sams->n * opt->stage_seed_freqc) ) {
           if(0 == strand) {
               tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query, qlen,
                                             target, tlen, 
