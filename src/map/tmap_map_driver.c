@@ -30,6 +30,9 @@
 #include "util/tmap_map_util.h"
 #include "tmap_map_driver.h"
 
+//#define TMAP_DRIVER_USE_HASH 1
+//#define TMAP_DRIVER_CLEAR_HASH_PER_READ 1
+
 #define __tmap_map_sam_sort_score_lt(a, b) ((a).score > (b).score)
 TMAP_SORT_INIT(tmap_map_sam_sort_score, tmap_map_sam_t, __tmap_map_sam_sort_score_lt)
 
@@ -180,9 +183,11 @@ tmap_map_driver_core_worker(int32_t num_ends,
   // initialize thread data
   tmap_map_driver_do_threads_init(driver, tid);
           
+#ifdef TMAP_DRIVER_USE_HASH
   // init the occurence hash
   hash[0] = tmap_bwt_match_hash_init(); 
   hash[1] = tmap_bwt_match_hash_init(); 
+#endif
 
   // initialize flow space info
   if(0 < seq_buffer_length) {
@@ -200,9 +205,13 @@ tmap_map_driver_core_worker(int32_t num_ends,
           tmap_map_stats_t *curstat = NULL;
           tmap_map_record_t *record_prev = NULL;
           
+#ifdef TMAP_DRIVER_USE_HASH
+#ifdef TMAP_DRIVER_CLEAR_HASH_PER_READ
           // TODO: should we hash each read, or across the thread?
           tmap_bwt_match_hash_clear(hash[0]);
           tmap_bwt_match_hash_clear(hash[1]);
+#endif
+#endif
               
           // remove key sequences
           for(i=0;i<num_ends;i++) {
@@ -396,9 +405,11 @@ tmap_map_driver_core_worker(int32_t num_ends,
 
   // cleanup
   tmap_map_driver_do_threads_cleanup(driver, tid);
+#ifdef TMAP_DRIVER_USE_HASH
   // free hash
   tmap_bwt_match_hash_destroy(hash[0]);
   tmap_bwt_match_hash_destroy(hash[1]);
+#endif
 }
 
 void *
