@@ -1607,7 +1607,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       break;
     case TMAP_MAP_ALGO_MAPALL:
       if(0 == opt->num_sub_opts) {
-          tmap_error("no algorithms given", Exit, CommandLineArgument);
+          tmap_error("no stages/algorithms given", Exit, CommandLineArgument);
       }
       break;
     default:
