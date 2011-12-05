@@ -692,13 +692,13 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            "the minimum sequence length to examine",
                            NULL,
                            tmap_map_opt_option_print_func_min_seq_len,
-                           ~TMAP_MAP_ALGO_MAPALL);
+                           ~(TMAP_MAP_ALGO_MAPALL | TMAP_MAP_ALGO_STAGE));
   tmap_map_opt_options_add(opt->options, "max-seq-length", required_argument, 0, 0, 
                            TMAP_MAP_OPT_TYPE_INT,
                            "the maximum sequence length to examine",
                            NULL,
                            tmap_map_opt_option_print_func_max_seq_len,
-                           ~TMAP_MAP_ALGO_MAPALL);
+                           ~(TMAP_MAP_ALGO_MAPALL | TMAP_MAP_ALGO_STAGE));
 
   // stage options
   tmap_map_opt_options_add(opt->options, "staged-score-thres", required_argument, 0, 0, 
@@ -911,7 +911,13 @@ static void
 tmap_map_opt_usage_algo(tmap_map_opt_t *opt, int32_t stage)
 {
   int32_t i;
-  if(stage < 0) {
+  if(opt->algo_id & TMAP_MAP_ALGO_MAPALL) {
+      return; // NB: there are no MAPALL specific options
+  }
+  else if(opt->algo_id & TMAP_MAP_ALGO_STAGE) {
+      tmap_file_fprintf(tmap_file_stderr, "\nstage%d options: [stage options] [algorithm [algorithm options]]+\n", stage);
+  }
+  else if(stage < 0) {
       tmap_file_fprintf(tmap_file_stderr, "\n%s options (optional):\n", tmap_algo_id_to_name(opt->algo_id));
   }
   else {
@@ -933,7 +939,16 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
   
   // print global options
   tmap_file_fprintf(tmap_file_stderr, "\n");
-  tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [options]\n", PACKAGE, tmap_algo_id_to_name(opt->algo_id));
+  if(opt->algo_id == TMAP_MAP_ALGO_MAPALL) {
+      tmap_file_fprintf(tmap_file_stderr, "\n%s [global options] [flowspace options] [stage[0-9]+ [stage options] [algorithm [algorithm options]]+]+\n", 
+                        tmap_algo_id_to_name(opt->algo_id));
+  }
+  else {
+      tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [global options] [flowspace options] [%s options]\n", 
+                        PACKAGE, 
+                        tmap_algo_id_to_name(opt->algo_id),
+                        tmap_algo_id_to_name(opt->algo_id));
+  }
   tmap_file_fprintf(tmap_file_stderr, "\n");
   tmap_file_fprintf(tmap_file_stderr, "global options:\n");
   for(i=0;i<opt->options->n;i++) {
@@ -961,8 +976,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
       if(opt->sub_opts[i]->algo_stage != prev_stage) {
           prev_stage = opt->sub_opts[i]->algo_stage;
           // print the stage
-          tmap_file_fprintf(tmap_file_stderr, "\n");
-          tmap_file_fprintf(tmap_file_stderr, "stage%d options:\n", prev_stage);
+          //tmap_file_fprintf(tmap_file_stderr, "\nstage%d options:\n", prev_stage);
           for(j=0;j<opt->options->n;j++) {
               tmap_map_opt_option_t *o = &opt->options->options[j];
               if(o->algos == TMAP_MAP_ALGO_STAGE) {

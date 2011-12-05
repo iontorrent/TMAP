@@ -83,6 +83,9 @@ tmap_map_all_add_algorithm(tmap_map_driver_t *driver, tmap_map_opt_t *opt)
                           NULL,
                           opt);
       break;
+    case TMAP_MAP_ALGO_STAGE:
+      // ignore
+      break;
     default:
       tmap_error("Unknown algorithm", Exit, OutOfRange);
   }
@@ -182,18 +185,20 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           if(0 < cur_id) break;
           k++;
       }
-      if(k == j) {
-          tmap_error("A stage was specified with no algorithms", Exit, CommandLineArgument);
-      }
 
       // parse the stage options
       // from i to k
-      stage_opt = tmap_map_opt_init(TMAP_MAP_ALGO_STAGE);
-      // copy global options to the stage options
-      tmap_map_opt_copy_global(stage_opt, opt);
+      stage_opt = tmap_map_opt_add_sub_opt(opt, TMAP_MAP_ALGO_STAGE);
+      stage_opt->algo_stage = cur_stage;
       optind = 1; 
       if(1 != tmap_map_opt_parse(k - i, argv + i, stage_opt)) {
           return 0;
+      }
+      
+      // NB: do this after parsing the stage options, since '-h' may be
+      // specified
+      if(k == j) {
+          tmap_error("A stage was specified with no algorithms", Exit, CommandLineArgument);
       }
       
       // parse the algorithms in this stage
@@ -231,10 +236,12 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
 
           // for the next loop
           k = l;
+
+          // nullify
+          algo_opt = NULL;
       }
 
-      // destroy the stage options
-      tmap_map_opt_destroy(stage_opt);
+      // nullify
       stage_opt = NULL;
 
       // update the outer loop
@@ -253,7 +260,6 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
 
   // do this after parsing
   opt->argc = argc; opt->argv = argv;
-
 
   // free
   free(stages_used);
