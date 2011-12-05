@@ -437,7 +437,7 @@ First, a set of global options is specified that will be used for the algorithms
 Global options should not be given in the options for a specific stage or algorithm.
 Next, a stage will be specified and its associate options that will be applied across algorithms in that stage.
 Stage-specific options should not be given in the options for any algorithm in that stage.
-The stage name should be specified by ``stage%d'', where ``%d'' is the stage number (one-based).
+The stage name should be specified by ``stage\%d'', where ``\%d'' is the stage number (one-based).
 Finally, the algorithms and their associated options will be specified for the given stage.
 
 An example would be:\\
@@ -447,6 +447,9 @@ Therefore, \TT{map1} algorithm will be applied with the options \TT{-g 1 -M 3 --
 If no mapping is found for a read, the \TT{map2} algorithm with the options \TT{-g 1 -M 3 --z-best 5} and the \TT{map3} algorithm with the options \TT{-g 1 -M 3 --max-seed-hits 10} will be applied in the second stage.
 Notice how the global options \TT{-g 1 -M 3} are applied to all the algorithms where applicable.
 It is possible to have the same algorithm run in two different stages.
+
+The recommended values are pre-set, and the following command line is recommended:
+\TT{tmap mapall -f <in.fasta> -r <in.fastq> -n <num.threads> -v map1 map2 map3 > <out.sam>}.
 
 \subsection{Usage}
 The following options apply to a single stage, and control how mappings are handled between stages.
