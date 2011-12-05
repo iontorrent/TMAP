@@ -86,6 +86,7 @@ typedef struct {
     int32_t stage; /*!< the stage for these algorithms (one-based) */
     tmap_map_driver_algorithm_t **algorithms; /*!< the algorithms to run */
     int32_t num_algorithms; /*!< the number of algorithms to run */
+    tmap_map_opt_t *opt; /*!< stage specific options */
 } tmap_map_driver_stage_t;
 
 /*!
