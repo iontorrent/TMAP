@@ -706,6 +706,7 @@ tmap_map_driver_stage_destroy(tmap_map_driver_stage_t *stage)
   for(i=0;i<stage->num_algorithms;i++) {
       tmap_map_driver_algorithm_destroy(stage->algorithms[i]);
   }
+  tmap_map_opt_destroy(stage->opt);
   free(stage->algorithms);
   free(stage);
 }
