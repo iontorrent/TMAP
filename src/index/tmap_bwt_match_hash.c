@@ -265,9 +265,6 @@ tmap_bwt_match_hash_2occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev,
       else { // test the user "hash" for k
           for(i=0;i<4;i++) {
               next[i].k = tmap_bwt_match_hash_get_k(hash, prev_k, i, &found_k); // compute k
-              if(prev_k-1 == 846071) {
-                  fprintf(stderr, "found_k=%d next[i].k=%u\n", found_k, next[i].k);
-              }
               if(0 == found_k) { // for k
                   break;
               }
@@ -275,7 +272,6 @@ tmap_bwt_match_hash_2occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev,
               if(0 == found_l) { // for l
                   break;
               }
-              //fprintf(stderr, "HERE A0 found i=%d next[i].k=%u next[i].l=%u\n", i, next[i].k, next[i].l);
           } // TODO: should we use tmap_bwt_occ if we break out of this loop?
           // compute the k value, if necessary
           if(0 == found_k || 0 == found_l) {
@@ -284,9 +280,6 @@ tmap_bwt_match_hash_2occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev,
                   next[i].k = cntk[i] + bwt->L2[i] + 1;
                   next[i].l = cntl[i] + bwt->L2[i];
                   // put it in the hash
-                  if(prev_k-1 == 846071) {
-                      fprintf(stderr, "Putting prev_k-1=%u i=%u next[i].k=%u\n", prev_k-1, i, next[i].k);
-                  }
                   tmap_bwt_match_hash_put_k(hash, prev_k, i, next[i].k);
                   tmap_bwt_match_hash_put_l(hash, prev_l, i, next[i].l);
               }
@@ -295,22 +288,6 @@ tmap_bwt_match_hash_2occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev,
               next[i].offset = offset + 1;
               next[i].hi = UINT32_MAX;
               // ignore k and l
-          }
-          // HERE
-          tmap_bwt_match_occ_t test[4];
-          tmap_bwt_match_hash_2occ4(bwt, prev, test, NULL);
-          for(i=0;i<4;i++) {
-              if(next[i].k != test[i].k || next[i].l != test[i].l) {
-                  fprintf(stderr, "i=%d prev_k-1=%u prev_l=%u next[i].k=%u test[i].k=%u next[i].l=%u test[i].l=%u\n",
-                          i, 
-                          prev_k-1, prev_l,
-                          next[i].k, test[i].k,
-                          next[i].l, test[i].l);
-                  tmap_error("bug encountered", Exit, OutOfRange);
-              }
-              if(next[i].l != test[i].l) {
-                  tmap_error("bug encountered", Exit, OutOfRange);
-              }
           }
       }
   }
