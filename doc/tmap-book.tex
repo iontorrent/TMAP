@@ -31,7 +31,7 @@ urlcolor=myurlcolor     % color of external links
 % TODO check all options are present
 
 % Version number
-\newcommand{\Version}{0.2.2}
+\newcommand{\Version}{0.2.3}
 
 % layout
 \setlength\topmargin{0in}
@@ -59,7 +59,7 @@ urlcolor=myurlcolor     % color of external links
 \author{Nils Homer}
 \date{}
 \title{TMAP: the flow sequence mapping program
-\thanks{Copyright \copyright 2010 Ion Torrent Systems, Inc. All Rights, made for TMAP version \Version}
+\thanks{Copyright \copyright 2010-2011 Ion Torrent Systems, Inc. All Rights, made for TMAP version \Version}
 }
 \begin{document}
 \frontmatter
@@ -423,8 +423,8 @@ There are no algorithm specific options.
 \label{sec:mapall}
 The \BF{mapall} is a command to quickly map short sequences to a reference genome.
 This command combines available mapping algorithms for fast and sensitive alignment.
-The algorithms follows a two-stage approach, with a set of algorithms and associated settings for each stage.
-If there are no mappings for a read by applying the algorithms in the first stage that pass filters, then the algorithms in the second stage are applied. 
+The algorithms follows a multi-stage approach, with a set of algorithms and associated settings for each stage.
+If there are no mappings for a read by applying the algorithms in the $i$th stage that pass filters, then the algorithms in the $i+1$th stage are applied. 
 For example, a set of algorithms to quickly align near-perfect reads may be used in the first stage, while a set of sensitive algorithms may be used to map difficult reads in the second stage
 
 It is recommended that \TT{mapvsw} is not used for any large scale mapping project.  
@@ -433,32 +433,38 @@ Please see \autoref{sec:mapvsw} for more details.
 See \autoref{sec:commonoptions} for common options that are in use in this command.
 
 \subsection{Overview}
-First, a set of global options is specified that will be used for the algorithms to be applied at both stages.
-Global options should not be given in the options for a specific algorithm.
-Next, the algorithms and their associated options will be specified for each stage.
-An algorithm to be applied in the first stage should be specified using its name in lowercase.
-The options specific to this algorithm should be specified directly thereafter.
-An algorithm to be applied in the second stage should be specified using its name in uppercase.
-The options specific to this algorithm should be specified directly thereafter.
-The order of the specified algorithms does not matter, only the case (upper versus lower) in determining which algorithm is applied at which stage.
+First, a set of global options is specified that will be used for the algorithms to be applied at all stages.
+Global options should not be given in the options for a specific stage or algorithm.
+Next, a stage will be specified and its associate options that will be applied across algorithms in that stage.
+Stage-specific options should not be given in the options for any algorithm in that stage.
+The stage name should be specified by ``stage\%d'', where ``\%d'' is the stage number (one-based).
+Finally, the algorithms and their associated options will be specified for the given stage.
 
 An example would be:\\
-\TT{tmap mapall -f ref.fasta -r reads.fastq -g 1 -M 3 map1 --seed-length 12 --seed-max-diff 4 MAP2 --z-best 5 MAP3 --max-seed-hits 10}.\\
-In this case, the \TT{map1} algorithm will be applied with the options \TT{-g 1 -M 3 --seed-length 12 --seed-max-diff 4} in the first stage.
+\TT{tmap mapall -f ref.fasta -r reads.fastq -g 1 -M 3 stage1 --stage-keep-all map1 --seed-length 12 --seed-max-diff 4 stage2 map2 --z-best 5 map3 --max-seed-hits 10}.\\
+In this case, the global options \TT{-f ref.fasta -r reads.fastq -g 1 -M 3} will be applied to all stages and algorithms. 
+Therefore, \TT{map1} algorithm will be applied with the options \TT{-g 1 -M 3 --seed-length 12 --seed-max-diff 4} in the first stage.
 If no mapping is found for a read, the \TT{map2} algorithm with the options \TT{-g 1 -M 3 --z-best 5} and the \TT{map3} algorithm with the options \TT{-g 1 -M 3 --max-seed-hits 10} will be applied in the second stage.
 Notice how the global options \TT{-g 1 -M 3} are applied to all the algorithms where applicable.
-It is possible to have a given algorithm run in both stages with different options.
+It is possible to have the same algorithm run in two different stages.
+
+The recommended values are pre-set, and the following command line is recommended:
+\TT{tmap mapall -f <in.fasta> -r <in.fastq> -n <num.threads> -v map1 map2 map3 > <out.sam>}.
 
 \subsection{Usage}
-\subsubsection{\TT{--staged-score-thres INT}}
+The following options apply to a single stage, and control how mappings are handled between stages.
+\subsubsection{\TT{--stage-score-thres INT}}
 Specifies the number of multiples of the match score (\TT{-A}) for the minimum scoring threshold for the first stage.
 An alignment is filtered in the first stage if it has an alignment score less than this threshold, and there are algorithms in the second stage.
-\subsubsection{\TT{--staged-mapq-thres INT}}
+\subsubsection{\TT{--stage-mapq-thres INT}}
 Specifies the mapping quality threshold for the first stage.
 An alignment is filtered in the first stage if it has a mapping quality less than this threshold, and there are algorithms in the second stage.
-\subsubsection{\TT{--staged-keep-all}}
+\subsubsection{\TT{--stage-keep-all}}
 Specifies not to keep mappings from the first stage for the second stage.
 If this option is not given, the mappings from the first stage are added to any mappings from the second stage as candidates.
+
+\subsubsection{\TT{--seed-freq-cutoff FLOAT}}
+Specifies the minimum frequency a seed must occur in order to be considered for mapping.
 
 \section{tmap server}
 \label{sec:server}

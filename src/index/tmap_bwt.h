@@ -29,6 +29,8 @@
 
 #include <stdint.h>
 
+// TODO: parameterize the SA size (uint32_t vs. uint64_t).  NB: be careful about
+// where uint32_t is assumed...
 // requirement: ((b)->occ_interval%16 == 0)
 
 #ifndef TMAP_UBYTE
@@ -184,11 +186,11 @@ tmap_bwt_2occ4(const tmap_bwt_t *bwt, uint32_t k, uint32_t l, uint32_t cntk[4], 
 
 // TODO: document
 // Returns the index of the occurrence array at or before k
-#define tmap_bwt_get_occ_array_i(b, k) ((k)/(b)->occ_interval * ((b)->occ_interval/16 + 4))
+#define tmap_bwt_get_occ_array_i(b, k) ((k)/(b)->occ_interval * ((b)->occ_interval/(sizeof(uint32_t)*8/2) + sizeof(uint32_t)/4*4))
 
 // TODO: document
 // Returns the array of 16 bases at [(k-(k%16),k+(16-(k%16))-1]
-#define tmap_bwt_get_bwt16(b, k) ((b)->bwt[tmap_bwt_get_occ_array_i(b, k) + 4 + ((k)%(b)->occ_interval)/16])
+#define tmap_bwt_get_bwt16(b, k) ((b)->bwt[tmap_bwt_get_occ_array_i(b, k) + sizeof(uint32_t)/4*4 + (k)%(b)->occ_interval/16])
 //#define tmap_bwt_get_bwt16(b, k) ((b)->bwt[(k)/(b)->occ_interval*12 + 4 + (k)%(b)->occ_interval/16])
 
 /*! 

@@ -276,7 +276,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
 
               // keep mappings for subsequent stages or restore mappings from
               // previous stages
-              if(1 == driver->opt->mapall_keep_all) {
+              if(1 == stage->opt->stage_keep_all) {
                   // merge from the previous stage
                   if(0 < i) {
                       tmap_map_record_merge(records[low], record_prev);
@@ -308,7 +308,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
               // filter if we have more stages
               if(i < driver->num_stages-1) {
                   for(j=0;j<num_ends;j++) { // for each end
-                      tmap_map_sams_filter2(records[low]->sams[j], driver->opt->mapall_score_thr, driver->opt->mapall_mapq_thr);
+                      tmap_map_sams_filter2(records[low]->sams[j], stage->opt->stage_score_thr, stage->opt->stage_mapq_thr);
                   }
               }
 
@@ -451,6 +451,7 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
           tmap_progress_print2("%s will be run in stage %d", 
                                tmap_algo_id_to_name(driver->stages[i]->algorithms[j]->opt->algo_id),
                                driver->stages[i]->algorithms[j]->opt->algo_stage);
+          //tmap_progress_print2("\t with seed mapall_seed_freqc=%.2f", driver->stages[i]->opt->stage_seed_freqc);
       }
   }
 
@@ -705,6 +706,17 @@ tmap_map_driver_stage_add(tmap_map_driver_stage_t *s,
                     tmap_map_driver_func_cleanup func_cleanup,
                     tmap_map_opt_t *opt)
 {
+  // stage options
+  if(0 == s->num_algorithms) {
+      // copy stage options
+      s->opt = tmap_map_opt_init();
+      s->opt->algo_id = TMAP_MAP_ALGO_STAGE;
+      tmap_map_opt_copy_stage(s->opt, opt);
+  }
+  else {
+      // check stage options
+      tmap_map_opt_check_stage(s->opt, opt);
+  }
   s->num_algorithms++;
   s->algorithms = tmap_realloc(s->algorithms, sizeof(tmap_map_driver_algorithm_t*) * s->num_algorithms, "s->algorithms");
   s->algorithms[s->num_algorithms-1] = tmap_map_driver_algorithm_init(func_init, func_thread_init, func_thread_map,
@@ -749,6 +761,12 @@ tmap_map_driver_add(tmap_map_driver_t *driver,
           driver->stages[driver->num_stages-1] = tmap_map_driver_stage_init(driver->num_stages);
       }
   }
+
+  // check options
+  tmap_map_opt_check(opt);
+
+  // check global options
+  tmap_map_opt_check_global(driver->opt, opt);
 
   // add to the stage
   tmap_map_driver_stage_add(driver->stages[opt->algo_stage-1],
