@@ -230,8 +230,8 @@ tmap_bwt_match_hash_2occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev,
           for(i=0;i<4;i++) {
               next[i].offset = offset + 1;
               next[i].hi = UINT32_MAX;
-              next[i].k += bwt->L2[i] + 1;
-              next[i].l += bwt->L2[i];
+              next[i].k = cntk[i] + bwt->L2[i] + 1;
+              next[i].l = cntl[i] + bwt->L2[i];
           }
       }
       else { // test the user "hash" for k
