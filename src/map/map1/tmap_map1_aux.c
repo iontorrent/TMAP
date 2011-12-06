@@ -9,6 +9,7 @@
 #include "../../index/tmap_refseq.h"
 #include "../../index/tmap_bwt.h"
 #include "../../index/tmap_bwt_match.h"
+#include "../../index/tmap_bwt_match_hash.h"
 #include "../../index/tmap_sa.h"
 #include "../../index/tmap_index.h"
 #include "../../sw/tmap_sw.h"
@@ -322,11 +323,12 @@ tmap_map1_aux_get_bam_state(int state)
 // TODO
 static tmap_map_sams_t *
 tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases, int32_t seed2_len,
-                       tmap_refseq_t *refseq, tmap_bwt_t *bwt, tmap_sa_t *sa, tmap_map_opt_t *opt) 
+                       tmap_refseq_t *refseq, tmap_bwt_t *bwt, tmap_sa_t *sa, tmap_bwt_match_hash_t *hash, tmap_map_opt_t *opt) 
 {
   tmap_map_sams_t *sams_tmp = NULL;
   tmap_map_sam_t *sam_cur = NULL;
-  uint32_t i, j, k, n, num_all_sa, aln_ref;
+  uint32_t i, j, aln_ref;
+  tmap_bwt_int_t k, n, num_all_sa;
 
   // max # of entries
   for(i=n=0;i<sams->n;i++) {
@@ -359,7 +361,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases, int32_t seed2
           strand = sams->sams[i].strand;
           aln_ref = sam->aux.map1_aux->aln_ref;
               
-          pacpos = bwt->seq_len - tmap_sa_pac_pos(sa, bwt, k);
+          pacpos = bwt->seq_len - tmap_sa_pac_pos_hash(sa, bwt, k, hash);
           pacpos = (pacpos < aln_ref) ? 0 : (pacpos - aln_ref);
           pacpos++; // make one-based
           
@@ -435,6 +437,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases, int32_t seed2
 
 tmap_map_sams_t *
 tmap_map1_aux_core(tmap_seq_t *seq, tmap_index_t *index,
+                   tmap_bwt_match_hash_t *hash,
                    tmap_bwt_match_width_t *width, tmap_bwt_match_width_t *seed_width, tmap_map_opt_t *opt,
                    tmap_map1_aux_stack_t *stack, int32_t seed2_len)
 {
@@ -555,7 +558,7 @@ tmap_map1_aux_core(tmap_seq_t *seq, tmap_index_t *index,
       else if(max_mm == e->n_mm // no mismatches from any state
               && ((e->state == STATE_M && max_gapo == e->n_gapo) // in STATE_M but no more gap opens
                   || (e->state != STATE_M && max_gape == e->n_gape))) { // in STATE_I/STATE_D but no more extensions
-          if(0 < tmap_bwt_match_exact_alt_reverse(bwt, offset, str, &match_sa_cur)) { // the alignment must match exactly to sam
+          if(0 < tmap_bwt_match_hash_exact_alt_reverse(bwt, offset, str, &match_sa_cur, hash)) { // the alignment must match exactly to sam
               sam_found = 2;
           }
           else {
@@ -735,7 +738,7 @@ tmap_map1_aux_core(tmap_seq_t *seq, tmap_index_t *index,
           }
 
           // retrieve the next SA interval
-          tmap_bwt_match_2occ4(bwt, &e->match_sa, match_sa_next); 
+          tmap_bwt_match_hash_2occ4(bwt, &e->match_sa, match_sa_next, hash); 
 
           // insertions/deletions
           if(allow_diff 
@@ -795,5 +798,5 @@ tmap_map1_aux_core(tmap_seq_t *seq, tmap_index_t *index,
       }
   }
 
-  return tmap_map1_sam_to_real(sams, bases, seed2_len, refseq, bwt, sa, opt);
+  return tmap_map1_sam_to_real(sams, bases, seed2_len, refseq, bwt, sa, hash, opt);
 }

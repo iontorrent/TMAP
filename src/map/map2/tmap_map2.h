@@ -34,13 +34,16 @@ tmap_map2_thread_init(void **data, tmap_map_opt_t *opt);
  @param  data     pointer to the mapping data pointer
  @param  seqs     the sequence to map (forward, reverse compliment, reverse, compliment)
  @param  index    the reference index
+ @param  hash     the occurrence hash
  @param  rand     the random number generator to use
  @param  opt      the program options
  @return          the mappings, NULL otherwise
  */
 tmap_map_sams_t*
 tmap_map2_thread_map(void **data, tmap_seq_t **seqs, 
-                     tmap_index_t *index, tmap_rand_t *rand, 
+                     tmap_index_t *index, 
+                     tmap_bwt_match_hash_t *hash,
+                     tmap_rand_t *rand, 
                      tmap_map_opt_t *opt);
 
 /*!

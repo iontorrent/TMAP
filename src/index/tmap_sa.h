@@ -6,6 +6,8 @@
 
 #include <stdint.h>
 #include "tmap_bwt.h"
+#include "tmap_bwt_match.h"
+#include "tmap_bwt_match_hash.h"
 
 /*! 
   A Suffix Array Library
@@ -70,6 +72,17 @@ tmap_sa_shm_unpack(uint8_t *buf);
   */
 void 
 tmap_sa_destroy(tmap_sa_t *sa);
+
+/*! 
+  returns the suffix array position given the occurrence position
+  @param  sa   the suffix array
+  @param  bwt  the bwt structure 
+  @param  k    the suffix array position
+  @param  hash  the user occurence hash
+  @return      the pac position
+*/
+tmap_bwt_int_t
+tmap_sa_pac_pos_hash(const tmap_sa_t *sa, const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_match_hash_t *hash);
 
 /*! 
   returns the suffix array position given the occurrence position

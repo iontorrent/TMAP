@@ -22,6 +22,7 @@ typedef struct {
   @param  refseq         the reference sequence structure (forward)
   @param  bwt            the BWT structure 
   @param  sa             the SA structure 
+  @param  hash           the occurrence hash
   @param  opt            the program options
   @return                the alignments
   the sequences should be in 2-bit format
@@ -33,6 +34,7 @@ tmap_map3_aux_core(tmap_seq_t *seq,
                    tmap_refseq_t *refseq,
                    tmap_bwt_t *bwt,
                    tmap_sa_t *sa,
+                   tmap_bwt_match_hash_t *hash,
                    tmap_map_opt_t *opt);
 
 #endif

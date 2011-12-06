@@ -54,6 +54,15 @@
 #define BAM_CPAD        6
 #endif
 
+/* For branch prediction */
+#ifdef __GNUC__
+#define TMAP_LIKELY(x) __builtin_expect((x),1)
+#define TMAP_UNLIKELY(x) __builtin_expect((x),0)
+#else
+#define TMAP_LIKELY(x) (x)
+#define TMAP_UNLIKELY(x) (x)
+#endif
+
 /*! 
   for each type of file, the integer id associated with this file
   @details  can be used with 'tmap_get_file_name' 

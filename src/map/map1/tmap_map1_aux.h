@@ -59,6 +59,7 @@ tmap_map1_aux_stack_destroy(tmap_map1_aux_stack_t *stack);
 /*! 
   @param  seq         the base sequences (forward)
   @param  index       the index structure
+  @param  hash        the occurrence hash
   @param  width       the bounds within the read 
   @param  seed_width  the bounds within the seed 
   @param  opt         the program parameters structure
@@ -68,6 +69,7 @@ tmap_map1_aux_stack_destroy(tmap_map1_aux_stack_t *stack);
   */
 tmap_map_sams_t *
 tmap_map1_aux_core(tmap_seq_t *seq, tmap_index_t *index,
+                   tmap_bwt_match_hash_t *hash,
                    tmap_bwt_match_width_t *width, tmap_bwt_match_width_t *seed_width, tmap_map_opt_t *opt,
                    tmap_map1_aux_stack_t *stack, int32_t seed2_len);
 

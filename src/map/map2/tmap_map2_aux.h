@@ -70,6 +70,7 @@ tmap_map2_aln_destroy(tmap_map2_aln_t *a);
   @param  refseq  pointer to the reference sequence structure
   @param  bwt     pointer to the bwt structure
   @param  sa      pointer to the SA structure
+  @param  hash    the occurence hash
   @param  rand    the random number generator
   @param  pool    pointer to a global memory pool
   @return         pointer to the alignment
@@ -80,6 +81,7 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
                    tmap_refseq_t *refseq,
                    tmap_bwt_t *bwt,
                    tmap_sa_t *sa,
+                   tmap_bwt_match_hash_t *hash,
                    tmap_rand_t *rand,
                    tmap_map2_global_mempool_t *pool);
 #endif

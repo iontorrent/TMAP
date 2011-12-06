@@ -7,6 +7,8 @@
 #include "../../index/tmap_refseq.h"
 #include "../../index/tmap_bwt.h"
 #include "../../index/tmap_bwtl.h"
+#include "../../index/tmap_bwt_match.h"
+#include "../../index/tmap_bwt_match_hash.h"
 #include "../../index/tmap_sa.h"
 #include "../../index/tmap_index.h"
 #include "../../sw/tmap_sw.h"

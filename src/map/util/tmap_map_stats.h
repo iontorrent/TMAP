@@ -3,7 +3,7 @@
 #define TMAP_MAP_STATS_H
 
 /*!
- * TODO
+  The mapping statistics structure.
  */
 typedef struct {
     uint64_t num_reads; /*!< the number of reads with at least one mapping */

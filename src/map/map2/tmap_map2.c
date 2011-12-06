@@ -143,7 +143,7 @@ tmap_map2_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
 }
 
 tmap_map_sams_t*
-tmap_map2_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_rand_t *rand, tmap_map_opt_t *opt)
+tmap_map2_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_bwt_match_hash_t *hash, tmap_rand_t *rand, tmap_map_opt_t *opt)
 {
   tmap_map_sams_t *sams = NULL;
   int32_t seq_len;
@@ -157,7 +157,7 @@ tmap_map2_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_r
   }
 
   // get the sams
-  sams = tmap_map2_aux_core(opt, seqs, index->refseq, index->bwt, index->sa, rand, d->pool);
+  sams = tmap_map2_aux_core(opt, seqs, index->refseq, index->bwt, index->sa, hash, rand, d->pool);
 
   return sams;
 }

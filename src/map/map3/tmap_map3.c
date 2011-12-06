@@ -18,6 +18,7 @@
 #include "../../index/tmap_bwt_gen.h"
 #include "../../index/tmap_bwt.h"
 #include "../../index/tmap_bwt_match.h"
+#include "../../index/tmap_bwt_match_hash.h"
 #include "../../index/tmap_sa.h"
 #include "../../index/tmap_index.h"
 #include "../../io/tmap_seq_io.h"
@@ -147,7 +148,7 @@ tmap_map3_thread_init(void **data, tmap_map_opt_t *opt)
 }
 
 tmap_map_sams_t *
-tmap_map3_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_rand_t *rand, tmap_map_opt_t *opt)
+tmap_map3_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_bwt_match_hash_t *hash, tmap_rand_t *rand, tmap_map_opt_t *opt)
 {
   tmap_map_sams_t *sams = NULL;
   int32_t i, seq_len;
@@ -169,7 +170,7 @@ tmap_map3_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_r
   }
   
   // align
-  sams = tmap_map3_aux_core(seqs[3], d->flow_order, d->flow_order_len, index->refseq, index->bwt, index->sa, opt);
+  sams = tmap_map3_aux_core(seqs[3], d->flow_order, d->flow_order_len, index->refseq, index->bwt, index->sa, hash, opt);
 
   return sams;
 }

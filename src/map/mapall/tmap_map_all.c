@@ -13,11 +13,13 @@
 #include "../../util/tmap_definitions.h"
 #include "../../util/tmap_progress.h"
 #include "../../util/tmap_sam_print.h"
+#include "../../util/tmap_sort.h"
 #include "../../seq/tmap_seq.h"
 #include "../../index/tmap_refseq.h"
 #include "../../index/tmap_bwt_gen.h"
 #include "../../index/tmap_bwt.h"
 #include "../../index/tmap_bwt_match.h"
+#include "../../index/tmap_bwt_match_hash.h"
 #include "../../index/tmap_sa.h"
 #include "../../index/tmap_index.h"
 #include "../../io/tmap_seq_io.h"
@@ -35,6 +37,8 @@
 #include "../tmap_map_driver.h"
 #include "tmap_map_all.h"
 
+#define tmap_map_all_stages_used_lt(a, b) (a < b) 
+TMAP_SORT_INIT(tmap_map_all_stages_used, int32_t, tmap_map_all_stages_used_lt)
 
 static void
 tmap_map_all_add_algorithm(tmap_map_driver_t *driver, tmap_map_opt_t *opt)
@@ -80,6 +84,9 @@ tmap_map_all_add_algorithm(tmap_map_driver_t *driver, tmap_map_opt_t *opt)
                           NULL,
                           opt);
       break;
+    case TMAP_MAP_ALGO_STAGE:
+      // ignore
+      break;
     default:
       tmap_error("Unknown algorithm", Exit, OutOfRange);
   }
@@ -95,11 +102,15 @@ tmap_map_all_core(tmap_map_driver_t *driver)
       tmap_map_all_add_algorithm(driver, driver->opt->sub_opts[i]);
   }
 
+  // DEBUG
   /*
-  for(i=0;i<driver->num_algorithms;i++) {
-      fprintf(stderr, "Algorithm: %s Stage: %d\n", 
-              tmap_algo_id_to_name(driver->algorithms[i]->opt->algo_id),
-              driver->algorithms[i]->opt->algo_stage);
+  int32_t j;
+  for(i=0;i<driver->num_stages;i++) {
+      for(j=0;j<driver->stages[i]->num_algorithms;j++) {
+          fprintf(stderr, "Algorithm: %s Stage: %d\n", 
+                  tmap_algo_id_to_name(driver->stages[i]->algorithms[j]->opt->algo_id),
+                  driver->stages[i]->algorithms[j]->opt->algo_stage);
+      }
   }
   */
 
@@ -110,99 +121,151 @@ tmap_map_all_core(tmap_map_driver_t *driver)
 int32_t
 tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
 {
-  int32_t i, j, start, opt_id, opt_next_id, opt_stage, opt_next_stage, cur_id, cur_stage;
-  char *name = NULL;
-  tmap_map_opt_t *opt_cur= NULL;
+  int32_t i, j, k, l;
+  int32_t cur_id, cur_stage;
+  int32_t *stages_used = NULL, stages_used_num = 0;
+  tmap_map_opt_t *stage_opt = NULL, *algo_opt = NULL;
 
-  // parse common options as well as map1/map2/map3/mapvsw commands
-  start = 0;
-  i = 1;
-  opt_id = opt_next_id = TMAP_MAP_ALGO_NONE;
-  opt_stage = opt_next_stage = 0;
-  opt->num_stages = 0;
-  while(i<=argc) {
-      if(i == argc) { 
-          // do nothing
+  // DEBUG
+  /*
+  for(i=0;i<argc;i++) {
+      fprintf(stderr, "argv[%d]=%s\n", i, argv[i]);
+  }
+  */
+
+  // get the range for the global options
+  i = j = 1;
+  while(j < argc) {
+      // check for the "stage"
+      if(0 == strncmp("stage", argv[j], 5)) {
+          break;
       }
-      else {
-          // get the algorithm type and stage
-          cur_stage = 1;
-          name = tmap_strdup(argv[i]); // copy the command line option
-          while(cur_stage <= 2) { // while it could be the first or second stage
-              cur_id = tmap_algo_name_to_id(name); // get the algorithm id
-              if(0 < cur_id) { // found!
-                  opt_next_id = cur_id;
-                  opt_next_stage = cur_stage;
-                  break;
-              }
-              if(1 == cur_stage) {
-                  // convert to lower case
-                  for(j=0;j<strlen(name);j++) {
-                      name[j] = tolower(name[j]);
-                  }
-              }
-              cur_stage++;
+      j++;
+  }
+
+  // parse the global options
+  optind = 1; 
+  if(0 == tmap_map_opt_parse(j, argv, opt)) {
+      return 0;
+  }
+
+  // go through the stages
+  i = j;
+  while(i < argc) {
+      // find the next stage, if it exists
+      j = i + 1;
+      while(j < argc) {
+          if(0 == strncmp("stage", argv[j], 5)) {
+              break;
           }
-          free(name);
+          j++;
+      }
+
+      // get the stage name
+      cur_stage = atoi(argv[i] + 5);
+      if(cur_stage <= 0) {
+          tmap_error("Could not identify the stage", Exit, CommandLineArgument);
+      }
+
+      // check that the stage was not previously specified
+      for(k=0;k<stages_used_num;k++) {
+          if(cur_stage == stages_used[k]) {
+              tmap_error("Cannot specify the same stage twice", Exit, CommandLineArgument);
+          }
+      }
+
+      // add to the stages used
+      stages_used_num++;
+      stages_used = tmap_realloc(stages_used, sizeof(uint32_t) * stages_used_num, "stages_used");
+      stages_used[stages_used_num-1] = cur_stage;
+      
+      // get the stage options
+      k = i+1; // ignore stage name
+      while(k < j) {
+          cur_id = tmap_algo_name_to_id(argv[k]);  // check for an algorithm id
+          if(0 < cur_id) break;
+          k++;
+      }
+
+      // parse the stage options
+      // from i to k
+      stage_opt = tmap_map_opt_add_sub_opt(opt, TMAP_MAP_ALGO_STAGE);
+      stage_opt->algo_stage = cur_stage;
+      optind = 1; 
+      if(1 != tmap_map_opt_parse(k - i, argv + i, stage_opt)) {
+          return 0;
       }
       
-      /*
-      fprintf(stderr, "ITER i=%d start=%d argc=%d opt_id=%d name=%s opt_stage=%d opt_next_id=%d name=%s opt_next_stage=%d argv[%d]=%s argc=%d\n",
-              i, start, argc, 
-              opt_id, tmap_algo_id_to_name(opt_id), opt_stage,
-              opt_next_id, tmap_algo_id_to_name(opt_next_id), opt_next_stage, 
-              i, (i < argc) ? argv[i] : NULL, argc);
-      */
-      
-      if(opt_id != opt_next_id // new type
-         || opt_stage != opt_next_stage // new stage
-         || i == argc) { // end of command line arguments
-          optind=1; // needed for getopt_long
-
-          /*
-          fprintf(stderr, "Algorithm: %s start=%d i=%d\n", tmap_algo_id_to_name(opt_id), start, i);
-          int j;
-          for(j=0;j<i-start;j++) {
-              fprintf(stderr, "j=%d arg=%s\n", j, argv[j+start]);
-          }
-          */
-
-          if(opt->num_stages < opt_stage) opt->num_stages = opt_stage;
-
-          if(TMAP_MAP_ALGO_NONE == opt_id) {
-              // parse common options
-              if(0 == tmap_map_opt_parse(i-start, argv+start, opt)) {
-                  return 0;
-              }
-          }
-          else {
-              // get a sub-opt
-              opt_cur= tmap_map_opt_add_sub_opt(opt, opt_id);
-              // set stage
-              opt_cur->algo_stage = opt_stage;
-              // parse common options
-              if(0 < i - start) {
-                  if(0 == tmap_map_opt_parse(i-start, argv+start, opt_cur)) {
-                      return 0;
-                  }
-              }
-          }
-
-          // update next
-          opt_id = opt_next_id;
-          opt_stage = opt_next_stage;
-          start = i;
+      // NB: do this after parsing the stage options, since '-h' may be
+      // specified
+      if(k == j) {
+          tmap_error("A stage was specified with no algorithms", Exit, CommandLineArgument);
       }
-      i++;
+      
+      // parse the algorithms in this stage
+      while(k < j) {
+          // get the algorithm id
+          cur_id = tmap_algo_name_to_id(argv[k]); 
+          if(cur_id <= 0) tmap_error("bug encountered", Exit, OutOfRange); // should not happen
+          algo_opt = tmap_map_opt_add_sub_opt(opt, cur_id);
+          algo_opt->algo_stage = cur_stage;
+
+          // copy global options to the algorithm options
+          tmap_map_opt_copy_stage(algo_opt, opt);
+          // copy stage options to the algorithm options
+          tmap_map_opt_copy_stage(algo_opt, stage_opt);
+          
+          // check that the algorithm has not been specified
+          for(l=0;l<opt->num_sub_opts;l++) {
+              if(opt->sub_opts[l]->algo_id == algo_opt->algo_id 
+                 && opt->sub_opts[l]->algo_stage == opt->algo_stage) {
+                  tmap_error("algorithm specified twice for the same stage", Exit, CommandLineArgument);
+              }
+          }
+
+          // get the range of options
+          l = k+1;
+          while(l < j && tmap_algo_name_to_id(argv[l]) <= 0) {
+              l++;
+          }
+
+          // parse the algorithm options
+          optind = 1; 
+          if(1 != tmap_map_opt_parse(l - k, argv + k, algo_opt)) {
+              return 0;
+          }
+
+          // for the next loop
+          k = l;
+
+          // nullify
+          algo_opt = NULL;
+      }
+
+      // nullify
+      stage_opt = NULL;
+
+      // update the outer loop
+      i = j;
   }
-  if(argc < i) {
-      i = argc;
+
+  // sort stages used
+  tmap_sort_introsort(tmap_map_all_stages_used, stages_used_num, stages_used);
+
+  // check that stages are continuous
+  for(i=0;i<stages_used_num;i++) {
+      if(i+1 != stages_used[i]) {
+          tmap_error("stage was missing", Exit, CommandLineArgument);
+      }
   }
-  optind = i;
-  
+
   // do this after parsing
   opt->argc = argc; opt->argv = argv;
 
+  // free
+  free(stages_used);
+
+  optind = argc;
   return 1;
 }
 
@@ -213,7 +276,7 @@ tmap_map_all_main(int argc, char *argv[])
 
   // init opt
   driver = tmap_map_driver_init(TMAP_MAP_ALGO_MAPALL, tmap_map_util_mapq);
-      
+
   // get options
   if(1 != tmap_map_all_opt_parse(argc, argv, driver->opt) // options parsed successfully
      || argc != optind  // all options should be used

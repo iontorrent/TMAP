@@ -92,6 +92,8 @@ typedef struct {
     int16_t query_end; /*!< the query end position in the alignment (0-based) */ 
     int16_t target_start; /*!< the target start position in the alignment (0-based) */ 
     int16_t target_end; /*!< the target end position in the alignment (0-based) */ 
+    uint32_t seed_start; /*!< the start of the seed in genomic coordinates used to map this read */
+    uint32_t seed_end; /*!< the end of the seed in genomic coordinates used to map this read */
 } tmap_map_sam_t;
 
 /*!
@@ -103,7 +105,9 @@ typedef struct {
     tmap_map_sam_t *sams; /*!< array of hits */
 } tmap_map_sams_t;
 
-// TODO
+/*!
+  The multi-end record structure
+  */
 typedef struct {
     tmap_map_sams_t **sams; /*!< the sam records */
     int32_t n; /*!< the number of records (multi-end) */
@@ -153,23 +157,35 @@ tmap_map_sams_realloc(tmap_map_sams_t *s, int32_t n);
 void
 tmap_map_sams_destroy(tmap_map_sams_t *s);
 
-// TODO
-void
-tmap_map_sams_destroy(tmap_map_sams_t *s);
-
-// TODO
+/*!
+  Initializes a new multi-end mapping structure
+  @param  num_ends  the number of ends in this record
+  @return  the new multi-end mapping structure
+ */
 tmap_map_record_t*
 tmap_map_record_init(int32_t num_ends);
 
-// TODO
+/*!
+  Clones a new multi-end mapping structure
+  @param  src  the multi-end mapping structure to clone
+  @return  the new multi-end mapping structure
+ */
 tmap_map_record_t*
 tmap_map_record_clone(tmap_map_record_t *src);
 
-// TODO
+/*!
+  Merges the mappings of two multi-end mappings 
+  @param  src   the multi-end mapping structure destination
+  @param  dest  the multi-end mapping structure to merge from
+ */
 void
 tmap_map_record_merge(tmap_map_record_t *dest, tmap_map_record_t *src);
 
-// TODO
+/*!
+  Merges the mappings of two multi-end mappings 
+  @param  src   the multi-end mapping structure destination
+  @param  dest  the multi-end mapping structure to merge from
+ */
 void 
 tmap_map_record_destroy(tmap_map_record_t *record);
 

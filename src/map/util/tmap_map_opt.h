@@ -6,8 +6,6 @@
 #include <getopt.h>
 #include "../../sw/tmap_vsw.h"
 
-// TODO: document
-
 /*!
   The default offset for homopolymer errors.
   */
@@ -71,7 +69,8 @@ enum {
     TMAP_MAP_ALGO_MAP1 = 0x1,  /*!< the map1 algorithm */
     TMAP_MAP_ALGO_MAP2 = 0x2,  /*!< the map2 algorithm */
     TMAP_MAP_ALGO_MAP3 = 0x4,  /*!< the map3 algorithm */
-    TMAP_MAP_ALGO_MAPVSW = 0x1000,  /*!< the mapvsw algorithm */
+    TMAP_MAP_ALGO_MAPVSW = 0x800,  /*!< the mapvsw algorithm */
+    TMAP_MAP_ALGO_STAGE = 0x1000, /*!< the stage options */
     TMAP_MAP_ALGO_MAPALL = 0x2000, /*!< the mapall algorithm */
     TMAP_MAP_ALGO_FLOWSPACE = 0x4000, /*!< flowspace options when printing parameters */
     TMAP_MAP_ALGO_GLOBAL = 0x8000, /*!< global options when printing parameters */
@@ -97,6 +96,9 @@ enum {
     TMAP_MAP_OPT_ALN_MODE_ALL            = 3   /*!< Output all alignments */
 };
 
+/*!
+  The various option types
+  */
 enum {
     TMAP_MAP_OPT_TYPE_INT = 0,
     TMAP_MAP_OPT_TYPE_FLOAT,
@@ -106,10 +108,14 @@ enum {
     TMAP_MAP_OPT_TYPE_NONE
 };
 
-// TODO
+/*!
+  The print function for the options
+  */
 typedef void (*tmap_map_opt_option_print_t)(void *opt);
 
-// TODO
+/*!
+  The option structure
+ */
 typedef struct {
     struct option option;
     char *name;
@@ -120,7 +126,9 @@ typedef struct {
     tmap_map_opt_option_print_t print_func;
 } tmap_map_opt_option_t;
 
-// TODO
+/*!
+  The options structure
+  */
 typedef struct {
     tmap_map_opt_option_t *options;
     int32_t n, mem;
@@ -128,8 +136,6 @@ typedef struct {
     int32_t max_type_length;
 } tmap_map_opt_options_t;
 
-// TODO function headers
-    
 /** 
  * A list of global command line flags take or available.
  *
@@ -144,6 +150,9 @@ typedef struct {
  * NB: Lets reserve single character flags for global options. 
 */
 
+/*!
+  The command line options structure
+ */
 typedef struct __tmap_map_opt_t {
     tmap_map_opt_options_t *options;
     int32_t algo_id;
@@ -230,11 +239,11 @@ typedef struct __tmap_map_opt_t {
     // mapvsw options
     // None
 
-    // mapall options
-    int32_t num_stages;  /*!< the number of stages */ 
-    int32_t mapall_score_thr;  /*!< the stage one scoring threshold (match-score-scaled) (--staged-score-thres) */
-    int32_t mapall_mapq_thr;  /*!< the stage one mapping quality threshold (--staged-mapq-thres) */
-    int32_t mapall_keep_all;  /*!< keep mappings that do not pass the first stage threshold for the next stage (--staged-keep-all) */
+    // stage options
+    int32_t stage_score_thr;  /*!< the stage one scoring threshold (match-score-scaled) (--staged-score-thres) */
+    int32_t stage_mapq_thr;  /*!< the stage one mapping quality threshold (--staged-mapq-thres) */
+    int32_t stage_keep_all;  /*!< keep mappings that do not pass the first stage threshold for the next stage (--staged-keep-all) */
+    double  stage_seed_freqc; /*!< the minimum frequency a seed must occur in order to be considered for mapping (--seed-freq-cutoff) */
 
     // sub-options
    struct __tmap_map_opt_t **sub_opts; /*!< sub-options, for multi-stage and multi-mapping */
@@ -248,7 +257,12 @@ typedef struct __tmap_map_opt_t {
 tmap_map_opt_t *
 tmap_map_opt_init();
 
-// HERE
+/*!
+  Add a sub-option to this option list.
+  @param  opt  the main option
+  @param  algo_id  the algorithm id of the option to create
+  @return  a pointer to the sub-option
+ */
 tmap_map_opt_t*
 tmap_map_opt_add_sub_opt(tmap_map_opt_t *opt, int32_t algo_id);
 
@@ -285,11 +299,35 @@ void
 tmap_map_opt_check(tmap_map_opt_t *opt);
 
 /*!
+  Checks that the global and flowspace options are the same.
+  @param  opt_a  the first option
+  @param  opt_b  the second option
+  */
+void
+tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b); 
+
+/*!
+  Checks that the stage options are the same.
+  @param  opt_a  the first option
+  @param  opt_b  the second option
+  */
+void
+tmap_map_opt_check_stage(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b); 
+
+/*!
   Copies only the global parameters from src into opt
   @param  opt_dest  the destination
   @param  opt_src   the soure
   */
 void
 tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src);
+
+/*!
+  Copies only the stage parameters from src into opt
+  @param  opt_dest  the destination
+  @param  opt_src   the soure
+  */
+void
+tmap_map_opt_copy_stage(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src);
 
 #endif
