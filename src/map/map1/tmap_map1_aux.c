@@ -323,7 +323,8 @@ tmap_map1_aux_get_bam_state(int state)
 
 static tmap_map_sams_t *
 tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t seed2_len,
-                       tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_map_opt_t *opt) 
+                       tmap_refseq_t *refseq, tmap_bwt_t *bwt[2], tmap_sa_t *sa[2], tmap_bwt_match_hash_t *hash[2], 
+                       tmap_map_opt_t *opt) 
 {
   tmap_map_sams_t *sams_tmp = NULL;
   tmap_map_sam_t *sam_cur = NULL;
@@ -362,10 +363,10 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases[2], int32_t se
 
           // query sequence
           if(0 == strand) { // forward
-              pacpos = bwt[1-strand]->seq_len - tmap_sa_pac_pos(sa[1-strand], bwt[1-strand], k);
+              pacpos = bwt[1-strand]->seq_len - tmap_sa_pac_pos_hash(sa[1-strand], bwt[1-strand], k, hash[1-strand]);
           }
           else { // reverse
-              pacpos = tmap_sa_pac_pos(sa[1-strand], bwt[1-strand], k); // since we used the reverse index
+              pacpos = tmap_sa_pac_pos_hash(sa[1-strand], bwt[1-strand], k, hash[1-strand]); // since we used the reverse index
               pacpos += aln_ref;
           }
           pacpos = (pacpos < aln_ref) ? 0 : (pacpos - aln_ref);
@@ -841,5 +842,5 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
       }
   }
 
-  return tmap_map1_sam_to_real(sams, bases, seed2_len, refseq, bwt, sa, opt);
+  return tmap_map1_sam_to_real(sams, bases, seed2_len, refseq, bwt, sa, hash, opt);
 }
