@@ -366,6 +366,78 @@ tmap_bwt_match_hash_cal_width_reverse(const tmap_bwt_t *bwt, int len, const char
   width[len].bid = ++bid;
 }
 
+static inline uint32_t
+tmap_bwt_match_hash_forward_init(const tmap_bwt_t *bwt, int len, const uint8_t *str,
+                                    tmap_bwt_match_occ_t *match_sa)
+{
+  int32_t i;
+  uint8_t c = 0;
+  len = (len < bwt->hash_width) ? len : bwt->hash_width;
+  match_sa->hi = 0;
+  for(i=0;i<len;i++) {
+      c = str[i];
+      if(TMAP_UNLIKELY(3 < c)) {
+          match_sa->offset = i+1;
+          match_sa->k = bwt->hash_k[match_sa->offset-1][match_sa->hi];
+          match_sa->l = bwt->hash_l[match_sa->offset-1][match_sa->hi];
+          return 0; 
+      }
+      match_sa->hi = (match_sa->hi << 2) + c;
+  }
+  match_sa->offset = len;
+  match_sa->k = bwt->hash_k[match_sa->offset-1][match_sa->hi];
+  match_sa->l = bwt->hash_l[match_sa->offset-1][match_sa->hi];
+  if(match_sa->l < match_sa->k) {
+      for(i=len-1;0<=i&&1<match_sa->offset;i--) {
+          if(bwt->hash_l[match_sa->offset-2][match_sa->hi>>2] < bwt->hash_k[match_sa->offset-2][match_sa->hi>>2]) {
+              break;
+          }
+          match_sa->hi >>= 2;
+          match_sa->offset--;
+          match_sa->k = bwt->hash_k[match_sa->offset-1][match_sa->hi];
+          match_sa->l = bwt->hash_l[match_sa->offset-1][match_sa->hi];
+      }
+      return 0;
+  }
+  return (match_sa->l - match_sa->k + 1);
+}
+
+static inline uint32_t
+tmap_bwt_match_hash_reverse_init(const tmap_bwt_t *bwt, int len, const uint8_t *str,
+                                    tmap_bwt_match_occ_t *match_sa)
+{
+  int32_t i, low;
+  uint8_t c = 0;
+  low = (len < bwt->hash_width) ? 0 : (len - bwt->hash_width);
+  match_sa->hi = 0;
+  for(i=len-1;low<=i;i--) {
+      c = str[i];
+      if(TMAP_UNLIKELY(3 < c)) {
+          match_sa->offset = len-i;
+          match_sa->k = bwt->hash_k[match_sa->offset-1][match_sa->hi];
+          match_sa->l = bwt->hash_l[match_sa->offset-1][match_sa->hi];
+          return 0; 
+      }
+      match_sa->hi = (match_sa->hi << 2) + c;
+  }
+  match_sa->offset = len-low;
+  match_sa->k = bwt->hash_k[match_sa->offset-1][match_sa->hi];
+  match_sa->l = bwt->hash_l[match_sa->offset-1][match_sa->hi];
+  if(match_sa->l < match_sa->k) {
+      for(i=low;i<len&&1<match_sa->offset;i++) {
+          if(bwt->hash_l[match_sa->offset-2][match_sa->hi>>2] < bwt->hash_k[match_sa->offset-2][match_sa->hi>>2]) {
+              break;
+          }
+          match_sa->hi >>= 2;
+          match_sa->offset--;
+          match_sa->k = bwt->hash_k[match_sa->offset-1][match_sa->hi];
+          match_sa->l = bwt->hash_l[match_sa->offset-1][match_sa->hi];
+      }
+      return 0;
+  }
+  return (match_sa->l - match_sa->k + 1);
+}
+
 uint32_t
 tmap_bwt_match_hash_exact(const tmap_bwt_t *bwt, int len, const uint8_t *str, 
                           tmap_bwt_match_occ_t *match_sa, tmap_bwt_match_hash_t *hash)
@@ -374,13 +446,23 @@ tmap_bwt_match_hash_exact(const tmap_bwt_t *bwt, int len, const uint8_t *str,
   uint8_t c = 0;
   tmap_bwt_match_occ_t prev, next;
 
-  prev.k = 0; prev.l = bwt->seq_len;
-  prev.offset = 0;
-  prev.hi = 0;
+  if(0 < bwt->hash_width && 0 < len) { 
+      if(0 == tmap_bwt_match_hash_forward_init(bwt, len, str, &prev)) {
+          if(NULL != match_sa) {
+              (*match_sa) = prev;
+          }
+          return 0;
+      }
+  }
+  else {
+      prev.k = 0; prev.l = bwt->seq_len;
+      prev.offset = 0;
+      prev.hi = 0;
+  }
 
-  for(i=0;i<len;i++) {
+  for(i=prev.offset;i<len;i++) {
       c = str[i];
-      if(3 < c) { 
+      if(TMAP_UNLIKELY(3 < c)) {
           prev.offset++;
           prev.k = prev.l + 1;
           break;
@@ -403,14 +485,24 @@ tmap_bwt_match_hash_exact_reverse(const tmap_bwt_t *bwt, int len, const uint8_t 
   int32_t i;
   uint8_t c = 0;
   tmap_bwt_match_occ_t prev, next;
+  
+  if(0 < bwt->hash_width && 0 < len) { 
+      if(0 == tmap_bwt_match_hash_reverse_init(bwt, len, str, &prev)) {
+          if(NULL != match_sa) {
+              (*match_sa) = prev;
+          }
+          return 0;
+      }
+  }
+  else {
+      prev.k = 0; prev.l = bwt->seq_len;
+      prev.offset = 0;
+      prev.hi = 0;
+  }
 
-  prev.k = 0; prev.l = bwt->seq_len;
-  prev.offset = 0;
-  prev.hi = 0;
-
-  for(i=len-1;0<=i;i--) {
+  for(i=len-prev.offset-1;0<=i;i--) {
       c = str[i];
-      if(3 < c) { 
+      if(TMAP_UNLIKELY(3 < c)) {
           prev.offset++; 
           prev.k = prev.l + 1;
           break;
@@ -435,7 +527,7 @@ tmap_bwt_match_hash_exact_alt(const tmap_bwt_t *bwt, int len, const uint8_t *str
 
   for(i=0;i<len;i++) {
       uint8_t c = str[i];
-      if(c > 3) return 0; // there is an N here. no match
+      if(TMAP_UNLIKELY(c > 3)) return 0; // there is an N here. no match
       tmap_bwt_match_hash_2occ(bwt, match_sa, c, &next, hash);
       (*match_sa) = next;
       if(next.k > next.l) return 0; // no match
@@ -452,7 +544,7 @@ tmap_bwt_match_hash_exact_alt_reverse(const tmap_bwt_t *bwt, int len, const uint
 
   for(i=len-1;0<=i;i--) {
       uint8_t c = str[i];
-      if(c > 3) return 0; // there is an N here. no match
+      if(TMAP_UNLIKELY(c > 3)) return 0; // there is an N here. no match
       tmap_bwt_match_hash_2occ(bwt, match_sa, c, &next, hash);
       (*match_sa) = next;
       if(next.k > next.l) return 0; // no match
@@ -473,7 +565,7 @@ tmap_bwt_match_hash_invPsi(const tmap_bwt_t *bwt, uint32_t sa_intv, uint32_t k, 
   prev.hi = UINT32_MAX;
   while(0 != (prev.k % sa_intv)) {
       (*s)++;
-      if(prev.k != bwt->primary) { // likely
+      if(TMAP_LIKELY(prev.k != bwt->primary)) { // likely
           if(prev.k < bwt->primary) {
               b0 = tmap_bwt_B0(bwt, prev.k);
           }
