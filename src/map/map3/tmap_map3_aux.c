@@ -266,7 +266,7 @@ tmap_map3_aux_core_seed(uint8_t *query,
                       if(0 < seed_step) {
                           int32_t k = i + seed_length;
                           int32_t n = 0;
-                          while(k + seed_step < query_length && 0 < tmap_bwt_match_hash_exact(bwt, seed_step, query + k, &cur_sa, hash)) {
+                          while(k + seed_step < query_length && 0 < tmap_bwt_match_hash_exact_alt(bwt, seed_step, query + k, &cur_sa, hash)) {
                               if((cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
                                   tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, seed_length + k - i);
                                   if(0 < opt->skip_seed_frac) {
@@ -400,7 +400,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
           uint8_t seed_length_ext = seeds[i][j].seed_length;
           for(k=seeds[i][j].k;k<=seeds[i][j].l;k++) { // through all occurrences
               tmap_map_sam_t *s = NULL;
-              pacpos = tmap_sa_pac_pos(sa, bwt, k);
+              pacpos = tmap_sa_pac_pos_hash(sa, bwt, k, hash);
               if(bwt->seq_len < pacpos + seeds[i][j].start + 1) { // before the beginning of the reference sequence
                   pacpos = 0;
               }
