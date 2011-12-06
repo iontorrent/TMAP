@@ -17,6 +17,7 @@
 #include "../../index/tmap_bwt_gen.h"
 #include "../../index/tmap_bwt.h"
 #include "../../index/tmap_bwt_match.h"
+#include "../../index/tmap_bwt_match_hash.h"
 #include "../../index/tmap_sa.h"
 #include "../../index/tmap_index.h"
 #include "../../io/tmap_seq_io.h"
@@ -202,7 +203,7 @@ tmap_map1_thread_init(void **data, tmap_map_opt_t *opt)
 // reverse and reverse compliment
 tmap_map_sams_t*
 tmap_map1_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len,
-                          tmap_index_t *index, tmap_map_opt_t *opt)
+                          tmap_index_t *index, tmap_bwt_match_hash_t *hash[2], tmap_map_opt_t *opt)
 {
   tmap_map1_thread_data_t *d = (tmap_map1_thread_data_t*)(*data);
   int32_t seed2_len = 0;
@@ -256,13 +257,13 @@ tmap_map1_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len,
       tmap_bwt_match_cal_width_reverse(index->bwt[1], opt->seed_length, bases[1]->s + (seq_len - opt->seed_length), d->seed_width[1]);
   }
 
-  sams = tmap_map1_aux_core(seqs, index->refseq, index->bwt, index->sa, d->width, (0 < opt_local.seed_length) ? d->seed_width : NULL, &opt_local, d->stack, seed2_len);
+  sams = tmap_map1_aux_core(seqs, index->refseq, index->bwt, index->sa, hash, d->width, (0 < opt_local.seed_length) ? d->seed_width : NULL, &opt_local, d->stack, seed2_len);
 
   return sams;
 }
 
 tmap_map_sams_t*
-tmap_map1_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_map_stats_t *stat, tmap_rand_t *rand, tmap_map_opt_t *opt)
+tmap_map1_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_map_stats_t *stat, tmap_rand_t *rand, tmap_bwt_match_hash_t *hash[2], tmap_map_opt_t *opt)
 {
   int32_t seq_len = 0;;
   tmap_map_sams_t *sams = NULL;
@@ -287,7 +288,7 @@ tmap_map1_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_m
   seqs_tmp[1] = seqs[1]; // reverse compliment
 
   // core algorithm
-  sams = tmap_map1_thread_map_core(data, seqs_tmp, seq_len, index, opt);
+  sams = tmap_map1_thread_map_core(data, seqs_tmp, seq_len, index, hash, opt);
 
   return sams;
 }

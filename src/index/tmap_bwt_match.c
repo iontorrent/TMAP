@@ -3,250 +3,70 @@
 #include <unistd.h>
 #include "tmap_bwt.h"
 #include "tmap_bwt_match.h"
+#include "tmap_bwt_match_hash.h"
 
 inline void
 tmap_bwt_match_occ(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8_t c, tmap_bwt_match_occ_t *next)
 {
-  uint32_t offset;
-  offset = (NULL == prev) ? 0 : prev->offset;
-  if(bwt->hash_width <= offset) { // do not use the hash
-      uint32_t prev_k;
-      prev_k = (NULL == prev) ? 0 : prev->k;
-      next->k = tmap_bwt_occ(bwt, prev_k-1, c) + bwt->L2[c] + 1;
-      next->offset = offset + 1;
-      next->hi = UINT32_MAX;
-      next->l = UINT32_MAX; 
-  }
-  else { // use the hash
-      uint64_t prev_hi = (NULL == prev) ? 0 : prev->hi;
-      next->offset = offset + 1;
-      next->hi = (prev_hi << 2) + c;
-      next->k = bwt->hash_k[next->offset-1][next->hi];
-      next->l = UINT32_MAX; 
-  }
+  tmap_bwt_match_hash_occ(bwt, prev, c, next, NULL);
 }
 
 inline void
 tmap_bwt_match_2occ(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8_t c, tmap_bwt_match_occ_t *next)
 {
-  uint32_t offset;
-  offset = (NULL == prev) ? 0 : prev->offset;
-  if(bwt->hash_width <= offset) { // do not use the hash
-      uint32_t prev_k, prev_l;
-      prev_k = (NULL == prev) ? 0 : prev->k;
-      prev_l = (NULL == prev) ? bwt->seq_len : prev->l;
-      tmap_bwt_2occ(bwt, prev_k-1, prev_l, c, &next->k, &next->l);
-      next->offset = offset + 1;
-      next->hi = UINT32_MAX;
-      next->k += bwt->L2[c] + 1;
-      next->l += bwt->L2[c];
-  }
-  else { // use the hash
-      uint64_t prev_hi = (NULL == prev) ? 0 : prev->hi;
-      next->offset = offset + 1;
-      next->hi = (prev_hi << 2) + c;
-      next->k = bwt->hash_k[next->offset-1][next->hi];
-      next->l = bwt->hash_l[next->offset-1][next->hi];
-  }
+  tmap_bwt_match_hash_2occ(bwt, prev, c, next, NULL);
 }
 
 inline void
 tmap_bwt_match_occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, tmap_bwt_match_occ_t next[4])
 {
-  uint32_t i, offset;
-  offset = (NULL == prev) ? 0 : prev->offset;
-  if(bwt->hash_width <= offset) { // do not use the hash
-      uint32_t cntk[4];
-      uint32_t prev_k;
-      prev_k = (NULL == prev) ? 0 : prev->k;
-      tmap_bwt_occ4(bwt, prev_k-1, cntk);
-      for(i=0;i<4;i++) {
-          next[i].offset = offset + 1;
-          next[i].hi = UINT32_MAX;
-          next[i].k = cntk[i] + bwt->L2[i] + 1;
-          next[i].l = UINT32_MAX;
-      }
-  }
-  else { // use the hash
-      uint64_t prev_hi = (NULL == prev) ? 0 : prev->hi;
-      for(i=0;i<4;i++) {
-          next[i].offset = offset + 1;
-          next[i].hi = (prev_hi << 2) + i;
-          next[i].k = bwt->hash_k[next[i].offset-1][next[i].hi];
-          next[i].l = UINT32_MAX;
-      }
-  }
+  tmap_bwt_match_hash_occ4(bwt, prev, next, NULL);
 }
 
 inline void
 tmap_bwt_match_2occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, tmap_bwt_match_occ_t next[4])
 {
-  uint32_t i, offset;
-  offset = (NULL == prev) ? 0 : prev->offset;
-  if(bwt->hash_width <= offset) { // do not use the hash
-      uint32_t cntk[4], cntl[4];
-      uint32_t prev_k, prev_l;
-      prev_k = (NULL == prev) ? 0 : prev->k;
-      prev_l = (NULL == prev) ? bwt->seq_len : prev->l;
-      tmap_bwt_2occ4(bwt, prev_k-1, prev_l, cntk, cntl);
-      for(i=0;i<4;i++) {
-          next[i].offset = offset + 1;
-          next[i].hi = UINT32_MAX;
-          next[i].k = cntk[i] + bwt->L2[i] + 1;
-          next[i].l = cntl[i] + bwt->L2[i];
-      }
-  }
-  else { // use the hash
-      uint64_t prev_hi = (NULL == prev) ? 0 : prev->hi;
-      for(i=0;i<4;i++) {
-          next[i].offset = offset + 1;
-          next[i].hi = (prev_hi << 2) + i;
-          next[i].k = bwt->hash_k[next[i].offset-1][next[i].hi];
-          next[i].l = bwt->hash_l[next[i].offset-1][next[i].hi];
-      }
-  }
+  tmap_bwt_match_hash_2occ4(bwt, prev, next, NULL);
 }
 
-void
+inline void
 tmap_bwt_match_cal_width_forward(const tmap_bwt_t *bwt, int len, const char *str, tmap_bwt_match_width_t *width)
 {
-  // 'width[i]' is the lower bound of the number of differences in str[i,len]
-  uint32_t k, l, ok, ol;
-  int i, bid;
-
-  bid = 0;
-  k = 0; l = bwt->seq_len;
-  for(i=len-1;0<=i;i--) {
-      uint8_t c = (int)str[i];
-      if(c < 4) {
-          tmap_bwt_2occ(bwt, k-1, l, c, &ok, &ol);
-          k = bwt->L2[c] + ok + 1;
-          l = bwt->L2[c] + ol;
-      }
-      if(l < k || 3 < c) { // new width
-          k = 0;
-          l = bwt->seq_len;
-          bid++;
-      }
-      width[i].w = l - k + 1;
-      width[i].bid = bid;
-  }
+  tmap_bwt_match_hash_cal_width_forward(bwt, len, str, width, NULL);
 }
 
-void
+inline void
 tmap_bwt_match_cal_width_reverse(const tmap_bwt_t *bwt, int len, const char *str, tmap_bwt_match_width_t *width)
 {
-  // 'width[i]' is the lower bound of the number of differences in str[0,i]
-  uint32_t k, l, ok, ol;
-  int i, bid;
-
-  bid = 0;
-  k = 0; l = bwt->seq_len;
-  for(i=0;i<len;i++) {
-      uint8_t c = (int)str[i];
-      if(c < 4) {
-          tmap_bwt_2occ(bwt, k-1, l, c, &ok, &ol);
-          k = bwt->L2[c] + ok + 1;
-          l = bwt->L2[c] + ol;
-      }
-      if(l < k || 3 < c) { // new width
-          k = 0;
-          l = bwt->seq_len;
-          bid++;
-      }
-      width[i].w = l - k + 1;
-      width[i].bid = bid;
-  }
-  width[len].w = 0;
-  width[len].bid = ++bid;
+  tmap_bwt_match_hash_cal_width_reverse(bwt, len, str, width, NULL);
 }
 
-uint32_t
+inline uint32_t
 tmap_bwt_match_exact(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa)
 {
-  int32_t i;
-  uint8_t c = 0;
-  tmap_bwt_match_occ_t prev, next;
-
-  prev.k = 0; prev.l = bwt->seq_len;
-  prev.offset = 0;
-  prev.hi = 0;
-
-  for(i=0;i<len;i++) {
-      c = str[i];
-      if(3 < c) { 
-          prev.offset++;
-          prev.k = prev.l + 1;
-          break;
-      }
-      tmap_bwt_match_2occ(bwt, &prev, c, &next);
-      prev = next;
-      if(next.k > next.l) break; // no match
-  }
-  if(NULL != match_sa) {
-      (*match_sa) = prev;
-  }
-  if(3 < c || prev.k > prev.l) return 0; // no match
-  return prev.l - prev.k + 1;
+  return tmap_bwt_match_hash_exact(bwt, len, str, match_sa, NULL);
 }
 
-uint32_t
+inline uint32_t
 tmap_bwt_match_exact_reverse(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa)
 {
-  int32_t i;
-  uint8_t c = 0;
-  tmap_bwt_match_occ_t prev, next;
-
-  prev.k = 0; prev.l = bwt->seq_len;
-  prev.offset = 0;
-  prev.hi = 0;
-
-  for(i=len-1;0<=i;i--) {
-      c = str[i];
-      if(3 < c) { 
-          prev.offset++; 
-          prev.k = prev.l + 1;
-          break;
-      }
-      tmap_bwt_match_2occ(bwt, &prev, c, &next);
-      prev = next;
-      if(next.k > next.l) break; // no match
-  }
-  if(NULL != match_sa) {
-      (*match_sa) = prev;
-  }
-  if(3 < c || prev.k > prev.l) return 0; // no match
-  return prev.l - prev.k + 1;
+  return tmap_bwt_match_hash_exact_reverse(bwt, len, str, match_sa, NULL);
 }
 
-uint32_t
+inline uint32_t
 tmap_bwt_match_exact_alt(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa)
 {
-  int i;
-  tmap_bwt_match_occ_t next;
-
-  for(i=0;i<len;i++) {
-      uint8_t c = str[i];
-      if(c > 3) return 0; // there is an N here. no match
-      tmap_bwt_match_2occ(bwt, match_sa, c, &next);
-      (*match_sa) = next;
-      if(next.k > next.l) return 0; // no match
-  }
-  return match_sa->l - match_sa->k + 1;
+  return tmap_bwt_match_hash_exact_alt(bwt, len, str, match_sa, NULL);
 }
 
-uint32_t
+inline uint32_t
 tmap_bwt_match_exact_alt_reverse(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa)
 {
-  int i;
-  tmap_bwt_match_occ_t next;
+  return tmap_bwt_match_hash_exact_alt_reverse(bwt, len, str, match_sa, NULL);
+}
 
-  for(i=len-1;0<=i;i--) {
-      uint8_t c = str[i];
-      if(c > 3) return 0; // there is an N here. no match
-      tmap_bwt_match_2occ(bwt, match_sa, c, &next);
-      (*match_sa) = next;
-      if(next.k > next.l) return 0; // no match
-  }
-  return match_sa->l - match_sa->k + 1;
+inline uint32_t
+tmap_bwt_match_invPsi(const tmap_bwt_t *bwt, uint32_t sa_intv, uint32_t k, uint32_t *s)
+{
+  return tmap_bwt_match_hash_invPsi(bwt, sa_intv, k, s, NULL);
 }

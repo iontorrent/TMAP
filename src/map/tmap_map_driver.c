@@ -19,6 +19,7 @@
 #include "../index/tmap_bwt_gen.h"
 #include "../index/tmap_bwt.h"
 #include "../index/tmap_bwt_match.h"
+#include "../index/tmap_bwt_match_hash.h"
 #include "../index/tmap_sa.h"
 #include "../index/tmap_index.h"
 #include "../io/tmap_seq_io.h"
@@ -28,6 +29,12 @@
 #include "util/tmap_map_stats.h"
 #include "util/tmap_map_util.h"
 #include "tmap_map_driver.h"
+
+// NB: do not turn these on, as they do not currently improve run time. They
+// could be useful if many duplicate lookups are performed and the hash
+// retrieval was fast...
+//#define TMAP_DRIVER_USE_HASH 1
+//#define TMAP_DRIVER_CLEAR_HASH_PER_READ 1
 
 #define __tmap_map_sam_sort_score_lt(a, b) ((a).score > (b).score)
 TMAP_SORT_INIT(tmap_map_sam_sort_score, tmap_map_sam_t, __tmap_map_sam_sort_score_lt)
@@ -174,9 +181,16 @@ tmap_map_driver_core_worker(int32_t num_ends,
   int32_t found;
   tmap_fsw_flowseq_t *fs = NULL;
   tmap_seq_t ***seqs = NULL;
+  tmap_bwt_match_hash_t *hash[2] = {NULL, NULL};
 
   // initialize thread data
   tmap_map_driver_do_threads_init(driver, tid);
+          
+#ifdef TMAP_DRIVER_USE_HASH
+  // init the occurence hash
+  hash[0] = tmap_bwt_match_hash_init(); 
+  hash[1] = tmap_bwt_match_hash_init(); 
+#endif
 
   // initialize flow space info
   if(0 < seq_buffer_length) {
@@ -193,6 +207,14 @@ tmap_map_driver_core_worker(int32_t num_ends,
       if(tid == (low % driver->opt->num_threads)) {
           tmap_map_stats_t *curstat = NULL;
           tmap_map_record_t *record_prev = NULL;
+          
+#ifdef TMAP_DRIVER_USE_HASH
+#ifdef TMAP_DRIVER_CLEAR_HASH_PER_READ
+          // TODO: should we hash each read, or across the thread?
+          tmap_bwt_match_hash_clear(hash[0]);
+          tmap_bwt_match_hash_clear(hash[1]);
+#endif
+#endif
               
           // remove key sequences
           for(i=0;i<num_ends;i++) {
@@ -243,7 +265,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
                           tmap_error("bug encountered", Exit, OutOfRange);
                       }
                       // map
-                      sams = algorithm->func_thread_map(&algorithm->thread_data[tid], seqs[j], index, curstat, rand, algorithm->opt);
+                      sams = algorithm->func_thread_map(&algorithm->thread_data[tid], seqs[j], index, curstat, rand, hash, algorithm->opt);
                       if(NULL == sams) {
                           tmap_error("the thread function did not return a mapping", Exit, OutOfRange);
                       }
@@ -386,6 +408,11 @@ tmap_map_driver_core_worker(int32_t num_ends,
 
   // cleanup
   tmap_map_driver_do_threads_cleanup(driver, tid);
+#ifdef TMAP_DRIVER_USE_HASH
+  // free hash
+  tmap_bwt_match_hash_destroy(hash[0]);
+  tmap_bwt_match_hash_destroy(hash[1]);
+#endif
 }
 
 void *

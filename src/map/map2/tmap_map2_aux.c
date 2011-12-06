@@ -15,6 +15,8 @@
 #include "../../index/tmap_refseq.h"
 #include "../../index/tmap_bwtl.h"
 #include "../../index/tmap_bwt.h"
+#include "../../index/tmap_bwt_match.h"
+#include "../../index/tmap_bwt_match_hash.h"
 #include "../../index/tmap_sa.h"
 #include "../../index/tmap_index.h"
 #include "../../sw/tmap_sw.h"
@@ -34,7 +36,7 @@ TMAP_SORT_INIT(hitG, tmap_map2_hit_t, __hitG_lt)
 #define TMAP_MAP2_AUX_IS 0
 
 int32_t
-tmap_map2_aux_resolve_duphits(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_map2_aln_t *b, int32_t IS, int32_t min_as)
+tmap_map2_aux_resolve_duphits(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_bwt_match_hash_t *hash, tmap_map2_aln_t *b, int32_t IS, int32_t min_as)
 {
   int32_t i, j, n;
   if(b->n == 0) return 0;
@@ -64,13 +66,13 @@ tmap_map2_aux_resolve_duphits(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_m
               uint32_t k;
               for(k = p->k; k <= p->l; ++k) {
                   b->hits[j] = *p;
-                  b->hits[j].k = tmap_sa_pac_pos(sa, bwt, k);
+                  b->hits[j].k = tmap_sa_pac_pos_hash(sa, bwt, k, hash);
                   b->hits[j].l = 0;
                   ++j;
               }
           } else if(p->G > min_as) {
               b->hits[j] = *p;
-              b->hits[j].k = tmap_sa_pac_pos(sa, bwt, p->k);
+              b->hits[j].k = tmap_sa_pac_pos_hash(sa, bwt, p->k, hash);
               b->hits[j].l = 0;
               b->hits[j].flag |= 0x1;
               ++j;
@@ -244,7 +246,7 @@ tmap_map2_aux_merge_hits(tmap_map2_aln_t *b[2], int32_t l, int32_t is_reverse)
 
 static tmap_map2_aln_t *
 tmap_map2_aux_aln(tmap_map_opt_t *opt, tmap_refseq_t *refseq, 
-                  tmap_bwt_t *target_bwt, tmap_sa_t *target_sa,
+                  tmap_bwt_t *target_bwt, tmap_sa_t *target_sa, tmap_bwt_match_hash_t *target_hash,
                   tmap_string_t *seq[2], int32_t is_rev, tmap_map2_global_mempool_t *pool)
 {
   tmap_map2_aln_t *b[2], **bb[2];
@@ -252,9 +254,9 @@ tmap_map2_aux_aln(tmap_map_opt_t *opt, tmap_refseq_t *refseq,
 
   for(k = 0; k < 2; ++k) {
       tmap_bwtl_t *query = tmap_bwtl_seq2bwtl(seq[k]->l, (uint8_t*)seq[k]->s);
-      bb[k] = tmap_map2_core_aln(opt, query, target_bwt, target_sa, pool);
-      tmap_map2_aux_resolve_duphits(target_bwt, target_sa, bb[k][0], opt->max_seed_intv, 0);
-      tmap_map2_aux_resolve_duphits(target_bwt, target_sa, bb[k][1], opt->max_seed_intv, 0);
+      bb[k] = tmap_map2_core_aln(opt, query, target_bwt, target_sa, target_hash, pool);
+      tmap_map2_aux_resolve_duphits(target_bwt, target_sa, target_hash, bb[k][0], opt->max_seed_intv, 0);
+      tmap_map2_aux_resolve_duphits(target_bwt, target_sa, target_hash, bb[k][1], opt->max_seed_intv, 0);
       tmap_bwtl_destroy(query);
   }
   b[0] = bb[0][1]; b[1] = bb[1][1]; // bb[*][1] are "narrow SA hits"
@@ -399,6 +401,7 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
                    tmap_refseq_t *refseq,
                    tmap_bwt_t *bwt[2],
                    tmap_sa_t *sa[2],
+                   tmap_bwt_match_hash_t *hash[2],
                    tmap_rand_t *rand,
                    tmap_map2_global_mempool_t *pool)
 {
@@ -470,12 +473,12 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
   }
 
   // alignment
-  b[0] = tmap_map2_aux_aln(&opt, refseq, bwt[0], sa[0], seq, 0, pool);
+  b[0] = tmap_map2_aux_aln(&opt, refseq, bwt[0], sa[0], hash[0], seq, 0, pool);
   for(k = 0; k < b[0]->n; ++k) {
       if(b[0]->hits[k].n_seeds < opt.seeds_rev) break;
   } 
   if(k < b[0]->n) {
-      b[1] = tmap_map2_aux_aln(&opt, refseq, bwt[1], sa[1], rseq, 1, pool);
+      b[1] = tmap_map2_aux_aln(&opt, refseq, bwt[1], sa[1], hash[1], rseq, 1, pool);
       for(i = 0; i < b[1]->n; ++i) {
           tmap_map2_hit_t *p = b[1]->hits + i;
           int x = p->beg;
