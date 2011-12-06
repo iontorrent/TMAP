@@ -38,13 +38,11 @@
 #include "../io/tmap_file.h"
 #include "tmap_bwt_gen.h"
 #include "tmap_bwt.h"
-//#include "tmap_bwt_aux.h"
+#include "tmap_bwt_aux.h"
+#include "tmap_bwt_check.h"
 #include "tmap_bwt_match.h"
 
 #define TMAP_BWT_BY_FIVE
-
-// Debug
-#define TMAP_BWT_DEBUG
 
 static inline uint64_t
 tmap_bwt_get_hash_length(uint64_t i)
@@ -330,7 +328,7 @@ tmap_bwt_update_occ_interval(tmap_bwt_t *bwt, tmap_bwt_int_t occ_interval)
   for (i = k = 0; i < bwt->seq_len; ++i) {
       // store the occurrences
       if (i % occ_interval == 0) {
-          memcpy(buf + k, c, sizeof(tmap_bwt_int_t) * 4);
+          memcpy(buf + k, c, sizeof(tmap_bwt_int_t) * 4); // in fact: sizeof(tmap_bwt_int_t) = 4*(sizeof(tmap_bwt_int_t)/4)
           k += sizeof(tmap_bwt_int_t);
       }
       // store the bwt string
@@ -427,28 +425,6 @@ tmap_bwt_gen_hash_helper(tmap_bwt_t *bwt, uint32_t len)
       }
   }
 
-  if(sum != bwt->seq_len - len + 1) {
-#ifdef TMAP_BWT_DEBUG
-      tmap_error("Found an inconsitency in the BWT", Warn, OutOfRange);
-      /*
-      fprintf(stderr, "len=%u sum=%lld (bwt->seq_len - len + 1)=%lld\n", 
-              len, (long long int)sum, (long long int)(bwt->seq_len - len + 1));
-      for(i=1;i<=len;i++) {
-          uint64_t hash_length = tmap_bwt_get_hash_length(i);
-          for(hash_i=0;hash_i<hash_length;hash_i++) {
-              fprintf(stderr, "i=%lld hash_i=%llu hash_k=%llu hash_l=%llu\n", 
-                      i,
-                      hash_i,
-                      bwt->hash_k[i-1][hash_i],
-                      bwt->hash_l[i-1][hash_i]);
-          }
-      }
-      */
-#else
-      tmap_error("sum != bwt->seq_len - len + 1", Exit, OutOfRange);
-#endif
-  }
-  
   free(seq);
 }
 
@@ -485,6 +461,10 @@ tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width)
       tmap_bwt_gen_hash_helper(bwt, i);
       bwt->hash_width = i; // updated the hash width
   }
+
+  // test the BWT hash
+  tmap_progress_print2("testing the BWT hash");
+  tmap_bwt_check_core2(bwt, bwt->hash_width, 1, 0, 1);
   
   tmap_progress_print2("constructed the occurrence hash for the BWT string");
 }
@@ -569,8 +549,8 @@ tmap_bwt_2occ_orig(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, ui
   } else {
       tmap_bwt_int_t m, n, i, j;
       uint32_t *p;
-      if(k >= bwt->primary) --k;
-      if(l >= bwt->primary) --l;
+      k = _k;
+      l = _l;
       n = ((tmap_bwt_int_t*)(p = tmap_bwt_occ_intv(bwt, k)))[c];
       p += sizeof(tmap_bwt_int_t);
       // calculate *ok
@@ -617,7 +597,7 @@ inline void
 tmap_bwt_2occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, uint8_t c, tmap_bwt_int_t *ok, tmap_bwt_int_t *ol)
 {
   //tmap_bwt_int_t aux_ok, aux_ol; 
-
+      
   // Original
   tmap_bwt_2occ_orig(bwt, k, l, c, ok, ol);
 
@@ -625,12 +605,14 @@ tmap_bwt_2occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, uint8_t
   // Optimized (?)
   aux_ol = l;
   aux_ok = tmap_bwt_aux_2occ(bwt, k, &aux_ol, c);
+  // NB: tmap_bwt_aux_2occ included L2 addition
+  aux_ol -= bwt->L2[c];
+  aux_ok -= bwt->L2[c] + 1;
   
   // Test
-  if(aux_ok != *ok) {
-      tmap_bug();
-  }
-  if(aux_ol != *ol) {
+  if(aux_ok != *ok || aux_ol != *ol) {
+      fprintf(stderr, "c=%u k=%llu l=%llu *ok=%llu aux_ok=%llu *ol=%llu aux_ol=%llu TMAP_BWT_INT_MAX=%llu\n", 
+              c, k, l, *ok, aux_ok, *ol, aux_ol, TMAP_BWT_INT_MAX);
       tmap_bug();
   }
   */
@@ -681,8 +663,8 @@ tmap_bwt_2occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, tmap_b
   } else {
       tmap_bwt_int_t i, j, x, y;
       uint32_t *p;
-      if(k >= bwt->primary) --k; // because $ is not in bwt
-      if(l >= bwt->primary) --l;
+      k = _k;
+      l = _l;
       p = tmap_bwt_occ_intv(bwt, k);
       memcpy(cntk, p, 4 * sizeof(tmap_bwt_int_t));
       p += sizeof(tmap_bwt_int_t);
@@ -727,6 +709,29 @@ tmap_bwt_pac2bwt_main(int argc, char *argv[])
   }
 
   tmap_bwt_pac2bwt(argv[optind], is_large, occ_interval, hash_width);
+
+  return 0;
+}
+
+int
+tmap_bwt_bwtupdate_main(int argc, char *argv[])
+{
+  int c, help = 0;
+  uint32_t hash_width = TMAP_BWT_HASH_WIDTH;
+
+  while((c = getopt(argc, argv, "w:vh")) >= 0) {
+      switch(c) {
+        case 'w': hash_width = atoi(optarg); break;
+        case 'v': tmap_progress_set_verbosity(1); break;
+        case 'h': help = 1; break;
+        default: return 1;
+      }
+  }
+  if(1 != argc - optind || 1 == help) {
+      tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [-l -o INT -w INT -v -h] <in.fasta>\n", PACKAGE, argv[0]);
+      return 1;
+  }
+  tmap_bwt_update_hash(argv[optind], hash_width);
 
   return 0;
 }

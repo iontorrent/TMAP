@@ -1632,11 +1632,13 @@ BWTSaveBwtCodeAndOcc(tmap_bwt_t *bwt_out, const tmap_bwt_gen_t *bwt, const char 
   // free and nullify
   bwt_out->bwt = NULL;
 
-  // update occurrence interval
-  bwt_tmp = tmap_bwt_read(fn_fasta);
-  tmap_bwt_update_occ_interval(bwt_tmp, occ_interval);
-  tmap_bwt_write(fn_fasta, bwt_tmp);
-  tmap_bwt_destroy(bwt_tmp);
+  // update occurrence interval, if necessary
+  if(occ_interval != bwt_out->occ_interval) {
+      bwt_tmp = tmap_bwt_read(fn_fasta);
+      tmap_bwt_update_occ_interval(bwt_tmp, occ_interval);
+      tmap_bwt_write(fn_fasta, bwt_tmp);
+      tmap_bwt_destroy(bwt_tmp);
+  }
 }
 
 void 
@@ -1711,9 +1713,51 @@ tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, 
 
   tmap_progress_print2("constructed the BWT string from the packed FASTA");
 
+  if(0 < hash_width) {
+      bwt = tmap_bwt_read(fn_fasta); 
+      tmap_bwt_gen_hash(bwt, hash_width);
+      tmap_bwt_write(fn_fasta, bwt);
+      tmap_bwt_destroy(bwt);
+  }
+  else {
+      tmap_progress_print("skipping occurrence hash creation");
+  }
+}
+
+void 
+tmap_bwt_update_hash(const char *fn_fasta, int32_t hash_width)
+{
+  int32_t i;
+  tmap_bwt_t *bwt;
+
+  // read in the bwt
   bwt = tmap_bwt_read(fn_fasta); 
-  tmap_bwt_gen_hash(bwt, hash_width);
-  tmap_bwt_write(fn_fasta, bwt);
+
+  // new hash width?
+  if(hash_width != bwt->hash_width) {
+      // free the previous hash
+      if(NULL != bwt->hash_k) {
+          for(i=0;i<bwt->hash_width;i++) {
+              free(bwt->hash_k[i]);
+          }
+      }
+      if(NULL != bwt->hash_l) {
+          for(i=0;i<bwt->hash_width;i++) {
+              free(bwt->hash_l[i]);
+          }
+      }
+      free(bwt->hash_k);
+      free(bwt->hash_l);
+      bwt->hash_k = bwt->hash_l = NULL;
+
+      // new hash
+      tmap_bwt_gen_hash(bwt, hash_width);
+
+      // write
+      tmap_bwt_write(fn_fasta, bwt);
+  }
+  
+  // destroy
   tmap_bwt_destroy(bwt);
 }
 

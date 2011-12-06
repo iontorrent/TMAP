@@ -16,17 +16,21 @@
 
 /*! 
   the core alignment algorithm
-  @param  opt         the program options
-  @param  target      the target sequence (read)
-  @param  query_bwt   the query bwt (reference)
-  @param  query_sa    the query sa (reference)
-  @param  hash        the occurence hash
-  @param  pool        a global memory pool
-  @return             a set of alignments
+  @param  opt           the program options
+  @param  target        the target sequence (read)
+  @param  query_refseq  the query reference sequence (reference)
+  @param  query_bwt     the query bwt (reference)
+  @param  query_sa      the query sa (reference)
+  @param  hash          the occurrence hash
+  @param  pool          a global memory pool
+  @return               a set of alignments
   */
 tmap_map2_aln_t **
 tmap_map2_core_aln(const tmap_map_opt_t *opt, const tmap_bwtl_t *target, 
-               const tmap_bwt_t *query_bwt, const tmap_sa_t *query_sa, tmap_bwt_match_hash_t *hash,
+               const tmap_refseq_t *refseq, 
+               const tmap_bwt_t *query_bwt, 
+               const tmap_sa_t *query_sa,
+               tmap_bwt_match_hash_t *hash,
                tmap_map2_global_mempool_t *pool);
 
 #endif

@@ -221,7 +221,6 @@ typedef struct __tmap_map_opt_t {
     int32_t max_entries;  /*!< maximum number of alignment nodes (--max-nodes) */
     
     // map2 options
-    double yita;  /*!< the error recurrence coefficient (PERMANENTLY SET) */
     //double mask_level;  /*!< the mask level (-m) */
     double length_coef;  /*!< the coefficient of length-threshold adjustment (--length-coef) */
     int32_t max_seed_intv;  /*!< the maximum seed interval (--max-seed-intv) */
