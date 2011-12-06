@@ -1037,7 +1037,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
               end, sams->n, opt->seed_freqc);
       printf(" (end - start + 1) > ( sams->n * opt->seed_freqc)=%d", ( (end - start + 1) > ( sams->n * opt->seed_freqc) ) );
       printf(" ( sams->n * opt->seed_freqc)=%0.2f\n", ( sams->n * opt->seed_freqc));*/
-      if ( (end - start + 1) > ( sams->n * opt->sub_opts[ sams->sams[end].algo_stage - 1 ]->stage_seed_freqc) ) {
+      if ( (end - start + 1) > ( sams->n * opt->stage_seed_freqc) ) {
           if(0 == strand) {
               tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query, qlen,
                                             target, tlen, 
