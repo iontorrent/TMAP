@@ -30,6 +30,9 @@
 #include "util/tmap_map_util.h"
 #include "tmap_map_driver.h"
 
+// NB: do not turn these on, as they do not currently improve run time. They
+// could be useful if many duplicate lookups are performed and the hash
+// retrieval was fast...
 //#define TMAP_DRIVER_USE_HASH 1
 //#define TMAP_DRIVER_CLEAR_HASH_PER_READ 1
 
