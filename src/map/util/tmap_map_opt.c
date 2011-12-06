@@ -1313,11 +1313,21 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   }
   if(optind < argc) {
       val = 0;
-      tmap_file_fprintf(tmap_file_stderr, "non-option command-line-elements: ");
+      tmap_file_fprintf(tmap_file_stderr, "non-option command-line-elements:\n");
       while(optind < argc) {
-          tmap_file_fprintf(tmap_file_stderr, "%s ", argv[optind++]);
+          tmap_file_fprintf(tmap_file_stderr, "%s", argv[optind]);
+          i = -1;
+          if(opt->algo_id == TMAP_MAP_ALGO_MAPALL) {
+              i = tmap_algo_name_to_id(argv[optind]);
+              if(0 <= i) {
+                  tmap_file_fprintf(tmap_file_stderr, ": recognized an algorithm name, did you forget to include the stage parameter?\n");
+              }
+          }
+          if(i < 0) {
+              tmap_file_fprintf(tmap_file_stderr, ": unknown command line option\n");
+          }
+          optind++;
       }
-      tmap_file_fprintf(tmap_file_stderr, "\n");
   }
   free(options);
   free(getopt_format);
