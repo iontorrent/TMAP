@@ -320,7 +320,7 @@ tmap_bwt_match_hash_cal_width_forward(const tmap_bwt_t *bwt, int len, const char
       if(c < 4) {
           tmap_bwt_match_hash_2occ(bwt, &prev, c, &next, hash);
       }
-      if(next.l < next.k || 3 < c) { // new width
+      if(next.l < next.k || UINT32_MAX == next.k || 3 < c) { // new width
           next.k = 0;
           next.l = bwt->seq_len;
           next.offset = 0;
@@ -351,7 +351,7 @@ tmap_bwt_match_hash_cal_width_reverse(const tmap_bwt_t *bwt, int len, const char
       if(c < 4) {
           tmap_bwt_match_hash_2occ(bwt, &prev, c, &next, hash);
       }
-      if(next.l < next.k || 3 < c) { // new width
+      if(next.l < next.k || UINT32_MAX == next.k || 3 < c) { // new width
           next.k = 0;
           next.l = bwt->seq_len;
           next.offset = 0;
@@ -387,9 +387,10 @@ tmap_bwt_match_hash_forward_init(const tmap_bwt_t *bwt, int len, const uint8_t *
   match_sa->offset = len;
   match_sa->k = bwt->hash_k[match_sa->offset-1][match_sa->hi];
   match_sa->l = bwt->hash_l[match_sa->offset-1][match_sa->hi];
-  if(match_sa->l < match_sa->k) {
+  if(match_sa->l < match_sa->k || UINT32_MAX == match_sa->k) {
       for(i=len-1;0<=i&&1<match_sa->offset;i--) {
-          if(bwt->hash_l[match_sa->offset-2][match_sa->hi>>2] < bwt->hash_k[match_sa->offset-2][match_sa->hi>>2]) {
+          if(bwt->hash_k[match_sa->offset-2][match_sa->hi>>2] <= bwt->hash_l[match_sa->offset-2][match_sa->hi>>2] 
+             && UINT32_MAX != bwt->hash_k[match_sa->offset-2][match_sa->hi>>2]) {
               break;
           }
           match_sa->hi >>= 2;
@@ -423,9 +424,10 @@ tmap_bwt_match_hash_reverse_init(const tmap_bwt_t *bwt, int len, const uint8_t *
   match_sa->offset = len-low;
   match_sa->k = bwt->hash_k[match_sa->offset-1][match_sa->hi];
   match_sa->l = bwt->hash_l[match_sa->offset-1][match_sa->hi];
-  if(match_sa->l < match_sa->k) {
+  if(match_sa->l < match_sa->k || UINT32_MAX == match_sa->k) {
       for(i=low;i<len&&1<match_sa->offset;i++) {
-          if(bwt->hash_l[match_sa->offset-2][match_sa->hi>>2] < bwt->hash_k[match_sa->offset-2][match_sa->hi>>2]) {
+          if(bwt->hash_k[match_sa->offset-2][match_sa->hi>>2] <= bwt->hash_l[match_sa->offset-2][match_sa->hi>>2]
+             && UINT32_MAX != bwt->hash_k[match_sa->offset-2][match_sa->hi>>2]) {
               break;
           }
           match_sa->hi >>= 2;
@@ -469,12 +471,12 @@ tmap_bwt_match_hash_exact(const tmap_bwt_t *bwt, int len, const uint8_t *str,
       }
       tmap_bwt_match_hash_2occ(bwt, &prev, c, &next, hash);
       prev = next;
-      if(next.k > next.l) break; // no match
+      if(next.k > next.l || UINT32_MAX == next.k) break; // no match
   }
   if(NULL != match_sa) {
       (*match_sa) = prev;
   }
-  if(3 < c || prev.k > prev.l) return 0; // no match
+  if(3 < c || prev.k > prev.l || UINT32_MAX == prev.k) return 0; // no match
   return prev.l - prev.k + 1;
 }
 
@@ -509,12 +511,12 @@ tmap_bwt_match_hash_exact_reverse(const tmap_bwt_t *bwt, int len, const uint8_t 
       }
       tmap_bwt_match_hash_2occ(bwt, &prev, c, &next, hash);
       prev = next;
-      if(next.k > next.l) break; // no match
+      if(next.k > next.l || UINT32_MAX == next.k) break; // no match
   }
   if(NULL != match_sa) {
       (*match_sa) = prev;
   }
-  if(3 < c || prev.k > prev.l) return 0; // no match
+  if(3 < c || prev.k > prev.l || UINT32_MAX == prev.k) return 0; // no match
   return prev.l - prev.k + 1;
 }
 
@@ -530,7 +532,7 @@ tmap_bwt_match_hash_exact_alt(const tmap_bwt_t *bwt, int len, const uint8_t *str
       if(TMAP_UNLIKELY(c > 3)) return 0; // there is an N here. no match
       tmap_bwt_match_hash_2occ(bwt, match_sa, c, &next, hash);
       (*match_sa) = next;
-      if(next.k > next.l) return 0; // no match
+      if(next.k > next.l || UINT32_MAX == next.k) return 0; // no match
   }
   return match_sa->l - match_sa->k + 1;
 }
@@ -547,7 +549,7 @@ tmap_bwt_match_hash_exact_alt_reverse(const tmap_bwt_t *bwt, int len, const uint
       if(TMAP_UNLIKELY(c > 3)) return 0; // there is an N here. no match
       tmap_bwt_match_hash_2occ(bwt, match_sa, c, &next, hash);
       (*match_sa) = next;
-      if(next.k > next.l) return 0; // no match
+      if(next.k > next.l || UINT32_MAX == next.k) return 0; // no match
   }
   return match_sa->l - match_sa->k + 1;
 }
