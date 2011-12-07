@@ -454,16 +454,16 @@ The recommended values are pre-set, and the following command line is recommende
 \subsection{Usage}
 The following options apply to a single stage, and control how mappings are handled between stages.
 \subsubsection{\TT{--stage-score-thres INT}}
-Specifies the number of multiples of the match score (\TT{-A}) for the minimum scoring threshold for the first stage.
-An alignment is filtered in the first stage if it has an alignment score less than this threshold, and there are algorithms in the second stage.
+Specifies the number of multiples of the match score (\TT{-A}) for the minimum scoring threshold for the current  stage.
+An alignment is filtered in the given stage if it has an alignment score less than this threshold, and there are more stages to process.
 \subsubsection{\TT{--stage-mapq-thres INT}}
-Specifies the mapping quality threshold for the first stage.
-An alignment is filtered in the first stage if it has a mapping quality less than this threshold, and there are algorithms in the second stage.
+Specifies the mapping quality threshold for the current stage.
+An alignment is filtered in the current stage if it has a mapping quality less than this threshold, and there are more stages to process.
 \subsubsection{\TT{--stage-keep-all}}
-Specifies not to keep mappings from the first stage for the second stage.
-If this option is not given, the mappings from the first stage are added to any mappings from the second stage as candidates.
+Specifies to keep mappings from the current stage for the next stage.
+If this option is given, the mappings from the previous stage are added to any mappings from the subsequent stage as candidates.
 
-\subsubsection{\TT{--seed-freq-cutoff FLOAT}}
+\subsubsection{\TT{--stage-seed-freq-cutoff FLOAT}}
 Specifies the minimum frequency a seed must occur in order to be considered for mapping.
 
 \section{tmap server}

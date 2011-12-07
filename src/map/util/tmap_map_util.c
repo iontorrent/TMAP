@@ -198,6 +198,7 @@ void
 tmap_map_record_destroy(tmap_map_record_t *record)
 {
   int32_t i;
+  if(NULL == record) return;
   for(i=0;i<record->n;i++) {
       tmap_map_sams_destroy(record->sams[i]);
   }
