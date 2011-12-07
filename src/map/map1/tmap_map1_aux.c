@@ -143,7 +143,8 @@ tmap_map1_aux_stack_push(tmap_map1_aux_stack_t *stack, int32_t strand,
                          tmap_map1_aux_stack_entry_t *prev_entry,
                          const tmap_map_opt_t *opt)
 {
-  //int32_t i;
+  int32_t i;
+  int32_t n_bins_needed = 0;
   tmap_map1_aux_stack_entry_t *entry = NULL;
   tmap_map1_aux_bin_t *bin = NULL;
 
@@ -179,6 +180,20 @@ tmap_map1_aux_stack_push(tmap_map1_aux_stack_t *stack, int32_t strand,
       entry->prev_i = prev_entry->i;
   }
 
+  if(stack->n_bins <= entry->score) {
+      //tmap_error("bug encountered", Exit, OutOfRange);
+	  // resize the bins if necessary
+	  n_bins_needed = entry->score + 1;
+	  // realloc
+	  tmap_roundup32(n_bins_needed);
+	  stack->bins = tmap_realloc(stack->bins, sizeof(tmap_map1_aux_bin_t) * n_bins_needed, "stack->bins"); 
+	  // initialize
+	  for(i=stack->n_bins;i<n_bins_needed;i++) {
+		  stack->bins[i].n_entries = stack->bins[i].m_entries = 0;
+		  stack->bins[i].entries = NULL;
+	  }
+	  stack->n_bins = n_bins_needed;
+  }
   if(stack->n_bins <= entry->score) {
       tmap_error("bug encountered", Exit, OutOfRange);
   }
@@ -748,7 +763,7 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
           }
       }
       else {
-          int32_t allow_diff = 1, allow_mm = 1;
+          int32_t allow_diff = 1, allow_mm = (e->n_mm < max_mm) ? 1 : 0;
 
           // decrement the offset
           offset--;
@@ -809,16 +824,16 @@ tmap_map1_aux_core(tmap_seq_t *seq[2], tmap_refseq_t *refseq, tmap_bwt_t *bwt[2]
                   }
               }
               else if(STATE_D == e->state) { // extension of a deletion
-                  if(e->n_gape < max_gape
-                     && e->n_gape + e->n_gapo < max_diff
-                     && e->match_sa.l - e->match_sa.k + 1 < opt->max_cals_del) { // gap extension is allowed
-                      for(j = 0; j != 4; ++j) {
-                          if(match_sa_next[j].k <= match_sa_next[j].l) {
-                              //   remember that a gap deletion does not consume a
-                              //   read base, so use 'offset+1'
-                              tmap_map1_aux_stack_push(stack, strand, offset+1, &match_sa_next[j], e->n_mm, e->n_gapo, e->n_gape + 1, STATE_D, 1, e, opt);
-                          }
-                      }
+				  if(e->n_gape < max_gape) {
+					  if(e->n_gape + e->n_gapo < max_diff || e->match_sa.l - e->match_sa.k + 1 < opt->max_cals_del) { // gap extension is allowed
+						  for(j = 0; j != 4; ++j) {
+							  if(match_sa_next[j].k <= match_sa_next[j].l) {
+								  //   remember that a gap deletion does not consume a
+								  //   read base, so use 'offset+1'
+								  tmap_map1_aux_stack_push(stack, strand, offset+1, &match_sa_next[j], e->n_mm, e->n_gapo, e->n_gape + 1, STATE_D, 1, e, opt);
+							  }
+						  }
+					  }
                   }
               }
           }
