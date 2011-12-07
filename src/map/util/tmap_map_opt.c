@@ -1500,10 +1500,10 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   if(TMAP_READS_FORMAT_UNKNOWN == opt->reads_format) {
       tmap_error("the reads format (-r/-i) was unrecognized", Exit, CommandLineArgument);
   }
-  tmap_error_cmd_check_int(opt->score_match, 0, INT32_MAX, "-A");
-  tmap_error_cmd_check_int(opt->pen_mm, 0, INT32_MAX, "-M");
-  tmap_error_cmd_check_int(opt->pen_gapo, 0, INT32_MAX, "-O");
-  tmap_error_cmd_check_int(opt->pen_gape, 0, INT32_MAX, "-E");
+  tmap_error_cmd_check_int(opt->score_match, 1, INT32_MAX, "-A");
+  tmap_error_cmd_check_int(opt->pen_mm, 1, INT32_MAX, "-M");
+  tmap_error_cmd_check_int(opt->pen_gapo, 1, INT32_MAX, "-O");
+  tmap_error_cmd_check_int(opt->pen_gape, 1, INT32_MAX, "-E");
   tmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
   if(NULL != opt->flow_order) {
       if(0 == strcmp("file", opt->flow_order) || 0 == strcmp("FILE", opt->flow_order)) {
