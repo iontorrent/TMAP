@@ -424,7 +424,13 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
   opt.score_thr = _opt->score_thr; // reset opt->score_thr
   if(opt.score_thr < log(l) * opt.length_coef) opt.score_thr = (int)(log(l) * opt.length_coef + .499);
   if(pool->max_l < l) { // then enlarge working space for tmap_sw_extend_core()
-      int32_t tmp = ((l + 1) / 2 * opt.score_match + opt.pen_gape) / opt.pen_gape + l;
+      int32_t tmp;
+      if(0 == opt.pen_gape) {
+          tmp = ((l + 1) / 2 * opt.score_match + opt.pen_gape) + l;
+      }
+      else {
+          tmp = ((l + 1) / 2 * opt.score_match + opt.pen_gape) / opt.pen_gape + l;
+      }
       pool->max_l = l;
       pool->aln_mem = tmap_realloc(pool->aln_mem, sizeof(uint8_t) * (tmp + 2) * 24, "pool->aln_mem");
   }
@@ -432,7 +438,12 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
   // set opt->bw
   opt.bw = _opt->bw;
   k = (l * opt.score_match - 2 * opt.pen_gapo) / (2 * opt.pen_gape + opt.score_match);
-  i = (l * opt.score_match - opt.score_match - opt.score_thr) / opt.pen_gape;
+  if(0 == opt.pen_gape) {
+      i = (l * opt.score_match - opt.score_match - opt.score_thr);
+  }
+  else {
+      i = (l * opt.score_match - opt.score_match - opt.score_thr) / opt.pen_gape;
+  }
   if(k > i) k = i;
   if(k < 1) k = 1; // I do not know if k==0 causes troubles
   opt.bw = _opt->bw < k ? _opt->bw: k;
