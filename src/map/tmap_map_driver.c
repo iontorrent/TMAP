@@ -393,7 +393,6 @@ tmap_map_driver_core_worker(int32_t num_ends,
                   seqs[i][j] = NULL;
               }
           }
-                  
           tmap_map_record_destroy(record_prev);
       }
       // next

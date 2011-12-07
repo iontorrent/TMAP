@@ -172,7 +172,9 @@ tmap_map_record_clone(tmap_map_record_t *src)
   if(NULL == src) return NULL;
   
   // init
-  dest = tmap_map_record_init(src->n);
+  dest = tmap_calloc(1, sizeof(tmap_map_record_t), "dest");
+  dest->sams = tmap_calloc(src->n, sizeof(tmap_map_sams_t*), "dest->sams");
+  dest->n = src->n;
   if(0 == src->n) return dest;
 
   // copy over data
