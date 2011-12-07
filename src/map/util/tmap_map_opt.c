@@ -1296,9 +1296,8 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           opt->stage_mapq_thr = atoi(optarg);
       }
       else if(0 == strcmp("stage-keep-all", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_STAGE) {
-          opt->stage_keep_all = 0;
+          opt->stage_keep_all = 1;
       }
-      
       else if(0 == strcmp("stage-seed-freq-cutoff", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_STAGE) {
           opt->stage_seed_freqc = atof(optarg);
       }
