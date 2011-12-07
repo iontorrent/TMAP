@@ -7,6 +7,7 @@
 #include "../../index/tmap_sa.h"
 #include "../../index/tmap_index.h"
 #include "../../index/tmap_bwt_match.h"
+#include "../../index/tmap_bwt_match_hash.h"
 #include "../../sw/tmap_sw.h"
 #include "../util/tmap_map_util.h"
 #include "tmap_map3.h"
@@ -46,6 +47,7 @@ tmap_map3_aux_core_seed_helper(uint8_t *query,
                                tmap_refseq_t *refseq,
                                tmap_bwt_t *bwt,
                                tmap_sa_t *sa,
+                               tmap_bwt_match_hash_t *hash,
                                tmap_map_opt_t *opt,
                                tmap_map3_aux_seed_t **seeds,
                                int32_t *n_seeds,
@@ -102,7 +104,7 @@ tmap_map3_aux_core_seed_helper(uint8_t *query,
              && bases_to_align <= bases_left) { // enough bases 
               // match exactly from here onwards
               tmp_sa = next_sa;
-              if(0 < tmap_bwt_match_exact_alt(bwt, bases_to_align, query + i + n_bases, &tmp_sa)
+              if(0 < tmap_bwt_match_hash_exact_alt(bwt, bases_to_align, query + i + n_bases, &tmp_sa, hash)
                  && (tmp_sa.l - tmp_sa.k + 1) <= opt->max_seed_hits) {
                   tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, tmp_sa.k, tmp_sa.l, offset, seed_length + n_bases - k);
               }
@@ -110,7 +112,7 @@ tmap_map3_aux_core_seed_helper(uint8_t *query,
 
           // move past this base in the hp
           tmp_sa = next_sa;
-          tmap_bwt_match_2occ(bwt, &tmp_sa, flow_order[flow_i], &next_sa);
+          tmap_bwt_match_hash_2occ(bwt, &tmp_sa, flow_order[flow_i], &next_sa, hash);
           if(next_sa.l < next_sa.k) { // no match, return
               return;
           }
@@ -121,12 +123,12 @@ tmap_map3_aux_core_seed_helper(uint8_t *query,
           cur_sa = next_sa; // already considered the 'n_bases' of this flow
           // insert
           for(k=1;k<=opt->hp_diff;k++) { // # of bases to insert
-              tmap_bwt_match_2occ(bwt, &cur_sa, flow_order[flow_i], &tmp_sa);
+              tmap_bwt_match_hash_2occ(bwt, &cur_sa, flow_order[flow_i], &tmp_sa, hash);
               if(tmp_sa.l < tmp_sa.k) { // no match, do not continue
                   break;
               }
               // match exactly from here onwards
-              if(0 < tmap_bwt_match_exact_alt(bwt, seed_length - (i - offset) - n_bases, query + i + n_bases, &tmp_sa)
+              if(0 < tmap_bwt_match_hash_exact_alt(bwt, seed_length - (i - offset) - n_bases, query + i + n_bases, &tmp_sa, hash)
                  && (tmp_sa.l - tmp_sa.k + 1) <= opt->max_seed_hits) {
                   tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, tmp_sa.k, tmp_sa.l, offset, seed_length + k);
               }
@@ -156,6 +158,7 @@ tmap_map3_aux_core_seed(uint8_t *query,
                         tmap_refseq_t *refseq,
                         tmap_bwt_t *bwt,
                         tmap_sa_t *sa,
+                        tmap_bwt_match_hash_t *hash,
                         tmap_map_opt_t *opt,
                         tmap_map3_aux_seed_t **seeds,
                         int32_t *n_seeds,
@@ -179,7 +182,7 @@ tmap_map3_aux_core_seed(uint8_t *query,
 
           // add seeds
           tmap_map3_aux_core_seed_helper(query, query_length, i, flow_order, flow_i,
-                                         refseq, bwt, sa, opt, seeds, n_seeds, m_seeds,
+                                         refseq, bwt, sa, hash, opt, seeds, n_seeds, m_seeds,
                                          seed_length);
 
           // skip over this hp
@@ -198,14 +201,14 @@ tmap_map3_aux_core_seed(uint8_t *query,
       j = count = 0;
       if(1 == opt->fwd_search) {
           for(i=0;i<query_length-seed_length+1;i++) {
-              if(0 < tmap_bwt_match_exact(bwt, seed_length, query + i, &cur_sa)) {
+              if(0 < tmap_bwt_match_hash_exact(bwt, seed_length, query + i, &cur_sa, hash)) {
                   count++;
                   if((cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
                       // extend further
                       prev_sa = cur_sa;
                       k = i + 1;
                       while(k < query_length - seed_length) {
-                          tmap_bwt_match_2occ(bwt, &prev_sa, query[k], &cur_sa);
+                          tmap_bwt_match_hash_2occ(bwt, &prev_sa, query[k], &cur_sa, hash);
                           if(cur_sa.l < cur_sa.k) {
                               // use prev
                               cur_sa = prev_sa;
@@ -230,7 +233,7 @@ tmap_map3_aux_core_seed(uint8_t *query,
                       if(0 < seed_step) {
                           k = i + seed_length;
                           int32_t n = 0;
-                          while(k + seed_step < query_length && 0 < tmap_bwt_match_exact(bwt, seed_step, query + k, &cur_sa)) {
+                          while(k + seed_step < query_length && 0 < tmap_bwt_match_hash_exact(bwt, seed_step, query + k, &cur_sa, hash)) {
                               if((cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
                                   tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, seed_length + k - i);
                                   // skip over 
@@ -249,7 +252,7 @@ tmap_map3_aux_core_seed(uint8_t *query,
       }
       else {
           for(i=query_length-seed_length;0<=i;i--) {
-              if(0 < tmap_bwt_match_exact(bwt, seed_length, query + i, &cur_sa)) {
+              if(0 < tmap_bwt_match_hash_exact(bwt, seed_length, query + i, &cur_sa, hash)) {
                   count++;
                   if((cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
                       tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, seed_length);
@@ -263,7 +266,7 @@ tmap_map3_aux_core_seed(uint8_t *query,
                       if(0 < seed_step) {
                           int32_t k = i + seed_length;
                           int32_t n = 0;
-                          while(k + seed_step < query_length && 0 < tmap_bwt_match_exact(bwt, seed_step, query + k, &cur_sa)) {
+                          while(k + seed_step < query_length && 0 < tmap_bwt_match_hash_exact_alt(bwt, seed_step, query + k, &cur_sa, hash)) {
                               if((cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
                                   tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, seed_length + k - i);
                                   if(0 < opt->skip_seed_frac) {
@@ -300,6 +303,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
                    tmap_refseq_t *refseq,
                    tmap_bwt_t *bwt,
                    tmap_sa_t *sa,
+                   tmap_bwt_match_hash_t *hash,
                    tmap_map_opt_t *opt)
 {
   int32_t i, j, n, seed_length;
@@ -376,7 +380,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
 
       // seed the alignment
       tmap_map3_aux_core_seed(query, seq_len[i], flow[i],
-                              refseq, bwt, sa, opt, &seeds[i], &n_seeds[i], &m_seeds[i],
+                              refseq, bwt, sa, hash, opt, &seeds[i], &n_seeds[i], &m_seeds[i],
                               seed_length, opt->seed_step);
 
       // for SAM storage
@@ -396,7 +400,7 @@ tmap_map3_aux_core(tmap_seq_t *seq[2],
           uint8_t seed_length_ext = seeds[i][j].seed_length;
           for(k=seeds[i][j].k;k<=seeds[i][j].l;k++) { // through all occurrences
               tmap_map_sam_t *s = NULL;
-              pacpos = tmap_sa_pac_pos(sa, bwt, k);
+              pacpos = tmap_sa_pac_pos_hash(sa, bwt, k, hash);
               if(bwt->seq_len < pacpos + seeds[i][j].start + 1) { // before the beginning of the reference sequence
                   pacpos = 0;
               }

@@ -73,7 +73,7 @@ typedef struct {
   @param  str    the string with bases in integer format
   @param  width  array of widths, one for each interval [i,len-1], for 0 <= i < len
 */
-void
+inline void
 tmap_bwt_match_cal_width_forward(const tmap_bwt_t *bwt, int len, const char *str, tmap_bwt_match_width_t *width);
 
 /*! 
@@ -83,7 +83,7 @@ tmap_bwt_match_cal_width_forward(const tmap_bwt_t *bwt, int len, const char *str
   @param  str    the string with bases in integer format
   @param  width  array of widths, one for each interval [0,i], for 0 <= i < len
 */
-void
+inline void
 tmap_bwt_match_cal_width_reverse(const tmap_bwt_t *bwt, int len, const char *str, tmap_bwt_match_width_t *width);
 
 /*! 
@@ -94,7 +94,7 @@ tmap_bwt_match_cal_width_reverse(const tmap_bwt_t *bwt, int len, const char *str
   @param  match_sa  pointer to the match structure to be returned
   @return           the size of the SA interval, 0 if none found
   */
-uint32_t
+inline uint32_t
 tmap_bwt_match_exact(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa);
 
 /*! 
@@ -106,7 +106,7 @@ tmap_bwt_match_exact(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bw
   @return           the size of the SA interval, 0 if none found
   @details          the search will be started at SA interval [k0,l0], with the results returned as [k0,l0]
   */
-uint32_t
+inline uint32_t
 tmap_bwt_match_exact_alt(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa);
 
 /*! 
@@ -118,7 +118,18 @@ tmap_bwt_match_exact_alt(const tmap_bwt_t *bwt, int len, const uint8_t *str, tma
   @return           the size of the SA interval, 0 if none found
   @details          the search will be started at SA interval [k0,l0], with the results returned as [k0,l0]
   */
-uint32_t
+inline uint32_t
 tmap_bwt_match_exact_alt_reverse(const tmap_bwt_t *bwt, int len, const uint8_t *str, tmap_bwt_match_occ_t *match_sa);
+
+/*!  
+  inverse Psi function
+  @param  bwt  pointer to the bwt structure
+  @param  sa_intv  the SA interval
+  @param  k  the occurrence position 
+  @param  s  the loop counter to return
+  @return  the suffix array position
+  */
+inline uint32_t
+tmap_bwt_match_invPsi(const tmap_bwt_t *bwt, uint32_t sa_intv, uint32_t k, uint32_t *s);
 
 #endif

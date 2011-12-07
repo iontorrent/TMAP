@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include "../../index/tmap_refseq.h"
 #include "../../index/tmap_bwt.h"
+#include "../../index/tmap_bwt_match.h"
+#include "../../index/tmap_bwt_match_hash.h"
 #include "../../index/tmap_sa.h"
 #include "../../index/tmap_index.h"
 #include "../../util/tmap_alloc.h"

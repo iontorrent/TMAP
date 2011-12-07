@@ -171,9 +171,10 @@ __tmap_map_opt_option_print_func_tf_init(fwd_search)
 __tmap_map_opt_option_print_func_double_init(skip_seed_frac)
 // mapvsw options
 // mapall options
-__tmap_map_opt_option_print_func_int_init(mapall_score_thr)
-__tmap_map_opt_option_print_func_int_init(mapall_mapq_thr)
-__tmap_map_opt_option_print_func_tf_init(mapall_keep_all)
+__tmap_map_opt_option_print_func_int_init(stage_score_thr)
+__tmap_map_opt_option_print_func_int_init(stage_mapq_thr)
+__tmap_map_opt_option_print_func_tf_init(stage_keep_all)
+__tmap_map_opt_option_print_func_double_init(stage_seed_freqc)
 
 static int32_t
 tmap_map_opt_option_flag_length(tmap_map_opt_option_t *opt)
@@ -258,6 +259,15 @@ tmap_map_opt_options_init()
 {
   return tmap_calloc(1, sizeof(tmap_map_opt_options_t), "");
 }
+
+/*
+  tmap_map_opt_options_add(opt->options, "seed-length", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the k-mer length to seed CALs (-1 to disable)",
+                           NULL,
+                           tmap_map_opt_option_print_func_seed_length,
+                           TMAP_MAP_ALGO_MAP1 | TMAP_MAP_ALGO_MAP3);
+*/
 
 static void
 tmap_map_opt_options_add(tmap_map_opt_options_t *options, const char *name, 
@@ -682,33 +692,39 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            "the minimum sequence length to examine",
                            NULL,
                            tmap_map_opt_option_print_func_min_seq_len,
-                           ~TMAP_MAP_ALGO_MAPALL);
+                           ~(TMAP_MAP_ALGO_MAPALL | TMAP_MAP_ALGO_STAGE));
   tmap_map_opt_options_add(opt->options, "max-seq-length", required_argument, 0, 0, 
                            TMAP_MAP_OPT_TYPE_INT,
                            "the maximum sequence length to examine",
                            NULL,
                            tmap_map_opt_option_print_func_max_seq_len,
-                           ~TMAP_MAP_ALGO_MAPALL);
+                           ~(TMAP_MAP_ALGO_MAPALL | TMAP_MAP_ALGO_STAGE));
 
-  // mapall options
-  tmap_map_opt_options_add(opt->options, "staged-score-thres", required_argument, 0, 0, 
+  // stage options
+  tmap_map_opt_options_add(opt->options, "stage-score-thres", required_argument, 0, 0, 
                            TMAP_MAP_OPT_TYPE_INT,
                            "score threshold for stage one divided by the match score",
                            NULL,
-                           tmap_map_opt_option_print_func_mapall_score_thr,
-                           TMAP_MAP_ALGO_MAPALL);
-  tmap_map_opt_options_add(opt->options, "staged-mapq-thres", required_argument, 0, 0, 
+                           tmap_map_opt_option_print_func_stage_score_thr,
+                           TMAP_MAP_ALGO_STAGE);
+  tmap_map_opt_options_add(opt->options, "stage-mapq-thres", required_argument, 0, 0, 
                            TMAP_MAP_OPT_TYPE_INT,
                            "mapping quality threshold for stage one divided by the match score",
                            NULL,
-                           tmap_map_opt_option_print_func_mapall_mapq_thr,
-                           TMAP_MAP_ALGO_MAPALL);
-  tmap_map_opt_options_add(opt->options, "staged-keep-all", no_argument, 0, 0, 
+                           tmap_map_opt_option_print_func_stage_mapq_thr,
+                           TMAP_MAP_ALGO_STAGE);
+  tmap_map_opt_options_add(opt->options, "stage-keep-all", no_argument, 0, 0, 
                            TMAP_MAP_OPT_TYPE_NONE,
-                           "do not keep mappings from the first stage for the next stage",
+                           "keep mappings from the first stage for the next stage",
                            NULL,
-                           tmap_map_opt_option_print_func_mapall_keep_all,
-                           TMAP_MAP_ALGO_MAPALL);
+                           tmap_map_opt_option_print_func_stage_keep_all,
+                           TMAP_MAP_ALGO_STAGE);
+  tmap_map_opt_options_add(opt->options, "stage-seed-freq-cutoff", required_argument, 0, 0,
+                           TMAP_MAP_OPT_TYPE_FLOAT,
+                           "the minimum frequency of a seed to be considered for mapping",
+                           NULL,
+                           tmap_map_opt_option_print_func_stage_seed_freqc,
+                           TMAP_MAP_ALGO_STAGE);
 
   /*
   // Prints out all single-flag command line options
@@ -833,11 +849,12 @@ tmap_map_opt_init(int32_t algo_id)
     case TMAP_MAP_ALGO_MAPVSW:
       // mapvsw
       break;
-    case TMAP_MAP_ALGO_MAPALL:
+    case TMAP_MAP_ALGO_STAGE:
       // mapall
-      opt->mapall_score_thr = 8;
-      opt->mapall_mapq_thr = 23; // 0.5% error
-      opt->mapall_keep_all = 1;
+      opt->stage_score_thr = 8;
+      opt->stage_mapq_thr = 23; // 0.5% error
+      opt->stage_keep_all = 0;
+      opt->stage_seed_freqc = 0.0; //all-pass filter as default
       break;
     default:
       break;
@@ -894,11 +911,17 @@ static void
 tmap_map_opt_usage_algo(tmap_map_opt_t *opt, int32_t stage)
 {
   int32_t i;
-  if(stage < 0) {
+  if(opt->algo_id & TMAP_MAP_ALGO_MAPALL) {
+      return; // NB: there are no MAPALL specific options
+  }
+  else if(opt->algo_id & TMAP_MAP_ALGO_STAGE) {
+      tmap_file_fprintf(tmap_file_stderr, "\nstage%d options: [stage options] [algorithm [algorithm options]]+\n", stage);
+  }
+  else if(stage < 0) {
       tmap_file_fprintf(tmap_file_stderr, "\n%s options (optional):\n", tmap_algo_id_to_name(opt->algo_id));
   }
   else {
-      tmap_file_fprintf(tmap_file_stderr, "\n%s stage %d options (optional):\n", tmap_algo_id_to_name(opt->algo_id), stage);
+      tmap_file_fprintf(tmap_file_stderr, "\n%s stage%d options (optional):\n", tmap_algo_id_to_name(opt->algo_id), stage);
   }
   for(i=0;i<opt->options->n;i++) {
       tmap_map_opt_option_t *o = &opt->options->options[i];
@@ -912,11 +935,20 @@ tmap_map_opt_usage_algo(tmap_map_opt_t *opt, int32_t stage)
 int
 tmap_map_opt_usage(tmap_map_opt_t *opt)
 {
-  int32_t i;
+  int32_t i, j, prev_stage;
   
   // print global options
   tmap_file_fprintf(tmap_file_stderr, "\n");
-  tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [options]\n", PACKAGE, tmap_algo_id_to_name(opt->algo_id));
+  if(opt->algo_id == TMAP_MAP_ALGO_MAPALL) {
+      tmap_file_fprintf(tmap_file_stderr, "\n%s [global options] [flowspace options] [stage[0-9]+ [stage options] [algorithm [algorithm options]]+]+\n", 
+                        tmap_algo_id_to_name(opt->algo_id));
+  }
+  else {
+      tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [global options] [flowspace options] [%s options]\n", 
+                        PACKAGE, 
+                        tmap_algo_id_to_name(opt->algo_id),
+                        tmap_algo_id_to_name(opt->algo_id));
+  }
   tmap_file_fprintf(tmap_file_stderr, "\n");
   tmap_file_fprintf(tmap_file_stderr, "global options:\n");
   for(i=0;i<opt->options->n;i++) {
@@ -939,7 +971,20 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
   }
 
   // print algorithm specific options
-  for(i=0;i<opt->num_sub_opts;i++) {
+  for(i=0,prev_stage=-1;i<opt->num_sub_opts;i++) {
+      // print the stage
+      if(opt->sub_opts[i]->algo_stage != prev_stage) {
+          prev_stage = opt->sub_opts[i]->algo_stage;
+          // print the stage
+          //tmap_file_fprintf(tmap_file_stderr, "\nstage%d options:\n", prev_stage);
+          for(j=0;j<opt->options->n;j++) {
+              tmap_map_opt_option_t *o = &opt->options->options[j];
+              if(o->algos == TMAP_MAP_ALGO_STAGE) {
+                  tmap_map_opt_option_print(o, opt);
+              }
+          }
+      }
+      
       tmap_map_opt_usage_algo(opt->sub_opts[i], opt->sub_opts[i]->algo_stage);
   }
   tmap_map_opt_usage_algo(opt, -1);
@@ -963,14 +1008,17 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   
   if(argc == optind) {
       // no need to parse
+      //fprintf(stderr, "\n[opt_parse] argc==optind.  no need to parse\n");
       return 1;
   }
 
   /*
+  fprintf(stderr, "\nargc: %d optind: %d\n", argc, optind);
   for(i=optind;i<argc;i++) {
-      fprintf(stderr, "i=%d argv[i]=%s\n", i, argv[i]);
+      fprintf(stderr, "[opt_parse] i=%d argv[i]=%s\n", i, argv[i]);
   }
   */
+  
 
   // allocate
   options = tmap_calloc(1, sizeof(struct option) * opt->options->n, "options");
@@ -1005,13 +1053,14 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
     case TMAP_MAP_ALGO_MAP2:
     case TMAP_MAP_ALGO_MAP3:
     case TMAP_MAP_ALGO_MAPVSW:
+    case TMAP_MAP_ALGO_STAGE:
     case TMAP_MAP_ALGO_MAPALL:
       break;
     default:
       tmap_error("unrecognized algorithm", Exit, OutOfRange);
       break;
   }
-
+  
   while((c = getopt_long(argc, argv, getopt_format, options, &option_index)) >= 0) {
       // Global options
       if(c == '?') {
@@ -1031,7 +1080,8 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
       else if(c == 'M' || (0 == c && 0 == strcmp("pen-mismatch", options[option_index].name))) {       
           opt->pen_mm = atoi(optarg);
-      }
+      }                                           
+    
       else if(c == 'O' || (0 == c && 0 == strcmp("pen-gap-open", options[option_index].name))) {       
           opt->pen_gapo = atoi(optarg);
       }
@@ -1238,16 +1288,21 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(0 == strcmp("skip-seed-frac", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP3) {
           opt->skip_seed_frac = atof(optarg);
       }
+      // STAGE
+      else if(0 == strcmp("stage-score-thres", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_STAGE) {
+          opt->stage_score_thr = atoi(optarg);
+      }
+      else if(0 == strcmp("stage-mapq-thres", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_STAGE) {
+          opt->stage_mapq_thr = atoi(optarg);
+      }
+      else if(0 == strcmp("stage-keep-all", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_STAGE) {
+          opt->stage_keep_all = 1;
+      }
+      else if(0 == strcmp("stage-seed-freq-cutoff", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_STAGE) {
+          opt->stage_seed_freqc = atof(optarg);
+      }
       // MAPALL
-      else if(0 == strcmp("staged-score-thres", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAPALL) {
-          opt->mapall_score_thr = atoi(optarg);
-      }
-      else if(0 == strcmp("staged-mapq-thres", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAPALL) {
-          opt->mapall_mapq_thr = atoi(optarg);
-      }
-      else if(0 == strcmp("staged-keep-all", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAPALL) {
-          opt->mapall_keep_all = 1;
-      }
+      
       else {
           break;
       }
@@ -1257,11 +1312,21 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   }
   if(optind < argc) {
       val = 0;
-      tmap_file_fprintf(tmap_file_stderr, "non-option command-line-elements: ");
+      tmap_file_fprintf(tmap_file_stderr, "non-option command-line-elements:\n");
       while(optind < argc) {
-          tmap_file_fprintf(tmap_file_stderr, "%s ", argv[optind++]);
+          tmap_file_fprintf(tmap_file_stderr, "%s", argv[optind]);
+          i = -1;
+          if(opt->algo_id == TMAP_MAP_ALGO_MAPALL) {
+              i = tmap_algo_name_to_id(argv[optind]);
+              if(0 <= i) {
+                  tmap_file_fprintf(tmap_file_stderr, ": recognized an algorithm name, did you forget to include the stage parameter?\n");
+              }
+          }
+          if(i < 0) {
+              tmap_file_fprintf(tmap_file_stderr, ": unknown command line option\n");
+          }
+          optind++;
       }
-      tmap_file_fprintf(tmap_file_stderr, "\n");
   }
   free(options);
   free(getopt_format);
@@ -1285,8 +1350,8 @@ tmap_map_opt_file_check_with_null(char *fn1, char *fn2)
 }
 
 // check that the global and flowspace options match the algorithm specific global options
-static void
-tmap_map_opt_check_common(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b) 
+void
+tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b) 
 {
     int32_t i;
     // global
@@ -1384,9 +1449,26 @@ tmap_map_opt_check_common(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
 }
 
 void
+tmap_map_opt_check_stage(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b) 
+{
+  if(opt_a->stage_score_thr != opt_b->stage_score_thr) {
+      tmap_error("option --stage-score-thres specified outside of stage options", Exit, CommandLineArgument);
+  }
+  if(opt_a->stage_mapq_thr != opt_b->stage_mapq_thr) {
+      tmap_error("option --stage-mapq-thres specified outside of stage options", Exit, CommandLineArgument);
+  }
+  if(opt_a->stage_keep_all != opt_b->stage_keep_all) {
+      tmap_error("option --stage-keep-all specified outside of stage options", Exit, CommandLineArgument);
+  }
+  if(opt_a->stage_seed_freqc != opt_b->stage_seed_freqc) {
+      tmap_error("option --stage-seed-freqc specified outside of stage options", Exit, CommandLineArgument);
+  }
+}
+
+void
 tmap_map_opt_check(tmap_map_opt_t *opt)
 {
-  int32_t i;
+  //int32_t i;
   // global and flowspace options
   if(NULL == opt->fn_fasta && 0 == opt->shm_key) {
       tmap_error("option -f or option -k must be specified", Exit, CommandLineArgument);
@@ -1489,6 +1571,12 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       tmap_error("The minimum sequence length must be less than the maximum sequence length (--min-seq-length and --max-seq-length)", Exit, OutOfRange);
   }
 
+  // stage options
+  tmap_error_cmd_check_int(opt->stage_score_thr, INT32_MIN, INT32_MAX, "--stage-score-thres");
+  tmap_error_cmd_check_int(opt->stage_mapq_thr, 0, 255, "--stage-mapq-thres");
+  tmap_error_cmd_check_int(opt->stage_keep_all, 0, 1, "--stage-keep-all");
+  tmap_error_cmd_check_int(opt->stage_seed_freqc, 0.0, 1.0, "--seed-freq-cutoff");
+
   switch(opt->algo_id) {
     case TMAP_MAP_ALGO_MAP1: // map1 options
       if(-1 != opt->seed_length) tmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "--seed-length");
@@ -1527,16 +1615,14 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       tmap_error_cmd_check_int(opt->skip_seed_frac, 0, 1, "--skip-seed-frac");
       break;
     case TMAP_MAP_ALGO_MAPALL:
-      tmap_error_cmd_check_int(opt->mapall_score_thr, INT32_MIN, INT32_MAX, "--staged-score-thres");
-      tmap_error_cmd_check_int(opt->mapall_mapq_thr, 0, 255, "--staged-mapq-thres");
-      tmap_error_cmd_check_int(opt->mapall_keep_all, 0, 1, "--staged-keep-all");
-      if(0 == opt->num_sub_opts || 0 == opt->num_stages) {
-          tmap_error("no algorithms given for stage 1", Exit, CommandLineArgument);
+      if(0 == opt->num_sub_opts) {
+          tmap_error("no stages/algorithms given", Exit, CommandLineArgument);
       }
       break;
     default:
       break;
   }
+  /*
   // check sub-options
   for(i=0;i<opt->num_sub_opts;i++) {
       // check mapping algorithm specific options
@@ -1545,6 +1631,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       // check that common values match other opt values
       tmap_map_opt_check_common(opt, opt->sub_opts[i]);
   }
+  */
 }
 
 void
@@ -1588,6 +1675,15 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->sam_sff_tags = opt_src->sam_sff_tags;
     opt_dest->ignore_flowgram = opt_src->ignore_flowgram;
     opt_dest->remove_sff_clipping = opt_src->remove_sff_clipping;
+}
+
+void
+tmap_map_opt_copy_stage(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
+{
+  opt_dest->stage_score_thr = opt_src->stage_score_thr;
+  opt_dest->stage_mapq_thr = opt_src->stage_mapq_thr;
+  opt_dest->stage_keep_all = opt_src->stage_keep_all;
+  opt_dest->stage_seed_freqc = opt_src->stage_seed_freqc;
 }
 
 void
@@ -1658,7 +1754,9 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "seed_step=%d\n", opt->seed_step);
   fprintf(stderr, "fwd_search=%d\n", opt->fwd_search);
   fprintf(stderr, "skip_seed_frac=%lf\n", opt->skip_seed_frac);
-  fprintf(stderr, "mapall_score_thr=%d\n", opt->mapall_score_thr);
-  fprintf(stderr, "mapall_mapq_thr=%d\n", opt->mapall_mapq_thr);
-  fprintf(stderr, "mapall_keep_all=%d\n", opt->mapall_keep_all);
+  fprintf(stderr, "stage_score_thr=%d\n", opt->stage_score_thr);
+  fprintf(stderr, "stage_mapq_thr=%d\n", opt->stage_mapq_thr);
+  fprintf(stderr, "stage_keep_all=%d\n", opt->stage_keep_all);
+  fprintf(stderr, "stage_seed_freqc=%.2f\n", opt->stage_seed_freqc);
+
 }
