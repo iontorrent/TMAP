@@ -67,7 +67,8 @@ tmap_LDADD =
 #libtmap_a_SOURCES = ${GLOBAL_SOURCES} 
 
 EXTRA_DIST = LICENSE \
-			 autogen.sh 
+			 autogen.sh \
+			 tmap.git.rev
 
 SUBDIRS = .
 

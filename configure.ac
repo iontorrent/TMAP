@@ -28,15 +28,20 @@ default_CFLAGS="-Wall -g -O3 -pthread -msse2";# "-Wall -g -O3 -pthread -msse2";
 #extended_CFLAGS="-DTMAP_BWT_32_BIT";# "-m64 -D_FILE_OFFSET_BITS=64";
 extended_CFLAGS="";# "-m64 -D_FILE_OFFSET_BITS=64";
 
-AC_MSG_CHECKING(whether this is a git repository)
+AC_MSG_CHECKING(whether the git revision is available)
 gitrev="`git log 2>/dev/null | grep -m 1 commit | awk '{print $2}'`";
 if test -n "${gitrev}"; then
     GITREV="${gitrev}";
+	echo "${gitrev}" > tmap.git.rev;
+elif test -f "tmap.git.rev"; then
+	GITREV="`head -n 1 tmap.git.rev`";
+fi
+if test -n "${GITREV}"; then
     AC_REVISION(["${GITREV}"])
     AC_DEFINE_UNQUOTED(GIT_REV, "${GITREV}", [Define to be the git revision number])
     AC_MSG_RESULT(yes)
 else
-    AC_MSG_RESULT(no)
+	AC_MSG_RESULT(no)
 fi
 
 AC_ARG_ENABLE(intel64, [  --enable-intel64        optimize for Intel64 CPU such as Xeon and Core2], [extended_CFLAGS="${extended_CFLAGS} -mtune=nocona"], [])
