@@ -206,7 +206,7 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       while(k < j) {
           // get the algorithm id
           cur_id = tmap_algo_name_to_id(argv[k]); 
-          if(cur_id <= 0) tmap_error("bug encountered", Exit, OutOfRange); // should not happen
+          if(cur_id <= 0) tmap_bug(); // should not happen
           algo_opt = tmap_map_opt_add_sub_opt(opt, cur_id);
           algo_opt->algo_stage = cur_stage;
 

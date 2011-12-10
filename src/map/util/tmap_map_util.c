@@ -172,7 +172,9 @@ tmap_map_record_clone(tmap_map_record_t *src)
   if(NULL == src) return NULL;
   
   // init
-  dest = tmap_map_record_init(src->n);
+  dest = tmap_calloc(1, sizeof(tmap_map_record_t), "dest");
+  dest->sams = tmap_calloc(src->n, sizeof(tmap_map_sams_t*), "dest->sams");
+  dest->n = src->n;
   if(0 == src->n) return dest;
 
   // copy over data
@@ -198,6 +200,7 @@ void
 tmap_map_record_destroy(tmap_map_record_t *record)
 {
   int32_t i;
+  if(NULL == record) return;
   for(i=0;i<record->n;i++) {
       tmap_map_sams_destroy(record->sams[i]);
   }
@@ -1059,7 +1062,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           }
       //} 
           if(1 == overflow) {
-              tmap_error("bug encountered", Exit, OutOfRange);
+              tmap_bug();
           }
 
           if(opt->score_thr <= tmp_sam.score) {
@@ -1106,7 +1109,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                   (*s->aux.map_vsw_aux) = (*tmp_sam.aux.map_vsw_aux);
                   break;
                 default:
-                  tmap_error("bug encountered", Exit, OutOfRange);
+                  tmap_bug();
                   break;
               }
 
