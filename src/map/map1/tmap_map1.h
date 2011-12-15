@@ -54,17 +54,19 @@ tmap_map1_thread_init(void **data, tmap_map_opt_t *opt);
  @param  seqs     the sequence to map (reverse and reverse compliment in integer format)
  @param  seq_len  the sequence lenth
  @param  index    the reference index
+ @param  hash     the occurence hash
  @param  opt      the program options
  @return          the mappings, NULL otherwise
  */
 tmap_map_sams_t*
 tmap_map1_thread_map_core(void **data, tmap_seq_t *seqs[2], int32_t seq_len,
-                          tmap_index_t *index, tmap_map_opt_t *opt);
+                          tmap_index_t *index, tmap_bwt_match_hash_t *hash[2], tmap_map_opt_t *opt);
 
 // TODO
 tmap_map_sams_t*
 tmap_map1_thread_map(void **data, tmap_seq_t **seqs, 
                      tmap_index_t *index, tmap_map_stats_t *stat, tmap_rand_t *rand, 
+                     tmap_bwt_match_hash_t *hash[2],
                      tmap_map_opt_t *opt);
 
 /*!

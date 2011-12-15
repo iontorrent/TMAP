@@ -19,6 +19,7 @@
 #include "../index/tmap_bwt_gen.h"
 #include "../index/tmap_bwt.h"
 #include "../index/tmap_bwt_match.h"
+#include "../index/tmap_bwt_match_hash.h"
 #include "../index/tmap_sa.h"
 #include "../index/tmap_index.h"
 #include "../io/tmap_seq_io.h"
@@ -28,6 +29,12 @@
 #include "util/tmap_map_stats.h"
 #include "util/tmap_map_util.h"
 #include "tmap_map_driver.h"
+
+// NB: do not turn these on, as they do not currently improve run time. They
+// could be useful if many duplicate lookups are performed and the hash
+// retrieval was fast...
+//#define TMAP_DRIVER_USE_HASH 1
+//#define TMAP_DRIVER_CLEAR_HASH_PER_READ 1
 
 #define __tmap_map_sam_sort_score_lt(a, b) ((a).score > (b).score)
 TMAP_SORT_INIT(tmap_map_sam_sort_score, tmap_map_sam_t, __tmap_map_sam_sort_score_lt)
@@ -174,9 +181,16 @@ tmap_map_driver_core_worker(int32_t num_ends,
   int32_t found;
   tmap_fsw_flowseq_t *fs = NULL;
   tmap_seq_t ***seqs = NULL;
+  tmap_bwt_match_hash_t *hash[2] = {NULL, NULL};
 
   // initialize thread data
   tmap_map_driver_do_threads_init(driver, tid);
+          
+#ifdef TMAP_DRIVER_USE_HASH
+  // init the occurence hash
+  hash[0] = tmap_bwt_match_hash_init(); 
+  hash[1] = tmap_bwt_match_hash_init(); 
+#endif
 
   // initialize flow space info
   if(0 < seq_buffer_length) {
@@ -193,6 +207,14 @@ tmap_map_driver_core_worker(int32_t num_ends,
       if(tid == (low % driver->opt->num_threads)) {
           tmap_map_stats_t *curstat = NULL;
           tmap_map_record_t *record_prev = NULL;
+          
+#ifdef TMAP_DRIVER_USE_HASH
+#ifdef TMAP_DRIVER_CLEAR_HASH_PER_READ
+          // TODO: should we hash each read, or across the thread?
+          tmap_bwt_match_hash_clear(hash[0]);
+          tmap_bwt_match_hash_clear(hash[1]);
+#endif
+#endif
               
           // remove key sequences
           for(i=0;i<num_ends;i++) {
@@ -243,7 +265,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
                           tmap_error("bug encountered", Exit, OutOfRange);
                       }
                       // map
-                      sams = algorithm->func_thread_map(&algorithm->thread_data[tid], seqs[j], index, curstat, rand, algorithm->opt);
+                      sams = algorithm->func_thread_map(&algorithm->thread_data[tid], seqs[j], index, curstat, rand, hash, algorithm->opt);
                       if(NULL == sams) {
                           tmap_error("the thread function did not return a mapping", Exit, OutOfRange);
                       }
@@ -257,10 +279,13 @@ tmap_map_driver_core_worker(int32_t num_ends,
 
               // keep mappings for subsequent stages or restore mappings from
               // previous stages
-              if(1 == driver->opt->mapall_keep_all) {
+              if(1 == stage->opt->stage_keep_all) {
                   // merge from the previous stage
                   if(0 < i) {
                       tmap_map_record_merge(records[low], record_prev);
+                      // destroy the record
+                      tmap_map_record_destroy(record_prev);
+                      record_prev = NULL;
                   }
 
                   // keep for the next stage
@@ -373,6 +398,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
                   seqs[i][j] = NULL;
               }
           }
+          tmap_map_record_destroy(record_prev);
       }
       // next
       low++;
@@ -391,6 +417,11 @@ tmap_map_driver_core_worker(int32_t num_ends,
 
   // cleanup
   tmap_map_driver_do_threads_cleanup(driver, tid);
+#ifdef TMAP_DRIVER_USE_HASH
+  // free hash
+  tmap_bwt_match_hash_destroy(hash[0]);
+  tmap_bwt_match_hash_destroy(hash[1]);
+#endif
 }
 
 void *
@@ -432,6 +463,7 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
           tmap_progress_print2("%s will be run in stage %d", 
                                tmap_algo_id_to_name(driver->stages[i]->algorithms[j]->opt->algo_id),
                                driver->stages[i]->algorithms[j]->opt->algo_stage);
+          //tmap_progress_print2("\t with seed mapall_seed_freqc=%.2f", driver->stages[i]->opt->stage_seed_freqc);
       }
   }
 
@@ -686,6 +718,17 @@ tmap_map_driver_stage_add(tmap_map_driver_stage_t *s,
                     tmap_map_driver_func_cleanup func_cleanup,
                     tmap_map_opt_t *opt)
 {
+  // stage options
+  if(0 == s->num_algorithms) {
+      // copy stage options
+      s->opt = tmap_map_opt_init();
+      s->opt->algo_id = TMAP_MAP_ALGO_STAGE;
+      tmap_map_opt_copy_stage(s->opt, opt);
+  }
+  else {
+      // check stage options
+      tmap_map_opt_check_stage(s->opt, opt);
+  }
   s->num_algorithms++;
   s->algorithms = tmap_realloc(s->algorithms, sizeof(tmap_map_driver_algorithm_t*) * s->num_algorithms, "s->algorithms");
   s->algorithms[s->num_algorithms-1] = tmap_map_driver_algorithm_init(func_init, func_thread_init, func_thread_map,
@@ -699,6 +742,7 @@ tmap_map_driver_stage_destroy(tmap_map_driver_stage_t *stage)
   for(i=0;i<stage->num_algorithms;i++) {
       tmap_map_driver_algorithm_destroy(stage->algorithms[i]);
   }
+  tmap_map_opt_destroy(stage->opt);
   free(stage->algorithms);
   free(stage);
 }
@@ -730,6 +774,12 @@ tmap_map_driver_add(tmap_map_driver_t *driver,
           driver->stages[driver->num_stages-1] = tmap_map_driver_stage_init(driver->num_stages);
       }
   }
+
+  // check options
+  tmap_map_opt_check(opt);
+
+  // check global options
+  tmap_map_opt_check_global(driver->opt, opt);
 
   // add to the stage
   tmap_map_driver_stage_add(driver->stages[opt->algo_stage-1],

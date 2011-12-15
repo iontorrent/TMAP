@@ -36,10 +36,11 @@ typedef int32_t (*tmap_map_driver_func_thread_init)(void **data, tmap_map_opt_t 
   @param  sa      the sa structure
   @param  stat    the driver statistics (for mapall only)
   @param  rand    the random number generator
+  @param  hash    the occurence hash
   @param  opt     the program options
   @return         the mappings upon success, NULL otherwise
  */
-typedef tmap_map_sams_t* (*tmap_map_driver_func_thread_map)(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_map_stats_t *stat, tmap_rand_t *rand, tmap_map_opt_t *opt);
+typedef tmap_map_sams_t* (*tmap_map_driver_func_thread_map)(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_map_stats_t *stat, tmap_rand_t *rand, tmap_bwt_match_hash_t *hash[2], tmap_map_opt_t *opt);
 
 /*!
   This function will be invoked to give a mapping quality to a set of mappings
@@ -86,6 +87,7 @@ typedef struct {
     int32_t stage; /*!< the stage for these algorithms (one-based) */
     tmap_map_driver_algorithm_t **algorithms; /*!< the algorithms to run */
     int32_t num_algorithms; /*!< the number of algorithms to run */
+    tmap_map_opt_t *opt; /*!< stage specific options */
 } tmap_map_driver_stage_t;
 
 /*!

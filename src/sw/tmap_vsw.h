@@ -67,6 +67,8 @@
 #define __tmap_vsw16_mm_min_epi16(_a, _b) _mm_min_epi16(_a, _b)
 #define __tmap_vsw16_mm_movemask_epi16(_a) _mm_movemask_epi8(_a) // NB: this should be 8-bit...
 #define __tmap_vsw16_mm_cmpeq_epi16(_a, _b) _mm_cmpeq_epi16(_a, _b)
+#define __tmap_vsw16_mm_cmplt_epi16(_a, _b) _mm_cmplt_epi16(_a, _b)
+#define __tmap_vsw16_mm_cmpgt_epi16(_a, _b) _mm_cmpgt_epi16(_a, _b)
 #define __tmap_vsw16_mm_insert_epi16(_a, _b, _imm) _mm_insert_epi16(_a, _b, _imm)
 #define __tmap_vsw16_mm_extract_epi16(_a, _imm) _mm_extract_epi16(_a, _imm)
 #define tmap_vsw16_values_per_128_bits 8 

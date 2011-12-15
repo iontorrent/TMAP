@@ -42,6 +42,7 @@ tmap_map_vsw_thread_map_core(void **data, tmap_seq_t **seqs, int32_t seq_len,
 tmap_map_sams_t*
 tmap_map_vsw_thread_map(void **data, tmap_seq_t **seqs, 
                      tmap_index_t *index, tmap_map_stats_t *stat, tmap_rand_t *rand, 
+                     tmap_bwt_match_hash_t *hash[2],
                      tmap_map_opt_t *opt);
 
 /*!
