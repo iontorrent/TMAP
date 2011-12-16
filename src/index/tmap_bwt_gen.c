@@ -1650,11 +1650,13 @@ tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, 
   tmap_bwt_int_t i;
   char *fn_pac=NULL;
   tmap_refseq_t *refseq=NULL;
+  uint64_t ref_len;
 
   tmap_progress_print("constructing the BWT string from the packed FASTA");
 
   // read in packed FASTA
   refseq = tmap_refseq_read(fn_fasta);
+  ref_len = refseq->len / 2; // NB: the reference is both forward and reverse compliment, so divide by two
 
   // initialization
   bwt = tmap_calloc(1, sizeof(tmap_bwt_t), "bwt");
@@ -1712,6 +1714,21 @@ tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, 
   tmap_bwt_destroy(bwt);
 
   tmap_progress_print2("constructed the BWT string from the packed FASTA");
+
+  if(INT32_MAX == hash_width) {
+      hash_width = 0;
+      while(0 < ref_len) {
+          ref_len >>= 2; // divide by four
+          hash_width++;
+      }
+      if(hash_width < TMAP_BWT_HASH_WIDTH_AUTO_MIN) {
+          hash_width = TMAP_BWT_HASH_WIDTH_AUTO_MIN;
+      }
+      else if(TMAP_BWT_HASH_WIDTH_AUTO_MAX < hash_width) {
+          hash_width = TMAP_BWT_HASH_WIDTH_AUTO_MAX;
+      }
+      tmap_progress_print2("setting the BWT hash width to %d", hash_width);
+  }
 
   if(0 < hash_width) {
       bwt = tmap_bwt_read(fn_fasta); 

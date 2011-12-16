@@ -42,7 +42,8 @@ typedef uint8_t ubyte_t;
   */
 
 #define TMAP_BWT_OCC_INTERVAL 0x80
-#define TMAP_BWT_HASH_WIDTH 12
+#define TMAP_BWT_HASH_WIDTH_AUTO_MIN 8
+#define TMAP_BWT_HASH_WIDTH_AUTO_MAX 12
 
 // NB: we do not need a multi-level hash, just the highest-level hash.  We can
 // simulate the others from this one...
@@ -60,7 +61,7 @@ typedef struct {
     uint32_t cnt_table[256];  /*!< occurrence array */
     tmap_bwt_int_t **hash_k;  /*!< hash of the BWT occurrence array (lower bounds) */
     tmap_bwt_int_t **hash_l;  /*!< hash of the BWT occurrence array (upper bounds) */
-    uint32_t hash_width;  /*!< the k-mer that is hashed */
+    int32_t hash_width;  /*!< the k-mer that is hashed */
     uint32_t is_shm;  /*!< 1 if loaded from shared memory, 0 otherwise */
 } tmap_bwt_t;
 
@@ -134,7 +135,7 @@ tmap_bwt_gen_cnt_table(tmap_bwt_t *bwt);
   @param  check_hash  1 if we are to validate the hash, zero otherwise
   */
 void
-tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width, uint32_t check_hash);
+tmap_bwt_gen_hash(tmap_bwt_t *bwt, int32_t hash_width, uint32_t check_hash);
 
 /*! 
   calculates the next occurrence given the previous occurrence and the next base

@@ -130,7 +130,7 @@ int tmap_index(int argc, char *argv[])
 
   opt.fn_fasta = NULL;
   opt.occ_interval = TMAP_BWT_OCC_INTERVAL; 
-  opt.hash_width = TMAP_BWT_HASH_WIDTH;
+  opt.hash_width = INT32_MAX;
   opt.sa_interval = TMAP_SA_INTERVAL; 
   opt.is_large = -1;
   opt.check_hash = 1;
