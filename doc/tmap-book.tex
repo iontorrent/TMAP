@@ -295,6 +295,9 @@ Specifies the BWT construction algorithm (\TT{bwtsw} or \TT{is}).
 The \TT{bwtsw} algorithm is for genomes larger than or equal to $10$Mb, and the \TT{is} algorithm is for genomes smaller than $10$Mb.
 This will be auto-recognized during index creation if this option is omitted.
 
+\subsubsection{\TT{-H}}
+Specifies to not validate the BWT hash.
+
 \subsubsection{\TT{--version}}
 Specifies to print the index format that will be created byt TMAP and exit.
 Format strings are of the form \TT{tmap-f<n>}, where \TT{<n>} will only increase as new formats are created.
