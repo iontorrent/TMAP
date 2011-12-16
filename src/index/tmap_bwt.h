@@ -131,9 +131,10 @@ tmap_bwt_gen_cnt_table(tmap_bwt_t *bwt);
   generates the occurrence hash
   @param  bwt         pointer to the bwt structure to update 
   @param  hash_width  the k-mer length to hash
+  @param  check_hash  1 if we are to validate the hash, zero otherwise
   */
 void
-tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width);
+tmap_bwt_gen_hash(tmap_bwt_t *bwt, uint32_t hash_width, uint32_t check_hash);
 
 /*! 
   calculates the next occurrence given the previous occurrence and the next base

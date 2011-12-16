@@ -1642,7 +1642,7 @@ BWTSaveBwtCodeAndOcc(tmap_bwt_t *bwt_out, const tmap_bwt_gen_t *bwt, const char 
 }
 
 void 
-tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, int32_t hash_width)
+tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, int32_t hash_width, int32_t check_hash)
 {
   tmap_bwt_gen_inc_t *bwtInc=NULL;
   tmap_bwt_t *bwt=NULL;
@@ -1715,7 +1715,7 @@ tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, 
 
   if(0 < hash_width) {
       bwt = tmap_bwt_read(fn_fasta); 
-      tmap_bwt_gen_hash(bwt, hash_width);
+      tmap_bwt_gen_hash(bwt, hash_width, check_hash);
       tmap_bwt_write(fn_fasta, bwt);
       tmap_bwt_destroy(bwt);
   }
@@ -1725,7 +1725,7 @@ tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, 
 }
 
 void 
-tmap_bwt_update_hash(const char *fn_fasta, int32_t hash_width)
+tmap_bwt_update_hash(const char *fn_fasta, int32_t hash_width, int32_t check_hash)
 {
   int32_t i;
   tmap_bwt_t *bwt;
@@ -1751,7 +1751,7 @@ tmap_bwt_update_hash(const char *fn_fasta, int32_t hash_width)
       bwt->hash_k = bwt->hash_l = NULL;
 
       // new hash
-      tmap_bwt_gen_hash(bwt, hash_width);
+      tmap_bwt_gen_hash(bwt, hash_width, check_hash);
 
       // write
       tmap_bwt_write(fn_fasta, bwt);

@@ -38,17 +38,19 @@
   @param  is_large      0 to use the short BWT construction algorith, 1 otherwise (large BWT construction algorithm) 
   @param  occ_interval  the desired occurrence interval
   @param  hash_width    the desired k-mer hash width
+  @param  check_hash    1 to validate the hash, 0 otherwise
   */
 void 
-tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, int32_t hash_width);
+tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, int32_t hash_width, int32_t check_hash);
 
 /*! 
   updates a bwt FASTA file for a new hash width
   @param  fn_fasta      file name of the FASTA file
   @param  hash_width    the desired k-mer hash width
+  @param  check_hash    1 to validate the hash, 0 otherwise
   */
 void 
-tmap_bwt_update_hash(const char *fn_fasta, int32_t hash_width);
+tmap_bwt_update_hash(const char *fn_fasta, int32_t hash_width, int32_t check_hash);
 
 /*! 
   @param  T  the input string

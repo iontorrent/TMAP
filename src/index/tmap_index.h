@@ -53,6 +53,7 @@ typedef struct {
     int32_t hash_width;  /*!< the occurrence hash width (-w) */
     int32_t sa_interval;  /*!< the suffix array interval (-i) */
     int32_t is_large;  /*!< 0 to use the short BWT construction algorith, 1 otherwise (large BWT construction algorithm) */
+    int32_t check_hash;  /*< 1 to validate the BWT hash, 0 otherwise */
 } tmap_index_opt_t;
 
 /*! 

@@ -25,7 +25,6 @@ tmap_bwt_check_core2(tmap_bwt_t *bwt, int32_t length, int32_t print_msg, int32_t
   int64_t sum, j;
   tmap_bwt_match_occ_t sa;
 
-
   for(i=1;i<=length;i++) {
       seqs[0] = tmap_calloc(i, sizeof(uint8_t), "seqs[0]");
       seqs[1] = tmap_calloc(i, sizeof(uint8_t), "seqs[1]");
@@ -46,14 +45,14 @@ tmap_bwt_check_core2(tmap_bwt_t *bwt, int32_t length, int32_t print_msg, int32_t
                   //n[k] = tmap_bwt_match_exact(bwt, i, seqs[k], &sa);
                   n[k] = tmap_bwt_match_exact_reverse(bwt, i, seqs[k], &sa);
                   if(0 == k) {
-                      if(0 < n[k] && sa.k <= sa.l) {
+                      if(0 < n[k] && TMAP_BWT_INT_MAX != sa.k && sa.k <= sa.l) {
                           sum += n[k];
                       }
                       if(1 == print_msg && 1 == print_sa) {
                           for(l=0;l<i;l++) {
                               str[l] = "ACGTN"[seqs[k][l]];
                           }
-                          if(0 < n[k] && sa.k <= sa.l) {
+                          if(0 < n[k] && TMAP_BWT_INT_MAX != sa.k && sa.k <= sa.l) {
                               tmap_progress_print2("%s\t%llu\t%llu\t%d", str, sa.k, sa.l, n[k]);
                           }
                           else {
@@ -64,7 +63,8 @@ tmap_bwt_check_core2(tmap_bwt_t *bwt, int32_t length, int32_t print_msg, int32_t
               }
               if(0 == asymmetric && n[0] != n[1]) {
                   asymmetric = 1;
-                  tmap_error("Asymmetriy found", Warn, OutOfRange);
+                  //fprintf(stderr, "n[0]=%u n[1]=%u\n", n[0], n[1]);
+                  tmap_error("Asymmetry found", Warn, OutOfRange);
               }
 
               j--;

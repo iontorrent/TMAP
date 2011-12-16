@@ -67,7 +67,8 @@ tmap_index_destroy(tmap_index_t *index)
   free(index);
 }
 
-static void tmap_index_core(tmap_index_opt_t *opt)
+static void 
+tmap_index_core(tmap_index_opt_t *opt)
 {
   uint64_t ref_len = 0;
 
@@ -91,7 +92,7 @@ static void tmap_index_core(tmap_index_opt_t *opt)
   }
 
   // create the bwt 
-  tmap_bwt_pac2bwt(opt->fn_fasta, opt->is_large, opt->occ_interval, opt->hash_width);
+  tmap_bwt_pac2bwt(opt->fn_fasta, opt->is_large, opt->occ_interval, opt->hash_width, opt->check_hash);
 
   // create the suffix array
   tmap_sa_bwt2sa(opt->fn_fasta, opt->sa_interval);
@@ -114,6 +115,7 @@ static int usage(tmap_index_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "         -a STRING   override BWT construction algorithm:\n");
   tmap_file_fprintf(tmap_file_stderr, "                     \t\"bwtsw\" (large genomes)\n");
   tmap_file_fprintf(tmap_file_stderr, "                     \t\"is\" (short genomes)\n");
+  tmap_file_fprintf(tmap_file_stderr, "         -H          do not validate the BWT hash [%d]\n", opt->check_hash);
   tmap_file_fprintf(tmap_file_stderr, "         --version   print the index format that will be created and exit\n");
   tmap_file_fprintf(tmap_file_stderr, "         -v          print verbose progress information\n");
   tmap_file_fprintf(tmap_file_stderr, "         -h          print this message\n");
@@ -131,6 +133,7 @@ int tmap_index(int argc, char *argv[])
   opt.hash_width = TMAP_BWT_HASH_WIDTH;
   opt.sa_interval = TMAP_SA_INTERVAL; 
   opt.is_large = -1;
+  opt.check_hash = 1;
       
   if(2 == argc && 0 == strcmp("--version", argv[1])) {
       tmap_file_stdout = tmap_file_fdopen(fileno(stdout), "wb", TMAP_FILE_NO_COMPRESSION);
@@ -139,7 +142,7 @@ int tmap_index(int argc, char *argv[])
       return 0;
   }
 
-  while((c = getopt(argc, argv, "f:o:i:w:a:hv")) >= 0) {
+  while((c = getopt(argc, argv, "f:o:i:w:a:hvH")) >= 0) {
       switch(c) {
         case 'f':
           opt.fn_fasta = tmap_strdup(optarg); break;
@@ -157,6 +160,9 @@ int tmap_index(int argc, char *argv[])
         case 'v':
           tmap_progress_set_verbosity(1); break;
         case 'h':
+          return usage(&opt);
+        case 'H':
+          opt.check_hash = 0; break;
         default:
           return usage(&opt);
       }
