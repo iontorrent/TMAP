@@ -1575,7 +1575,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->stage_score_thr, INT32_MIN, INT32_MAX, "--stage-score-thres");
   tmap_error_cmd_check_int(opt->stage_mapq_thr, 0, 255, "--stage-mapq-thres");
   tmap_error_cmd_check_int(opt->stage_keep_all, 0, 1, "--stage-keep-all");
-  tmap_error_cmd_check_int(opt->stage_seed_freqc, 0.0, 1.0, "--seed-freq-cutoff");
+  tmap_error_cmd_check_int(opt->stage_seed_freqc, 0.0, 1.0, "--stage-seed-freq-cutoff");
 
   switch(opt->algo_id) {
     case TMAP_MAP_ALGO_MAP1: // map1 options
