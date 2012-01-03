@@ -327,7 +327,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
                   // filter if we have more stages
                   if(i < driver->num_stages-1) {
                       for(j=0;j<num_ends;j++) { // for each end
-                          tmap_map_sams_filter2(records[low]->sams[j], driver->opt->mapall_score_thr, driver->opt->mapall_mapq_thr);
+                          tmap_map_sams_filter2(records[low]->sams[j], stage->opt->stage_score_thr, stage->opt->stage_mapq_thr);
                       }
                   }
 
