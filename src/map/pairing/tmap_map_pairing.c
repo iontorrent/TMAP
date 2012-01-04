@@ -53,7 +53,6 @@ tmap_map_pairing_get_num_std(tmap_map_sam_t *one, tmap_map_sam_t *two, double in
   int32_t strand_diff, position_diff;
   double num_std;
 
-  //tmap_map_pairing_get_strand_diff(tmap_map_sam_t *one, tmap_map_sam_t *two, int32_t strandedness)
   strand_diff = tmap_map_pairing_get_strand_diff(one, two, strandedness);
 
   if(0 == strand_diff || one->seqid != two->seqid) {
@@ -61,7 +60,7 @@ tmap_map_pairing_get_num_std(tmap_map_sam_t *one, tmap_map_sam_t *two, double in
   }
   else {
       position_diff = tmap_map_pairing_get_position_diff(one, two, positioning, use_target_end);
-      if(1 == one->strand) position_diff = 0 - position_diff; // reverse on the opposite strand
+      //if(1 == one->strand) position_diff = 0 - position_diff; // reverse on the opposite strand
       num_std = fabs(position_diff - ins_size_mean) / ins_size_std;
       if(ins_size_std_max_num < num_std) num_std = ins_size_std_max_num;
   }
@@ -76,7 +75,7 @@ tmap_map_pairing_score(tmap_map_sam_t *one, tmap_map_sam_t *two, double ins_size
   // NB: use the target ends
   num_std = tmap_map_pairing_get_num_std(one, two, ins_size_mean, ins_size_std, ins_size_std_max_num, pen_mm, strandedness, positioning, 1);
   (*proper_pair) = (num_std < ins_size_std_max_num) ? 1 : 0; 
-  return one->score + two->score + (int)(pen_mm * -1.0 * log10( erfc(M_SQRT1_2 * num_std)) + 0.499);
+  return one->score + two->score - (int)(pen_mm * -1.0 * log10( erfc(M_SQRT1_2 * num_std)) + 0.499);
 }
 
 // TODO: have other options
