@@ -15,4 +15,9 @@ enum {
     TMAP_MAP_PAIRING_POSITIONING_NONE
 };
 
+// TODO
+void
+tmap_map_pairing_pick_pairs(tmap_map_sams_t *one, tmap_map_sams_t *two, tmap_seq_t *one_seq, tmap_seq_t *two_seq,
+                            tmap_rand_t *rand, tmap_map_opt_t *opt);
+
 #endif

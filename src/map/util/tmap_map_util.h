@@ -75,6 +75,7 @@ typedef struct {
     int32_t score; /*!< the alignment score */
     int32_t ascore;  /*!< the base alignment score (SFF only) */
     int32_t pscore;  /*!< the pairing base alignment score (pairing only) */
+    uint8_t proper_pair:1;  /*!< 0 - if not a proper pair, 1 otherwise */
     int16_t pmapq; /*!< the pairing mapping quality */
     int32_t score_subo; /*!< the alignment score of the sub-optimal hit */
     int32_t n_cigar; /*!< the number of cigar operators */
@@ -227,6 +228,15 @@ tmap_map_sam_copy_and_nullify(tmap_map_sam_t *dest, tmap_map_sam_t *src);
 void
 tmap_map_sams_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sams_t *sams, int32_t end_num, 
                     tmap_map_sams_t *mates, int32_t sam_sff_tags);
+
+/*!
+  keep only the mappings with the given score 
+  @param  sams     the mappings to keep
+  @param  algo_id  the algorithm identifier
+  @param  score    the score to keep
+  */
+void
+tmap_map_util_keep_score(tmap_map_sams_t *sams, int32_t algo_id, int32_t score);
 
 /*!
   filters mappings based on the output mode

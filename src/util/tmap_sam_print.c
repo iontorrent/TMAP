@@ -387,7 +387,7 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
                       uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, uint32_t m_strand,
                       uint32_t m_seqid, uint32_t m_pos, uint32_t m_tlen,
                       uint8_t mapq, uint32_t *cigar, int32_t n_cigar,
-                      int32_t score, int32_t ascore, int32_t nh, int32_t algo_id, int32_t algo_stage,
+                      int32_t score, int32_t ascore, int32_t pscore, int32_t nh, int32_t algo_id, int32_t algo_stage,
                       const char *format, ...)
 {
   va_list ap;
@@ -504,6 +504,10 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
   // XZ
   if(TMAP_SEQ_TYPE_SFF == seq->type && INT32_MIN != ascore) {
       tmap_file_fprintf(fp, "\tXZ:i:%d", ascore);
+  }
+  
+  if(0 < end_num) { // mate info
+      tmap_file_fprintf(fp, "\tXP:i:%d", pscore);
   }
 
   // optional tags

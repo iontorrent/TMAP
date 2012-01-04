@@ -28,6 +28,7 @@
 #include "../sw/tmap_sw.h"
 #include "util/tmap_map_stats.h"
 #include "util/tmap_map_util.h"
+#include "pairing/tmap_map_pairing.h"
 #include "tmap_map_driver.h"
 
 // NB: do not turn these on, as they do not currently improve run time. They
@@ -311,25 +312,21 @@ tmap_map_driver_core_worker(int32_t num_ends,
                   driver->func_mapq(records[low]->sams[j], tmap_seq_get_bases_length(seqs[j][0]), driver->opt);
               }
 
+              // filter if we have more stages
+              if(i < driver->num_stages-1) {
+                  for(j=0;j<num_ends;j++) { // for each end
+                      tmap_map_sams_filter2(records[low]->sams[j], stage->opt->stage_score_thr, stage->opt->stage_mapq_thr);
+                  }
+              }
+
               if(2 == num_ends && 0 < records[low]->sams[0]->n && 0 < records[low]->sams[1]->n) { // pairs of reads!
-                  // TODO
-                  //
-                  // TODO: PAIRING HERE
-                  //
-                  // TODO: mapping quality
-                  //
-                  // TODO: filtering 
-                  //
+                  tmap_map_pairing_pick_pairs(records[low]->sams[0], records[low]->sams[1],
+                                              seqs[0][0], seqs[1][0],
+                                              rand, driver->opt);
                   // TODO: if we have one end for a pair, do we go onto the second
                   // stage?
               }
               else {
-                  // filter if we have more stages
-                  if(i < driver->num_stages-1) {
-                      for(j=0;j<num_ends;j++) { // for each end
-                          tmap_map_sams_filter2(records[low]->sams[j], stage->opt->stage_score_thr, stage->opt->stage_mapq_thr);
-                      }
-                  }
 
                   // choose alignments
                   for(j=0;j<num_ends;j++) { // for each end
@@ -347,6 +344,9 @@ tmap_map_driver_core_worker(int32_t num_ends,
                       found = 1;
                   }
               }
+
+              // TODO
+              // if paired, update pairing score based on target start...
 
               // did we find any mappings?
               if(1 == found) { // yes

@@ -75,6 +75,7 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
   @param  n_cigar     the number of cigar operations
   @param  score       the alignment score
   @param  ascore      the original base alignment score (SFF only)
+  @param  pscore      the pairing alignment score (paired reads only)
   @param  nh          the number of reported alignments (NH tag)
   @param  algo_id     the algorithm id
   @param  algo_stage  the algorithm stage (1 or 2) 
@@ -88,7 +89,7 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
                       uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, uint32_t m_strand,
                       uint32_t m_seqid, uint32_t m_pos, uint32_t m_tlen,
                       uint8_t mapq, uint32_t *cigar, int32_t n_cigar,
-                      int32_t score, int32_t ascore, int32_t nh, int32_t algo_id, int32_t algo_stage,
+                      int32_t score, int32_t ascore, int32_t pscore, int32_t nh, int32_t algo_id, int32_t algo_stage,
                       const char *format, ...);
 
 #ifdef HAVE_SAMTOOLS

@@ -69,9 +69,10 @@ enum {
     TMAP_MAP_ALGO_MAP1 = 0x1,  /*!< the map1 algorithm */
     TMAP_MAP_ALGO_MAP2 = 0x2,  /*!< the map2 algorithm */
     TMAP_MAP_ALGO_MAP3 = 0x4,  /*!< the map3 algorithm */
-    TMAP_MAP_ALGO_MAPVSW = 0x800,  /*!< the mapvsw algorithm */
-    TMAP_MAP_ALGO_STAGE = 0x1000, /*!< the stage options */
-    TMAP_MAP_ALGO_MAPALL = 0x2000, /*!< the mapall algorithm */
+    TMAP_MAP_ALGO_MAPVSW = 0x400,  /*!< the mapvsw algorithm */
+    TMAP_MAP_ALGO_STAGE = 0x800, /*!< the stage options */
+    TMAP_MAP_ALGO_MAPALL = 0x1000, /*!< the mapall algorithm */
+    TMAP_MAP_ALGO_PAIRING = 0x2000, /*!< flowspace options when printing parameters */
     TMAP_MAP_ALGO_FLOWSPACE = 0x4000, /*!< flowspace options when printing parameters */
     TMAP_MAP_ALGO_GLOBAL = 0x8000, /*!< global options when printing parameters */
 };
@@ -144,8 +145,8 @@ typedef struct {
  * afghijknqrsvwyz
  *
  * Available:
- * CDHILNPQSUV
- * bcdlmoptux
+ * CDHILQUV
+ * lmoptux
  * 
  * NB: Lets reserve single character flags for global options. 
 */
@@ -193,6 +194,13 @@ typedef struct __tmap_map_opt_t {
     int32_t sam_sff_tags;  /*!< specifies to output SFF specific SAM tags (-Y,--sam-sff-tags) */
     int32_t ignore_flowgram;  /*!< specifies to ignore the flowgram if available (-S,--ignore-flowgram) */
     int32_t remove_sff_clipping; /*!< removes SFF clipping (-G,--remove-sff-clipping) */
+
+    // pairing options
+    double ins_size_mean; // TODO
+    double ins_size_std; // TODO
+    double ins_size_std_max_num; // TODO
+    int32_t strandedness; // TODO
+    int32_t positioning; // TODO
 
     // map1/map2/map3 options, but specific to each
     int32_t min_seq_len; /*< the minimum sequence length to examine (--min-seq-length) */
