@@ -68,7 +68,7 @@ typedef struct {
 typedef struct {
     uint32_t algo_id:16; /*!< the algorithm id used to obtain this hit */
     uint32_t algo_stage:16; /*!< the algorithm id used to obtain this hit */
-    uint16_t strand:1; /*!< the strand */
+    uint8_t strand; /*!< the strand */
     uint32_t seqid;  /*!< the sequence index (0-based) */
     uint32_t pos; /*!< the position (0-based) */
     int16_t mapq; /*!< the mapping quality */
