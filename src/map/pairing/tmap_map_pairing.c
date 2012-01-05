@@ -204,6 +204,8 @@ tmap_map_pairing_pick_pairs(tmap_map_sams_t *one, tmap_map_sams_t *two, tmap_seq
   // free
   for(i=0;i<n_i;i++) {
       free(scores[i]);
+      free(proper_pairs[i]);
   }
   free(scores);
+  free(proper_pairs);
 }
