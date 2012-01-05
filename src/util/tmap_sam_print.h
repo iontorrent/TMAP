@@ -13,7 +13,7 @@
 /*! 
 */
                     
-#define TMAP_SAM_PRINT_VERSION "1.3"
+#define TMAP_SAM_PRINT_VERSION "1.4"
 
 /*! 
   prints out a SAM header
