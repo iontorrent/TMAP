@@ -421,7 +421,7 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
   if(0 < aln_num) flag |= 0x100; // secondary alignment
   if(0 < end_num) { // mate info
       flag |= 0x1;
-      if(1 == m_prop) flag |= 0x2; // properly aligned
+      if(0 == m_unmapped && 1 == m_prop) flag |= 0x2; // properly aligned
       if(1 == m_unmapped) flag |= 0x8; // unmapped
       else if(1 == m_strand) flag |= 0x20; // strand 
       flag |= (1 == end_num) ? 0x40 : 0x80; // first/second end

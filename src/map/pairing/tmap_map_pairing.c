@@ -103,9 +103,11 @@ tmap_map_pairing_pick_pairs(tmap_map_sams_t *one, tmap_map_sams_t *two, tmap_seq
   // reset all the mapping qualities to zero
   for(i=0;i<n_i;i++) {
       one->sams[i].mapq = 0;
+      one->sams[i].proper_pair = 0;
   }
   for(j=0;j<n_j;j++) {
       two->sams[j].mapq = 0;
+      two->sams[j].proper_pair = 0;
   }
 
   // score the pairings
