@@ -78,8 +78,6 @@ tmap_map_pairing_score(tmap_map_sam_t *one, tmap_map_sam_t *two, double ins_size
   return one->score + two->score - (int)(pen_mm * -1.0 * log10( erfc(M_SQRT1_2 * num_std)) + 0.499);
 }
 
-// TODO: have other options
-// TODO: fold options into opt
 void
 tmap_map_pairing_pick_pairs(tmap_map_sams_t *one, tmap_map_sams_t *two, tmap_seq_t *one_seq, tmap_seq_t *two_seq, 
                             tmap_rand_t *rand, tmap_map_opt_t *opt)

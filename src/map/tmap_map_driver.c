@@ -211,7 +211,6 @@ tmap_map_driver_core_worker(int32_t num_ends,
           
 #ifdef TMAP_DRIVER_USE_HASH
 #ifdef TMAP_DRIVER_CLEAR_HASH_PER_READ
-          // TODO: should we hash each read, or across the thread?
           tmap_bwt_match_hash_clear(hash[0]);
           tmap_bwt_match_hash_clear(hash[1]);
 #endif
@@ -346,7 +345,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
               }
 
               // TODO
-              // if paired, update pairing score based on target start...
+              // if paired, update pairing score based on target start?
 
               // did we find any mappings?
               if(1 == found) { // yes

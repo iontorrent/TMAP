@@ -261,6 +261,36 @@ Specifies to not use the flowgram, otherwise uses the flowgram for flowspace re-
 \subsubsection{\TT{-G,--remove-sff-clipping}}
 Specifies to not remove bases and qualities based on the adapter and quality clipping fields found in the an input SFF file.
 
+\subsection{Pairing Options}
+These options control how TMAP uses and outputs information about the paired end or mate pair reads.
+Pairing will be performed when exactly two input read files are given using the \TT{-r} option twice.
+
+\subsubsection{\TT{-b,--ins-size-mean FLOAT}}
+Specifies the expected mean insert size.
+
+\subsubsection{\TT{-c,--ins-size-std FLOAT}}
+Specifies the expected insert size standard deviations.
+
+\subsubsection{\TT{-d,--ins-size-std-max-num FLOAT}}
+Specifies the maximum number of standard deviations for a pair to be proper.
+See \autoref{sec:samformat} for more informaton about proper pairs.
+
+\subsubsection{\TT{-S,--strandedness}}
+Specifies the strand orientation between the pairs.
+\begin{enumerate}
+	\setcounter{enumi}{-1} % start at zero
+	\item the reads should be mapped to the same strand
+	\item the reads should be mapped to opposite strands
+\end{enumerate}
+
+\subsubsection{\TT{-P,--positioning}}
+Specifies that position orientation between the pairs.
+\begin{enumerate}
+	\setcounter{enumi}{-1} % start at zero
+	\item the first read of the pair (A) is before the second read of the pair (B).
+	\item the second read of the pair (B) is before the first read of the pair (A).
+\end{enumerate}
+
 \section{tmap index}
 \label{sec:index}
 The \BF{index} command creates a compact version of the reference genome and associated index.
