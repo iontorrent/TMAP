@@ -1260,19 +1260,19 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
       // End of flowspace options
       // Pairing options
-      else if(c == 'b' || (0 == strcmp("ins-size-mean", options[option_index].name))) {
+      else if(c == 'b' || (0 == c && 0 == strcmp("ins-size-mean", options[option_index].name))) {
           opt->ins_size_mean = atof(optarg);
       }
-      else if(c == 'c' || (0 == strcmp("ins-size-std", options[option_index].name))) {
+      else if(c == 'c' || (0 == c && 0 == strcmp("ins-size-std", options[option_index].name))) {
           opt->ins_size_std = atof(optarg);
       }
-      else if(c == 'd' || (0 == strcmp("ins-size-std-max-num", options[option_index].name))) {
+      else if(c == 'd' || (0 == c && 0 == strcmp("ins-size-std-max-num", options[option_index].name))) {
           opt->ins_size_std_max_num = atof(optarg);
       }
-      else if(c == 'S' || (0 == strcmp("strandedness", options[option_index].name))) {
+      else if(c == 'S' || (0 == c && 0 == strcmp("strandedness", options[option_index].name))) {
           opt->strandedness = atoi(optarg);
       }
-      else if(c == 'P' || (0 == strcmp("positioning", options[option_index].name))) {
+      else if(c == 'P' || (0 == c && 0 == strcmp("positioning", options[option_index].name))) {
           opt->positioning = atoi(optarg);
       }
       // End of pairing options 
