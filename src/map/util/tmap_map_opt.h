@@ -145,7 +145,7 @@ typedef struct {
  * afghijknqrsvwyz
  *
  * Available:
- * CDHILQUV
+ * CDHILUV
  * lmoptux
  * 
  * NB: Lets reserve single character flags for global options. 
@@ -196,11 +196,12 @@ typedef struct __tmap_map_opt_t {
     int32_t remove_sff_clipping; /*!< removes SFF clipping (-G,--remove-sff-clipping) */
 
     // pairing options
+    int32_t pairing; // TODO
+    int32_t strandedness; // TODO
+    int32_t positioning; // TODO
     double ins_size_mean; // TODO
     double ins_size_std; // TODO
     double ins_size_std_max_num; // TODO
-    int32_t strandedness; // TODO
-    int32_t positioning; // TODO
 
     // map1/map2/map3 options, but specific to each
     int32_t min_seq_len; /*< the minimum sequence length to examine (--min-seq-length) */

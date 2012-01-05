@@ -318,7 +318,8 @@ tmap_map_driver_core_worker(int32_t num_ends,
                   }
               }
 
-              if(2 == num_ends && 0 < records[low]->sams[0]->n && 0 < records[low]->sams[1]->n) { // pairs of reads!
+              if(0 <= driver->opt->strandedness && 0 <= driver->opt->positioning
+                 && 2 == num_ends && 0 < records[low]->sams[0]->n && 0 < records[low]->sams[1]->n) { // pairs of reads!
                   tmap_map_pairing_pick_pairs(records[low]->sams[0], records[low]->sams[1],
                                               seqs[0][0], seqs[1][0],
                                               rand, driver->opt);

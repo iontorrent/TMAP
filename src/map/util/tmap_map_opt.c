@@ -140,11 +140,12 @@ __tmap_map_opt_option_print_func_tf_init(sam_sff_tags)
 __tmap_map_opt_option_print_func_tf_init(ignore_flowgram)
 __tmap_map_opt_option_print_func_tf_init(remove_sff_clipping)
 // pairing
+__tmap_map_opt_option_print_func_int_init(pairing)
+__tmap_map_opt_option_print_func_int_init(strandedness)
+__tmap_map_opt_option_print_func_int_init(positioning)
 __tmap_map_opt_option_print_func_double_init(ins_size_mean)
 __tmap_map_opt_option_print_func_double_init(ins_size_std)
 __tmap_map_opt_option_print_func_double_init(ins_size_std_max_num)
-__tmap_map_opt_option_print_func_int_init(strandedness)
-__tmap_map_opt_option_print_func_int_init(positioning)
 // map1/map2/map3 options, but specific to each
 __tmap_map_opt_option_print_func_int_init(min_seq_len)
 __tmap_map_opt_option_print_func_int_init(max_seq_len)
@@ -348,6 +349,7 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
       "2 - all best hits",
       "3 - all alignments",
       NULL};
+  static char *pairing[] = {"0 - no pairing is to be performed", "1 - mate pairs (-S 0 -P 1)", "2 - paired end (-S 1 -P 0)", NULL};
   static char *strandedness[] = {"0 - same strand", "1 - opposite strand", NULL};
   static char *positioning[] = {"0 - read one before read two", "1 - read two before read one", NULL};
 
@@ -552,6 +554,24 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            TMAP_MAP_ALGO_FLOWSPACE);
 
   // pairing options
+  tmap_map_opt_options_add(opt->options, "pairing", required_argument, 0, 'Q',
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the insert pairing",
+                           pairing,
+                           tmap_map_opt_option_print_func_pairing,
+                           TMAP_MAP_ALGO_PAIRING);
+  tmap_map_opt_options_add(opt->options, "strandedness", required_argument, 0, 'S',
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the insert strandedness",
+                           strandedness,
+                           tmap_map_opt_option_print_func_strandedness,
+                           TMAP_MAP_ALGO_PAIRING);
+  tmap_map_opt_options_add(opt->options, "positioning", required_argument, 0, 'P',
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the insert positioning",
+                           positioning,
+                           tmap_map_opt_option_print_func_positioning,
+                           TMAP_MAP_ALGO_PAIRING);
   tmap_map_opt_options_add(opt->options, "ins-size-mean", required_argument, 0, 'b',
                            TMAP_MAP_OPT_TYPE_FLOAT,
                            "the mean insert size",
@@ -569,18 +589,6 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            "the insert size maximum standard deviation",
                            NULL,
                            tmap_map_opt_option_print_func_ins_size_std_max_num,
-                           TMAP_MAP_ALGO_PAIRING);
-  tmap_map_opt_options_add(opt->options, "strandedness", required_argument, 0, 'S',
-                           TMAP_MAP_OPT_TYPE_INT,
-                           "the insert strandedness",
-                           strandedness,
-                           tmap_map_opt_option_print_func_strandedness,
-                           TMAP_MAP_ALGO_PAIRING);
-  tmap_map_opt_options_add(opt->options, "positioning", required_argument, 0, 'P',
-                           TMAP_MAP_OPT_TYPE_INT,
-                           "the insert positioning",
-                           positioning,
-                           tmap_map_opt_option_print_func_positioning,
                            TMAP_MAP_ALGO_PAIRING);
 
   // map1/map3 options
@@ -850,11 +858,12 @@ tmap_map_opt_init(int32_t algo_id)
   opt->remove_sff_clipping = 1;
 
   // pairing options
+  opt->pairing = 0;
+  opt->strandedness = -1;
+  opt->positioning = -1;
   opt->ins_size_mean = -1.0;
   opt->ins_size_std = -1.0;
   opt->ins_size_std_max_num  = -1.0;
-  opt->strandedness = -1;
-  opt->positioning = -1;
 
   switch(algo_id) {
     case TMAP_MAP_ALGO_MAP1:
@@ -1260,6 +1269,23 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
       // End of flowspace options
       // Pairing options
+      else if(c == 'Q' || (0 == c && 0 == strcmp("pairing", options[option_index].name))) {
+          opt->pairing = atoi(optarg);
+          if(1 == opt->pairing) {
+              opt->strandedness = 0;
+              opt->positioning = 1;
+          }
+          else if(2 == opt->pairing) {
+              opt->strandedness = 1;
+              opt->positioning = 0;
+          }
+      }
+      else if(c == 'S' || (0 == c && 0 == strcmp("strandedness", options[option_index].name))) {
+          opt->strandedness = atoi(optarg);
+      }
+      else if(c == 'P' || (0 == c && 0 == strcmp("positioning", options[option_index].name))) {
+          opt->positioning = atoi(optarg);
+      }
       else if(c == 'b' || (0 == c && 0 == strcmp("ins-size-mean", options[option_index].name))) {
           opt->ins_size_mean = atof(optarg);
       }
@@ -1268,12 +1294,6 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
       else if(c == 'd' || (0 == c && 0 == strcmp("ins-size-std-max-num", options[option_index].name))) {
           opt->ins_size_std_max_num = atof(optarg);
-      }
-      else if(c == 'S' || (0 == c && 0 == strcmp("strandedness", options[option_index].name))) {
-          opt->strandedness = atoi(optarg);
-      }
-      else if(c == 'P' || (0 == c && 0 == strcmp("positioning", options[option_index].name))) {
-          opt->positioning = atoi(optarg);
       }
       // End of pairing options 
       // End single flag options
@@ -1523,6 +1543,15 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
         tmap_error("option -G was specified outside of the common options", Exit, CommandLineArgument);
     }
     // pairing
+    if(opt_a->pairing != opt_b->pairing) {
+        tmap_error("option -Q was specified outside the common options", Exit, CommandLineArgument);
+    }
+    if(opt_a->strandedness != opt_b->strandedness) {
+        tmap_error("option -S was specified outside the common options", Exit, CommandLineArgument);
+    }
+    if(opt_a->positioning != opt_b->positioning) {
+        tmap_error("option -P was specified outside the common options", Exit, CommandLineArgument);
+    }
     if(opt_a->ins_size_mean != opt_b->ins_size_mean) {
         tmap_error("option -b specified outside the common options", Exit, CommandLineArgument);
     }
@@ -1531,12 +1560,6 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
     }
     if(opt_a->ins_size_std_max_num != opt_b->ins_size_std_max_num) {
         tmap_error("option -d was specified outside the common options", Exit, CommandLineArgument);
-    }
-    if(opt_a->strandedness != opt_b->strandedness) {
-        tmap_error("option -S was specified outside the common options", Exit, CommandLineArgument);
-    }
-    if(opt_a->positioning != opt_b->positioning) {
-        tmap_error("option -P was specified outside the common options", Exit, CommandLineArgument);
     }
 }
 
@@ -1587,20 +1610,22 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       else if(NULL != opt->key_seq) {
           tmap_error("options -1 and -2 cannot be used with -K", Exit, CommandLineArgument);
       }
-      else if(opt->ins_size_mean < 0) {
-          tmap_error("option -b not specified", Exit, CommandLineArgument);
-      }
-      else if(opt->ins_size_std < 0) {
-          tmap_error("option -c not specified", Exit, CommandLineArgument);
-      }
-      else if(opt->ins_size_std_max_num < 0) {
-          tmap_error("option -d was not specified", Exit, CommandLineArgument);
-      }
-      else if(opt->strandedness < 0 || 1 < opt->strandedness) {
-          tmap_error("option -S was not specified", Exit, CommandLineArgument);
-      }
-      else if(opt->positioning < 0 || 1 < opt->positioning) {
-          tmap_error("option -P was not specified", Exit, CommandLineArgument);
+      else if(0 != opt->pairing) {
+          if(opt->strandedness < 0 || 1 < opt->strandedness) {
+              tmap_error("option -S was not specified", Exit, CommandLineArgument);
+          }
+          else if(opt->positioning < 0 || 1 < opt->positioning) {
+              tmap_error("option -P was not specified", Exit, CommandLineArgument);
+          }
+          else if(opt->ins_size_mean < 0) {
+              tmap_error("option -b not specified", Exit, CommandLineArgument);
+          }
+          else if(opt->ins_size_std < 0) {
+              tmap_error("option -c not specified", Exit, CommandLineArgument);
+          }
+          else if(opt->ins_size_std_max_num < 0) {
+              tmap_error("option -d was not specified", Exit, CommandLineArgument);
+          }
       }
       // OK
   }
@@ -1784,11 +1809,12 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->remove_sff_clipping = opt_src->remove_sff_clipping;
 
     // pairing
+    opt_dest->pairing = opt_src->pairing;
+    opt_dest->strandedness = opt_src->strandedness;
+    opt_dest->positioning = opt_src->positioning;
     opt_dest->ins_size_mean = opt_src->ins_size_mean;
     opt_dest->ins_size_std = opt_src->ins_size_std;
     opt_dest->ins_size_std_max_num = opt_src->ins_size_std_max_num;
-    opt_dest->strandedness = opt_src->strandedness;
-    opt_dest->positioning = opt_src->positioning;
 }
 
 void
