@@ -64,6 +64,13 @@ tmap_map_pairing_get_num_std(tmap_map_sam_t *one, tmap_map_sam_t *two, double in
       num_std = fabs(position_diff - ins_size_mean) / ins_size_std;
       if(ins_size_std_max_num < num_std) num_std = ins_size_std_max_num;
   }
+  /*
+  fprintf(stderr, "strand_diff=%d strandedness=%d num_std=%lf\n", strand_diff, strandedness, num_std);
+  fprintf(stderr, "ins_size_mean=%lf\n", ins_size_mean);
+  fprintf(stderr, "ins_size_std=%lf\n", ins_size_std);
+  fprintf(stderr, "ins_size_std_max_num=%lf\n", ins_size_std_max_num);
+  */
+
   return num_std;
 }
 
@@ -101,13 +108,11 @@ tmap_map_pairing_pick_pairs(tmap_map_sams_t *one, tmap_map_sams_t *two, tmap_seq
       num_stds[i] = tmap_malloc(sizeof(double) * n_j, "num_stds[i]");
   }
 
-  // reset all the mapping qualities to zero
+  // no proper pairs
   for(i=0;i<n_i;i++) {
-      one->sams[i].mapq = 0;
       one->sams[i].proper_pair = 0;
   }
   for(j=0;j<n_j;j++) {
-      two->sams[j].mapq = 0;
       two->sams[j].proper_pair = 0;
   }
 
@@ -152,20 +157,17 @@ tmap_map_pairing_pick_pairs(tmap_map_sams_t *one, tmap_map_sams_t *two, tmap_seq
       mapq = tmap_map_util_mapq_score(tmap_seq_get_bases_length(one_seq) + tmap_seq_get_bases_length(two_seq),
                                       n_best, best_score, n_best_subo, best_subo_score, opt);
       // update the mapping quality
-      one->sams[best_score_i].mapq = two->sams[best_score_j].mapq = mapq;
+      //one->sams[best_score_i].mapq = two->sams[best_score_j].mapq = mapq;
   }
   else {
-      // all should have zero already
+      mapq = 0;
   }
 
   // TODO: adjust suboptimal?
       
   // filter
-  if(TMAP_MAP_OPT_ALN_MODE_ALL == opt->aln_output_mode) {
+  if(TMAP_MAP_OPT_ALN_MODE_ALL == opt->aln_output_mode || TMAP_MAP_OPT_ALN_MODE_ALL_BEST == opt->aln_output_mode) {
       tmap_error("bug encountered", Exit, OutOfRange);
-  }
-  else if(TMAP_MAP_OPT_ALN_MODE_ALL == opt->aln_output_mode) {
-      // do nothing
   }
   else {
       if(TMAP_MAP_OPT_ALN_MODE_RAND_BEST == opt->aln_output_mode) {
@@ -192,8 +194,6 @@ tmap_map_pairing_pick_pairs(tmap_map_sams_t *one, tmap_map_sams_t *two, tmap_seq
           tmap_map_sam_copy_and_nullify(&two->sams[0], &two->sams[best_score_j]);
       }
 
-      // HERE
-      fprintf(stderr, "best_score=%d best_subo_score=%d\n", best_score, best_subo_score); 
       // re-allocate
       tmap_map_sams_realloc(one, 1);
       tmap_map_sams_realloc(two, 1);
@@ -206,6 +206,54 @@ tmap_map_pairing_pick_pairs(tmap_map_sams_t *one, tmap_map_sams_t *two, tmap_seq
       // the number of standard deviations from the mean
       one->sams[0].num_stds = num_stds[best_score_i][best_score_j]; 
       two->sams[0].num_stds = num_stds[best_score_i][best_score_j]; 
+      // update the mapping quality
+      //fprintf(stderr, "mapq=%d n_best=%d proper_pairs[best_score_i][best_score_j]=%d\n", mapq, n_best, proper_pairs[best_score_i][best_score_j]);
+      if(1 == n_best) {
+          if(1 == proper_pairs[best_score_i][best_score_j]) { // proper pair
+              if(0 < one->sams[0].mapq && 0 < two->sams[0].mapq) { // both were chosen in SE mapq analysis
+                  /*
+                  // sum the two mapqs, with no regard to PE mapq
+                  int32_t mapq2 = one->sams[0].mapq + two->sams[0].mapq;
+                  mapq = (mapq < mapq2) ? mapq : mapq2; // bound by PE mapq
+                  one->sams[0].mapq = two->sams[0].mapq = mapq;
+                  */
+                  // upweight
+                  one->sams[0].mapq += mapq;
+                  two->sams[0].mapq += mapq;
+              }
+              else { // one of the two had zero SE mapq
+                  if(0 < mapq && 0 == one->sams[0].mapq) one->sams[0].mapq = (mapq + 7 < two->sams[0].mapq) ? (mapq + 7) : two->sams[0].mapq;
+                  if(0 < mapq && 0 == two->sams[0].mapq) two->sams[0].mapq = (mapq + 7 < one->sams[0].mapq) ? (mapq + 7) : one->sams[0].mapq;
+              }
+          }
+          else { // discordant pair
+              if(0 < one->sams[0].mapq && 0 < two->sams[0].mapq) { // both were chosen in SE mapq analysis
+                  // downweight
+                  mapq -= 10; // downweight
+                  one->sams[0].mapq -= 10;
+                  two->sams[0].mapq -= 10;
+                  if(mapq < one->sams[0].mapq) one->sams[0].mapq = mapq;
+                  if(mapq < two->sams[0].mapq) two->sams[0].mapq = mapq;
+              }
+              else if(0 == one->sams[0].mapq && 0 == two->sams[0].mapq) { // both were ambiguous in SE mapq analysis
+                  mapq -= 20; // downweight
+                  if(mapq < 0) mapq = 0;
+                  one->sams[0].mapq = two->sams[0].mapq = mapq;
+              }
+              else if(0 < one->sams[0].mapq) { // one was chosen in SE mapq analysis
+                  two->sams[0].mapq = one->sams[0].mapq;
+                  if(mapq < two->sams[0].mapq) two->sams[0].mapq = mapq;
+              }
+              else { // two was chosen in SE mapq analysis
+                  one->sams[0].mapq = two->sams[0].mapq;
+                  if(mapq < one->sams[0].mapq) one->sams[0].mapq = mapq;
+              }
+          }
+      }
+      else {
+          one->sams[0].mapq = two->sams[0].mapq = 0;
+      }
+
   }
 
   // free

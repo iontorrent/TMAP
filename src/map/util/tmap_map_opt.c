@@ -1791,7 +1791,12 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->score_thr = opt_src->score_thr;
     opt_dest->reads_queue_size = opt_src->reads_queue_size;
     opt_dest->num_threads = opt_src->num_threads;
-    opt_dest->aln_output_mode = TMAP_MAP_OPT_ALN_MODE_ALL;
+    if(TMAP_MAP_ALGO_STAGE == opt_dest->algo_id) {
+        opt_dest->aln_output_mode = opt_src->aln_output_mode;
+    }
+    else {
+        opt_dest->aln_output_mode = TMAP_MAP_OPT_ALN_MODE_ALL;
+    }
     opt_dest->sam_rg = tmap_strdup(opt_src->sam_rg);
     opt_dest->input_compr = opt_src->input_compr;
     opt_dest->output_compr = opt_src->output_compr;

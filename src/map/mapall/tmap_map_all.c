@@ -159,7 +159,7 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   i = 1;
   j = tmap_map_all_opt_get_next_stage_j(argc, argv, 1);
   if(j == argc) {
-      tmap_error("No stages were specified", Exit, CommandLineArgument);
+      tmap_error("No stages were specified", Warn, CommandLineArgument);
   }
 
   // parse the global options
@@ -208,7 +208,7 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       if(1 != tmap_map_opt_parse(k - i, argv + i, stage_opt)) {
           return 0;
       }
-      
+
       // NB: do this after parsing the stage options, since '-h' may be
       // specified
       if(k == j) {
