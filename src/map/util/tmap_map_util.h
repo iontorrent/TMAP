@@ -76,6 +76,7 @@ typedef struct {
     int32_t ascore;  /*!< the base alignment score (SFF only) */
     int32_t pscore;  /*!< the pairing base alignment score (pairing only) */
     uint8_t proper_pair:1;  /*!< 0 - if not a proper pair, 1 otherwise */
+    double num_stds;  /*!< the number of standard deviations from the mean insert size */
     int16_t pmapq; /*!< the pairing mapping quality */
     int32_t score_subo; /*!< the alignment score of the sub-optimal hit */
     int32_t n_cigar; /*!< the number of cigar operators */

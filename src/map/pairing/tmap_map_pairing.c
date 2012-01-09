@@ -69,13 +69,12 @@ tmap_map_pairing_get_num_std(tmap_map_sam_t *one, tmap_map_sam_t *two, double in
 
 int32_t
 tmap_map_pairing_score(tmap_map_sam_t *one, tmap_map_sam_t *two, double ins_size_mean, double ins_size_std, double ins_size_std_max_num, 
-                            int32_t pen_mm, int32_t strandedness, int32_t positioning, uint8_t *proper_pair)
+                            int32_t pen_mm, int32_t strandedness, int32_t positioning, uint8_t *proper_pair, double *num_std)
 {
-  double num_std;
   // NB: use the target ends
-  num_std = tmap_map_pairing_get_num_std(one, two, ins_size_mean, ins_size_std, ins_size_std_max_num, pen_mm, strandedness, positioning, 1);
-  (*proper_pair) = (num_std < ins_size_std_max_num) ? 1 : 0; 
-  return one->score + two->score - (int)(pen_mm * -1.0 * log10( erfc(M_SQRT1_2 * num_std)) + 0.499);
+  (*num_std) = tmap_map_pairing_get_num_std(one, two, ins_size_mean, ins_size_std, ins_size_std_max_num, pen_mm, strandedness, positioning, 1);
+  (*proper_pair) = ((*num_std) < ins_size_std_max_num) ? 1 : 0; 
+  return one->score + two->score - (int)(pen_mm * -1.0 * log10( erfc(M_SQRT1_2 * (*num_std))) + 0.499);
 }
 
 void
@@ -84,10 +83,10 @@ tmap_map_pairing_pick_pairs(tmap_map_sams_t *one, tmap_map_sams_t *two, tmap_seq
 {
   int32_t i, j, n_i, n_j;
   int32_t best_score, best_subo_score, best_score_i, best_score_j;
-  int32_t n_best, n_best_subo;
+  int32_t n_best, n_best_subo, mapq;
   int32_t **scores = NULL; // TODO: make this more efficient
-  int32_t mapq;
   uint8_t **proper_pairs = NULL;
+  double **num_stds = NULL;
 
   if(one->n <= 0 || two->n <= 0) return;
 
@@ -95,9 +94,11 @@ tmap_map_pairing_pick_pairs(tmap_map_sams_t *one, tmap_map_sams_t *two, tmap_seq
   n_j = two->n;
   scores = tmap_malloc(sizeof(int32_t*) * n_i, "scores"); 
   proper_pairs = tmap_malloc(sizeof(uint8_t*) * n_i, "proper_pairs"); 
+  num_stds = tmap_malloc(sizeof(double*) * n_i, "num_stds"); 
   for(i=0;i<n_i;i++) {
       scores[i] = tmap_malloc(sizeof(int32_t) * n_j, "scores[i]");
       proper_pairs[i] = tmap_malloc(sizeof(uint8_t) * n_j, "proper_pairs[i]");
+      num_stds[i] = tmap_malloc(sizeof(double) * n_j, "num_stds[i]");
   }
 
   // reset all the mapping qualities to zero
@@ -119,7 +120,8 @@ tmap_map_pairing_pick_pairs(tmap_map_sams_t *one, tmap_map_sams_t *two, tmap_seq
           // score
           scores[i][j] = tmap_map_pairing_score(&one->sams[i], &two->sams[j], 
                                          opt->ins_size_mean, opt->ins_size_std, opt->ins_size_std_max_num,
-                                         opt->pen_mm, opt->strandedness, opt->positioning, &proper_pairs[i][j]);
+                                         opt->pen_mm, opt->strandedness, opt->positioning, 
+                                         &proper_pairs[i][j], &num_stds[i][j]);
           // update best and next-best
           if(best_score == scores[i][j]) {
               n_best++;
@@ -190,6 +192,8 @@ tmap_map_pairing_pick_pairs(tmap_map_sams_t *one, tmap_map_sams_t *two, tmap_seq
           tmap_map_sam_copy_and_nullify(&two->sams[0], &two->sams[best_score_j]);
       }
 
+      // HERE
+      fprintf(stderr, "best_score=%d best_subo_score=%d\n", best_score, best_subo_score); 
       // re-allocate
       tmap_map_sams_realloc(one, 1);
       tmap_map_sams_realloc(two, 1);
@@ -199,15 +203,18 @@ tmap_map_pairing_pick_pairs(tmap_map_sams_t *one, tmap_map_sams_t *two, tmap_seq
       // proper pair
       one->sams[0].proper_pair = proper_pairs[best_score_i][best_score_j];
       two->sams[0].proper_pair = proper_pairs[best_score_i][best_score_j];
-      // TODO
-      // - do we want to store the z-score for a pair?
+      // the number of standard deviations from the mean
+      one->sams[0].num_stds = num_stds[best_score_i][best_score_j]; 
+      two->sams[0].num_stds = num_stds[best_score_i][best_score_j]; 
   }
 
   // free
   for(i=0;i<n_i;i++) {
       free(scores[i]);
       free(proper_pairs[i]);
+      free(num_stds[i]);
   }
   free(scores);
   free(proper_pairs);
+  free(num_stds);
 }

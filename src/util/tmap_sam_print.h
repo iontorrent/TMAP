@@ -49,7 +49,7 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq,
   */
 inline void
 tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tmap_refseq_t *refseq,
-                        uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop,
+                        uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, 
                         uint32_t m_strand, uint32_t m_seqid, uint32_t m_pos);
 
 
@@ -66,6 +66,7 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
   @param  end_num     0 if there is no mate (all mate params ignored), 1 if the mate is the first fragment, 2 if the mate is the last fragment
   @param  m_unmapped  1 if the mate is unmapped, 0 otherwise (m_strand/m_seqid/m_pos/m_tlen are ignored)
   @param  m_prop      1 if properly paired, 0 otherwise
+  @param  m_num_std   the number of standard devaitions from the mean insert size if paired
   @param  m_strand    the mates strand
   @param  m_seqid     the mates seqid (zero-based), 0 otherwise
   @param  m_pos       the mates position (zero-based), 0 otherwise
@@ -86,7 +87,7 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
 inline void
 tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tmap_refseq_t *refseq,
                       uint8_t strand, uint32_t seqid, uint32_t pos, int32_t secondary,
-                      uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, uint32_t m_strand,
+                      uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, double m_num_std, uint32_t m_strand,
                       uint32_t m_seqid, uint32_t m_pos, uint32_t m_tlen,
                       uint8_t mapq, uint32_t *cigar, int32_t n_cigar,
                       int32_t score, int32_t ascore, int32_t pscore, int32_t nh, int32_t algo_id, int32_t algo_stage,

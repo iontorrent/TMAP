@@ -384,7 +384,7 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
 inline void
 tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tmap_refseq_t *refseq,
                       uint8_t strand, uint32_t seqid, uint32_t pos, int32_t aln_num,
-                      uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, uint32_t m_strand,
+                      uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, double m_num_std, uint32_t m_strand,
                       uint32_t m_seqid, uint32_t m_pos, uint32_t m_tlen,
                       uint8_t mapq, uint32_t *cigar, int32_t n_cigar,
                       int32_t score, int32_t ascore, int32_t pscore, int32_t nh, int32_t algo_id, int32_t algo_stage,
@@ -507,7 +507,10 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
   }
   
   if(0 < end_num) { // mate info
-      tmap_file_fprintf(fp, "\tXP:i:%d", pscore);
+      tmap_file_fprintf(fp, "\tYP:i:%d", pscore);
+      if(0 == m_unmapped) {
+          tmap_file_fprintf(fp, "\tYS:f:%f:", m_num_std);
+      }
   }
 
   // optional tags
