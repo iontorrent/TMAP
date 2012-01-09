@@ -1839,8 +1839,9 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "fn_fasta=%s\n", opt->fn_fasta);
   for(i=0;i<opt->fn_reads_num;i++) {
       if(0 < i) fprintf(stderr, ",");
-      fprintf(stderr, "fn_reads=%s\n", opt->fn_reads[i]);
+      fprintf(stderr, "fn_reads=%s", opt->fn_reads[i]);
   }
+  fprintf(stderr, "\n");
   fprintf(stderr, "fn_sam=%s\n", opt->fn_sam);
   fprintf(stderr, "reads_format=%d\n", opt->reads_format);
   fprintf(stderr, "reads_format=%d\n", opt->reads_format);
@@ -1903,5 +1904,4 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "stage_mapq_thr=%d\n", opt->stage_mapq_thr);
   fprintf(stderr, "stage_keep_all=%d\n", opt->stage_keep_all);
   fprintf(stderr, "stage_seed_freqc=%.2f\n", opt->stage_seed_freqc);
-
 }

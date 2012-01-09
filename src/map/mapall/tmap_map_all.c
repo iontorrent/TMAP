@@ -108,7 +108,7 @@ tmap_map_all_core(tmap_map_driver_t *driver)
   int32_t j;
   for(i=0;i<driver->num_stages;i++) {
       for(j=0;j<driver->stages[i]->num_algorithms;j++) {
-          fprintf(stderr, "Algorithm: %s Stage: %d\n", 
+          tmap_file_fprintf(tmap_file_stderr, "Algorithm: %s Stage: %d\n", 
                   tmap_algo_id_to_name(driver->stages[i]->algorithms[j]->opt->algo_id),
                   driver->stages[i]->algorithms[j]->opt->algo_stage);
       }

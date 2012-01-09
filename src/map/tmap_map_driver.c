@@ -707,6 +707,7 @@ tmap_map_driver_stage_init(int32_t stage)
   s = tmap_calloc(1, sizeof(tmap_map_driver_stage_t), "stage");
   s->stage = stage;
   s->opt = tmap_map_opt_init(TMAP_MAP_ALGO_STAGE);
+  s->opt->algo_stage = stage;
   return s;
 }
 
