@@ -296,19 +296,19 @@ tmap_map_driver_core_worker(int32_t num_ends,
 
               // generate scores with smith waterman
               for(j=0;j<num_ends;j++) { // for each end
-                  records[low]->sams[j] = tmap_map_util_sw_gen_score(index->refseq, records[low]->sams[j], seqs[j], rand, driver->opt);
+                  records[low]->sams[j] = tmap_map_util_sw_gen_score(index->refseq, records[low]->sams[j], seqs[j], rand, stage->opt);
                   curstat->num_after_scoring += records[low]->sams[j]->n;
               }
 
               // remove duplicates
               for(j=0;j<num_ends;j++) { // for each end
-                  tmap_map_util_remove_duplicates(records[low]->sams[j], driver->opt->dup_window, rand);
+                  tmap_map_util_remove_duplicates(records[low]->sams[j], stage->opt->dup_window, rand);
                   curstat->num_after_rmdup += records[low]->sams[j]->n;
               }
               
               // (single-end) mapping quality
               for(j=0;j<num_ends;j++) { // for each end
-                  driver->func_mapq(records[low]->sams[j], tmap_seq_get_bases_length(seqs[j][0]), driver->opt);
+                  driver->func_mapq(records[low]->sams[j], tmap_seq_get_bases_length(seqs[j][0]), stage->opt);
               }
 
               // filter if we have more stages
@@ -321,7 +321,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
               if(2 == num_ends && 0 < records[low]->sams[0]->n && 0 < records[low]->sams[1]->n) { // pairs of reads!
                   tmap_map_pairing_pick_pairs(records[low]->sams[0], records[low]->sams[1],
                                               seqs[0][0], seqs[1][0],
-                                              rand, driver->opt);
+                                              rand, stage->opt);
                   // TODO: if we have one end for a pair, do we go onto the second
                   // stage?
               }
@@ -329,7 +329,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
 
                   // choose alignments
                   for(j=0;j<num_ends;j++) { // for each end
-                      tmap_map_sams_filter1(records[low]->sams[j], driver->opt->aln_output_mode, TMAP_MAP_ALGO_NONE, rand);
+                      tmap_map_sams_filter1(records[low]->sams[j], stage->opt->aln_output_mode, TMAP_MAP_ALGO_NONE, rand);
                       curstat->num_after_filter += records[low]->sams[j]->n;
                   }
               }
@@ -337,7 +337,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
               // generate the cigars
               found = 0;
               for(j=0;j<num_ends;j++) { // for each end
-                  records[low]->sams[j] = tmap_map_util_sw_gen_cigar(index->refseq, records[low]->sams[j], seqs[j], driver->opt);
+                  records[low]->sams[j] = tmap_map_util_sw_gen_cigar(index->refseq, records[low]->sams[j], seqs[j], stage->opt);
                   if(0 < records[low]->sams[j]->n) {
                       //curstat->num_with_mapping++;
                       found = 1;
