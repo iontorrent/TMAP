@@ -568,7 +568,7 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            TMAP_MAP_ALGO_PAIRING);
   tmap_map_opt_options_add(opt->options, "positioning", required_argument, 0, 'P',
                            TMAP_MAP_OPT_TYPE_INT,
-                           "the insert positioning",
+                           "the insert positioning when on the same strand (-S 0)",
                            positioning,
                            tmap_map_opt_option_print_func_positioning,
                            TMAP_MAP_ALGO_PAIRING);
