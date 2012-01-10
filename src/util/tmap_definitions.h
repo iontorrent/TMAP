@@ -105,6 +105,11 @@ enum {
 #endif
 };
 
+/*!
+  One gibabyte.
+ */
+#define TMAP_1GB (1 << 30)
+
 /*! 
   @param  algo_id  the algorithm identifier
   @return          algorithm name

@@ -11,6 +11,7 @@
 
 #include "../util/tmap_error.h"
 #include "../util/tmap_alloc.h"
+#include "../util/tmap_definitions.h"
 #include "tmap_file.h"
 
 tmap_file_t *
@@ -213,7 +214,7 @@ tmap_file_fclose(tmap_file_t *fp)
 size_t 
 tmap_file_fread(void *ptr, size_t size, size_t count, tmap_file_t *fp) 
 {
-  size_t num_read = 0;
+  size_t num_read = 0, to_read, cur_read;
   int error;
 #ifndef DISABLE_BZ2 
   int32_t nbuf=0, i;
@@ -223,7 +224,18 @@ tmap_file_fread(void *ptr, size_t size, size_t count, tmap_file_t *fp)
 
   switch(fp->c) {
     case TMAP_FILE_NO_COMPRESSION:
-      num_read = fread(ptr, size, count, fp->fp);
+      //cur_read = fread(ptr, size, count, fp->fp);
+      // NB: some fread's are buggy when reading in large files, 
+      // like apple's fread, so use a buffered approach
+      while(num_read < count) {
+          to_read = count - num_read;
+          if(TMAP_1GB < to_read * size) {
+              to_read = (size_t)(TMAP_1GB / size);
+          }
+          cur_read = fread(ptr + (num_read * size), size, to_read, fp->fp);
+          num_read += cur_read;
+          if(cur_read != to_read) break; // error 
+      }
       break;
 #ifndef DISABLE_BZ2 
     case TMAP_FILE_BZ2_COMPRESSION:

@@ -975,12 +975,8 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
             
                   continue; // there may be more to add
              }*/
-          
-              
           }
-        
       }
-      
      
       // choose a random one within the window
       if(start == end) {
