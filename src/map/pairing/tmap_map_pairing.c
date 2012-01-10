@@ -220,6 +220,8 @@ tmap_map_pairing_pick_pairs(tmap_map_sams_t *one, tmap_map_sams_t *two, tmap_seq
                   // upweight
                   one->sams[0].mapq += mapq;
                   two->sams[0].mapq += mapq;
+                  if(250 < one->sams[0].mapq) one->sams[0].mapq = 250; 
+                  if(250 < one->sams[0].mapq) one->sams[0].mapq = 250; 
               }
               else { // one of the two had zero SE mapq
                   if(0 < mapq && 0 == one->sams[0].mapq) one->sams[0].mapq = (mapq + 7 < two->sams[0].mapq) ? (mapq + 7) : two->sams[0].mapq;
@@ -229,15 +231,14 @@ tmap_map_pairing_pick_pairs(tmap_map_sams_t *one, tmap_map_sams_t *two, tmap_seq
           else { // discordant pair
               if(0 < one->sams[0].mapq && 0 < two->sams[0].mapq) { // both were chosen in SE mapq analysis
                   // downweight
-                  mapq -= 10; // downweight
-                  one->sams[0].mapq -= 10;
-                  two->sams[0].mapq -= 10;
+                  mapq = (mapq < 10) ? 0 : mapq - 10;
+                  one->sams[0].mapq = (one->sams[0].mapq < 10) ? 0 : one->sams[0].mapq - 10;
+                  two->sams[0].mapq = (two->sams[0].mapq < 10) ? 0 : two->sams[0].mapq - 10;
                   if(mapq < one->sams[0].mapq) one->sams[0].mapq = mapq;
                   if(mapq < two->sams[0].mapq) two->sams[0].mapq = mapq;
               }
               else if(0 == one->sams[0].mapq && 0 == two->sams[0].mapq) { // both were ambiguous in SE mapq analysis
-                  mapq -= 20; // downweight
-                  if(mapq < 0) mapq = 0;
+                  mapq = (mapq < 20) ? 0 : mapq - 20; // downweight
                   one->sams[0].mapq = two->sams[0].mapq = mapq;
               }
               else if(0 < one->sams[0].mapq) { // one was chosen in SE mapq analysis
