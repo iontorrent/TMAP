@@ -652,7 +652,7 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window, tmap_
   // NB: since tmap_map_util_sw_gen_score only sets the end position of the
   // alignment, use that
   tmap_sort_introsort(tmap_map_sam_sort_coord_end, sams->n, sams->sams);
-
+  
   // remove duplicates within a window
   for(i=j=0;i<sams->n;) {
 
@@ -938,43 +938,36 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
          // printf("%s seed start: %d end: %d next start: %d  next end: %d\n", seq_name, sams->sams[end].pos, (sams->sams[end].pos + sams->sams[end].target_len), sams->sams[end+1].pos, (sams->sams[end+1].pos + sams->sams[end+1].target_len));
           if(sams->sams[end].strand == sams->sams[end+1].strand 
              && sams->sams[end].seqid == sams->sams[end+1].seqid) {
-             /*&& (sams->sams[end+1].pos <= (sams->sams[end].pos + seq_len) ) //check for unsigned int underflow
-             && ((sams->sams[end+1].pos - (sams->sams[end].pos + seq_len)) <= opt->max_seed_band ) ) {*/
-             if (sams->sams[end+1].pos <= (sams->sams[end].pos + seq_len)) { //check for unsigned int underflow     
-                 //printf("my if1:  end+1 pos: %d end pos: %d seq_len: %d\n", sams->sams[end+1].pos, sams->sams[end].pos, seq_len);
+              /*
+              // consider start positions only
+              if (sams->sams[end+1].pos - sams->sams[end].pos <= opt->max_seed_band) {
+              end++;
+              continue;
+              }
+              else {
+              }
+              */
+
+              if(sams->sams[end+1].pos <= (sams->sams[end].pos + seq_len)) { //check for unsigned int underflow     
+                  //fprintf(stderr, "my if1:  end+1 pos: %d end pos: %d seq_len: %d\n", sams->sams[end+1].pos, sams->sams[end].pos, seq_len);
                   end++;
                   if(end_pos < sams->sams[end].pos + seq_len) {
-                    end_pos = sams->sams[end].pos + seq_len + 1; // one-based
+                      end_pos = sams->sams[end].pos + seq_len + 1; // one-based
                   }
                   continue; // there may be more to add
-                
-             }
-             else if(sams->sams[end+1].pos >= (sams->sams[end].pos + seq_len)) {
-                 //printf("my if2:  end+1 pos: %d end pos: %d seq_len: %d\n", sams->sams[end+1].pos, sams->sams[end].pos, seq_len);
-                 if ((sams->sams[end+1].pos - (sams->sams[end].pos + seq_len)) <= opt->max_seed_band) {
-                     end++;
 
-                     if(end_pos < sams->sams[end].pos + seq_len) {
-                        end_pos = sams->sams[end].pos + seq_len + 1; // one-based
-                     }
-                    continue;
-                 }
-             }/*
-             else if((sams->sams[end+1].pos - (sams->sams[end].pos) <= opt->max_seed_band)) {
-                  printf("ms if0:  end+1 pos: %d end pos: %d seq_len: %d\n", sams->sams[end+1].pos, sams->sams[end].pos, seq_len);
-                  printf("\tmy if math %d - (%d + %d) = %d && <= %d\n", 
-                          sams->sams[end+1].pos, sams->sams[end].pos, 
-                          seq_len, (sams->sams[end+1].pos - (sams->sams[end].pos + seq_len)),
-                          opt->max_seed_band
-                          );
+              }
+              else if(sams->sams[end+1].pos >= (sams->sams[end].pos + seq_len)) {
+                  //fprintf(stderr, "my if2:  end+1 pos: %d end pos: %d seq_len: %d\n", sams->sams[end+1].pos, sams->sams[end].pos, seq_len);
+                  if ((sams->sams[end+1].pos - (sams->sams[end].pos + seq_len)) <= opt->max_seed_band) {
+                      end++;
 
-                  end++;
-                  if(end_pos < sams->sams[end].pos) {
-                    end_pos = sams->sams[end].pos + seq_len + 1; // one-based
+                      if(end_pos < sams->sams[end].pos + seq_len) {
+                          end_pos = sams->sams[end].pos + seq_len + 1; // one-based
+                      }
+                      continue;
                   }
-            
-                  continue; // there may be more to add
-             }*/
+              }
           }
       }
      
@@ -1048,6 +1041,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
        * if a region has ≥fC q-hits, only then it is processed further. "
        */
       if ( (end - start + 1) > ( sams->n * opt->stage_seed_freqc) ) {
+          int32_t n_best = 0;
           if(0 == strand) {
               tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query, qlen,
                                             target, tlen, 
@@ -1056,7 +1050,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                                             &tmp_sam.score_fwd, &tmp_sam.score_rev,
                                             &tmp_sam.query_start, &tmp_sam.query_end,
                                             &tmp_sam.target_start, &tmp_sam.target_end,
-                                            &overflow, opt->score_thr, 0);
+                                            &overflow, &n_best, opt->score_thr, 0);
           }
           else {
               tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query, qlen,
@@ -1066,9 +1060,8 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                                             &tmp_sam.score_fwd, &tmp_sam.score_rev,
                                             &tmp_sam.query_start, &tmp_sam.query_end,
                                             &tmp_sam.target_start, &tmp_sam.target_end,
-                                            &overflow, opt->score_thr, 0);
+                                            &overflow, &n_best, opt->score_thr, 0);
           }
-      //} 
           if(1 == overflow) {
               tmap_error("bug encountered", Exit, OutOfRange);
           }
@@ -1389,7 +1382,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
                                         &tmp_sam.score_fwd, &tmp_sam.score_rev,
                                         &tmp_sam.query_start, &tmp_sam.query_end,
                                         &tmp_sam.target_start, &tmp_sam.target_end,
-                                        &overflow, opt->score_thr, 1);
+                                        &overflow, NULL, opt->score_thr, 1);
       }
       else {
           tmp_sam.score = tmap_vsw_sse2(vsw_query[strand], query_rc, qlen,
@@ -1399,7 +1392,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
                                         &tmp_sam.score_fwd, &tmp_sam.score_rev,
                                         &tmp_sam.query_start, &tmp_sam.query_end,
                                         &tmp_sam.target_start, &tmp_sam.target_end,
-                                        &overflow, opt->score_thr, 1);
+                                        &overflow, NULL, opt->score_thr, 1);
       }
       if(1 == overflow) {
           tmap_error("bug encountered", Exit, OutOfRange);
