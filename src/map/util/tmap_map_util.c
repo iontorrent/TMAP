@@ -998,7 +998,7 @@ tmap_map_util_gen_score(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
                                            strand, vsw_query, seq_len, start_pos, end_pos,
                                            target_mem, target,
                                            softclip_start, softclip_end,
-                                           max_seed_band >> 1,
+                                           (max_seed_band <= 0) ? -1 : (max_seed_band >> 1),
                                            vsw_opt, rand, opt);
               // update start/end
               end++;
