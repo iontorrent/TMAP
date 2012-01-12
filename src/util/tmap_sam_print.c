@@ -509,7 +509,7 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
   if(0 < end_num) { // mate info
       tmap_file_fprintf(fp, "\tYP:i:%d", pscore);
       if(0 == m_unmapped) {
-          tmap_file_fprintf(fp, "\tYS:f:%f:", m_num_std);
+          tmap_file_fprintf(fp, "\tYS:f:%f", m_num_std);
       }
   }
 
