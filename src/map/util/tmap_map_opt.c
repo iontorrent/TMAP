@@ -120,6 +120,7 @@ __tmap_map_opt_option_print_func_int_init(bw)
 __tmap_map_opt_option_print_func_int_init(softclip_type)
 __tmap_map_opt_option_print_func_int_init(dup_window)
 __tmap_map_opt_option_print_func_int_init(max_seed_band)
+__tmap_map_opt_option_print_func_tf_init(no_unroll_banding)
 __tmap_map_opt_option_print_func_int_init(score_thr)
 __tmap_map_opt_option_print_func_int_init(reads_queue_size)
 __tmap_map_opt_option_print_func_int_init(num_threads)
@@ -431,6 +432,12 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            "the window of bases in which to group seeds",
                            NULL,
                            tmap_map_opt_option_print_func_max_seed_band,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "no-unroll-banding", no_argument, 0, 'U', 
+                           TMAP_MAP_OPT_TYPE_NONE,
+                           "do not unroll the grouped seeds from banding if multiple alignments are found",
+                           NULL,
+                           tmap_map_opt_option_print_func_no_unroll_banding,
                            TMAP_MAP_ALGO_GLOBAL);
   tmap_map_opt_options_add(opt->options, "score-thres", required_argument, 0, 'T', 
                            TMAP_MAP_OPT_TYPE_INT,
@@ -835,6 +842,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->softclip_type = TMAP_MAP_OPT_SOFT_CLIP_RIGHT;
   opt->dup_window = 128;
   opt->max_seed_band = 15;
+  opt->no_unroll_banding = 0;
   opt->score_thr = 8;
   opt->reads_queue_size = 262144;
   opt->num_threads = 1;
@@ -1138,6 +1146,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
       else if(c == 'B' || (0 == c && 0 == strcmp("max-seed-band", options[option_index].name))) {       
           opt->max_seed_band = atoi(optarg);
+      }
+      else if(c == 'U' || (0 == c && 0 == strcmp("no-unroll-banding", options[option_index].name))) {       
+          opt->no_unroll_banding = 1;
       }
       else if(c == 'E' || (0 == c && 0 == strcmp("pen-gap-extension", options[option_index].name))) {       
           opt->pen_gape = atoi(optarg);
@@ -1492,6 +1503,9 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
     if(opt_a->max_seed_band != opt_b->max_seed_band) {
         tmap_error("option -B was specified outside of the common options", Exit, CommandLineArgument);
     }
+    if(opt_a->no_unroll_banding != opt_b->no_unroll_banding) {
+        tmap_error("option -U was specified outside of the common options", Exit, CommandLineArgument);
+    }
     if(opt_a->score_thr != opt_b->score_thr) {
         tmap_error("option -T was specified outside of the common options", Exit, CommandLineArgument);
     }
@@ -1689,6 +1703,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
 
   tmap_error_cmd_check_int(opt->dup_window, -1, INT32_MAX, "-W");
   tmap_error_cmd_check_int(opt->max_seed_band, 1, INT32_MAX, "-B");
+  tmap_error_cmd_check_int(opt->no_unroll_banding, 0, 1, "-U");
   tmap_error_cmd_check_int(opt->score_thr, INT32_MIN, INT32_MAX, "-T");
   if(-1 != opt->reads_queue_size) tmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
   tmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
@@ -1788,6 +1803,7 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->softclip_type = opt_src->softclip_type;
     opt_dest->dup_window = opt_src->dup_window;
     opt_dest->max_seed_band = opt_src->max_seed_band;
+    opt_dest->no_unroll_banding = opt_src->no_unroll_banding;
     opt_dest->score_thr = opt_src->score_thr;
     opt_dest->reads_queue_size = opt_src->reads_queue_size;
     opt_dest->num_threads = opt_src->num_threads;
@@ -1859,6 +1875,7 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "softclip_key=%d\n", opt->softclip_key);
   fprintf(stderr, "dup_window=%d\n", opt->dup_window);
   fprintf(stderr, "max_seed_band=%d\n", opt->max_seed_band);
+  fprintf(stderr, "no_unroll_banding=%d\n", opt->no_unroll_banding);
   fprintf(stderr, "score_thr=%d\n", opt->score_thr);
   fprintf(stderr, "reads_queue_size=%d\n", opt->reads_queue_size);
   fprintf(stderr, "num_threads=%d\n", opt->num_threads);

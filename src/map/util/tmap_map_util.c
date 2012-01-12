@@ -964,7 +964,7 @@ tmap_map_util_gen_score(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
   }
 
   if(opt->score_thr <= tmp_sam.score) {
-      if(1 < end - start + 1 && 1 < n_best) { // unroll banding
+      if(0 == opt->no_unroll_banding && 1 < end - start + 1 && 1 < n_best) { // unroll banding
           // NB: band based on EXACT start position
           n = end + 1;
           end = start;
