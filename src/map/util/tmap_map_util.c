@@ -863,10 +863,10 @@ static int32_t matrix_iupac_mask[89] = {
 } while(0)
 
 // NB: this function unrolls banding in some cases
-static int32_t 
+static void
 tmap_map_util_gen_score(tmap_refseq_t *refseq, tmap_map_sams_t *sams, 
                         tmap_seq_t **seqs, tmap_map_sams_t *sams_tmp,
-                        int32_t idx, int32_t start, int32_t end,
+                        int32_t *idx, int32_t start, int32_t end,
                         uint8_t strand, tmap_vsw_query_t *vsw_query[2], 
                         int32_t seq_len, int32_t start_pos, int32_t end_pos,
                         int32_t *target_mem, uint8_t **target,
@@ -876,7 +876,7 @@ tmap_map_util_gen_score(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
                         tmap_rand_t *rand,
                         tmap_map_opt_t *opt)
 {
-  int32_t i, n;
+  int32_t n;
   tmap_map_sam_t tmp_sam;
   uint8_t *query;
   int32_t tlen, overflow = 0, n_best = 0;
@@ -964,7 +964,9 @@ tmap_map_util_gen_score(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
   }
 
   if(opt->score_thr <= tmp_sam.score) {
-      if(0 == opt->no_unroll_banding && 1 < end - start + 1 && 1 < n_best) { // unroll banding
+      if(0 == opt->no_unroll_banding && 0 <= max_seed_band 
+         && 1 < end - start + 1 && 1 < n_best) { // unroll banding
+          //fprintf(stderr, "max_seed_band=%d start=%d end=%d\n", max_seed_band, start, end);
           // NB: band based on EXACT start position
           n = end + 1;
           end = start;
@@ -994,7 +996,7 @@ tmap_map_util_gen_score(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
                   }
               }
 
-              i += tmap_map_util_gen_score(refseq, sams, seqs, sams_tmp, idx + i, start, end,
+              tmap_map_util_gen_score(refseq, sams, seqs, sams_tmp, idx, start, end,
                                            strand, vsw_query, seq_len, start_pos, end_pos,
                                            target_mem, target,
                                            softclip_start, softclip_end,
@@ -1004,11 +1006,15 @@ tmap_map_util_gen_score(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
               end++;
               start = end;
           }
-          return i;
       }
       else {
+          tmap_map_sam_t *s = NULL;
 
-          tmap_map_sam_t *s = &sams_tmp->sams[idx];
+          if(sams_tmp->n <= (*idx)) {
+              tmap_error("bug encountered", Exit, OutOfRange);
+          }
+
+          s = &sams_tmp->sams[(*idx)];
           // shallow copy previous data 
           (*s) = tmp_sam; 
 
@@ -1056,11 +1062,8 @@ tmap_map_util_gen_score(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
               tmap_error("bug encountered", Exit, OutOfRange);
               break;
           }
-          return 1;
+          (*idx)++;
       }
-  }
-  else {
-      return 0;
   }
 }
 
@@ -1184,7 +1187,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
        */
       if((end - start + 1) > ( sams->n * opt->stage_seed_freqc) ) {
           // generate the score
-          i += tmap_map_util_gen_score(refseq, sams, seqs, sams_tmp, i, start, end,
+          tmap_map_util_gen_score(refseq, sams, seqs, sams_tmp, &i, start, end,
                                   strand, vsw_query, seq_len, start_pos, end_pos,
                                   &target_mem, &target,
                                   softclip_start, softclip_end,
