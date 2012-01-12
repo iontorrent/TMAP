@@ -364,6 +364,8 @@ end_loop:
       }
       if(score_thr <= imax && best <= imax) { // potential best score
           tmap_vsw16_int_t *t;
+          int32_t save_score = 0;
+          if(imax > best || (1 == direction && imax == best)) save_score = 1;
           if(query_end_clip == 0) { // check the last
               j = (query->qlen-1) % slen; // stripe
               k = (query->qlen-1) / slen; // byte
@@ -379,7 +381,7 @@ end_loop:
                       (*n_best) = 1;
                   }
               }
-              if(best < imax && (best < (int32_t)t[k] || (1 == direction && (int32_t)t[k] == best))) { // found new best score 
+              if(1 == save_score && (best < (int32_t)t[k] || (1 == direction && (int32_t)t[k] == best))) { // found new best score 
                   (*query_end) = query->qlen-1;
                   (*target_end) = i;
                   best = t[k];
@@ -404,7 +406,7 @@ end_loop:
                               (*n_best) = 1;
                           }
                       }
-                      if(best < imax && (best < (int32_t)*t || (1 == direction && (int32_t)*t == best))) { // found new best score 
+                      if(1 == save_score && (best < (int32_t)*t || (1 == direction && (int32_t)*t == best))) { // found new best score 
                           found_best = 1;
                           best = *t;
                           (*query_end) = j + ((k & (tmap_vsw16_values_per_128_bits-1)) * slen);
