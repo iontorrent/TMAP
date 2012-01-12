@@ -141,11 +141,11 @@ typedef struct {
  * A list of global command line flags take or available.
  *
  * Taken:
- * ABEFGJKMORTWXYZ
+ * ABCEFGJKMORTUWXYZ
  * afghijknqrsvwyz
  *
  * Available:
- * CDHILUV
+ * DHILUV
  * lmoptux
  * 
  * NB: Lets reserve single character flags for global options. 
@@ -203,6 +203,7 @@ typedef struct __tmap_map_opt_t {
     double ins_size_mean; // TODO
     double ins_size_std; // TODO
     double ins_size_std_max_num; // TODO
+    int32_t read_rescue; // TODO
 
     // map1/map2/map3 options, but specific to each
     int32_t min_seq_len; /*< the minimum sequence length to examine (--min-seq-length) */

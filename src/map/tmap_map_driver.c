@@ -322,11 +322,21 @@ tmap_map_driver_core_worker(int32_t num_ends,
                  && 2 == num_ends && 0 < records[low]->sams[0]->n && 0 < records[low]->sams[1]->n) { // pairs of reads!
 
                   // read rescue
-                  tmap_map_pairing_read_rescue(index->refseq, 
-                                               records[low]->sams[0], records[low]->sams[1],
-                                               seqs[0], seqs[1],
-                                               rand, stage->opt);
-
+                  if(1 == stage->opt->read_rescue) {
+                      int32_t flag = tmap_map_pairing_read_rescue(index->refseq, 
+                                                                  records[low]->sams[0], records[low]->sams[1],
+                                                                  seqs[0], seqs[1],
+                                                                  rand, stage->opt);
+                      // recalculate mapping qualities if necessary
+                      if(0 < (flag & 0x1)) { // first end was rescued
+                          //fprintf(stderr, "re-doing mapq for end #1\n");
+                          driver->func_mapq(records[low]->sams[0], tmap_seq_get_bases_length(seqs[0][0]), stage->opt);
+                      }
+                      if(0 < (flag & 0x2)) { // second end was rescued
+                          //fprintf(stderr, "re-doing mapq for end #2\n");
+                          driver->func_mapq(records[low]->sams[1], tmap_seq_get_bases_length(seqs[1][0]), stage->opt);
+                      }
+                  }
                   // pick pairs
                   tmap_map_pairing_pick_pairs(records[low]->sams[0], records[low]->sams[1],
                                               seqs[0][0], seqs[1][0],

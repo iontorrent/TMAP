@@ -28,8 +28,10 @@ enum {
   @param  two_seq  the sequence for the second end (forward/reverse compliment) (B)
   @param  rand     the random number generator
   @param  opt      the program parameters
+  @return          0 if no reads are rescued, 1 if only end 1 was rescued, 2 if only end 2 was 
+  rescued, and 3 if both ends were rescued
   */
-void
+int32_t
 tmap_map_pairing_read_rescue(tmap_refseq_t *refseq, 
                              tmap_map_sams_t *one, tmap_map_sams_t *two, 
                              tmap_seq_t *one_seq[2], tmap_seq_t *two_seq[2], 

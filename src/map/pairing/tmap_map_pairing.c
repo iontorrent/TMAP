@@ -157,9 +157,11 @@ tmap_map_pairing_pick_pairs(tmap_map_sams_t *one, tmap_map_sams_t *two, tmap_seq
                                                 opt->pen_mm, opt->strandedness, opt->positioning, 
                                                 &proper_pairs[i][j], &num_stds[i][j]);
           /*
-          fprintf(stderr, "one->pos=%d two->pos=%d scores[i][j]=%d proper_pairs[i][j]=%d num_stds[i][j]=%lf\n",
-                  one->sams[i].pos, two->sams[j].pos, scores[i][j], proper_pairs[i][j], num_stds[i][j]);
-          */
+          fprintf(stderr, "one->pos=%d two->pos=%d one->score=%d two->score=%d scores[i][j]=%d proper_pairs[i][j]=%d num_stds[i][j]=%lf\n",
+                  one->sams[i].pos, two->sams[j].pos, 
+                  one->sams[i].score, two->sams[j].score, 
+                  scores[i][j], proper_pairs[i][j], num_stds[i][j]);
+                  */
           // update best and next-best
           if(best_score == scores[i][j]) {
               n_best++;
@@ -200,6 +202,8 @@ tmap_map_pairing_pick_pairs(tmap_map_sams_t *one, tmap_map_sams_t *two, tmap_seq
   else {
       mapq = 0;
   }
+  
+  //fprintf(stderr, "best_score=%d best_subo_score=%d mapq=%d\n", best_score, best_subo_score, mapq);
 
   // TODO: adjust suboptimal?
       
@@ -396,6 +400,8 @@ tmap_map_pairing_read_rescue_helper(tmap_refseq_t *refseq,
                   add = one_right; sub = ins_size_mean; // genomic forward left-most
                   //add = one_left + two_len + 1; sub = ins_size_mean; // genomic forward right-most
               }
+              // opposite strand
+              sams->sams[j].strand = 1 - one->sams[i].strand;
           }
 
           // check that we do not go off the contig
@@ -405,9 +411,15 @@ tmap_map_pairing_read_rescue_helper(tmap_refseq_t *refseq,
           else if(refseq->annos[one->sams[i].seqid].len < add - sub) { // off the end
               continue;
           }
+          sams->sams[j].pos = add - sub;
 
           // this is important for tmap_map_util_sw_gen_score
           sams->sams[j].target_len = two_len; 
+
+          /*
+          fprintf(stderr, "RR seqid:%u pos:%u strand:%d\n",
+                  sams->sams[j].seqid, sams->sams[j].pos, sams->sams[j].strand);
+                  */
 
           // TODO: annotate as read rescued
 
@@ -421,36 +433,69 @@ tmap_map_pairing_read_rescue_helper(tmap_refseq_t *refseq,
   }
 
   // generate scores
-  sams = tmap_map_util_sw_gen_score(refseq, sams, two_seq, rand, opt);
+  // NB: no banding, no seed fraction, (TODO: others?)...
+  tmap_map_opt_t opt_local = (*opt);
+  opt_local.max_seed_band = 0;
+  opt_local.stage_seed_freqc = 0.0;
+  sams = tmap_map_util_sw_gen_score(refseq, sams, two_seq, rand, &opt_local);
 
   return sams;
 }
 
-void
+int32_t 
 tmap_map_pairing_read_rescue(tmap_refseq_t *refseq, 
                              tmap_map_sams_t *one, tmap_map_sams_t *two, 
                              tmap_seq_t *one_seq[2], tmap_seq_t *two_seq[2], 
                              tmap_rand_t *rand, tmap_map_opt_t *opt)
 {
   tmap_map_sams_t *one_rr = NULL, *two_rr = NULL;
-  
-  // Rescue #2 from #1
-  two_rr = tmap_map_pairing_read_rescue_helper(refseq, one, two, one_seq, two_seq,
-                                               opt->ins_size_mean,
-                                               opt->strandedness, opt->positioning, 
-                                               rand, opt);
+  int32_t i, flag = 0;
   
   // Rescue #1 from #2
   one_rr = tmap_map_pairing_read_rescue_helper(refseq, two, one, two_seq, one_seq,
                                                opt->ins_size_mean,
                                                opt->strandedness, 1-opt->positioning, // NB: update positioning 
                                                rand, opt);
-
-  // merge
+  //fprintf(stderr, "RR #1: %d\n", one_rr->n);
   if(0 < one_rr->n) {
+      /*
+      for(i=0;i<one_rr->n;i++) {
+          fprintf(stderr, "Rescued seqid:%u pos:%u score:%d\n",
+                  one_rr->sams[i].seqid,
+                  one_rr->sams[i].pos,
+                  one_rr->sams[i].score);
+      }
+      */
+      i = one->n;
       tmap_map_sams_merge(one, one_rr);
+      tmap_map_util_remove_duplicates(one, opt->dup_window, rand);
+      if(i < one->n) flag |= 0x1; 
   }
+  
+  // Rescue #2 from #1
+  two_rr = tmap_map_pairing_read_rescue_helper(refseq, one, two, one_seq, two_seq,
+                                               opt->ins_size_mean,
+                                               opt->strandedness, opt->positioning, 
+                                               rand, opt);
+  //fprintf(stderr, "RR #2: %d\n", one_rr->n);
   if(0 < two_rr->n) {
+      /*
+      for(i=0;i<two_rr->n;i++) {
+          fprintf(stderr, "Rescued seqid:%u pos:%u score:%d\n",
+                  two_rr->sams[i].seqid,
+                  two_rr->sams[i].pos,
+                  two_rr->sams[i].score);
+      }
+      */
+      i = two->n;
       tmap_map_sams_merge(two, two_rr);
+      tmap_map_util_remove_duplicates(two, opt->dup_window, rand);
+      if(i < two->n) flag |= 0x2; 
   }
+
+  // free memory
+  tmap_map_sams_destroy(one_rr);
+  tmap_map_sams_destroy(two_rr);
+
+  return flag;
 }

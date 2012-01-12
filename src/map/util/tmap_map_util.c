@@ -1009,7 +1009,7 @@ tmap_map_util_gen_score(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
       }
       else {
           tmap_map_sam_t *s = NULL;
-
+          
           if(sams_tmp->n <= (*idx)) {
               tmap_error("bug encountered", Exit, OutOfRange);
           }
