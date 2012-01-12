@@ -208,7 +208,7 @@ tmap_map_record_destroy(tmap_map_record_t *record)
   free(record);
 }
 
-static inline void
+inline void
 tmap_map_sam_copy(tmap_map_sam_t *dest, tmap_map_sam_t *src)
 {
   int32_t i;
@@ -1106,6 +1106,12 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                                      seq_len, softclip_start, softclip_end, vsw_opt);
   vsw_query[1] = tmap_vsw_query_init((uint8_t*)tmap_seq_get_bases(seqs[1])->s, seq_len, 
                                      seq_len, softclip_start, softclip_end, vsw_opt);
+
+  /*
+  for(i=0;i<sams->n;i++) {
+      fprintf(stderr, "seqid:%u pos:%u\n", sams->sams[i].seqid, sams->sams[i].pos);
+  }
+  */
 
   i = start = end = 0;
   best_subo_score = INT32_MIN;

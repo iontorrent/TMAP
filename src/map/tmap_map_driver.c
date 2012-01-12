@@ -320,6 +320,14 @@ tmap_map_driver_core_worker(int32_t num_ends,
 
               if(0 <= driver->opt->strandedness && 0 <= driver->opt->positioning
                  && 2 == num_ends && 0 < records[low]->sams[0]->n && 0 < records[low]->sams[1]->n) { // pairs of reads!
+
+                  // read rescue
+                  tmap_map_pairing_read_rescue(index->refseq, 
+                                               records[low]->sams[0], records[low]->sams[1],
+                                               seqs[0], seqs[1],
+                                               rand, stage->opt);
+
+                  // pick pairs
                   tmap_map_pairing_pick_pairs(records[low]->sams[0], records[low]->sams[1],
                                               seqs[0][0], seqs[1][0],
                                               rand, stage->opt);

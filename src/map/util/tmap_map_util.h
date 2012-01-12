@@ -118,6 +118,14 @@ typedef struct {
 } tmap_map_record_t;
 
 /*!
+  make a copy of src and store it in dest
+  @param  dest  the destination record
+  @param  src   the source record
+  */
+inline void
+tmap_map_sam_copy(tmap_map_sam_t *dest, tmap_map_sam_t *src);
+
+/*!
   allocates memory for the auxiliary data specific to the algorithm specified by algo_id
   @param  s        the mapping structurem
   @param  algo_id  the algorithm identifier

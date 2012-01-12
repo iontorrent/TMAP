@@ -20,6 +20,22 @@ enum {
 };
 
 /*!
+  performs read rescue
+  @param  refseq   the reference sequence
+  @param  one      the seeds for the first end (A)
+  @param  two      the seeds for the second end (B)
+  @param  one_seq  the sequence for the first end (foward/reverse compliment) (A)
+  @param  two_seq  the sequence for the second end (forward/reverse compliment) (B)
+  @param  rand     the random number generator
+  @param  opt      the program parameters
+  */
+void
+tmap_map_pairing_read_rescue(tmap_refseq_t *refseq, 
+                             tmap_map_sams_t *one, tmap_map_sams_t *two, 
+                             tmap_seq_t *one_seq[2], tmap_seq_t *two_seq[2], 
+                             tmap_rand_t *rand, tmap_map_opt_t *opt);
+
+/*!
   given sets of seeds for two ends of pair, scores all possible pairs of seeds and
   filters accordingly.
   @param  one      the seeds for the first end (A)

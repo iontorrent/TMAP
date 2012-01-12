@@ -21,6 +21,18 @@ tmap_map_pairing_get_strand_diff(tmap_map_sam_t *one, tmap_map_sam_t *two, int32
   }
 }
 
+static inline int32_t
+tmap_map_pairing_get_left(tmap_map_sam_t *sam, int32_t len)
+{
+  return sam->pos + sam->target_end - len + 1;
+}
+
+static inline int32_t
+tmap_map_pairing_get_right(tmap_map_sam_t *sam, int32_t len)
+{
+  return sam->pos + sam->target_end;
+}
+
 static int32_t
 tmap_map_pairing_get_position_diff(tmap_map_sam_t *one, tmap_map_sam_t *two, int32_t one_len, int32_t two_len,
                                    int32_t strandedness, int32_t positioning)
@@ -31,10 +43,10 @@ tmap_map_pairing_get_position_diff(tmap_map_sam_t *one, tmap_map_sam_t *two, int
 
   // NB:does not matter about strand, since target end is always computed on the
   // "+" strand
-  pos_one_left = one->pos + one->target_end - one_len + 1;
-  pos_two_left = two->pos + two->target_end - two_len + 1;
-  pos_one_right = one->pos + one->target_end;
-  pos_two_right = two->pos + two->target_end;
+  pos_one_left = tmap_map_pairing_get_left(one, one_len);
+  pos_two_left = tmap_map_pairing_get_left(two, two_len);
+  pos_one_right = tmap_map_pairing_get_right(one, one_len);
+  pos_two_right = tmap_map_pairing_get_right(two, two_len);
 
   switch(strandedness) { 
     case TMAP_MAP_PAIRING_SAME_STRAND:
@@ -304,4 +316,141 @@ tmap_map_pairing_pick_pairs(tmap_map_sams_t *one, tmap_map_sams_t *two, tmap_seq
   free(scores);
   free(proper_pairs);
   free(num_stds);
+}
+
+// NB: rescues two from one
+static tmap_map_sams_t*
+tmap_map_pairing_read_rescue_helper(tmap_refseq_t *refseq,
+                                    tmap_map_sams_t *one, tmap_map_sams_t *two, 
+                                    tmap_seq_t *one_seq[2], tmap_seq_t *two_seq[2], 
+                                    double ins_size_mean,
+                                    int32_t strandedness, int32_t positioning, // positioning should be relateive to one/two
+                                    tmap_rand_t *rand, tmap_map_opt_t *opt)
+{
+  int32_t i, j;
+  int32_t best, n_best;
+  tmap_map_sams_t *sams = NULL;
+
+  sams = tmap_map_sams_init(NULL);
+  if(one->n <= 0) return sams;
+
+  best = INT32_MIN;
+  n_best = 0;
+  for(i=0;i<one->n;i++) {
+      if(best == one->sams[i].score) {
+          n_best++;
+      }
+      else if(best < one->sams[i].score) {
+          best = one->sams[i].score;
+          n_best = 1;
+      }
+  }
+
+  if(n_best <= 0) return sams;
+
+  tmap_map_sams_realloc(sams, n_best);
+
+  // copy over data
+  for(i=j=0;i<one->n && 0<n_best;i++) {
+      if(best == one->sams[i].score) {
+          int32_t one_len = tmap_seq_get_bases_length(one_seq[0]);
+          int32_t two_len = tmap_seq_get_bases_length(two_seq[0]);
+          int32_t one_left = tmap_map_pairing_get_left(&one->sams[i], one_len);
+          int32_t one_right = tmap_map_pairing_get_right(&one->sams[i], one_len);
+          int32_t add, sub;
+          
+          // found a best
+          n_best--;
+
+          // copy from one to sams
+          tmap_map_sam_copy(&sams->sams[j], &one->sams[i]);
+
+          // infer #2 position from #1
+          if(TMAP_MAP_PAIRING_SAME_STRAND == strandedness) {
+              if(TMAP_MAP_PAIRING_POSITIONING_AB == positioning) {
+                  if(0 == one->sams[i].strand) {
+                      add = one_left + ins_size_mean + 1; sub = two_len;
+                  }
+                  else {
+                      add = one_right; sub = ins_size_mean; // genomic forward left-most
+                      //add = one_right + two_len; sub = ins_size_mean + 1 // genomic forward right-most
+                  }
+              }
+              else {
+                  if(0 == one->sams[i].strand) {
+                      add = one_right; sub = ins_size_mean; 
+                  }
+                  else {
+                      add = one_left + ins_size_mean + 1; sub = two_len; // genomic forward left-most
+                      //add = one_left + ins_size_mean; sub = 0; // genomic forward right-most
+                  }
+              }
+          }
+          else {
+              // NB: positioning does not matter on opposite strands
+              if(0 == one->sams[i].strand) {
+                  add = one_left + ins_size_mean + 1; sub = two_len; // genomic forward left-most
+                  //add = one_left + ins_size_mean; sub = 0; // genomic forward right-most
+              }
+              else {
+                  add = one_right; sub = ins_size_mean; // genomic forward left-most
+                  //add = one_left + two_len + 1; sub = ins_size_mean; // genomic forward right-most
+              }
+          }
+
+          // check that we do not go off the contig
+          if(add <= sub) { // before the beginning
+              continue;
+          }
+          else if(refseq->annos[one->sams[i].seqid].len < add - sub) { // off the end
+              continue;
+          }
+
+          // this is important for tmap_map_util_sw_gen_score
+          sams->sams[j].target_len = two_len; 
+
+          // TODO: annotate as read rescued
+
+          j++;
+      }
+  }
+
+  if(j < sams->n) {
+      tmap_map_sams_realloc(sams, n_best);
+      if(0 == sams->n) return sams;
+  }
+
+  // generate scores
+  sams = tmap_map_util_sw_gen_score(refseq, sams, two_seq, rand, opt);
+
+  return sams;
+}
+
+void
+tmap_map_pairing_read_rescue(tmap_refseq_t *refseq, 
+                             tmap_map_sams_t *one, tmap_map_sams_t *two, 
+                             tmap_seq_t *one_seq[2], tmap_seq_t *two_seq[2], 
+                             tmap_rand_t *rand, tmap_map_opt_t *opt)
+{
+  tmap_map_sams_t *one_rr = NULL, *two_rr = NULL;
+  
+  // Rescue #2 from #1
+  two_rr = tmap_map_pairing_read_rescue_helper(refseq, one, two, one_seq, two_seq,
+                                               opt->ins_size_mean,
+                                               opt->strandedness, opt->positioning, 
+                                               rand, opt);
+  
+  // Rescue #1 from #2
+  one_rr = tmap_map_pairing_read_rescue_helper(refseq, two, one, two_seq, one_seq,
+                                               opt->ins_size_mean,
+                                               opt->strandedness, 1-opt->positioning, // NB: update positioning 
+                                               rand, opt);
+
+  // merge
+  if(0 < one_rr->n) {
+      tmap_map_sams_merge(one, one_rr);
+  }
+  if(0 < two_rr->n) {
+      tmap_map_sams_merge(two, two_rr);
+  }
 }
