@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
   else {
       tmap_file_stderr = tmap_file_fdopen(fileno(stderr), "w", TMAP_FILE_NO_COMPRESSION); // set stderr
       tmap_progress_set_command(argv[1]); // set output progress
-      tmap_progress_set_start_time(clock()); // set start time
+      tmap_progress_set_start_time(); // set start time
 
       if (0 == strcmp("index", argv[1])) ret = tmap_index(argc-1, argv+1);
       else if (0 == strcmp("server", argv[1])) ret = tmap_server_main(argc-1, argv+1);
