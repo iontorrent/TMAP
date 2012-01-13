@@ -32,8 +32,6 @@ typedef int32_t (*tmap_map_driver_func_thread_init)(void **data, tmap_map_opt_t 
   @param  data    the thread persistent data
   @param  seqs    the sequence to map (forward, reverse compliment, reverse, compliment)
   @param  index   the reference index
-  @param  bwt     the bwt structure
-  @param  sa      the sa structure
   @param  stat    the driver statistics (for mapall only)
   @param  rand    the random number generator
   @param  hash    the occurence hash
