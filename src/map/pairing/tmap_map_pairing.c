@@ -327,8 +327,9 @@ static tmap_map_sams_t*
 tmap_map_pairing_read_rescue_helper(tmap_refseq_t *refseq,
                                     tmap_map_sams_t *one, tmap_map_sams_t *two, 
                                     tmap_seq_t *one_seq[2], tmap_seq_t *two_seq[2], 
-                                    double ins_size_mean,
+                                    double ins_size_mean, double ins_size_std,
                                     int32_t strandedness, int32_t positioning, // positioning should be relateive to one/two
+                                    int32_t read_rescue_std_num,
                                     tmap_rand_t *rand, tmap_map_opt_t *opt)
 {
   int32_t i, j;
@@ -437,6 +438,7 @@ tmap_map_pairing_read_rescue_helper(tmap_refseq_t *refseq,
   tmap_map_opt_t opt_local = (*opt);
   opt_local.max_seed_band = 0;
   opt_local.stage_seed_freqc = 0.0;
+  opt_local.bw += ins_size_std * read_rescue_std_num;
   sams = tmap_map_util_sw_gen_score(refseq, sams, two_seq, rand, &opt_local);
 
   return sams;
@@ -453,8 +455,9 @@ tmap_map_pairing_read_rescue(tmap_refseq_t *refseq,
   
   // Rescue #1 from #2
   one_rr = tmap_map_pairing_read_rescue_helper(refseq, two, one, two_seq, one_seq,
-                                               opt->ins_size_mean,
+                                               opt->ins_size_mean, opt->ins_size_std,
                                                opt->strandedness, 1-opt->positioning, // NB: update positioning 
+                                               opt->read_rescue_std_num,
                                                rand, opt);
   //fprintf(stderr, "RR #1: %d\n", one_rr->n);
   if(0 < one_rr->n) {
@@ -474,8 +477,9 @@ tmap_map_pairing_read_rescue(tmap_refseq_t *refseq,
   
   // Rescue #2 from #1
   two_rr = tmap_map_pairing_read_rescue_helper(refseq, one, two, one_seq, two_seq,
-                                               opt->ins_size_mean,
+                                               opt->ins_size_mean, opt->ins_size_std,
                                                opt->strandedness, opt->positioning, 
+                                               opt->read_rescue_std_num,
                                                rand, opt);
   //fprintf(stderr, "RR #2: %d\n", one_rr->n);
   if(0 < two_rr->n) {

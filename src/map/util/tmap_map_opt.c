@@ -148,6 +148,7 @@ __tmap_map_opt_option_print_func_double_init(ins_size_mean)
 __tmap_map_opt_option_print_func_double_init(ins_size_std)
 __tmap_map_opt_option_print_func_double_init(ins_size_std_max_num)
 __tmap_map_opt_option_print_func_tf_init(read_rescue)
+__tmap_map_opt_option_print_func_double_init(read_rescue_std_num)
 // map1/map2/map3 options, but specific to each
 __tmap_map_opt_option_print_func_int_init(min_seq_len)
 __tmap_map_opt_option_print_func_int_init(max_seq_len)
@@ -598,11 +599,17 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_ins_size_std_max_num,
                            TMAP_MAP_ALGO_PAIRING);
-  tmap_map_opt_options_add(opt->options, "read-rescue", no_argument, 0, 'C',
+  tmap_map_opt_options_add(opt->options, "read-rescue", no_argument, 0, 'L',
                            TMAP_MAP_OPT_TYPE_NONE,
                            "perform read rescue",
                            NULL,
                            tmap_map_opt_option_print_func_read_rescue,
+                           TMAP_MAP_ALGO_PAIRING);
+  tmap_map_opt_options_add(opt->options, "read-rescue-std-num", required_argument, 0, 'l',
+                           TMAP_MAP_OPT_TYPE_FLOAT,
+                           "the number of standard deviations around the mean insert size to perform read rescue",
+                           NULL,
+                           tmap_map_opt_option_print_func_read_rescue_std_num,
                            TMAP_MAP_ALGO_PAIRING);
 
   // map1/map3 options
@@ -880,6 +887,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->ins_size_std = -1.0;
   opt->ins_size_std_max_num  = -1.0;
   opt->read_rescue = 0;
+  opt->read_rescue_std_num = -1.0;
 
   switch(algo_id) {
     case TMAP_MAP_ALGO_MAP1:
@@ -1314,8 +1322,11 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(c == 'd' || (0 == c && 0 == strcmp("ins-size-std-max-num", options[option_index].name))) {
           opt->ins_size_std_max_num = atof(optarg);
       }
-      else if(c == 'C' || (0 == c && 0 == strcmp("read-rescue", options[option_index].name))) {
+      else if(c == 'L' || (0 == c && 0 == strcmp("read-rescue", options[option_index].name))) {
           opt->read_rescue = 1;
+      }
+      else if(c == 'l' || (0 == c && 0 == strcmp("read-rescue-std-num", options[option_index].name))) {
+          opt->read_rescue_std_num = atof(optarg);
       }
       // End of pairing options 
       // End single flag options
@@ -1587,7 +1598,10 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
         tmap_error("option -d was specified outside the common options", Exit, CommandLineArgument);
     }
     if(opt_a->read_rescue != opt_b->read_rescue) {
-        tmap_error("option -C was specified outside the common options", Exit, CommandLineArgument);
+        tmap_error("option -L was specified outside the common options", Exit, CommandLineArgument);
+    }
+    if(opt_a->read_rescue_std_num != opt_b->read_rescue_std_num) {
+        tmap_error("option -l was specified outside the common options", Exit, CommandLineArgument);
     }
 }
 
@@ -1653,6 +1667,9 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
           }
           else if(opt->ins_size_std_max_num < 0) {
               tmap_error("option -d was not specified", Exit, CommandLineArgument);
+          }
+          else if(1 == opt->read_rescue && opt->read_rescue_std_num < 0) {
+              tmap_error("option -l was not specified", Exit, CommandLineArgument);
           }
       }
       // OK
@@ -1851,6 +1868,7 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->ins_size_std = opt_src->ins_size_std;
     opt_dest->ins_size_std_max_num = opt_src->ins_size_std_max_num;
     opt_dest->read_rescue = opt_src->read_rescue;
+    opt_dest->read_rescue_std_num = opt_src->read_rescue_std_num;
 }
 
 void
