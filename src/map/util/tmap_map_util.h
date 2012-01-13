@@ -195,9 +195,8 @@ void
 tmap_map_record_merge(tmap_map_record_t *dest, tmap_map_record_t *src);
 
 /*!
-  Merges the mappings of two multi-end mappings 
-  @param  src   the multi-end mapping structure destination
-  @param  dest  the multi-end mapping structure to merge from
+  Destroys a record structure
+  @param  record  the mapping structure
  */
 void 
 tmap_map_record_destroy(tmap_map_record_t *record);
@@ -291,8 +290,9 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window, tmap_
  @param  n_best           the number of best scores
  @param  best_score       the best score
  @param  n_best_subo      the number of best suboptimal scores
- @param  best_score_subo  the best suboptimal score
+ @param  best_subo_score  the best suboptimal score
  @param  opt              the program parameters
+ @return                  the mapping quality
  */
 int32_t
 tmap_map_util_mapq_score(int32_t seq_len, int32_t n_best, int32_t best_score, int32_t n_best_subo, int32_t best_subo_score, tmap_map_opt_t *opt);
@@ -312,7 +312,7 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt);
   @details              only fills in the score, start and end of the alignments
   @param  refseq        the reference sequence
   @param  sams          the seeded sams
-  @param  seq           the query sequence (forward, reverse compliment, reverse, and compliment)
+  @param  seqs          the query sequence (forward, reverse compliment, reverse, and compliment)
   @param  rand          the random number generator
   @param  opt           the program parameters
   @return               the locally aligned sams
@@ -329,7 +329,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   @details              generates the cigar after tmap_map_util_sw_gen_score has been called
   @param  refseq        the reference sequence
   @param  sams          the seeded sams
-  @param  seq           the query sequence (forward, reverse compliment, reverse, and compliment)
+  @param  seqs          the query sequence (forward, reverse compliment, reverse, and compliment)
   @param  opt           the program parameters
   @return               the locally aligned sams
   */
