@@ -333,7 +333,7 @@ tmap_map_pairing_read_rescue_helper(tmap_refseq_t *refseq,
                                     tmap_rand_t *rand, tmap_map_opt_t *opt)
 {
   int32_t i, j;
-  int32_t best, n_best;
+  int32_t best, n_best, best_mapq=-1;
   tmap_map_sams_t *sams = NULL;
 
   sams = tmap_map_sams_init(NULL);
@@ -344,14 +344,18 @@ tmap_map_pairing_read_rescue_helper(tmap_refseq_t *refseq,
   for(i=0;i<one->n;i++) {
       if(best == one->sams[i].score) {
           n_best++;
+          if(best_mapq != one->sams[i].mapq) {
+              tmap_error("bug encountered", Exit, OutOfRange);
+          }
       }
       else if(best < one->sams[i].score) {
+          best_mapq = one->sams[i].mapq;
           best = one->sams[i].score;
           n_best = 1;
       }
   }
 
-  if(n_best <= 0) return sams;
+  if(n_best <= 0 || best_mapq < opt->read_rescue_mapq_thr) return sams;
 
   tmap_map_sams_realloc(sams, n_best);
 

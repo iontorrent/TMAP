@@ -149,6 +149,7 @@ __tmap_map_opt_option_print_func_double_init(ins_size_std)
 __tmap_map_opt_option_print_func_double_init(ins_size_std_max_num)
 __tmap_map_opt_option_print_func_tf_init(read_rescue)
 __tmap_map_opt_option_print_func_double_init(read_rescue_std_num)
+__tmap_map_opt_option_print_func_int_init(read_rescue_mapq_thr)
 // map1/map2/map3 options, but specific to each
 __tmap_map_opt_option_print_func_int_init(min_seq_len)
 __tmap_map_opt_option_print_func_int_init(max_seq_len)
@@ -611,6 +612,12 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_read_rescue_std_num,
                            TMAP_MAP_ALGO_PAIRING);
+  tmap_map_opt_options_add(opt->options, "read-rescue-mapq-thr", required_argument, 0, 'm',
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "mapping quality threshold for read rescue",
+                           NULL,
+                           tmap_map_opt_option_print_func_read_rescue_mapq_thr,
+                           TMAP_MAP_ALGO_PAIRING);
 
   // map1/map3 options
   tmap_map_opt_options_add(opt->options, "seed-length", required_argument, 0, 0, 
@@ -772,13 +779,13 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
   // stage options
   tmap_map_opt_options_add(opt->options, "stage-score-thres", required_argument, 0, 0, 
                            TMAP_MAP_OPT_TYPE_INT,
-                           "score threshold for stage one divided by the match score",
+                           "score threshold for the stage divided by the match score",
                            NULL,
                            tmap_map_opt_option_print_func_stage_score_thr,
                            TMAP_MAP_ALGO_STAGE);
   tmap_map_opt_options_add(opt->options, "stage-mapq-thres", required_argument, 0, 0, 
                            TMAP_MAP_OPT_TYPE_INT,
-                           "mapping quality threshold for stage one divided by the match score",
+                           "mapping quality threshold for the stage divided by the match score",
                            NULL,
                            tmap_map_opt_option_print_func_stage_mapq_thr,
                            TMAP_MAP_ALGO_STAGE);
@@ -888,6 +895,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->ins_size_std_max_num  = -1.0;
   opt->read_rescue = 0;
   opt->read_rescue_std_num = -1.0;
+  opt->read_rescue_mapq_thr = 0;
 
   switch(algo_id) {
     case TMAP_MAP_ALGO_MAP1:
@@ -1328,6 +1336,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(c == 'l' || (0 == c && 0 == strcmp("read-rescue-std-num", options[option_index].name))) {
           opt->read_rescue_std_num = atof(optarg);
       }
+      else if(c == 'm' || (0 == c && 0 == strcmp("read-rescue-mapq-thr", options[option_index].name))) {
+          opt->read_rescue_mapq_thr = atoi(optarg);
+      }
       // End of pairing options 
       // End single flag options
       else if(0 != c) {
@@ -1603,6 +1614,9 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
     if(opt_a->read_rescue_std_num != opt_b->read_rescue_std_num) {
         tmap_error("option -l was specified outside the common options", Exit, CommandLineArgument);
     }
+    if(opt_a->read_rescue_mapq_thr != opt_b->read_rescue_mapq_thr) {
+        tmap_error("option -m was specified outside the common options", Exit, CommandLineArgument);
+    }
 }
 
 void
@@ -1668,8 +1682,11 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
           else if(opt->ins_size_std_max_num < 0) {
               tmap_error("option -d was not specified", Exit, CommandLineArgument);
           }
-          else if(1 == opt->read_rescue && opt->read_rescue_std_num < 0) {
-              tmap_error("option -l was not specified", Exit, CommandLineArgument);
+          else if(1 == opt->read_rescue) {
+              if(opt->read_rescue_std_num < 0) {
+                  tmap_error("option -l was not specified", Exit, CommandLineArgument);
+              }
+              tmap_error_cmd_check_int(opt->read_rescue_mapq_thr, 0, 1, "-m");
           }
       }
       // OK
@@ -1869,6 +1886,7 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->ins_size_std_max_num = opt_src->ins_size_std_max_num;
     opt_dest->read_rescue = opt_src->read_rescue;
     opt_dest->read_rescue_std_num = opt_src->read_rescue_std_num;
+    opt_dest->read_rescue_mapq_thr = opt_src->read_rescue_mapq_thr;
 }
 
 void
