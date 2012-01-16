@@ -92,6 +92,7 @@ tmap_bwt_match_hash_occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, tmap
   @param  bwt      pointer to the bwt structure 
   @param  prev     pointer to the previous match structure
   @param  next     pointer to the next match structure
+  @param  hash     a occurence array hash
   */
 inline void
 tmap_bwt_match_hash_2occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, tmap_bwt_match_occ_t next[4], tmap_bwt_match_hash_t *hash);

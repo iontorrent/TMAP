@@ -220,7 +220,8 @@ tmap_vsw_query_destroy(tmap_vsw_query_t *query);
   @param  query_end         the query end position in the alignment (0-based) 
   @param  target_start      the target start position in the alignment (0-based) 
   @param  target_end        the target end position in the alignment (0-based) 
-  @param  overflow           returns 1 if overflow occurs, 0 otherwise
+  @param  overflow          returns 1 if overflow occurs, 0 otherwise
+  @param  n_best            the number of bset scoring alignments found
   @param  score_thr         the minimum scoring threshold (inclusive)
   @param  is_rev            1 if the reverse alignment is being performed, 0 for the forward
   @return                   the alignment score
@@ -234,6 +235,6 @@ tmap_vsw_sse2(tmap_vsw_query_t *vsw_query,
               int16_t *score_fwd, int16_t *score_rev,
               int16_t *query_start, int16_t *query_end,
               int16_t *target_start, int16_t *target_end,
-              int32_t *overflow, int32_t score_thr, int32_t is_rev);
+              int32_t *overflow, int32_t *n_best, int32_t score_thr, int32_t is_rev);
 
 #endif

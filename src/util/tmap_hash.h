@@ -441,7 +441,7 @@ static inline tmap_hash_int_t __tmap_hash_Wang_hash(tmap_hash_int_t key)
   @param  h     Pointer to the hash table [tmap_hash_t(name)*]
   @param  x     Iterator to the bucket [tmap_hash_int_t]
   @return       Value [type of values]
-  @discussion   For hash sets, calling this results in segfault.
+  @details       For hash sets, calling this results in segfault.
  */
 #define tmap_hash_val(h, x) ((h)->vals[x])
 

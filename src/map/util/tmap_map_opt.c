@@ -120,6 +120,7 @@ __tmap_map_opt_option_print_func_int_init(bw)
 __tmap_map_opt_option_print_func_int_init(softclip_type)
 __tmap_map_opt_option_print_func_int_init(dup_window)
 __tmap_map_opt_option_print_func_int_init(max_seed_band)
+__tmap_map_opt_option_print_func_tf_init(no_unroll_banding)
 __tmap_map_opt_option_print_func_int_init(score_thr)
 __tmap_map_opt_option_print_func_int_init(reads_queue_size)
 __tmap_map_opt_option_print_func_int_init(num_threads)
@@ -139,6 +140,15 @@ __tmap_map_opt_option_print_func_tf_init(softclip_key)
 __tmap_map_opt_option_print_func_tf_init(sam_sff_tags)
 __tmap_map_opt_option_print_func_tf_init(ignore_flowgram)
 __tmap_map_opt_option_print_func_tf_init(remove_sff_clipping)
+// pairing
+__tmap_map_opt_option_print_func_int_init(pairing)
+__tmap_map_opt_option_print_func_int_init(strandedness)
+__tmap_map_opt_option_print_func_int_init(positioning)
+__tmap_map_opt_option_print_func_double_init(ins_size_mean)
+__tmap_map_opt_option_print_func_double_init(ins_size_std)
+__tmap_map_opt_option_print_func_double_init(ins_size_std_max_num)
+__tmap_map_opt_option_print_func_tf_init(read_rescue)
+__tmap_map_opt_option_print_func_double_init(read_rescue_std_num)
 // map1/map2/map3 options, but specific to each
 __tmap_map_opt_option_print_func_int_init(min_seq_len)
 __tmap_map_opt_option_print_func_int_init(max_seq_len)
@@ -341,6 +351,9 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
       "2 - all best hits",
       "3 - all alignments",
       NULL};
+  static char *pairing[] = {"0 - no pairing is to be performed", "1 - mate pairs (-S 0 -P 1)", "2 - paired end (-S 1 -P 0)", NULL};
+  static char *strandedness[] = {"0 - same strand", "1 - opposite strand", NULL};
+  static char *positioning[] = {"0 - read one before read two", "1 - read two before read one", NULL};
 
   opt->options = tmap_map_opt_options_init();
 
@@ -420,6 +433,12 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            "the window of bases in which to group seeds",
                            NULL,
                            tmap_map_opt_option_print_func_max_seed_band,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "no-unroll-banding", no_argument, 0, 'U', 
+                           TMAP_MAP_OPT_TYPE_NONE,
+                           "do not unroll the grouped seeds from banding if multiple alignments are found",
+                           NULL,
+                           tmap_map_opt_option_print_func_no_unroll_banding,
                            TMAP_MAP_ALGO_GLOBAL);
   tmap_map_opt_options_add(opt->options, "score-thres", required_argument, 0, 'T', 
                            TMAP_MAP_OPT_TYPE_INT,
@@ -529,7 +548,7 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_sam_sff_tags,
                            TMAP_MAP_ALGO_FLOWSPACE);
-  tmap_map_opt_options_add(opt->options, "ignore-flowgram", no_argument, 0, 'S', 
+  tmap_map_opt_options_add(opt->options, "ignore-flowgram", no_argument, 0, 'N', 
                            TMAP_MAP_OPT_TYPE_NONE,
                            "do not use the flowgram, otherwise use the flowgram when available",
                            NULL,
@@ -541,6 +560,56 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_remove_sff_clipping,
                            TMAP_MAP_ALGO_FLOWSPACE);
+
+  // pairing options
+  tmap_map_opt_options_add(opt->options, "pairing", required_argument, 0, 'Q',
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the insert pairing",
+                           pairing,
+                           tmap_map_opt_option_print_func_pairing,
+                           TMAP_MAP_ALGO_PAIRING);
+  tmap_map_opt_options_add(opt->options, "strandedness", required_argument, 0, 'S',
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the insert strandedness",
+                           strandedness,
+                           tmap_map_opt_option_print_func_strandedness,
+                           TMAP_MAP_ALGO_PAIRING);
+  tmap_map_opt_options_add(opt->options, "positioning", required_argument, 0, 'P',
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the insert positioning when on the same strand (-S 0)",
+                           positioning,
+                           tmap_map_opt_option_print_func_positioning,
+                           TMAP_MAP_ALGO_PAIRING);
+  tmap_map_opt_options_add(opt->options, "ins-size-mean", required_argument, 0, 'b',
+                           TMAP_MAP_OPT_TYPE_FLOAT,
+                           "the mean insert size",
+                           NULL,
+                           tmap_map_opt_option_print_func_ins_size_mean,
+                           TMAP_MAP_ALGO_PAIRING);
+  tmap_map_opt_options_add(opt->options, "ins-size-std", required_argument, 0, 'c',
+                           TMAP_MAP_OPT_TYPE_FLOAT,
+                           "the insert size standard deviation",
+                           NULL,
+                           tmap_map_opt_option_print_func_ins_size_std,
+                           TMAP_MAP_ALGO_PAIRING);
+  tmap_map_opt_options_add(opt->options, "ins-size-std-max-num", required_argument, 0, 'd',
+                           TMAP_MAP_OPT_TYPE_FLOAT,
+                           "the insert size maximum standard deviation",
+                           NULL,
+                           tmap_map_opt_option_print_func_ins_size_std_max_num,
+                           TMAP_MAP_ALGO_PAIRING);
+  tmap_map_opt_options_add(opt->options, "read-rescue", no_argument, 0, 'L',
+                           TMAP_MAP_OPT_TYPE_NONE,
+                           "perform read rescue",
+                           NULL,
+                           tmap_map_opt_option_print_func_read_rescue,
+                           TMAP_MAP_ALGO_PAIRING);
+  tmap_map_opt_options_add(opt->options, "read-rescue-std-num", required_argument, 0, 'l',
+                           TMAP_MAP_OPT_TYPE_FLOAT,
+                           "the number of standard deviations around the mean insert size to perform read rescue",
+                           NULL,
+                           tmap_map_opt_option_print_func_read_rescue_std_num,
+                           TMAP_MAP_ALGO_PAIRING);
 
   // map1/map3 options
   tmap_map_opt_options_add(opt->options, "seed-length", required_argument, 0, 0, 
@@ -786,6 +855,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->softclip_type = TMAP_MAP_OPT_SOFT_CLIP_RIGHT;
   opt->dup_window = 128;
   opt->max_seed_band = 15;
+  opt->no_unroll_banding = 0;
   opt->score_thr = 8;
   opt->reads_queue_size = 262144;
   opt->num_threads = 1;
@@ -807,6 +877,16 @@ tmap_map_opt_init(int32_t algo_id)
   opt->sam_sff_tags = 0;
   opt->ignore_flowgram = 0;
   opt->remove_sff_clipping = 1;
+
+  // pairing options
+  opt->pairing = 0;
+  opt->strandedness = -1;
+  opt->positioning = -1;
+  opt->ins_size_mean = -1.0;
+  opt->ins_size_std = -1.0;
+  opt->ins_size_std_max_num  = -1.0;
+  opt->read_rescue = 0;
+  opt->read_rescue_std_num = -1.0;
 
   switch(algo_id) {
     case TMAP_MAP_ALGO_MAP1:
@@ -968,6 +1048,17 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
       }
   }
 
+  // print pairing options
+  tmap_file_fprintf(tmap_file_stderr, "\n");
+  tmap_file_fprintf(tmap_file_stderr, "pairing options:\n");
+  for(i=0;i<opt->options->n;i++) {
+      tmap_map_opt_option_t *o = &opt->options->options[i];
+
+      if(o->algos == TMAP_MAP_ALGO_PAIRING) {
+          tmap_map_opt_option_print(o, opt);
+      }
+  }
+
   // print algorithm specific options
   for(i=0,prev_stage=-1;i<opt->num_sub_opts;i++) {
       // print the stage
@@ -1069,6 +1160,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
       else if(c == 'B' || (0 == c && 0 == strcmp("max-seed-band", options[option_index].name))) {       
           opt->max_seed_band = atoi(optarg);
+      }
+      else if(c == 'U' || (0 == c && 0 == strcmp("no-unroll-banding", options[option_index].name))) {       
+          opt->no_unroll_banding = 1;
       }
       else if(c == 'E' || (0 == c && 0 == strcmp("pen-gap-extension", options[option_index].name))) {       
           opt->pen_gape = atoi(optarg);
@@ -1186,7 +1280,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
               opt->key_seq_use_file = 0;
           }
       }
-      else if(c == 'S' || (0 == c && 0 == strcmp("use-flowgram", options[option_index].name))) {       
+      else if(c == 'N' || (0 == c && 0 == strcmp("use-flowgram", options[option_index].name))) {       
           opt->ignore_flowgram = 1;
       }
       else if(c == 'X' || (0 == c && 0 == strcmp("pen-flow-error", options[option_index].name))) {       
@@ -1198,7 +1292,42 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(c == 'y' || (0 == c && 0 == strcmp("softclip-key", options[option_index].name))) {       
           opt->softclip_key = 1;
       }
-      // End of flowspace options and signle flag options
+      // End of flowspace options
+      // Pairing options
+      else if(c == 'Q' || (0 == c && 0 == strcmp("pairing", options[option_index].name))) {
+          opt->pairing = atoi(optarg);
+          if(1 == opt->pairing) {
+              opt->strandedness = 0;
+              opt->positioning = 1;
+          }
+          else if(2 == opt->pairing) {
+              opt->strandedness = 1;
+              opt->positioning = 0;
+          }
+      }
+      else if(c == 'S' || (0 == c && 0 == strcmp("strandedness", options[option_index].name))) {
+          opt->strandedness = atoi(optarg);
+      }
+      else if(c == 'P' || (0 == c && 0 == strcmp("positioning", options[option_index].name))) {
+          opt->positioning = atoi(optarg);
+      }
+      else if(c == 'b' || (0 == c && 0 == strcmp("ins-size-mean", options[option_index].name))) {
+          opt->ins_size_mean = atof(optarg);
+      }
+      else if(c == 'c' || (0 == c && 0 == strcmp("ins-size-std", options[option_index].name))) {
+          opt->ins_size_std = atof(optarg);
+      }
+      else if(c == 'd' || (0 == c && 0 == strcmp("ins-size-std-max-num", options[option_index].name))) {
+          opt->ins_size_std_max_num = atof(optarg);
+      }
+      else if(c == 'L' || (0 == c && 0 == strcmp("read-rescue", options[option_index].name))) {
+          opt->read_rescue = 1;
+      }
+      else if(c == 'l' || (0 == c && 0 == strcmp("read-rescue-std-num", options[option_index].name))) {
+          opt->read_rescue_std_num = atof(optarg);
+      }
+      // End of pairing options 
+      // End single flag options
       else if(0 != c) {
           tmap_bug();
       }
@@ -1394,6 +1523,9 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
     if(opt_a->max_seed_band != opt_b->max_seed_band) {
         tmap_error("option -B was specified outside of the common options", Exit, CommandLineArgument);
     }
+    if(opt_a->no_unroll_banding != opt_b->no_unroll_banding) {
+        tmap_error("option -U was specified outside of the common options", Exit, CommandLineArgument);
+    }
     if(opt_a->score_thr != opt_b->score_thr) {
         tmap_error("option -T was specified outside of the common options", Exit, CommandLineArgument);
     }
@@ -1444,6 +1576,31 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
     if(opt_a->remove_sff_clipping != opt_b->remove_sff_clipping) {
         tmap_error("option -G was specified outside of the common options", Exit, CommandLineArgument);
     }
+    // pairing
+    if(opt_a->pairing != opt_b->pairing) {
+        tmap_error("option -Q was specified outside the common options", Exit, CommandLineArgument);
+    }
+    if(opt_a->strandedness != opt_b->strandedness) {
+        tmap_error("option -S was specified outside the common options", Exit, CommandLineArgument);
+    }
+    if(opt_a->positioning != opt_b->positioning) {
+        tmap_error("option -P was specified outside the common options", Exit, CommandLineArgument);
+    }
+    if(opt_a->ins_size_mean != opt_b->ins_size_mean) {
+        tmap_error("option -b specified outside the common options", Exit, CommandLineArgument);
+    }
+    if(opt_a->ins_size_std != opt_b->ins_size_std) {
+        tmap_error("option -c was specified outside the common options", Exit, CommandLineArgument);
+    }
+    if(opt_a->ins_size_std_max_num != opt_b->ins_size_std_max_num) {
+        tmap_error("option -d was specified outside the common options", Exit, CommandLineArgument);
+    }
+    if(opt_a->read_rescue != opt_b->read_rescue) {
+        tmap_error("option -L was specified outside the common options", Exit, CommandLineArgument);
+    }
+    if(opt_a->read_rescue_std_num != opt_b->read_rescue_std_num) {
+        tmap_error("option -l was specified outside the common options", Exit, CommandLineArgument);
+    }
 }
 
 void
@@ -1492,6 +1649,26 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       }
       else if(NULL != opt->key_seq) {
           tmap_error("options -1 and -2 cannot be used with -K", Exit, CommandLineArgument);
+      }
+      else if(0 != opt->pairing) {
+          if(opt->strandedness < 0 || 1 < opt->strandedness) {
+              tmap_error("option -S was not specified", Exit, CommandLineArgument);
+          }
+          else if(opt->positioning < 0 || 1 < opt->positioning) {
+              tmap_error("option -P was not specified", Exit, CommandLineArgument);
+          }
+          else if(opt->ins_size_mean < 0) {
+              tmap_error("option -b not specified", Exit, CommandLineArgument);
+          }
+          else if(opt->ins_size_std < 0) {
+              tmap_error("option -c not specified", Exit, CommandLineArgument);
+          }
+          else if(opt->ins_size_std_max_num < 0) {
+              tmap_error("option -d was not specified", Exit, CommandLineArgument);
+          }
+          else if(1 == opt->read_rescue && opt->read_rescue_std_num < 0) {
+              tmap_error("option -l was not specified", Exit, CommandLineArgument);
+          }
       }
       // OK
   }
@@ -1555,6 +1732,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
 
   tmap_error_cmd_check_int(opt->dup_window, -1, INT32_MAX, "-W");
   tmap_error_cmd_check_int(opt->max_seed_band, 1, INT32_MAX, "-B");
+  tmap_error_cmd_check_int(opt->no_unroll_banding, 0, 1, "-U");
   tmap_error_cmd_check_int(opt->score_thr, INT32_MIN, INT32_MAX, "-T");
   if(-1 != opt->reads_queue_size) tmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
   tmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
@@ -1573,7 +1751,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->stage_score_thr, INT32_MIN, INT32_MAX, "--stage-score-thres");
   tmap_error_cmd_check_int(opt->stage_mapq_thr, 0, 255, "--stage-mapq-thres");
   tmap_error_cmd_check_int(opt->stage_keep_all, 0, 1, "--stage-keep-all");
-  tmap_error_cmd_check_int(opt->stage_seed_freqc, 0.0, 1.0, "--seed-freq-cutoff");
+  tmap_error_cmd_check_int(opt->stage_seed_freqc, 0.0, 1.0, "--stage-seed-freq-cutoff");
 
   switch(opt->algo_id) {
     case TMAP_MAP_ALGO_MAP1: // map1 options
@@ -1654,10 +1832,16 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->softclip_type = opt_src->softclip_type;
     opt_dest->dup_window = opt_src->dup_window;
     opt_dest->max_seed_band = opt_src->max_seed_band;
+    opt_dest->no_unroll_banding = opt_src->no_unroll_banding;
     opt_dest->score_thr = opt_src->score_thr;
     opt_dest->reads_queue_size = opt_src->reads_queue_size;
     opt_dest->num_threads = opt_src->num_threads;
-    opt_dest->aln_output_mode = TMAP_MAP_OPT_ALN_MODE_ALL;
+    if(TMAP_MAP_ALGO_STAGE == opt_dest->algo_id) {
+        opt_dest->aln_output_mode = opt_src->aln_output_mode;
+    }
+    else {
+        opt_dest->aln_output_mode = TMAP_MAP_OPT_ALN_MODE_ALL;
+    }
     opt_dest->sam_rg = tmap_strdup(opt_src->sam_rg);
     opt_dest->input_compr = opt_src->input_compr;
     opt_dest->output_compr = opt_src->output_compr;
@@ -1673,6 +1857,16 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->sam_sff_tags = opt_src->sam_sff_tags;
     opt_dest->ignore_flowgram = opt_src->ignore_flowgram;
     opt_dest->remove_sff_clipping = opt_src->remove_sff_clipping;
+
+    // pairing
+    opt_dest->pairing = opt_src->pairing;
+    opt_dest->strandedness = opt_src->strandedness;
+    opt_dest->positioning = opt_src->positioning;
+    opt_dest->ins_size_mean = opt_src->ins_size_mean;
+    opt_dest->ins_size_std = opt_src->ins_size_std;
+    opt_dest->ins_size_std_max_num = opt_src->ins_size_std_max_num;
+    opt_dest->read_rescue = opt_src->read_rescue;
+    opt_dest->read_rescue_std_num = opt_src->read_rescue_std_num;
 }
 
 void
@@ -1692,8 +1886,9 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "fn_fasta=%s\n", opt->fn_fasta);
   for(i=0;i<opt->fn_reads_num;i++) {
       if(0 < i) fprintf(stderr, ",");
-      fprintf(stderr, "fn_reads=%s\n", opt->fn_reads[i]);
+      fprintf(stderr, "fn_reads=%s", opt->fn_reads[i]);
   }
+  fprintf(stderr, "\n");
   fprintf(stderr, "fn_sam=%s\n", opt->fn_sam);
   fprintf(stderr, "reads_format=%d\n", opt->reads_format);
   fprintf(stderr, "reads_format=%d\n", opt->reads_format);
@@ -1711,6 +1906,7 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "softclip_key=%d\n", opt->softclip_key);
   fprintf(stderr, "dup_window=%d\n", opt->dup_window);
   fprintf(stderr, "max_seed_band=%d\n", opt->max_seed_band);
+  fprintf(stderr, "no_unroll_banding=%d\n", opt->no_unroll_banding);
   fprintf(stderr, "score_thr=%d\n", opt->score_thr);
   fprintf(stderr, "reads_queue_size=%d\n", opt->reads_queue_size);
   fprintf(stderr, "num_threads=%d\n", opt->num_threads);
@@ -1755,5 +1951,4 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "stage_mapq_thr=%d\n", opt->stage_mapq_thr);
   fprintf(stderr, "stage_keep_all=%d\n", opt->stage_keep_all);
   fprintf(stderr, "stage_seed_freqc=%.2f\n", opt->stage_seed_freqc);
-
 }

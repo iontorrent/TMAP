@@ -67,7 +67,8 @@ tmap_vsw16_query_destroy(tmap_vsw16_query_t *vsw);
   @param  query_end         the query end position in the alignment (0-based) 
   @param  target_end        the target end position in the alignment (0-based) 
   @param  direction         1 if we are performing forward alignment, 0 otherwise
-  @param  overflow           returns 1 if overflow occurs, 0 otherwise
+  @param  overflow          returns 1 if overflow occurs, 0 otherwise
+  @param  n_best            the number of bset scoring alignments found
   @param  score_thr         the minimum scoring threshold (inclusive)
   @return                   the alignment score
   */
@@ -75,5 +76,5 @@ int32_t
 tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_t tlen,
                         int32_t query_start_clip, int32_t query_end_clip,
                         tmap_vsw_opt_t *opt, int16_t *query_end, int16_t *target_end,
-                        int32_t direction, int32_t *overflow, int32_t score_thr);
+                        int32_t direction, int32_t *overflow, int32_t *n_best, int32_t score_thr);
 #endif

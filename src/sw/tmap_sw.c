@@ -621,15 +621,15 @@ tmap_sw_local_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, con
               f = (f > last_h - q)? f - r : last_h - qr;
               if(curr_h < f) curr_h = f;
           }
-          if(*(s+1) >= qr_shift) { /* initialize e */
+          if(TMAP_SW_UNLIKELY(*(s+1) >= qr_shift)) { /* initialize e */
               curr_last_h = *(s+1) >> TMAP_SW_NT_LOCAL_SHIFT;
               e = ((*s & TMAP_SW_NT_LOCAL_MASK) > curr_last_h - q)? (*s & TMAP_SW_NT_LOCAL_MASK) - r : curr_last_h - qr;
               if(curr_h < e) curr_h = e;
               *s = (last_h << TMAP_SW_NT_LOCAL_SHIFT) | e;
           } else *s = last_h << TMAP_SW_NT_LOCAL_SHIFT; /* e = 0 */
           last_h = curr_h;
-          if(subo < curr_h) subo = curr_h;
-          if(score_f < curr_h) {
+          if(TMAP_SW_UNLIKELY(subo < curr_h)) subo = curr_h;
+          if(TMAP_SW_UNLIKELY(score_f < curr_h)) {
               score_f = curr_h; end_i = i; end_j = j;
               if(score_f > TMAP_SW_LOCAL_OVERFLOW_THRESHOLD) is_overflow = 1;
           }

@@ -27,10 +27,10 @@ static char *algo_id_to_name[17] = {
     "dummy8",
     "dummy9",
     "dummy10",
-    "dummy11",
     "mapvsw",
     "stage options",
     "mapall",
+    "pairing options",
     "flowspace options",
     "global options"
 };

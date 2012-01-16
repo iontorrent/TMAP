@@ -108,6 +108,11 @@ typedef int64_t tmap_bwt_sint_t;
 #define TMAP_UNLIKELY(x) (x)
 #endif
 
+/*!
+  One gibabyte.
+ */
+#define TMAP_1GB (1 << 30)
+
 /*! 
   @param  algo_id  the algorithm identifier
   @return          algorithm name

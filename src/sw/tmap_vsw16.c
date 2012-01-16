@@ -152,7 +152,7 @@ int32_t
 tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_t tlen, 
                         int32_t query_start_clip, int32_t query_end_clip,
                         tmap_vsw_opt_t *opt, int16_t *query_end, int16_t *target_end,
-                        int32_t direction, int32_t *overflow, int32_t score_thr)
+                        int32_t direction, int32_t *overflow, int32_t *n_best, int32_t score_thr)
 {
   int32_t slen, i, j, k, sum = 0;
 #ifdef TMAP_VSW_DEBUG
@@ -177,6 +177,7 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
   zero_start_mm = __tmap_vsw16_mm_set1_epi16(zero); // where the normalized zero alignment score occurs
   gmax = tmap_vsw16_min_value;
   best = tmap_vsw16_min_value;
+  if(NULL != n_best) (*n_best) = 0;
   reduce_mm = __tmap_vsw16_mm_set1_epi16(tmap_vsw16_mid_value);
   // vectors
   H0 = query->H0; 
@@ -361,9 +362,10 @@ end_loop:
       if(imax > gmax) { 
           gmax = imax; // global maximum score 
       }
-      if(score_thr <= imax 
-         && (imax > best || (1 == direction && imax == best))) { // potential best score
+      if(score_thr <= imax && best <= imax) { // potential best score
           tmap_vsw16_int_t *t;
+          int32_t save_score = 0;
+          if(imax > best || (1 == direction && imax == best)) save_score = 1;
           if(query_end_clip == 0) { // check the last
               j = (query->qlen-1) % slen; // stripe
               k = (query->qlen-1) / slen; // byte
@@ -371,7 +373,15 @@ end_loop:
 #ifdef TMAP_VSW_DEBUG 
               fprintf(stderr, "j=%d k=%d slen=%d qlen=%d best=%d pot=%d\n", j, k, slen, query->qlen, best-zero, t[k]-zero);
 #endif
-              if((int32_t)t[k] > best || (1 == direction && (int32_t)t[k] == best)) { // found
+              if(NULL != n_best) {
+                  if(best == (int32_t)t[k]) { // duplicate best score
+                      (*n_best)++;
+                  }
+                  else if(best < (int32_t)t[k]) {
+                      (*n_best) = 1;
+                  }
+              }
+              if(1 == save_score && (best < (int32_t)t[k] || (1 == direction && (int32_t)t[k] == best))) { // found new best score 
                   (*query_end) = query->qlen-1;
                   (*target_end) = i;
                   best = t[k];
@@ -381,21 +391,37 @@ end_loop:
               }
           }
           else { // check all
+              int32_t found_best = 0;
               t = (tmap_vsw16_int_t*)H1;
-              (*target_end) = i;
-              for(j = 0, *query_end = -1; TMAP_LIKELY(j < slen); ++j) { // for each stripe in the query
+              if(best < imax || (best == imax && 1 == direction)) {
+                  *query_end = -1;
+              }
+              for(j = 0; TMAP_LIKELY(j < slen); ++j) { // for each stripe in the query
                   for(k = 0; k < tmap_vsw16_values_per_128_bits; k++, t++) { // for each cell in the stripe
-                      if((int32_t)*t > best || (1 == direction && (int32_t)*t== best)) { // found
+                      if(NULL != n_best) {
+                          if(best == (int32_t)*t) { // duplicate best score
+                              (*n_best)++;
+                          }
+                          else if(best < (int32_t)*t) {
+                              (*n_best) = 1;
+                          }
+                      }
+                      if(1 == save_score && (best < (int32_t)*t || (1 == direction && (int32_t)*t == best))) { // found new best score 
+                          found_best = 1;
                           best = *t;
-                          *query_end = j + ((k & (tmap_vsw16_values_per_128_bits-1)) * slen);
+                          (*query_end) = j + ((k & (tmap_vsw16_values_per_128_bits-1)) * slen);
+                          (*target_end) = i;
 #ifdef TMAP_VSW_DEBUG 
                           fprintf(stderr, "FOUND B j=%d k=%d query_end=%d best=%d\n", j, k, *query_end, best-zero);
 #endif
                       }
                   }
               }
-              if(-1 == *query_end) {
-                  tmap_bug();
+              if(1 == found_best && -1 == *query_end) {
+                  if(-1 == *query_end) {
+                      tmap_bug();
+                      tmap_error("bug encountered", Exit, OutOfRange);
+                  }
               }
               //fprintf(stderr, "FOUND B i=%d imax=%d best=%d query_end=%d target_end=%d\n", i, imax-zero, best-zero, *query_end, *target_end);
           }

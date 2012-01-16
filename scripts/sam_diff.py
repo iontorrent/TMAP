@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved
+
 import os
 import sys
 from optparse import OptionParser

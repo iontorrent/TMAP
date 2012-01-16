@@ -68,12 +68,16 @@ typedef struct {
 typedef struct {
     uint32_t algo_id:16; /*!< the algorithm id used to obtain this hit */
     uint32_t algo_stage:16; /*!< the algorithm id used to obtain this hit */
-    uint16_t strand:1; /*!< the strand */
+    uint8_t strand; /*!< the strand */
     uint32_t seqid;  /*!< the sequence index (0-based) */
     uint32_t pos; /*!< the position (0-based) */
     int16_t mapq; /*!< the mapping quality */
     int32_t score; /*!< the alignment score */
     int32_t ascore;  /*!< the base alignment score (SFF only) */
+    int32_t pscore;  /*!< the pairing base alignment score (pairing only) */
+    uint8_t proper_pair:1;  /*!< 0 - if not a proper pair, 1 otherwise */
+    double num_stds;  /*!< the number of standard deviations from the mean insert size */
+    int16_t pmapq; /*!< the pairing mapping quality */
     int32_t score_subo; /*!< the alignment score of the sub-optimal hit */
     int32_t n_cigar; /*!< the number of cigar operators */
     uint32_t *cigar; /*!< the cigar operator array */
@@ -112,6 +116,14 @@ typedef struct {
     tmap_map_sams_t **sams; /*!< the sam records */
     int32_t n; /*!< the number of records (multi-end) */
 } tmap_map_record_t;
+
+/*!
+  make a copy of src and store it in dest
+  @param  dest  the destination record
+  @param  src   the source record
+  */
+inline void
+tmap_map_sam_copy(tmap_map_sam_t *dest, tmap_map_sam_t *src);
 
 /*!
   allocates memory for the auxiliary data specific to the algorithm specified by algo_id
@@ -182,9 +194,8 @@ void
 tmap_map_record_merge(tmap_map_record_t *dest, tmap_map_record_t *src);
 
 /*!
-  Merges the mappings of two multi-end mappings 
-  @param  src   the multi-end mapping structure destination
-  @param  dest  the multi-end mapping structure to merge from
+  Destroys a record structure
+  @param  record  the mapping structure
  */
 void 
 tmap_map_record_destroy(tmap_map_record_t *record);
@@ -226,6 +237,15 @@ tmap_map_sams_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sams_t *sam
                     tmap_map_sams_t *mates, int32_t sam_sff_tags);
 
 /*!
+  keep only the mappings with the given score 
+  @param  sams     the mappings to keep
+  @param  algo_id  the algorithm identifier
+  @param  score    the score to keep
+  */
+void
+tmap_map_util_keep_score(tmap_map_sams_t *sams, int32_t algo_id, int32_t score);
+
+/*!
   filters mappings based on the output mode
   @param  sams             the mappings to filter
   @param  aln_output_mode  the output mode
@@ -264,6 +284,19 @@ void
 tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window, tmap_rand_t *rand);
 
 /*!
+ Computes the mapping quality score from a small set of summary statistics.
+ @param  seq_len          the sequence length
+ @param  n_best           the number of best scores
+ @param  best_score       the best score
+ @param  n_best_subo      the number of best suboptimal scores
+ @param  best_subo_score  the best suboptimal score
+ @param  opt              the program parameters
+ @return                  the mapping quality
+ */
+int32_t
+tmap_map_util_mapq_score(int32_t seq_len, int32_t n_best, int32_t best_score, int32_t n_best_subo, int32_t best_subo_score, tmap_map_opt_t *opt);
+
+/*!
  Computes the mapping quality from the mappings of multiple algorithms
  @param  sams     the sams to update
  @param  seq_len  the sequence length
@@ -278,7 +311,7 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt);
   @details              only fills in the score, start and end of the alignments
   @param  refseq        the reference sequence
   @param  sams          the seeded sams
-  @param  seq           the query sequence (forward, reverse compliment, reverse, and compliment)
+  @param  seqs          the query sequence (forward, reverse compliment, reverse, and compliment)
   @param  rand          the random number generator
   @param  opt           the program parameters
   @return               the locally aligned sams
@@ -295,7 +328,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   @details              generates the cigar after tmap_map_util_sw_gen_score has been called
   @param  refseq        the reference sequence
   @param  sams          the seeded sams
-  @param  seq           the query sequence (forward, reverse compliment, reverse, and compliment)
+  @param  seqs          the query sequence (forward, reverse compliment, reverse, and compliment)
   @param  opt           the program parameters
   @return               the locally aligned sams
   */

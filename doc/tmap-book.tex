@@ -180,6 +180,9 @@ Specifies to remove duplicate mappings that occur within this bp window.
 \subsubsection{\TT{-B,--max-seed-band INT}}
 Specifies the window in bases in which to group seeds.
 
+\subsubsection{\TT{-U,--no-unroll-banding}}
+Specifies to not unroll the grouped seeds from banding if multiple alignments are found
+
 \subsubsection{\TT{-T,--score-thres INT}}
 Specifies the number of multiples of the match score (\TT{-A}) for the minimum scoring threshold.
 
@@ -255,11 +258,57 @@ Specifies to soft clip only the last base of the key sequence.
 Specifies that SFF specific tags should be added to the output SAM file.
 See \autoref{sec:samformat} for more informaton.
 
-\subsubsection{\TT{-S,--ignore-flowgram}}
+\subsubsection{\TT{-N,--ignore-flowgram}}
 Specifies to not use the flowgram, otherwise uses the flowgram for flowspace re-alignment when available.
 
 \subsubsection{\TT{-G,--remove-sff-clipping}}
 Specifies to not remove bases and qualities based on the adapter and quality clipping fields found in the an input SFF file.
+
+\subsection{Pairing Options}
+These options control how TMAP uses and outputs information about the paired end or mate pair reads.
+Pairing will be performed when exactly two input read files are given using the \TT{-r} option twice.
+
+\subsubsection{\TT{-Q,--pairing}}
+Specifies the pairing orientation.
+This will override \TT{-S} and \TT{-P}.
+\begin{enumerate}
+	\setcounter{enumi}{-1} % start at zero
+	\item no pairing is to be performed
+	\item 1 - mate pairs (\TT{-S 0 -P 1})
+	\item 2 - paired end (\TT{-S 1 -P 0})
+\end{enumerate}
+
+\subsubsection{\TT{-S,--strandedness}}
+Specifies the strand orientation between the pairs.
+\begin{enumerate}
+	\setcounter{enumi}{-1} % start at zero
+	\item the reads should be mapped to the same strand
+	\item the reads should be mapped to opposite strands
+\end{enumerate}
+
+\subsubsection{\TT{-P,--positioning}}
+Specifies that position orientation between the pairs.
+\begin{enumerate}
+	\setcounter{enumi}{-1} % start at zero
+	\item the first read of the pair (A) is before the second read of the pair (B).
+	\item the second read of the pair (B) is before the first read of the pair (A).
+\end{enumerate}
+
+\subsubsection{\TT{-b,--ins-size-mean FLOAT}}
+Specifies the expected mean insert size.
+
+\subsubsection{\TT{-c,--ins-size-std FLOAT}}
+Specifies the expected insert size standard deviations.
+
+\subsubsection{\TT{-d,--ins-size-std-max-num FLOAT}}
+Specifies the maximum number of standard deviations for a pair to be proper.
+See \autoref{sec:samformat} for more informaton about proper pairs.
+
+\subsubsection{\TT{-L,--read-rescue}}
+Specifies to perform read rescuing during pairing.
+
+\subsubsection{\TT{-l,--read-rescue-std-num FLOAT}}
+Specifies the number of insert size standard deviations to search around the inferred rescue position.
 
 \section{tmap index}
 \label{sec:index}
