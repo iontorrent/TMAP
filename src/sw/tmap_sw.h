@@ -34,6 +34,15 @@
 #define TMAP_SW_CIGAR_STORE(_cigar, _op, _len) ((_cigar) = ((_len) << 4) | ((_op) & 0xf))
 #define TMAP_SW_CIGAR_ADD_LENGTH(_cigar, _add) ((_cigar) += ((_add) << 4))
 
+/* For branch prediction */
+#ifdef __GNUC__
+#define TMAP_SW_LIKELY(x) __builtin_expect((x),1)
+#define TMAP_SW_UNLIKELY(x) __builtin_expect((x),0)
+#else
+#define TMAP_SW_LIKELY(x) (x)
+#define TMAP_SW_UNLIKELY(x) (x)
+#endif
+
 /*! 
   Functions for Performing Efficient Smith-Waterman
   */

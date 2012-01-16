@@ -28,6 +28,7 @@
 #include "../sw/tmap_sw.h"
 #include "util/tmap_map_stats.h"
 #include "util/tmap_map_util.h"
+#include "pairing/tmap_map_pairing.h"
 #include "tmap_map_driver.h"
 
 // NB: do not turn these on, as they do not currently improve run time. They
@@ -210,7 +211,6 @@ tmap_map_driver_core_worker(int32_t num_ends,
           
 #ifdef TMAP_DRIVER_USE_HASH
 #ifdef TMAP_DRIVER_CLEAR_HASH_PER_READ
-          // TODO: should we hash each read, or across the thread?
           tmap_bwt_match_hash_clear(hash[0]);
           tmap_bwt_match_hash_clear(hash[1]);
 #endif
@@ -296,19 +296,19 @@ tmap_map_driver_core_worker(int32_t num_ends,
 
               // generate scores with smith waterman
               for(j=0;j<num_ends;j++) { // for each end
-                  records[low]->sams[j] = tmap_map_util_sw_gen_score(index->refseq, records[low]->sams[j], seqs[j], rand, driver->opt);
+                  records[low]->sams[j] = tmap_map_util_sw_gen_score(index->refseq, records[low]->sams[j], seqs[j], rand, stage->opt);
                   curstat->num_after_scoring += records[low]->sams[j]->n;
               }
 
               // remove duplicates
               for(j=0;j<num_ends;j++) { // for each end
-                  tmap_map_util_remove_duplicates(records[low]->sams[j], driver->opt->dup_window, rand);
+                  tmap_map_util_remove_duplicates(records[low]->sams[j], stage->opt->dup_window, rand);
                   curstat->num_after_rmdup += records[low]->sams[j]->n;
               }
               
               // (single-end) mapping quality
               for(j=0;j<num_ends;j++) { // for each end
-                  driver->func_mapq(records[low]->sams[j], tmap_seq_get_bases_length(seqs[j][0]), driver->opt);
+                  driver->func_mapq(records[low]->sams[j], tmap_seq_get_bases_length(seqs[j][0]), stage->opt);
               }
 
               // filter if we have more stages
@@ -318,30 +318,53 @@ tmap_map_driver_core_worker(int32_t num_ends,
                   }
               }
 
-              // choose alignments
-              for(j=0;j<num_ends;j++) { // for each end
-                  tmap_map_sams_filter1(records[low]->sams[j], driver->opt->aln_output_mode, TMAP_MAP_ALGO_NONE, rand);
-                  curstat->num_after_filter += records[low]->sams[j]->n;
-              }
+              if(0 <= driver->opt->strandedness && 0 <= driver->opt->positioning
+                 && 2 == num_ends && 0 < records[low]->sams[0]->n && 0 < records[low]->sams[1]->n) { // pairs of reads!
 
-              // TODO: PAIRING HERE
-              //
-              // TODO: mapping quality
-              //
-              // TODO: filtering 
-              //
-              // TODO: if we have one end for a pair, do we go onto the second
-              // stage?
+                  // read rescue
+                  if(1 == stage->opt->read_rescue) {
+                      int32_t flag = tmap_map_pairing_read_rescue(index->refseq, 
+                                                                  records[low]->sams[0], records[low]->sams[1],
+                                                                  seqs[0], seqs[1],
+                                                                  rand, stage->opt);
+                      // recalculate mapping qualities if necessary
+                      if(0 < (flag & 0x1)) { // first end was rescued
+                          //fprintf(stderr, "re-doing mapq for end #1\n");
+                          driver->func_mapq(records[low]->sams[0], tmap_seq_get_bases_length(seqs[0][0]), stage->opt);
+                      }
+                      if(0 < (flag & 0x2)) { // second end was rescued
+                          //fprintf(stderr, "re-doing mapq for end #2\n");
+                          driver->func_mapq(records[low]->sams[1], tmap_seq_get_bases_length(seqs[1][0]), stage->opt);
+                      }
+                  }
+                  // pick pairs
+                  tmap_map_pairing_pick_pairs(records[low]->sams[0], records[low]->sams[1],
+                                              seqs[0][0], seqs[1][0],
+                                              rand, stage->opt);
+                  // TODO: if we have one end for a pair, do we go onto the second
+                  // stage?
+              }
+              else {
+
+                  // choose alignments
+                  for(j=0;j<num_ends;j++) { // for each end
+                      tmap_map_sams_filter1(records[low]->sams[j], stage->opt->aln_output_mode, TMAP_MAP_ALGO_NONE, rand);
+                      curstat->num_after_filter += records[low]->sams[j]->n;
+                  }
+              }
 
               // generate the cigars
               found = 0;
               for(j=0;j<num_ends;j++) { // for each end
-                  records[low]->sams[j] = tmap_map_util_sw_gen_cigar(index->refseq, records[low]->sams[j], seqs[j], driver->opt);
+                  records[low]->sams[j] = tmap_map_util_sw_gen_cigar(index->refseq, records[low]->sams[j], seqs[j], stage->opt);
                   if(0 < records[low]->sams[j]->n) {
                       //curstat->num_with_mapping++;
                       found = 1;
                   }
               }
+
+              // TODO
+              // if paired, update pairing score based on target start?
 
               // did we find any mappings?
               if(1 == found) { // yes
@@ -701,6 +724,8 @@ tmap_map_driver_stage_init(int32_t stage)
   tmap_map_driver_stage_t *s = NULL;
   s = tmap_calloc(1, sizeof(tmap_map_driver_stage_t), "stage");
   s->stage = stage;
+  s->opt = tmap_map_opt_init(TMAP_MAP_ALGO_STAGE);
+  s->opt->algo_stage = stage;
   return s;
 }
 
@@ -713,17 +738,8 @@ tmap_map_driver_stage_add(tmap_map_driver_stage_t *s,
                     tmap_map_driver_func_cleanup func_cleanup,
                     tmap_map_opt_t *opt)
 {
-  // stage options
-  if(0 == s->num_algorithms) {
-      // copy stage options
-      s->opt = tmap_map_opt_init();
-      s->opt->algo_id = TMAP_MAP_ALGO_STAGE;
-      tmap_map_opt_copy_stage(s->opt, opt);
-  }
-  else {
-      // check stage options
-      tmap_map_opt_check_stage(s->opt, opt);
-  }
+  // check against stage options
+  tmap_map_opt_check_stage(s->opt, opt);
   s->num_algorithms++;
   s->algorithms = tmap_realloc(s->algorithms, sizeof(tmap_map_driver_algorithm_t*) * s->num_algorithms, "s->algorithms");
   s->algorithms[s->num_algorithms-1] = tmap_map_driver_algorithm_init(func_init, func_thread_init, func_thread_map,
@@ -767,13 +783,17 @@ tmap_map_driver_add(tmap_map_driver_t *driver,
       while(driver->num_stages < opt->algo_stage) {
           driver->num_stages++;
           driver->stages[driver->num_stages-1] = tmap_map_driver_stage_init(driver->num_stages);
+          // copy global options into this stage
+          tmap_map_opt_copy_global(driver->stages[driver->num_stages-1]->opt, driver->opt);
+          // copy stage options into this stage
+          tmap_map_opt_copy_stage(driver->stages[driver->num_stages-1]->opt, opt);
       }
   }
 
   // check options
   tmap_map_opt_check(opt);
 
-  // check global options
+  // check against global options
   tmap_map_opt_check_global(driver->opt, opt);
 
   // add to the stage

@@ -8,6 +8,7 @@
 #include <unistd.h>
 #endif
 #include <unistd.h>
+#include <limits.h>
 #include "../../util/tmap_error.h"
 #include "../../util/tmap_alloc.h"
 #include "../../util/tmap_definitions.h"
@@ -107,7 +108,7 @@ tmap_map_all_core(tmap_map_driver_t *driver)
   int32_t j;
   for(i=0;i<driver->num_stages;i++) {
       for(j=0;j<driver->stages[i]->num_algorithms;j++) {
-          fprintf(stderr, "Algorithm: %s Stage: %d\n", 
+          tmap_file_fprintf(tmap_file_stderr, "Algorithm: %s Stage: %d\n", 
                   tmap_algo_id_to_name(driver->stages[i]->algorithms[j]->opt->algo_id),
                   driver->stages[i]->algorithms[j]->opt->algo_stage);
       }
@@ -116,6 +117,27 @@ tmap_map_all_core(tmap_map_driver_t *driver)
 
   // run the driver
   tmap_map_driver_run(driver);
+}
+
+static int32_t
+tmap_map_all_opt_get_next_stage_j(int argc, char *argv[], int32_t j)
+{
+  int32_t cur_stage;
+  while(j < argc) {
+      if(6 <= strlen(argv[j]) 
+         && 0 == strncmp("stage", argv[j], 5)) {
+          cur_stage = atoi(argv[j] + 5);
+          // get the stage name
+          if(cur_stage <= 0 || INT_MAX == cur_stage) {
+              tmap_error("Could not identify the stage", Exit, CommandLineArgument);
+          }
+          if(strlen(argv[j]) == 6 + (int)log10(cur_stage)) { 
+              break;
+          }
+      }
+      j++;
+  }
+  return j;
 }
 
 int32_t
@@ -134,13 +156,10 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   */
 
   // get the range for the global options
-  i = j = 1;
-  while(j < argc) {
-      // check for the "stage"
-      if(0 == strncmp("stage", argv[j], 5)) {
-          break;
-      }
-      j++;
+  i = 1;
+  j = tmap_map_all_opt_get_next_stage_j(argc, argv, 1);
+  if(j == argc) {
+      tmap_error("No stages were specified", Warn, CommandLineArgument);
   }
 
   // parse the global options
@@ -153,17 +172,11 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
   i = j;
   while(i < argc) {
       // find the next stage, if it exists
-      j = i + 1;
-      while(j < argc) {
-          if(0 == strncmp("stage", argv[j], 5)) {
-              break;
-          }
-          j++;
-      }
-
+      j = tmap_map_all_opt_get_next_stage_j(argc, argv, i+1);
+          
       // get the stage name
       cur_stage = atoi(argv[i] + 5);
-      if(cur_stage <= 0) {
+      if(cur_stage <= 0 || INT_MAX == cur_stage) {
           tmap_error("Could not identify the stage", Exit, CommandLineArgument);
       }
 
@@ -195,7 +208,7 @@ tmap_map_all_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       if(1 != tmap_map_opt_parse(k - i, argv + i, stage_opt)) {
           return 0;
       }
-      
+
       // NB: do this after parsing the stage options, since '-h' may be
       // specified
       if(k == j) {

@@ -5,7 +5,7 @@
 #  or with explicit permission from, Nils Homer.
 
 AC_PREREQ(2.61);
-AC_INIT([tmap],[0.2.3],[nils.homer@lifetech.com],[tmap])
+AC_INIT([tmap],[0.2.4],[nils.homer@lifetech.com],[tmap])
 AC_COPYRIGHT([See LICENSE for copyright information.])
 AC_CONFIG_AUX_DIR(config)
 AM_INIT_AUTOMAKE([dist-bzip2 subdir-objects])
@@ -45,7 +45,7 @@ AC_ARG_ENABLE(debug-functions, [  --enable-debug-functions        use this optio
 AC_ARG_ENABLE(tcmalloc, [  --disable-tcmalloc      disable tcmalloc for memory allocation], [], [AC_CHECK_LIB([tcmalloc],malloc)]) 
 AC_ARG_ENABLE(perftools, [  --enable-perftools      enable google performance tools for profiling and heap checking], [LDFLAGS="${LDFLAGS} -Wl,--no-as-needed -lprofiler"; LDADD="${LDADD} -lprofiler"], [])
 
-CFLAGS="${default_CFLAGS} ${extended_CFLAGS}";
+CFLAGS="${CFLAGS} ${default_CFLAGS} ${extended_CFLAGS}";
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST

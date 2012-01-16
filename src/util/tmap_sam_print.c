@@ -384,10 +384,10 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
 inline void
 tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tmap_refseq_t *refseq,
                       uint8_t strand, uint32_t seqid, uint32_t pos, int32_t aln_num,
-                      uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, uint32_t m_strand,
+                      uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, double m_num_std, uint32_t m_strand,
                       uint32_t m_seqid, uint32_t m_pos, uint32_t m_tlen,
                       uint8_t mapq, uint32_t *cigar, int32_t n_cigar,
-                      int32_t score, int32_t ascore, int32_t nh, int32_t algo_id, int32_t algo_stage,
+                      int32_t score, int32_t ascore, int32_t pscore, int32_t nh, int32_t algo_id, int32_t algo_stage,
                       const char *format, ...)
 {
   va_list ap;
@@ -421,7 +421,7 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
   if(0 < aln_num) flag |= 0x100; // secondary alignment
   if(0 < end_num) { // mate info
       flag |= 0x1;
-      if(1 == m_prop) flag |= 0x2; // properly aligned
+      if(0 == m_unmapped && 1 == m_prop) flag |= 0x2; // properly aligned
       if(1 == m_unmapped) flag |= 0x8; // unmapped
       else if(1 == m_strand) flag |= 0x20; // strand 
       flag |= (1 == end_num) ? 0x40 : 0x80; // first/second end
@@ -504,6 +504,13 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
   // XZ
   if(TMAP_SEQ_TYPE_SFF == seq->type && INT32_MIN != ascore) {
       tmap_file_fprintf(fp, "\tXZ:i:%d", ascore);
+  }
+  
+  if(0 < end_num) { // mate info
+      tmap_file_fprintf(fp, "\tYP:i:%d", pscore);
+      if(0 == m_unmapped) {
+          tmap_file_fprintf(fp, "\tYS:f:%f", m_num_std);
+      }
   }
 
   // optional tags

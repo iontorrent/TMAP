@@ -7,12 +7,14 @@
 #include <config.h>
 
 #include "tmap_error.h"
+#include "tmap_time.h"
 #include "../io/tmap_file.h"
 #include "tmap_progress.h"
 
 static char tmap_progress_command[1024]="(null)";
 static clock_t tmap_progress_start_time=0;
 static int32_t tmap_progress_verbosity=0;
+static double tmap_progress_start_realtime=0;
 
 void 
 tmap_progress_set_command(const char *command)
@@ -23,9 +25,10 @@ tmap_progress_set_command(const char *command)
 }
 
 void 
-tmap_progress_set_start_time(clock_t start_time)
+tmap_progress_set_start_time()
 {
-  tmap_progress_start_time = start_time;
+  tmap_progress_start_time = clock();
+  tmap_progress_start_realtime = tmap_time_realtime();
 }
 
 void
@@ -47,7 +50,10 @@ tmap_progress_vprint1(const char *format, clock_t start_time, va_list ap)
   
   if(0 != tmap_progress_verbosity) {
       if(0 <= (float)start_time) {
-          if(sprintf(tmap_progress_format, "[%s] %.2f sec: ", tmap_progress_command, (float)(clock()-start_time) / CLOCKS_PER_SEC) < 0) {
+          if(sprintf(tmap_progress_format, "[%s] %.2f/%.2f sec: ", 
+                     tmap_progress_command, 
+                     (0 < start_time) ? (float)(clock()-start_time) / CLOCKS_PER_SEC : (float)(tmap_time_cputime()),
+                     (float)(tmap_time_realtime()-tmap_progress_start_realtime)) < 0) {
               tmap_error(NULL, Exit, OutOfRange);
           }
       }
@@ -91,7 +97,7 @@ tmap_progress_print2(const char *format, ...)
   va_list ap;
   if(0 != tmap_progress_verbosity) {
       va_start(ap, format);
-      tmap_progress_vprint1(format, tmap_progress_start_time, ap);
+      tmap_progress_vprint1(format, 0, ap);
       va_end(ap);
   }
 }

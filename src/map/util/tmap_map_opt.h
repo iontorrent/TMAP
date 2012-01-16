@@ -69,9 +69,10 @@ enum {
     TMAP_MAP_ALGO_MAP1 = 0x1,  /*!< the map1 algorithm */
     TMAP_MAP_ALGO_MAP2 = 0x2,  /*!< the map2 algorithm */
     TMAP_MAP_ALGO_MAP3 = 0x4,  /*!< the map3 algorithm */
-    TMAP_MAP_ALGO_MAPVSW = 0x800,  /*!< the mapvsw algorithm */
-    TMAP_MAP_ALGO_STAGE = 0x1000, /*!< the stage options */
-    TMAP_MAP_ALGO_MAPALL = 0x2000, /*!< the mapall algorithm */
+    TMAP_MAP_ALGO_MAPVSW = 0x400,  /*!< the mapvsw algorithm */
+    TMAP_MAP_ALGO_STAGE = 0x800, /*!< the stage options */
+    TMAP_MAP_ALGO_MAPALL = 0x1000, /*!< the mapall algorithm */
+    TMAP_MAP_ALGO_PAIRING = 0x2000, /*!< flowspace options when printing parameters */
     TMAP_MAP_ALGO_FLOWSPACE = 0x4000, /*!< flowspace options when printing parameters */
     TMAP_MAP_ALGO_GLOBAL = 0x8000, /*!< global options when printing parameters */
 };
@@ -140,12 +141,12 @@ typedef struct {
  * A list of global command line flags take or available.
  *
  * Taken:
- * ABEFGJKMORTWXYZ
- * afghijknqrsvwyz
+ * ABEFGJKLMORTUWXYZ
+ * afghijklnqrsvwyz
  *
  * Available:
- * CDHILNPQSUV
- * bcdlmoptux
+ * CDHIUV
+ * moptux
  * 
  * NB: Lets reserve single character flags for global options. 
 */
@@ -174,6 +175,7 @@ typedef struct __tmap_map_opt_t {
     int32_t softclip_type; /*!< soft clip type (-g,--softclip-type) */
     int32_t dup_window; /*!< remove duplicate alignments from different algorithms within this bp window (-W,--duplicate-window) */
     int32_t max_seed_band; /*!< the band to group seeds (-B,--max-seed-band) */
+    int32_t no_unroll_banding; /*!< do not unroll the grouped seeds from banding if multiple alignments are found (-U,--no-unroll-banding) */
     int32_t score_thr;  /*!< the score threshold (match-score-scaled) (-T,--score-thres) */
     int32_t reads_queue_size;  /*!< the reads queue size (-q,--reads-queue-size) */
     int32_t num_threads;  /*!< the number of threads (-n,--num-threads) */
@@ -193,6 +195,16 @@ typedef struct __tmap_map_opt_t {
     int32_t sam_sff_tags;  /*!< specifies to output SFF specific SAM tags (-Y,--sam-sff-tags) */
     int32_t ignore_flowgram;  /*!< specifies to ignore the flowgram if available (-S,--ignore-flowgram) */
     int32_t remove_sff_clipping; /*!< removes SFF clipping (-G,--remove-sff-clipping) */
+
+    // pairing options
+    int32_t pairing; /*!< 0 - no pairing is to be performed, 1 - mate pairs (-S 0 -P 1), 2 - paired end (-S 1 -P 0) (-Q,--pairing)*/
+    int32_t strandedness; /*!< the insert strandedness: 0 - same strand, 1 - opposite strand (-S,--strandedness)*/
+    int32_t positioning; /*!< the insert positioning: 0 - read one before read two, 1 - read two before read one (-P,--positioning) */
+    double ins_size_mean; /*!< the mean insert size (-b,--ins-size-mean)*/
+    double ins_size_std; /*!< the insert size standard deviation (-c,--ins-size-std) */
+    double ins_size_std_max_num; /*!< the insert size maximum standard deviation (-d,--ins-size-std-max-num) */
+    int32_t read_rescue; /*!< specifies to perform read rescuing during pairing (-L,--read-rescue) */
+    double read_rescue_std_num; /*!< specifies the number of standard deviations around the mean insert size to perform read rescue (-l,--read-rescue-std-num) */
 
     // map1/map2/map3 options, but specific to each
     int32_t min_seq_len; /*< the minimum sequence length to examine (--min-seq-length) */

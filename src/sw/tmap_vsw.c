@@ -87,7 +87,7 @@ tmap_vsw_sse2(tmap_vsw_query_t *vsw_query,
               int16_t *score_fwd, int16_t *score_rev,
               int16_t *query_start, int16_t *query_end,
               int16_t *target_start, int16_t *target_end,
-              int32_t *overflow, int32_t score_thr, int32_t is_rev)
+              int32_t *overflow, int32_t *n_best, int32_t score_thr, int32_t is_rev)
 {
   uint8_t *tmp_target;
   int32_t tmp_tlen, found_forward = 1;
@@ -121,7 +121,7 @@ tmap_vsw_sse2(tmap_vsw_query_t *vsw_query,
       (*score_fwd) = tmap_vsw16_sse2_forward(vsw_query->query16, target, tlen,
                                                   query_start_clip, query_end_clip,
                                                   opt, query_end, target_end,
-                                                  0, overflow, score_thr);
+                                                  0, overflow, n_best, score_thr);
 
       // check forward results
       if(NULL != overflow && 1 == *overflow) {
@@ -143,6 +143,7 @@ tmap_vsw_sse2(tmap_vsw_query_t *vsw_query,
           (*query_end) = (*query_start) = 0;
           (*target_end) = (*target_start) = 0;
           (*score_fwd) = (*score_rev) = INT16_MIN;
+          if(NULL != n_best) (*n_best) = 0;
           return INT32_MIN;
       }
 
@@ -191,7 +192,7 @@ tmap_vsw_sse2(tmap_vsw_query_t *vsw_query,
       (*score_rev) = tmap_vsw16_sse2_forward(vsw_query->query16, target, tlen,
                                                   0/*query_end_clip*/, query_start_clip,
                                                   opt, query_start, target_start,
-                                                  1, overflow, score_thr);
+                                                  1, overflow, n_best, score_thr);
 
 #ifdef TMAP_VSW_DEBUG
       fprintf(stderr, "is_rev=%d (*score_fwd)=%d (*score_rev)=%d\n",
@@ -203,6 +204,7 @@ tmap_vsw_sse2(tmap_vsw_query_t *vsw_query,
           (*query_end) = (*query_start) = 0;
           (*target_end) = (*target_start) = 0;
           (*score_fwd) = (*score_rev) = INT16_MIN;
+          if(NULL != n_best) (*n_best) = 0;
           return INT32_MIN; 
       }
       else if((*score_fwd) != (*score_rev)) {

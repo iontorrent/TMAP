@@ -15,10 +15,10 @@ void
 tmap_progress_set_command(const char *command);
 
 /*! 
-  @param  start_time  the start time of the clock
+  Set the start time of the clock
   */
 void
-tmap_progress_set_start_time(clock_t start_time);
+tmap_progress_set_start_time();
 
 /*! 
   @param  verbosity  the verbosity level
