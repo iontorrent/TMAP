@@ -142,11 +142,11 @@ typedef struct {
  *
  * Taken:
  * ABEFGJKLMORTUWXYZ
- * afghijklnqrsvwyz
+ * afghijklmnqrsvwyz
  *
  * Available:
  * CDHIUV
- * moptux
+ * optux
  * 
  * NB: Lets reserve single character flags for global options. 
 */
@@ -205,6 +205,7 @@ typedef struct __tmap_map_opt_t {
     double ins_size_std_max_num; /*!< the insert size maximum standard deviation (-d,--ins-size-std-max-num) */
     int32_t read_rescue; /*!< specifies to perform read rescuing during pairing (-L,--read-rescue) */
     double read_rescue_std_num; /*!< specifies the number of standard deviations around the mean insert size to perform read rescue (-l,--read-rescue-std-num) */
+    int32_t read_rescue_mapq_thr; /*!< minimum mapping quality for read rescue */
 
     // map1/map2/map3 options, but specific to each
     int32_t min_seq_len; /*< the minimum sequence length to examine (--min-seq-length) */
