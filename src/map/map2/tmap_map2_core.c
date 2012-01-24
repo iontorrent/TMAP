@@ -265,7 +265,7 @@ tmap_map2_core_aln(const tmap_map_opt_t *opt, const tmap_bwtl_t *target,
                const tmap_refseq_t *refseq,
                const tmap_bwt_t *query_bwt, 
                const tmap_sa_t *query_sa, 
-               tmap_bwt_match_hash_t *hash, 
+               tmap_bwt_match_hash_t *query_hash, 
                tmap_map2_global_mempool_t *pool)
 {
   tmap_map2_stack_t *stack = (tmap_map2_stack_t*)pool->stack;
@@ -371,7 +371,7 @@ tmap_map2_core_aln(const tmap_map_opt_t *opt, const tmap_bwtl_t *target,
               }
               if((x->G > opt->pen_gapo + opt->pen_gape && x->G >= -heap[0]) || i < old_n) { // good node in u, or in v
                   if(p->cpos[0] == -1 || p->cpos[1] == -1 || p->cpos[2] == -1 || p->cpos[3] == -1) {
-                      tmap_bwt_match_hash_2occ4(query_bwt, &p->match_sa, qnext, hash);
+                      tmap_bwt_match_hash_2occ4(query_bwt, &p->match_sa, qnext, query_hash);
                       for(qj = 0; qj != 4; ++qj) { // descend to the prefix trie
                           if(p->cpos[qj] != -1) continue; // this node will be visited later
                           k = qnext[qj].k;

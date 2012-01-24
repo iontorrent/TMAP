@@ -171,6 +171,7 @@ __tmap_map_opt_option_print_func_double_init(length_coef)
 __tmap_map_opt_option_print_func_int_init(max_seed_intv)
 __tmap_map_opt_option_print_func_int_init(z_best)
 __tmap_map_opt_option_print_func_int_init(seeds_rev)
+__tmap_map_opt_option_print_func_tf_init(narrow_rmdup)
 // map3 options
 __tmap_map_opt_option_print_func_int_init(max_seed_hits)
 __tmap_map_opt_option_print_func_int_init(hp_diff)
@@ -712,6 +713,12 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_seeds_rev,
                            TMAP_MAP_ALGO_MAP2);
+  tmap_map_opt_options_add(opt->options, "narrow-rmdup", no_argument, 0, 0,
+                           TMAP_MAP_OPT_TYPE_NONE,
+                           "remove duplicates for narrow SA hits",
+                           NULL,
+                           tmap_map_opt_option_print_func_narrow_rmdup,
+                           TMAP_MAP_ALGO_MAP2);
 
   // map3 options
   tmap_map_opt_options_add(opt->options, "max-seed-hits", required_argument, 0, 0, 
@@ -912,6 +919,7 @@ tmap_map_opt_init(int32_t algo_id)
       opt->max_seed_intv = 3; 
       opt->z_best = 1; 
       opt->seeds_rev = 5;
+      opt->narrow_rmdup = 0;
       break;
     case TMAP_MAP_ALGO_MAP3:
       // map3
@@ -1396,6 +1404,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(0 == strcmp("seeds-rev", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP2) {
           opt->seeds_rev = atoi(optarg);
       }
+      else if(0 == strcmp("narrow-rmdup", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP2) {
+          opt->narrow_rmdup = 1;
+      }
       // MAP 3
       else if(0 == strcmp("max-seed-hits", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP3) {
           opt->max_seed_hits = atoi(optarg);
@@ -1780,6 +1791,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       tmap_error_cmd_check_int(opt->max_seed_intv, 0, INT32_MAX, "--max-seed-intv");
       tmap_error_cmd_check_int(opt->z_best, 1, INT32_MAX, "--z-best");
       tmap_error_cmd_check_int(opt->seeds_rev, 0, INT32_MAX, "--seeds-rev");
+      tmap_error_cmd_check_int(opt->narrow_rmdup, 0, 1, "--narrow-rmdup");
       break;
     case TMAP_MAP_ALGO_MAP3:
       if(-1 != opt->seed_length) tmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "--seed-length");
@@ -1941,6 +1953,7 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "max_seed_intv=%d\n", opt->max_seed_intv);
   fprintf(stderr, "z_best=%d\n", opt->z_best);
   fprintf(stderr, "seeds_rev=%d\n", opt->seeds_rev);
+  fprintf(stderr, "narrow_rmdup=%d\n", opt->narrow_rmdup);
   fprintf(stderr, "max_seed_hits=%d\n", opt->max_seed_hits);
   fprintf(stderr, "hp_diff=%d\n", opt->hp_diff);
   fprintf(stderr, "hit_frac=%lf\n", opt->hit_frac);

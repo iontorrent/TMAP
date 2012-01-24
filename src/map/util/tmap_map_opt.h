@@ -238,6 +238,7 @@ typedef struct __tmap_map_opt_t {
     int32_t max_seed_intv;  /*!< the maximum seed interval (--max-seed-intv) */
     int32_t z_best;  /*!< the number of top scoring hits to keep (--z-best) */
     int32_t seeds_rev;  /*!< the maximum number of seeds for which reverse alignment is triggered (--seeds-rev) */
+    int32_t narrow_rmdup; /*!< remove duplicates in narrow hits (--narrow-rmdup) */
 
     // map3 options
     int32_t max_seed_hits; /*!< the maximum number of hits returned by a seed (--max-seed-hits) */

@@ -790,6 +790,10 @@ tmap_refseq_get_pos(const tmap_refseq_t *refseq, tmap_bwt_int_t pacpos, uint32_t
 inline tmap_bwt_int_t 
 tmap_refseq_pac2real(const tmap_refseq_t *refseq, tmap_bwt_int_t pacpos, uint32_t aln_length, uint32_t *seqid, uint32_t *pos, uint8_t *strand)
 {
+  if((refseq->len << 1) < pacpos) {
+      tmap_error("Coordinate was larger than the reference", Exit, OutOfRange);
+  }
+
   // strand
   if(refseq->len < pacpos) {
       (*strand) = 1;
