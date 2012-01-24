@@ -471,9 +471,11 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
 #endif
   int32_t seq_type, reads_queue_size, num_ends;
 
+  /*
   if(NULL == driver->opt->fn_reads) {
       tmap_progress_set_verbosity(0); 
   }
+  */
   
   // print out the algorithms and stages
   for(i=0;i<driver->num_stages;i++) {
@@ -486,11 +488,13 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
   }
 
   // open the reads file for reading
+  // NB: may have no fns (streaming in)
   seq_type = tmap_reads_format_to_seq_type(driver->opt->reads_format); 
-  num_ends = (0 == driver->opt->fn_reads_num) ? 0 : driver->opt->fn_reads_num;
+  num_ends = (0 == driver->opt->fn_reads_num) ? 1 : driver->opt->fn_reads_num;
   seqio = tmap_malloc(sizeof(tmap_seq_io_t*)*num_ends, "seqio");
   for(i=0;i<num_ends;i++) {
-      seqio[i] = tmap_seq_io_init(driver->opt->fn_reads[i], seq_type, 0, driver->opt->input_compr);
+      seqio[i] = tmap_seq_io_init((0 == driver->opt->fn_reads_num) ? "-" : driver->opt->fn_reads[i], 
+                                  seq_type, 0, driver->opt->input_compr);
   }
 
   // get the index
