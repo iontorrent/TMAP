@@ -13,7 +13,7 @@
 typedef struct {
     char *fn_fasta;  /*!< the fasta file name (-f) */
     key_t shm_key;  /*!< the shared memory key (-k) */
-    uint64_t hash_width;  /*!< the new index hash width (-w) */
+    int32_t hash_width;  /*!< the new index hash width (-w) */
     int32_t enum_max_hits;  /*!< the maximum number of hits to enumerate (-e) */
     int32_t kmer_length;  /*!< the kmer length to simulate (-K) */ 
     int32_t kmer_num;  /*!< the number of kmers to simulate (-N) */
