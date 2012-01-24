@@ -118,7 +118,7 @@ usage(int32_t seq_len, int32_t tlen, int32_t n_iter,
   tmap_file_fprintf(tmap_file_stderr, "\n");
   tmap_file_fprintf(tmap_file_stderr, "Options (required):\n");
   tmap_file_fprintf(tmap_file_stderr, "         -q INT      the query length [%d]\n", seq_len);
-  tmap_file_fprintf(tmap_file_stderr, "         -t INT      the target length [%d]\n", tlen);
+  tmap_file_fprintf(tmap_file_stderr, "         -t INT      the target length [%d] (must be at least as long as the query)\n", tlen);
   tmap_file_fprintf(tmap_file_stderr, "         -n INT      the number of iterations [%d]\n", n_iter);
   tmap_file_fprintf(tmap_file_stderr, "         -N INT      the number of re-evaluations of the same query/target combination [%d]\n", n_sub_iter);
   tmap_file_fprintf(tmap_file_stderr, "         -S          use the non-vectorized Smith Waterman [%s]\n",
@@ -157,7 +157,7 @@ tmap_vswbm_main(int argc, char *argv[])
           return usage(seq_len, tlen, n_iter, n_sub_iter, use_sw);
       }
   }
-  if(argc != optind) {
+  if(argc != optind || seq_len > tlen) {
       return usage(seq_len, tlen, n_iter, n_sub_iter, use_sw);
   }
 
