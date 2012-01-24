@@ -8,7 +8,7 @@
 #include "../../sw/tmap_vsw.h"
 #include "tmap_map_opt.h"
 
-#define __gen_ap(par, opt) do { \
+#define __map_util_gen_ap(par, opt) do { \
     int32_t i; \
     for(i=0;i<25;i++) { \
         (par).matrix[i] = -(opt)->pen_mm; \
@@ -18,7 +18,8 @@
     } \
     (par).gap_open = (opt)->pen_gapo; (par).gap_ext = (opt)->pen_gape; \
     (par).gap_end = (opt)->pen_gape; \
-    (par).row = 5; (par).band_width = opt->bw; \
+    (par).row = 5; \
+    (par).band_width = (opt)->bw; \
 } while(0)
 
 #define __tmap_map_util_reverse_soft_clipping(_sc) \
