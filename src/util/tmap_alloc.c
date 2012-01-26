@@ -5,6 +5,7 @@
 
 #include "tmap_alloc.h"
 
+/*
 inline void *
 tmap_memalign1(size_t alignment, size_t size, const char *function_name, const char *variable_name)
 {
@@ -14,6 +15,7 @@ tmap_memalign1(size_t alignment, size_t size, const char *function_name, const c
   }
   return ptr;
 }
+*/
 
 inline void *
 tmap_malloc1(size_t size, const char *function_name, const char *variable_name)

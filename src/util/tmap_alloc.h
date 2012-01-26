@@ -15,8 +15,10 @@
   @param  _variable_name  the variable name to be assigned this memory in the calling function
   @return                 upon success, a pointer to the memory block allocated by the function; a null pointer otherwise.
   */
+/*
 #define tmap_memalign(_alignment, _size, _variable_name) \
   tmap_memalign1(_alignment, _size, __func__, _variable_name)
+  */
 
 /*! 
   wrapper function for malloc

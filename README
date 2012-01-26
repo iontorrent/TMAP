@@ -1,5 +1,9 @@
 TMAP - flow mapper
 
+=== General Notes  ===
+1.  Now on github
+  github.com/iontorrent/TMAP
+
 === Pre-requisites ===
 1. Compiler (required):
   The compiler and system must support SSE2 instructions.  

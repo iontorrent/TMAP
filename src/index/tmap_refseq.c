@@ -59,6 +59,11 @@ tmap_refseq_supported(tmap_refseq_t *refseq)
   if(2 != j) {
       tmap_error("did not find three version numbers", Exit, OutOfRange);
   }
+
+  fprintf(stderr, "comparing: %d\n", tmap_compare_versions(tmap_v, refseq_v));
+  if(tmap_compare_versions(tmap_v, refseq_v) < 0) {
+      return 0;
+  }
   
   // get the format ids
   if(0 == strcmp(tmap_refseq_get_version_format(refseq_v), tmap_refseq_get_version_format(tmap_v))) {
@@ -442,7 +447,7 @@ tmap_refseq_write(tmap_refseq_t *refseq, const char *fn_fasta)
 }
 
 static inline void 
-tmap_refseq_read_header(tmap_file_t *fp, tmap_refseq_t *refseq)
+tmap_refseq_read_header(tmap_file_t *fp, tmap_refseq_t *refseq, int32_t ignore_version)
 {
   size_t package_version_l;
   if(1 != tmap_file_fread(&refseq->version_id, sizeof(uint64_t), 1, fp) 
@@ -458,7 +463,7 @@ tmap_refseq_read_header(tmap_file_t *fp, tmap_refseq_t *refseq)
   if(refseq->package_version->l+1 != tmap_file_fread(refseq->package_version->s, sizeof(char), refseq->package_version->l+1, fp)) {
       tmap_error(NULL, Exit, ReadFileError);
   }
-  if(0 == tmap_refseq_supported(refseq)) {
+  if(0 == ignore_version && 0 == tmap_refseq_supported(refseq)) {
       fprintf(stderr, "reference version: %s\n", refseq->package_version->s);
       fprintf(stderr, "package version: %s\n", PACKAGE_VERSION);
       tmap_error("the reference index is not supported", Exit, ReadFileError);
@@ -508,11 +513,11 @@ tmap_refseq_read_annos(tmap_file_t *fp, tmap_anno_t *anno)
 }
 
 static inline void
-tmap_refseq_read_anno(tmap_file_t *fp, tmap_refseq_t *refseq)
+tmap_refseq_read_anno(tmap_file_t *fp, tmap_refseq_t *refseq, int32_t ignore_version)
 {
   int32_t i;
   // read annotation file
-  tmap_refseq_read_header(fp, refseq); // read the header
+  tmap_refseq_read_header(fp, refseq, ignore_version); // read the header
   refseq->annos = tmap_calloc(refseq->num_annos, sizeof(tmap_anno_t), "refseq->annos"); // allocate memory
   for(i=0;i<refseq->num_annos;i++) { // read the annotations
       tmap_refseq_read_annos(fp, &refseq->annos[i]);
@@ -533,7 +538,7 @@ tmap_refseq_read(const char *fn_fasta)
   // read annotation file
   fn_anno = tmap_get_file_name(fn_fasta, TMAP_ANNO_FILE);
   fp_anno = tmap_file_fopen(fn_anno, "rb", TMAP_ANNO_COMPRESSION);
-  tmap_refseq_read_anno(fp_anno, refseq); 
+  tmap_refseq_read_anno(fp_anno, refseq, 0); 
   tmap_file_fclose(fp_anno);
   free(fn_anno);
 
@@ -594,7 +599,7 @@ tmap_refseq_shm_read_num_bytes(const char *fn_fasta)
   // read the annotation file
   fn_anno = tmap_get_file_name(fn_fasta, TMAP_ANNO_FILE);
   fp_anno = tmap_file_fopen(fn_anno, "rb", TMAP_ANNO_COMPRESSION);
-  tmap_refseq_read_anno(fp_anno, refseq);
+  tmap_refseq_read_anno(fp_anno, refseq, 1);
   tmap_file_fclose(fp_anno);
   free(fn_anno);
 
@@ -973,7 +978,7 @@ tmap_refseq_refinfo_main(int argc, char *argv[])
   // read the annotation file
   fn_anno = tmap_get_file_name(fn_fasta, TMAP_ANNO_FILE);
   fp_anno = tmap_file_fopen(fn_anno, "rb", TMAP_ANNO_COMPRESSION);
-  tmap_refseq_read_anno(fp_anno, refseq);
+  tmap_refseq_read_anno(fp_anno, refseq, 1);
   tmap_file_fclose(fp_anno);
   free(fn_anno);
 
