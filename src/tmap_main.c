@@ -106,11 +106,8 @@ int main(int argc, char *argv[])
       else if (0 == strcmp("exact", argv[1])) ret = tmap_debug_exact(argc-1, argv+1);
       else if (0 == strcmp("fsw", argv[1])) ret = tmap_fsw_main(argc-1, argv+1);
       else if (0 == strcmp("indexspeed", argv[1])) ret = tmap_index_speed(argc-1, argv+1);
-<<<<<<< HEAD
       else if (0 == strcmp("bwtcheck", argv[1])) ret = tmap_bwt_check(argc-1, argv+1);
-=======
       else if (0 == strcmp("vswbm", argv[1])) ret = tmap_vswbm_main(argc-1, argv+1);
->>>>>>> master
 #endif
       else if (0 == strcmp("--version", argv[1]) || 0 == strcmp("-v", argv[1])) ret = version();
       else if (0 == strcmp("--help", argv[1]) || 0 == strcmp("-h", argv[1])) ret = usage();
