@@ -19,7 +19,7 @@ typedef struct {
 } tmap_bwt_match_occ_t;
 
 /*! 
-  analagous function to tmap_bwt_occ but using a hash
+  analagous function to tmap_bwt_occ
   @param  bwt      pointer to the bwt structure 
   @param  prev     pointer to the previous match structure
   @param  c        base in two-bit integer format
@@ -30,7 +30,7 @@ inline void
 tmap_bwt_match_occ(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8_t c, tmap_bwt_match_occ_t *next);
 
 /*! 
-  analagous function to tmap_bwt_2occ but using a hash
+  analagous function to tmap_bwt_2occ
   @param  bwt      pointer to the bwt structure 
   @param  prev     pointer to the previous match structure
   @param  c        base in two-bit integer format
@@ -41,7 +41,7 @@ inline void
 tmap_bwt_match_2occ(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, uint8_t c, tmap_bwt_match_occ_t *next);
 
 /*! 
-  analagous function to tmap_bwt_occ4 but using a hash
+  analagous function to tmap_bwt_occ4
   @param  bwt      pointer to the bwt structure 
   @param  prev     pointer to the previous match structure
   @param  next     pointer to the next match structure
@@ -50,7 +50,7 @@ inline void
 tmap_bwt_match_occ4(const tmap_bwt_t *bwt, tmap_bwt_match_occ_t *prev, tmap_bwt_match_occ_t next[4]);
 
 /*! 
-  analagous function to tmap_bwt_2occ4 but using a hash
+  analagous function to tmap_bwt_2occ4
   @param  bwt      pointer to the bwt structure 
   @param  prev     pointer to the previous match structure
   @param  next     pointer to the next match structure

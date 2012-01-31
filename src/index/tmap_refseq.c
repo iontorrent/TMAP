@@ -60,7 +60,6 @@ tmap_refseq_supported(tmap_refseq_t *refseq)
       tmap_error("did not find three version numbers", Exit, OutOfRange);
   }
 
-  fprintf(stderr, "comparing: %d\n", tmap_compare_versions(tmap_v, refseq_v));
   if(tmap_compare_versions(tmap_v, refseq_v) < 0) {
       return 0;
   }
