@@ -92,8 +92,8 @@ def main(options):
             print "read", read,"not in sam2"
         else:
             if 0 < options.min_mapq:
-                mapq1 = getattr( sam1.records[ read ], 'mapq' )
-                mapq2 = getattr( sam2.records[ read ], 'mapq' )
+                mapq1 = int(getattr( sam1.records[ read ], 'mapq' ))
+                mapq2 = int(getattr( sam2.records[ read ], 'mapq' ))
                 if mapq1 < options.min_mapq and mapq2 < options.min_mapq:
                     continue
             diff_str = "[%s]" % (read)
@@ -133,6 +133,6 @@ if __name__ == '__main__':
                       "use their 2 letter abbreviation.  Default:  pos" % (str(fields)),
                       dest='fields', default=['pos'])
     parser.add_option('--full-qname', help="keep the full query name", dest='full_qname', action="store_true", default=False)
-    parser.add_option('--min-mapq', help="examine only those records with a given minimum mapping quality", dest="min_mapq", default=0)
+    parser.add_option('--min-mapq', help="examine only those records with a given minimum mapping quality", type="int", dest="min_mapq", default=0)
     options, args = parser.parse_args()
     main(options)
