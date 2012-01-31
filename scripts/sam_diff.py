@@ -41,12 +41,12 @@ class Record(object):
 
 class Sam(object):
 
-    def __init__(self, sam):
+    def __init__(self, sam, full_qname ):
         self.records = {}
         self.sam = sam
-        self._parse_file()
+        self._parse_file( full_qname )
 
-    def _parse_file(self):
+    def _parse_file(self, full_qname ):
         fp = open( self.sam, "r" )
         fp = fp.readlines()
         widgets = [
@@ -62,20 +62,23 @@ class Sam(object):
             line = line.rstrip()
             tokens = line.split('\t')
             rec = Record(tokens)
-            self.records[ self._hash_name( rec.qname ) ] = rec
+            self.records[ self._hash_name( rec.qname, full_qname ) ] = rec
             pbar.update(i+1)
         pbar.finish()
 
-    def _hash_name( self, name ):
-        return ':'.join(name.split(':')[1:])
+    def _hash_name( self, name, full_qname ):
+        if full_qname:
+            return name
+        else:
+            return ':'.join(name.split(':')[1:])
 
 def diff_field(field1, field2):
     """returns true if field1 == field2"""
     return field1 == field2
 
 def main(options):
-    sam1 = Sam(options.sam1)
-    sam2 = Sam(options.sam2)
+    sam1 = Sam(options.sam1, options.full_qname)
+    sam2 = Sam(options.sam2, options.full_qname)
     fields = options.fields.split(',')
     widgets = [
                 "diffing: ", 
@@ -124,5 +127,6 @@ if __name__ == '__main__':
                       "sam records use names from the same spec. for optional tags"
                       "use their 2 letter abbreviation.  Default:  pos" % (str(fields)),
                       dest='fields', default=['pos'])
+    parser.add_option('--full-qname', help="keep the full query name", dest='full_qname', action="store_true", default=False)
     options, args = parser.parse_args()
     main(options)
