@@ -297,17 +297,6 @@ tmap_map1_aux_stack_shadow(tmap_bwt_int_t x, tmap_bwt_int_t max,
   }
 }
 
-static inline int32_t int_log2(uint32_t v)
-{
-  int32_t c = 0;
-  if(v & 0xffff0000u) { v >>= 16; c |= 16; }
-  if(v & 0xff00) { v >>= 8; c |= 8; }
-  if(v & 0xf0) { v >>= 4; c |= 4; }
-  if(v & 0xc) { v >>= 2; c |= 2; }
-  if(v & 0x2) c |= 1;
-  return c;
-}
-
 static inline int
 tmap_map1_aux_get_bam_state(int state)
 {
@@ -368,7 +357,8 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases, int32_t seed2
 
       // go through SA interval
       for(k=sams->sams[i].seqid;k<=sams->sams[i].pos;k++) { // k -> l
-          uint32_t pos = 0, seqid = 0, pacpos = 0;
+          uint32_t pos = 0, seqid = 0;
+          tmap_bwt_int_t pacpos = 0;
           uint8_t strand;
 
           sam_cur = &sams_tmp->sams[j];
