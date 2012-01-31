@@ -64,13 +64,16 @@ tmap_map2_aux_sa_pac_pos(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_bwt_ma
       // copy over
       for(i = j = 0; i < tmp_b->n; ++i) {
           tmap_map2_hit_t *p = tmp_b->hits + i;
-          if(0 != p->k && 0 != p->l && 0 != p->qlen && p->l - p->k + 1 <= IS && TMAP_MAP2_MINUS_INF < p->G) {
+          if(0 == p->k && 0 == p->l && 0 == p->qlen) continue;
+          if(p->l - p->k + 1 <= IS && TMAP_MAP2_MINUS_INF < p->G) {
               tmap_bwt_int_t k;
               for(k = p->k; k <= p->l; ++k) {
                   b->hits[j] = *p;
                   b->hits[j].k = tmap_sa_pac_pos_hash(sa, bwt, k, hash);
                   b->hits[j].l = 0;
                   b->hits[j].is_rev = is_rev;
+                  // TODO: does this hurt/help?
+                  //b->hits[j].n_seeds = 1;
                   if (is_rev) b->hits[j].k -= p->qlen - 1;
                   ++j;
               }
@@ -80,6 +83,8 @@ tmap_map2_aux_sa_pac_pos(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_bwt_ma
               b->hits[j].l = 0;
               b->hits[j].is_rev = is_rev;
               b->hits[j].flag |= 0x1;
+              // TODO: does this hurt/help?
+              //b->hits[j].n_seeds = p->l - p->k + 1;
               if (is_rev) b->hits[j].k -= p->qlen - 1;
               ++j;
           }
@@ -379,17 +384,18 @@ tmap_map2_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
       tmap_map_sam_t *sam = &sams->sams[j];
 
       //strand = (p->flag & 0x10) ? 1 : 0;
-      //
 
       // skip over duplicate hits, or sub-optimal hits to the same location
       if(0 < i) {
           tmap_map2_hit_t *q = aln->hits + i - 1;
           if(q->flag == p->flag && q->k == p->k && q->G <= p->G && q->tlen <= p->tlen) continue;
       }
+      /*
       if(i < aln->n) {
           tmap_map2_hit_t *q = aln->hits + i + 1;
           if(p->flag == q->flag && p->k == q->k && p->G <= q->G && p->tlen <= q->tlen) continue;
       }
+      */
 
       // adjust for contig boundaries
       if(tmap_refseq_pac2real(refseq, p->k, p->tlen, &seqid, &pos, &strand) <= 0) {
