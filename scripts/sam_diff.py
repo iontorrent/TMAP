@@ -92,8 +92,8 @@ def main(options):
             print "read", read,"not in sam2"
         else:
             if 0 < options.min_mapq:
-                mapq1 = geattr( sam1.records[ read ], 'mapq' )
-                mapq2 = geattr( sam2.records[ read ], 'mapq' )
+                mapq1 = getattr( sam1.records[ read ], 'mapq' )
+                mapq2 = getattr( sam2.records[ read ], 'mapq' )
                 if mapq1 < options.min_mapq and mapq2 < options.min_mapq:
                     continue
             diff_str = "[%s]" % (read)
