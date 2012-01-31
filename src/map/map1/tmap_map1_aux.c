@@ -31,6 +31,11 @@
   }
 
 
+// Dummy tuple
+typedef struct {
+    tmap_bwt_int_t k, l;
+} tmap_map1_aux_occ_t;
+
 /*
 static int 
 tmap_map1_aux_stack_cmp(void *a, void *b)
@@ -297,36 +302,9 @@ tmap_map1_aux_stack_shadow(tmap_bwt_int_t x, tmap_bwt_int_t max,
   }
 }
 
-static inline int
-tmap_map1_aux_get_bam_state(int state)
-{
-  switch(state) {
-    case STATE_M:
-      return BAM_CMATCH;
-    case STATE_I:
-      return BAM_CINS;
-    case STATE_D:
-      return BAM_CDEL;
-    default:
-      // in theory this should not occur
-      return BAM_CMATCH;
-  }
-}
-
-#define __add_to_cigar() do { \
-    if(0 < op_len) { \
-        if(sam->n_cigar <= cigar_i) { \
-            sam->n_cigar++; \
-            sam->cigar = tmap_realloc(sam->cigar, sizeof(uint32_t)*sam->n_cigar, "sam->cigar"); \
-        } \
-        TMAP_SW_CIGAR_STORE(sam->cigar[cigar_i], tmap_map1_aux_get_bam_state(op), op_len); \
-        cigar_i++; \
-    } \
-} while(0)
-
 // TODO
 static tmap_map_sams_t *
-tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases, int32_t seed2_len,
+tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_map1_aux_occ_t *occs, tmap_string_t *bases, int32_t seed2_len,
                        tmap_refseq_t *refseq, tmap_bwt_t *bwt, tmap_sa_t *sa, tmap_bwt_match_hash_t *hash, tmap_map_opt_t *opt) 
 {
   tmap_map_sams_t *sams_tmp = NULL;
@@ -336,7 +314,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases, int32_t seed2
 
   // max # of entries
   for(i=n=0;i<sams->n;i++) {
-      n += sams->sams[i].pos - sams->sams[i].seqid + 1; // l - k + 1
+      n += occs[i].l - occs[i].k + 1;
   }
   num_all_sa = n;
 
@@ -356,7 +334,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases, int32_t seed2
       sam = &sams->sams[i];
 
       // go through SA interval
-      for(k=sams->sams[i].seqid;k<=sams->sams[i].pos;k++) { // k -> l
+      for(k=occs[i].k;k<=occs[i].l;k++) {
           uint32_t pos = 0, seqid = 0;
           tmap_bwt_int_t pacpos = 0;
           uint8_t strand;
@@ -436,6 +414,10 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_string_t *bases, int32_t seed2
 
   // realloc
   tmap_map_sams_realloc(sams_tmp, j);
+
+  //NB: do not use occs later
+  free(occs);
+  occs = NULL;
   
   return sams_tmp;
 }
@@ -459,6 +441,7 @@ tmap_map1_aux_core(tmap_seq_t *seq, tmap_index_t *index,
   tmap_refseq_t *refseq = index->refseq;
   tmap_bwt_t *bwt = index->bwt;
   tmap_sa_t *sa = index->sa;
+  tmap_map1_aux_occ_t *occs = NULL;
 
 
   max_edit_score = opt->pen_mm;
@@ -501,6 +484,7 @@ tmap_map1_aux_core(tmap_seq_t *seq, tmap_index_t *index,
 
   // initialize
   sams = tmap_map_sams_init(NULL);
+  occs = NULL;
 
   match_sa_start.offset = 0;
   match_sa_start.hi = 0;
@@ -576,32 +560,32 @@ tmap_map1_aux_core(tmap_seq_t *seq, tmap_index_t *index,
           if(0 < sams->n) {
               for(i=0;i<sams->n;i++) {
                   // check contained
-                  if(match_sa_cur.k <= sams->sams[i].seqid
-                     && sams->sams[i].seqid <= match_sa_cur.l) { // MK <= SK <= ML
-                      if(sams->sams[i].pos <= match_sa_cur.l) { // MK <= SK <= SL <= ML
+                  if(match_sa_cur.k <= occs[i].k
+                     && occs[i].k <= match_sa_cur.l) { // MK <= SK <= ML
+                      if(occs[i].l <= match_sa_cur.l) { // MK <= SK <= SL <= ML
                           // Want (SK - MK) + (ML - SL)
-                          k = sams->sams[i].seqid - match_sa_cur.k; // (SK - MK)
-                          k += match_sa_cur.l - sams->sams[i].pos; // (ML - SL)
-                          sams->sams[i].pos = match_sa_cur.l; // Make SL = ML
+                          k = occs[i].k - match_sa_cur.k; // (SK - MK)
+                          k += match_sa_cur.l - occs[i].l; // (ML - SL)
+                          occs[i].l = match_sa_cur.l; // Make SL = ML
                       }
                       else { // MK <= SK <= ML <= SL
-                          k = sams->sams[i].seqid - match_sa_cur.k; // (SK - MK)
+                          k = occs[i].k - match_sa_cur.k; // (SK - MK)
                       }
-                      sams->sams[i].seqid = match_sa_cur.k; // Make SK = MK
+                      occs[i].k = match_sa_cur.k; // Make SK = MK
                       break;
                   }
-                  else if(match_sa_cur.k <= sams->sams[i].pos
-                          && sams->sams[i].pos <= match_sa_cur.l) { // MK <= SL <= ML
-                      if(match_sa_cur.k <= sams->sams[i].seqid) { // MK <= SK <= SL <= ML
+                  else if(match_sa_cur.k <= occs[i].l
+                          && occs[i].l <= match_sa_cur.l) { // MK <= SL <= ML
+                      if(match_sa_cur.k <= occs[i].k) { // MK <= SK <= SL <= ML
                           // Want (SK - MK) + (ML - SL)
-                          k = sams->sams[i].seqid - match_sa_cur.k; // (SK - MK)
-                          k += match_sa_cur.l - sams->sams[i].pos; // (ML - SL)
-                          sams->sams[i].seqid = match_sa_cur.k; // Make SK = MK
+                          k = occs[i].k - match_sa_cur.k; // (SK - MK)
+                          k += match_sa_cur.l - occs[i].l; // (ML - SL)
+                          occs[i].k = match_sa_cur.k; // Make SK = MK
                       }
                       else { // SK <= MK <= SL <= ML
-                          k = match_sa_cur.l - sams->sams[i].pos; // (ML - SL)
+                          k = match_sa_cur.l - occs[i].l; // (ML - SL)
                       }
-                      sams->sams[i].pos = match_sa_cur.l; // Make SL = ML
+                      occs[i].l = match_sa_cur.l; // Make SL = ML
                       break;
                   }
               }
@@ -645,16 +629,18 @@ tmap_map1_aux_core(tmap_seq_t *seq, tmap_index_t *index,
               tmap_map1_aux_stack_entry_t *cur = NULL;
   
               tmap_map_sams_realloc(sams, sams->n+1);
+              occs = tmap_realloc(occs, sizeof(tmap_map1_aux_occ_t) * sams->n, "occs");
+
               sam = &sams->sams[sams->n-1];
 
               sam->algo_id = TMAP_MAP_ALGO_MAP1;
               sam->algo_stage = 0;
               sam->score = e->score;
-              k = sam->seqid = match_sa_cur.k;
-              l = sam->pos = match_sa_cur.l;
 
               // aux data
               tmap_map_sam_malloc_aux(sam);
+              k = occs[sams->n-1].k = match_sa_cur.k;
+              l = occs[sams->n-1].l= match_sa_cur.l;
               sam->aux.map1_aux->n_mm = e->n_mm;
               sam->aux.map1_aux->n_gapo = e->n_gapo;
               sam->aux.map1_aux->n_gape = e->n_gape;
@@ -703,7 +689,7 @@ tmap_map1_aux_core(tmap_seq_t *seq, tmap_index_t *index,
               tmap_map1_aux_stack_shadow(l - k + 1, seed2_len, width_cur_i, width_cur);
               if(opt->max_best_cals < best_cnt) {
                   // ignore if too many "best" have been found
-                  sam->pos -= (best_cnt - opt->max_best_cals); // only save the maximum
+                  occs[sams->n-1].l -= (best_cnt - opt->max_best_cals); // only save the maximum
                   break;
               }
           }
@@ -803,5 +789,5 @@ tmap_map1_aux_core(tmap_seq_t *seq, tmap_index_t *index,
       }
   }
 
-  return tmap_map1_sam_to_real(sams, bases, seed2_len, refseq, bwt, sa, hash, opt);
+  return tmap_map1_sam_to_real(sams, occs, bases, seed2_len, refseq, bwt, sa, hash, opt);
 }
