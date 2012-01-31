@@ -17,8 +17,8 @@ static inline void
 tmap_map3_aux_seed_add(tmap_map3_aux_seed_t **seeds,
                        int32_t *n_seeds,
                        int32_t *m_seeds,
-                       int32_t k,
-                       int32_t l,
+                       tmap_bwt_int_t k,
+                       tmap_bwt_int_t l,
                        int32_t start, 
                        int16_t seed_length)
 {
