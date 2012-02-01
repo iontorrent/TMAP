@@ -73,7 +73,7 @@ tmap_map2_aux_sa_pac_pos(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_bwt_ma
                   b->hits[j].l = 0;
                   b->hits[j].is_rev = is_rev;
                   // TODO: does this hurt/help?
-                  //b->hits[j].n_seeds = 1;
+                  b->hits[j].n_seeds = 1;
                   if (is_rev) b->hits[j].k -= p->qlen - 1;
                   ++j;
               }
@@ -84,7 +84,7 @@ tmap_map2_aux_sa_pac_pos(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_bwt_ma
               b->hits[j].is_rev = is_rev;
               b->hits[j].flag |= 0x1;
               // TODO: does this hurt/help?
-              //b->hits[j].n_seeds = p->l - p->k + 1;
+              b->hits[j].n_seeds = p->l - p->k + 1;
               if (is_rev) b->hits[j].k -= p->qlen - 1;
               ++j;
           }
