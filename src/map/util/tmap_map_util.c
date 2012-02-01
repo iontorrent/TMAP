@@ -1126,8 +1126,6 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           best_subo_score = sams->sams[end].score_subo;
       }
 
-      //debugging prints
-      
       // check if the hits can be banded
       if(end + 1 < sams->n) {              
          // printf("%s seed start: %d end: %d next start: %d  next end: %d\n", seq_name, sams->sams[end].pos, (sams->sams[end].pos + sams->sams[end].target_len), sams->sams[end+1].pos, (sams->sams[end+1].pos + sams->sams[end+1].target_len));
