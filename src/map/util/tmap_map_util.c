@@ -951,8 +951,17 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
       tmap_error("bug encountered", Exit, OutOfRange);
   }
 
-  if(opt->score_thr <= tmp_sam.score) {
+  if(opt->score_thr <= tmp_sam.score) { // NB: we could also specify 'prev_score <= tmp_sam.score'
       int32_t add_current = 1;
+
+      // Save local variables
+      // TODO: do we need to save this data in this fashion?
+      int32_t t_end = end;
+      int32_t t_start = start;
+      int32_t t_n = n;
+      int32_t t_end_pos = end_pos;
+      int32_t t_start_pos = start_pos;
+      
       if(0 == opt->no_unroll_banding && 0 <= max_seed_band 
          && 1 < end - start + 1 && 1 < n_best) { // unroll banding
           //fprintf(stderr, "max_seed_band=%d start=%d end=%d\n", max_seed_band, start, end);
@@ -1000,11 +1009,20 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
           }
       }
 
+      // Reset local variables
+      // TODO: do we need to reset this data in this fashion?
+      end = t_end;
+      start = t_start;
+      n = t_n;
+      end_pos = t_end_pos;
+      start_pos = t_start_pos;
+
       if(1 == add_current) {
           tmap_map_sam_t *s = NULL;
           
           if(sams_tmp->n <= (*idx)) {
-              tmap_error("bug encountered", Exit, OutOfRange);
+              tmap_map_sams_realloc(sams_tmp, (*idx)+1);
+              //tmap_error("bug encountered", Exit, OutOfRange);
           }
 
           s = &sams_tmp->sams[(*idx)];
