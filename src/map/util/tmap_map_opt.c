@@ -933,10 +933,10 @@ tmap_map_opt_init(int32_t algo_id)
       // map3
       opt->seed_length = -1;
       opt->seed_length_set = 0;
-      opt->max_seed_hits = 12;
+      opt->max_seed_hits = 20;
       opt->hp_diff = 0;
-      opt->hit_frac = 0.25;
-      opt->seed_step = 16;
+      opt->hit_frac = 0.20;
+      opt->seed_step = 8;
       opt->fwd_search = 0;
       opt->skip_seed_frac = 0.2;
       break;
