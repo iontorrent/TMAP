@@ -164,7 +164,8 @@ tmap_map3_aux_core_seed(uint8_t *query,
                         int32_t *n_seeds,
                         int32_t *m_seeds,
                         int32_t seed_length,
-                        int32_t seed_step)
+                        int32_t seed_step,
+                        int32_t fwd_search)
 {
   int32_t i, j, flow_i;
 
@@ -199,7 +200,7 @@ tmap_map3_aux_core_seed(uint8_t *query,
       int k, count;
       tmap_bwt_match_occ_t cur_sa, prev_sa;
       j = count = 0;
-      if(1 == opt->fwd_search) {
+      if(1 == fwd_search) {
           for(i=0;i<query_length-seed_length+1;i++) {
               if(0 < tmap_bwt_match_hash_exact(bwt, seed_length, query + i, &cur_sa, hash)) {
                   count++;
@@ -236,6 +237,7 @@ tmap_map3_aux_core_seed(uint8_t *query,
                           while(k + seed_step < query_length && 0 < tmap_bwt_match_hash_exact(bwt, seed_step, query + k, &cur_sa, hash)) {
                               if((cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
                                   tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, seed_length + k - i);
+                                  j++;
                                   // skip over 
                                   if(0 < opt->skip_seed_frac) {
                                       i += opt->skip_seed_frac * (seed_length + k - i - 1); // - 1 since i will be incremented
@@ -269,6 +271,7 @@ tmap_map3_aux_core_seed(uint8_t *query,
                           while(k + seed_step < query_length && 0 < tmap_bwt_match_hash_exact_alt(bwt, seed_step, query + k, &cur_sa, hash)) {
                               if((cur_sa.l - cur_sa.k + 1) <= opt->max_seed_hits) {
                                   tmap_map3_aux_seed_add(seeds, n_seeds, m_seeds, cur_sa.k, cur_sa.l, i, seed_length + k - i);
+                                  j++;
                                   if(0 < opt->skip_seed_frac) {
                                       i -= opt->skip_seed_frac * (seed_length + k - i - 1); // -1 since i will be incremented
                                   }
@@ -288,9 +291,10 @@ tmap_map3_aux_core_seed(uint8_t *query,
           }
       }
       // remove seeds if there were too many repetitive hits
-      // NB: does not count seed steps
+      // NB: does count seed steps
       if(j / (double)count < opt->hit_frac) {
-          (*n_seeds) -= j;
+          (*n_seeds) = 0;
+          //(*n_seeds) -= j;
       }
   }
 }
@@ -373,7 +377,12 @@ tmap_map3_aux_core(tmap_seq_t *seq,
   // seed the alignment
   tmap_map3_aux_core_seed(query, seq_len, flow,
                           refseq, bwt, sa, hash, opt, &seeds, &n_seeds, &m_seeds,
-                          seed_length, opt->seed_step);
+                          seed_length, opt->seed_step, opt->fwd_search);
+  if(0 == n_seeds) { // try the seeding in the opposite direction
+      tmap_map3_aux_core_seed(query, seq_len, flow,
+                              refseq, bwt, sa, hash, opt, &seeds, &n_seeds, &m_seeds,
+                              seed_length, opt->seed_step, 1-opt->fwd_search);
+  }
 
   // for SAM storage
   n = 0;
@@ -387,31 +396,24 @@ tmap_map3_aux_core(tmap_seq_t *seq,
   // convert seeds to chr/pos
   n = 0;
   for(j=0;j<n_seeds;j++) { // go through all seeds
-      uint32_t seqid, pos;
+      uint32_t seqid, pos, pos_adj;
       tmap_bwt_int_t k, pacpos;
-      uint8_t seed_length_ext = seeds[j].seed_length;
+      uint16_t seed_length_ext = seeds[j].seed_length;
+      uint16_t start = seeds[j].seed_length;
       uint8_t strand;
       for(k=seeds[j].k;k<=seeds[j].l;k++) { // through all occurrences
           tmap_map_sam_t *s = NULL;
           pacpos = bwt->seq_len - tmap_sa_pac_pos_hash(sa, bwt, k, hash);
-          // adjust based on the the number of bases seeded
-          if(pacpos <= seed_length_ext-1) { // before the beginning of the reference sequence
-              pacpos = 1;
-          }
-          else {
-              pacpos -= (seed_length_ext-1);
-          }
           if(0 < tmap_refseq_pac2real(refseq, pacpos, 1, &seqid, &pos, &strand)) {
-              // we need to check if we crossed contig boundaries
-              if(pos < seed_length_ext) {
-                  if(0 < seqid && seed_length / 2.0 < pos) {
-                      seqid--;
-                  }
-                  pos = 0;
-              }
-              else {
-                  pos -= seed_length_ext;
-              }
+              // adjust based on offset
+              pos_adj = start + seed_length_ext - 1; // NB: we only used the forward read, so adjustment is based off of this...
+              /*
+              fprintf(stderr, "seqid=%u pos=%u pos_adj=%u start=%u seed_length_ext=%u strand=%u n=%llu\n",
+                      seqid, pos, pos_adj, start, seed_length_ext, strand, seeds[j].l - seeds[j].k + 1);
+                      */
+              // contig boundary
+              if(pos <= pos_adj) pos = 0; 
+              else pos -= pos_adj;
 
               // save
               s = &sams->sams[n];
