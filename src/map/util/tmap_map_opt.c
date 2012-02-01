@@ -924,7 +924,7 @@ tmap_map_opt_init(int32_t algo_id)
       // map2
       //opt->mask_level = 0.50; 
       opt->length_coef = 5.5f;
-      opt->max_seed_intv = 3; 
+      opt->max_seed_intv = 6; 
       opt->z_best = 1; 
       opt->seeds_rev = 5;
       opt->narrow_rmdup = 0;
