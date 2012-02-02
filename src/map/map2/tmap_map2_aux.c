@@ -36,7 +36,7 @@ TMAP_SORT_INIT(hitG, tmap_map2_hit_t, __hitG_lt)
 #define TMAP_MAP2_AUX_IS 0
 
 void
-tmap_map2_aux_sa_pac_pos(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_bwt_match_hash_t *hash, tmap_map2_aln_t *b, int32_t IS, int32_t min_as)
+tmap_map2_aux_sa_pac_pos(const tmap_refseq_t *refseq, const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_bwt_match_hash_t *hash, tmap_map2_aln_t *b, int32_t IS, int32_t min_as)
 {
   int32_t i, j, n;
   //uint32_t seqid, pos;
@@ -71,6 +71,7 @@ tmap_map2_aux_sa_pac_pos(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_bwt_ma
                   b->hits[j] = *p;
                   b->hits[j].k = tmap_sa_pac_pos_hash(sa, bwt, k, hash);
                   b->hits[j].l = 0;
+                  is_rev = (refseq->len < b->hits[j].k) ? 1 : 0;
                   b->hits[j].is_rev = is_rev;
                   // TODO: does this hurt/help?
                   b->hits[j].n_seeds = 1;
@@ -81,6 +82,7 @@ tmap_map2_aux_sa_pac_pos(const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_bwt_ma
               b->hits[j] = *p;
               b->hits[j].k = tmap_sa_pac_pos_hash(sa, bwt, p->k, hash);
               b->hits[j].l = 0;
+              is_rev = (refseq->len < b->hits[j].k) ? 1 : 0;
               b->hits[j].is_rev = is_rev;
               b->hits[j].flag |= 0x1;
               // TODO: does this hurt/help?
@@ -101,7 +103,7 @@ tmap_map2_aux_resolve_duphits(const tmap_refseq_t *refseq, const tmap_bwt_t *bwt
   if(b->n == 0) return 0;
 
   // convert to SA positions
-  tmap_map2_aux_sa_pac_pos(bwt, sa, hash, b, IS, min_as);
+  tmap_map2_aux_sa_pac_pos(refseq, bwt, sa, hash, b, IS, min_as);
   // sort
   tmap_sort_introsort(hitG, b->n, b->hits);
   // resolve dups
@@ -313,7 +315,7 @@ tmap_map2_aux_aln(tmap_map_opt_t *opt,
       tmap_map2_aux_resolve_duphits(target_refseq, target_bwt, target_sa, target_hash, bb[k][0], opt->max_seed_intv, 0);
       // bb[*][1] are "narrow SA hits"
       if(0 == opt->narrow_rmdup) {
-          tmap_map2_aux_sa_pac_pos(target_bwt, target_sa, target_hash, bb[k][1], INT32_MAX, INT32_MIN);
+          tmap_map2_aux_sa_pac_pos(target_refseq, target_bwt, target_sa, target_hash, bb[k][1], INT32_MAX, INT32_MIN);
       }
       else {
           tmap_map2_aux_resolve_duphits(target_refseq, target_bwt, target_sa, target_hash, bb[k][1], opt->max_seed_intv, 0);

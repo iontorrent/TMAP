@@ -977,8 +977,8 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
       
       if(0 == opt->no_unroll_banding && 0 <= max_seed_band 
          && 1 < end - start + 1 && 1 < n_best) { // unroll banding
-          uint32_t start_pos_prev, end_pos_prev;
-          uint32_t start_pos_cur, end_pos_cur;
+          uint32_t start_pos_prev=0, end_pos_prev=0;
+          uint32_t start_pos_cur=0, end_pos_cur=0;
           uint32_t unrolled = 0;
 
           while(0 == unrolled) {
@@ -1136,8 +1136,8 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   tmap_vsw_opt_t *vsw_opt = NULL;
   uint32_t start_pos, end_pos;
   int32_t softclip_start, softclip_end;
-  uint32_t start_pos_prev, end_pos_prev;
-  uint32_t start_pos_cur, end_pos_cur;
+  uint32_t start_pos_prev=0, end_pos_prev=0;
+  uint32_t start_pos_cur=0, end_pos_cur=0;
 
   if(0 == sams->n) {
       return sams;
