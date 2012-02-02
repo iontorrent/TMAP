@@ -848,13 +848,26 @@ static int32_t matrix_iupac_mask[89] = {
     (par).band_width = (opt)->bw; \
 } while(0)
 
+static inline void
+tmap_map_util_sw_get_start_and_end_pos(tmap_map_sam_t *sam, int32_t seq_len, uint8_t strand, 
+                                       uint32_t *start_pos, uint32_t *end_pos)
+{
+  if(strand == 0) {
+      (*start_pos) = sam->pos + 1;
+      (*end_pos) = sam->pos + sam->target_len;
+  } else {
+      (*start_pos) = sam->pos + 1;
+      (*end_pos) = sam->pos + seq_len;
+  }
+}
+
 // NB: this function unrolls banding in some cases
 static int32_t
 tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams, 
                         tmap_seq_t **seqs, tmap_map_sams_t *sams_tmp,
                         int32_t *idx, int32_t start, int32_t end,
                         uint8_t strand, tmap_vsw_query_t *vsw_query[2], 
-                        int32_t seq_len, int32_t start_pos, int32_t end_pos,
+                        int32_t seq_len, uint32_t start_pos, uint32_t end_pos,
                         int32_t *target_mem, uint8_t **target,
                         int32_t softclip_start, int32_t softclip_end,
                         int32_t max_seed_band, // NB: this may be modified as banding is unrolled
@@ -946,7 +959,7 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
                                     &tmp_sam.target_start, &tmp_sam.target_end,
                                     &overflow, &n_best, opt->score_thr, 0);
   }
-  //fprintf(stderr, "start_pos=%u end_pos=%u score=%d prev_score=%d n_best=%d\n", start_pos, end_pos, tmp_sam.score, prev_score, n_best); 
+  //fprintf(stderr, "start_pos=%u end_pos=%u score=%d prev_score=%d n_best=%d start=%d end=%d idx=%d sams->n=%d\n", start_pos, end_pos, tmp_sam.score, prev_score, n_best, start, end, *idx, sams->n); 
   if(1 == overflow) {
       tmap_error("bug encountered", Exit, OutOfRange);
   }
@@ -960,52 +973,79 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
       int32_t t_start = start;
       int32_t t_n = n;
       int32_t t_end_pos = end_pos;
-      int32_t t_start_pos = start_pos;
+      uint32_t t_start_pos = start_pos;
       
       if(0 == opt->no_unroll_banding && 0 <= max_seed_band 
          && 1 < end - start + 1 && 1 < n_best) { // unroll banding
-          //fprintf(stderr, "max_seed_band=%d start=%d end=%d\n", max_seed_band, start, end);
-          // NB: band based on EXACT start position
-          n = end + 1;
-          end = start;
-          while(start < n) {
-              int32_t cur_score;
-              // reset start and end position
-              if(start == end) {
-                  if(strand == 0) {
-                      start_pos = sams->sams[start].pos + 1; 
-                      end_pos = sams->sams[start].pos + sams->sams[start].target_len; 
-                  } else {
-                      start_pos = sams->sams[start].pos + 1;
-                      end_pos = sams->sams[start].pos + seq_len;
-                  }
-              }
-              if(end + 1 < n) {
-                  if(sams->sams[end].strand == sams->sams[end+1].strand 
-                     && sams->sams[end].seqid == sams->sams[end+1].seqid) {
-                      // consider start positions only
-                      // TODO: should we consider within the seed band?
-                      if(sams->sams[end+1].pos - sams->sams[end].pos <= max_seed_band) {
-                          end++;
-                          continue;
-                      }
-                      else {
-                          // do nothing
-                      }
-                  }
-              }
+          uint32_t start_pos_prev, end_pos_prev;
+          uint32_t start_pos_cur, end_pos_cur;
+          uint32_t unrolled = 0;
 
-              cur_score = tmap_map_util_sw_gen_score_helper(refseq, sams, seqs, sams_tmp, idx, start, end,
-                                                            strand, vsw_query, seq_len, start_pos, end_pos,
-                                                            target_mem, target,
-                                                            softclip_start, softclip_end,
-                                                            (max_seed_band <= 0) ? -1 : (max_seed_band >> 1),
-                                                            tmp_sam.score,
-                                                            vsw_opt, rand, opt);
-              if(cur_score == tmp_sam.score) add_current = 0; // do not add the current alignment, we found it during unrolling
-              // update start/end
-              end++;
-              start = end;
+          while(0 == unrolled) {
+
+              // Reset local variables
+              start = t_start;
+              end = t_end;
+
+              //fprintf(stderr, "max_seed_band=%d start=%d end=%d\n", max_seed_band, start, end);
+              // NB: band based on EXACT start position
+              n = end + 1;
+              end = start;
+              while(start < n) {
+                  int32_t cur_score;
+                  // reset start and end position
+                  if(start == end) {
+                      tmap_map_util_sw_get_start_and_end_pos(&sams->sams[start], seq_len, strand, &start_pos, &end_pos);
+                      start_pos_prev = start_pos;
+                      end_pos_prev = end_pos;
+                  }
+                  if(end + 1 < n) {
+                      if(sams->sams[end].strand == sams->sams[end+1].strand 
+                         && sams->sams[end].seqid == sams->sams[end+1].seqid) {
+                          tmap_map_util_sw_get_start_and_end_pos(&sams->sams[end+1], seq_len, strand, &start_pos_cur, &end_pos_cur);
+
+                          /*
+                             fprintf(stderr, "start_pos_cur=%u start_pos_prev=%u max_seed_band=%d\n",
+                             start_pos_cur, start_pos_prev, max_seed_band);
+                             */
+
+                          // consider start positions only
+                          if(start_pos_cur - start_pos_prev <= max_seed_band) { // consider start positions only
+                              end++;
+                              if(end_pos < end_pos_cur) {
+                                  end_pos = end_pos_cur;
+                              }
+                              start_pos_prev = start_pos_cur;
+                              end_pos_prev = end_pos_cur;
+                              continue; // there may be more to add
+                          }
+                      }
+                  }
+
+                  // do not recurse if we did not unroll
+                  if(0 < max_seed_band && t_start == start && t_end == end) { // we did not unroll any
+                      max_seed_band = (max_seed_band >> 1);
+                      break;
+                  }
+                  unrolled = 1; // we are going to unroll
+
+                  // TODO: we could hash the alignment result, as unrolling may
+                  // cause many more SWs
+
+                  // recurse
+                  cur_score = tmap_map_util_sw_gen_score_helper(refseq, sams, seqs, sams_tmp, idx, start, end,
+                                                                strand, vsw_query, seq_len, start_pos, end_pos,
+                                                                target_mem, target,
+                                                                softclip_start, softclip_end,
+                                                                (max_seed_band <= 0) ? -1 : (max_seed_band >> 1),
+                                                                tmp_sam.score,
+                                                                vsw_opt, rand, opt);
+
+                  if(cur_score == tmp_sam.score) add_current = 0; // do not add the current alignment, we found it during unrolling
+                  // update start/end
+                  end++;
+                  start = end;
+              }
           }
       }
 
@@ -1096,6 +1136,9 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   tmap_vsw_opt_t *vsw_opt = NULL;
   uint32_t start_pos, end_pos;
   int32_t softclip_start, softclip_end;
+  uint32_t start_pos_prev, end_pos_prev;
+  uint32_t start_pos_cur, end_pos_cur;
+
   if(0 == sams->n) {
       return sams;
   }
@@ -1121,7 +1164,12 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
 
   /*
   for(i=0;i<sams->n;i++) {
-      fprintf(stderr, "seqid:%u pos:%u\n", sams->sams[i].seqid, sams->sams[i].pos);
+      uint8_t strand;
+      uint32_t start_pos_new, end_pos_new;
+      strand = sams->sams[i].strand;
+      tmap_map_util_sw_get_start_and_end_pos(&sams->sams[i], seq_len, strand, &start_pos_new, &end_pos_new);
+      fprintf(stderr, "i=%d seqid:%u pos:%u strand:%u start:%u end:%u\n", 
+              i, sams->sams[i].seqid, sams->sams[i].pos, strand, start_pos_new, end_pos_new);
   }
   */
 
@@ -1138,13 +1186,9 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       strand = sams->sams[end].strand;
       //first pass, setup start and end
       if(start == end) {
-          if (strand == 0) {
-              start_pos = sams->sams[start].pos + 1; 
-              end_pos = sams->sams[start].pos + sams->sams[start].target_len; 
-          } else {
-              start_pos = sams->sams[start].pos + 1;
-              end_pos = sams->sams[start].pos + seq_len;
-          }
+          tmap_map_util_sw_get_start_and_end_pos(&sams->sams[start], seq_len, strand, &start_pos, &end_pos);
+          start_pos_prev = start_pos;
+          end_pos_prev = end_pos;
       }
 
       // sub-optimal score
@@ -1157,35 +1201,19 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
          // printf("%s seed start: %d end: %d next start: %d  next end: %d\n", seq_name, sams->sams[end].pos, (sams->sams[end].pos + sams->sams[end].target_len), sams->sams[end+1].pos, (sams->sams[end+1].pos + sams->sams[end+1].target_len));
           if(sams->sams[end].strand == sams->sams[end+1].strand 
              && sams->sams[end].seqid == sams->sams[end+1].seqid) {
-              /*
-              // consider start positions only
-              if (sams->sams[end+1].pos - sams->sams[end].pos <= opt->max_seed_band) {
-              end++;
-              continue;
-              }
-              else {
-              }
-              */
+              tmap_map_util_sw_get_start_and_end_pos(&sams->sams[end+1], seq_len, strand, &start_pos_cur, &end_pos_cur);
 
-              if(sams->sams[end+1].pos <= (sams->sams[end].pos + seq_len)) { //check for unsigned int underflow     
-                  //fprintf(stderr, "my if1:  end+1 pos: %d end pos: %d seq_len: %d\n", sams->sams[end+1].pos, sams->sams[end].pos, seq_len);
+              //if(start_pos_cur - start_pos_prev <= opt->max_seed_band) { // consider start positions only
+              if(start_pos_cur <= end_pos_prev // NB: beware of unsigned int underflow
+                 || (start_pos_cur - end_pos_prev) <= opt->max_seed_band) { 
                   end++;
-                  if(end_pos < sams->sams[end].pos + seq_len) {
-                      end_pos = sams->sams[end].pos + seq_len + 1; // one-based
+                  if(end_pos < end_pos_cur) {
+                      end_pos = end_pos_cur;
                   }
+                  start_pos_prev = start_pos_cur;
+                  end_pos_prev = end_pos_cur;
                   continue; // there may be more to add
 
-              }
-              else if(sams->sams[end+1].pos >= (sams->sams[end].pos + seq_len)) {
-                  //fprintf(stderr, "my if2:  end+1 pos: %d end pos: %d seq_len: %d\n", sams->sams[end+1].pos, sams->sams[end].pos, seq_len);
-                  if ((sams->sams[end+1].pos - (sams->sams[end].pos + seq_len)) <= opt->max_seed_band) {
-                      end++;
-
-                      if(end_pos < sams->sams[end].pos + seq_len) {
-                          end_pos = sams->sams[end].pos + seq_len + 1; // one-based
-                      }
-                      continue;
-                  }
               }
           }
       }
