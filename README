@@ -25,7 +25,7 @@ TMAP - flow mapper
     make distclean && sh autogen.sh && ./configure && make clean && make
   After installation, execute the following command:
     sh autogen.sh && ./configure && make clean && make
-  The performance increase should occur when using multiple-threads.
+  The performance improve should occur when using multiple-threads.
 
 2. SAMtools (optional):
   The following commands rely on linking to samtools:
@@ -81,15 +81,31 @@ performance on large genomes (hg19) is recommended.
   The mapping quality is sufficiently calibrated, but can always be improved,
     especially for longer reads.  This is a major area for improvement.
 
-5. Support for paired ends/mate pairs
-  There is no support for multi-end reads, though you can try seeing what
-    happens if you specify "-r" twice, just saying.  Nonetheless, proper support
-     for paired ends should be written, including paired end rescue, and paired
-     end alignment scoring.  The vectorized Smith Waterman may be useful here.
+5. Better support for paired ends/mate pairs
+  There is minimal support for paired ends/mate pairs, which relies on knowing
+    a prior the parameters for the insert size distribution.  The insert size 
+	could be trained on a subset of the given input data.
 
 6. Speeding up lookups in the FM-index/BWT.
   Further implementation improvements or parameter tuning could be made to make
     the lookups in the FM-index/BWT faster.  This includes the occurrence 
 	interval, the suffix array interval, and the k-mer occurence hash.  Caching
 	these results may also make sense when examining the same sub-strings across
-	multiple algorithms.
+	multiple algorithms.  Speed improvements have already been made to BWA and 
+	could be relevant here:
+	  http://github.com/RoelKluin/bwa
+
+7. Dynamic split read mapping
+  It is important to detect Structural Variation (SV), as well as finding splice 
+    junctions for RNA-seq.  Support for returning more than one alignment, where
+	these alignments do not significantly overlap in terms of which bases they
+	consume in the query, could be included.  For example, a 400bp read could span
+	a SV breakpiont, with the first 100bp on one side of the breakpoint and the 
+	second 300bp on the other.  Currently (with full soft-clipping options turned 
+    on), we may produce two alignments for the two parts of the query. Nonetheless,
+	the "choice" algorithm will choose the one with the best alignment score 
+    (typically the 300bp one), and so only one alignment will be present in the SAM
+	file.  A better strategy would be to search for pairs (triples, etc.) of 
+	alignments that do not significantly overlap in the query (i.e. consume the same
+	query bases).  This would directly find SVs as well as other types of variant
+	requiring split read mapping.
