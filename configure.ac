@@ -49,7 +49,7 @@ AC_ARG_ENABLE(bz2, [  --disable-bz2         use this option to disable bz2 suppo
 AC_ARG_ENABLE(debug-functions, [  --enable-debug-functions        use this option to enable debugging functions support], [AC_DEFINE(ENABLE_TMAP_DEBUG_FUNCTIONS,1,[Define 1 if we want to enable TMAP debugging functions support])], [])
 # NB: what happens if --disable-tcmalloc is used with --enable-perftools ?
 AC_ARG_ENABLE(tcmalloc, [  --disable-tcmalloc      disable tcmalloc for memory allocation], [], [AC_CHECK_LIB([tcmalloc],malloc)]) 
-AC_ARG_ENABLE(perftools, [  --enable-perftools      enable google performance tools for profiling and heap checking], [LDFLAGS="${LDFLAGS} -Wl,--no-as-needed -lprofiler"; LDADD="${LDADD} -lprofiler"], [])
+AC_ARG_ENABLE(perftools, [  --enable-perftools      enable google performance tools for profiling and heap checking], [LIBS="${LIBS} -lprofiler"], [])
 AC_ARG_ENABLE(32bit-support, 
 			  [  --enable-32bit-support     use this option to enable 32bit support (64bit by default)], 
 			  [AC_MSG_WARN("Using 32-bit SA intervals; Genome sizes limited to 4Gb")
