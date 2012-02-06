@@ -109,10 +109,8 @@ tmap_map4_aux_core(tmap_seq_t *seq,
                   uint32_t seqid, pos;
                   uint8_t strand;
 
-                  //fprintf(stderr, "p->x[0]=%llu k=%llu bwt->seq_len=%llu\n", p->x[0], k, bwt->seq_len);
-                  //pacpos = bwt->seq_len - tmap_sa_pac_pos_hash(sa, bwt, p->x[0] + k, hash);
                   pacpos = tmap_sa_pac_pos_hash(sa, bwt, p->x[0] + k, hash);
-                  //fprintf(stderr, "pacpos=%llu\n", pacpos);
+                  //fprintf(stderr, "p->x[0]=%llu p->x[1]=%llu k=%llu bwt->seq_len=%llu pacpos=%llu\n", p->x[0], p->x[1], k, bwt->seq_len, pacpos);
                   if(0 < tmap_refseq_pac2real(refseq, pacpos, 1, &seqid, &pos, &strand)) {
                       tmap_map_sam_t *s;
                       uint32_t lower, upper, match_length;
@@ -122,8 +120,12 @@ tmap_map4_aux_core(tmap_seq_t *seq,
                       
                       //fprintf(stderr, "1 seqid:%u pos:%u strand:%d lower=%u upper=%u\n", seqid, pos, strand, lower, upper);
                       // contig boundary
-                      if(0 == strand) match_length = upper - 1;
-                      else match_length = query_len - upper;
+                      if(0 == strand) {
+                          match_length = (0 == upper) ? 0 : (upper - 1);
+                      }
+                      else {
+                          match_length = (query_len < upper) ? 0 : (query_len - upper);
+                      }
                       if(pos <= match_length) pos = 0;
                       else pos -= match_length;
                       //fprintf(stderr, "2 seqid:%u pos:%u strand:%d lower=%u upper=%u\n", seqid, pos, strand, lower, upper);
