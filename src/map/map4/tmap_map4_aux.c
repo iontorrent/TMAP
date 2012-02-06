@@ -83,12 +83,6 @@ tmap_map4_aux_core(tmap_seq_t *seq,
   query = (uint8_t*)tmap_seq_get_bases(seq)->s;
   query_len = tmap_seq_get_bases_length(seq);
 
-  fprintf(stderr, "query_len=%d\n", query_len);
-  for(i=0;i<query_len;i++) {
-      fputc("ACGTN"[query[i]], stderr);
-  }
-  fputc('\n', stderr);
-
   // init iter
   tmap_map4_aux_smem_iter_set_query(iter, query_len, query);
 
