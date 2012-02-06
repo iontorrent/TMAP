@@ -111,8 +111,8 @@ tmap_bwt_smem1(const tmap_bwt_t *bwt, int32_t len, const uint8_t *q, int32_t x, 
   swap = curr; curr = prev; prev = swap;
 
   for (i = x - 1; i >= -1; --i) { // backward search for MEMs
-      if (q[i] > 3) break;
-      c = i < 0? 0 : q[i];
+      c = (i < 0) ? 0 : q[i];
+      if (c > 3) break;
       for (j = 0, curr->n = 0; j < prev->n; ++j) {
           tmap_bwt_smem_intv_t *p = &prev->a[j];
           tmap_bwt_smem_extend(bwt, p, ok, 1);
