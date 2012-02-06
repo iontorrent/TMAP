@@ -153,7 +153,7 @@ __tmap_map_opt_option_print_func_int_init(read_rescue_mapq_thr)
 // map1/map2/map3 options, but specific to each
 __tmap_map_opt_option_print_func_int_init(min_seq_len)
 __tmap_map_opt_option_print_func_int_init(max_seq_len)
-// map1/map3 options
+// map1/map3/map4 options
 __tmap_map_opt_option_print_func_int_init(seed_length)
 // map1 options
 __tmap_map_opt_option_print_func_int_init(seed_max_diff)
@@ -180,6 +180,8 @@ __tmap_map_opt_option_print_func_double_init(hit_frac)
 __tmap_map_opt_option_print_func_int_init(seed_step)
 __tmap_map_opt_option_print_func_tf_init(fwd_search)
 __tmap_map_opt_option_print_func_double_init(skip_seed_frac)
+// map4 options
+__tmap_map_opt_option_print_func_int_init(min_iwidth)
 // mapvsw options
 // mapall options
 __tmap_map_opt_option_print_func_int_init(stage_score_thr)
@@ -619,13 +621,13 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            tmap_map_opt_option_print_func_read_rescue_mapq_thr,
                            TMAP_MAP_ALGO_PAIRING);
 
-  // map1/map3 options
+  // map1/map3/map4 options
   tmap_map_opt_options_add(opt->options, "seed-length", required_argument, 0, 0, 
                            TMAP_MAP_OPT_TYPE_INT,
                            "the k-mer length to seed CALs (-1 to disable)",
                            NULL,
                            tmap_map_opt_option_print_func_seed_length,
-                           TMAP_MAP_ALGO_MAP1 | TMAP_MAP_ALGO_MAP3);
+                           TMAP_MAP_ALGO_MAP1 | TMAP_MAP_ALGO_MAP3 | TMAP_MAP_ALGO_MAP4);
 
   // map1 options
   tmap_map_opt_options_add(opt->options, "seed-max-diff", required_argument, 0, 0, 
@@ -764,6 +766,13 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_skip_seed_frac,
                            TMAP_MAP_ALGO_MAP3);
+  // map4
+  tmap_map_opt_options_add(opt->options, "min-iwidth", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "TODO",
+                           NULL,
+                           tmap_map_opt_option_print_func_min_iwidth,
+                           TMAP_MAP_ALGO_MAP4);
 
   // mapvsw options
   // None
@@ -939,6 +948,12 @@ tmap_map_opt_init(int32_t algo_id)
       opt->seed_step = 8;
       opt->fwd_search = 0;
       opt->skip_seed_frac = 0.2;
+      break;
+    case TMAP_MAP_ALGO_MAP4:
+      // map4
+      opt->seed_length = -1;
+      opt->seed_length_set = 0;
+      opt->min_iwidth = 20;
       break;
     case TMAP_MAP_ALGO_MAPVSW:
       // mapvsw
@@ -1157,6 +1172,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
     case TMAP_MAP_ALGO_MAP1:
     case TMAP_MAP_ALGO_MAP2:
     case TMAP_MAP_ALGO_MAP3:
+    case TMAP_MAP_ALGO_MAP4:
     case TMAP_MAP_ALGO_MAPVSW:
     case TMAP_MAP_ALGO_STAGE:
     case TMAP_MAP_ALGO_MAPALL:
@@ -1359,8 +1375,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
                                                                             || opt->algo_id == TMAP_MAP_ALGO_MAP3 || opt->algo_id == TMAP_MAP_ALGO_MAPVSW)) {
           opt->max_seq_len = atoi(optarg);
       }
-      // MAP1/MAP3
-      else if(0 == strcmp("seed-length", options[option_index].name) && (opt->algo_id == TMAP_MAP_ALGO_MAP1 || opt->algo_id == TMAP_MAP_ALGO_MAP3)) {
+      // MAP1/MAP3/MAP4
+      else if(0 == strcmp("seed-length", options[option_index].name) && (opt->algo_id == TMAP_MAP_ALGO_MAP1 || opt->algo_id == TMAP_MAP_ALGO_MAP3
+                                                                         || opt->algo_id == TMAP_MAP_ALGO_MAP4)) {
           opt->seed_length = atoi(optarg);
           opt->seed_length_set = 1;
       }
@@ -1436,6 +1453,10 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
       else if(0 == strcmp("skip-seed-frac", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP3) {
           opt->skip_seed_frac = atof(optarg);
+      }
+      // MAP 4
+      else if(0 == strcmp("min-iwidth", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP4) {
+          opt->min_iwidth = atoi(optarg);
       }
       // STAGE
       else if(0 == strcmp("stage-score-thres", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_STAGE) {
@@ -1818,6 +1839,10 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       tmap_error_cmd_check_int(opt->hit_frac, 0, 1, "--hit-frac");
       tmap_error_cmd_check_int(opt->seed_step, -1, INT32_MAX, "--seed-step");
       tmap_error_cmd_check_int(opt->skip_seed_frac, 0, 1, "--skip-seed-frac");
+      break;
+    case TMAP_MAP_ALGO_MAP4:
+      if(-1 != opt->seed_length) tmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "--seed-length");
+      tmap_error_cmd_check_int(opt->min_iwidth, 0, INT32_MAX, "--min-iwidth");
       break;
     case TMAP_MAP_ALGO_MAPALL:
       if(0 == opt->num_sub_opts) {

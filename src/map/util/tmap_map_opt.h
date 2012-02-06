@@ -69,6 +69,7 @@ enum {
     TMAP_MAP_ALGO_MAP1 = 0x1,  /*!< the map1 algorithm */
     TMAP_MAP_ALGO_MAP2 = 0x2,  /*!< the map2 algorithm */
     TMAP_MAP_ALGO_MAP3 = 0x4,  /*!< the map3 algorithm */
+    TMAP_MAP_ALGO_MAP4 = 0x8,  /*!< the map4 algorithm */
     TMAP_MAP_ALGO_MAPVSW = 0x400,  /*!< the mapvsw algorithm */
     TMAP_MAP_ALGO_STAGE = 0x800, /*!< the stage options */
     TMAP_MAP_ALGO_MAPALL = 0x1000, /*!< the mapall algorithm */
@@ -211,7 +212,7 @@ typedef struct __tmap_map_opt_t {
     int32_t min_seq_len; /*< the minimum sequence length to examine (--min-seq-length) */
     int32_t max_seq_len; /*< the maximum sequence length to examine (--max-seq-length) */
 
-    // map1/map3 options
+    // map1/map3/map4 options
     int32_t seed_length; /*!< the kmer seed length (-l) */
     int32_t seed_length_set; /*!< 1 if the user has set seed length (--seed-length) */
     
@@ -248,6 +249,9 @@ typedef struct __tmap_map_opt_t {
     int32_t seed_step; /*!< the number of bases to increase the seed for each seed increase iteration (--seed-step) */ 
     int32_t fwd_search; /*!< perform a forward search instead of a reverse search (--fwd-search) */
     double skip_seed_frac; /*!< the fraction of a seed to skip when a lookup succeeds (--skip-seed-frac) */ 
+
+    // map4 options
+    int32_t min_iwidth; // TODO
 
     // mapvsw options
     // None

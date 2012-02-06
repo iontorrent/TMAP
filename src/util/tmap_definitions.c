@@ -14,7 +14,7 @@ static char *algo_id_to_name[17] = {
     "map1", 
     "map2", 
     "map3", 
-    "dummy4", 
+    "map4", 
     "dummy5",
     "dummy6",
     "dummy7",

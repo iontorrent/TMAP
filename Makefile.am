@@ -28,6 +28,7 @@ GLOBAL_SOURCES = \
 				 src/index/tmap_bwt_gen.h src/index/tmap_bwt_gen.c \
 				 src/index/tmap_bwt_match.h src/index/tmap_bwt_match.c \
 				 src/index/tmap_bwt_match_hash.h src/index/tmap_bwt_match_hash.c \
+				 src/index/tmap_bwt_smem.h src/index/tmap_bwt_smem.c \
 				 src/index/tmap_index.h src/index/tmap_index.c \
 				 src/index/tmap_refseq.h src/index/tmap_refseq.c \
 				 src/index/tmap_sa.c src/index/tmap_sa.h \
@@ -59,6 +60,8 @@ tmap_SOURCES = \
 			   src/map/map2/tmap_map2_mempool.h src/map/map2/tmap_map2_mempool.c \
 			   src/map/map3/tmap_map3.h src/map/map3/tmap_map3.c \
 			   src/map/map3/tmap_map3_aux.h src/map/map3/tmap_map3_aux.c \
+			   src/map/map4/tmap_map4.h src/map/map4/tmap_map4.c \
+			   src/map/map4/tmap_map4_aux.h src/map/map4/tmap_map4_aux.c \
 			   src/map/mapvsw/tmap_map_vsw.h src/map/mapvsw/tmap_map_vsw.c \
 			   src/map/mapall/tmap_map_all.h src/map/mapall/tmap_map_all.c \
 			   src/map/tmap_map_driver.h src/map/tmap_map_driver.c \
