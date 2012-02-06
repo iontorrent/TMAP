@@ -212,9 +212,12 @@ typedef struct __tmap_map_opt_t {
     int32_t min_seq_len; /*< the minimum sequence length to examine (--min-seq-length) */
     int32_t max_seq_len; /*< the maximum sequence length to examine (--max-seq-length) */
 
-    // map1/map3/map4 options
+    // map1/map3 options
     int32_t seed_length; /*!< the kmer seed length (-l) */
     int32_t seed_length_set; /*!< 1 if the user has set seed length (--seed-length) */
+
+    // map3/map4 options
+    int32_t seed_step; /*!< the number of bases to increase the seed for each seed increase iteration (--seed-step) */ 
     
     // map1 options
     int32_t seed_max_diff;  /*!< maximum number of edits in the seed (--seed-max-diff) */
@@ -246,11 +249,12 @@ typedef struct __tmap_map_opt_t {
     int32_t max_seed_hits; /*!< the maximum number of hits returned by a seed (--max-seed-hits) */
     int32_t hp_diff; /*!< single homopolymer error difference for enumeration (--hp-diff) */
     double hit_frac; /*!< the fraction of seed positions that are under the maximum (--hit-frac) */
-    int32_t seed_step; /*!< the number of bases to increase the seed for each seed increase iteration (--seed-step) */ 
     int32_t fwd_search; /*!< perform a forward search instead of a reverse search (--fwd-search) */
     double skip_seed_frac; /*!< the fraction of a seed to skip when a lookup succeeds (--skip-seed-frac) */ 
 
     // map4 options
+    int32_t min_seed_length; /*!< the minimum seed length to accept a hit (--min-seed-length) */
+    int32_t max_seed_length; /*!< the maximum seed length to accept a hit (--max-seed-length) */
     int32_t max_iwidth; /*!< the maximum interval width to accept hits (--max-iwidth) */
 
     // mapvsw options
