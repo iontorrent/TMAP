@@ -156,6 +156,7 @@ __tmap_map_opt_option_print_func_int_init(max_seq_len)
 // map1/map3 options
 __tmap_map_opt_option_print_func_int_init(seed_length)
 // map3/map4 options
+__tmap_map_opt_option_print_func_double_init(hit_frac)
 __tmap_map_opt_option_print_func_int_init(seed_step)
 // map1 options
 __tmap_map_opt_option_print_func_int_init(seed_max_diff)
@@ -178,7 +179,6 @@ __tmap_map_opt_option_print_func_tf_init(narrow_rmdup)
 // map3 options
 __tmap_map_opt_option_print_func_int_init(max_seed_hits)
 __tmap_map_opt_option_print_func_int_init(hp_diff)
-__tmap_map_opt_option_print_func_double_init(hit_frac)
 __tmap_map_opt_option_print_func_tf_init(fwd_search)
 __tmap_map_opt_option_print_func_double_init(skip_seed_frac)
 // map4 options
@@ -633,6 +633,12 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            TMAP_MAP_ALGO_MAP1 | TMAP_MAP_ALGO_MAP3);
 
   // map3/map4 options
+  tmap_map_opt_options_add(opt->options, "hit-frac", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_FLOAT,
+                           "the fraction of seed positions that are under the maximum",
+                           NULL,
+                           tmap_map_opt_option_print_func_hit_frac,
+                           TMAP_MAP_ALGO_MAP3 | TMAP_MAP_ALGO_MAP4);
   tmap_map_opt_options_add(opt->options, "seed-step", required_argument, 0, 0, 
                            TMAP_MAP_OPT_TYPE_INT,
                            "the number of bases to increase the seed while repetitive (-1 to disable)",
@@ -752,12 +758,6 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            "single homopolymer error difference for enumeration",
                            NULL,
                            tmap_map_opt_option_print_func_hp_diff,
-                           TMAP_MAP_ALGO_MAP3);
-  tmap_map_opt_options_add(opt->options, "hit-frac", required_argument, 0, 0, 
-                           TMAP_MAP_OPT_TYPE_FLOAT,
-                           "the fraction of seed positions that are under the maximum",
-                           NULL,
-                           tmap_map_opt_option_print_func_hit_frac,
                            TMAP_MAP_ALGO_MAP3);
   tmap_map_opt_options_add(opt->options, "fwd-search", no_argument, 0, 0, 
                            TMAP_MAP_OPT_TYPE_NONE,
@@ -970,6 +970,7 @@ tmap_map_opt_init(int32_t algo_id)
       // map4
       opt->min_seed_length = -1;
       opt->max_seed_length = 48; 
+      opt->hit_frac = 0.20;
       opt->seed_step = 8;
       opt->max_iwidth = 20;
       break;
@@ -1399,6 +1400,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           opt->seed_length_set = 1;
       }
       // MAP3/MAP4
+      else if(0 == strcmp("hit-frac", options[option_index].name) && (opt->algo_id == TMAP_MAP_ALGO_MAP3 || opt->algo_id == TMAP_MAP_ALGO_MAP4)) {
+          opt->hit_frac = atof(optarg);
+      }
       else if(0 == strcmp("seed-step", options[option_index].name) && (opt->algo_id == TMAP_MAP_ALGO_MAP3 || opt->algo_id == TMAP_MAP_ALGO_MAP4)) {
           opt->seed_step = atoi(optarg);
       }
@@ -1462,9 +1466,6 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
       else if(0 == strcmp("hp-diff", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP3) {
           opt->hp_diff = atoi(optarg);
-      }
-      else if(0 == strcmp("hit-frac", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP3) {
-          opt->hit_frac = atof(optarg);
       }
       else if(0 == strcmp("fwd-search", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP3) {
           opt->fwd_search = 1;
@@ -1872,6 +1873,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
           }
       }
       tmap_error_cmd_check_int(opt->max_seed_length, 1, INT32_MAX, "--max-seed-length");
+      tmap_error_cmd_check_int(opt->hit_frac, 0, 1, "--hit-frac");
       tmap_error_cmd_check_int(opt->seed_step, -1, INT32_MAX, "--seed-step");
       tmap_error_cmd_check_int(opt->max_iwidth, 0, INT32_MAX, "--max-iwidth");
       break;
