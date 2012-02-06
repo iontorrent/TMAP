@@ -57,6 +57,13 @@ typedef struct {
 } tmap_map_map3_aux_t;
 
 /*! 
+  Auxiliary data for map4
+  */
+typedef struct {
+    void *ptr; // NULL
+} tmap_map_map4_aux_t;
+
+/*! 
   Auxiliary data for map3
   */
 typedef struct {
@@ -88,6 +95,7 @@ typedef struct {
         tmap_map_map1_aux_t *map1_aux; /*!< auxiliary data for map1 */
         tmap_map_map2_aux_t *map2_aux; /*!< auxiliary data for map2 */
         tmap_map_map3_aux_t *map3_aux; /*!< auxiliary data for map3 */
+        tmap_map_map4_aux_t *map4_aux; /*!< auxiliary data for map4 */
         tmap_map_map_vsw_aux_t *map_vsw_aux; /*!< auxiliary data for map_vsw */
     } aux;
     // for bounding the alignment with vectorized SW

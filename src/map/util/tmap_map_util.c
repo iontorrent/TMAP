@@ -61,6 +61,9 @@ tmap_map_sam_malloc_aux(tmap_map_sam_t *s)
     case TMAP_MAP_ALGO_MAP3:
       s->aux.map3_aux = tmap_calloc(1, sizeof(tmap_map_map3_aux_t), "s->aux.map3_aux");
       break;
+    case TMAP_MAP_ALGO_MAP4:
+      s->aux.map4_aux = tmap_calloc(1, sizeof(tmap_map_map4_aux_t), "s->aux.map4_aux");
+      break;
     case TMAP_MAP_ALGO_MAPVSW:
       s->aux.map_vsw_aux = tmap_calloc(1, sizeof(tmap_map_map_vsw_aux_t), "s->aux.map_vsw_aux");
       break;
@@ -84,6 +87,10 @@ tmap_map_sam_destroy_aux(tmap_map_sam_t *s)
     case TMAP_MAP_ALGO_MAP3:
       free(s->aux.map3_aux);
       s->aux.map3_aux = NULL;
+      break;
+    case TMAP_MAP_ALGO_MAP4:
+      free(s->aux.map4_aux);
+      s->aux.map4_aux = NULL;
       break;
     case TMAP_MAP_ALGO_MAPVSW:
       free(s->aux.map_vsw_aux);
@@ -226,6 +233,9 @@ tmap_map_sam_copy(tmap_map_sam_t *dest, tmap_map_sam_t *src)
     case TMAP_MAP_ALGO_MAP3:
       (*dest->aux.map3_aux) = (*src->aux.map3_aux);
       break;
+    case TMAP_MAP_ALGO_MAP4:
+      (*dest->aux.map4_aux) = (*src->aux.map4_aux);
+      break;
     case TMAP_MAP_ALGO_MAPVSW:
       (*dest->aux.map_vsw_aux) = (*src->aux.map_vsw_aux);
       break;
@@ -289,6 +299,9 @@ tmap_map_sam_copy_and_nullify(tmap_map_sam_t *dest, tmap_map_sam_t *src)
       break;
     case TMAP_MAP_ALGO_MAP3:
       src->aux.map3_aux = NULL;
+      break;
+    case TMAP_MAP_ALGO_MAP4:
+      src->aux.map4_aux = NULL;
       break;
     case TMAP_MAP_ALGO_MAPVSW:
       src->aux.map_vsw_aux = NULL;
@@ -385,6 +398,16 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
                                 sam->n_seeds,
                                 sam->seed_start,
                                 sam->seed_end);
+          break;
+        case TMAP_MAP_ALGO_MAP4:
+          tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, refseq, 
+                                sam->strand, sam->seqid, sam->pos, aln_num,
+                                end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
+                                mate_strand, mate_seqid, mate_pos, mate_tlen,
+                                sam->mapq, sam->cigar, sam->n_cigar,
+                                sam->score, sam->ascore, sam->pscore, nh, sam->algo_id, sam->algo_stage, 
+                                "\tXS:i:%d",
+                                sam->score_subo);
           break;
         case TMAP_MAP_ALGO_MAPVSW:
           tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, refseq, 
@@ -1106,6 +1129,9 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
             case TMAP_MAP_ALGO_MAP3:
               (*s->aux.map3_aux) = (*tmp_sam.aux.map3_aux);
               break;
+            case TMAP_MAP_ALGO_MAP4:
+              (*s->aux.map4_aux) = (*tmp_sam.aux.map4_aux);
+              break;
             case TMAP_MAP_ALGO_MAPVSW:
               (*s->aux.map_vsw_aux) = (*tmp_sam.aux.map_vsw_aux);
               break;
@@ -1653,6 +1679,9 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
           break;
         case TMAP_MAP_ALGO_MAP3:
           (*s->aux.map3_aux) = (*tmp_sam.aux.map3_aux);
+          break;
+        case TMAP_MAP_ALGO_MAP4:
+          (*s->aux.map4_aux) = (*tmp_sam.aux.map4_aux);
           break;
         case TMAP_MAP_ALGO_MAPVSW:
           (*s->aux.map_vsw_aux) = (*tmp_sam.aux.map_vsw_aux);
