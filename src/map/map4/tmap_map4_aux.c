@@ -108,7 +108,7 @@ tmap_map4_aux_core(tmap_seq_t *seq,
           if (p->x[2] <= opt->min_iwidth) {
               for (k = 0; k < p->x[2]; ++k) {
                   tmap_bwt_int_t pacpos;
-                  uint32_t seqid, pos, match_length;
+                  uint32_t seqid, pos;
                   uint8_t strand;
 
                   //fprintf(stderr, "p->x[0]=%llu k=%llu bwt->seq_len=%llu\n", p->x[0], k, bwt->seq_len);
@@ -117,19 +117,21 @@ tmap_map4_aux_core(tmap_seq_t *seq,
                   //fprintf(stderr, "pacpos=%llu\n", pacpos);
                   if(0 < tmap_refseq_pac2real(refseq, pacpos, 1, &seqid, &pos, &strand)) {
                       tmap_map_sam_t *s;
+                      uint32_t lower, upper, match_length;
 
-                      match_length = (uint32_t)p->info - (p->info>>32);
-                      match_length--; // zero-based
+                      lower = (uint32_t)p->info;
+                      upper = (uint32_t)(p->info >> 32);
                       
-                      fprintf(stderr, "1 seqid:%u pos:%u strand:%d match_length:%d\n", seqid, pos, strand, match_length);
+                      //fprintf(stderr, "1 seqid:%u pos:%u strand:%d lower=%u upper=%u\n", seqid, pos, strand, lower, upper);
                       // contig boundary
+                      if(0 == strand) match_length = upper - 1;
+                      else match_length = query_len - upper;
                       if(pos <= match_length) pos = 0;
                       else pos -= match_length;
-                      fprintf(stderr, "2 seqid:%u pos:%u strand:%d match_length:%d\n", seqid, pos, strand, match_length);
+                      //fprintf(stderr, "2 seqid:%u pos:%u strand:%d lower=%u upper=%u\n", seqid, pos, strand, lower, upper);
 
                       // save
                       s = &sams->sams[j];
-                      
 
                       // save the hit
                       s->algo_id = TMAP_MAP_ALGO_MAP4;
