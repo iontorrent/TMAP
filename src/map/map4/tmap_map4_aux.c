@@ -69,8 +69,6 @@ tmap_map4_aux_core(tmap_seq_t *seq,
                    tmap_map4_aux_smem_iter_t *iter,
                    tmap_map_opt_t *opt)
 {
-  // opt->min_iwidth (20)
-  // opt->seed_length (17)
   int32_t i, j;
   tmap_bwt_int_t k;
   tmap_map_sams_t *sams;
@@ -92,7 +90,7 @@ tmap_map4_aux_core(tmap_seq_t *seq,
       for (i = 0; i < iter->matches->n; ++i) {
           tmap_bwt_smem_intv_t *p = &iter->matches->a[i];
           if ((uint32_t)p->info - (p->info>>32) < opt->seed_length) continue;
-          if (p->x[2] <= opt->min_iwidth) {
+          if (p->x[2] <= opt->max_iwidth) {
               n += p->x[2];
           }
       }
@@ -105,7 +103,7 @@ tmap_map4_aux_core(tmap_seq_t *seq,
           tmap_bwt_smem_intv_t *p = &iter->matches->a[i];
           if ((uint32_t)p->info - (p->info>>32) < opt->seed_length) continue;
           //printf("EM\t%d\t%d\t%ld", (uint32_t)(p->info>>32), (uint32_t)p->info, (long)p->x[2]);
-          if (p->x[2] <= opt->min_iwidth) {
+          if (p->x[2] <= opt->max_iwidth) {
               for (k = 0; k < p->x[2]; ++k) {
                   tmap_bwt_int_t pacpos;
                   uint32_t seqid, pos;

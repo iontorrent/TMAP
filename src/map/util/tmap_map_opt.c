@@ -181,7 +181,7 @@ __tmap_map_opt_option_print_func_int_init(seed_step)
 __tmap_map_opt_option_print_func_tf_init(fwd_search)
 __tmap_map_opt_option_print_func_double_init(skip_seed_frac)
 // map4 options
-__tmap_map_opt_option_print_func_int_init(min_iwidth)
+__tmap_map_opt_option_print_func_int_init(max_iwidth)
 // mapvsw options
 // mapall options
 __tmap_map_opt_option_print_func_int_init(stage_score_thr)
@@ -767,11 +767,11 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            tmap_map_opt_option_print_func_skip_seed_frac,
                            TMAP_MAP_ALGO_MAP3);
   // map4
-  tmap_map_opt_options_add(opt->options, "min-iwidth", required_argument, 0, 0, 
+  tmap_map_opt_options_add(opt->options, "max-iwidth", required_argument, 0, 0, 
                            TMAP_MAP_OPT_TYPE_INT,
-                           "TODO",
+                           "the maximum interval size to accept hits",
                            NULL,
-                           tmap_map_opt_option_print_func_min_iwidth,
+                           tmap_map_opt_option_print_func_max_iwidth,
                            TMAP_MAP_ALGO_MAP4);
 
   // mapvsw options
@@ -953,7 +953,7 @@ tmap_map_opt_init(int32_t algo_id)
       // map4
       opt->seed_length = -1;
       opt->seed_length_set = 0;
-      opt->min_iwidth = 20;
+      opt->max_iwidth = 20;
       break;
     case TMAP_MAP_ALGO_MAPVSW:
       // mapvsw
@@ -1455,8 +1455,8 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           opt->skip_seed_frac = atof(optarg);
       }
       // MAP 4
-      else if(0 == strcmp("min-iwidth", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP4) {
-          opt->min_iwidth = atoi(optarg);
+      else if(0 == strcmp("max-iwidth", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP4) {
+          opt->max_iwidth = atoi(optarg);
       }
       // STAGE
       else if(0 == strcmp("stage-score-thres", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_STAGE) {
@@ -1842,7 +1842,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       break;
     case TMAP_MAP_ALGO_MAP4:
       if(-1 != opt->seed_length) tmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "--seed-length");
-      tmap_error_cmd_check_int(opt->min_iwidth, 0, INT32_MAX, "--min-iwidth");
+      tmap_error_cmd_check_int(opt->max_iwidth, 0, INT32_MAX, "--max-iwidth");
       break;
     case TMAP_MAP_ALGO_MAPALL:
       if(0 == opt->num_sub_opts) {

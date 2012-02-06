@@ -251,7 +251,7 @@ typedef struct __tmap_map_opt_t {
     double skip_seed_frac; /*!< the fraction of a seed to skip when a lookup succeeds (--skip-seed-frac) */ 
 
     // map4 options
-    int32_t min_iwidth; // TODO
+    int32_t max_iwidth; /*!< the maximum interval width to accept hits (--max-iwidth) */
 
     // mapvsw options
     // None
