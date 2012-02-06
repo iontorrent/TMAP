@@ -10,11 +10,15 @@
   BWA Fastmap algorithm
   */
 
-// TODO
+/*!
+  the query iterator for the bi-directional occurrence search
+ */
 typedef struct {
-    const uint8_t *query;
-    int32_t start, len;
-    tmap_bwt_smem_intv_vec_t *tmpvec[2], *matches;
+    const uint8_t *query; /*!< the query to be searched */
+    int32_t start; /*!< the current index into the query */
+    int32_t len; /*!< the query length */
+    tmap_bwt_smem_intv_vec_t *tmpvec[2]; /*!< temporary memory for occurrence intervals */
+    tmap_bwt_smem_intv_vec_t *matches; /*!< the occurence interval matches found by this search */
 } tmap_map4_aux_smem_iter_t;
 
 /*!

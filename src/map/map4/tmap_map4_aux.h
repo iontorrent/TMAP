@@ -4,14 +4,33 @@
 
 #include "tmap_map4.h"
 
-// TODO
+/*!
+  initializes the shared memory search iterator
+  @return  the iterator
+ */
 tmap_map4_aux_smem_iter_t *
 tmap_map4_aux_smem_iter_init();
 
-// TODO
+/*!
+  destroys the shared memory search iterator
+  @param  iter  the iterator
+ */
 void 
 tmap_map4_aux_smem_iter_destroy(tmap_map4_aux_smem_iter_t *iter);
 
+
+/*!
+  Core mapping routine
+  @param  seq            the sequence to align (forward)
+  @param  refseq         the reference sequence structure (forward)
+  @param  bwt            the BWT structure 
+  @param  sa             the SA structure 
+  @param  hash           the occurrence hash
+  @param  iter           the shared memory iterator
+  @param  opt            the program options
+  @return                the alignments
+  the sequences should be in 2-bit format
+  */
 tmap_map_sams_t *
 tmap_map4_aux_core(tmap_seq_t *seq,
                    tmap_refseq_t *refseq,
