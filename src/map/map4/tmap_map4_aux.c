@@ -33,7 +33,10 @@ tmap_map4_aux_smem_iter_destroy(tmap_map4_aux_smem_iter_t *iter)
 {
   free(iter->tmpvec[0]->a);
   free(iter->tmpvec[1]->a);
+  free(iter->tmpvec[0]);
+  free(iter->tmpvec[1]);
   free(iter->matches->a);
+  free(iter->matches);
   free(iter);
 }
 
