@@ -21,10 +21,10 @@ tmap_map4_aux_smem_iter_t *
 tmap_map4_aux_smem_iter_init()
 {
   tmap_map4_aux_smem_iter_t *iter;
-  iter = calloc(1, sizeof(tmap_map4_aux_smem_iter_t));
-  iter->tmpvec[0] = calloc(1, sizeof(tmap_bwt_smem_intv_vec_t));
-  iter->tmpvec[1] = calloc(1, sizeof(tmap_bwt_smem_intv_vec_t));
-  iter->matches   = calloc(1, sizeof(tmap_bwt_smem_intv_vec_t));
+  iter = tmap_calloc(1, sizeof(tmap_map4_aux_smem_iter_t), "iter");
+  iter->tmpvec[0] = tmap_calloc(1, sizeof(tmap_bwt_smem_intv_vec_t), "iter->tmpvec[0]");
+  iter->tmpvec[1] = tmap_calloc(1, sizeof(tmap_bwt_smem_intv_vec_t), "iter->tmpvec[1]");
+  iter->matches   = tmap_calloc(1, sizeof(tmap_bwt_smem_intv_vec_t), "iter->matches");
   return iter;
 }
 
@@ -80,8 +80,14 @@ tmap_map4_aux_core(tmap_seq_t *seq,
 
   sams = tmap_map_sams_init(NULL);
 
-  query = (uint8_t*)tmap_seq_get_bases(seq);
+  query = (uint8_t*)tmap_seq_get_bases(seq)->s;
   query_len = tmap_seq_get_bases_length(seq);
+
+  fprintf(stderr, "query_len=%d\n", query_len);
+  for(i=0;i<query_len;i++) {
+      fputc("ACGTN"[query[i]], stderr);
+  }
+  fputc('\n', stderr);
 
   // init iter
   tmap_map4_aux_smem_iter_set_query(iter, query_len, query);

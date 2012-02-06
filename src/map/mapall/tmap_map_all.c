@@ -21,6 +21,7 @@
 #include "../../index/tmap_bwt.h"
 #include "../../index/tmap_bwt_match.h"
 #include "../../index/tmap_bwt_match_hash.h"
+#include "../../index/tmap_bwt_smem.h"
 #include "../../index/tmap_sa.h"
 #include "../../index/tmap_index.h"
 #include "../../io/tmap_seq_io.h"
@@ -34,6 +35,8 @@
 #include "../map2/tmap_map2_aux.h"
 #include "../map3/tmap_map3.h"
 #include "../map3/tmap_map3_aux.h"
+#include "../map4/tmap_map4.h"
+#include "../map4/tmap_map4_aux.h"
 #include "../mapvsw/tmap_map_vsw.h"
 #include "../tmap_map_driver.h"
 #include "tmap_map_all.h"
@@ -72,6 +75,16 @@ tmap_map_all_add_algorithm(tmap_map_driver_t *driver, tmap_map_opt_t *opt)
                           tmap_map3_thread_init,
                           tmap_map3_thread_map,
                           tmap_map3_thread_cleanup,
+                          NULL,
+                          opt);
+      break;
+    case TMAP_MAP_ALGO_MAP4:
+      // add this algorithm
+      tmap_map_driver_add(driver,
+                          tmap_map4_init,
+                          tmap_map4_thread_init,
+                          tmap_map4_thread_map,
+                          tmap_map4_thread_cleanup,
                           NULL,
                           opt);
       break;

@@ -98,7 +98,7 @@ tmap_map4_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_b
      || (0 < opt->max_seq_len && opt->max_seq_len < seq_len)) {
       return tmap_map_sams_init(NULL);
   }
-  
+
   // align
   sams = tmap_map4_aux_core(seqs[0], index->refseq, index->bwt, index->sa, hash, d->iter, opt);
 
