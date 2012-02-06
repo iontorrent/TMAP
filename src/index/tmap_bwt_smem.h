@@ -30,24 +30,40 @@
 #include <stdint.h>
 #include "../util/tmap_definitions.h"
 
-// TODO
+/*!
+  Bi-directional occurrence intervals
+ */
 typedef struct {
-    tmap_bwt_int_t x[3];
-    tmap_bwt_int_t info;
+    tmap_bwt_int_t x[3]; /*!< the forward and backward (x[0] and x[1]) suffix intervals, and the interval size (x[2]) */
+    uint64_t info; /*!< lower 32 bits store the query index for the forward search, the upper 32 bits store the query index for the reverse search */
 } tmap_bwt_smem_intv_t;
 
-// TODO
+/*!
+  A vector of intervals
+ */
 typedef struct { 
-    size_t n;
-    size_t m;
-    tmap_bwt_smem_intv_t *a; 
+    size_t n; /*!< the number of intervals */
+    size_t m; /*!< the amount of memory allocated for the intervals */
+    tmap_bwt_smem_intv_t *a; /*!< the intervals */
 } tmap_bwt_smem_intv_vec_t;
 
-// TODO
+/*!
+  @param  bwt  the bwt
+  @param  c    the query base
+  @param  ik   the bi-directional occurrence interval
+  @details  resets the interval structure based on the given query base
+ */
 #define tmap_bwt_smem_set_intv(bwt, c, ik) ((ik).x[0] = (bwt)->L2[(int32_t)(c)]+1, (ik).x[2] = (bwt)->L2[(int32_t)(c)+1]-(bwt)->L2[(int32_t)(c)], (ik).x[1] = (bwt)->L2[3-(c)]+1, (ik).info = 0)
 
-// TODO
-tmap_bwt_int_t
+/*!
+  @param  bwt     the bwt
+  @param  len     the query length
+  @param  x       the start index into the query for the search (0-based)
+  @param  mem     where the matches should be stored
+  @param  tmpvec  temporary memory
+  @return         the new index into the query (0-based)
+ */
+int32_t
 tmap_bwt_smem1(const tmap_bwt_t *bwt, int32_t len, const uint8_t *q, int32_t x, tmap_bwt_smem_intv_vec_t *mem, tmap_bwt_smem_intv_vec_t *tmpvec[2]);
 
 #endif

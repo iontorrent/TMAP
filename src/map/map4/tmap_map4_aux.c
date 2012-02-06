@@ -121,11 +121,11 @@ tmap_map4_aux_core(tmap_seq_t *seq,
                       match_length = (uint32_t)p->info - (p->info>>32);
                       match_length--; // zero-based
                       
-                      //fprintf(stderr, "1 seqid:%u pos:%u strand:%d match_length:%d\n", seqid, pos, strand, match_length);
+                      fprintf(stderr, "1 seqid:%u pos:%u strand:%d match_length:%d\n", seqid, pos, strand, match_length);
                       // contig boundary
                       if(pos <= match_length) pos = 0;
                       else pos -= match_length;
-                      //fprintf(stderr, "2 seqid:%u pos:%u strand:%d match_length:%d\n", seqid, pos, strand, match_length);
+                      fprintf(stderr, "2 seqid:%u pos:%u strand:%d match_length:%d\n", seqid, pos, strand, match_length);
 
                       // save
                       s = &sams->sams[j];

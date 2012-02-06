@@ -76,11 +76,10 @@ tmap_bwt_smem_reverse_intvs(tmap_bwt_smem_intv_vec_t *p)
 }
 
 // TODO: document
-tmap_bwt_int_t
+int32_t
 tmap_bwt_smem1(const tmap_bwt_t *bwt, int32_t len, const uint8_t *q, int32_t x, tmap_bwt_smem_intv_vec_t *mem, tmap_bwt_smem_intv_vec_t *tmpvec[2])
 {
-  int32_t i, j, c;
-  tmap_bwt_int_t ret;
+  int32_t i, j, c, ret;
   tmap_bwt_smem_intv_t ik, ok[4];
   tmap_bwt_smem_intv_vec_t a[2], *prev, *curr, *swap;
 
