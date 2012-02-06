@@ -109,3 +109,12 @@ performance on large genomes (hg19) is recommended.
 	alignments that do not significantly overlap in the query (i.e. consume the same
 	query bases).  This would directly find SVs as well as other types of variant
 	requiring split read mapping.
+
+8. Representative repetitive hits
+  If a seeding algorithm finds a large occurence interval that it will save, it 
+    could save one of the occurrences (random) as a representative hit for the 
+	repetitive interval.  This representative hit could be aligned with Smith-Waterman
+	and its alignment score could be compared to the other hits.  If its score is
+	better, than the read could be flagged as repetitive and "unmapped".  The 
+	algorithm would need to be careful that the repetitive hit is not contained 
+	within the returned non-repeititve hits, as to cause many reads to be unmapped.
