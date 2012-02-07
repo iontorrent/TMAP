@@ -2,20 +2,22 @@
 #ifndef TMAP_RAND_H
 #define TMAP_RAND_H
 
-// http://en.wikipedia.org/wiki/Multiply-with-carry
-#define TMAP_RAND_R_LAG 4096 // must be a power of 2
-#define TMAP_RAND_PHI 0x9e3779b9
-#define TMAP_RAND_A 18782LL
-#define TMAP_RAND_C 362436
-#define TMAP_RAND_R 0xfffffffe
+#include <stdint.h>
+
+#define TMAP_RAND_NN 312
+#define TMAP_RAND_MM 156
+#define TMAP_RAND_UM 0xFFFFFFFF80000000ULL /* Most significant 33 bits */
+#define TMAP_RAND_LM 0x7FFFFFFFULL /* Least significant 31 bits */
+
+#define tmap_rand_drand48(_kr) ((tmap_rand_int(_kr) >> 11) * (1.0/9007199254740992.0))
+#define tmap_rand_sample(_kr, _k, _cnt) ((*(_cnt))++ < (_k)? *(_cnt) - 1 : tmap_rand_rand(_kr) % *(_cnt))
 
 /*!
   a thread-safe random number generator
   */
 typedef struct {
-    uint32_t Q[TMAP_RAND_R_LAG]; /*!< the random seed values */
-    uint32_t c; /*!< the carry */
-    uint32_t i; /*!< the index */
+    int mti;
+    uint64_t mt[TMAP_RAND_NN];
 } tmap_rand_t;
 
 /*!
@@ -23,7 +25,14 @@ typedef struct {
   @return       the initialized random number generator
  */
 tmap_rand_t*
-tmap_rand_init(uint32_t seed);
+tmap_rand_init(uint64_t seed);
+
+/*!
+  @param  r  the initialized random number generator
+  @return    a random 64-bit integer
+ */
+uint64_t 
+tmap_rand_int(tmap_rand_t *r);
 
 /*!
   @param  r  the initialized random number generator

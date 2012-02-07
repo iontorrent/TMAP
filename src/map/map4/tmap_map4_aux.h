@@ -38,6 +38,7 @@ tmap_map4_aux_core(tmap_seq_t *seq,
                    tmap_sa_t *sa,
                    tmap_bwt_match_hash_t *hash,
                    tmap_map4_aux_smem_iter_t *iter,
+                   tmap_rand_t *rand,
                    tmap_map_opt_t *opt);
 
 #endif

@@ -99,7 +99,7 @@ tmap_map4_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_b
   }
 
   // align
-  sams = tmap_map4_aux_core(seqs[0], index->refseq, index->bwt, index->sa, hash, d->iter, opt);
+  sams = tmap_map4_aux_core(seqs[0], index->refseq, index->bwt, index->sa, hash, d->iter, rand, opt);
 
   return sams;
 }
