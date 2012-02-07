@@ -209,7 +209,7 @@ typedef struct __tmap_map_opt_t {
     int32_t read_rescue_mapq_thr; /*!< minimum mapping quality for read rescue */
 
     // map1/map2/map3 options, but specific to each
-    int32_t min_seq_len; /*< the minimum sequence length to examine (--min-seq-length) */
+    int32_t min_seq_len; /*< the minimum sequence length to examine (-1 to disable) (--min-seq-length) */
     int32_t max_seq_len; /*< the maximum sequence length to examine (--max-seq-length) */
 
     // map1/map3 options
@@ -255,7 +255,7 @@ typedef struct __tmap_map_opt_t {
     // map4 options
     int32_t min_seed_length; /*!< the minimum seed length to accept a hit (--min-seed-length) */
     int32_t max_seed_length; /*!< the maximum seed length to accept a hit (--max-seed-length) */
-    int32_t max_iwidth; /*!< the maximum interval width to accept hits (--max-iwidth) */
+    int32_t max_iwidth; /*!< the maximum interval width to accept a hit (--max-iwidth) */
 
     // mapvsw options
     // None
