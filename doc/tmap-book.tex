@@ -31,7 +31,7 @@ urlcolor=myurlcolor     % color of external links
 % TODO check all options are present
 
 % Version number
-\newcommand{\Version}{0.2.4}
+\newcommand{\Version}{0.3.0}
 
 % layout
 \setlength\topmargin{0in}
@@ -115,7 +115,7 @@ To access each command, we use \TT{tmap <name>}, where \TT{<name>} is the name o
 
 \section{Common Mapping Options}
 \label{sec:commonoptions}
-Some common options exist across some or all of the mapping commands (\TT{map1}, \TT{map2}, \TT{map3}, \TT{mapvsw} and \TT{mapall}). 
+Some common options exist across some or all of the mapping commands (\TT{map1}, \TT{map2}, \TT{map3}, \TT{map4}, \TT{mapvsw} and \TT{mapall}). 
 These options will be discussed here to avoid duplication.
 
 The TMAP mapping commands can accept their input file from the standard input stream.
@@ -442,6 +442,13 @@ See \autoref{sec:commonoptions} for common options that are in use in this comma
 
 \subsection{Usage}
 
+\subsubsection{\TT{--hit-frac FLOAT}}
+Specifies the fraction of seed positions that are under the maximum (\TT{--max-seed-hits}).
+
+\subsubsection{\TT{--seed-step INT}}
+Specifies the number of bases to increase the seed while repetitive (-1 to disable).
+
+
 \subsubsection{\TT{--seed-length INT}}
 Specifies the $k$-mer length to seed candidate alignment locations (CALs).
 With a value of $-1$ will set the seed length to $\left(ceiling(log_4(R)) + 2\right)$ where $R$ is the reference genome length.
@@ -452,17 +459,35 @@ Specifies the maximum number of CALs allowed to be returned by a seed before it 
 \subsubsection{\TT{--hp-diff INT}}
 Specifies the number of bases to enumerate for a single homopolymer within the seed.
 
-\subsubsection{\TT{--hit-frac FLOAT}}
-Specifies the fraction of seed positions that are under the maximum (\TT{--max-seed-hits}).
-
-\subsubsection{\TT{--seed-step INT}}
-Specifies the number of bases to increase the seed while repetitive (-1 to disable).
-
 \subsubsection{\TT{--fwd-search}}
 Specifies to perform a forward search instead of a reverse search.
 
 \subsubsection{\TT{--skip-seed-frac FLOAT}}
 Specifies the fraction of a seed to skip when a lookup succeeds.
+
+\section{tmap map4}
+\label{sec:map4}
+The \BF{map4} is a command to map sequences to a reference genome.
+This algorithm is well suited for longer reads ($\geq 100$bp) and is a variation of the super-maximal exact matching (SMEM) algorithm proposed by Heng Li.
+SMEMs are equivalent to returning all longest common substrings between the read and reference.
+
+See \autoref{sec:commonoptions} for common options that are in use in this command.
+
+\subsection{Usage}
+
+\subsubsection{\TT{--hit-frac FLOAT}}
+Specifies the fraction of seed positions that are under the maximum (\TT{--max-seed-hits}).
+
+\subsubsection{\TT{--max-iwidth INT}}
+Specifies the maximum interval size to accept a hit.
+
+\subsubsection{\TT{--min-seed-length INT}}
+Specifies the minimum number of bases to use to seed.
+With a value of $-1$ will set the seed length to $\left(ceiling(log_4(R)) + 2\right)$ where $R$ is the reference genome length.
+
+\subsubsection{\TT{--max-seed-length INT}}
+Specifies the maximum number of bases to use to seed.
+
 \section{tmap mapvsw}
 \label{sec:mapvsw}
 The \BF{mapvsw} is a command to map sequences to a reference genome.
