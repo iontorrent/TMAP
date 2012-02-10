@@ -44,24 +44,56 @@
 #include "tmap_sa.h"
 #include "tmap_sa_aux.h"
 
-static const uint64_t n_mask[5] = { 0xfffffffffffffffful, 0xaaaaaaaaaaaaaaaaul,
-        0x5555555555555555ul, 0x0ul, 0xfffffffffffffffful };
+
+static inline uint64_t 
+tmap_bwt_aux_occ(tmap_bwt_int_t k, __m64 x, const uint32_t *const p)
+{
+  __m128i t, t2;
+  t2 = t = _mm_set1_epi64(x);
+  switch (k&0x60) {
+    case 0x60:
+      x = _mm_set_pi32(p[-6], p[-5]);
+    case 0x40:
+      t = _mm_set_epi64(x, _mm_set_pi32(p[-4], p[-3]));
+    case 0x20: x = _mm_set_pi32(p[-2], p[-1]);
+  }
+  t = _mm_nc_combmask_epi128(t, t2, n_mask_128[0]);
+
+  t2 = _mm_xor_si128(_mm_set_epi64(x, _mm_set_pi32(p[0], p[1])), t2);
+  t2 = _mm_and_si128(t2, _mm_srli_epi64(t2, 1));
+
+  x = _mm_srli_si64(n_mask_64[7], ((k&31)<<1));
+  x = _mm_sub_si64(n_mask_64[2], x);
+  t2 = _mm_and_si128(t2, _mm_set_epi64(n_mask_64[2], x));
+
+  t = _mm_add_epi64(t, t2);
+
+  t2 = _mm_srli_epi64(t, 2);
+  t2 = _mm_and_si128(t2, n_mask_128[1]);
+  t = _mm_and_si128(t, n_mask_128[1]);
+  t = _mm_add_epi64(t, t2);
+
+  t2 = _mm_srli_epi64(t, 4);
+  t2 = _mm_and_si128(t2, n_mask_128[2]);
+  t = _mm_and_si128(t, n_mask_128[2]);
+  t = _mm_add_epi64(t, t2);
+
+  return _mm_extract_epi64(t, 1) + _mm_extract_epi64(t, 0);
+}
 
 static inline tmap_bwt_int_t 
-tmap_sa_aux_cal_isa(const tmap_bwt_t *bwt, tmap_bwt_int_t isa)
+tmap_bwt_aux_invPsi(const tmap_bwt_t *bwt, tmap_bwt_int_t isa)
 {
   if (TMAP_LIKELY(isa != bwt->primary)) {
       tmap_bwt_int_t c, _i;
       _i = (isa < bwt->primary) ? isa : isa - 1;
-      c = tmap_bwt_B0(bwt, _i);
-      if (TMAP_LIKELY(isa < bwt->seq_len)) {
-          uint64_t w;
+      c = bwt_B0(bwt, _i);
+      if (likely(isa < bwt->seq_len)) {
           const uint32_t *p;
-          w = n_mask[c];
           isa = bwt->L2[c] + ((const tmap_bwt_int_t *)(p = tmap_bwt_occ_intv(bwt, _i)))[c];
           p += sizeof(tmap_bwt_int_t) + ((_i&0x60)>>4);
-          w = tmap_bwt_aux_occ_p(_i, w, (const tmap_bwt_int_t *)p);
-          isa += w * 0x101010101010101ul >> 56;
+          c = tmap_bwt_aux_occ(_i, n_mask_64[c], p);
+          isa += c * 0x101010101010101ul >> 56;
       } else {
           isa = (isa == bwt->seq_len ? bwt->L2[c+1] : bwt->L2[c]);
       }
@@ -72,52 +104,16 @@ tmap_sa_aux_cal_isa(const tmap_bwt_t *bwt, tmap_bwt_int_t isa)
   return isa;
 }
 
-static inline tmap_bwt_int_t 
-tmap_sa_aux_cal_isa_PleSl(const tmap_bwt_t *bwt, tmap_bwt_int_t isa)
-{
-  uint64_t w;
-  const uint32_t *p;
-  tmap_bwt_int_t c;
-  if (TMAP_LIKELY(isa != bwt->primary)) {
-      if (isa > bwt->primary) {
-          if (TMAP_UNLIKELY(isa > bwt->seq_len))
-            return 0;
-          --isa;
-
-      }
-      c = tmap_bwt_B0(bwt, isa);
-      w = n_mask[c];
-      c = bwt->L2[c] + ((const tmap_bwt_int_t *)(p = tmap_bwt_occ_intv(bwt, isa)))[c];
-      p += sizeof(tmap_bwt_int_t) + ((isa&0x60)>>4);
-      w = tmap_bwt_aux_occ_p(isa, w, (const tmap_bwt_int_t *)p);
-      isa = c + (w * 0x101010101010101ul >> 56);
-  } else {
-      c = tmap_bwt_B0(bwt, isa);
-      if (isa == bwt->seq_len)
-        ++c;
-      isa = bwt->L2[c];
-  }
-  return isa;
-}
-
 tmap_bwt_int_t 
 tmap_sa_pac_pos_aux(const tmap_sa_t *sa, const tmap_bwt_t *bwt, tmap_bwt_int_t k)
 {
-  tmap_bwt_int_t mask, isa = 0;
+  tmap_bwt_int_t mask, sa = 0;
   mask = sa->sa_intv - 1;
-  if (TMAP_LIKELY(bwt->primary <= bwt->seq_len)) {
-      // not power of 2 before decrement
-      while (k & mask) {
-          ++isa;
-          k = tmap_sa_aux_cal_isa_PleSl(bwt, k);
-      }
-  } else {
-      while(k & mask) {
-          ++isa;
-          k = tmap_sa_aux_cal_isa(bwt, k);
-      }
+  while(k & mask) {
+      ++sa;
+      k = tmap_bwt_aux_invPsi(bwt, k);
   }
-  /* without setting sa->sa[0] = -1, the following line should be
-     changed to (isa + sa->sa[k/sa->sa_intv]) % (bwt->seq_len + 1) */
-  return isa + sa->sa[k/sa->sa_intv];
+  /* without setting bwt->sa[0] = -1, the following line should be
+     changed to (sa + bwt->sa[k/bwt->sa_intv]) % (bwt->seq_len + 1) */
+  return sa + sa->sa[k/sa->sa_intv];
 }

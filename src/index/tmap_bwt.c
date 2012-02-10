@@ -44,6 +44,11 @@
 
 #define TMAP_BWT_BY_FIVE
 
+/* 0 - Use this to use the original BWT code */
+/* 1 - Use this to use the optimized code */
+/* 2 - Use this to test the optimized code against the original BWT code */
+#define TMAP_BWT_RUN_TYPE 0
+
 static inline uint64_t
 tmap_bwt_get_hash_length(uint64_t i)
 {
@@ -354,6 +359,9 @@ tmap_bwt_gen_cnt_table(tmap_bwt_t *bwt)
         x |= (((i&3) == j) + ((i>>2&3) == j) + ((i>>4&3) == j) + (i>>6 == j)) << (j<<3);
       bwt->cnt_table[i] = x;
   }
+#if TMAP_BWT_RUN_TYPE != 0
+  tmap_bwt_aux_set_mask();
+#endif
 }
 
 static void
@@ -598,26 +606,37 @@ tmap_bwt_2occ_orig(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, ui
 inline void 
 tmap_bwt_2occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, uint8_t c, tmap_bwt_int_t *ok, tmap_bwt_int_t *ol)
 {
-  //tmap_bwt_int_t aux_ok, aux_ol; 
-      
-  // Original
-  tmap_bwt_2occ_orig(bwt, k, l, c, ok, ol);
+#if TMAP_BWT_RUN_TYPE != 0 // Not just the original
+  tmap_bwt_int_t aux_ok, aux_ol; 
+#endif
 
-  /*
+#if TMAP_BWT_RUN_TYPE != 1 // Not just the optimized
+  tmap_bwt_2occ_orig(bwt, k, l, c, ok, ol);
+#endif
+      
+#if TMAP_BWT_RUN_TYPE != 0 // Not just the original
+
   // Optimized (?)
-  aux_ol = l;
-  aux_ok = tmap_bwt_aux_2occ(bwt, k, &aux_ol, c);
-  // NB: tmap_bwt_aux_2occ included L2 addition
-  aux_ol -= bwt->L2[c];
-  aux_ok -= bwt->L2[c] + 1;
+  if(TMAP_BWT_INT_MAX == k && TMAP_BWT_INT_MAX != l) {
+      aux_ok = 0;
+      aux_ol = tmap_bwt_occ(bwt, l, c);
+  }
+  else {
+      aux_ol = l;
+      aux_ok = tmap_bwt_aux_2occ(bwt, k, &aux_ol, c);
+      // NB: tmap_bwt_aux_2occ included L2 addition
+      aux_ol -= bwt->L2[c];
+      aux_ok -= bwt->L2[c] + 1;
+  }
   
-  // Test
+#if TMAP_BWT_RUN_TYPE == 2 // Test
   if(aux_ok != *ok || aux_ol != *ol) {
       fprintf(stderr, "c=%u k=%llu l=%llu *ok=%llu aux_ok=%llu *ol=%llu aux_ol=%llu TMAP_BWT_INT_MAX=%llu\n", 
               c, k, l, *ok, aux_ok, *ol, aux_ol, TMAP_BWT_INT_MAX);
       tmap_bug();
   }
-  */
+#endif
+#endif
 }
 
 #define __occ_aux4(bwt, b)											\

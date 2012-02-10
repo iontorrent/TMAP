@@ -6,6 +6,20 @@
  * https://github.com/RoelKluin/bwa
  */
 
+#include <stdlib.h>
+#include <stdint.h>
+#include <emmintrin.h>
+#include <unistd.h>
+
+extern const uint32_t tmap_bwt_aux_occ_mask[16];
+extern const uint64_t tmap_bwt_aux_n_mask[5];
+extern __m128i tmap_bwt_aux_n_mask_128[3];
+extern __m64 tmap_bwt_aux_n_mask_64[9];
+
+// TODO
+void
+tmap_bwt_aux_set_mask();
+
 // TODO
 inline uint64_t 
 tmap_bwt_aux_occ_p(const tmap_bwt_int_t k, uint64_t x, const tmap_bwt_int_t *const p);
