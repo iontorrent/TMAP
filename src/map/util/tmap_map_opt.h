@@ -142,11 +142,11 @@ typedef struct {
  * A list of global command line flags take or available.
  *
  * Taken:
- * ABEFGJKLMORTUWXYZ
+ * ABDEFGJKLMORTUWXYZ
  * afghijklmnqrsvwyz
  *
  * Available:
- * CDHIUV
+ * CHIUV
  * optux
  * 
  * NB: Lets reserve single character flags for global options. 
@@ -182,6 +182,7 @@ typedef struct __tmap_map_opt_t {
     int32_t num_threads;  /*!< the number of threads (-n,--num-threads) */
     int32_t aln_output_mode;  /*!< specifies how to choose alignments (-a,--aln-output-mode) */
     char *sam_rg;  /*!< specifies the RG line in the SAM header (-R,--sam-read-group) */
+    int32_t bidirectional;  /*!< specifies the input reads are to be annotated as bidirectional (-D,--bidirectional) */
     int32_t input_compr;  /*!< the input compression type (-j,--input-bz2 and -z,--input-gz) */
     int32_t output_compr;  /*!< the output compression type (-J,--output-bz2 and -Z,--output-gz) */
     key_t shm_key;  /*!< the shared memory key (-k,--shared-memory-key) */

@@ -126,6 +126,7 @@ __tmap_map_opt_option_print_func_int_init(reads_queue_size)
 __tmap_map_opt_option_print_func_int_init(num_threads)
 __tmap_map_opt_option_print_func_int_init(aln_output_mode)
 __tmap_map_opt_option_print_func_chars_init(sam_rg, "not using")
+__tmap_map_opt_option_print_func_tf_init(bidirectional)
 __tmap_map_opt_option_print_func_compr_init(input_compr_gz, input_compr, TMAP_FILE_GZ_COMPRESSION)
 __tmap_map_opt_option_print_func_compr_init(input_compr_bz2, input_compr, TMAP_FILE_BZ2_COMPRESSION)
 __tmap_map_opt_option_print_func_compr_init(output_compr_gz, output_compr, TMAP_FILE_GZ_COMPRESSION)
@@ -478,6 +479,12 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            "the RG tags to add to the SAM header",
                            NULL,
                            tmap_map_opt_option_print_func_sam_rg,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "bidirectional", no_argument, 0, 'D', 
+                           TMAP_MAP_OPT_TYPE_NONE,
+                           "specifies the input reads are to be annotated as bidirectional",
+                           NULL,
+                           tmap_map_opt_option_print_func_bidirectional,
                            TMAP_MAP_ALGO_GLOBAL);
   tmap_map_opt_options_add(opt->options, "input-gz", no_argument, 0, 'z', 
                            TMAP_MAP_OPT_TYPE_NONE,
@@ -915,6 +922,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->num_threads = 1;
   opt->aln_output_mode = TMAP_MAP_OPT_ALN_MODE_RAND_BEST;
   opt->sam_rg = NULL;
+  opt->bidirectional = 0;
   opt->input_compr = TMAP_FILE_NO_COMPRESSION;
   opt->output_compr = TMAP_FILE_NO_COMPRESSION;
   opt->shm_key = 0;
@@ -1227,6 +1235,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
       else if(c == 'B' || (0 == c && 0 == strcmp("max-seed-band", options[option_index].name))) {       
           opt->max_seed_band = atoi(optarg);
+      }
+      else if(c == 'D' || (0 == c && 0 == strcmp("bidirectional", options[option_index].name))) {       
+          opt->bidirectional = 1;
       }
       else if(c == 'U' || (0 == c && 0 == strcmp("no-unroll-banding", options[option_index].name))) {       
           opt->no_unroll_banding = 1;
@@ -1629,6 +1640,9 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
     if(0 != tmap_map_opt_file_check_with_null(opt_a->sam_rg, opt_b->sam_rg)) {
         tmap_error("option -R was specified outside of the common options", Exit, CommandLineArgument);
     }
+    if(opt_a->bidirectional != opt_b->bidirectional) {
+        tmap_error("option -D was specified outside of the common options", Exit, CommandLineArgument);
+    }
     if(opt_a->input_compr != opt_b->input_compr) {
         tmap_error("option -j or -z was specified outside of the common options", Exit, CommandLineArgument);
     }
@@ -1833,6 +1847,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   if(-1 != opt->reads_queue_size) tmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
   tmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
   tmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
+  tmap_error_cmd_check_int(opt->bidirectional, 0, 1, "-D");
   if(TMAP_FILE_BZ2_COMPRESSION == opt->output_compr
      && -1 == opt->reads_queue_size) {
       tmap_error("cannot buffer reads with bzip2 output (options \"-q 1 -J\")", Exit, OutOfRange);
@@ -1954,6 +1969,7 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
         opt_dest->aln_output_mode = TMAP_MAP_OPT_ALN_MODE_ALL;
     }
     opt_dest->sam_rg = tmap_strdup(opt_src->sam_rg);
+    opt_dest->bidirectional = opt_src->bidirectional;
     opt_dest->input_compr = opt_src->input_compr;
     opt_dest->output_compr = opt_src->output_compr;
     opt_dest->shm_key = opt_src->shm_key;
@@ -2024,6 +2040,7 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "num_threads=%d\n", opt->num_threads);
   fprintf(stderr, "aln_output_mode=%d\n", opt->aln_output_mode);
   fprintf(stderr, "sam_rg=%s\n", opt->sam_rg);
+  fprintf(stderr, "bidirectional=%d\n", opt->bidirectional);
   fprintf(stderr, "sam_sff_tags=%d\n", opt->sam_sff_tags);
   fprintf(stderr, "ignore_flowgram=%d\n", opt->ignore_flowgram);
   fprintf(stderr, "remove_sff_clipping=%d\n", opt->remove_sff_clipping);

@@ -39,6 +39,7 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq,
   @param  fp            the file pointer to which to print
   @param  seq           the sequence that is unmapped
   @param  sam_sff_tags  1 if SFF specific SAM tags are to be outputted, 0 otherwise
+  @param  bidirectional  1 if a bidirectional SAM tag is to be added, 0 otherwise
   @param  refseq        pointer to the reference sequence (forward)
   @param  end_num       0 if there is no mate (all mate params ignored), 1 if the mate is the first fragment, 2 if the mate is the last fragment
   @param  m_unmapped    1 if the mate is unmapped, 0 otherwise (m_strand/m_seqid/m_pos are ignored)
@@ -48,7 +49,7 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq,
   @param  m_pos         the mates position (zero-based), 0 otherwise
   */
 inline void
-tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tmap_refseq_t *refseq,
+tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, int32_t bidirectional, tmap_refseq_t *refseq,
                         uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, 
                         uint32_t m_strand, uint32_t m_seqid, uint32_t m_pos);
 
@@ -58,6 +59,7 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
   @param  fp          the file pointer to which to print
   @param  seq         the sequence that is mapped
   @param  sam_sff_tags  1 if SFF specific SAM tags are to be outputted, 0 otherwise
+  @param  bidirectional  1 if a bidirectional SAM tag is to be added, 0 otherwise
   @param  refseq      pointer to the reference sequence (forward)
   @param  strand      the strand of the mapping
   @param  seqid       the sequence index (0-based)
@@ -85,7 +87,7 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
   @details            the format should not include the MD tag, which will be outputted automatically
   */
 inline void
-tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tmap_refseq_t *refseq,
+tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, int32_t bidirectional, tmap_refseq_t *refseq,
                       uint8_t strand, uint32_t seqid, uint32_t pos, int32_t secondary,
                       uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, double m_num_std, uint32_t m_strand,
                       uint32_t m_seqid, uint32_t m_pos, uint32_t m_tlen,
