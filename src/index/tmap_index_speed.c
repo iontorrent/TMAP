@@ -124,7 +124,7 @@ usage(tmap_index_speed_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "         -e INT      the maximum number of hits to enumerate (-1 for unlimited, 0 to disable) [%d]\n", opt->enum_max_hits);
   tmap_file_fprintf(tmap_file_stderr, "         -K INT      the kmer length to simulate [%d]\n", opt->kmer_length);
   tmap_file_fprintf(tmap_file_stderr, "         -N INT      the number of kmers to simulate [%d]\n", opt->kmer_num);
-  tmap_file_fprintf(tmap_file_stderr, "         -R FLOAT    the fraction of random kmers [%.2lf]\n", (1 == opt->rand_frac) ? "true" : "false");
+  tmap_file_fprintf(tmap_file_stderr, "         -R FLOAT    the fraction of random kmers [%.2lf]\n", opt->rand_frac);
   tmap_file_fprintf(tmap_file_stderr, "Options (optional):\n");
   tmap_file_fprintf(tmap_file_stderr, "         -v          print verbose progress information\n");
   tmap_file_fprintf(tmap_file_stderr, "         -h          print this message\n");
