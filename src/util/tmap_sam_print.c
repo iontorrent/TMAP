@@ -211,7 +211,7 @@ tmap_sam_print_flowgram(tmap_file_t *fp, uint16_t *flowgram, int32_t length)
 }
 
 inline void
-tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tmap_refseq_t *refseq,
+tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, int32_t bidirectional, tmap_refseq_t *refseq,
                       uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, 
                       uint32_t m_strand, uint32_t m_seqid, uint32_t m_pos)
 {
@@ -272,6 +272,9 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
                     PACKAGE_NAME);
   if(TMAP_SEQ_TYPE_SFF == seq->type && 1 == sam_sff_tags) {
       tmap_sam_print_flowgram(fp, seq->data.sff->read->flowgram, seq->data.sff->gheader->flow_length);
+  }
+  if(1 == bidirectional) {
+      tmap_file_fprintf(fp, "\tXB:i:1");
   }
   tmap_file_fprintf(fp, "\n");
 }
@@ -382,7 +385,7 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
 }
 
 inline void
-tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tmap_refseq_t *refseq,
+tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, int32_t bidirectional, tmap_refseq_t *refseq,
                       uint8_t strand, uint32_t seqid, uint32_t pos, int32_t aln_num,
                       uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, double m_num_std, uint32_t m_strand,
                       uint32_t m_seqid, uint32_t m_pos, uint32_t m_tlen,
@@ -511,6 +514,9 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, tm
       if(0 == m_unmapped) {
           tmap_file_fprintf(fp, "\tYS:f:%f", m_num_std);
       }
+  }
+  if(1 == bidirectional) {
+      tmap_file_fprintf(fp, "\tXB:i:1");
   }
 
   // optional tags
