@@ -42,8 +42,8 @@ tmap_index_speed_test(tmap_index_t *index, clock_t *total_clock, tmap_index_spee
           }
       }
       else {
-          // get a position
-          pacpos = (tmap_bwt_int_t)(tmap_rand_get(rand) * index->refseq->len);
+          // get a position (one-based)
+          pacpos = 1 + (tmap_bwt_int_t)(tmap_rand_get(rand) * (index->refseq->len - opt->kmer_length + 1));
           if(0 == tmap_refseq_subseq(index->refseq, pacpos, opt->kmer_length, seq)) {
               i--;
               continue;
@@ -51,7 +51,7 @@ tmap_index_speed_test(tmap_index_t *index, clock_t *total_clock, tmap_index_spee
       }
       found = 0;
       start_clock = clock();
-      if(0 < tmap_bwt_match_exact(index->bwt, opt->kmer_length, seq, &cur)) {
+      if(0 < tmap_bwt_match_exact_reverse(index->bwt, opt->kmer_length, seq, &cur)) {
           if(0 <= opt->enum_max_hits && (cur.l - cur.k + 1) <= opt->enum_max_hits) {
               for(k=cur.k;k<=cur.l;k++) {
                   // retrieve the packed position
@@ -143,7 +143,7 @@ tmap_index_speed(int argc, char *argv[])
   opt.enum_max_hits = 1024;
   opt.kmer_length = 12;
   opt.kmer_num = 100000;
-  opt.rand_frac = 1.0;
+  opt.rand_frac = 0.0;
   opt.shm_key = 0;
       
   while((c = getopt(argc, argv, "f:k:w:e:K:N:R:hv")) >= 0) {
