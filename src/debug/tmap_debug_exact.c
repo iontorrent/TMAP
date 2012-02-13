@@ -26,6 +26,9 @@ tmap_debug_exact_print_sam(tmap_refseq_t *refseq, tmap_seq_t *seq, tmap_bwt_int_
   uint8_t strand;
 
   if(0 < tmap_refseq_pac2real(refseq, pacpos, tmap_seq_get_bases_length(seq), &seqid, &pos, &strand)) {
+      // NB: need to update position
+      if(0 == strand) pos++;
+      else pos--;
       if(1 == strand) { // reverse for the output
           flag |= 0x0010;
           tmap_seq_reverse_compliment(seq);
@@ -64,7 +67,8 @@ tmap_debug_exact_core_worker(tmap_refseq_t *refseq, tmap_bwt_t *bwt, tmap_sa_t *
       if(0 < tmap_bwt_match_exact_reverse(bwt, bases->l, (uint8_t*)bases->s, &cur)) {
           if(0 == n_only) {
               for(j=cur.k;j<=cur.l;j++) {
-                  pacpos = bwt->seq_len - tmap_sa_pac_pos(sa, bwt, j) - bases->l + 1;
+                  //pacpos = bwt->seq_len - tmap_sa_pac_pos(sa, bwt, j) - bases->l + 1;
+                  pacpos = tmap_sa_pac_pos(sa, bwt, j);
                   if(0 != tmap_debug_exact_print_sam(refseq, orig_seq, pacpos)) {
                       mapped = 1;
                   }
