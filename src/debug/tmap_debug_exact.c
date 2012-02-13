@@ -45,9 +45,9 @@ tmap_debug_exact_print_sam(tmap_refseq_t *refseq, tmap_seq_t *seq, tmap_bwt_int_
 static void 
 tmap_debug_exact_core_worker(tmap_refseq_t *refseq, tmap_bwt_t *bwt, tmap_sa_t *sa, tmap_seq_t *orig_seq, int32_t n_only)
 {
-  uint32_t i, j, count = 0;
+  uint32_t i;
   uint32_t mapped = 0;
-  tmap_bwt_int_t pacpos = 0;
+  tmap_bwt_int_t j, pacpos = 0, count = 0;
   tmap_seq_t *seqs[2]={NULL,NULL};
   tmap_bwt_match_occ_t cur;
 
@@ -82,8 +82,8 @@ tmap_debug_exact_core_worker(tmap_refseq_t *refseq, tmap_bwt_t *bwt, tmap_sa_t *
       }
   }
   else {
-      tmap_file_fprintf(tmap_file_stdout, "%s\t%s\t%u\n",
-                        tmap_seq_get_name(orig_seq)->s, tmap_seq_get_bases(orig_seq)->s, count);
+      tmap_file_fprintf(tmap_file_stdout, "%s\t%s\t%llu\n",
+                        tmap_seq_get_name(orig_seq)->s, tmap_seq_get_bases(orig_seq)->s, (long long unsigned int)count);
   }
   
   // destroy
