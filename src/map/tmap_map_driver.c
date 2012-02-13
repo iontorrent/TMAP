@@ -611,14 +611,14 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
           // write
           if(1 == num_ends) {
               tmap_map_sams_print(seq_buffer[0][i], index->refseq, records[i]->sams[0], 
-                                  0, NULL, driver->opt->sam_sff_tags);
+                                  0, NULL, driver->opt->sam_sff_tags, driver->opt->bidirectional);
           }
           else {
               for(j=0;j<num_ends;j++) {
                   tmap_map_sams_print(seq_buffer[j][i], index->refseq, records[i]->sams[j],
                                     (0 == j) ? 1 : ((num_ends-1 == j) ? 2 : 0),
                                     records[i]->sams[(j+1) % num_ends], 
-                                    driver->opt->sam_sff_tags);
+                                    driver->opt->sam_sff_tags, driver->opt->bidirectional);
               }
           }
           // free alignments

@@ -240,10 +240,11 @@ tmap_map_sam_copy_and_nullify(tmap_map_sam_t *dest, tmap_map_sam_t *src);
   @param  end_num       0 if there is no mate, 1 if this is the first fragment, 2 if the this is the last fragment
   @param  mates         the mate's mappings, NULL if there is no mate
   @param  sam_sff_tags  1 if SFF specific SAM tags are to be outputted, 0 otherwise
+  @param  bidirectional  1 if a bidirectional SAM tag is to be added, 0 otherwise
   */
 void
 tmap_map_sams_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sams_t *sams, int32_t end_num, 
-                    tmap_map_sams_t *mates, int32_t sam_sff_tags);
+                    tmap_map_sams_t *mates, int32_t sam_sff_tags, int32_t bidirectional);
 
 /*!
   keep only the mappings with the given score 

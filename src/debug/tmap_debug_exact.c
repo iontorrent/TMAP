@@ -78,7 +78,7 @@ tmap_debug_exact_core_worker(tmap_refseq_t *refseq, tmap_bwt_t *bwt, tmap_sa_t *
 
   if(0 == n_only) {
       if(0 == mapped) {
-          tmap_sam_print_unmapped(tmap_file_stdout, orig_seq, 0, refseq, 0, 0, 0, 0, 0, 0);
+          tmap_sam_print_unmapped(tmap_file_stdout, orig_seq, 0, 0, refseq, 0, 0, 0, 0, 0, 0);
       }
   }
   else {

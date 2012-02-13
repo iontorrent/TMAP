@@ -17,7 +17,7 @@ typedef struct {
     int32_t enum_max_hits;  /*!< the maximum number of hits to enumerate (-e) */
     int32_t kmer_length;  /*!< the kmer length to simulate (-K) */ 
     int32_t kmer_num;  /*!< the number of kmers to simulate (-N) */
-    int32_t rand_frac;  /*!< the fraction of random kmers (-R) */
+    double rand_frac;  /*!< the fraction of random kmers (-R) */
 } tmap_index_speed_opt_t;
 
 /*! 
