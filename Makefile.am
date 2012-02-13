@@ -36,7 +36,7 @@ GLOBAL_SOURCES = \
 				 src/sw/tmap_fsw.h src/sw/tmap_fsw.c \
 				 src/sw/tmap_vsw.h src/sw/tmap_vsw.c \
 				 src/sw/tmap_vsw16.h src/sw/tmap_vsw16.c \
-				 src/sw/tmap_vsw_bm.h src/sw/tmap_vsw_bm.c 
+				 src/sw/tmap_vsw_bm.c 
 
 tmap_SOURCES = \
 			   ${GLOBAL_SOURCES} \
