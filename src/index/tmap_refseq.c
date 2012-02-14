@@ -19,10 +19,11 @@
 const char * 
 tmap_refseq_get_version_format(const char *v)
 {
-  static const int32_t tmap_index_versions_num = 4;
+  static const int32_t tmap_index_versions_num = 6;
   static const char *tmap_index_versions[34] = {
       "0.0.1", "tmap-f1",
-      "0.0.17", "tmap-f2"
+      "0.0.17", "tmap-f2",
+      "0.3.0", "tmap-f3"
   };
   int32_t i, cmp;
   for(i=tmap_index_versions_num-2;0<=i;i-=2) {
