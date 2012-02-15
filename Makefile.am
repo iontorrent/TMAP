@@ -32,6 +32,7 @@ GLOBAL_SOURCES = \
 				 src/index/tmap_index.h src/index/tmap_index.c \
 				 src/index/tmap_refseq.h src/index/tmap_refseq.c \
 				 src/index/tmap_sa.c src/index/tmap_sa.h \
+				 src/index/tmap_index_size.h src/index/tmap_index_size.c \
 				 src/sw/tmap_sw.h src/sw/tmap_sw.c \
 				 src/sw/tmap_fsw.h src/sw/tmap_fsw.c \
 				 src/sw/tmap_vsw.h src/sw/tmap_vsw.c \

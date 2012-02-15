@@ -59,6 +59,7 @@ static int usage()
   fprintf(stderr, "         refinfo        prints information about the reference\n");
   fprintf(stderr, "         pac2fasta      converts a packed FASTA to a FASTA file\n");
   fprintf(stderr, "         bwtupdate      updates the bwt hash width\n");
+  fprintf(stderr, "         indexsize      gives the index size in bytes\n");
 #ifdef HAVE_SAMTOOLS
   fprintf(stderr, "         sam2fs         pretty print SAM records in flow space\n");
 #endif
@@ -101,6 +102,7 @@ int main(int argc, char *argv[])
       else if (0 == strcmp("refinfo", argv[1])) ret = tmap_refseq_refinfo_main(argc-1, argv+1);
       else if (0 == strcmp("pac2fasta", argv[1])) ret = tmap_refseq_pac2fasta_main(argc-1, argv+1);
       else if (0 == strcmp("bwtupdate", argv[1])) ret = tmap_bwt_bwtupdate_main(argc-1, argv+1);
+      else if (0 == strcmp("indexsize", argv[1])) ret = tmap_index_size(argc-1, argv+1);
 #ifdef HAVE_SAMTOOLS
       else if (0 == strcmp("sam2fs", argv[1])) ret = tmap_sam2fs_main(argc-1, argv+1);
 #endif
