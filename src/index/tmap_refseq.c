@@ -295,6 +295,9 @@ tmap_refseq_fasta2pac(const char *fn_fasta, int32_t compression, int32_t fwd_onl
           anno->amb_bases = tmap_realloc(anno->amb_bases, sizeof(uint8_t) * amb_bases_mem, "anno->amb_bases");
       }
   }
+  if(0 == refseq->len) {
+      tmap_error("no bases found", Exit, OutOfRange);
+  }
   // write out the buffer
   if(tmap_refseq_seq_memory(buffer_length) != tmap_file_fwrite(buffer, sizeof(uint8_t), tmap_refseq_seq_memory(buffer_length), fp_pac)) {
       tmap_error(fn_pac, Exit, WriteFileError);
