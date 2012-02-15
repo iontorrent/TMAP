@@ -42,8 +42,6 @@
 #include "tmap_bwt_check.h"
 #include "tmap_bwt_match.h"
 
-#define TMAP_BWT_BY_FIVE
-
 /* 0 - Use this to use the original BWT code */
 /* 1 - Use this to use the optimized code */
 /* 2 - Use this to test the optimized code against the original BWT code */
@@ -321,7 +319,7 @@ tmap_bwt_update_occ_interval(tmap_bwt_t *bwt, tmap_bwt_int_t occ_interval)
   // 2-bit DNA packed
 #define bwt_B00(b, k) ((b)->bwt[(k)>>4]>>((~(k)&0xf)<<1)&3)
 
-  if(occ_interval < 16 || 0 != occ_interval % 16) {
+  if(occ_interval < TMAP_BWT_OCC_MOD || 0 != occ_interval % TMAP_BWT_OCC_MOD) {
       tmap_bug();
   }
 
@@ -519,7 +517,7 @@ tmap_bwt_occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, uint8_t c)
   n = ((tmap_bwt_int_t*)(p = tmap_bwt_occ_intv(bwt, k)))[c];
   p += sizeof(tmap_bwt_int_t); // jump to the start of the first BWT cell
 
-#ifndef TMAP_BWT_BY_FIVE
+#ifndef TMAP_BWT_BY_16
   // calculate Occ
   j = k >> 4 << 4; // divide by 16, then multiply by 16, to subtract k % 16.
   for(l = (k/bwt->occ_interval)*bwt->occ_interval; l < j; l += 16, p++) {
@@ -564,7 +562,7 @@ tmap_bwt_2occ_orig(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, ui
       n = ((tmap_bwt_int_t*)(p = tmap_bwt_occ_intv(bwt, k)))[c];
       p += sizeof(tmap_bwt_int_t);
       // calculate *ok
-#ifndef TMAP_BWT_BY_FIVE
+#ifndef TMAP_BWT_BY_16
       j = k >> 4 << 4; // divide by 16, then multiply by 16, to subtract k % 16.
       for(i = (k/bwt->occ_interval)*bwt->occ_interval; i < j; i += 16, p++) {
           n += __occ_aux16(p[0], c);
@@ -583,7 +581,7 @@ tmap_bwt_2occ_orig(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, ui
 #endif
       *ok = n;
       // calculate *ol
-#ifndef TMAP_BWT_BY_FIVE
+#ifndef TMAP_BWT_BY_16
       j = l >> 4 << 4;
       for(; i < j; i += 16, p += 1) {
           m += __occ_aux16(p[0], c);
@@ -726,7 +724,7 @@ tmap_bwt_pac2bwt_main(int argc, char *argv[])
       tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [-l -o INT -w INT -H -v -h] <in.fasta>\n", PACKAGE, argv[0]);
       return 1;
   }
-  if(occ_interval < 16 || 0 != (occ_interval % 16)) {
+  if(occ_interval < TMAP_BWT_OCC_MOD || 0 != (occ_interval % TMAP_BWT_OCC_MOD)) {
       tmap_error("option -o out of range", Exit, CommandLineArgument);
   }
 

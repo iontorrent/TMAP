@@ -109,9 +109,10 @@ static int usage(tmap_index_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "Options (required):\n");
   tmap_file_fprintf(tmap_file_stderr, "         -f FILE     the FASTA file name to index\n");
   tmap_file_fprintf(tmap_file_stderr, "Options (optional):\n");
-  tmap_file_fprintf(tmap_file_stderr, "         -o INT      the occurrence interval [%d]\n", opt->occ_interval);
+  tmap_file_fprintf(tmap_file_stderr, "         -o INT      the occurrence interval (use %d, %d, %d, ...) [%d]\n", 
+                    TMAP_BWT_OCC_MOD, TMAP_BWT_OCC_MOD*2, TMAP_BWT_OCC_MOD*3, opt->occ_interval);
   tmap_file_fprintf(tmap_file_stderr, "         -w INT      the k-mer occurrence hash width [%d]\n", opt->hash_width);
-  tmap_file_fprintf(tmap_file_stderr, "         -i INT      the suffix array interval [%d]\n", opt->sa_interval);
+  tmap_file_fprintf(tmap_file_stderr, "         -i INT      the suffix array interval (use 1, 2, 4, ...)[%d]\n", opt->sa_interval);
   tmap_file_fprintf(tmap_file_stderr, "         -a STRING   override BWT construction algorithm:\n");
   tmap_file_fprintf(tmap_file_stderr, "                     \t\"bwtsw\" (large genomes)\n");
   tmap_file_fprintf(tmap_file_stderr, "                     \t\"is\" (short genomes)\n");
@@ -174,7 +175,7 @@ int tmap_index(int argc, char *argv[])
   if(NULL == opt.fn_fasta) {
       tmap_error("required option -f", Exit, CommandLineArgument);
   }
-  if(opt.occ_interval < 16 || 0 != (opt.occ_interval % 16)) {
+  if(opt.occ_interval < TMAP_BWT_OCC_MOD || 0 != (opt.occ_interval % TMAP_BWT_OCC_MOD)) {
       tmap_error("option -o out of range", Exit, CommandLineArgument);
   }
   if(opt.hash_width < 0) {

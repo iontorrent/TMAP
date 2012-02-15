@@ -30,16 +30,27 @@
 #include <stdint.h>
 #include "../util/tmap_definitions.h"
 
-// requirement: ((b)->occ_interval%16 == 0)
+/*! 
+  A BWT index library
+  */
+
+/*
+ * If TMAP_BWT_BY_16 is defined, then:
+ *    requirement: ((b)->occ_interval%32 == 0)
+ * else:
+ *    requirement: ((b)->occ_interval%16 == 0)
+ */
+#define TMAP_BWT_BY_16
+#ifdef TMAP_BWT_BY_16
+#define TMAP_BWT_OCC_MOD 32
+#else
+#define TMAP_BWT_OCC_MOD 16
+#endif
 
 #ifndef TMAP_UBYTE
 #define TMAP_UBYTE
 typedef uint8_t ubyte_t;
 #endif
-
-/*! 
-  A BWT index library
-  */
 
 #define TMAP_BWT_OCC_INTERVAL 0x80
 #define TMAP_BWT_HASH_WIDTH_AUTO_MIN 8
@@ -56,7 +67,7 @@ typedef struct {
     tmap_bwt_int_t L2[5];  /*!< C(), cumulative count */
     tmap_bwt_int_t seq_len;  /*!< reference sequence length */
     tmap_bwt_int_t bwt_size;  /*!< size of bwt in bytes */
-    tmap_bwt_int_t occ_interval;  /*!< occurrence array interval, must be a strictly positive power of 16: (16, 32, 48, ...) */
+    tmap_bwt_int_t occ_interval;  /*!< occurrence array interval */
     uint32_t *bwt;  /*!< burrows-wheeler transform */
     uint32_t cnt_table[256];  /*!< occurrence array */
     tmap_bwt_int_t **hash_k;  /*!< hash of the BWT occurrence array (lower bounds) */

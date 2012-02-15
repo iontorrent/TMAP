@@ -15,15 +15,26 @@
 #include "tmap_bwt_match.h"
 #include "tmap_bwt_check.h"
 
+//#define TMPA_BWT_CHECK_DEBUG 1
+
+#ifdef TMPA_BWT_CHECK_DEBUG 
+#include "tmap_refseq.h"
+#include "tmap_sa.h"
+#include "tmap_index.h"
+// NB: global variable!
+static tmap_index_t *tmap_bwt_index;
+#endif
+
 void 
 tmap_bwt_check_core2(tmap_bwt_t *bwt, int32_t length, int32_t print_msg, int32_t print_sa, int32_t warn)
 {
   uint8_t *seqs[2] = {NULL,NULL};
   char *str = NULL;
-  int32_t i, n[2], asymmetric, k, l;
+  int32_t i, asymmetric, k, l;
   uint64_t hash_j;
   int64_t sum, j;
   tmap_bwt_match_occ_t sa;
+  tmap_bwt_int_t n[2];
 
   for(i=1;i<=length;i++) {
       seqs[0] = tmap_calloc(i, sizeof(uint8_t), "seqs[0]");
@@ -53,7 +64,23 @@ tmap_bwt_check_core2(tmap_bwt_t *bwt, int32_t length, int32_t print_msg, int32_t
                               str[l] = "ACGTN"[seqs[k][l]];
                           }
                           if(0 < n[k] && TMAP_BWT_INT_MAX != sa.k && sa.k <= sa.l) {
-                              tmap_progress_print2("%s\t%llu\t%llu\t%d", str, sa.k, sa.l, n[k]);
+                              tmap_progress_print2("%s\t%llu\t%llu\t%llu", str, sa.k, sa.l, n[k]);
+#ifdef TMPA_BWT_CHECK_DEBUG 
+                              while(sa.k <= sa.l) {
+                                  uint32_t seqid, pos;
+                                  uint8_t strand;
+                                  tmap_bwt_int_t pacpos = tmap_sa_pac_pos(tmap_bwt_index->sa, bwt, sa.k);
+                                  if(0 < tmap_refseq_pac2real(tmap_bwt_index->refseq, pacpos, 1, &seqid, &pos, &strand)) {
+                                      tmap_progress_print2("%s\t%llu\t%llu\t%llu\t%c%u:%u", str, sa.k, sa.l, n[k],
+                                                           "+-"[strand], seqid, pos);
+                                  }
+                                  else {
+                                      tmap_progress_print2("%s\t%llu\t%llu\t%llu\t%c%u:%u", str, sa.k, sa.l, n[k],
+                                                           '?', 0, 0);
+                                  }
+                                  sa.k++;
+                              }
+#endif
                           }
                           else {
                               tmap_progress_print2("%s\tNA\tNA\tNA", str);
@@ -105,19 +132,28 @@ tmap_bwt_check_core(const char *fn_fasta, int32_t length, int32_t print_sa, int3
   tmap_bwt_t *bwt;
   int32_t hash_width = 0;
 
+#ifdef TMPA_BWT_CHECK_DEBUG 
+  tmap_bwt_index = tmap_index_init(fn_fasta, 0);
+  bwt = tmap_bwt_index->bwt;
+#else
   bwt = tmap_bwt_read(fn_fasta);
-
+#endif
   if(0 == use_hash) {
       hash_width = bwt->hash_width;
       bwt->hash_width = 0;
   }
+
 
   tmap_bwt_check_core2(bwt, length, 1, print_sa, 1);
 
   if(0 == use_hash) {
       bwt->hash_width = hash_width;
   }
+#ifdef TMPA_BWT_CHECK_DEBUG 
+  tmap_index_destroy(tmap_bwt_index);
+#else
   tmap_bwt_destroy(bwt);
+#endif
 }
 
 int 
