@@ -112,15 +112,22 @@ tmap_refseq_t *
 tmap_refseq_read(const char *fn_fasta);
 
 /*! 
+  @param  len  the refseq length
+  @return      the approximate number of bytes required for this refseq in shared memory
+  */
+size_t
+tmap_refseq_approx_num_bytes(uint64_t len);
+
+/*! 
   @param  refseq  the refseq structure 
-  @return         the number of bytes required for this bwt in shared memory
+  @return         the number of bytes required for this refseq in shared memory
   */
 size_t
 tmap_refseq_shm_num_bytes(tmap_refseq_t *refseq);
 
 /*! 
   @param  fn_fasta  the fn_fasta of the file to be read, usually the fasta file name 
-  @return           the number of bytes required for this bwt in shared memory
+  @return           the number of bytes required for this refseq in shared memory
   */
 size_t
 tmap_refseq_shm_read_num_bytes(const char *fn_fasta);

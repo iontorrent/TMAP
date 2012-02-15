@@ -39,6 +39,14 @@ void
 tmap_sa_write(const char *fn_fasta, tmap_sa_t *sa);
 
 /*! 
+  @param  len      the reference length
+  @param  sa_intv  the suffix array interval
+  @return          the approximate number of bytes required for this sa in shared memory
+  */
+size_t
+tmap_sa_approx_num_bytes(uint64_t len, uint32_t sa_intv);
+
+/*! 
   @param  sa  the sa structure 
   @return     the number of bytes required for this sa in shared memory
   */

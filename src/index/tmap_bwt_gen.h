@@ -32,6 +32,14 @@
   BWT Generation Library
   */
 
+/*!
+  sets the BWT hash width based on the reference length
+  @param  ref_len  the reference length
+  @return  the reference-tuned hash width
+ */
+int32_t
+tmap_bwt_tune_hash_width(uint64_t ref_len); 
+
 /*! 
   create a bwt FASTA file from a packed FASTA file
   @param  fn_fasta      file name of the FASTA file

@@ -148,6 +148,43 @@ tmap_bwt_write(const char *fn_fasta, tmap_bwt_t *bwt)
 }
 
 size_t
+tmap_bwt_approx_num_bytes(uint64_t len, tmap_bwt_int_t occ_interval, uint32_t hash_width)
+{
+  uint32_t i;
+  size_t n = 0;
+  tmap_bwt_int_t n_occ, bwt_size;
+
+  if(INT32_MAX == hash_width) {
+      hash_width = tmap_bwt_tune_hash_width(len);
+      tmap_progress_print2("setting the BWT hash width to %d", hash_width);
+  }
+
+  n_occ = ((len + occ_interval - 1) / occ_interval) + 1; // the number of occurrences to store, on top of the bwt string
+  bwt_size = (len + 15) >> 4; // 2-bit packed
+  bwt_size += n_occ * sizeof(tmap_bwt_int_t); // the new size
+
+  // fixed length data
+  n += sizeof(uint32_t); // version id
+  n += sizeof(tmap_bwt_int_t); // primary
+  n += 5*sizeof(tmap_bwt_int_t); // L2[5]
+  n += sizeof(tmap_bwt_int_t); // seq_len
+  n += sizeof(tmap_bwt_int_t); // bwt_size;
+  n += sizeof(tmap_bwt_int_t); // occ_interval
+  n += 256*sizeof(uint32_t); // cnt_table[256]
+  n += sizeof(int32_t); // hash_width
+
+  //variable length data
+  n += sizeof(uint32_t)*bwt_size; // bwt
+  for(i=1;i<=hash_width;i++) {
+      uint64_t hash_length = tmap_bwt_get_hash_length(i);
+      n += sizeof(tmap_bwt_int_t)*hash_length; // hash_k[i-1]
+      n += sizeof(tmap_bwt_int_t)*hash_length; // hash_l[i-1]
+  }
+
+  return n;
+}
+
+size_t
 tmap_bwt_shm_num_bytes(tmap_bwt_t *bwt)
 {
   // returns the number of bytes to allocate for shared memory

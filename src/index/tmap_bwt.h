@@ -91,6 +91,15 @@ void
 tmap_bwt_write(const char *fn_fasta, tmap_bwt_t *bwt);
 
 /*! 
+  @param  len           the sequence length
+  @param  occ_interval  the occurence array interval
+  @param  hash_width    the k-mer length to hash
+  @return      the approximate number of bytes required for this bwt in shared memory
+  */
+size_t
+tmap_bwt_approx_num_bytes(uint64_t len, tmap_bwt_int_t occ_interval, uint32_t hash_width);
+
+/*! 
   @param  bwt  the bwt structure 
   @return      the number of bytes required for this bwt in shared memory
   */

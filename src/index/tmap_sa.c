@@ -71,6 +71,20 @@ tmap_sa_write(const char *fn_fasta, tmap_sa_t *sa)
 }
 
 size_t
+tmap_sa_approx_num_bytes(uint64_t len, uint32_t sa_intv)
+{
+  size_t n = 0;
+  
+  n += sizeof(tmap_bwt_int_t); // primary
+  n += sizeof(tmap_bwt_int_t); // sa_intv
+  n += sizeof(tmap_bwt_int_t); // seq_len
+  n += sizeof(tmap_bwt_int_t); // n_sa
+  n += sizeof(tmap_bwt_int_t)*(size_t)((len + sa_intv)/sa_intv); // sa
+
+  return n;
+}
+
+size_t
 tmap_sa_shm_num_bytes(tmap_sa_t *sa)
 {
   // returns the number of bytes to allocate for shared memory

@@ -561,6 +561,33 @@ tmap_refseq_read(const char *fn_fasta)
 }
 
 size_t
+tmap_refseq_approx_num_bytes(uint64_t len)
+{
+  // returns the number of bytes to allocate for shared memory
+  int32_t i;
+  size_t n = 0;
+
+  n += sizeof(uint64_t); // version_id
+  n += sizeof(size_t); // package_version->l
+  n += sizeof(uint32_t); // annos
+  n += sizeof(uint64_t); // len
+  n += sizeof(char)*(strlen(PACKAGE_VERSION)); // ~package_version->s
+  n += sizeof(uint8_t)*tmap_refseq_seq_memory(len); // ~seq
+  for(i=0;i<32;i++) { // ~refseq->num_anos;
+      n += sizeof(uint64_t); // len
+      n += sizeof(uint64_t); // offset
+      n += sizeof(size_t); // annos[i].name->l
+      n += sizeof(uint32_t); // annos[i].num_amb
+      n += sizeof(char)*(32); // ~annos[i].name->s
+      n += sizeof(uint32_t)*256; // ~amb_positions_start
+      n += sizeof(uint32_t)*256; // ~amb_positions_end
+      n += sizeof(uint8_t)*256; // amb_bases
+  }
+
+  return n;
+}
+
+size_t
 tmap_refseq_shm_num_bytes(tmap_refseq_t *refseq)
 {
   // returns the number of bytes to allocate for shared memory

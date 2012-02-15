@@ -1641,6 +1641,24 @@ BWTSaveBwtCodeAndOcc(tmap_bwt_t *bwt_out, const tmap_bwt_gen_t *bwt, const char 
   }
 }
 
+int32_t
+tmap_bwt_tune_hash_width(uint64_t ref_len) 
+{
+  int32_t hash_width = 0;
+  while(0 < ref_len) {
+      ref_len >>= 2; // divide by four
+      hash_width++;
+  }
+  if(hash_width < TMAP_BWT_HASH_WIDTH_AUTO_MIN) {
+      hash_width = TMAP_BWT_HASH_WIDTH_AUTO_MIN;
+  }
+  else if(TMAP_BWT_HASH_WIDTH_AUTO_MAX < hash_width) {
+      hash_width = TMAP_BWT_HASH_WIDTH_AUTO_MAX;
+  }
+
+  return hash_width;
+}
+
 void 
 tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, int32_t hash_width, int32_t check_hash)
 {
@@ -1716,17 +1734,7 @@ tmap_bwt_pac2bwt(const char *fn_fasta, uint32_t is_large, int32_t occ_interval, 
   tmap_progress_print2("constructed the BWT string from the packed FASTA");
 
   if(INT32_MAX == hash_width) {
-      hash_width = 0;
-      while(0 < ref_len) {
-          ref_len >>= 2; // divide by four
-          hash_width++;
-      }
-      if(hash_width < TMAP_BWT_HASH_WIDTH_AUTO_MIN) {
-          hash_width = TMAP_BWT_HASH_WIDTH_AUTO_MIN;
-      }
-      else if(TMAP_BWT_HASH_WIDTH_AUTO_MAX < hash_width) {
-          hash_width = TMAP_BWT_HASH_WIDTH_AUTO_MAX;
-      }
+      hash_width = tmap_bwt_tune_hash_width(ref_len);
       tmap_progress_print2("setting the BWT hash width to %d", hash_width);
   }
 

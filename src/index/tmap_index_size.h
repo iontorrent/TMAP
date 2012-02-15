@@ -7,6 +7,10 @@
   */
 typedef struct {
     char *fn_fasta;  /*!< the fasta file name (-f) */
+    uint64_t len;  /*!< reference length (-l) */
+    int32_t occ_interval;  /*!< the occurrence array interval (-o) */
+    int32_t hash_width;  /*!< the occurrence hash width (-w) */
+    int32_t sa_interval;  /*!< the suffix array interval (-i) */
 } tmap_index_size_opt_t;
 
 /*! 
@@ -15,6 +19,6 @@ typedef struct {
   @param  argv  the argument list
   @return       0 if executed successful
   */
-int tmap_index(int argc, char *argv[]);
+int tmap_index_size(int argc, char *argv[]);
 
 #endif
