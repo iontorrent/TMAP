@@ -21,6 +21,7 @@
   TMAP will run approximately 15% faster using the tcmalloc memory allocation
   implementation.  To use tcmalloc, install the Google performance tools:
   http://code.google.com/p/google-perftools
+  
   If you have previously compiled TMAP, execute the following command:
   <pre lang="bsh"><code>
 make distclean && sh autogen.sh && ./configure && make clean && make
