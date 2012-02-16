@@ -10,7 +10,7 @@ TMAP is an fast and accurate alignment software for short and long nucleotide se
 
 ##  Pre-requisites
 1. Compiler (required):
-  The compiler and system must support SSE2 instructions.  
+  The compiler and system must support SSE4.1 instructions.  
 
 ##  To Install
 
