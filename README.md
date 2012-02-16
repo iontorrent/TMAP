@@ -11,9 +11,13 @@
 ##  To Install
 
 1. Compile TMAP:
-  sh autogen.sh && ./configure && make
+  <pre lang="bsh"><code>
+    sh autogen.sh && ./configure && make
+  </code></pre>
 2. Install
-  make install
+  <pre lang="bsh"><code>
+    make install
+  </code></pre>
 
 ##  Optional Installs
 
