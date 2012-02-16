@@ -1,21 +1,21 @@
-TMAP - flow mapper
+## TMAP - flow mapper
 
-=== General Notes  ===
+###  General Notes 
 1.  Now on github
   github.com/iontorrent/TMAP
 
-=== Pre-requisites ===
+###  Pre-requisites
 1. Compiler (required):
   The compiler and system must support SSE2 instructions.  
 
-=== To Install ===
+###  To Install
 
 1. Compile TMAP:
   sh autogen.sh && ./configure && make
 2. Install
   make install
 
-=== Optional Installs ===
+###  Optional Installs
 
 1. TCMalloc (optional)
   TMAP will run approximately 15% faster using the tcmalloc memory allocation
@@ -43,7 +43,7 @@ TMAP - flow mapper
   After the samtools library is linked and compiled, run:
     sh autogen.sh && ./configure && make clean && make
 
-=== Developer Notes ===
+###  Developer Notes
 
 There are a number of areas for potential improvement within TMAP for those
 that are interested; they will be mentioned here.  A great way to find places
@@ -61,7 +61,7 @@ performance on large genomes (hg19) is recommended.
    Nonetheless, this would improve the run time of the program, especially for
    high-quality data and/or longer reads (>200bp).
 
-2 . Smith Waterman vectorization
+2. Smith Waterman vectorization
   The vectorized (SSE2) Smith Waterman implemented supports an combination of
     start and end soft-clipping.  To support any type of soft-clipping, some 
     performance trade-offs needed to be made.  In particular, 16-bit integers
