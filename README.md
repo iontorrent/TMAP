@@ -17,36 +17,47 @@
 
 ##  Optional Installs
 
-1. TCMalloc (optional)
+### TCMalloc (optional)
   TMAP will run approximately 15% faster using the tcmalloc memory allocation
   implementation.  To use tcmalloc, install the Google performance tools:
-  <!-- language: lang-bsh -->
     http://code.google.com/p/google-perftools
+
   If you have previously compiled TMAP, execute the following command:
+
   <!-- language: lang-bsh -->
     make distclean && sh autogen.sh && ./configure && make clean && make
+
   After installation, execute the following command:
+
   <!-- language: lang-bsh -->
     sh autogen.sh && ./configure && make clean && make
+
   The performance improve should occur when using multiple-threads.
 
-2. SAMtools (optional):
+### SAMtools (optional):
   The following commands rely on linking to samtools:
+
   <!-- language: lang-bsh -->
     tmap sam2fs
+
   They will will be unavailable if the samtools directory cannot be located.
   Furthermore, SAM/BAM as input will be unavailable.
 
   The samtools directory must be placed in this directory.  The 
   easiest way to do this is to a symbolic link:
+
   <!-- language: lang-bsh -->
     ln -s <path to samtools> samtools 
+
   Then the samtools library must be built:
+
   <!-- language: lang-bsh -->
     cd samtools
 	make
 	cd ..
+
   After the samtools library is linked and compiled, run:
+
   <!-- language: lang-bsh -->
     sh autogen.sh && ./configure && make clean && make
 
@@ -59,7 +70,7 @@ where the code can be improved is to use Google's performance tools:
 This includes a heap checker, heap profiler, and cpu profiler.  Examining 
 performance on large genomes (hg19) is recommended.
 
-1. Smith Waterman extensions
+### Smith Waterman extensions
   Currently, each hit is examined with Smith Waterman (score only), which
    re-considers the portion of the read that matched during seeding.  We need
    only re-examine the portion of the read that is not matched during seeding.
@@ -68,7 +79,7 @@ performance on large genomes (hg19) is recommended.
    Nonetheless, this would improve the run time of the program, especially for
    high-quality data and/or longer reads (>200bp).
 
-2. Smith Waterman vectorization
+### Smith Waterman vectorization
   The vectorized (SSE2) Smith Waterman implemented supports an combination of
     start and end soft-clipping.  To support any type of soft-clipping, some 
     performance trade-offs needed to be made.  In particular, 16-bit integers
@@ -79,21 +90,21 @@ performance on large genomes (hg19) is recommended.
     difficult.  Nonetheless, this could significantly improve the performance of
     the most expensive portion of the program.
 
-3. Best two-stage mapping
+### Best two-stage mapping
   There is no current recommendation for the best settings for two-stage 
     mapping, which could significantly decrease the running time.  A good 
 	project would be to optimize these settings.
 
-4. Mapping quality calibration
+### Mapping quality calibration
   The mapping quality is sufficiently calibrated, but can always be improved,
     especially for longer reads.  This is a major area for improvement.
 
-5. Better support for paired ends/mate pairs
+### Better support for paired ends/mate pairs
   There is minimal support for paired ends/mate pairs, which relies on knowing
     a prior the parameters for the insert size distribution.  The insert size 
 	could be trained on a subset of the given input data.
 
-6. Speeding up lookups in the FM-index/BWT.
+### Speeding up lookups in the FM-index/BWT.
   Further implementation improvements or parameter tuning could be made to make
     the lookups in the FM-index/BWT faster.  This includes the occurrence 
 	interval, the suffix array interval, and the k-mer occurence hash.  Caching
@@ -102,7 +113,7 @@ performance on large genomes (hg19) is recommended.
 	could be relevant here:
 	  http://github.com/RoelKluin/bwa
 
-7. Dynamic split read mapping
+### Dynamic split read mapping
   It is important to detect Structural Variation (SV), as well as finding splice 
     junctions for RNA-seq.  Support for returning more than one alignment, where
 	these alignments do not significantly overlap in terms of which bases they
@@ -117,7 +128,7 @@ performance on large genomes (hg19) is recommended.
 	query bases).  This would directly find SVs as well as other types of variant
 	requiring split read mapping.
 
-8. Representative repetitive hits
+### Representative repetitive hits
   If a seeding algorithm finds a large occurence interval that it will save, it 
     could save one of the occurrences (random) as a representative hit for the 
 	repetitive interval.  This representative hit could be aligned with Smith-Waterman
