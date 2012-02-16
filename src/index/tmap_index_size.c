@@ -14,10 +14,33 @@
 #include "tmap_index.h"
 #include "tmap_index_size.h"
 
+static char*
+tmap_index_size_reformat_size(size_t s)
+{
+  char *str = NULL;
+  double d = (double)s;
+  int32_t i = 0;
+  char *types[32] = {"B", "KB", "MB", "GB", "TB", "PB"};
+
+  while(1000 < d) {
+      d /= 1000;
+      i++;
+  }
+
+  str = tmap_calloc(10, sizeof(char), "str");
+
+  if(sprintf(str, "%.2lf%s", d, types[i]) < 0) {
+      tmap_bug();
+  }
+
+  return str;
+}
+
 static size_t
 tmap_index_size_print(const char *fn_fasta, uint64_t len, int32_t occ_interval, int32_t hash_width, int32_t sa_interval)
 {
   size_t s, x, y, z;
+  char *s_str, *x_str, *y_str, *z_str;
 
   if(NULL != fn_fasta) { // exact
       x = tmap_refseq_shm_read_num_bytes(fn_fasta);
@@ -34,10 +57,21 @@ tmap_index_size_print(const char *fn_fasta, uint64_t len, int32_t occ_interval, 
 
   s = x + y + z;
 
-  tmap_progress_print2("reference size (in bytes) = %llu", (unsigned long long int)x);
-  tmap_progress_print2("bwt size (in bytes) = %llu", (unsigned long long int)y);
-  tmap_progress_print2("sa size (in bytes) = %llu", (unsigned long long int)z);
-  tmap_progress_print2("total index size (in bytes) = %llu", (unsigned long long int)s);
+
+  s_str = tmap_index_size_reformat_size(s);
+  x_str = tmap_index_size_reformat_size(x);
+  y_str = tmap_index_size_reformat_size(y);
+  z_str = tmap_index_size_reformat_size(z);
+
+  tmap_progress_print2("reference size = %lluB (%s)", (unsigned long long int)x, x_str);
+  tmap_progress_print2("bwt size = %lluB (%s)", (unsigned long long int)y, y_str);
+  tmap_progress_print2("sa size = %lluB (%s)", (unsigned long long int)z, z_str);
+  tmap_progress_print2("total index size = %lluB (%s)", (unsigned long long int)s, s_str);
+
+  free(s_str);
+  free(x_str);
+  free(y_str);
+  free(z_str);
 
   return s;
 }
@@ -50,6 +84,8 @@ usage(tmap_index_size_opt_t *opt)
   tmap_file_fprintf(tmap_file_stderr, "\n");
   tmap_file_fprintf(tmap_file_stderr, "Options (required):\n");
   tmap_file_fprintf(tmap_file_stderr, "         -f FILE     the FASTA file name to index\n");
+  tmap_file_fprintf(tmap_file_stderr, "         -l INT      the genome size (if the index does not exist) [%llu]\n", opt->len);
+  tmap_file_fprintf(tmap_file_stderr, "Options (optional):\n");
   tmap_file_fprintf(tmap_file_stderr, "         -o INT      the occurrence interval (use %d, %d, %d, ...) [%d]\n",
                     TMAP_BWT_OCC_MOD, TMAP_BWT_OCC_MOD*2, TMAP_BWT_OCC_MOD*3, opt->occ_interval);
   tmap_file_fprintf(tmap_file_stderr, "         -w INT      the k-mer occurrence hash width [%d]\n", opt->hash_width);
