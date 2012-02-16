@@ -6,7 +6,7 @@ TMAP is an fast and accurate alignment software for short and long nucleotide se
 
 *  Download TMAP now: https://github.com/iontorrent/TMAP/tags
 *  See the latest manual: https://github.com/iontorrent/TMAP/blob/master/doc/tmap-book.pdf
-*  Get the source code: http://github.com/iontorrent/TMAP
+*  Get the source code: <pre lang="bsh"><code>git clone git://github.com/iontorrent/TMAP.git</code></pre>
 
 ##  Pre-requisites
 1. Compiler (required):
