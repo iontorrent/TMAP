@@ -34,13 +34,11 @@
   They will will be unavailable if the samtools directory cannot be located.
   Furthermore, SAM/BAM as input will be unavailable.  The samtools directory must be 
   placed in this directory.  The easiest way to do this is to a symbolic link:
-  <pre lang="bsh"><code>
-ln -s <path to samtools> samtools 
-  </code></pre>
+  <pre lang="bsh"><code>ln -s <path to samtools> samtools</code></pre>
   Then the samtools library must be built:
   <pre lang="bsh"><code>cd samtools
-  make
-  cd ..</code></pre>
+make
+cd ..</code></pre>
   After the samtools library is linked and compiled, run:
   <pre lang="bsh"><code>sh autogen.sh && ./configure && make clean && make</code></pre>
 
