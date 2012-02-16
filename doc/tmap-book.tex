@@ -497,7 +497,7 @@ Specifies the maximum number of bases to use to seed.
 \section{tmap mapvsw}
 \label{sec:mapvsw}
 The \BF{mapvsw} is a command to map sequences to a reference genome.
-This algorithm performs the full Smith Waterman algorithm alignment of the read to the reference genome, using SSE4.1 (vectorized) programming instructions.
+This algorithm performs the full Smith Waterman algorithm alignment of the read to the reference genome, using SSE2 (vectorized) programming instructions.
 This algorithm should not be used for large number of reads or large genomes, and instead should be used for debugging and investigating small numbers of reads..
 
 See \autoref{sec:commonoptions} for common options that are in use in this command.

@@ -43,6 +43,8 @@
 #include "tmap_bwt_match.h"
 #include "tmap_bwt_aux.h"
 
+#if TMAP_BWT_RUN_TYPE != 0 // Just not the original
+
 const uint32_t tmap_bwt_aux_occ_mask[16] = {
     0xc0000000u, 0xf0000000u, 0xfc000000u, 0xff000000u,
     0xffc00000u, 0xfff00000u, 0xfffc0000u, 0xffff0000u, 
@@ -253,3 +255,4 @@ tmap_bwt_aux_2occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t *l, ui
 tmap_bwt_aux_2occ_out:
   return k;
 }
+#endif

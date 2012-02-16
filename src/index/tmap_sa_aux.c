@@ -34,8 +34,10 @@
 #include <assert.h>
 #include <stdint.h>
 #include <emmintrin.h>
+#if TMAP_BWT_RUN_TYPE != 0 // Just not the original
 #include <mmintrin.h>
 #include <smmintrin.h>
+#endif
 #include "../util/tmap_error.h"
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_progress.h"
@@ -46,6 +48,8 @@
 #include "tmap_bwt_gen.h"
 #include "tmap_sa.h"
 #include "tmap_sa_aux.h"
+
+#if TMAP_BWT_RUN_TYPE != 0 // Just not the original
 
 extern const uint32_t tmap_bwt_aux_occ_mask[16];
 extern const uint64_t tmap_bwt_aux_n_mask[5];
@@ -162,3 +166,4 @@ tmap_sa_pac_pos_aux(const tmap_sa_t *sa, const tmap_bwt_t *bwt, tmap_bwt_int_t k
      changed to (s + bwt->sa[k/bwt->sa_intv]) % (bwt->seq_len + 1) */
   return s + sa->sa[k/sa->sa_intv];
 }
+#endif

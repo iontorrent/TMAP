@@ -42,11 +42,6 @@
 #include "tmap_bwt_check.h"
 #include "tmap_bwt_match.h"
 
-/* 0 - Use this to use the original BWT code */
-/* 1 - Use this to use the optimized code */
-/* 2 - Use this to test the optimized code against the original BWT code */
-#define TMAP_BWT_RUN_TYPE 0
-
 static inline uint64_t
 tmap_bwt_get_hash_length(uint64_t i)
 {

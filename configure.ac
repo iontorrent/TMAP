@@ -24,9 +24,16 @@ AC_GNU_SOURCE
 #AC_PROG_RANLIB
 
 # set CFLAGS and CXXFLAGS
-default_CFLAGS="-Wall -g -O3 -pthread -msse4.1";# "-Wall -g -O3 -pthread -msse2";
-#extended_CFLAGS="-DTMAP_BWT_32_BIT";# "-m64 -D_FILE_OFFSET_BITS=64";
-extended_CFLAGS="";# "-m64 -D_FILE_OFFSET_BITS=64";
+# condition on BWT Type!
+## 0 - Use this to use the original BWT code 
+extended_CFLAGS="-D_TMAP_BWT_RUN_TYPE=0";
+default_CFLAGS="-Wall -g -O3 -pthread -msse2";
+## 1 - Use this to use the optimized code 
+#extended_CFLAGS="-D_TMAP_BWT_RUN_TYPE=0";
+#default_CFLAGS="-Wall -g -O3 -pthread -msse4.1";
+## 2 - Use this to test the optimized code against the original BWT code 
+#extended_CFLAGS="-D_TMAP_BWT_RUN_TYPE=0";
+#default_CFLAGS="-Wall -g -O3 -pthread -msse4.1";
 
 AC_MSG_CHECKING(whether the git revision is available)
 gitrev="`git log 2>/dev/null | grep -m 1 commit | awk '{print $2}'`";
