@@ -2,7 +2,7 @@
 
 ##  General Notes 
 1.  Now on github
-  github.com/iontorrent/TMAP
+  http://github.com/iontorrent/TMAP
 
 ##  Pre-requisites
 1. Compiler (required):
