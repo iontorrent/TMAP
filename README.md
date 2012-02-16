@@ -13,9 +13,7 @@
 1. Compile TMAP:
   <pre lang="bsh"><code>sh autogen.sh && ./configure && make</code></pre>
 2. Install
-  <pre lang="bsh"><code>
-    make install
-  </code></pre>
+  <pre lang="bsh"><code>make install</code></pre>
 
 ##  Optional Installs
 
@@ -25,20 +23,14 @@
   http://code.google.com/p/google-perftools
   
   If you have previously compiled TMAP, execute the following command:
-  <pre lang="bsh"><code>
-make distclean && sh autogen.sh && ./configure && make clean && make
-  </code></pre>
+  <pre lang="bsh"><code>make distclean && sh autogen.sh && ./configure && make clean && make</code></pre>
   After installation, execute the following command:
-  <pre lang="bsh"><code>
-sh autogen.sh && ./configure && make clean && make
-  </code></pre>
+  <pre lang="bsh"><code>sh autogen.sh && ./configure && make clean && make</code></pre>
   The performance improve should occur when using multiple-threads.
 
 ### SAMtools (optional):
   The following commands rely on linking to samtools:
-  <pre lang="bsh"><code>
-tmap sam2fs
-  </code></pre>
+  <pre lang="bsh"><code>tmap sam2fs</code></pre>
   They will will be unavailable if the samtools directory cannot be located.
   Furthermore, SAM/BAM as input will be unavailable.  The samtools directory must be 
   placed in this directory.  The easiest way to do this is to a symbolic link:
@@ -46,15 +38,11 @@ tmap sam2fs
 ln -s <path to samtools> samtools 
   </code></pre>
   Then the samtools library must be built:
-  <pre lang="bsh"><code>
-cd samtools
-make
-cd ..
-  </code></pre>
+  <pre lang="bsh"><code>cd samtools
+  make
+  cd ..</code></pre>
   After the samtools library is linked and compiled, run:
-  <pre lang="bsh"><code>
-sh autogen.sh && ./configure && make clean && make
-  </code></pre>
+  <pre lang="bsh"><code>sh autogen.sh && ./configure && make clean && make</code></pre>
 
 ##  Developer Notes
 
