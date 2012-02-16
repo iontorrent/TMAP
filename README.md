@@ -1,8 +1,12 @@
 # TMAP - flow mapper
 
 ##  General Notes 
-1.  Now on github
-  http://github.com/iontorrent/TMAP
+
+TMAP is an fast and accurate alignment software for short and long nucleotide sequences produced by
+next-generation sequencing technologies.
+* Download TMAP now: https://github.com/iontorrent/TMAP/tags
+* See the latest manual: https://github.com/iontorrent/TMAP/blob/master/doc/tmap-book.pdf
+* Get the source code: http://github.com/iontorrent/TMAP
 
 ##  Pre-requisites
 1. Compiler (required):
