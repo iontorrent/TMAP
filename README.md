@@ -24,21 +24,24 @@
 
   If you have previously compiled TMAP, execute the following command:
 
-  <!-- language: lang-bsh -->
-    make distclean && sh autogen.sh && ./configure && make clean && make
+  <pre lang="bsh"><code>
+make distclean && sh autogen.sh && ./configure && make clean && make
+  </code></pre>
 
   After installation, execute the following command:
 
-  <!-- language: lang-bsh -->
-    sh autogen.sh && ./configure && make clean && make
+  <pre lang="bsh"><code>
+sh autogen.sh && ./configure && make clean && make
+  </code></pre>
 
   The performance improve should occur when using multiple-threads.
 
 ### SAMtools (optional):
   The following commands rely on linking to samtools:
 
-  <!-- language: lang-bsh -->
+  <pre lang="bsh"><code>
     tmap sam2fs
+  </code></pre>
 
   They will will be unavailable if the samtools directory cannot be located.
   Furthermore, SAM/BAM as input will be unavailable.
@@ -46,20 +49,23 @@
   The samtools directory must be placed in this directory.  The 
   easiest way to do this is to a symbolic link:
 
-  <!-- language: lang-bsh -->
-    ln -s <path to samtools> samtools 
+  <pre lang="bsh"><code>
+ln -s <path to samtools> samtools 
+  </code></pre>
 
   Then the samtools library must be built:
 
-  <!-- language: lang-bsh -->
-    cd samtools
-	make
-	cd ..
+  <pre lang="bsh"><code>
+cd samtools
+make
+cd ..
+  </code></pre>
 
   After the samtools library is linked and compiled, run:
 
-  <!-- language: lang-bsh -->
-    sh autogen.sh && ./configure && make clean && make
+  <pre lang="bsh"><code>
+sh autogen.sh && ./configure && make clean && make
+  </code></pre>
 
 ##  Developer Notes
 
