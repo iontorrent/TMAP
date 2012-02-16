@@ -11,6 +11,7 @@ typedef struct {
     int32_t occ_interval;  /*!< the occurrence array interval (-o) */
     int32_t hash_width;  /*!< the occurrence hash width (-w) */
     int32_t sa_interval;  /*!< the suffix array interval (-i) */
+    int32_t s;  /*!< use 1024B as 1KB (etc.) (-s) */
 } tmap_index_size_opt_t;
 
 /*! 

@@ -15,15 +15,17 @@
 #include "tmap_index_size.h"
 
 static char*
-tmap_index_size_reformat_size(size_t s)
+tmap_index_size_reformat_size(size_t s, int32_t by_kb)
 {
   char *str = NULL;
-  double d = (double)s;
+  double d = (double)s, e;
   int32_t i = 0;
   char *types[32] = {"B", "KB", "MB", "GB", "TB", "PB"};
 
-  while(1000 < d) {
-      d /= 1000;
+  e = (1 == by_kb) ? 1024 : 1000;
+
+  while(e < d) {
+      d /= e;
       i++;
   }
 
@@ -37,7 +39,7 @@ tmap_index_size_reformat_size(size_t s)
 }
 
 static size_t
-tmap_index_size_print(const char *fn_fasta, uint64_t len, int32_t occ_interval, int32_t hash_width, int32_t sa_interval)
+tmap_index_size_print(const char *fn_fasta, uint64_t len, int32_t occ_interval, int32_t hash_width, int32_t sa_interval, int32_t by_kb)
 {
   size_t s, x, y, z;
   char *s_str, *x_str, *y_str, *z_str;
@@ -57,11 +59,10 @@ tmap_index_size_print(const char *fn_fasta, uint64_t len, int32_t occ_interval, 
 
   s = x + y + z;
 
-
-  s_str = tmap_index_size_reformat_size(s);
-  x_str = tmap_index_size_reformat_size(x);
-  y_str = tmap_index_size_reformat_size(y);
-  z_str = tmap_index_size_reformat_size(z);
+  s_str = tmap_index_size_reformat_size(s, by_kb);
+  x_str = tmap_index_size_reformat_size(x, by_kb);
+  y_str = tmap_index_size_reformat_size(y, by_kb);
+  z_str = tmap_index_size_reformat_size(z, by_kb);
 
   tmap_progress_print2("reference size = %lluB (%s)", (unsigned long long int)x, x_str);
   tmap_progress_print2("bwt size = %lluB (%s)", (unsigned long long int)y, y_str);
@@ -90,6 +91,7 @@ usage(tmap_index_size_opt_t *opt)
                     TMAP_BWT_OCC_MOD, TMAP_BWT_OCC_MOD*2, TMAP_BWT_OCC_MOD*3, opt->occ_interval);
   tmap_file_fprintf(tmap_file_stderr, "         -w INT      the k-mer occurrence hash width [%d]\n", opt->hash_width);
   tmap_file_fprintf(tmap_file_stderr, "         -i INT      the suffix array interval (use 1, 2, 4, ...)[%d]\n", opt->sa_interval);
+  tmap_file_fprintf(tmap_file_stderr, "         -s          use 1024B as 1Kb (etc.) [%s]\n", (opt->s == 1) ? "true" : "false");
   tmap_file_fprintf(tmap_file_stderr, "         -h          print this message\n");
   tmap_file_fprintf(tmap_file_stderr, "\n");
   return 1;
@@ -106,8 +108,9 @@ tmap_index_size(int argc, char *argv[])
   opt.occ_interval = TMAP_BWT_OCC_INTERVAL;
   opt.hash_width = INT32_MAX;
   opt.sa_interval = TMAP_SA_INTERVAL;
+  opt.s = 0;
       
-  while((c = getopt(argc, argv, "f:l:o:i:w:h")) >= 0) {
+  while((c = getopt(argc, argv, "f:l:o:i:w:sh")) >= 0) {
       switch(c) {
         case 'f':
           opt.fn_fasta = tmap_strdup(optarg); break;
@@ -119,6 +122,8 @@ tmap_index_size(int argc, char *argv[])
           opt.sa_interval = atoi(optarg); break;
         case 'w':
           opt.hash_width = atoi(optarg); break;
+        case 's':
+          opt.s = 1; break;
         case 'h':
           return usage(&opt);
         default:
@@ -134,7 +139,7 @@ tmap_index_size(int argc, char *argv[])
   }
 
   tmap_progress_set_verbosity(1); 
-  tmap_index_size_print(opt.fn_fasta, opt.len, opt.occ_interval, opt.hash_width, opt.sa_interval);
+  tmap_index_size_print(opt.fn_fasta, opt.len, opt.occ_interval, opt.hash_width, opt.sa_interval, opt.s);
 
   free(opt.fn_fasta);
 
