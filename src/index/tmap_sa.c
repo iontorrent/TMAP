@@ -16,6 +16,16 @@
 #include "tmap_sa.h"
 //#include "tmap_sa_aux.h"
 
+/* 0 - Use this to use the original SA code */
+/* 1 - Use this to use the optimized code */
+/* 2 - Use this to test the optimized code against the original SA code */
+#define TMAP_SA_RUN_TYPE 0
+
+#if TMAP_SA_RUN_TYPE != 0 // Not just the original
+#include "tmap_sa_aux.h"
+#endif
+
+
 tmap_sa_t *
 tmap_sa_read(const char *fn_fasta)
 {
@@ -185,11 +195,13 @@ tmap_sa_destroy(tmap_sa_t *sa)
   }
 }
 
+#if TMAP_SA_RUN_TYPE != 1 // Not just the optimized
 static tmap_bwt_int_t 
 tmap_sa_pac_pos_orig(const tmap_sa_t *sa, const tmap_bwt_t *bwt, tmap_bwt_int_t k)
 {
   return tmap_sa_pac_pos_hash(sa, bwt, k, NULL);
 }
+#endif
 
 tmap_bwt_int_t 
 tmap_sa_pac_pos_hash(const tmap_sa_t *sa, const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_match_hash_t *hash)
@@ -203,24 +215,27 @@ tmap_bwt_int_t
 tmap_sa_pac_pos(const tmap_sa_t *sa, const tmap_bwt_t *bwt, tmap_bwt_int_t k)
 {
 
-  //return tmap_sa_pac_pos_orig(sa, bwt, k);
-  //tmap_bwt_int_t orig, opt;
+#if TMAP_SA_RUN_TYPE != 1 // Not just the optimized
   tmap_bwt_int_t orig;
-
-  // Original
   orig = tmap_sa_pac_pos_orig(sa, bwt, k);
+#endif
 
-  /*
-  // Optimized
+#if TMAP_SA_RUN_TYPE != 0 // Not just the original
+  tmap_bwt_int_t opt;
   opt = tmap_sa_pac_pos_aux(sa, bwt, k);
+#endif
 
-  // Test
+#if TMAP_SA_RUN_TYPE == 2 // Not just the original
   if(orig != opt) {
       tmap_bug();
   }
-  */
+#endif
 
+#if TMAP_SA_RUN_TYPE == 1 // The optimized
+  return opt;
+#else
   return orig;
+#endif
 }
 
 extern int32_t debug_on;

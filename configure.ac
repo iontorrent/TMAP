@@ -24,7 +24,7 @@ AC_GNU_SOURCE
 #AC_PROG_RANLIB
 
 # set CFLAGS and CXXFLAGS
-default_CFLAGS="-Wall -g -O3 -pthread -msse2";# "-Wall -g -O3 -pthread -msse2";
+default_CFLAGS="-Wall -g -O3 -pthread -msse4.1";# "-Wall -g -O3 -pthread -msse2";
 #extended_CFLAGS="-DTMAP_BWT_32_BIT";# "-m64 -D_FILE_OFFSET_BITS=64";
 extended_CFLAGS="";# "-m64 -D_FILE_OFFSET_BITS=64";
 

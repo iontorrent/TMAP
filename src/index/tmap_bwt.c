@@ -658,18 +658,41 @@ tmap_bwt_2occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, uint8_t
   }
   else {
       aux_ol = l;
-      aux_ok = tmap_bwt_aux_2occ(bwt, k, &aux_ol, c);
-      // NB: tmap_bwt_aux_2occ included L2 addition
+      aux_ok = tmap_bwt_aux_2occ(bwt, k+1, &aux_ol, c); // NH: use k+1
       aux_ol -= bwt->L2[c];
-      aux_ok -= bwt->L2[c] + 1;
+      if(aux_ok == TMAP_BWT_INT_MAX) {
+          aux_ok = aux_ol; 
+      }
+      else {
+          // NB: tmap_bwt_aux_2occ included L2 addition
+          aux_ok -= bwt->L2[c] + 1;
+      }
   }
   
 #if TMAP_BWT_RUN_TYPE == 2 // Test
+  tmap_bwt_int_t ok2, ol2;
+  tmap_bwt_int_t cntk[4], cntl[4];
+  tmap_bwt_2occ4(bwt, k, l, cntk, cntl);
+  ok2 = cntk[c];
+  ol2 = cntl[c];
+
+  /*
+  fprintf(stderr, "k=%lld l=%lld\t", k, l);
+  fprintf(stderr, "ok1=%lld ok2=%lld ok3=%lld\t", *ok, aux_ok, ok2);
+  fprintf(stderr, "ol1=%lld ol2=%lld ol3=%lld\n", *ol, aux_ol, ol2);
+  */
   if(aux_ok != *ok || aux_ol != *ol) {
-      fprintf(stderr, "c=%u k=%llu l=%llu *ok=%llu aux_ok=%llu *ol=%llu aux_ol=%llu TMAP_BWT_INT_MAX=%llu\n", 
-              c, k, l, *ok, aux_ok, *ol, aux_ol, TMAP_BWT_INT_MAX);
-      tmap_bug();
+      // This is an important comparison, sinc
+      if(*ok < *ol || aux_ok < aux_ol) {
+          fprintf(stderr, "c=%u k=%lld l=%lld *ok=%lld aux_ok=%lld *ol=%lld aux_ol=%lld ok2=%lld ol2=%lld TMAP_BWT_INT_MAX=%lld\n", 
+                  c, k, l, *ok, aux_ok, *ol, aux_ol, ok2, ol2, TMAP_BWT_INT_MAX);
+          tmap_bug();
+      }
   }
+#endif
+#if TMAP_BWT_RUN_TYPE == 1 // The optimized
+  *ok = aux_ok;
+  *ol = aux_ol;
 #endif
 #endif
 }

@@ -132,44 +132,6 @@ tmap_bwt_aux_set_mask()
                                      v + ((w ^ v) >> 32);                    \
                                      })
 
-//nucleo_upto5mask
-#define _mm_nc_combmask_xxx(x, xor, m, t1, t2) ({               \
-                                                x = _mm_xor_##t1(x, xor);                               \
-                                                x = _mm_and_##t1(x, _mm_srli_##t2(x, 1));               \
-                                                _mm_and_##t1(x, m);                                     \
-                                                })
-
-#define _mm_nc_combmask_si64(q, x, m) _mm_nc_combmask_xxx(q, x, m, si64, si64)
-#define _mm_nc_combmask_epi128(t, x, m)                                 \
-  _mm_nc_combmask_xxx(t, x, m, si128, epi64)
-
-// e.g. nucleo_3mask()
-#define _mm_nmask_xxx(q, q2, shft, m, t1, t2) ({\
-                                               q2 = _mm_srli_##t2(q, shft);            \
-                                               q = _mm_add_##t2(q, q2);                \
-                                               _mm_and_##t1(q, m);                     \
-                                               })
-
-#define _mm_nmask_si64(q, q2, shft, m)          \
-  _mm_nmask_xxx(q, q2, shft, m, si64, si64)
-
-#define _mm_nmask_epi128(q, q2, shft, m)        \
-  _mm_nmask_xxx(q, q2, shft, m, si128, epi64)
-
-// e.g. als nucleo_combine_3mask()
-#define _mm_ctmap_bwt_aux_n_mask_xxx(x, y, m, shft, t1, t2) ({       \
-                                                             x = _mm_and_##t1(y, m);                         \
-                                                             y = _mm_xor_##t1(y, x);                         \
-                                                             y = _mm_srli_##t2(y, shft);                     \
-                                                             _mm_add_##t2(x, y);                             \
-                                                             })
-
-#define _mm_ctmap_bwt_aux_n_mask_si64(x, q, m, shft) _mm_ctmap_bwt_aux_n_mask_xxx(x, q, m, shft, si64, si64)
-#define _mm_ctmap_bwt_aux_n_mask_epi128(t2, t, m, shft) _mm_ctmap_bwt_aux_n_mask_xxx(t2, t, m, shft, si128, epi64)
-
-#define _mm_sum2si128_si64(t)                   \
-  _mm_add_si64(_mm_movepi64_pi64(t), _mm_cvtsi64x_si64(_mm_extract_epi64(t, 1)))
-
 
 // an analogy to bwt_occ() but more efficient, requiring k <= l
 inline tmap_bwt_int_t 
