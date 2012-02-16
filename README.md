@@ -1,4 +1,4 @@
-# TMAP - flow mapper
+# TMAP - torrent mapping alignment program
 
 ##  General Notes 
 
