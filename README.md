@@ -1,49 +1,56 @@
-## TMAP - flow mapper
+# TMAP - flow mapper
 
-###  General Notes 
+##  General Notes 
 1.  Now on github
   github.com/iontorrent/TMAP
 
-###  Pre-requisites
+##  Pre-requisites
 1. Compiler (required):
   The compiler and system must support SSE2 instructions.  
 
-###  To Install
+##  To Install
 
 1. Compile TMAP:
   sh autogen.sh && ./configure && make
 2. Install
   make install
 
-###  Optional Installs
+##  Optional Installs
 
 1. TCMalloc (optional)
   TMAP will run approximately 15% faster using the tcmalloc memory allocation
   implementation.  To use tcmalloc, install the Google performance tools:
+  <!-- language: lang-bsh -->
     http://code.google.com/p/google-perftools
   If you have previously compiled TMAP, execute the following command:
+  <!-- language: lang-bsh -->
     make distclean && sh autogen.sh && ./configure && make clean && make
   After installation, execute the following command:
+  <!-- language: lang-bsh -->
     sh autogen.sh && ./configure && make clean && make
   The performance improve should occur when using multiple-threads.
 
 2. SAMtools (optional):
   The following commands rely on linking to samtools:
+  <!-- language: lang-bsh -->
     tmap sam2fs
   They will will be unavailable if the samtools directory cannot be located.
-	Furthermore, SAM/BAM as input will be unavailable.
+  Furthermore, SAM/BAM as input will be unavailable.
 
   The samtools directory must be placed in this directory.  The 
   easiest way to do this is to a symbolic link:
+  <!-- language: lang-bsh -->
     ln -s <path to samtools> samtools 
   Then the samtools library must be built:
+  <!-- language: lang-bsh -->
     cd samtools
 	make
 	cd ..
   After the samtools library is linked and compiled, run:
+  <!-- language: lang-bsh -->
     sh autogen.sh && ./configure && make clean && make
 
-###  Developer Notes
+##  Developer Notes
 
 There are a number of areas for potential improvement within TMAP for those
 that are interested; they will be mentioned here.  A great way to find places
