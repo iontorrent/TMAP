@@ -550,11 +550,11 @@ tmap_bwt_occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, uint8_t c)
   p += sizeof(tmap_bwt_int_t); // jump to the start of the first BWT cell
 
 #ifndef TMAP_BWT_BY_16
-  // calculate Occ
   j = k >> 4 << 4; // divide by 16, then multiply by 16, to subtract k % 16.
   for(l = (k/bwt->occ_interval)*bwt->occ_interval; l < j; l += 16, p++) {
       n += __occ_aux16(p[0], c);
   }
+  // calculate Occ
   n += __occ_aux16(p[0] & ~((1ul<<((~k&15)<<1)) - 1), c);
   if(c == 0) n -= ~k&15; // corrected for the masked bits
 #else

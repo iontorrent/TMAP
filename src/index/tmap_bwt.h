@@ -204,7 +204,7 @@ tmap_bwt_2occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, tmap_b
 /*!
   @param  b   pointer to the bwt structure
   @param  k   the zero-based index of the bwt character to retrieve
-  @return     the index into the bwt for the occurrence array at or before the bwt character
+  @return     the index into the bwt for the last occurrence array stored at or before the bwt character
  */
 #define tmap_bwt_get_occ_array_i16(b, k) ((k)/(b)->occ_interval * ((b)->occ_interval/(sizeof(uint32_t)*8/2) + sizeof(tmap_bwt_int_t)/4*4))
 
@@ -227,7 +227,7 @@ tmap_bwt_2occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, tmap_b
 /*!
   @param  b   pointer to the bwt structure
   @param  k   the zero-based index of the bwt character to retrieve
-  @return     a pointer to the occurrence array at or before the bwt character
+  @return     a pointer to the last occurrence array value stored at or before the bwt character
   */
 #define tmap_bwt_occ_intv(b, k) ((b)->bwt + tmap_bwt_get_occ_array_i16(b, k))
 
