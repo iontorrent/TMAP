@@ -201,17 +201,19 @@ tmap_bwt_2occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, uint8_t
 inline void 
 tmap_bwt_2occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, tmap_bwt_int_t cntk[4], tmap_bwt_int_t cntl[4]);
 
-// TODO: document
-// Returns the index of the occurrence array at or before k
+/*!
+  @param  b   pointer to the bwt structure
+  @param  k   the zero-based index of the bwt character to retrieve
+  @return     the index into the bwt for the occurrence array at or before the bwt character
+ */
 #define tmap_bwt_get_occ_array_i16(b, k) ((k)/(b)->occ_interval * ((b)->occ_interval/(sizeof(uint32_t)*8/2) + sizeof(tmap_bwt_int_t)/4*4))
-// Returns the index of the occurrence array at or before k
-// TODO
 
-// TODO: document
-// Returns the array of 16 bases at [(k-(k%16),k+(16-(k%16))-1]
+/*!
+  @param  b   pointer to the bwt structure
+  @param  k   the zero-based index of the bwt character to retrieve
+  @return     the array 16 of bwt characters from the $-removed BWT string at [(k-(k%16),k+(16-(k%16))-1]
+ */
 #define tmap_bwt_get_bwt16(b, k) ((b)->bwt[tmap_bwt_get_occ_array_i16(b, k) + sizeof(tmap_bwt_int_t)/4*4 + (k)%(b)->occ_interval/16])
-// Returns the array of 32 bases at [(k-(k%32),k+(32-(k%32))-1]
-// TODO
 
 /*! 
   @param  b   pointer to the bwt structure
@@ -222,11 +224,12 @@ tmap_bwt_2occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, tmap_b
   */
 #define tmap_bwt_B0(b, k) (tmap_bwt_get_bwt16(b, k)>>((~(k)&0xf)<<1)&3)
 
-// TODO: document
-// Returns the occurrence array at or before k
+/*!
+  @param  b   pointer to the bwt structure
+  @param  k   the zero-based index of the bwt character to retrieve
+  @return     a pointer to the occurrence array at or before the bwt character
+  */
 #define tmap_bwt_occ_intv(b, k) ((b)->bwt + tmap_bwt_get_occ_array_i16(b, k))
-//#define tmap_bwt_get_occ_array_i16(b, k) ((k)/(b)->occ_interval * ((b)->occ_interval/(sizeof(uint32_t)*8/2) + sizeof(tmap_bwt_int_t)*4/4))
-//#define tmap_bwt_occ_intv(b, k) ((b)->bwt + (k)/(b)->occ_interval*12)
 
 /*!  
   inverse Psi function
