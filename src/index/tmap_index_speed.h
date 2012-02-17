@@ -18,6 +18,7 @@ typedef struct {
     int32_t kmer_length;  /*!< the kmer length to simulate (-K) */ 
     int32_t kmer_num;  /*!< the number of kmers to simulate (-N) */
     double rand_frac;  /*!< the fraction of random kmers (-R) */
+    int32_t func;  /*!< the function to test (-F) */
 } tmap_index_speed_opt_t;
 
 /*! 
