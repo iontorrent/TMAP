@@ -35,6 +35,13 @@ static char *tmap_map_opt_input_types[] = {"INT", "FLOAT", "NUM", "FILE", "STRIN
       tmap_file_fprintf(tmap_file_stderr, "[%s]", (NULL == opt->_name) ? _null_msg : opt->_name); \
   } \
 
+// int32_t print function
+#define __tmap_map_opt_option_print_func_int_autodetected_init(_name, _detected) \
+  static void tmap_map_opt_option_print_func_##_name(void *arg) { \
+      tmap_map_opt_t *opt = (tmap_map_opt_t*)arg; \
+      tmap_file_fprintf(tmap_file_stderr, "(%s) [%d]", (0 == opt->_detected) ? "user set" : "autodetect", opt->_name); \
+  }
+
 // true/false 
 #define __tmap_map_opt_option_print_func_tf_init(_name) \
   static void tmap_map_opt_option_print_func_##_name(void *arg) { \
@@ -123,7 +130,7 @@ __tmap_map_opt_option_print_func_int_init(max_seed_band)
 __tmap_map_opt_option_print_func_tf_init(no_unroll_banding)
 __tmap_map_opt_option_print_func_int_init(score_thr)
 __tmap_map_opt_option_print_func_int_init(reads_queue_size)
-__tmap_map_opt_option_print_func_int_init(num_threads)
+__tmap_map_opt_option_print_func_int_autodetected_init(num_threads, num_threads_autodetected)
 __tmap_map_opt_option_print_func_int_init(aln_output_mode)
 __tmap_map_opt_option_print_func_chars_init(sam_rg, "not using")
 __tmap_map_opt_option_print_func_tf_init(bidirectional)
@@ -919,7 +926,8 @@ tmap_map_opt_init(int32_t algo_id)
   opt->no_unroll_banding = 0;
   opt->score_thr = 8;
   opt->reads_queue_size = 262144;
-  opt->num_threads = 1;
+  opt->num_threads = tmap_detect_cpus();
+  opt->num_threads_autodetected = 1;
   opt->aln_output_mode = TMAP_MAP_OPT_ALN_MODE_RAND_BEST;
   opt->sam_rg = NULL;
   opt->bidirectional = 0;
@@ -1307,6 +1315,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
       else if(c == 'n' || (0 == c && 0 == strcmp("num-threads", options[option_index].name))) {       
           opt->num_threads = atoi(optarg);
+          opt->num_threads_autodetected = 0;
       }
       else if(c == 'q' || (0 == c && 0 == strcmp("reads-queue-size", options[option_index].name))) {       
           opt->reads_queue_size = atoi(optarg);

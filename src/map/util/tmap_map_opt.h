@@ -180,6 +180,7 @@ typedef struct __tmap_map_opt_t {
     int32_t score_thr;  /*!< the score threshold (match-score-scaled) (-T,--score-thres) */
     int32_t reads_queue_size;  /*!< the reads queue size (-q,--reads-queue-size) */
     int32_t num_threads;  /*!< the number of threads (-n,--num-threads) */
+    int32_t num_threads_autodetected;  /*!< 1 if the number of threads has been auto detected, 0 otherwise (-n,--num-threads) */
     int32_t aln_output_mode;  /*!< specifies how to choose alignments (-a,--aln-output-mode) */
     char *sam_rg;  /*!< specifies the RG line in the SAM header (-R,--sam-read-group) */
     int32_t bidirectional;  /*!< specifies the input reads are to be annotated as bidirectional (-D,--bidirectional) */

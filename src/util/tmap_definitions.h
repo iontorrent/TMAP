@@ -329,4 +329,10 @@ tmap_validate_flow_order(const char *flow_order);
 int32_t
 tmap_validate_key_seq(const char *key_seq);
 
+/*!
+  @return  the number of cpus available for multi-threading
+ */
+int32_t
+tmap_detect_cpus();
+
 #endif
