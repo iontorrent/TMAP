@@ -543,7 +543,6 @@ tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping, uint8_t *
   while(flow_order[sff->flow_start_index] != sff->read->bases->s[i]) {
       sff->flow_start_index++;
   }
-  fprintf(stderr, "sff->flow_start_index=%d\n", sff->flow_start_index);
   free(flow_order); flow_order=NULL;
   
   // move back
