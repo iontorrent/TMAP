@@ -5,7 +5,7 @@
 #define TMAP_SFF_MAGIC 0x2E736666
 #define TMAP_SFF_VERSION 1
 
-// uncomment this to allow for some SFF debuggin
+// uncomment this to allow for some SFF debugging
 //#define TMAP_SFF_DEBUG 1
 
 #include <stdint.h>
