@@ -620,11 +620,15 @@ The ID tag should always be \TT{tmap}.
 
 \subsection{SAM Record Optional Tags}
 
-\subsubsection{RG}
-This tag stores the read group identifier corresponding to the RG SAM header field.
+\subsubsection{AS}
+This tag stores the alignment score.
+All IUPAC code positions are treated as mismatches.
+If the alignment contains an N in the reference but an A in the read, this score will be incorrect (overestimated) as the N was converted to an A in the reference.
+Please see \autoref{sec:iupac} for more details. 
 
-\subsubsection{PG}
-This tag stores the program group identifier corresponding to the PG SAM header field.
+\subsubsection{FZ}
+This tag stores the flow signals when an SFF is inputted and the \TT{-Y} option is used.
+The flowgram values are stored as a string of hexidecimal values, with each group of four hexidecimal values corresponding to one flow signal.
 
 \subsubsection{MD}
 This tag stores the MD array.
@@ -637,14 +641,34 @@ This tag stores the edit distance from the reference sequence.
 Matches to any non-DNA IUPAC ambiguity code (B, D, H, K, M, N, R, S, V, W, Y) will be counted as a mismatch.
 Please see \autoref{sec:iupac} for more details. 
 
-\subsubsection{AS}
-This tag stores the alignment score.
-All IUPAC code positions are treated as mismatches.
-If the alignment contains an N in the reference but an A in the read, this score will be incorrect (overestimated) as the N was converted to an A in the reference.
-Please see \autoref{sec:iupac} for more details. 
+\subsubsection{PG}
+This tag stores the program group identifier corresponding to the PG SAM header field.
+
+\subsubsection{RG}
+This tag stores the read group identifier corresponding to the RG SAM header field.
+
 \subsubsection{NH}
 This tag stores the number of hits found during alignment.
 The number of alignments reported in the output is determined by \TT{-a} and therefore fewer alignments may be present in the output than specified by the \TT{NH} tag.
+
+\subsubsection{XA}
+This tag stores the algorithm that produced this mapping and from what stage.
+The format is the algorithm name, and then the zero-based stage, separated by a dash.
+
+\subsubsection{XB}
+This tag indicates that the given read originates from a bidirectional read.
+
+\subsubsection{XE}
+This tag stores the number of seeds supporting this mapping specifically for \TT{map2}.
+
+\subsubsection{XF}
+This tag stores from where the mappings originated: one indicates from the forward search, two indicates from the reverse search, and three indicates from both the forward and reverse search.
+
+\subsubsection{XG}
+This tag stores the number of indel extensions (gap extensions) in the mapping, or in the secondary seed if used.
+
+\subsubsection{XI}
+This tag stores the size of the suffix interval for this mapping.
 
 \subsubsection{XM}
 This tag stores the number of mismatches in the mapping, or in the secondary seed if used.
@@ -652,37 +676,18 @@ This tag stores the number of mismatches in the mapping, or in the secondary see
 \subsubsection{XO}
 This tag stores the number of indels (gap opens) in the mapping, or in the secondary seed if used.
 
-\subsubsection{XG}
-This tag stores the number of indel extensions (gap extensions) in the mapping, or in the secondary seed if used.
-
 \subsubsection{XS}
 This tag stores the alignment score of next-best sub-optimal mapping.
 
 \subsubsection{XT}
 This tag stores the number of seeds supporting this mapping.
-\subsubsection{XF}
-This tag stores from where the mappings originated: one indicates from the forward search, two indicates from the reverse search, and three indicates from both the forward and reverse search.
-
-\subsubsection{XE}
-This tag stores the number of seeds supporting this mapping specifically for \TT{map2}.
-
-\subsubsection{XI}
-This tag stores the size of the suffix interval for this mapping.
-
-\subsubsection{XA}
-This tag stores the algorithm that produced this mapping and from what stage.
-The format is the algorithm name, and then the zero-based stage, separated by a dash.
-
 \subsubsection{XZ}
 This tag stores the original alignment score, if an SFF was inputted.
 
-\subsubsection{FZ}
-This tag stores the flow signals when an SFF is inputted and the \TT{-Y} option is used.
-The flowgram values are stored as a string of hexidecimal values, with each group of four hexidecimal values corresponding to one flow signal.
 
-\subsubsection{XB}
-This tag indicates that the given read originates from a bidirectional read.
-
+\subsubsection{ZF}
+This tag stores the zero-based index of the first flow signal corresponding to the template, inferred from the clipping values in the SFF.
+This this is outputted only when an SFF is inputted and the \TT{-Y} option is used.
 \chapter{Commonly Asked Questions}
 \label{chap:faq}
 

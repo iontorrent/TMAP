@@ -336,6 +336,7 @@ tmap_sff_init()
   sff->gheader = NULL;
   sff->rheader = NULL;
   sff->read = NULL;
+  sff->flow_start_index = -1;
 
   return sff;
 }
@@ -458,23 +459,21 @@ tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping, uint8_t *
   int32_t i, was_int;
   int32_t left, right; // zero-based
   int32_t key_match = 1;
+  uint8_t *flow_order = NULL;
+      
+  was_int = sff->is_int;
+  if(0 == sff->is_int) {
+      tmap_sff_to_int(sff);
+  }
 
   // check if the key sequence matches
   if(NULL != key_seq && 0 < key_seq_len) {
-      was_int = 1;
-      if(0 == sff->is_int) {
-          was_int = 0;
-          tmap_sff_to_int(sff);
-      }
       // NB: key_seq and sff must be in integer format
       for(i=0;i<key_seq_len;i++) {
           if((int32_t)sff->read->bases->l <= i || sff->read->bases->s[i] != key_seq[i]) {
               key_match = 0;
               break;
           }
-      }
-      if(0 == was_int) {
-          tmap_sff_to_char(sff);
       }
   }
 
@@ -522,6 +521,36 @@ tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping, uint8_t *
       right = sff->rheader->n_bases-1;
   }
 
+  // set flow_start_index
+  sff->read->bases->s[4] = 2;
+  sff->flow_start_index = i = 0;
+  tmap_sff_get_flow_order_int(sff, &flow_order);
+  while(i < left) { // clipped bases are left
+      /*
+      fprintf(stderr, "i=%d left=%d sff->flow_start_index=%d fo=%d base=%d\n", i, left, 
+              sff->flow_start_index, flow_order[sff->flow_start_index], sff->read->bases->s[i]);
+              */
+      // move to the flow for the current base
+      while(flow_order[sff->flow_start_index] != sff->read->bases->s[i]) {
+          sff->flow_start_index++;
+      }
+      // move to the flow for the current base
+      while(i < left && flow_order[sff->flow_start_index] == sff->read->bases->s[i]) {
+          i++;
+      }
+  }
+  // finalize
+  while(flow_order[sff->flow_start_index] != sff->read->bases->s[i]) {
+      sff->flow_start_index++;
+  }
+  fprintf(stderr, "sff->flow_start_index=%d\n", sff->flow_start_index);
+  free(flow_order); flow_order=NULL;
+  
+  // move back
+  if(0 == was_int) {
+      tmap_sff_to_char(sff);
+  }
+
   // extract the bases
   for(i=0;i<right-left+1;i++) {
       sff->read->bases->s[i] = sff->read->bases->s[i+left];
@@ -539,6 +568,7 @@ tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping, uint8_t *
       sff->read->bases->s[sff->read->bases->l] = '\0';
       sff->read->quality->s[sff->read->quality->l] = '\0';
   }
+      
 
   return key_match;
 }
