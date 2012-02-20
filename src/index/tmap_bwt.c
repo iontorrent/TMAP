@@ -48,6 +48,13 @@ tmap_bwt_get_hash_length(uint64_t i)
   return ((uint64_t)1) << (i << 1); // 4^{hash_width} entries
 }
 
+static inline void
+tmap_bwt_update_optimizations(tmap_bwt_t *bwt)
+{
+  bwt->occ_interval_log2 = tmap_log2(bwt->occ_interval);
+  bwt->occ_array_16_pt2 = (bwt->occ_interval/(sizeof(uint32_t)<<3>>1) + (sizeof(tmap_bwt_int_t)>>2<<2));
+}
+
 tmap_bwt_t *
 tmap_bwt_read(const char *fn_fasta)
 {
@@ -104,6 +111,8 @@ tmap_bwt_read(const char *fn_fasta)
   free(fn_bwt);
 
   bwt->is_shm = 0;
+
+  tmap_bwt_update_optimizations(bwt);
 
   return bwt;
 }
@@ -310,6 +319,8 @@ tmap_bwt_shm_unpack(uint8_t *buf)
   }
 
   bwt->is_shm = 1;
+  
+  tmap_bwt_update_optimizations(bwt);
 
   return bwt;
 }
@@ -377,6 +388,7 @@ tmap_bwt_update_occ_interval(tmap_bwt_t *bwt, tmap_bwt_int_t occ_interval)
   }
   // update bwt
   free(bwt->bwt); bwt->bwt = buf;
+  tmap_bwt_update_optimizations(bwt);
 }
 
 void 
@@ -551,7 +563,7 @@ tmap_bwt_occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, uint8_t c)
 
 #ifndef TMAP_BWT_BY_16
   j = k >> 4 << 4; // divide by 16, then multiply by 16, to subtract k % 16.
-  for(l = (k/bwt->occ_interval)*bwt->occ_interval; l < j; l += 16, p++) {
+  for(l = (k >> bwt->occ_interval_log2) << bwt->occ_interval_log2; l < j; l += 16, p++) {
       n += __occ_aux16(p[0], c);
   }
   // calculate Occ
@@ -560,7 +572,7 @@ tmap_bwt_occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, uint8_t c)
 #else
   // calculate Occ up to the last k/32
   j = k >> 5 << 5;
-  for(l = k/bwt->occ_interval*bwt->occ_interval; l < j; l += 32, p += 2) {
+  for(l = (k >> bwt->occ_interval_log2) << bwt->occ_interval_log2; l < j; l += 32, p += 2) {
       n += __occ_aux32((uint64_t)p[0]<<32 | p[1], c);
   }
   // calculate Occ
@@ -582,7 +594,7 @@ tmap_bwt_2occ_orig(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, ui
   }
   _k = (k >= bwt->primary)? k-1 : k;
   _l = (l >= bwt->primary)? l-1 : l;
-  if(_l/bwt->occ_interval != _k/bwt->occ_interval || TMAP_BWT_INT_MAX == k || TMAP_BWT_INT_MAX == l) {
+  if((_l >> bwt->occ_interval_log2) != (_k >> bwt->occ_interval_log2) || TMAP_BWT_INT_MAX == k || TMAP_BWT_INT_MAX == l) {
       if(l == TMAP_BWT_INT_MAX) k = TMAP_BWT_INT_MAX; 
       *ok = tmap_bwt_occ(bwt, k, c);
       *ol = tmap_bwt_occ(bwt, l, c);
@@ -596,7 +608,7 @@ tmap_bwt_2occ_orig(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, ui
       // calculate *ok
 #ifndef TMAP_BWT_BY_16
       j = k >> 4 << 4; // divide by 16, then multiply by 16, to subtract k % 16.
-      for(i = (k/bwt->occ_interval)*bwt->occ_interval; i < j; i += 16, p++) {
+      for(i = (k >> bwt->occ_interval_log2) << bwt->occ_interval_log2; i < j; i += 16, p++) {
           n += __occ_aux16(p[0], c);
       }
       m = n; // save for ol
@@ -604,7 +616,7 @@ tmap_bwt_2occ_orig(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, ui
       if(c == 0) n -= ~k&15; // corrected for the masked bits
 #else
       j = k >> 5 << 5; // divide by 32, then multiply by 32, to subtract k % 32
-      for(i = (k/bwt->occ_interval)*bwt->occ_interval; i < j; i += 32, p+=2) {
+      for(i = (k >> bwt->occ_interval_log2) << bwt->occ_interval_log2; i < j; i += 32, p+=2) {
           n += __occ_aux32((uint64_t)p[0]<<32 | p[1], c);
       }
       m = n; // save for ol
@@ -711,7 +723,7 @@ tmap_bwt_occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t cnt[4])
   p += sizeof(tmap_bwt_int_t); // move to the first bwt cell
 
   j = (k >> 4) << 4;
-  for(l = (k / bwt->occ_interval) * bwt->occ_interval, x = 0; l < j; l += 16, ++p) {
+  for(l = (k >> bwt->occ_interval_log2) << bwt->occ_interval_log2, x = 0; l < j; l += 16, ++p) {
     x += __occ_aux4(bwt, *p);
   }
   x += __occ_aux4(bwt, *p & ~((1U<<((~k&15)<<1)) - 1)) - (~k&15);
@@ -730,7 +742,7 @@ tmap_bwt_2occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, tmap_b
   }
   _k = (k >= bwt->primary)? k-1 : k;
   _l = (l >= bwt->primary)? l-1 : l;
-  if(_l/bwt->occ_interval != _k/bwt->occ_interval || TMAP_BWT_INT_MAX == k || TMAP_BWT_INT_MAX == l) {
+  if((_l >> bwt->occ_interval_log2) != (_k >> bwt->occ_interval_log2) || TMAP_BWT_INT_MAX == k || TMAP_BWT_INT_MAX == l) {
       if(l == TMAP_BWT_INT_MAX) k = TMAP_BWT_INT_MAX; 
       tmap_bwt_occ4(bwt, k, cntk);
       tmap_bwt_occ4(bwt, l, cntl);
@@ -744,7 +756,7 @@ tmap_bwt_2occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, tmap_b
       p += sizeof(tmap_bwt_int_t);
       // prepare cntk[]
       j = k >> 4 << 4;
-      for(i = k / bwt->occ_interval * bwt->occ_interval, x = 0; i < j; i += 16, ++p) 
+      for(i = k >> bwt->occ_interval_log2 << bwt->occ_interval_log2, x = 0; i < j; i += 16, ++p) 
         x += __occ_aux4(bwt, *p);
       y = x;
       x += __occ_aux4(bwt, *p & ~((1U<<((~k&15)<<1)) - 1)) - (~k&15);
