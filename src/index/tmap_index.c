@@ -175,7 +175,7 @@ int tmap_index(int argc, char *argv[])
   if(NULL == opt.fn_fasta) {
       tmap_error("required option -f", Exit, CommandLineArgument);
   }
-  if(opt.occ_interval < TMAP_BWT_OCC_MOD || 0 != (opt.occ_interval % TMAP_BWT_OCC_MOD)) {
+  if(opt.occ_interval < TMAP_BWT_OCC_MOD || 0 != (opt.occ_interval % 2) || 0 != (opt.occ_interval % TMAP_BWT_OCC_MOD)) {
       tmap_error("option -o out of range", Exit, CommandLineArgument);
   }
   if(opt.hash_width < 0) {

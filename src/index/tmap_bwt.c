@@ -86,6 +86,9 @@ tmap_bwt_read(const char *fn_fasta)
      || bwt->bwt_size != tmap_file_fread(bwt->bwt, sizeof(uint32_t), bwt->bwt_size, fp_bwt)) {
       tmap_error(NULL, Exit, ReadFileError);
   }
+  if(0 != (bwt->occ_interval % 2)) {
+      tmap_error("BWT interval not supported", Exit, OutOfRange);
+  }
 
   if(0 < bwt->hash_width) {
       uint32_t i;
@@ -825,7 +828,7 @@ tmap_bwt_pac2bwt_main(int argc, char *argv[])
       tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [-l -o INT -w INT -H -v -h] <in.fasta>\n", PACKAGE, argv[0]);
       return 1;
   }
-  if(occ_interval < TMAP_BWT_OCC_MOD || 0 != (occ_interval % TMAP_BWT_OCC_MOD)) {
+  if(occ_interval < TMAP_BWT_OCC_MOD || 0 != (occ_interval % 2) ||  0 != (occ_interval % TMAP_BWT_OCC_MOD)) {
       tmap_error("option -o out of range", Exit, CommandLineArgument);
   }
 
