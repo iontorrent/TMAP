@@ -159,28 +159,28 @@ tmap_bwt_check_core(const char *fn_fasta, int32_t length, int32_t print_sa, int3
 int 
 tmap_bwt_check(int argc, char *argv[])
 {
-	int c, length = 12, print_sa = 0, use_hash = 0;
+  int c, length = 12, print_sa = 0, use_hash = 0;
 
-        tmap_progress_set_verbosity(1); 
+  tmap_progress_set_verbosity(1); 
 
-	while ((c = getopt(argc, argv, "l:pH")) >= 0) {
-		switch (c) {
-                  case 'l': length = atoi(optarg); break;
-                  case 'p': print_sa = 1; break;
-                  case 'H': use_hash = 1; break;
-                  default: return 1;
-		}
-	}
+  while ((c = getopt(argc, argv, "l:pH")) >= 0) {
+      switch (c) {
+        case 'l': length = atoi(optarg); break;
+        case 'p': print_sa = 1; break;
+        case 'H': use_hash = 1; break;
+        default: return 1;
+      }
+  }
 
-	if (optind + 1 > argc) {
-                tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [options] <in.fasta>\n", PACKAGE, argv[0]);
-		tmap_file_fprintf(tmap_file_stderr, "Options:\n");
-		tmap_file_fprintf(tmap_file_stderr, "         -l INT    the kmer length to check\n");
-		tmap_file_fprintf(tmap_file_stderr, "         -p        print out the SA intervals for each kmer\n");
-		tmap_file_fprintf(tmap_file_stderr, "         -H        use the hash to compute the SA intervals\n");
-		tmap_file_fprintf(tmap_file_stderr, "\n");
-		return 1;
-	}
-	tmap_bwt_check_core(argv[optind], length, print_sa, use_hash);
-	return 0;
+  if (optind + 1 > argc) {
+      tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [options] <in.fasta>\n", PACKAGE, argv[0]);
+      tmap_file_fprintf(tmap_file_stderr, "Options:\n");
+      tmap_file_fprintf(tmap_file_stderr, "         -l INT    the kmer length to check\n");
+      tmap_file_fprintf(tmap_file_stderr, "         -p        print out the SA intervals for each kmer\n");
+      tmap_file_fprintf(tmap_file_stderr, "         -H        use the hash to compute the SA intervals\n");
+      tmap_file_fprintf(tmap_file_stderr, "\n");
+      return 1;
+  }
+  tmap_bwt_check_core(argv[optind], length, print_sa, use_hash);
+  return 0;
 }
