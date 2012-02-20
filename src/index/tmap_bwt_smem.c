@@ -51,15 +51,16 @@ tmap_bwt_smem_extend(const tmap_bwt_t *bwt, const tmap_bwt_smem_intv_t *ik, tmap
   tmap_bwt_int_t tk[4], tl[4];
   int32_t i;
   // TODO: the primary and secondary hash (etc.)
-  tmap_bwt_2occ4(bwt, ik->x[!is_back] - 1, ik->x[!is_back] - 1 + ik->x[2], tk, tl);
+  tmap_bwt_2occ4(bwt, ik->x[!is_back] - 1, ik->x[!is_back] - 1 + ik->size, tk, tl);
   for (i = 0; i != 4; ++i) {
       ok[i].x[!is_back] = bwt->L2[i] + 1 + tk[i];
-      ok[i].x[2] = tl[i] - tk[i];
+      if(tl[i] < tk[i]) ok[i].size = 0;
+      else ok[i].size = tl[i] - tk[i];
   }
-  ok[3].x[is_back] = ik->x[is_back] + (ik->x[!is_back] <= bwt->primary && ik->x[!is_back] + ik->x[2] - 1 >= bwt->primary);
-  ok[2].x[is_back] = ok[3].x[is_back] + ok[3].x[2];
-  ok[1].x[is_back] = ok[2].x[is_back] + ok[2].x[2];
-  ok[0].x[is_back] = ok[1].x[is_back] + ok[1].x[2];
+  ok[3].x[is_back] = ik->x[is_back] + (ik->x[!is_back] <= bwt->primary && ik->x[!is_back] + ik->size - 1 >= bwt->primary);
+  ok[2].x[is_back] = ok[3].x[is_back] + ok[3].size;
+  ok[1].x[is_back] = ok[2].x[is_back] + ok[2].size;
+  ok[0].x[is_back] = ok[1].x[is_back] + ok[1].size;
 }
 
 static void 
@@ -95,9 +96,12 @@ tmap_bwt_smem1(const tmap_bwt_t *bwt, int32_t len, const uint8_t *q, int32_t x, 
       if (q[i] < 4) {
           c = 3 - q[i];
           tmap_bwt_smem_extend(bwt, &ik, ok, 0);
-          if (ok[c].x[2] != ik.x[2]) // change of the interval size
+          if (ok[c].size != ik.size) // change of the interval size
             tmap_vec_push(tmap_bwt_smem_intv_t, *curr, ik);
-          if (ok[c].x[2] == 0) break; // cannot be extended
+          if (ok[c].size <= 0) {
+              ok[c].size = 0;
+              break; // cannot be extended
+          }
           ik = ok[c]; ik.info = i + 1;
       } else { // an ambiguous base
           tmap_vec_push(tmap_bwt_smem_intv_t, *curr, ik);
@@ -115,7 +119,7 @@ tmap_bwt_smem1(const tmap_bwt_t *bwt, int32_t len, const uint8_t *q, int32_t x, 
       for (j = 0, curr->n = 0; j < prev->n; ++j) {
           tmap_bwt_smem_intv_t *p = &prev->a[j];
           tmap_bwt_smem_extend(bwt, p, ok, 1);
-          if (ok[c].x[2] == 0 || i == -1) { // keep the hit if reaching the beginning or not extended further
+          if (ok[c].size <= 0 || i == -1) { // keep the hit if reaching the beginning or not extended further
               if (curr->n == 0) { // curr->n to make sure there is no longer matches
                   if (mem->n == 0 || i + 1 < mem->a[mem->n-1].info>>32) { // skip contained matches
                       ik = *p; ik.info |= (uint64_t)(i + 1)<<32;
@@ -123,7 +127,7 @@ tmap_bwt_smem1(const tmap_bwt_t *bwt, int32_t len, const uint8_t *q, int32_t x, 
                   }
               } // otherwise the match is contained in another longer match
           }
-          if (ok[c].x[2] && (curr->n == 0 || ok[c].x[2] != curr->a[curr->n-1].x[2])) {
+          if (0 < ok[c].size && (curr->n == 0 || ok[c].size != curr->a[curr->n-1].size)) {
               ok[c].info = p->info;
               tmap_vec_push(tmap_bwt_smem_intv_t, *curr, ok[c]);
           }

@@ -211,13 +211,17 @@ tmap_bwt_2occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, tmap_b
  */
 #define tmap_bwt_get_occ_array_i16(b, k) (((k) >> (b)->occ_interval_log2) * b->occ_array_16_pt2)
 //#define tmap_bwt_get_occ_array_i16(b, k) ((k)/(b)->occ_interval * ((b)->occ_interval/(sizeof(uint32_t)<<3>>1) + (sizeof(tmap_bwt_int_t)>>2<<2)))
+//#define tmap_bwt_get_occ_array_i16(b, k) ((k)/(b)->occ_interval * ((b)->occ_interval/(sizeof(uint32_t)*8/2) + sizeof(tmap_bwt_int_t)/4*4))
+
 
 /*!
   @param  b   pointer to the bwt structure
   @param  k   the zero-based index of the bwt character to retrieve
   @return     the array 16 of bwt characters from the $-removed BWT string at [(k-(k%16),k+(16-(k%16))-1]
  */
-#define tmap_bwt_get_bwt16(b, k) ((b)->bwt[tmap_bwt_get_occ_array_i16(b, k) + (sizeof(tmap_bwt_int_t)>>2<<2) + ((k)&(((b)->occ_interval>>4)-1))])
+#define tmap_bwt_get_bwt16(b, k) ((b)->bwt[tmap_bwt_get_occ_array_i16(b, k) + (sizeof(tmap_bwt_int_t)>>2<<2) + (((k)&((b)->occ_interval-1))>>4)])
+//#define tmap_bwt_get_bwt16(b, k) ((b)->bwt[tmap_bwt_get_occ_array_i16(b, k) + sizeof(tmap_bwt_int_t)/4*4 + (k)%(b)->occ_interval/16])
+
 
 /*! 
   @param  b   pointer to the bwt structure
