@@ -52,6 +52,8 @@ tmap_index_speed(int argc, char *argv[]);
 extern int
 tmap_bwt_check(int argc, char *argv[]);
 extern int
+tmap_bwt_compare(int argc, char *argv[]);
+extern int
 tmap_vswbm_main(int argc, char *argv[]);
 #endif
 

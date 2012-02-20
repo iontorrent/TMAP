@@ -70,6 +70,7 @@ static int usage()
   fprintf(stderr, "         fsw            perform flow Smith-Waterman\n");
   fprintf(stderr, "         indexspeed     index performance benchmarks\n");
   fprintf(stderr, "         bwtcheck       check the consistency of the BWT\n");
+  fprintf(stderr, "         bwtcompare     compare two BWTs\n");
   fprintf(stderr, "         vswbm          VSW benchmarks\n");
 #endif
   return 1;
@@ -111,6 +112,7 @@ int main(int argc, char *argv[])
       else if (0 == strcmp("fsw", argv[1])) ret = tmap_fsw_main(argc-1, argv+1);
       else if (0 == strcmp("indexspeed", argv[1])) ret = tmap_index_speed(argc-1, argv+1);
       else if (0 == strcmp("bwtcheck", argv[1])) ret = tmap_bwt_check(argc-1, argv+1);
+      else if (0 == strcmp("bwtcompare", argv[1])) ret = tmap_bwt_compare(argc-1, argv+1);
       else if (0 == strcmp("vswbm", argv[1])) ret = tmap_vswbm_main(argc-1, argv+1);
 #endif
       else if (0 == strcmp("--version", argv[1]) || 0 == strcmp("-v", argv[1])) ret = version();

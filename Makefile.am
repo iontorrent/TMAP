@@ -49,6 +49,7 @@ tmap_SOURCES = \
 			   src/debug/tmap_debug_exact.h src/debug/tmap_debug_exact.c \
 			   src/index/tmap_index_speed.h src/index/tmap_index_speed.c \
 			   src/index/tmap_bwt_check.c src/index/tmap_bwt_check.h \
+			   src/index/tmap_bwt_compare.c src/index/tmap_bwt_compare.h \
 			   src/map/util/tmap_map_opt.h src/map/util/tmap_map_opt.c \
 			   src/map/util/tmap_map_stats.h src/map/util/tmap_map_stats.c \
 			   src/map/util/tmap_map_util.h src/map/util/tmap_map_util.c \
