@@ -704,9 +704,16 @@ tmap_bwt_2occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, uint8_t
 #endif
 }
 
+
 #define __occ_aux4(bwt, b)											\
   ((bwt)->cnt_table[(b)&0xff] + (bwt)->cnt_table[(b)>>8&0xff]		\
    + (bwt)->cnt_table[(b)>>16&0xff] + (bwt)->cnt_table[(b)>>24])
+
+#define __occ_aux8(bwt, b)											\
+  ((bwt)->cnt_table[(b)&0xff] + (bwt)->cnt_table[(b)>>8&0xff]		\
+   + (bwt)->cnt_table[(b)>>16&0xff] + (bwt)->cnt_table[(b)>>24&0xff] \
+   + (bwt)->cnt_table[(b)>>32&0xff] + (bwt)->cnt_table[(b)>>40&0xff] \
+   + (bwt)->cnt_table[(b)>>48&0xff] + (bwt)->cnt_table[(b)>>56]) \
 
 inline void 
 tmap_bwt_occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t cnt[4])
@@ -722,12 +729,23 @@ tmap_bwt_occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t cnt[4])
   memcpy(cnt, p, 4 * sizeof(tmap_bwt_int_t));
   p += sizeof(tmap_bwt_int_t); // move to the first bwt cell
 
+#ifndef TMAP_BWT_BY_16
   j = (k >> 4) << 4;
   for(l = (k >> bwt->occ_interval_log2) << bwt->occ_interval_log2, x = 0; l < j; l += 16, ++p) {
     x += __occ_aux4(bwt, *p);
   }
   x += __occ_aux4(bwt, *p & ~((1U<<((~k&15)<<1)) - 1)) - (~k&15);
+  //m += __occ_aux16(p[0] & ~((1ul<<((~l&15)<<1)) - 1), c);
   cnt[0] += x&0xff; cnt[1] += x>>8&0xff; cnt[2] += x>>16&0xff; cnt[3] += x>>24;
+#else
+  j = (k >> 5) << 5;
+  for(l = (k >> bwt->occ_interval_log2) << bwt->occ_interval_log2, x = 0; l < j; l += 32, p += 2) {
+    x += __occ_aux8(bwt, ((uint64_t)p[0] | p[1]));
+  }
+  x += __occ_aux8(bwt, ((uint64_t)p[0] | p[1]) & ~((1ull<<((~k&31)<<1)) - 1)) - (~k&31);
+  cnt[0] += (x&0xff) + (x>>32&0xff); cnt[1] += (x>>8&0xff) + (x>>40&0xff); 
+  cnt[2] += (x>>16&0xff) + (x>>48&0xff); cnt[3] += (x>>24&0xff) + (x>>56);
+#endif
 }
 
 // an analogy to tmap_bwt_occ4() but more efficient, requiring k <= l
@@ -754,6 +772,7 @@ tmap_bwt_2occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, tmap_b
       p = tmap_bwt_occ_intv(bwt, k);
       memcpy(cntk, p, 4 * sizeof(tmap_bwt_int_t));
       p += sizeof(tmap_bwt_int_t);
+#ifndef TMAP_BWT_BY_16
       // prepare cntk[]
       j = k >> 4 << 4;
       for(i = k >> bwt->occ_interval_log2 << bwt->occ_interval_log2, x = 0; i < j; i += 16, ++p) 
@@ -767,6 +786,21 @@ tmap_bwt_2occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, tmap_b
       memcpy(cntl, cntk, 4 * sizeof(tmap_bwt_int_t));
       cntk[0] += x&0xff; cntk[1] += x>>8&0xff; cntk[2] += x>>16&0xff; cntk[3] += x>>24;
       cntl[0] += y&0xff; cntl[1] += y>>8&0xff; cntl[2] += y>>16&0xff; cntl[3] += y>>24;
+#else
+      j = (k >> 5) << 5;
+      for(i = (k >> bwt->occ_interval_log2) << bwt->occ_interval_log2, x = 0; i < j; i += 32, p += 2) 
+        x += __occ_aux8(bwt, ((uint64_t)p[0] | p[1]));
+      y = x;
+      x += __occ_aux8(bwt, ((uint64_t)p[0] | p[1]) & ~((1ull<<((~k&31)<<1)) - 1)) - (~k&31);
+      // calculate cntl[] and finalize cntk[]
+      j = l >> 5 << 5;
+      for(; i < j; i += 32, p += 2) y += __occ_aux8(bwt, ((uint64_t)p[0] | p[1]));
+      y += __occ_aux8(bwt, ((uint64_t)p[0] | p[1]) & ~((1ull<<((~k&31)<<1)) - 1)) - (~k&31);
+      cntk[0] += (x&0xff) + (x>>32&0xff); cntk[1] += (x>>8&0xff) + (x>>40&0xff); 
+      cntk[2] += (x>>16&0xff) + (x>>48&0xff); cntk[3] += (x>>24&0xff) + (x>>56);
+      cntl[0] += (y&0xff) + (y>>32&0xff); cntl[1] += (y>>8&0xff) + (y>>40&0xff); 
+      cntl[2] += (y>>16&0xff) + (y>>48&0xff); cntl[3] += (y>>24&0xff) + (y>>56);
+#endif
   }
 }
 
