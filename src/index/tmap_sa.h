@@ -22,6 +22,8 @@ typedef struct {
     tmap_bwt_int_t n_sa;  /*!< number of suffix array entries */
     tmap_bwt_int_t *sa;  /*!< pointer to the suffix array entries */
     uint32_t is_shm;  /*!< 1 if loaded from shared memory, 0 otherwise */
+    // Not stored in the file
+    uint32_t sa_intv_log2;  /*!< the log2 suffix array interval (sampled) */
 } tmap_sa_t;
 
 /*! 
