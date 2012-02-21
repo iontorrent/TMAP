@@ -899,7 +899,6 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
                         tmap_rand_t *rand,
                         tmap_map_opt_t *opt)
 {
-  int32_t n;
   tmap_map_sam_t tmp_sam;
   uint8_t *query;
   int32_t tlen, overflow = 0, n_best = 0;
@@ -994,7 +993,6 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
       // TODO: do we need to save this data in this fashion?
       int32_t t_end = end;
       int32_t t_start = start;
-      int32_t t_n = n;
       int32_t t_end_pos = end_pos;
       uint32_t t_start_pos = start_pos;
       
@@ -1012,7 +1010,7 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
 
               //fprintf(stderr, "max_seed_band=%d start=%d end=%d\n", max_seed_band, start, end);
               // NB: band based on EXACT start position
-              n = end + 1;
+              int32_t n = end + 1;
               end = start;
               while(start < n) {
                   int32_t cur_score;
@@ -1076,7 +1074,6 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
       // TODO: do we need to reset this data in this fashion?
       end = t_end;
       start = t_start;
-      n = t_n;
       end_pos = t_end_pos;
       start_pos = t_start_pos;
 
