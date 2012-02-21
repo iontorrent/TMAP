@@ -791,6 +791,7 @@ tmap_bwt_2occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, tmap_b
       l = _l;
       p = tmap_bwt_occ_intv(bwt, k);
       memcpy(cntk, p, 4 * sizeof(tmap_bwt_int_t));
+      memcpy(cntl, cntk, 4 * sizeof(tmap_bwt_int_t));
       p += sizeof(tmap_bwt_int_t);
 //#ifndef TMAP_BWT_BY_16
       // prepare cntk[]
@@ -806,7 +807,6 @@ tmap_bwt_2occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, tmap_b
           __occ_aux4_alt(bwt, *p, cntl);
       }
       y = __occ_aux4(bwt, *p & ~((1U<<((~l&15)<<1)) - 1)) - (~l&15);
-      memcpy(cntl, cntk, 4 * sizeof(tmap_bwt_int_t));
       cntk[0] += x&0xff; cntk[1] += x>>8&0xff; cntk[2] += x>>16&0xff; cntk[3] += x>>24;
       cntl[0] += y&0xff; cntl[1] += y>>8&0xff; cntl[2] += y>>16&0xff; cntl[3] += y>>24;
       /*

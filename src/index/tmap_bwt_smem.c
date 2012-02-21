@@ -52,6 +52,12 @@ tmap_bwt_smem_extend(const tmap_bwt_t *bwt, const tmap_bwt_smem_intv_t *ik, tmap
   int32_t i;
   // TODO: the primary and secondary hash (etc.)
   tmap_bwt_2occ4(bwt, ik->x[!is_back] - 1, ik->x[!is_back] - 1 + ik->size, tk, tl);
+  /*
+  fprintf(stderr, "k=%llu l=%llu ok[%llu,%llu,%llu,%llu] ol[%llu,%llu,%llu,%llu]\n", 
+          ik->x[!is_back] - 1, ik->x[!is_back] - 1 + ik->size, 
+          tk[0], tk[1], tk[2], tk[3],
+          tl[0], tl[1], tl[2], tl[3]);
+          */
   for (i = 0; i != 4; ++i) {
       ok[i].x[!is_back] = bwt->L2[i] + 1 + tk[i];
       if(tl[i] < tk[i]) ok[i].size = 0;
@@ -95,9 +101,17 @@ tmap_bwt_smem1(const tmap_bwt_t *bwt, int32_t len, const uint8_t *q, int32_t x, 
   for (i = x + 1, curr->n = 0; i < len; ++i) { // forward search
       if (q[i] < 4) {
           c = 3 - q[i];
+          /*
+          fprintf(stderr, "ik.k=%llu ik.l=%llu\n", 
+                  ik.x[0], ik.x[1]);
+          */
           tmap_bwt_smem_extend(bwt, &ik, ok, 0);
           if (ok[c].size != ik.size) // change of the interval size
             tmap_vec_push(tmap_bwt_smem_intv_t, *curr, ik);
+          /*
+          fprintf(stderr, "ok[%d].k=%llu ok[%d].l=%llu ok[%d].size=%u\n", 
+                  c, ok[c].x[0], c, ok[c].x[1], c, ok[c].size);
+                  */
           if (ok[c].size <= 0) {
               ok[c].size = 0;
               break; // cannot be extended
