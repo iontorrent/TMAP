@@ -738,7 +738,6 @@ tmap_bwt_occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t cnt[4])
     x += __occ_aux4(bwt, *p);
   }
   x += __occ_aux4(bwt, *p & ~((1U<<((~k&15)<<1)) - 1)) - (~k&15);
-  //m += __occ_aux16(p[0] & ~((1ul<<((~l&15)<<1)) - 1), c);
   cnt[0] += x&0xff; cnt[1] += x>>8&0xff; cnt[2] += x>>16&0xff; cnt[3] += x>>24;
 #else
   j = (k >> 5) << 5;
