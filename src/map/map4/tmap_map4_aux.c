@@ -223,6 +223,7 @@ tmap_map4_aux_core(tmap_seq_t *seq,
       // realloc
       for (i = n = 0; i < matches->n; ++i) {
           tmap_bwt_smem_intv_t *p = &matches->a[i];
+          //fprintf(stderr, "i=%d matches->n=%d p->size=%u\n", i, matches->n, p->size);
           n += p->size;
       }
       tmap_map_sams_realloc(sams, n);
@@ -238,8 +239,9 @@ tmap_map4_aux_core(tmap_seq_t *seq,
               if(bwt->seq_len < pacpos) pacpos = bwt->seq_len;
 
               // get the packed position
+              //tmap_bwt_int_t tmp = pacpos;
               pacpos = tmap_sa_pac_pos_hash(sa, bwt, pacpos, hash);
-              //fprintf(stderr, "p->x[0]=%llu p->x[1]=%llu p->size=%llu k=%llu bwt->seq_len=%llu pacpos=%llu\n", p->x[0], p->x[1], p->size, k, bwt->seq_len, pacpos);
+              //fprintf(stderr, "p->x[0]=%llu p->x[1]=%llu p->size=%llu k=%llu bwt->seq_len=%llu pacpos=%llu tmp=%llu\n", p->x[0], p->x[1], p->size, k, bwt->seq_len, pacpos, tmp);
 
               // convert to reference co-ordinates
               if(0 < tmap_refseq_pac2real(refseq, pacpos, 1, &seqid, &pos, &strand)) {

@@ -52,6 +52,8 @@ tmap_sa_read(const char *fn_fasta)
       tmap_error(NULL, Exit, ReadFileError);
   }
 
+  sa->sa_intv_log2 = tmap_log2(sa->sa_intv);
+
   tmap_file_fclose(fp_sa);
   free(fn_sa);
 
@@ -178,6 +180,8 @@ tmap_sa_shm_unpack(uint8_t *buf)
   sa->sa = (tmap_bwt_int_t*)buf;
   buf += sa->n_sa*sizeof(tmap_bwt_int_t);
   
+  sa->sa_intv_log2 = tmap_log2(sa->sa_intv);
+
   sa->is_shm = 1;
 
   return sa;
@@ -207,8 +211,10 @@ tmap_bwt_int_t
 tmap_sa_pac_pos_hash(const tmap_sa_t *sa, const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_match_hash_t *hash)
 {
   uint32_t s = 0;
+  if(1 == sa->sa_intv) return sa->sa[k];
   k = tmap_bwt_match_hash_invPsi(bwt, sa->sa_intv, k, &s, hash);
-  return s + sa->sa[k/sa->sa_intv];
+  return s + sa->sa[k >> sa->sa_intv_log2];
+  //return s + sa->sa[k/sa->sa_intv];
 }
 
 tmap_bwt_int_t 

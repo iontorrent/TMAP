@@ -474,11 +474,15 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
       tmap_progress_set_verbosity(0); 
   }
   */
+          
+  tmap_progress_print("running with %d threads (%s)",
+                       driver->opt->num_threads,
+                       (0 == driver->opt->num_threads_autodetected) ? "user set" : "autodetected");
   
   // print out the algorithms and stages
   for(i=0;i<driver->num_stages;i++) {
       for(j=0;j<driver->stages[i]->num_algorithms;j++) {
-          tmap_progress_print2("%s will be run in stage %d", 
+          tmap_progress_print("%s will be run in stage %d", 
                                tmap_algo_id_to_name(driver->stages[i]->algorithms[j]->opt->algo_id),
                                driver->stages[i]->algorithms[j]->opt->algo_stage);
           //tmap_progress_print2("\t with seed mapall_seed_freqc=%.2f", driver->stages[i]->opt->stage_seed_freqc);
