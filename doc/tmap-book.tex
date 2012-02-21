@@ -325,7 +325,7 @@ See \autoref{sec:commonoptions} for common options that are in use in this comma
 
 \subsubsection{\TT{-o INT}}
 Specifies the occurence interval size $o$, storing only every $o$th occurrence interval.
-This must be one, or a multiple of $16$.
+This be a power of two greater than or equal to $32$.
 
 \subsubsection{\TT{-w INT}}
 Specifies the k-mer size (the number of bases) to hash.
@@ -338,7 +338,7 @@ using the Taylor series.
 
 \subsubsection{\TT{-i INT}}
 Specifies the suffix array interval size $i$, storing only every $i$th suffix array interval.
-This must be one, or a multiple of two.
+This must be one, or a powerof two.
 
 \subsubsection{\TT{-a STRING}}
 Specifies the BWT construction algorithm (\TT{bwtsw} or \TT{is}).
