@@ -55,7 +55,8 @@ tmap_map2_aux_sa_pac_pos(const tmap_refseq_t *refseq, const tmap_bwt_t *bwt, con
       // go through tmp hits
       for(i = n = 0; i < tmp_b->n; ++i) {
           tmap_map2_hit_t *p = tmp_b->hits + i;
-          if(p->l - p->k + 1 <= IS) n += p->l - p->k + 1;
+          if(0 == p->k && 0 == p->l && 0 == p->qlen) continue;
+          if(p->l - p->k + 1 <= IS && TMAP_MAP2_MINUS_INF < p->G) n += p->l - p->k + 1;
           else if(p->G > min_as) ++n;
       }
       // realloc
@@ -293,6 +294,17 @@ tmap_map2_aux_aln(tmap_map_opt_t *opt,
   }
 
   for(k = 0; k < 2; ++k) { // separate _b into bb[2] based on the strand
+      // resolve duplicates
+      // _b[0] are "wide SA hits"
+      // _b[1] are "narrow SA hits"
+      if(1 == k || 0 != opt->narrow_rmdup) {
+          tmap_map2_aux_resolve_duphits(target_refseq, target_bwt, target_sa, target_hash, _b[k], opt->max_seed_intv, 0);
+      }
+      else {
+          // only to packed reference coordinates
+          //tmap_map2_aux_resolve_duphits(target_refseq, target_bwt, target_sa, target_hash, _b[k], opt->max_seed_intv, 0);
+          tmap_map2_aux_sa_pac_pos(target_refseq, target_bwt, target_sa, target_hash, _b[k], INT32_MAX, INT32_MIN);
+      }
       for(j = 0; j < _b[k]->n; ++j) {
           tmap_map2_hit_t *q;
           p = bb[_b[k]->hits[j].is_rev][k];
@@ -312,18 +324,16 @@ tmap_map2_aux_aln(tmap_map_opt_t *opt,
   // free
   for(k = 0; k < 2; ++k) {
       free(_b[k]->hits);
+      free(_b[k]);
   }
   free(_b);
   // resolve duplicates
   for(k = 0; k < 2; ++k) {
       // bb[*][0] are "wide SA hits"
-      tmap_map2_aux_resolve_duphits(target_refseq, target_bwt, target_sa, target_hash, bb[k][0], opt->max_seed_intv, 0);
+      tmap_map2_aux_resolve_duphits(NULL, NULL, NULL, NULL, bb[k][0], opt->max_seed_intv, 0);
       // bb[*][1] are "narrow SA hits"
-      if(0 == opt->narrow_rmdup) {
-          tmap_map2_aux_sa_pac_pos(target_refseq, target_bwt, target_sa, target_hash, bb[k][1], INT32_MAX, INT32_MIN);
-      }
-      else {
-          tmap_map2_aux_resolve_duphits(target_refseq, target_bwt, target_sa, target_hash, bb[k][1], opt->max_seed_intv, 0);
+      if(0 != opt->narrow_rmdup) {
+          tmap_map2_aux_resolve_duphits(NULL, NULL, NULL, NULL, bb[k][1], opt->max_seed_intv, 0);
       }
   }
   b[0] = bb[0][1]; b[1] = bb[1][1]; // bb[*][1] are "narrow SA hits"
