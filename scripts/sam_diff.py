@@ -79,7 +79,8 @@ def diff_field(field1, field2):
 def main(options):
     sam1 = Sam(options.sam1, options.full_qname)
     sam2 = Sam(options.sam2, options.full_qname)
-    fields = options.fields.split(',')
+    fields = options.fields
+    #fields = options.fields.split(',')
     widgets = [
                 "diffing: ", 
                 progressbar.Percentage(),
@@ -131,7 +132,7 @@ if __name__ == '__main__':
                       help="comma seperated list of fields:%s\t\t\t\t\t to diff between the"
                       "sam records use names from the same spec. for optional tags"
                       "use their 2 letter abbreviation.  Default:  pos" % (str(fields)),
-                      dest='fields', default=['pos'])
+                      dest='fields', action="append", default=[])
     parser.add_option('--full-qname', help="keep the full query name", dest='full_qname', action="store_true", default=False)
     parser.add_option('--min-mapq', help="examine only those records with a given minimum mapping quality", type="int", dest="min_mapq", default=0)
     options, args = parser.parse_args()

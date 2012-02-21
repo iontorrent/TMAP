@@ -65,7 +65,7 @@ tmap_bwt_smem_intv_copy(tmap_bwt_smem_intv_t *dest, tmap_bwt_smem_intv_t *src)
 {
   dest->x[0] = src->x[0];
   dest->x[1] = src->x[1];
-  dest->x[2] = src->x[2];
+  dest->size = src->size;
   dest->info = src->info;
 }
 
@@ -149,13 +149,15 @@ tmap_map4_aux_core(tmap_seq_t *seq,
           for (i = 0; i < iter->matches->n; ++i) {
               tmap_bwt_smem_intv_t *p = &iter->matches->a[i];
 
-              //fprintf(stderr, "EM\t%d\t%d\t%ld\n", (uint32_t)(p->info>>32), (uint32_t)p->info, (long)p->x[2]);
+              if(p->size <= 0) continue;
+
+              //fprintf(stderr, "EM\t%d\t%d\t%ld\t%llu\t%llu\n", (uint32_t)(p->info>>32), (uint32_t)p->info, (long)p->size, p->x[0], p->x[1]);
               // too short
               if ((uint32_t)p->info - (p->info>>32) < min_seed_length) continue;
               // update total
               total++;
               // too many hits?
-              if (p->x[2] <= opt->max_iwidth || p->x[2] < max_repr) {
+              if (p->size <= opt->max_iwidth || p->size < max_repr) {
                   // OK
                   tmap_bwt_smem_intv_vec_push(matches, p);
               }
@@ -166,20 +168,20 @@ tmap_map4_aux_core(tmap_seq_t *seq,
                   // Keep only representative hits
 
                   /*
-                  p->x[2] = (opt->max_iwidth < max_repr) ? opt->max_iwidth : max_repr;
+                  p->size = (opt->max_iwidth < max_repr) ? opt->max_iwidth : max_repr;
                   tmap_bwt_smem_intv_vec_push(matches, p);
                   */
 
                   if (1 == opt->rand_repr) {
                       // choose randomly the representitive hits
-                      pr = max_repr / (double)p->x[2];
+                      pr = max_repr / (double)p->size;
                       q = *p;
-                      for (k = c = 0; k < q.x[2]; ++k) {
+                      for (k = c = 0; k < q.size; ++k) {
                           if (tmap_rand_get(rand) < pr) {
                               // fake
                               p->x[0] = q.x[0] + k;
                               p->x[1] = q.x[1] + k;
-                              p->x[2] = 1;
+                              p->size = 1;
                               // push
                               tmap_bwt_smem_intv_vec_push(matches, p);
                               // update count
@@ -192,14 +194,14 @@ tmap_map4_aux_core(tmap_seq_t *seq,
                   }
                   else {
                       // choose uniformly the representitive hits
-                      pr = p->x[2] / (double)max_repr;
+                      pr = p->size / (double)max_repr;
                       q = *p;
-                      for (k = c = 0; k < q.x[2]; ++k, ++c) {
+                      for (k = c = 0; k < q.size; ++k, ++c) {
                           if (pr < c) {
                               // fake
                               p->x[0] = q.x[0] + k;
                               p->x[1] = q.x[1] + k;
-                              p->x[2] = 1;
+                              p->size = 1;
                               // push
                               tmap_bwt_smem_intv_vec_push(matches, p);
                               // update count
@@ -221,13 +223,13 @@ tmap_map4_aux_core(tmap_seq_t *seq,
       // realloc
       for (i = n = 0; i < matches->n; ++i) {
           tmap_bwt_smem_intv_t *p = &matches->a[i];
-          n += p->x[2];
+          n += p->size;
       }
       tmap_map_sams_realloc(sams, n);
       // go through the matches
       for (i = n = 0; i < matches->n; ++i) {
           tmap_bwt_smem_intv_t *p = &matches->a[i];
-          for (k = 0; k < p->x[2]; ++k) {
+          for (k = 0; k < p->size; ++k) {
               tmap_bwt_int_t pacpos;
               uint32_t seqid, pos;
               uint8_t strand;
@@ -237,7 +239,7 @@ tmap_map4_aux_core(tmap_seq_t *seq,
 
               // get the packed position
               pacpos = tmap_sa_pac_pos_hash(sa, bwt, pacpos, hash);
-              //fprintf(stderr, "p->x[0]=%llu p->x[1]=%llu p->x[2]=%llu k=%llu bwt->seq_len=%llu pacpos=%llu\n", p->x[0], p->x[1], p->x[2], k, bwt->seq_len, pacpos);
+              //fprintf(stderr, "p->x[0]=%llu p->x[1]=%llu p->size=%llu k=%llu bwt->seq_len=%llu pacpos=%llu\n", p->x[0], p->x[1], p->size, k, bwt->seq_len, pacpos);
 
               // convert to reference co-ordinates
               if(0 < tmap_refseq_pac2real(refseq, pacpos, 1, &seqid, &pos, &strand)) {

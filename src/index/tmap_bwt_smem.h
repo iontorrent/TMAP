@@ -34,7 +34,8 @@
   Bi-directional occurrence intervals
  */
 typedef struct {
-    tmap_bwt_int_t x[3]; /*!< the forward and backward (x[0] and x[1]) suffix intervals, and the interval size (x[2]) */
+    tmap_bwt_int_t x[2]; /*!< the forward and backward suffix intervals */
+    tmap_bwt_int_t size; /*!< the interval size */
     uint64_t info; /*!< lower 32 bits store the query index for the forward search, the upper 32 bits store the query index for the reverse search */
 } tmap_bwt_smem_intv_t;
 
@@ -53,7 +54,7 @@ typedef struct {
   @param  ik   the bi-directional occurrence interval
   @details  resets the interval structure based on the given query base
  */
-#define tmap_bwt_smem_set_intv(bwt, c, ik) ((ik).x[0] = (bwt)->L2[(int32_t)(c)]+1, (ik).x[2] = (bwt)->L2[(int32_t)(c)+1]-(bwt)->L2[(int32_t)(c)], (ik).x[1] = (bwt)->L2[3-(c)]+1, (ik).info = 0)
+#define tmap_bwt_smem_set_intv(bwt, c, ik) ((ik).x[0] = (bwt)->L2[(int32_t)(c)]+1, (ik).size = (bwt)->L2[(int32_t)(c)+1]-(bwt)->L2[(int32_t)(c)], (ik).x[1] = (bwt)->L2[3-(c)]+1, (ik).info = 0)
 
 /*!
   @param  bwt     the bwt

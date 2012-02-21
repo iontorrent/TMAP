@@ -48,6 +48,13 @@ tmap_bwt_get_hash_length(uint64_t i)
   return ((uint64_t)1) << (i << 1); // 4^{hash_width} entries
 }
 
+static inline void
+tmap_bwt_update_optimizations(tmap_bwt_t *bwt)
+{
+  bwt->occ_interval_log2 = tmap_log2(bwt->occ_interval);
+  bwt->occ_array_16_pt2 = (bwt->occ_interval/(sizeof(uint32_t)<<3>>1) + (sizeof(tmap_bwt_int_t)>>2<<2));
+}
+
 tmap_bwt_t *
 tmap_bwt_read(const char *fn_fasta)
 {
@@ -79,6 +86,9 @@ tmap_bwt_read(const char *fn_fasta)
      || bwt->bwt_size != tmap_file_fread(bwt->bwt, sizeof(uint32_t), bwt->bwt_size, fp_bwt)) {
       tmap_error(NULL, Exit, ReadFileError);
   }
+  if(0 != (bwt->occ_interval % 2)) {
+      tmap_error("BWT interval not supported", Exit, OutOfRange);
+  }
 
   if(0 < bwt->hash_width) {
       uint32_t i;
@@ -104,6 +114,8 @@ tmap_bwt_read(const char *fn_fasta)
   free(fn_bwt);
 
   bwt->is_shm = 0;
+
+  tmap_bwt_update_optimizations(bwt);
 
   return bwt;
 }
@@ -310,6 +322,8 @@ tmap_bwt_shm_unpack(uint8_t *buf)
   }
 
   bwt->is_shm = 1;
+  
+  tmap_bwt_update_optimizations(bwt);
 
   return bwt;
 }
@@ -377,6 +391,7 @@ tmap_bwt_update_occ_interval(tmap_bwt_t *bwt, tmap_bwt_int_t occ_interval)
   }
   // update bwt
   free(bwt->bwt); bwt->bwt = buf;
+  tmap_bwt_update_optimizations(bwt);
 }
 
 void 
@@ -551,7 +566,7 @@ tmap_bwt_occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, uint8_t c)
 
 #ifndef TMAP_BWT_BY_16
   j = k >> 4 << 4; // divide by 16, then multiply by 16, to subtract k % 16.
-  for(l = (k/bwt->occ_interval)*bwt->occ_interval; l < j; l += 16, p++) {
+  for(l = (k >> bwt->occ_interval_log2) << bwt->occ_interval_log2; l < j; l += 16, p++) {
       n += __occ_aux16(p[0], c);
   }
   // calculate Occ
@@ -560,7 +575,7 @@ tmap_bwt_occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, uint8_t c)
 #else
   // calculate Occ up to the last k/32
   j = k >> 5 << 5;
-  for(l = k/bwt->occ_interval*bwt->occ_interval; l < j; l += 32, p += 2) {
+  for(l = (k >> bwt->occ_interval_log2) << bwt->occ_interval_log2; l < j; l += 32, p += 2) {
       n += __occ_aux32((uint64_t)p[0]<<32 | p[1], c);
   }
   // calculate Occ
@@ -582,7 +597,7 @@ tmap_bwt_2occ_orig(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, ui
   }
   _k = (k >= bwt->primary)? k-1 : k;
   _l = (l >= bwt->primary)? l-1 : l;
-  if(_l/bwt->occ_interval != _k/bwt->occ_interval || TMAP_BWT_INT_MAX == k || TMAP_BWT_INT_MAX == l) {
+  if((_l >> bwt->occ_interval_log2) != (_k >> bwt->occ_interval_log2) || TMAP_BWT_INT_MAX == k || TMAP_BWT_INT_MAX == l) {
       if(l == TMAP_BWT_INT_MAX) k = TMAP_BWT_INT_MAX; 
       *ok = tmap_bwt_occ(bwt, k, c);
       *ol = tmap_bwt_occ(bwt, l, c);
@@ -596,7 +611,7 @@ tmap_bwt_2occ_orig(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, ui
       // calculate *ok
 #ifndef TMAP_BWT_BY_16
       j = k >> 4 << 4; // divide by 16, then multiply by 16, to subtract k % 16.
-      for(i = (k/bwt->occ_interval)*bwt->occ_interval; i < j; i += 16, p++) {
+      for(i = (k >> bwt->occ_interval_log2) << bwt->occ_interval_log2; i < j; i += 16, p++) {
           n += __occ_aux16(p[0], c);
       }
       m = n; // save for ol
@@ -604,7 +619,7 @@ tmap_bwt_2occ_orig(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, ui
       if(c == 0) n -= ~k&15; // corrected for the masked bits
 #else
       j = k >> 5 << 5; // divide by 32, then multiply by 32, to subtract k % 32
-      for(i = (k/bwt->occ_interval)*bwt->occ_interval; i < j; i += 32, p+=2) {
+      for(i = (k >> bwt->occ_interval_log2) << bwt->occ_interval_log2; i < j; i += 32, p+=2) {
           n += __occ_aux32((uint64_t)p[0]<<32 | p[1], c);
       }
       m = n; // save for ol
@@ -692,9 +707,16 @@ tmap_bwt_2occ(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, uint8_t
 #endif
 }
 
+
 #define __occ_aux4(bwt, b)											\
   ((bwt)->cnt_table[(b)&0xff] + (bwt)->cnt_table[(b)>>8&0xff]		\
    + (bwt)->cnt_table[(b)>>16&0xff] + (bwt)->cnt_table[(b)>>24])
+
+#define __occ_aux8(bwt, b)											\
+  ((bwt)->cnt_table[(b)&0xff] + (bwt)->cnt_table[(b)>>8&0xff]		\
+   + (bwt)->cnt_table[(b)>>16&0xff] + (bwt)->cnt_table[(b)>>24&0xff] \
+   + (bwt)->cnt_table[(b)>>32&0xff] + (bwt)->cnt_table[(b)>>40&0xff] \
+   + (bwt)->cnt_table[(b)>>48&0xff] + (bwt)->cnt_table[(b)>>56]) \
 
 inline void 
 tmap_bwt_occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t cnt[4])
@@ -710,12 +732,22 @@ tmap_bwt_occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t cnt[4])
   memcpy(cnt, p, 4 * sizeof(tmap_bwt_int_t));
   p += sizeof(tmap_bwt_int_t); // move to the first bwt cell
 
+#ifndef TMAP_BWT_BY_16
   j = (k >> 4) << 4;
-  for(l = (k / bwt->occ_interval) * bwt->occ_interval, x = 0; l < j; l += 16, ++p) {
+  for(l = (k >> bwt->occ_interval_log2) << bwt->occ_interval_log2, x = 0; l < j; l += 16, ++p) {
     x += __occ_aux4(bwt, *p);
   }
   x += __occ_aux4(bwt, *p & ~((1U<<((~k&15)<<1)) - 1)) - (~k&15);
   cnt[0] += x&0xff; cnt[1] += x>>8&0xff; cnt[2] += x>>16&0xff; cnt[3] += x>>24;
+#else
+  j = (k >> 5) << 5;
+  for(l = (k >> bwt->occ_interval_log2) << bwt->occ_interval_log2, x = 0; l < j; l += 32, p += 2) {
+    x += __occ_aux8(bwt, ((uint64_t)p[0] | p[1]));
+  }
+  x += __occ_aux8(bwt, ((uint64_t)p[0] | p[1]) & ~((1ull<<((~k&31)<<1)) - 1)) - (~k&31);
+  cnt[0] += (x&0xff) + (x>>32&0xff); cnt[1] += (x>>8&0xff) + (x>>40&0xff); 
+  cnt[2] += (x>>16&0xff) + (x>>48&0xff); cnt[3] += (x>>24&0xff) + (x>>56);
+#endif
 }
 
 // an analogy to tmap_bwt_occ4() but more efficient, requiring k <= l
@@ -730,7 +762,7 @@ tmap_bwt_2occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, tmap_b
   }
   _k = (k >= bwt->primary)? k-1 : k;
   _l = (l >= bwt->primary)? l-1 : l;
-  if(_l/bwt->occ_interval != _k/bwt->occ_interval || TMAP_BWT_INT_MAX == k || TMAP_BWT_INT_MAX == l) {
+  if((_l >> bwt->occ_interval_log2) != (_k >> bwt->occ_interval_log2) || TMAP_BWT_INT_MAX == k || TMAP_BWT_INT_MAX == l) {
       if(l == TMAP_BWT_INT_MAX) k = TMAP_BWT_INT_MAX; 
       tmap_bwt_occ4(bwt, k, cntk);
       tmap_bwt_occ4(bwt, l, cntl);
@@ -742,9 +774,10 @@ tmap_bwt_2occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, tmap_b
       p = tmap_bwt_occ_intv(bwt, k);
       memcpy(cntk, p, 4 * sizeof(tmap_bwt_int_t));
       p += sizeof(tmap_bwt_int_t);
+#ifndef TMAP_BWT_BY_16
       // prepare cntk[]
       j = k >> 4 << 4;
-      for(i = k / bwt->occ_interval * bwt->occ_interval, x = 0; i < j; i += 16, ++p) 
+      for(i = k >> bwt->occ_interval_log2 << bwt->occ_interval_log2, x = 0; i < j; i += 16, ++p) 
         x += __occ_aux4(bwt, *p);
       y = x;
       x += __occ_aux4(bwt, *p & ~((1U<<((~k&15)<<1)) - 1)) - (~k&15);
@@ -755,6 +788,21 @@ tmap_bwt_2occ4(const tmap_bwt_t *bwt, tmap_bwt_int_t k, tmap_bwt_int_t l, tmap_b
       memcpy(cntl, cntk, 4 * sizeof(tmap_bwt_int_t));
       cntk[0] += x&0xff; cntk[1] += x>>8&0xff; cntk[2] += x>>16&0xff; cntk[3] += x>>24;
       cntl[0] += y&0xff; cntl[1] += y>>8&0xff; cntl[2] += y>>16&0xff; cntl[3] += y>>24;
+#else
+      j = (k >> 5) << 5;
+      for(i = (k >> bwt->occ_interval_log2) << bwt->occ_interval_log2, x = 0; i < j; i += 32, p += 2) 
+        x += __occ_aux8(bwt, ((uint64_t)p[0] | p[1]));
+      y = x;
+      x += __occ_aux8(bwt, ((uint64_t)p[0] | p[1]) & ~((1ull<<((~k&31)<<1)) - 1)) - (~k&31);
+      // calculate cntl[] and finalize cntk[]
+      j = l >> 5 << 5;
+      for(; i < j; i += 32, p += 2) y += __occ_aux8(bwt, ((uint64_t)p[0] | p[1]));
+      y += __occ_aux8(bwt, ((uint64_t)p[0] | p[1]) & ~((1ull<<((~k&31)<<1)) - 1)) - (~k&31);
+      cntk[0] += (x&0xff) + (x>>32&0xff); cntk[1] += (x>>8&0xff) + (x>>40&0xff); 
+      cntk[2] += (x>>16&0xff) + (x>>48&0xff); cntk[3] += (x>>24&0xff) + (x>>56);
+      cntl[0] += (y&0xff) + (y>>32&0xff); cntl[1] += (y>>8&0xff) + (y>>40&0xff); 
+      cntl[2] += (y>>16&0xff) + (y>>48&0xff); cntl[3] += (y>>24&0xff) + (y>>56);
+#endif
   }
 }
 
@@ -779,7 +827,7 @@ tmap_bwt_pac2bwt_main(int argc, char *argv[])
       tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [-l -o INT -w INT -H -v -h] <in.fasta>\n", PACKAGE, argv[0]);
       return 1;
   }
-  if(occ_interval < TMAP_BWT_OCC_MOD || 0 != (occ_interval % TMAP_BWT_OCC_MOD)) {
+  if(occ_interval < TMAP_BWT_OCC_MOD || 0 != (occ_interval % 2) ||  0 != (occ_interval % TMAP_BWT_OCC_MOD)) {
       tmap_error("option -o out of range", Exit, CommandLineArgument);
   }
 

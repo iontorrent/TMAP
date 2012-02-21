@@ -566,12 +566,14 @@ tmap_bwt_match_hash_invPsi(const tmap_bwt_t *bwt, uint32_t sa_intv, tmap_bwt_int
   uint8_t b0;
   tmap_bwt_match_occ_t prev, next;
 
+  if(1 == sa_intv) return k;
+
   *s = 0;
   prev.k = k;
   prev.l = TMAP_BWT_INT_MAX;
   prev.offset = UINT32_MAX; // do not use the bwt hash
   prev.hi = TMAP_BWT_INT_MAX;
-  while(0 != (prev.k % sa_intv)) {
+  while(0 != (prev.k & (sa_intv-1))) { // relies on sa_intv%2 == 0
       (*s)++;
       if(TMAP_LIKELY(prev.k != bwt->primary)) { // likely
           if(prev.k < bwt->primary) {
