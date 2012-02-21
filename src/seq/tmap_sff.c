@@ -461,8 +461,9 @@ tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping, uint8_t *
   int32_t key_match = 1;
   uint8_t *flow_order = NULL;
       
-  was_int = sff->is_int;
+  was_int = 1;
   if(0 == sff->is_int) {
+      was_int = 0;
       tmap_sff_to_int(sff);
   }
 
@@ -522,7 +523,6 @@ tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping, uint8_t *
   }
 
   // set flow_start_index
-  sff->read->bases->s[4] = 2;
   sff->flow_start_index = i = 0;
   tmap_sff_get_flow_order_int(sff, &flow_order);
   while(i < left) { // clipped bases are left
