@@ -309,6 +309,11 @@ tmap_map2_aux_aln(tmap_map_opt_t *opt,
           }
       }
   }
+  // free
+  for(k = 0; k < 2; ++k) {
+      free(_b[k]->hits);
+  }
+  free(_b);
   // resolve duplicates
   for(k = 0; k < 2; ++k) {
       // bb[*][0] are "wide SA hits"
@@ -331,6 +336,7 @@ tmap_map2_aux_aln(tmap_map_opt_t *opt,
       free(bb[k]);		
   }
   tmap_map2_aux_merge_hits(b, seq[0]->l, 1); // b[1] and b[0] are merged into b[0]
+
 
   return b[0];
 }
