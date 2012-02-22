@@ -161,6 +161,10 @@ tmap_stream_getuntil(tmap_stream_t *ks, int delimiter, tmap_string_t *str, int *
           break;
       }
   }
+  if(0 == str->l) {
+      str->m = 1;
+      str->s = tmap_calloc(str->m, sizeof(char), "str->s");
+  }
   str->s[str->l] = '\0';
   return str->l;
 }
