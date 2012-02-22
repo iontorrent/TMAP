@@ -41,7 +41,7 @@
   A FASTQ Reading Library
   */
 
-#define TMAP_STREAM_BUFFER_SIZE 4096
+#define TMAP_STREAM_BUFFER_SIZE 16384
 
 /*! 
   */
