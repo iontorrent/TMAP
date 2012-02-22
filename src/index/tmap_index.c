@@ -101,7 +101,8 @@ tmap_index_core(tmap_index_opt_t *opt)
   ref_len = tmap_refseq_fasta2pac(opt->fn_fasta, TMAP_FILE_NO_COMPRESSION, 1);
 }
 
-static int usage(tmap_index_opt_t *opt)
+static int 
+usage(tmap_index_opt_t *opt)
 {
   tmap_file_fprintf(tmap_file_stderr, "\n");
   tmap_file_fprintf(tmap_file_stderr, "Usage: %s index [options]", PACKAGE);
@@ -124,7 +125,8 @@ static int usage(tmap_index_opt_t *opt)
   return 1;
 }
 
-int tmap_index(int argc, char *argv[])
+int 
+tmap_index(int argc, char *argv[])
 {
   int c;
   tmap_index_opt_t opt;
@@ -188,6 +190,8 @@ int tmap_index(int argc, char *argv[])
   tmap_index_core(&opt);
 
   free(opt.fn_fasta);
+  
+  tmap_progress_print2("terminating successfully");
 
   return 0;
 }
