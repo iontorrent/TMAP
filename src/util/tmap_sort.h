@@ -271,8 +271,16 @@ type_t tmap_sort_small_##name(size_t n, type_t arr[], size_t kk) \
   @param  name  the name of the sort functions [symbol] 
   @param  n     the size of the array
   @param  a     the array of elements to be sorted
+  @details   'tmap_sort_heapmake' must be used prior to running heapsort
   */
 #define tmap_sort_heapsort(name, n, a) tmap_sort_heapsort_##name(n, a)
+/*!
+  creates a heap
+  @param  name  the name of the sort functions [symbol] 
+  @param  n     the size of the array
+  @param  a     the array of elements to be sorted
+  @details   this must be used before 'tmap_sort_heapsort'
+  */
 #define tmap_sort_heapmake(name, n, a) tmap_sort_heapmake_##name(n, a)
 #define tmap_sort_heapadjust(name, i, n, a) tmap_sort_heapadjust_##name(i, n, a)
 /*! 
