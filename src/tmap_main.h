@@ -6,6 +6,30 @@
   Main TMAP Function
   */
 
+typedef int (*tmap_command_func)(int argc, char *argv[]);
+
+/*! 
+ *  The type of command.
+ */
+enum {
+    TMAP_COMMAND_NONE=0, /*!< no affiliation; do not output in the help message */
+    TMAP_COMMAND_PREPROCESSING=1, /*!< a preprocessing command */
+    TMAP_COMMAND_SERVER=2, /*!< a server command */
+    TMAP_COMMAND_MAPPING=3, /*!< a mapping command */
+    TMAP_COMMAND_UTILITIES=4, /*!< a utility command */
+    TMAP_COMMAND_DEBUG=5, /*!< a debug command */
+};
+
+/*!
+ * The command structure.
+ */
+typedef struct {
+    tmap_command_func func; /*!< the main-like function associated with this command */
+    char *name; /*!< the name of the command */
+    char *help; /*!< the help message for this command */
+    int32_t type; /*! the command type */
+} tmap_command_t;
+
 extern int 
 tmap_index(int argc, char *argv[]);
 extern int 

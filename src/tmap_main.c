@@ -10,10 +10,11 @@
 #include "io/tmap_file.h"
 #include "tmap_main.h"
 
-tmap_file_t *tmap_file_stdout = NULL; // do not initialize as this may used for output
-tmap_file_t *tmap_file_stderr = NULL;
+tmap_file_t *tmap_file_stdout;
+tmap_file_t *tmap_file_stderr;
 
-static int version()
+static int
+tmap_version(int argc, char *argv[])
 {
   fprintf(stdout, "\n");
   fprintf(stdout, "%s:   torrent mapper\n", PACKAGE);
@@ -26,8 +27,49 @@ static int version()
   return 0;
 }
 
-static int usage()
+static int 
+tmap_usage(int argc, char *argv[]);
+
+static tmap_command_t commands[] = {
+      {tmap_index, "index", "creates the packed FASTA, BWT string, and SA files", TMAP_COMMAND_PREPROCESSING},
+      {tmap_server_main, "server", "creates a mapping server", TMAP_COMMAND_SERVER},
+      {tmap_map1_main, "map1", "mapping procedure #1 (bwa-short variant)", TMAP_COMMAND_MAPPING},
+      {tmap_map2_main, "map2", "mapping procedure #2 (bwa-long/BWASW variant)", TMAP_COMMAND_MAPPING},
+      {tmap_map3_main, "map3", "mapping procedure #3 (k-mer lookup)", TMAP_COMMAND_MAPPING},
+      {tmap_map4_main, "map4", "mapping procedure #4 (bwa fastmap variant)", TMAP_COMMAND_MAPPING},
+      {tmap_map_vsw_main, "mapvsw", "mapping procedure vectorized smith waterman", TMAP_COMMAND_MAPPING},
+      {tmap_map_all_main, "mapall", "multi-mapping procedure", TMAP_COMMAND_MAPPING},
+      {tmap_refseq_fasta2pac_main, "fasta2pac", "creates the packed FASTA file", TMAP_COMMAND_UTILITIES},
+      {tmap_bwt_pac2bwt_main, "pac2bwt", "creates the BWT string file from the packed FASTA file", TMAP_COMMAND_UTILITIES},
+      {tmap_sa_bwt2sa_main, "bwt2sa", "creates the SA file from the BWT string file", TMAP_COMMAND_UTILITIES},
+      {tmap_seq_io_sff2fq_main, "sff2fq", "converts a SFF file to a FASTQ file", TMAP_COMMAND_UTILITIES},
+      {tmap_refseq_refinfo_main, "refinfo", "prints information about the reference", TMAP_COMMAND_UTILITIES},
+      {tmap_refseq_pac2fasta_main, "pac2fasta", "converts a packed FASTA to a FASTA file", TMAP_COMMAND_UTILITIES},
+      {tmap_bwt_bwtupdate_main, "bwtupdate", "updates the bwt hash width", TMAP_COMMAND_UTILITIES},
+      {tmap_index_size, "indexsize", "gives the index size in bytes", TMAP_COMMAND_UTILITIES},
+#ifdef HAVE_SAMTOOLS
+      {tmap_sam2fs_main, "sam2fs", "pretty print SAM records in flow space", TMAP_COMMAND_UTILITIES},
+#endif
+#ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
+      {tmap_debug_exact, "exact", "perform simple exact matching", TMAP_COMMAND_DEBUGGING},
+      {tmap_fsw_main, "fsw", "perform flow Smith-Waterman", TMAP_COMMAND_DEBUGGING},
+      {tmap_index_speed, "indexspeed", "index performance benchmarks", TMAP_COMMAND_DEBUGGING},
+      {tmap_bwt_check, "bwtcheck", "check the consistency of the BWT", TMAP_COMMAND_DEBUGGING},
+      {tmap_bwt_compare, "bwtcompare", "compare two BWTs", TMAP_COMMAND_DEBUGGING},
+      {tmap_vswbm_main, "vswbm", "VSW benchmarks", TMAP_COMMAND_DEBUGGING},
+#endif 
+      {tmap_version, "--version", "prints the TMAP version", TMAP_COMMAND_NONE},
+      {tmap_version, "-v", "prints the TMAP version", TMAP_COMMAND_NONE},
+      {tmap_usage, "--help", "prints this message", TMAP_COMMAND_NONE},
+      {tmap_usage, "-h", "prints this message", TMAP_COMMAND_NONE},
+      {NULL, NULL, NULL, -1}
+};
+
+static int
+tmap_usage(int argc, char *argv[])
 {
+  tmap_command_t *c = NULL;
+  int i, t;
   fprintf(stderr, "\n");
   fprintf(stderr, "%s:   torrent mapper\n", PACKAGE);
 #ifdef GIT_REV
@@ -37,87 +79,71 @@ static int usage()
 #endif
   fprintf(stderr, "Contact: %s\n\n", PACKAGE_BUGREPORT);
   fprintf(stderr, "Usage:   %s <command> [options]\n\n", PACKAGE); 
-  fprintf(stderr, "Pre-processing:\n");
-  fprintf(stderr, "         index          creates the packed FASTA, BWT string, and SA files\n");
-  fprintf(stderr, "\n");
-  fprintf(stderr, "Server:\n");
-  fprintf(stderr, "         server         creates a mapping server\n");
-  fprintf(stderr, "\n");
-  fprintf(stderr, "Mapping:\n");
-  fprintf(stderr, "         map1           mapping procedure #1 (bwa-short variant)\n");
-  fprintf(stderr, "         map2           mapping procedure #2 (bwa-long/BWASW variant)\n");
-  fprintf(stderr, "         map3           mapping procedure #3 (k-mer lookup)\n");
-  fprintf(stderr, "         map4           mapping procedure #4 (bwa fastmap variant)\n");
-  fprintf(stderr, "         mapvsw         mapping procedure vectorized smith waterman\n");
-  fprintf(stderr, "         mapall         multi-mapping procedure\n");
-  fprintf(stderr, "\n");
-  fprintf(stderr, "Utilities:\n");
-  fprintf(stderr, "         fasta2pac      creates the packed FASTA file\n");
-  fprintf(stderr, "         pac2bwt        creates the BWT string file from the packed FASTA file\n");
-  fprintf(stderr, "         bwt2sa         creates the SA file from the BWT string file\n");
-  fprintf(stderr, "         sff2fq         converts a SFF file to a FASTQ file\n");
-  fprintf(stderr, "         refinfo        prints information about the reference\n");
-  fprintf(stderr, "         pac2fasta      converts a packed FASTA to a FASTA file\n");
-  fprintf(stderr, "         bwtupdate      updates the bwt hash width\n");
-  fprintf(stderr, "         indexsize      gives the index size in bytes\n");
-#ifdef HAVE_SAMTOOLS
-  fprintf(stderr, "         sam2fs         pretty print SAM records in flow space\n");
-#endif
+
+  c = commands;
+  t = -1;
+  while(0 <= c->type) {
+      if(c->type != t) {
+          if(0 <= t && TMAP_COMMAND_NONE != c->type) fprintf(stderr, "\n");
+          switch(c->type) {
+            case TMAP_COMMAND_PREPROCESSING:
+              fprintf(stderr, "Pre-processing:\n");
+              break;
+            case TMAP_COMMAND_SERVER:
+              fprintf(stderr, "Server:\n");
+              break;
+            case TMAP_COMMAND_MAPPING:
+              fprintf(stderr, "Mapping:\n");
+              break;
+            case TMAP_COMMAND_UTILITIES:
+              fprintf(stderr, "Utilities:\n");
+              break;
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
-  fprintf(stderr, "\n");
-  fprintf(stderr, "Debugging:\n");
-  fprintf(stderr, "         exact          perform simple exact matching\n");
-  fprintf(stderr, "         fsw            perform flow Smith-Waterman\n");
-  fprintf(stderr, "         indexspeed     index performance benchmarks\n");
-  fprintf(stderr, "         bwtcheck       check the consistency of the BWT\n");
-  fprintf(stderr, "         bwtcompare     compare two BWTs\n");
-  fprintf(stderr, "         vswbm          VSW benchmarks\n");
+            case TMAP_COMMAND_DEBUG:
+              fprintf(stderr, "Debugging:\n");
+              break;
 #endif
+            case TMAP_COMMAND_NONE:
+              break;
+            default:
+              fprintf(stderr, "c->type=%d\n", c->type);
+              tmap_bug();
+          }
+          t = c->type;
+      }
+            
+      if(c->type != TMAP_COMMAND_NONE) {
+          fprintf(stderr, "         %s", c->name);
+          for(i=strlen(c->name);i<16;i++) fputc(' ', stderr);
+          fprintf(stderr, "%s\n", c->help);
+      }
+      c++;
+  }
   return 1;
 }
 
 int main(int argc, char *argv[])
 {
   int ret = 0;
+  tmap_command_t *c = NULL;
 
   if(argc < 2) {
-      return usage();
+      return tmap_usage(argc, argv);
   }
   else {
       tmap_file_stderr = tmap_file_fdopen(fileno(stderr), "w", TMAP_FILE_NO_COMPRESSION); // set stderr
       tmap_progress_set_command(argv[1]); // set output progress
       tmap_progress_set_start_time(); // set start time
 
-      if (0 == strcmp("index", argv[1])) ret = tmap_index(argc-1, argv+1);
-      else if (0 == strcmp("server", argv[1])) ret = tmap_server_main(argc-1, argv+1);
-      else if (0 == strcmp("map1", argv[1])) ret = tmap_map1_main(argc-1, argv+1);
-      else if (0 == strcmp("map2", argv[1])) ret = tmap_map2_main(argc-1, argv+1);
-      else if (0 == strcmp("map3", argv[1])) ret = tmap_map3_main(argc-1, argv+1);
-      else if (0 == strcmp("map4", argv[1])) ret = tmap_map4_main(argc-1, argv+1);
-      else if (0 == strcmp("mapvsw", argv[1])) ret = tmap_map_vsw_main(argc-1, argv+1);
-      else if (0 == strcmp("mapall", argv[1])) ret = tmap_map_all_main(argc-1, argv+1);
-      else if (0 == strcmp("fasta2pac", argv[1])) ret = tmap_refseq_fasta2pac_main(argc-1, argv+1);
-      else if (0 == strcmp("pac2bwt", argv[1])) ret = tmap_bwt_pac2bwt_main(argc-1, argv+1);
-      else if (0 == strcmp("bwt2sa", argv[1])) ret = tmap_sa_bwt2sa_main(argc-1, argv+1);
-      else if (0 == strcmp("sff2fq", argv[1])) ret = tmap_seq_io_sff2fq_main(argc-1, argv+1);
-      else if (0 == strcmp("refinfo", argv[1])) ret = tmap_refseq_refinfo_main(argc-1, argv+1);
-      else if (0 == strcmp("pac2fasta", argv[1])) ret = tmap_refseq_pac2fasta_main(argc-1, argv+1);
-      else if (0 == strcmp("bwtupdate", argv[1])) ret = tmap_bwt_bwtupdate_main(argc-1, argv+1);
-      else if (0 == strcmp("indexsize", argv[1])) ret = tmap_index_size(argc-1, argv+1);
-#ifdef HAVE_SAMTOOLS
-      else if (0 == strcmp("sam2fs", argv[1])) ret = tmap_sam2fs_main(argc-1, argv+1);
-#endif
-#ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
-      else if (0 == strcmp("exact", argv[1])) ret = tmap_debug_exact(argc-1, argv+1);
-      else if (0 == strcmp("fsw", argv[1])) ret = tmap_fsw_main(argc-1, argv+1);
-      else if (0 == strcmp("indexspeed", argv[1])) ret = tmap_index_speed(argc-1, argv+1);
-      else if (0 == strcmp("bwtcheck", argv[1])) ret = tmap_bwt_check(argc-1, argv+1);
-      else if (0 == strcmp("bwtcompare", argv[1])) ret = tmap_bwt_compare(argc-1, argv+1);
-      else if (0 == strcmp("vswbm", argv[1])) ret = tmap_vswbm_main(argc-1, argv+1);
-#endif
-      else if (0 == strcmp("--version", argv[1]) || 0 == strcmp("-v", argv[1])) ret = version();
-      else if (0 == strcmp("--help", argv[1]) || 0 == strcmp("-h", argv[1])) ret = usage();
-      else {
+      c = commands;
+      while(0 <= c->type) {
+          if (0 == strcmp(c->name, argv[1])) {
+              ret = c->func(argc-1, argv+1);
+              break;
+          }
+          c++;
+      }
+      if(c->type < 0) {
           tmap_error1(PACKAGE, "Unknown command", Exit, CommandLineArgument);
       }
 
