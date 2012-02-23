@@ -6,7 +6,9 @@
 #include <stdint.h>
 
 #include "util/tmap_error.h"
+#include "util/tmap_alloc.h"
 #include "util/tmap_progress.h"
+#include "util/tmap_levenshtein.h"
 #include "io/tmap_file.h"
 #include "tmap_main.h"
 
@@ -122,7 +124,82 @@ tmap_usage(int argc, char *argv[])
   return 1;
 }
 
-int main(int argc, char *argv[])
+#define __get_distance(_a) ((int)(_a&0xffffffff))
+#define __get_name_idx(_a) ((int)(_a>>32))
+
+/* An empirically derived magic number */
+#define TMAP_HELP_SIMILARITY_FLOOR 7
+#define TMAP_HELP_SIMILAR_ENOUGH(x) ((x) < TMAP_HELP_SIMILARITY_FLOOR)
+
+static int
+tmap_prefixcmp(const char *str, const char *prefix)
+{
+  int32_t i;
+  for(i=0;i<strlen(str) && i<strlen(prefix);i++) {
+      if(str[i] != prefix[i])
+        return (int)prefix[i] - (int)str[i];
+  }
+  //fprintf(stderr, "i=%d str=%s prefix=%s\n", i, str, prefix);
+  return 0;
+}
+
+// NB: would require sorting to get the commands sorted
+void
+tmap_help_unknown_cmd(const char *cmd)
+{
+  int32_t i, n, best=INT32_MAX, best_n=0;
+  uint64_t *distances = NULL;
+  tmap_command_t *c = NULL;
+  
+  // get # of commands
+  n = 0;
+  c = commands;
+  while(0 <= c->type) {
+      n++;
+      c++;
+  }
+
+  distances = tmap_malloc(sizeof(uint64_t)*n, "distances");
+
+  for(i=0;0 <= commands[i].type;i++) {
+      if(0 == strcmp(cmd, commands[i].name)) tmap_bug();
+      if(!tmap_prefixcmp(commands[i].name, cmd)) {
+          distances[i] = ((uint64_t)i << 32); // zero score
+      }
+      else {
+          distances[i] = ((uint64_t)i << 32) | (tmap_levenshtein(cmd, commands[i].name, 0, 2, 1, 4) + 1); // pack
+      }
+      if(__get_distance(distances[i]) < best) {
+          best = __get_distance(distances[i]);
+          best_n = 0;
+      }
+      else if(__get_distance(distances[i]) == best) {
+          best_n++;
+      }
+      //fprintf(stderr, "%s -> %u\n", commands[distances[i]>>32].name, (__get_distance(distances[i])));
+  }
+
+  if(0 == best && n == best_n) { // matches everything
+      best = TMAP_HELP_SIMILARITY_FLOOR + 1; 
+  }
+  n = i;
+
+  // output similar matches
+  fprintf(stderr, "%s: '%s' is not a tmap command.  See 'tmap --help'.\n", PACKAGE, cmd);
+  if(TMAP_HELP_SIMILAR_ENOUGH(best)) {
+      fprintf(stderr, "\nDid you mean %s?\n",
+              i < 2 ? "this": "one of these");
+      for (i = 0; i < n; i++)
+        if(best == __get_distance(distances[i])) {
+            fprintf(stderr, "\t%s\n", commands[__get_name_idx(distances[i])].name);
+        }
+  }
+
+  free(distances);
+}
+
+int 
+main(int argc, char *argv[])
 {
   int ret = 0;
   tmap_command_t *c = NULL;
@@ -144,6 +221,7 @@ int main(int argc, char *argv[])
           c++;
       }
       if(c->type < 0) {
+          tmap_help_unknown_cmd(argv[1]);
           tmap_error1(PACKAGE, "Unknown command", Exit, CommandLineArgument);
       }
 

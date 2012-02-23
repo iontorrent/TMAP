@@ -10,6 +10,7 @@ GLOBAL_SOURCES = \
 				 src/util/tmap_hash.h \
 				 src/util/tmap_progress.h src/util/tmap_progress.c \
 				 src/util/tmap_string.h src/util/tmap_string.c \
+				 src/util/tmap_levenshtein.h src/util/tmap_levenshtein.c \
 				 src/util/tmap_sort.h \
 				 src/util/tmap_vec.h \
 				 src/util/tmap_sam_print.h src/util/tmap_sam_print.c \
