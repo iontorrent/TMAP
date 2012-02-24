@@ -53,12 +53,12 @@ static tmap_command_t commands[] = {
       {tmap_sam2fs_main, "sam2fs", "pretty print SAM records in flow space", TMAP_COMMAND_UTILITIES},
 #endif
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
-      {tmap_debug_exact, "exact", "perform simple exact matching", TMAP_COMMAND_DEBUGGING},
-      {tmap_fsw_main, "fsw", "perform flow Smith-Waterman", TMAP_COMMAND_DEBUGGING},
-      {tmap_index_speed, "indexspeed", "index performance benchmarks", TMAP_COMMAND_DEBUGGING},
-      {tmap_bwt_check, "bwtcheck", "check the consistency of the BWT", TMAP_COMMAND_DEBUGGING},
-      {tmap_bwt_compare, "bwtcompare", "compare two BWTs", TMAP_COMMAND_DEBUGGING},
-      {tmap_vswbm_main, "vswbm", "VSW benchmarks", TMAP_COMMAND_DEBUGGING},
+      {tmap_debug_exact, "exact", "perform simple exact matching", TMAP_COMMAND_DEBUG},
+      {tmap_fsw_main, "fsw", "perform flow Smith-Waterman", TMAP_COMMAND_DEBUG},
+      {tmap_index_speed, "indexspeed", "index performance benchmarks", TMAP_COMMAND_DEBUG},
+      {tmap_bwt_check, "bwtcheck", "check the consistency of the BWT", TMAP_COMMAND_DEBUG},
+      {tmap_bwt_compare, "bwtcompare", "compare two BWTs", TMAP_COMMAND_DEBUG},
+      {tmap_vswbm_main, "vswbm", "VSW benchmarks", TMAP_COMMAND_DEBUG},
 #endif 
       {tmap_version, "--version", "prints the TMAP version", TMAP_COMMAND_NONE},
       {tmap_version, "-v", "prints the TMAP version", TMAP_COMMAND_NONE},
