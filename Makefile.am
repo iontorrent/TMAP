@@ -78,9 +78,10 @@ tmap_LDADD =
 
 EXTRA_DIST = LICENSE \
 			 autogen.sh \
-			 tmap.git.rev
+			 tmap.git.rev \
+			 doc/Makefile
 
-SUBDIRS = .
+SUBDIRS = . 
 
 docdir = ${datadir}/doc/${PACKAGE}
 dist_doc_DATA = LICENSE doc/tmap-book.pdf
