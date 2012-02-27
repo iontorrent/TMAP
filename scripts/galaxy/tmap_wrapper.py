@@ -124,10 +124,10 @@ def __main__():
 
     #mapping_cmds 
     # prepare actual mapping and generate mapping commands
-    cmd = 'tmap %s -f %s -r %s -i %s -n %s %s %s %s' % \
+    cmd = 'tmap %s -f %s -r %s -i %s -n %s %s %s %s > %s' % \
             ( options.algorithm, options.ref, options.input, options.inputtype, \
             options.threads, options.flowspaceOptions, \
-            options.pairingOptions, options.algorithmOptions ) 
+            options.pairingOptions, options.algorithmOptions, options.output ) 
     # perform alignments
     buffsize = 1048576
     try:
