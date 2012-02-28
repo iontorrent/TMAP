@@ -120,10 +120,12 @@ tmap_map4_aux_core(tmap_seq_t *seq,
 
   sams = tmap_map_sams_init(NULL);
 
-  matches = tmap_bwt_smem_intv_vec_init();
-
   query = (uint8_t*)tmap_seq_get_bases(seq)->s;
   query_len = tmap_seq_get_bases_length(seq);
+
+  if(query_len <= 0) return sams;
+  
+  matches = tmap_bwt_smem_intv_vec_init();
 
   min_seed_length = opt->min_seed_length;
   max_seed_length = opt->max_seed_length;
