@@ -522,6 +522,10 @@ tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping, uint8_t *
       right = sff->rheader->n_bases-1;
   }
 
+  if(sff->read->bases->l < left) {
+      tmap_error("SFF left clipping exceeded the number of called bases", Exit, OutOfRange);
+  }
+
   // set flow_start_index
   sff->flow_start_index = i = 0;
   tmap_sff_get_flow_order_int(sff, &flow_order);
