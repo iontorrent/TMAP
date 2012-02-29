@@ -495,6 +495,10 @@ tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping, uint8_t *
           else {
               left = sff->gheader->key_length; 
               sff->rheader->clip_left = 0;
+                      
+              if(sff->read->bases->l < left) {
+                  left = sff->read->bases->l;
+              }
           }
       }
       else {
