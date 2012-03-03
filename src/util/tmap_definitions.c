@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <config.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #if defined(__APPLE__)
 #include <sys/sysctl.h>
 #elif defined(_SC_NPROCESSORS_ONLN)
