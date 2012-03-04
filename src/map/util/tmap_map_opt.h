@@ -218,6 +218,9 @@ typedef struct __tmap_map_opt_t {
     int32_t seed_length; /*!< the kmer seed length (-l) */
     int32_t seed_length_set; /*!< 1 if the user has set seed length (--seed-length) */
 
+    // map2/map3
+    int32_t max_seed_hits; /*!< the maximum number of hits returned by a seed (--max-seed-hits) */
+
     // map3/map4 options
     int32_t seed_step; /*!< the number of bases to increase the seed for each seed increase iteration (--seed-step) */ 
     double hit_frac; /*!< the fraction of seed positions that are under the maximum (--hit-frac) */
@@ -249,7 +252,6 @@ typedef struct __tmap_map_opt_t {
     int32_t narrow_rmdup; /*!< remove duplicates in narrow hits (--narrow-rmdup) */
 
     // map3 options
-    int32_t max_seed_hits; /*!< the maximum number of hits returned by a seed (--max-seed-hits) */
     int32_t hp_diff; /*!< single homopolymer error difference for enumeration (--hp-diff) */
     int32_t fwd_search; /*!< perform a forward search instead of a reverse search (--fwd-search) */
     double skip_seed_frac; /*!< the fraction of a seed to skip when a lookup succeeds (--skip-seed-frac) */ 

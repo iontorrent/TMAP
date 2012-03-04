@@ -163,6 +163,8 @@ __tmap_map_opt_option_print_func_int_init(min_seq_len)
 __tmap_map_opt_option_print_func_int_init(max_seq_len)
 // map1/map3 options
 __tmap_map_opt_option_print_func_int_init(seed_length)
+// map2/map3 options
+__tmap_map_opt_option_print_func_int_init(max_seed_hits)
 // map3/map4 options
 __tmap_map_opt_option_print_func_double_init(hit_frac)
 __tmap_map_opt_option_print_func_int_init(seed_step)
@@ -185,7 +187,6 @@ __tmap_map_opt_option_print_func_int_init(z_best)
 __tmap_map_opt_option_print_func_int_init(seeds_rev)
 __tmap_map_opt_option_print_func_tf_init(narrow_rmdup)
 // map3 options
-__tmap_map_opt_option_print_func_int_init(max_seed_hits)
 __tmap_map_opt_option_print_func_int_init(hp_diff)
 __tmap_map_opt_option_print_func_tf_init(fwd_search)
 __tmap_map_opt_option_print_func_double_init(skip_seed_frac)
@@ -648,6 +649,14 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            tmap_map_opt_option_print_func_seed_length,
                            TMAP_MAP_ALGO_MAP1 | TMAP_MAP_ALGO_MAP3);
 
+  // map2/map3 options
+  tmap_map_opt_options_add(opt->options, "max-seed-hits", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the maximum number of hits returned by a seed",
+                           NULL,
+                           tmap_map_opt_option_print_func_max_seed_hits,
+                           TMAP_MAP_ALGO_MAP2 | TMAP_MAP_ALGO_MAP3);
+
   // map3/map4 options
   tmap_map_opt_options_add(opt->options, "hit-frac", required_argument, 0, 0, 
                            TMAP_MAP_OPT_TYPE_FLOAT,
@@ -763,12 +772,6 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            TMAP_MAP_ALGO_MAP2);
 
   // map3 options
-  tmap_map_opt_options_add(opt->options, "max-seed-hits", required_argument, 0, 0, 
-                           TMAP_MAP_OPT_TYPE_INT,
-                           "the maximum number of hits returned by a seed",
-                           NULL,
-                           tmap_map_opt_option_print_func_max_seed_hits,
-                           TMAP_MAP_ALGO_MAP3);
   tmap_map_opt_options_add(opt->options, "hp-diff", required_argument, 0, 0, 
                            TMAP_MAP_OPT_TYPE_INT,
                            "single homopolymer error difference for enumeration",
@@ -984,6 +987,7 @@ tmap_map_opt_init(int32_t algo_id)
       opt->z_best = 1; 
       opt->seeds_rev = 5;
       opt->narrow_rmdup = 0;
+      opt->max_seed_hits = 1024;
       break;
     case TMAP_MAP_ALGO_MAP3:
       // map3
@@ -1435,6 +1439,10 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           opt->seed_length = atoi(optarg);
           opt->seed_length_set = 1;
       }
+      // MAP2/MAP3
+      else if(0 == strcmp("max-seed-hits", options[option_index].name) && (opt->algo_id == TMAP_MAP_ALGO_MAP2 || opt->algo_id == TMAP_MAP_ALGO_MAP3)) {
+          opt->max_seed_hits = atoi(optarg);
+      }
       // MAP3/MAP4
       else if(0 == strcmp("hit-frac", options[option_index].name) && (opt->algo_id == TMAP_MAP_ALGO_MAP3 || opt->algo_id == TMAP_MAP_ALGO_MAP4)) {
           opt->hit_frac = atof(optarg);
@@ -1497,9 +1505,6 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           opt->narrow_rmdup = 1;
       }
       // MAP 3
-      else if(0 == strcmp("max-seed-hits", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP3) {
-          opt->max_seed_hits = atoi(optarg);
-      }
       else if(0 == strcmp("hp-diff", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP3) {
           opt->hp_diff = atoi(optarg);
       }
@@ -1901,6 +1906,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       tmap_error_cmd_check_int(opt->z_best, 1, INT32_MAX, "--z-best");
       tmap_error_cmd_check_int(opt->seeds_rev, 0, INT32_MAX, "--seeds-rev");
       tmap_error_cmd_check_int(opt->narrow_rmdup, 0, 1, "--narrow-rmdup");
+      tmap_error_cmd_check_int(opt->max_seed_hits, 1, INT32_MAX, "--max-seed-hits");
       break;
     case TMAP_MAP_ALGO_MAP3:
       if(-1 != opt->seed_length) tmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "--seed-length");

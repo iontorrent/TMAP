@@ -418,6 +418,9 @@ See \autoref{sec:commonoptions} for common options that are in use in this comma
 
 \subsection{Usage}
 
+\subsubsection{\TT{--max-seed-hits INT}}
+Specifies the maximum number of CALs allowed to be returned by a seed before it is ignored.
+
 \subsubsection{\TT{--length-coef FLOAT}}
 Specifies the coefficient to adjust the mapping score threshold based on the read length.
 Given a $l$-long read, the threshold for a mapping to be retained is $a*max\{T,c*log(l)\}$, where $a$ is the match score (\TT{-A}) and $T$ is the minimum score threshold (\TT{-T}).

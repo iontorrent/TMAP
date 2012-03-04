@@ -35,13 +35,14 @@ TMAP_SORT_INIT(hitG, tmap_map2_hit_t, __hitG_lt)
 
 #define TMAP_MAP2_AUX_IS 0
 
-void
-tmap_map2_aux_sa_pac_pos(const tmap_refseq_t *refseq, const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_bwt_match_hash_t *hash, tmap_map2_aln_t *b, int32_t IS, int32_t min_as)
+int32_t
+tmap_map2_aux_sa_pac_pos(const tmap_refseq_t *refseq, const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_bwt_match_hash_t *hash, tmap_map2_aln_t *b, 
+                         int32_t max_seed_hits, int32_t IS, int32_t min_as)
 {
   int32_t i, j, n;
   //uint32_t seqid, pos;
   uint8_t is_rev;
-  if(b->n == 0) return;
+  if(b->n == 0) return 1;
   if(NULL != bwt && NULL != sa) { // convert to chromosomal coordinates if suitable
       tmap_map2_aln_t *tmp_b;
       // copy over
@@ -59,6 +60,7 @@ tmap_map2_aux_sa_pac_pos(const tmap_refseq_t *refseq, const tmap_bwt_t *bwt, con
           if(p->l - p->k + 1 <= IS && TMAP_MAP2_MINUS_INF < p->G) n += p->l - p->k + 1;
           else if(p->G > min_as) ++n;
       }
+      if(max_seed_hits < n) return 0;
       // realloc
       tmap_map2_aln_realloc(b, n);
       b->n = n;
@@ -94,17 +96,19 @@ tmap_map2_aux_sa_pac_pos(const tmap_refseq_t *refseq, const tmap_bwt_t *bwt, con
       }
       tmap_map2_aln_destroy(tmp_b);
   }
+  return 1;
 }
 
 int32_t
-tmap_map2_aux_resolve_duphits(const tmap_refseq_t *refseq, const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_bwt_match_hash_t *hash, tmap_map2_aln_t *b, int32_t IS, int32_t min_as)
+tmap_map2_aux_resolve_duphits(const tmap_refseq_t *refseq, const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_bwt_match_hash_t *hash, tmap_map2_aln_t *b, 
+                              int32_t max_seed_hits, int32_t IS, int32_t min_as)
 {
   int32_t i, j, n;
   //uint32_t seqid, pos;
   if(b->n == 0) return 0;
 
   // convert to SA positions
-  tmap_map2_aux_sa_pac_pos(refseq, bwt, sa, hash, b, IS, min_as);
+  tmap_map2_aux_sa_pac_pos(refseq, bwt, sa, hash, b, max_seed_hits, IS, min_as);
   // sort
   tmap_sort_introsort(hitG, b->n, b->hits);
   // resolve dups
@@ -298,12 +302,14 @@ tmap_map2_aux_aln(tmap_map_opt_t *opt,
       // _b[0] are "wide SA hits"
       // _b[1] are "narrow SA hits"
       if(1 == k || 0 != opt->narrow_rmdup) {
-          tmap_map2_aux_resolve_duphits(target_refseq, target_bwt, target_sa, target_hash, _b[k], opt->max_seed_intv, 0);
+          tmap_map2_aux_resolve_duphits(target_refseq, target_bwt, target_sa, target_hash, _b[k], opt->max_seed_hits, opt->max_seed_intv, 0);
       }
       else {
           // only to packed reference coordinates
-          //tmap_map2_aux_resolve_duphits(target_refseq, target_bwt, target_sa, target_hash, _b[k], opt->max_seed_intv, 0);
-          tmap_map2_aux_sa_pac_pos(target_refseq, target_bwt, target_sa, target_hash, _b[k], INT32_MAX, INT32_MIN);
+          if(0 == tmap_map2_aux_sa_pac_pos(target_refseq, target_bwt, target_sa, target_hash, _b[k], INT32_MAX, INT32_MAX, INT32_MIN)) {
+              // revert to resolving duplicates narrowly
+              tmap_map2_aux_resolve_duphits(target_refseq, target_bwt, target_sa, target_hash, _b[k], opt->max_seed_hits, opt->max_seed_intv, 0);
+          }
       }
       for(j = 0; j < _b[k]->n; ++j) {
           tmap_map2_hit_t *q;
@@ -330,10 +336,10 @@ tmap_map2_aux_aln(tmap_map_opt_t *opt,
   // resolve duplicates
   for(k = 0; k < 2; ++k) {
       // bb[*][0] are "wide SA hits"
-      tmap_map2_aux_resolve_duphits(NULL, NULL, NULL, NULL, bb[k][0], opt->max_seed_intv, 0);
+      tmap_map2_aux_resolve_duphits(NULL, NULL, NULL, NULL, bb[k][0], opt->max_seed_hits, opt->max_seed_intv, 0);
       // bb[*][1] are "narrow SA hits"
       if(0 != opt->narrow_rmdup) {
-          tmap_map2_aux_resolve_duphits(NULL, NULL, NULL, NULL, bb[k][1], opt->max_seed_intv, 0);
+          tmap_map2_aux_resolve_duphits(NULL, NULL, NULL, NULL, bb[k][1], opt->max_seed_hits, opt->max_seed_intv, 0);
       }
   }
   b[0] = bb[0][1]; b[1] = bb[1][1]; // bb[*][1] are "narrow SA hits"
