@@ -306,7 +306,7 @@ tmap_map2_aux_aln(tmap_map_opt_t *opt,
       }
       else {
           // only to packed reference coordinates
-          if(0 == tmap_map2_aux_sa_pac_pos(target_refseq, target_bwt, target_sa, target_hash, _b[k], INT32_MAX, INT32_MAX, INT32_MIN)) {
+          if(0 == tmap_map2_aux_sa_pac_pos(target_refseq, target_bwt, target_sa, target_hash, _b[k], opt->max_seed_hits, INT32_MAX, INT32_MIN)) {
               // revert to resolving duplicates narrowly
               tmap_map2_aux_resolve_duphits(target_refseq, target_bwt, target_sa, target_hash, _b[k], opt->max_seed_hits, opt->max_seed_intv, 0);
           }
