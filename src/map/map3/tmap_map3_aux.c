@@ -362,9 +362,13 @@ tmap_map3_aux_core(tmap_seq_t *seq,
       m_seeds = 0;
       int32_t k;
       for(j=seed_length,k=0;j<=seq_len;j+=opt->seed_step,k++) {
-          if(UINT8_MAX < k) {
+          if(UINT16_MAX < k) {
+              /*
+              fprintf(stderr, "j=%d seed_length=%d k=%d seq_len=%d opt->seed_step=%d\n",
+                      j, seed_length, k, seq_len, opt->seed_step);
+                      */
               tmap_error("seed step out of range", Warn, OutOfRange);
-              break;
+              return sams;
           }
           m_seeds += seq_len - j + 1; // maximum number of seeds possible
       }
