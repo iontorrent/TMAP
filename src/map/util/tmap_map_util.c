@@ -983,7 +983,8 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
   }
   //fprintf(stderr, "start_pos=%u end_pos=%u score=%d prev_score=%d n_best=%d start=%d end=%d idx=%d sams->n=%d\n", start_pos, end_pos, tmp_sam.score, prev_score, n_best, start, end, *idx, sams->n); 
   if(1 == overflow) {
-      tmap_error("bug encountered", Exit, OutOfRange);
+      return INT32_MIN;
+      //tmap_error("bug encountered", Exit, OutOfRange);
   }
 
   if(opt->score_thr <= tmp_sam.score) { // NB: we could also specify 'prev_score <= tmp_sam.score'

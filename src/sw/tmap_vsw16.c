@@ -357,7 +357,13 @@ end_loop:
 #endif
       __tmap_vsw16_max(imax, max); // imax is the maximum number in max
       if(query->max_aln_score - query->max_edit_score < imax) { // overflow
-          tmap_bug();
+          /*
+          fprintf(stderr, "max score - max edit score = %d, imax=%d\n",
+                  query->max_aln_score - query->max_edit_score,
+                  imax);
+                  */
+          if(NULL != overflow) *overflow = 1;
+          return tmap_vsw16_min_value;
       }
       if(imax > gmax) { 
           gmax = imax; // global maximum score 
