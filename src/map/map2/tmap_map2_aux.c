@@ -105,12 +105,16 @@ tmap_map2_aux_resolve_duphits(const tmap_refseq_t *refseq, const tmap_bwt_t *bwt
 {
   int32_t i, j, n;
   //uint32_t seqid, pos;
+  if(NULL == b) return 0;
   if(b->n == 0) return 0;
 
   // convert to SA positions
   tmap_map2_aux_sa_pac_pos(refseq, bwt, sa, hash, b, max_seed_hits, IS, min_as);
+  if(b->n == 0) return 0;
+
   // sort
   tmap_sort_introsort(hitG, b->n, b->hits);
+
   // resolve dups
   for(i = 1; i < b->n; ++i) {
       tmap_map2_hit_t *p = b->hits + i;
