@@ -578,7 +578,7 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
                   j++;
               }
           }
-          tmap_progress_print2("sampling %d out of %d [%.2lf\%]", j, seq_buffer_length, 100.0*j/(double)seq_buffer_length);
+          tmap_progress_print2("sampling %d out of %d [%.2lf%%]", j, seq_buffer_length, 100.0*j/(double)seq_buffer_length);
           seq_buffer_length = j;
           if(0 == seq_buffer_length) continue;
       }
