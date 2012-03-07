@@ -60,7 +60,10 @@ tmap_map2_aux_sa_pac_pos(const tmap_refseq_t *refseq, const tmap_bwt_t *bwt, con
           if(p->l - p->k + 1 <= IS && TMAP_MAP2_MINUS_INF < p->G) n += p->l - p->k + 1;
           else if(p->G > min_as) ++n;
       }
-      if(max_seed_hits < n) return 0;
+      if(max_seed_hits < n) {
+          tmap_map2_aln_destroy(tmp_b);
+          return 0;
+      }
       // realloc
       tmap_map2_aln_realloc(b, n);
       b->n = n;
