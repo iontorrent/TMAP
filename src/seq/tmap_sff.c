@@ -137,7 +137,7 @@ tmap_sff_read_header_print(FILE *fp, tmap_sff_read_header_t *rh)
 #endif
 
 tmap_sff_read_header_t *
-tmap_sff_read_header_read(tmap_file_t *fp)
+tmap_sff_read_header_read(tmap_file_t *fp, int32_t early_eof_ok)
 {
   tmap_sff_read_header_t *rh = NULL;
   uint32_t n = 0;
@@ -151,7 +151,13 @@ tmap_sff_read_header_read(tmap_file_t *fp)
      || 1 != tmap_file_fread(&rh->clip_qual_right, sizeof(uint16_t), 1, fp)
      || 1 != tmap_file_fread(&rh->clip_adapter_left, sizeof(uint16_t), 1, fp)
      || 1 != tmap_file_fread(&rh->clip_adapter_right, sizeof(uint16_t), 1, fp)) {
-      tmap_error("tmap_file_fread", Exit, ReadFileError);
+      if(0 == early_eof_ok) {
+          tmap_error("tmap_file_fread", Exit, ReadFileError);
+      }
+      else {
+          free(rh);
+          return NULL;
+      }
   }
   n += sizeof(uint32_t) + 6*sizeof(uint16_t);
 

@@ -21,6 +21,21 @@ tmap_sff_io_init(tmap_file_t *fp)
   return sffio;
 }
 
+inline tmap_sff_io_t *
+tmap_sff_io_init2(tmap_file_t *fp, int32_t early_eof_ok)
+{
+  tmap_sff_io_t *sffio = NULL;
+
+  sffio = tmap_calloc(1, sizeof(tmap_sff_io_t), "sffio");
+
+  sffio->fp = fp;
+  sffio->gheader = tmap_sff_header_read(sffio->fp);
+  sffio->n_read = 0;
+  sffio->early_eof_ok = early_eof_ok;
+
+  return sffio;
+}
+
 void
 tmap_sff_io_destroy(tmap_sff_io_t *sffio)
 {
@@ -45,7 +60,8 @@ tmap_sff_io_read(tmap_sff_io_t *sffio, tmap_sff_t *sff)
   }
 
   sff->gheader = sffio->gheader;
-  sff->rheader = tmap_sff_read_header_read(sffio->fp);
+  sff->rheader = tmap_sff_read_header_read(sffio->fp, sffio->early_eof_ok);
+  if(NULL == sff->rheader && 1 == sffio->early_eof_ok) return EOF;
   sff->read = tmap_sff_read_read(sffio->fp, sffio->gheader, sff->rheader);
 
   sffio->n_read++;

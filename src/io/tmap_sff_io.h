@@ -17,6 +17,7 @@ typedef struct {
     tmap_file_t *fp;  /*!< pointer to the file structure */
     tmap_sff_header_t *gheader;  /*!< pointer to the global SFF header */
     uint32_t n_read;  /*!< the number of SFF reads read */
+    int32_t early_eof_ok;  /*!< 0 if the number of reads to read in should match the SFF header, 0 otherwise */
 } tmap_sff_io_t;
 
 /*! 
@@ -26,6 +27,15 @@ typedef struct {
   */
 inline tmap_sff_io_t *
 tmap_sff_io_init(tmap_file_t *fp);
+
+/*! 
+  initializes sff reading structure
+  @param  fp  a pointer to a file structure from which to read
+  @param  early_eof_ok  set this to 1 if the number of reads to be read in disagrees with the SFF header
+  @return     pointer to the initialized memory for reading in sffs
+  */
+inline tmap_sff_io_t *
+tmap_sff_io_init2(tmap_file_t *fp, int32_t early_eof_ok);
 
 /*! 
   destroys sff reading structure
