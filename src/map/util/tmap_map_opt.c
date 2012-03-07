@@ -4,6 +4,7 @@
 #include <math.h>
 #include <string.h>
 #include <getopt.h>
+#include <config.h>
 #include "../../util/tmap_alloc.h"
 #include "../../util/tmap_error.h"
 #include "../../io/tmap_file.h"
@@ -139,6 +140,9 @@ __tmap_map_opt_option_print_func_compr_init(input_compr_bz2, input_compr, TMAP_F
 __tmap_map_opt_option_print_func_compr_init(output_compr_gz, output_compr, TMAP_FILE_GZ_COMPRESSION)
 __tmap_map_opt_option_print_func_compr_init(output_compr_bz2, output_compr, TMAP_FILE_BZ2_COMPRESSION)
 __tmap_map_opt_option_print_func_int_init(shm_key)
+#ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
+__tmap_map_opt_option_print_func_double_init(sample_reads)
+#endif
 __tmap_map_opt_option_print_func_verbosity_init()
 // flowspace
 __tmap_map_opt_option_print_func_int_init(fscore)
@@ -528,6 +532,14 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_shm_key,
                            TMAP_MAP_ALGO_GLOBAL);
+#ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
+  tmap_map_opt_options_add(opt->options, "sample-reads", required_argument, 0, 'x',
+                           TMAP_MAP_OPT_TYPE_FLOAT,
+                           "sample the reads at this fraction",
+                           NULL,
+                           tmap_map_opt_option_print_func_sample_reads,
+                           TMAP_MAP_ALGO_GLOBAL);
+#endif
   tmap_map_opt_options_add(opt->options, "help", no_argument, 0, 'h', 
                            TMAP_MAP_OPT_TYPE_NONE,
                            "print this message",
@@ -939,6 +951,9 @@ tmap_map_opt_init(int32_t algo_id)
   opt->shm_key = 0;
   opt->min_seq_len = -1;
   opt->max_seq_len = -1;
+#ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
+  opt->sample_reads = 1.0;
+#endif
 
   // flowspace options
   opt->fscore = TMAP_MAP_OPT_FSCORE;
@@ -1337,6 +1352,11 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(c == 'v' || (0 == c && 0 == strcmp("verbose", options[option_index].name))) {       
           tmap_progress_set_verbosity(1);
       }
+#ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
+      else if(c == 'x' || (0 == c && 0 == strcmp("sample-reads", options[option_index].name))) {
+          opt->sample_reads = atof(optarg); 
+      }
+#endif
       else if(c == 'w' || (0 == c && 0 == strcmp("band-width", options[option_index].name))) {       
           opt->bw = atoi(optarg);
       }
@@ -1666,6 +1686,11 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
     if(opt_a->shm_key != opt_b->shm_key) {
         tmap_error("option -k was specified outside of the common options", Exit, CommandLineArgument);
     }
+#ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
+    if(opt_a->sample_reads != opt_b->sample_reads) {
+        tmap_error("option -x was specified outside of the common options", Exit, CommandLineArgument);
+    }
+#endif
     // flowspace
     if(opt_a->fscore != opt_b->fscore) {
         tmap_error("option -X was specified outside of the common options", Exit, CommandLineArgument);
@@ -1871,6 +1896,9 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   if(-1 != opt->min_seq_len && -1 != opt->max_seq_len && opt->max_seq_len < opt->min_seq_len) {
       tmap_error("The minimum sequence length must be less than the maximum sequence length (--min-seq-length and --max-seq-length)", Exit, OutOfRange);
   }
+#ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
+  tmap_error_cmd_check_int(opt->sample_reads, 0, 1, "-x");
+#endif
 
   // stage options
   tmap_error_cmd_check_int(opt->stage_score_thr, INT32_MIN, INT32_MAX, "--stage-score-thres");
@@ -1988,6 +2016,9 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->input_compr = opt_src->input_compr;
     opt_dest->output_compr = opt_src->output_compr;
     opt_dest->shm_key = opt_src->shm_key;
+#ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
+    opt_dest->sample_reads = opt_src->sample_reads;
+#endif
     
     // flowspace options
     opt_dest->fscore = opt_src->fscore;
@@ -2062,6 +2093,9 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "input_compr=%d\n", opt->input_compr);
   fprintf(stderr, "output_compr=%d\n", opt->output_compr);
   fprintf(stderr, "shm_key=%d\n", (int)opt->shm_key);
+#ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
+  fprintf(stderr, "sample_reads=%lf\n", opt->sample_reads);
+#endif
   fprintf(stderr, "min_seq_len=%d\n", opt->min_seq_len);
   fprintf(stderr, "max_seq_len=%d\n", opt->max_seq_len);
   fprintf(stderr, "seed_length=%d\n", opt->seed_length);

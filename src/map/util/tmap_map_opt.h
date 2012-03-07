@@ -142,12 +142,12 @@ typedef struct {
  * A list of global command line flags take or available.
  *
  * Taken:
- * ABDEFGJKLMORTUWXYZ
- * afghijklmnqrsvwyz
+ * ABDEFGJKLMORSTUWXYZ
+ * afghijklmnqrsvwxyz
  *
  * Available:
  * CHIUV
- * optux
+ * optu
  * 
  * NB: Lets reserve single character flags for global options. 
 */
@@ -187,6 +187,9 @@ typedef struct __tmap_map_opt_t {
     int32_t input_compr;  /*!< the input compression type (-j,--input-bz2 and -z,--input-gz) */
     int32_t output_compr;  /*!< the output compression type (-J,--output-bz2 and -Z,--output-gz) */
     key_t shm_key;  /*!< the shared memory key (-k,--shared-memory-key) */
+#ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
+    double sample_reads;  /*!< sample the reads at this fraction (-x,--sample-reads) */
+#endif
 
     // flowspace tags
     int32_t fscore;  /*!< the flow score penalty (-X,--pen-flow-error) */

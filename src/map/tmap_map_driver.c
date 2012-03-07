@@ -467,6 +467,10 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
 #else
   tmap_rand_t *rand = NULL;
 #endif
+#ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
+  tmap_rand_t *rand_core = tmap_rand_init(13);
+  uint32_t k;
+#endif
   int32_t seq_type, reads_queue_size, num_ends;
 
   /*
@@ -557,6 +561,28 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
       if(0 == seq_buffer_length) {
           break;
       }
+#ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
+      // sample reads
+      if(driver->opt->sample_reads < 1) {
+          for(i=j=0;i<seq_buffer_length;i++) {
+              if(tmap_rand_get(rand_core) < driver->opt->sample_reads) { // keep
+                  if(j < i) {
+                      for(k=0;k<num_ends;k++) {
+                          // swap
+                          tmap_seq_t *seq;
+                          seq = seq_buffer[k][j];
+                          seq_buffer[k][j] = seq_buffer[k][i]; 
+                          seq_buffer[k][i] = seq;
+                      }
+                  }
+                  j++;
+              }
+          }
+          tmap_progress_print2("sampling %d out of %d [%.2lf\%]", j, seq_buffer_length, 100.0*j/(double)seq_buffer_length);
+          seq_buffer_length = j;
+          if(0 == seq_buffer_length) continue;
+      }
+#endif
 
       // do alignment
 #ifdef HAVE_LIBPTHREAD
@@ -685,6 +711,9 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
   free(rand);
 #else
   tmap_rand_destroy(rand);
+#endif
+#ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
+  tmap_rand_destroy(rand_core);
 #endif
 }
 
