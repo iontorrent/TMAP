@@ -85,10 +85,11 @@ tmap_sff_header_destroy(tmap_sff_header_t *h);
 
 /*! 
   @param  fp  the file pointer from which to read
+  @param  early_eof_ok  if this is one, this function will return NULL if a header could not be read in, otherwise an error is thrown
   @return     a pointer to the sff read header read in
   */
 tmap_sff_read_header_t *
-tmap_sff_read_header_read(tmap_file_t *fp);
+tmap_sff_read_header_read(tmap_file_t *fp, int32_t early_eof_ok);
 
 /*! 
   @param  rh  a pointer to the sff read header to destroy
