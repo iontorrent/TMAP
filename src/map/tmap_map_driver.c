@@ -565,18 +565,17 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
       // sample reads
       if(driver->opt->sample_reads < 1) {
           for(i=j=0;i<seq_buffer_length;i++) {
-              if(tmap_rand_get(rand_core) < driver->opt->sample_reads) { // keep
-                  if(j < i) {
-                      for(k=0;k<num_ends;k++) {
-                          // swap
-                          tmap_seq_t *seq;
-                          seq = seq_buffer[k][j];
-                          seq_buffer[k][j] = seq_buffer[k][i]; 
-                          seq_buffer[k][i] = seq;
-                      }
+              if(driver->opt->sample_reads < tmap_rand_get(rand_core)) continue; // skip
+              if(j < i) {
+                  for(k=0;k<num_ends;k++) {
+                      // swap
+                      tmap_seq_t *seq;
+                      seq = seq_buffer[k][j];
+                      seq_buffer[k][j] = seq_buffer[k][i]; 
+                      seq_buffer[k][i] = seq;
                   }
-                  j++;
               }
+              j++;
           }
           tmap_progress_print2("sampling %d out of %d [%.2lf%%]", j, seq_buffer_length, 100.0*j/(double)seq_buffer_length);
           seq_buffer_length = j;
