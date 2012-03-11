@@ -131,7 +131,8 @@ tmap_map4_aux_core(tmap_seq_t *seq,
   max_seed_length = opt->max_seed_length;
 
   if(query_len < min_seed_length) min_seed_length = query_len; 
-  if(query_len < max_seed_length) max_seed_length = query_len; 
+  if (min_seed_length < 0) tmap_bug(); // this should not happen, or fix it upstream
+  if(-1 == max_seed_length || query_len < max_seed_length) max_seed_length = query_len; 
 
   start = 0;
   by = (opt->seed_step < 0) ? query_len : opt->seed_step;
@@ -139,7 +140,7 @@ tmap_map4_aux_core(tmap_seq_t *seq,
   max_repr = opt->max_repr;
   max_repr = (opt->max_iwidth < max_repr) ? opt->max_iwidth : max_repr;
   
-  while(start + max_seed_length - 1 < query_len) {
+  while(start + min_seed_length - 1 < query_len) {
       //fprintf(stderr, "start=%d min_seed_length=%d max_seed_length=%d\n", start, min_seed_length, max_seed_length);
       
       // init iter
@@ -155,7 +156,7 @@ tmap_map4_aux_core(tmap_seq_t *seq,
 
               //fprintf(stderr, "EM\t%d\t%d\t%ld\t%llu\t%llu\n", (uint32_t)(p->info>>32), (uint32_t)p->info, (long)p->size, p->x[0], p->x[1]);
               // too short
-              if ((uint32_t)p->info - (p->info>>32) < min_seed_length) continue;
+              if ((uint32_t)(p->info & 0xFFFF) - (p->info>>32) < min_seed_length) continue;
               // update total
               total++;
               // too many hits?
@@ -234,37 +235,36 @@ tmap_map4_aux_core(tmap_seq_t *seq,
           tmap_bwt_smem_intv_t *p = &matches->a[i];
           for (k = 0; k < p->size; ++k) {
               tmap_bwt_int_t pacpos;
+              tmap_bwt_int_t tmp;
               uint32_t seqid, pos;
               uint8_t strand;
+              uint32_t qstart, qend, len;
 
+              qstart = (uint32_t)((p->info >> 32) & 0xFFFF); // should be zero if moved all the way to the start of the query
+              qend = (uint32_t)(p->info & 0xFFFF) - 1; // should be qlen if moved all the way to the end of the query
+              len = qend - qstart + 1; 
+              
               pacpos = p->x[0] + k;
+              tmp = pacpos;
               if(bwt->seq_len < pacpos) pacpos = bwt->seq_len;
 
               // get the packed position
-              //tmap_bwt_int_t tmp = pacpos;
-              pacpos = tmap_sa_pac_pos_hash(sa, bwt, pacpos, hash);
-              //fprintf(stderr, "p->x[0]=%llu p->x[1]=%llu p->size=%llu k=%llu bwt->seq_len=%llu pacpos=%llu tmp=%llu\n", p->x[0], p->x[1], p->size, k, bwt->seq_len, pacpos, tmp);
-
+              pacpos = tmap_sa_pac_pos_hash(sa, bwt, pacpos, hash) + 1; // make zero based
+              //fprintf(stderr, "X0 p->x[0]=%llu p->x[1]=%llu p->size=%llu k=%llu bwt->seq_len=%llu pacpos=%llu tmp=%llu\n", p->x[0], p->x[1], p->size, k, bwt->seq_len, pacpos, tmp);
+              
               // convert to reference co-ordinates
+              //if(pacpos == 0 || bwt->seq_len < pacpos) tmap_bug();
               if(0 < tmap_refseq_pac2real(refseq, pacpos, 1, &seqid, &pos, &strand)) {
                   tmap_map_sam_t *s;
-                  uint32_t lower, upper, match_length;
 
-                  lower = (uint32_t)p->info;
-                  upper = (uint32_t)(p->info >> 32);
-
-                  //fprintf(stderr, "1 seqid:%u pos:%u strand:%d lower=%u upper=%u\n", seqid, pos, strand, lower, upper);
-                  // contig boundary
-                  if(0 == strand) {
-                      match_length = (0 == upper) ? 0 : (upper - 1);
+                  //fprintf(stderr, "1 seqid:%u pos:%u strand:%d qstart=%u qend=%u len=%u\n", seqid, pos, strand, qstart, qend, len);
+                  // adjust the position
+                  if(1 == strand) {
+                      // NB: could cross a contig boundary 
+                      if(pos < len) pos = 0;
+                      else pos -= len-1;
                   }
-                  else {
-                      //match_length = (query_len < upper) ? 0 : (query_len - upper);
-                      match_length = (max_seed_length < upper) ? 0 : (max_seed_length - upper);
-                  }
-                  if(pos <= match_length) pos = 0;
-                  else pos -= match_length;
-                  //fprintf(stderr, "2 seqid:%u pos:%u strand:%d lower=%u upper=%u\n", seqid, pos, strand, lower, upper);
+                  //fprintf(stderr, "2 seqid:%u pos:%u strand:%d qstart=%u qend=%u len=%u\n", seqid, pos, strand, qstart, qend, len);
 
                   // save
                   s = &sams->sams[n];

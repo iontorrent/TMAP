@@ -1942,7 +1942,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       tmap_error_cmd_check_int(opt->hp_diff, 0, INT32_MAX, "--hp-diff");
       if(0 < opt->hp_diff && (NULL == opt->flow_order && 0 == opt->flow_order_use_file)) tmap_error("--hp-diff option requires a flow order from (-F) or file", Exit, OutOfRange); 
       tmap_error_cmd_check_int(opt->hit_frac, 0, 1, "--hit-frac");
-      tmap_error_cmd_check_int(opt->seed_step, -1, INT32_MAX, "--seed-step");
+      if(-1 != opt->seed_step) tmap_error_cmd_check_int(opt->seed_step, 1, INT32_MAX, "--seed-step");
       tmap_error_cmd_check_int(opt->skip_seed_frac, 0, 1, "--skip-seed-frac");
       break;
     case TMAP_MAP_ALGO_MAP4:
@@ -1952,9 +1952,9 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
               tmap_error("--max-seed-length is less than --min-seed-length", Exit, CommandLineArgument);
           }
       }
-      tmap_error_cmd_check_int(opt->max_seed_length, 1, INT32_MAX, "--max-seed-length");
+      if(-1 != opt->max_seed_length) tmap_error_cmd_check_int(opt->max_seed_length, 1, INT32_MAX, "--max-seed-length");
       tmap_error_cmd_check_int(opt->hit_frac, 0, 1, "--hit-frac");
-      tmap_error_cmd_check_int(opt->seed_step, -1, INT32_MAX, "--seed-step");
+      if(-1 != opt->seed_step) tmap_error_cmd_check_int(opt->seed_step, 1, INT32_MAX, "--seed-step");
       tmap_error_cmd_check_int(opt->max_iwidth, 0, INT32_MAX, "--max-iwidth");
       tmap_error_cmd_check_int(opt->max_repr, 0, INT32_MAX, "--max-repr");
       tmap_error_cmd_check_int(opt->rand_repr, 0, 1, "--rand-repr");
