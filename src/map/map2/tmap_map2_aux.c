@@ -75,7 +75,7 @@ tmap_map2_aux_sa_pac_pos(const tmap_refseq_t *refseq, const tmap_bwt_t *bwt, con
               tmap_bwt_int_t k;
               for(k = p->k; k <= p->l; ++k) {
                   b->hits[j] = *p;
-                  b->hits[j].k = tmap_sa_pac_pos_hash(sa, bwt, k, hash);
+                  b->hits[j].k = tmap_sa_pac_pos_hash(sa, bwt, k, hash); // NB: keep zero based for now
                   b->hits[j].l = 0;
                   is_rev = (refseq->len < b->hits[j].k) ? 1 : 0;
                   b->hits[j].is_rev = is_rev;
@@ -86,7 +86,7 @@ tmap_map2_aux_sa_pac_pos(const tmap_refseq_t *refseq, const tmap_bwt_t *bwt, con
               }
           } else if(p->G > min_as) {
               b->hits[j] = *p;
-              b->hits[j].k = tmap_sa_pac_pos_hash(sa, bwt, p->k, hash);
+              b->hits[j].k = tmap_sa_pac_pos_hash(sa, bwt, p->k, hash); // NB: keep zero based for now
               b->hits[j].l = 0;
               is_rev = (refseq->len < b->hits[j].k) ? 1 : 0;
               b->hits[j].is_rev = is_rev;
