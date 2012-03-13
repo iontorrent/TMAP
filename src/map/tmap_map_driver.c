@@ -173,6 +173,7 @@ tmap_map_driver_init_seqs(tmap_seq_t **seqs, tmap_seq_t *seq, int32_t max_length
   for(i=0;i<4;i++) {
       // TODO: only if necessary
       seqs[i] = tmap_seq_clone(seq); // clone the sequence 
+      // modify the length before reversing or reverse complimenting 
       if(0 < max_length) { // NB: does not modify quality string or other meta data
           tmap_seq_get_bases(seqs[i])->l = max_length;
           tmap_seq_get_bases(seqs[i])->s[max_length] = '\0';
