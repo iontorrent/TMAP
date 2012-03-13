@@ -200,6 +200,7 @@ __tmap_map_opt_option_print_func_int_init(max_seed_length)
 __tmap_map_opt_option_print_func_int_init(max_iwidth)
 __tmap_map_opt_option_print_func_int_init(max_repr)
 __tmap_map_opt_option_print_func_tf_init(rand_repr)
+__tmap_map_opt_option_print_func_tf_init(use_min)
 // mapvsw options
 // mapall options
 __tmap_map_opt_option_print_func_int_init(stage_score_thr)
@@ -833,6 +834,12 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_rand_repr,
                            TMAP_MAP_ALGO_MAP4);
+  tmap_map_opt_options_add(opt->options, "use-min", no_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_NONE,
+                           "when seed stepping, try seeding when at least the minimum seed length is present, otherwise maximum",
+                           NULL,
+                           tmap_map_opt_option_print_func_use_min,
+                           TMAP_MAP_ALGO_MAP4);
 
   // mapvsw options
   // None
@@ -1024,6 +1031,7 @@ tmap_map_opt_init(int32_t algo_id)
       opt->max_iwidth = 20;
       opt->max_repr = 3;
       opt->rand_repr = 0;
+      opt->use_min = 0;
       break;
     case TMAP_MAP_ALGO_MAPVSW:
       // mapvsw
@@ -1550,6 +1558,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(0 == strcmp("rand-repr", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP4) {
           opt->rand_repr = 1;
       }
+      else if(0 == strcmp("use-min", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP4) {
+          opt->use_min = 1;
+      }
       // STAGE
       else if(0 == strcmp("stage-score-thres", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_STAGE) {
           opt->stage_score_thr = atoi(optarg);
@@ -1958,6 +1969,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       tmap_error_cmd_check_int(opt->max_iwidth, 0, INT32_MAX, "--max-iwidth");
       tmap_error_cmd_check_int(opt->max_repr, 0, INT32_MAX, "--max-repr");
       tmap_error_cmd_check_int(opt->rand_repr, 0, 1, "--rand-repr");
+      tmap_error_cmd_check_int(opt->use_min, 0, 1, "--use-min");
       break;
     case TMAP_MAP_ALGO_MAPALL:
       if(0 == opt->num_sub_opts) {

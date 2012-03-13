@@ -491,6 +491,9 @@ Specified the maximum representitive hits for repetitive hits.
 \subsubsection{\TT{--rand-repr}}
 Specifies to choose the representitive hits randomly, otherwise uniformly.
 
+\subsubsection{\TT{--use-min}}
+Specifies when seed stepping, try seeding when at least the minimum seed length is present, otherwise maximum.
+
 \subsubsection{\TT{--min-seed-length INT}}
 Specifies the minimum number of bases to use to seed.
 With a value of $-1$ will set the seed length to $\left(ceiling(log_4(R)) + 2\right)$ where $R$ is the reference genome length.

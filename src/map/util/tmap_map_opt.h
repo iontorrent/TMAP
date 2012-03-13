@@ -264,6 +264,7 @@ typedef struct __tmap_map_opt_t {
     int32_t max_seed_length; /*!< the maximum seed length to accept a hit (--max-seed-length) */
     int32_t max_iwidth; /*!< the maximum interval width to accept hits (--max-iwidth) */
     int32_t max_repr; /*!< the maximum number of representitive hits for repetitive hits (--max-repr) */
+    int32_t use_min; /*!< when seed stepping, try seeding when at least the minimum seed length is present, otherwise maximum (--use-min) */
     int32_t rand_repr; /*!< choose the representitive hits randomly, otherwise uniformly (--rand-repr) */
 
     // mapvsw options

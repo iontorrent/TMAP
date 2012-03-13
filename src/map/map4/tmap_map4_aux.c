@@ -107,7 +107,7 @@ tmap_map4_aux_core(tmap_seq_t *seq,
                    tmap_map_opt_t *opt)
 {
   int32_t i, n;
-  int32_t start, by;
+  int32_t start, by, end;
   int32_t min_seed_length, max_seed_length;
   tmap_bwt_int_t k;
   tmap_map_sams_t *sams;
@@ -139,8 +139,11 @@ tmap_map4_aux_core(tmap_seq_t *seq,
 
   max_repr = opt->max_repr;
   max_repr = (opt->max_iwidth < max_repr) ? opt->max_iwidth : max_repr;
+
+  // for looping
+  end = (0 == opt->use_min) ? (query_len - max_seed_length + 1) : (query_len - min_seed_length + 1);
   
-  while(start + min_seed_length - 1 < query_len) {
+  while(start < end) {
       //fprintf(stderr, "start=%d min_seed_length=%d max_seed_length=%d\n", start, min_seed_length, max_seed_length);
       
       // init iter
