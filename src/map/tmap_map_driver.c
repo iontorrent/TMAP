@@ -165,6 +165,32 @@ tmap_map_driver_do_threads_cleanup(tmap_map_driver_t *driver, int32_t tid)
   }
 }
 
+static void
+tmap_map_driver_init_seqs(tmap_seq_t **seqs, tmap_seq_t *seq, int32_t max_length)
+{
+  int32_t i;
+  // init seqs
+  for(i=0;i<4;i++) {
+      // TODO: only if necessary
+      seqs[i] = tmap_seq_clone(seq); // clone the sequence 
+      if(0 < max_length) { // NB: does not modify quality string or other meta data
+          tmap_seq_get_bases(seqs[i])->l = max_length;
+          tmap_seq_get_bases(seqs[i])->s[max_length] = '\0';
+      }
+      switch(i) {
+        case 0: // forward
+          break;
+        case 1: // reverse compliment
+          tmap_seq_reverse_compliment(seqs[i]); break;
+        case 2: // reverse
+          tmap_seq_reverse(seqs[i]); break;
+        case 3: // compliment
+          tmap_seq_compliment(seqs[i]); break;
+      }
+      tmap_seq_to_int(seqs[i]); // convert to integers
+  }
+}
+
 void
 tmap_map_driver_core_worker(int32_t num_ends, 
                             tmap_seq_t ***seq_buffer, 
@@ -205,7 +231,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
   // Go through the buffer
   while(low < seq_buffer_length) {
       if(tid == (low % driver->opt->num_threads)) {
-          tmap_map_stats_t *curstat = NULL;
+          tmap_map_stats_t *stage_stat = NULL;
           tmap_map_record_t *record_prev = NULL;
           
 #ifdef TMAP_DRIVER_USE_HASH
@@ -227,25 +253,8 @@ tmap_map_driver_core_worker(int32_t num_ends,
 
           // init
           for(i=0;i<num_ends;i++) {
-              tmap_seq_t *seq = NULL;
-              seq = seq_buffer[i][low];
+              tmap_map_driver_init_seqs(seqs[i], seq_buffer[i][low], -1);
               stat->num_reads++;
-              // init seqs
-              for(j=0;j<4;j++) {
-                  // TODO: only if necessary
-                  seqs[i][j]= tmap_seq_clone(seq); // clone the sequence 
-                  switch(j) {
-                    case 0: // forward
-                      break;
-                    case 1: // reverse compliment
-                      tmap_seq_reverse_compliment(seqs[i][j]); break;
-                    case 2: // reverse
-                      tmap_seq_reverse(seqs[i][j]); break;
-                    case 3: // compliment
-                      tmap_seq_compliment(seqs[i][j]); break;
-                  }
-                  tmap_seq_to_int(seqs[i][j]); // convert to integers
-              }
           }
 
           // init records
@@ -254,9 +263,21 @@ tmap_map_driver_core_worker(int32_t num_ends,
           // go through each stage
           for(i=0;i<driver->num_stages;i++) { // for each stage
               tmap_map_driver_stage_t *stage = driver->stages[i];
-              curstat = tmap_calloc(1, sizeof(tmap_map_stats_t), "curstat");
+
+              // stage stats
+              stage_stat = tmap_calloc(1, sizeof(tmap_map_stats_t), "stage_stat");
+
               // seed
               for(j=0;j<num_ends;j++) { // for each end
+                  tmap_seq_t **stage_seqs = NULL;
+                  // should we seed using the whole read?
+                  if(0 < stage->opt->stage_seed_max_length && stage->opt->stage_seed_max_length < tmap_seq_get_bases_length(seqs[j][0])) {
+                      stage_seqs = tmap_calloc(4, sizeof(tmap_seq_t*), "seqs[i]");
+                      tmap_map_driver_init_seqs(stage_seqs, seq_buffer[i][low], stage->opt->stage_seed_max_length);
+                  }
+                  else {
+                      stage_seqs = seqs[j];
+                  }
                   for(k=0;k<stage->num_algorithms;k++) { // for each algorithm
                       tmap_map_driver_algorithm_t *algorithm = stage->algorithms[k];
                       tmap_map_sams_t *sams = NULL;
@@ -264,7 +285,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
                           tmap_bug();
                       }
                       // map
-                      sams = algorithm->func_thread_map(&algorithm->thread_data[tid], seqs[j], index, hash, rand, algorithm->opt);
+                      sams = algorithm->func_thread_map(&algorithm->thread_data[tid], stage_seqs, index, hash, rand, algorithm->opt);
                       if(NULL == sams) {
                           tmap_error("the thread function did not return a mapping", Exit, OutOfRange);
                       }
@@ -273,7 +294,15 @@ tmap_map_driver_core_worker(int32_t num_ends,
                       // destroy
                       tmap_map_sams_destroy(sams);
                   }
-                  curstat->num_after_seeding += records[low]->sams[j]->n;
+                  stage_stat->num_after_seeding += records[low]->sams[j]->n;
+                  if(0 < stage->opt->stage_seed_max_length && stage->opt->stage_seed_max_length < tmap_seq_get_bases_length(seqs[j][0])) {
+                      // free
+                      for(j=0;j<4;j++) {
+                          tmap_seq_destroy(stage_seqs[j]);
+                          stage_seqs[j] = NULL;
+                      }
+                  }
+                  stage_seqs = NULL; // do not use
               }
 
               // keep mappings for subsequent stages or restore mappings from
@@ -296,13 +325,13 @@ tmap_map_driver_core_worker(int32_t num_ends,
               // generate scores with smith waterman
               for(j=0;j<num_ends;j++) { // for each end
                   records[low]->sams[j] = tmap_map_util_sw_gen_score(index->refseq, records[low]->sams[j], seqs[j], rand, stage->opt);
-                  curstat->num_after_scoring += records[low]->sams[j]->n;
+                  stage_stat->num_after_scoring += records[low]->sams[j]->n;
               }
 
               // remove duplicates
               for(j=0;j<num_ends;j++) { // for each end
                   tmap_map_util_remove_duplicates(records[low]->sams[j], stage->opt->dup_window, rand);
-                  curstat->num_after_rmdup += records[low]->sams[j]->n;
+                  stage_stat->num_after_rmdup += records[low]->sams[j]->n;
               }
               
               // (single-end) mapping quality
@@ -348,7 +377,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
                   // choose alignments
                   for(j=0;j<num_ends;j++) { // for each end
                       tmap_map_sams_filter1(records[low]->sams[j], stage->opt->aln_output_mode, TMAP_MAP_ALGO_NONE, rand);
-                      curstat->num_after_filter += records[low]->sams[j]->n;
+                      stage_stat->num_after_filter += records[low]->sams[j]->n;
                   }
               }
 
@@ -357,7 +386,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
               for(j=0;j<num_ends;j++) { // for each end
                   records[low]->sams[j] = tmap_map_util_sw_gen_cigar(index->refseq, records[low]->sams[j], seqs[j], stage->opt);
                   if(0 < records[low]->sams[j]->n) {
-                      //curstat->num_with_mapping++;
+                      //stage_stat->num_with_mapping++;
                       found = 1;
                   }
               }
@@ -367,8 +396,8 @@ tmap_map_driver_core_worker(int32_t num_ends,
 
               // did we find any mappings?
               if(1 == found) { // yes
-                  tmap_map_stats_add(stat, curstat);
-                  tmap_map_stats_destroy(curstat);
+                  tmap_map_stats_add(stat, stage_stat);
+                  tmap_map_stats_destroy(stage_stat);
                   break;
               }
               else { // no
@@ -376,7 +405,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
                   // re-init
                   records[low] = tmap_map_record_init(num_ends);
               }
-              tmap_map_stats_destroy(curstat);
+              tmap_map_stats_destroy(stage_stat);
           }
 
           // flowspace re-align and sorting
