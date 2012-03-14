@@ -39,7 +39,8 @@ int32_t
 tmap_map2_aux_sa_pac_pos(const tmap_refseq_t *refseq, const tmap_bwt_t *bwt, const tmap_sa_t *sa, tmap_bwt_match_hash_t *hash, tmap_map2_aln_t *b, 
                          int32_t max_seed_hits, int32_t IS, int32_t min_as)
 {
-  int32_t i, j, n;
+  int32_t i, j;
+  int64_t n;
   //uint32_t seqid, pos;
   uint8_t is_rev;
   if(b->n == 0) return 1;
@@ -59,10 +60,10 @@ tmap_map2_aux_sa_pac_pos(const tmap_refseq_t *refseq, const tmap_bwt_t *bwt, con
           if(0 == p->k && 0 == p->l && 0 == p->qlen) continue;
           if(p->l - p->k + 1 <= IS && TMAP_MAP2_MINUS_INF < p->G) n += p->l - p->k + 1;
           else if(p->G > min_as) ++n;
-      }
-      if(max_seed_hits < n) {
-          tmap_map2_aln_destroy(tmp_b);
-          return 0;
+          if(max_seed_hits < n) {
+              tmap_map2_aln_destroy(tmp_b);
+              return 0;
+          }
       }
       // realloc
       tmap_map2_aln_realloc(b, n);
