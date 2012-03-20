@@ -232,7 +232,7 @@ tmap_file_fread(void *ptr, size_t size, size_t count, tmap_file_t *fp)
           if(TMAP_1GB < to_read * size) {
               to_read = (size_t)(TMAP_1GB / size);
           }
-          cur_read = fread(ptr + (num_read * size), size, to_read, fp->fp);
+          cur_read = fread((uint8_t*)ptr + (num_read * size), size, to_read, fp->fp);
           num_read += cur_read;
           if(cur_read != to_read) break; // error 
       }
