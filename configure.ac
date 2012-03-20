@@ -16,8 +16,10 @@ AC_CONFIG_HEADERS([config.h])
 AC_CANONICAL_BUILD
 
 # Check for C and C++ compilers
+CFLAGS_TMP=${CFLAGS}; # Save, as AC_PROG_CC sets CFLAGS
 AC_PROG_CC
 AM_PROG_CC_C_O
+CFLAGS=${CFLAGS_TMP}; # Restore CFLAGS
 
 AC_PROG_INSTALL
 AC_GNU_SOURCE
@@ -63,6 +65,7 @@ AC_ARG_ENABLE(32bit-support,
 			  AC_DEFINE(TMAP_BWT_32_BIT,1,[Define 1 if we want to enable TMAP 32bit support])],
 			  [AC_MSG_WARN("Using 64-bit SA intervals; Genome sizes greater than 4Gb are supported")])
 
+echo "CFLAGS: $CFLAGS";
 CFLAGS="${CFLAGS} ${default_CFLAGS} ${extended_CFLAGS}";
 
 
