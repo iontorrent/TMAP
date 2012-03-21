@@ -36,8 +36,8 @@ typedef struct {
     key_t key;  /*!< the key of the shared memory  */
     size_t size;  /*!< the size of the shared memory */
     int32_t shmid;  /*!< the id of the shared memory */
-    void *ptr;  /*!< pointer to the first byte of the shared memory */
-    void *buf;  /*!< pointer to the first byte of the data stored in the shared memory */
+    uint8_t *ptr;  /*!< pointer to the first byte of the shared memory */
+    uint8_t *buf;  /*!< pointer to the first byte of the data stored in the shared memory */
     int32_t creator; /*!< 1 if this structure created the shared memory, 0 otherwise */
 } tmap_shm_t;
 

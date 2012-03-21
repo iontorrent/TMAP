@@ -176,7 +176,7 @@ tmap_shm_init(key_t key, size_t size, int32_t create)
 
   // attach the shared memory
   shm->ptr = tmap_shmat(shm->shmid, NULL, 0);
-  shm->buf = ((char*)shm->ptr);
+  shm->buf = ((uint8_t*)shm->ptr);
   shm->buf += sizeof(uint32_t); // synchronization 
   shm->buf += sizeof(uint32_t) + 32*sizeof(size_t); // listings
 
