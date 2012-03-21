@@ -282,7 +282,7 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
 static inline tmap_string_t *
 tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are characters
             uint32_t seqid, uint32_t pos, // seqid and pos are 0-based
-            uint32_t *cigar, int32_t n_cigar, int32_t *nm)
+            uint32_t *cigar, int32_t n_cigar, int32_t *nm, char *read_bases_eq)
 {
   int32_t i, j;
   uint32_t ref_i, read_i, ref_start, ref_end;
@@ -333,9 +333,11 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
               ref_base = target[ref_i];
 
               if(read_base == ref_base) { // a match
+                  if(NULL != read_bases_eq) read_bases_eq[read_i] = '=';
                   l++;
               }
               else {
+                  if(NULL != read_bases_eq) read_bases_eq[read_i] = read_bases[read_i];
                   tmap_string_lsprintf(md, md->l, "%d%c", l, tmap_iupac_int_to_char[ref_base]);
                   l = 0;
                   (*nm)++;
@@ -346,6 +348,11 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
           if(j < op_len) break;
       }
       else if(BAM_CINS == op) {
+          if(NULL != read_bases_eq) {
+              for(j=0;j<op_len;j++) {
+                  read_bases_eq[read_i+j] = read_bases[read_i+j];
+              }
+          }
           read_i += op_len;
           (*nm) += op_len;
       }
@@ -365,6 +372,11 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
           ref_i += op_len;
       }
       else if(BAM_CSOFT_CLIP == op) {
+          if(NULL != read_bases_eq) {
+              for(j=0;j<op_len;j++) {
+                  read_bases_eq[read_i+j] = read_bases[read_i+j];
+              }
+          }
           read_i += op_len;
       }
       else if(BAM_CHARD_CLIP == op) {
@@ -378,6 +390,7 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
       }
   }
   tmap_string_lsprintf(md, md->l, "%d", l);
+  if(NULL != read_bases_eq) read_bases_eq[read_i] = '\0';
 
   free(target);
 
@@ -385,7 +398,7 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
 }
 
 inline void
-tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, int32_t bidirectional, tmap_refseq_t *refseq,
+tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, int32_t bidirectional, int32_t seq_eq, tmap_refseq_t *refseq,
                       uint8_t strand, uint32_t seqid, uint32_t pos, int32_t aln_num,
                       uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, double m_num_std, uint32_t m_strand,
                       uint32_t m_seqid, uint32_t m_pos, uint32_t m_tlen,
@@ -396,6 +409,7 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, in
   va_list ap;
   int32_t i;
   tmap_string_t *name=NULL, *bases=NULL, *qualities=NULL;
+  char *bases_eq=NULL;
   uint32_t flag;
   tmap_string_t *md;
   int32_t nm;
@@ -417,6 +431,15 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, in
   if(0 == pos + 1) {
       tmap_error("position is out of range", Exit, OutOfRange);
   }
+
+  // compute the MD/NM
+  if(1 == seq_eq && 0 < bases->l) {
+      bases_eq = tmap_calloc((1 + bases->l), sizeof(char), "bases_eq");
+  }
+  else {
+      bases_eq = NULL;
+  }
+  md = tmap_sam_md(refseq, bases->s, seqid, pos, cigar, n_cigar, &nm, bases_eq);
 
   // flag
   flag = 0;
@@ -475,8 +498,12 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, in
   }
 
   // bases and qualities
-  tmap_file_fprintf(fp, "\t%s\t%s",
-                    bases->s, (0 == qualities->l) ? "*" : qualities->s);
+  if(1 == seq_eq && NULL != bases_eq) {
+      tmap_file_fprintf(fp, "\t%s\t%s", bases_eq, (0 == qualities->l) ? "*" : qualities->s);
+  }
+  else {
+      tmap_file_fprintf(fp, "\t%s\t%s", bases->s, (0 == qualities->l) ? "*" : qualities->s);
+  }
   
   // RG and PG
   tmap_file_fprintf(fp, "\tRG:Z:%s\tPG:Z:%s",
@@ -484,9 +511,7 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, in
                     PACKAGE_NAME);
 
   // MD and NM
-  md = tmap_sam_md(refseq, bases->s, seqid, pos, cigar, n_cigar, &nm);
   tmap_file_fprintf(fp, "\tMD:Z:%s\tNM:i:%d", md->s, nm);
-  tmap_string_destroy(md);
 
   // AS
   tmap_file_fprintf(fp, "\tAS:i:%d", score);
@@ -532,6 +557,10 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, in
       tmap_string_reverse_compliment(bases, 0);
       tmap_string_reverse(qualities);
   }
+
+  // free
+  tmap_string_destroy(md);
+  free(bases_eq);
 }
 
 #ifdef HAVE_SAMTOOLS

@@ -60,6 +60,7 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
   @param  seq         the sequence that is mapped
   @param  sam_sff_tags  1 if SFF specific SAM tags are to be outputted, 0 otherwise
   @param  bidirectional  1 if a bidirectional SAM tag is to be added, 0 otherwise
+  @param  seq_eq      1 if the SEQ field is to use '=' symbols, 0 otherwise
   @param  refseq      pointer to the reference sequence (forward)
   @param  strand      the strand of the mapping
   @param  seqid       the sequence index (0-based)
@@ -87,7 +88,7 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
   @details            the format should not include the MD tag, which will be outputted automatically
   */
 inline void
-tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, int32_t bidirectional, tmap_refseq_t *refseq,
+tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, int32_t bidirectional, int32_t seq_eq, tmap_refseq_t *refseq,
                       uint8_t strand, uint32_t seqid, uint32_t pos, int32_t secondary,
                       uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, double m_num_std, uint32_t m_strand,
                       uint32_t m_seqid, uint32_t m_pos, uint32_t m_tlen,
