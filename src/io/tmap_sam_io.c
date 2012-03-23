@@ -14,6 +14,7 @@
 #include "tmap_seq_io.h"
 
 #ifdef HAVE_SAMTOOLS
+#include <sam_header.h>
 // from sam.c
 #define TYPE_BAM  1
 #define TYPE_READ 2
@@ -23,7 +24,10 @@ extern char *bam_nt16_rev_table;
 static inline tmap_sam_io_t *
 tmap_sam_io_init_helper(const char *fn, int32_t is_bam)
 {
+  static char *rg_tags[] = {"ID", "CN", "DS", "DT", "FO", "KS", "LB", "PG", "PI", "PL", "PU", "SM"};
   tmap_sam_io_t *samio = NULL;
+  char **p = NULL;
+  int32_t i, n;
 
   // initialize memory
   samio = tmap_calloc(1, sizeof(tmap_sam_io_t), "samio");
@@ -40,6 +44,13 @@ tmap_sam_io_init_helper(const char *fn, int32_t is_bam)
   // check if there are sequences in the header
   if(samio->fp->header->n_targets == 0) {
       tmap_error("Found no @SQ lines in the SAM header", Exit, OutOfRange);
+  }
+
+  for(i=0;i<12;i++) {
+      p = sam_header2list(samio->fp->header->dict, "RG", rg_tags[i], &n);
+      if(1 == n) samio->rg_tags[i] = p[0];
+      else samio->rg_tags[i] = NULL;
+      free(p); p = NULL;
   }
 
   return samio;
@@ -97,6 +108,8 @@ tmap_sam_io_read(tmap_sam_io_t *samio, tmap_sam_t *sam)
       if((sam->b->core.flag & BAM_FREVERSE)) {
           tmap_sam_reverse_compliment(sam);
       }
+      // save for later
+      sam->io = samio;
       return 1;
   }
   

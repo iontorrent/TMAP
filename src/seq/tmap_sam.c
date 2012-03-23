@@ -14,6 +14,7 @@
 #include "../util/tmap_definitions.h"
 #include "../util/tmap_string.h"
 #include "tmap_sam.h"
+#include "../io/tmap_sam_io.h"
 
 #ifdef HAVE_SAMTOOLS
 tmap_sam_t *
@@ -102,19 +103,44 @@ tmap_sam_get_qualities(tmap_sam_t *sam)
 int32_t
 tmap_sam_get_flow_order_int(tmap_sam_t *sam, uint8_t **flow_order)
 {
-  return 0;
+  int32_t i, flow_order_len;
+  char *fo = tmap_sam_io_get_rg_fo(sam->io);
+  if(NULL == fo) return 0;
+  flow_order_len = strlen(fo); // TODO: cache this
+  (*flow_order) = tmap_malloc(sizeof(uint8_t) * flow_order_len, "flow_order");
+  for(i=0;i<flow_order_len;i++) {
+      (*flow_order)[i] = tmap_nt_char_to_int[(int)fo[i]];
+  }
+  return flow_order_len;
 }
 
 int32_t
 tmap_sam_get_key_seq_int(tmap_sam_t *sam, uint8_t **key_seq)
 {
-  return 0;
+  int32_t i, key_seq_len;
+  char *ks = tmap_sam_io_get_rg_ks(sam->io);
+  if(NULL == ks) return 0;
+  key_seq_len = strlen(ks); // TODO: cache this
+  (*key_seq) = tmap_malloc(sizeof(uint8_t) * key_seq_len, "key_seq");
+  for(i=0;i<key_seq_len;i++) {
+      (*key_seq)[i] = tmap_nt_char_to_int[(int)ks[i]];
+  }
+  return key_seq_len;
 }
 
 int32_t
 tmap_sam_get_flowgram(tmap_sam_t *sam, uint16_t **flowgram, int32_t mem)
 {
+#ifdef bam_auxB2S
+  int32_t flowgram_len = 0;
+  uint8_t *tag = bam_aux_get(sam->b, "FZ");
+  if(NULL == tag) return 0;
+  if(0 < mem) free(*flowgram);
+  *flowgram = bam_auxB2S(tag, &flowgram_len);
+  return flowgram_len;
+#else
   return 0;
+#endif
 }
 
 #endif

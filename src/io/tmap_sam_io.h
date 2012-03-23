@@ -14,9 +14,71 @@
 
 /*! 
 */
-typedef struct {
+typedef struct _tmap_sam_io_t {
     samfile_t *fp;  /*!< the file pointer to the SAM/BAM file */
+    char *rg_tags[12]; /*!< the SAM Header RG tags */
 } tmap_sam_io_t;
+
+/*!
+  @param  samio  a pointer to a previously initialized SAM/BAM structure
+  @return the ID tag from the SAM Header
+  */
+#define tmap_sam_io_get_rg_id(samio) (samio->rg_tags[0]) 
+/*!
+  @param  samio  a pointer to a previously initialized SAM/BAM structure
+  @return the CN tag from the SAM Header
+  */
+#define tmap_sam_io_get_rg_cn(samio) (samio->rg_tags[1]) 
+/*!
+  @param  samio  a pointer to a previously initialized SAM/BAM structure
+  @return the DS tag from the SAM Header
+  */
+#define tmap_sam_io_get_rg_ds(samio) (samio->rg_tags[2]) 
+/*!
+  @param  samio  a pointer to a previously initialized SAM/BAM structure
+  @return the DT tag from the SAM Header
+  */
+#define tmap_sam_io_get_rg_dt(samio) (samio->rg_tags[3]) 
+/*!
+  @param  samio  a pointer to a previously initialized SAM/BAM structure
+  @return the FO tag from the SAM Header
+  */
+#define tmap_sam_io_get_rg_fo(samio) (samio->rg_tags[4]) 
+/*!
+  @param  samio  a pointer to a previously initialized SAM/BAM structure
+  @return the KS tag from the SAM Header
+  */
+#define tmap_sam_io_get_rg_ks(samio) (samio->rg_tags[5]) 
+/*!
+  @param  samio  a pointer to a previously initialized SAM/BAM structure
+  @return the LB tag from the SAM Header
+  */
+#define tmap_sam_io_get_rg_lb(samio) (samio->rg_tags[6]) 
+/*!
+  @param  samio  a pointer to a previously initialized SAM/BAM structure
+  @return the PG tag from the SAM Header
+  */
+#define tmap_sam_io_get_rg_pg(samio) (samio->rg_tags[7]) 
+/*!
+  @param  samio  a pointer to a previously initialized SAM/BAM structure
+  @return the PI tag from the SAM Header
+  */
+#define tmap_sam_io_get_rg_pi(samio) (samio->rg_tags[8]) 
+/*!
+  @param  samio  a pointer to a previously initialized SAM/BAM structure
+  @return the PL tag from the SAM Header
+  */
+#define tmap_sam_io_get_rg_pl(samio) (samio->rg_tags[9]) 
+/*!
+  @param  samio  a pointer to a previously initialized SAM/BAM structure
+  @return the PU tag from the SAM Header
+  */
+#define tmap_sam_io_get_rg_pu(samio) (samio->rg_tags[10]) 
+/*!
+  @param  samio  a pointer to a previously initialized SAM/BAM structure
+  @return the SM tag from the SAM Header
+  */
+#define tmap_sam_io_get_rg_sm(samio) (samio->rg_tags[11]) 
 
 /*! 
   initializes SAM reading structure

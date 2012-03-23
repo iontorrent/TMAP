@@ -5,6 +5,7 @@
 #include <config.h>
 #ifdef HAVE_SAMTOOLS
 #include <bam.h>
+#include <sam.h>
 #endif
 #include "../util/tmap_definitions.h"
 #include "../index/tmap_refseq.h"
@@ -16,7 +17,8 @@
  Structure for holding SAM/BAM records
  */
 typedef struct {
-    bam1_t *b;
+    bam1_t *b; /*!< the SAM/BAM structure */
+    struct _tmap_sam_io_t *io; /*!< the file from which this SAM was read */
     tmap_string_t *name;  /*!< the name string */
     tmap_string_t *seq;  /*!< the sequence string */
     tmap_string_t *qual;  /*!< the quality string */
