@@ -240,11 +240,14 @@ tmap_seq_io_sff2sam_main(int argc, char *argv[])
   tmap_seq_io_t *io_in = NULL;
   char *sam_rg = NULL;
   tmap_seq_t *seq_in = NULL;
-  int bidirectional = 0, sam_sff_tags = 0;
+  int bidirectional = 0, sam_sff_tags = 0, remove_sff_clipping = 1;
+  uint8_t *key_seq = NULL;
+  int key_seq_len = 0;
 
-  while((c = getopt(argc, argv, "DR:Yvh")) >= 0) {
+  while((c = getopt(argc, argv, "DGR:Yvh")) >= 0) {
       switch(c) {
         case 'D': bidirectional = 1; break;
+        case 'G': remove_sff_clipping = 0; break;
         case 'R':
           if(NULL == sam_rg) {
               // add five for the string "@RG\t" and null terminator
@@ -281,10 +284,20 @@ tmap_seq_io_sff2sam_main(int argc, char *argv[])
   
   // SAM header
   tmap_sam_print_header(tmap_file_stdout, NULL, io_in, sam_rg, NULL, NULL, sam_sff_tags, argc, argv);
+  if(0 < tmap_seq_io_read(io_in, seq_in)) {
+      // get the key sequence from the first entry
+      key_seq_len = tmap_seq_get_key_seq_int(seq_in, &key_seq);
+      tmap_seq_remove_key_sequence(seq_in, remove_sff_clipping, key_seq, key_seq_len);
+      tmap_sam_print_unmapped(tmap_file_stdout, seq_in, sam_sff_tags, bidirectional, NULL, 0, 0, 0, 0, 0, 0);
 
-  while(0 < tmap_seq_io_read(io_in, seq_in)) {
-      tmap_sam_print_unmapped(tmap_file_stdout, seq_in, sam_sff_tags, bidirectional, NULL, 
-                              0, 0, 0, 0, 0, 0);
+      // no need to get the key sequence
+      while(0 < tmap_seq_io_read(io_in, seq_in)) {
+          tmap_seq_remove_key_sequence(seq_in, remove_sff_clipping, key_seq, key_seq_len);
+          tmap_sam_print_unmapped(tmap_file_stdout, seq_in, sam_sff_tags, bidirectional, NULL, 0, 0, 0, 0, 0, 0);
+      }
+
+      free(key_seq);
+      key_seq = NULL;
   }
   tmap_seq_destroy(seq_in);
 

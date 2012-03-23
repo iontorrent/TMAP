@@ -272,8 +272,10 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
   tmap_file_fprintf(fp, "\tRG:Z:%s\tPG:Z:%s",
                     tmap_sam_rg_id,
                     PACKAGE_NAME);
+  // FZ and ZF
   if(TMAP_SEQ_TYPE_SFF == seq->type && 1 == sam_sff_tags) {
       tmap_sam_print_flowgram(fp, seq->data.sff->read->flowgram, seq->data.sff->gheader->flow_length);
+      if(0 <= seq->data.sff->flow_start_index) tmap_file_fprintf(fp, "\tZF:i:%d", seq->data.sff->flow_start_index); 
   }
   if(1 == bidirectional) {
       tmap_file_fprintf(fp, "\tXB:i:1");
