@@ -139,9 +139,11 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, tmap_seq_io_t *seq
   // SAM header
   tmap_file_fprintf(fp, "@HD\tVN:%s\tSO:unsorted\n",
                     TMAP_SAM_PRINT_VERSION);
-  for(i=0;i<refseq->num_annos;i++) {
-      tmap_file_fprintf(fp, "@SQ\tSN:%s\tLN:%d\n",
-                        refseq->annos[i].name->s, (int)refseq->annos[i].len);
+  if(NULL != refseq) {
+      for(i=0;i<refseq->num_annos;i++) {
+          tmap_file_fprintf(fp, "@SQ\tSN:%s\tLN:%d\n",
+                            refseq->annos[i].name->s, (int)refseq->annos[i].len);
+      }
   }
   // RG
   if(NULL != seqio && TMAP_SEQ_TYPE_SFF == seqio->type && 1 == sam_sff_tags) {
@@ -257,7 +259,7 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
   else if(1 == m_unmapped) { // unmapped mate
       tmap_file_fprintf(fp, "\t*\t0\t0");
   }
-  else { // mapped mate
+  else if(NULL != refseq) { // mapped mate
       tmap_file_fprintf(fp, "\t%s\t%u\t%u",
                         refseq->annos[m_seqid].name->s,
                         m_pos+1,

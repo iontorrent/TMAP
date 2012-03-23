@@ -45,6 +45,7 @@ static tmap_command_t commands[] = {
       {tmap_bwt_pac2bwt_main, "pac2bwt", "creates the BWT string file from the packed FASTA file", TMAP_COMMAND_UTILITIES},
       {tmap_sa_bwt2sa_main, "bwt2sa", "creates the SA file from the BWT string file", TMAP_COMMAND_UTILITIES},
       {tmap_seq_io_sff2fq_main, "sff2fq", "converts a SFF file to a FASTQ file", TMAP_COMMAND_UTILITIES},
+      {tmap_seq_io_sff2sam_main, "sff2sam", "converts a SFF file to a SAM file", TMAP_COMMAND_UTILITIES},
       {tmap_refseq_refinfo_main, "refinfo", "prints information about the reference", TMAP_COMMAND_UTILITIES},
       {tmap_refseq_pac2fasta_main, "pac2fasta", "converts a packed FASTA to a FASTA file", TMAP_COMMAND_UTILITIES},
       {tmap_bwt_bwtupdate_main, "bwtupdate", "updates the bwt hash width", TMAP_COMMAND_UTILITIES},

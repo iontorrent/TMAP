@@ -6,6 +6,7 @@
 #include "../util/tmap_error.h"
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_progress.h"
+#include "../util/tmap_sam_print.h"
 #include "tmap_seq_io.h"
 #include "tmap_sff_io.h"
 #include "tmap_seq_io.h"
@@ -228,6 +229,70 @@ tmap_seq_io_sff2fq_main(int argc, char *argv[])
   
   // output
   tmap_seq_io_destroy(io_out);
+
+  return 0;
+}
+
+int
+tmap_seq_io_sff2sam_main(int argc, char *argv[])
+{
+  int c, help = 0;
+  tmap_seq_io_t *io_in = NULL;
+  char *sam_rg = NULL;
+  tmap_seq_t *seq_in = NULL;
+  int bidirectional = 0, sam_sff_tags = 0;
+
+  while((c = getopt(argc, argv, "DR:Yvh")) >= 0) {
+      switch(c) {
+        case 'D': bidirectional = 1; break;
+        case 'R':
+          if(NULL == sam_rg) {
+              // add five for the string "@RG\t" and null terminator
+              sam_rg = tmap_realloc(sam_rg, sizeof(char) * (5 + strlen(optarg)), "sam_rg");
+              strcpy(sam_rg, "@RG\t");
+              strcat(sam_rg, optarg);
+          }
+          else {
+              // add two for the tab separator and null terminator
+              sam_rg = tmap_realloc(sam_rg, sizeof(char) * (2 + strlen(optarg) + strlen(sam_rg)), "sam_rg");
+              if(0 < strlen(optarg) && '\t' != optarg[0]) strcat(sam_rg, "\t"); // add a tab separator
+              strcat(sam_rg, optarg);
+          }
+          // remove trailing white spaces
+          tmap_chomp(sam_rg);
+          break;
+        case 'Y': sam_sff_tags = 1; break;
+        case 'v': tmap_progress_set_verbosity(1); break;
+        case 'h': help = 1; break;
+        default: return 1;
+      }
+  }
+  if(1 != argc - optind || 1 == help) {
+      tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [-R -Y -v -h] <in.sff>\n", PACKAGE, argv[0]);
+      return 1; 
+  }
+
+  // input
+  io_in = tmap_seq_io_init(argv[optind], TMAP_SEQ_TYPE_SFF, 0, TMAP_FILE_NO_COMPRESSION);
+  seq_in = tmap_seq_init(TMAP_SEQ_TYPE_SFF);
+
+  // output
+  tmap_file_stdout = tmap_file_fdopen(fileno(stdout), "wb", TMAP_FILE_NO_COMPRESSION);
+  
+  // SAM header
+  tmap_sam_print_header(tmap_file_stdout, NULL, io_in, sam_rg, NULL, NULL, sam_sff_tags, argc, argv);
+
+  while(0 < tmap_seq_io_read(io_in, seq_in)) {
+      tmap_sam_print_unmapped(tmap_file_stdout, seq_in, sam_sff_tags, bidirectional, NULL, 
+                              0, 0, 0, 0, 0, 0);
+  }
+  tmap_seq_destroy(seq_in);
+
+  // input
+  tmap_seq_io_destroy(io_in);
+
+  // output
+  tmap_file_fclose(tmap_file_stdout);
 
   return 0;
 }
