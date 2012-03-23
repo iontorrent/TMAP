@@ -65,7 +65,6 @@ AC_ARG_ENABLE(32bit-support,
 			  AC_DEFINE(TMAP_BWT_32_BIT,1,[Define 1 if we want to enable TMAP 32bit support])],
 			  [AC_MSG_WARN("Using 64-bit SA intervals; Genome sizes greater than 4Gb are supported")])
 
-echo "CFLAGS: $CFLAGS";
 CFLAGS="${CFLAGS} ${default_CFLAGS} ${extended_CFLAGS}";
 
 
