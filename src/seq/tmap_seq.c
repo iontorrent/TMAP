@@ -395,3 +395,25 @@ tmap_seq_get_flowgram(tmap_seq_t *seq, uint16_t **flowgram, int32_t mem)
   }
   return 0;
 }
+
+int32_t
+tmap_seq_get_flow_start_index(tmap_seq_t *seq)
+{
+  switch(seq->type) {
+    case TMAP_SEQ_TYPE_FQ:
+      return -1;
+    case TMAP_SEQ_TYPE_SFF:
+      return tmap_sff_get_flow_start_index(seq->data.sff);
+      break;
+#ifdef HAVE_SAMTOOLS
+    case TMAP_SEQ_TYPE_SAM:
+    case TMAP_SEQ_TYPE_BAM:
+      return tmap_sam_get_flow_start_index(seq->data.sam);
+      break;
+#endif
+    default:
+      tmap_error("type is unrecognized", Exit, OutOfRange);
+      break;
+  }
+  return -1;
+}

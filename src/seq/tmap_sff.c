@@ -622,3 +622,9 @@ tmap_sff_get_flowgram(tmap_sff_t *sff, uint16_t **flowgram, int32_t mem)
   }
   return sff->gheader->flow_length;
 }
+
+int32_t
+tmap_sff_get_flow_start_index(tmap_sff_t *sff)
+{
+  return sff->flow_start_index;
+}

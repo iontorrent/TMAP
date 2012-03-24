@@ -146,29 +146,35 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, tmap_seq_io_t *seq
       }
   }
   // RG
-  if(NULL != seqio && TMAP_SEQ_TYPE_SFF == seqio->type && 1 == sam_sff_tags) {
+  if(NULL != seqio && 1 == sam_sff_tags) {
       if(NULL != flow_order) { // this should not happen, since it should be checked upstream
-          tmap_error("flow order was specified when using an SFF", Exit, OutOfRange);
+          tmap_error("flow order was specified when using sam sff tags", Exit, OutOfRange);
       }
       if(NULL != key_seq) { // this should not happen, since it should be checked upstream
-          tmap_error("key sequence was specified when using an SFF", Exit, OutOfRange);
+          tmap_error("key sequence was specified when using sam sff tags", Exit, OutOfRange);
+      }
+      if(NULL == (flow_order = tmap_seq_io_get_rg_fo(seqio))) {
+          tmap_error("flow order could not be retrieved from the input", Exit, OutOfRange);
+      }
+      if(NULL == (key_seq = tmap_seq_io_get_rg_ks(seqio))) {
+          tmap_error("key sequence could not be retrieved from the input", Exit, OutOfRange);
       }
       if(NULL != sam_rg) { // SAM RG is user-specified
           tmap_sam_parse_rg(sam_rg, 
-                            seqio->io.sffio->gheader->flow->s, 
-                            seqio->io.sffio->gheader->flow->s, 
+                            flow_order,
+                            key_seq,
                             PACKAGE_NAME);
           tmap_file_fprintf(fp, "%s\tFO:%s\tKS:%s\tPG:%s\n",
                             sam_rg,
-                            seqio->io.sffio->gheader->flow->s,
-                            seqio->io.sffio->gheader->key->s,
+                            flow_order,
+                            key_seq,
                             PACKAGE_NAME);
       }
       else {
           tmap_file_fprintf(fp, "@RG\tID:%s\tFO:%s\tKS:%s\tPG:%s\n",
                             tmap_sam_rg_id,
-                            seqio->io.sffio->gheader->flow->s,
-                            seqio->io.sffio->gheader->key->s,
+                            flow_order,
+                            key_seq,
                             PACKAGE_NAME);
       }
   }
@@ -212,6 +218,23 @@ tmap_sam_print_flowgram(tmap_file_t *fp, uint16_t *flowgram, int32_t length)
   }
 }
 
+static inline void 
+tmap_sam_print_fz_and_zf(tmap_file_t *fp, tmap_seq_t *seq)
+{
+  uint16_t *flowgram = NULL;
+  int32_t flow_start_index;
+  int32_t flowgram_len;
+  flowgram_len = tmap_seq_get_flowgram(seq, &flowgram, 0);
+  if(NULL != flowgram) {
+      tmap_sam_print_flowgram(fp, flowgram, flowgram_len);
+      free(flowgram);
+  }
+  flow_start_index = tmap_seq_get_flow_start_index(seq);
+  if(0 <= flow_start_index) {
+      tmap_file_fprintf(fp, "\tZF:i:%d", flow_start_index);
+  }
+}
+
 inline void
 tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, int32_t bidirectional, tmap_refseq_t *refseq,
                       uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, 
@@ -236,22 +259,6 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
   // name, flag, seqid, pos, mapq, cigar
   tmap_file_fprintf(fp, "%s\t%u\t*\t%u\t%u\t*", name->s, flag, 0, 0);
   // NB: hard clipped portions of the read is not reported
-  /*
-  if(TMAP_SEQ_TYPE_SFF == seq->type 
-     && (0 < seq->data.sff->rheader->clip_left || 0 < seq->data.sff->rheader->clip_right)) {
-      // sff
-     if(0 < seq->data.sff->rheader->clip_left) {
-         tmap_file_fprintf(fp, "%dH", seq->data.sff->rheader->clip_left);
-     }
-     tmap_file_fprintf(fp, "%dM", bases->l);
-     if(0 < seq->data.sff->rheader->clip_right) {
-         tmap_file_fprintf(fp, "%dH", seq->data.sff->rheader->clip_right);
-     }
-  }
-  else {
-      tmap_file_fprintf(fp, "*");
-  }
-  */
   // mate info
   if(0 == end_num) { // no mate
       tmap_file_fprintf(fp, "\t*\t0\t0");
@@ -273,9 +280,8 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
                     tmap_sam_rg_id,
                     PACKAGE_NAME);
   // FZ and ZF
-  if(TMAP_SEQ_TYPE_SFF == seq->type && 1 == sam_sff_tags) {
-      tmap_sam_print_flowgram(fp, seq->data.sff->read->flowgram, seq->data.sff->gheader->flow_length);
-      if(0 <= seq->data.sff->flow_start_index) tmap_file_fprintf(fp, "\tZF:i:%d", seq->data.sff->flow_start_index); 
+  if(1 == sam_sff_tags) {
+      tmap_sam_print_fz_and_zf(fp, seq);
   }
   if(1 == bidirectional) {
       tmap_file_fprintf(fp, "\tXB:i:1");
@@ -524,9 +530,8 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, in
   if(1 < nh) tmap_file_fprintf(fp, "\tNH:i:%d", nh);
   
   // FZ and ZF
-  if(TMAP_SEQ_TYPE_SFF == seq->type && 1 == sam_sff_tags) {
-      tmap_sam_print_flowgram(fp, seq->data.sff->read->flowgram, seq->data.sff->gheader->flow_length);
-      if(0 <= seq->data.sff->flow_start_index) tmap_file_fprintf(fp, "\tZF:i:%d", seq->data.sff->flow_start_index); 
+  if(1 == sam_sff_tags) {
+      tmap_sam_print_fz_and_zf(fp, seq);
   }
 
   // XA

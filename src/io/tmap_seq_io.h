@@ -30,6 +30,20 @@ typedef struct {
   } io;
 } tmap_seq_io_t;
 
+/*!
+  @param  io  a pointer to a previously initialized SAM/BAM structure
+  @return the FO tag from the SAM Header
+  */
+char*
+tmap_seq_io_get_rg_fo(tmap_seq_io_t *io);
+
+/*!
+  @param  io  a pointer to a previously initialized SAM/BAM structure
+  @return the KS tag from the SAM Header
+  */
+char*
+tmap_seq_io_get_rg_ks(tmap_seq_io_t *io);
+
 /*! 
   initializes input/output structure
   @param  fn           the file name of the input/output

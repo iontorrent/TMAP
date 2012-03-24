@@ -11,6 +11,48 @@
 #include "tmap_sff_io.h"
 #include "tmap_seq_io.h"
 
+char*
+tmap_seq_io_get_rg_fo(tmap_seq_io_t *io)
+{
+  switch(io->type) {
+    case TMAP_SEQ_TYPE_FQ:
+      return NULL;
+    case TMAP_SEQ_TYPE_SFF:
+      return tmap_sff_io_get_rg_fo(io->io.sffio);
+#ifdef HAVE_SAMTOOLS
+    case TMAP_SEQ_TYPE_SAM:
+    case TMAP_SEQ_TYPE_BAM:
+      return tmap_sam_io_get_rg_fo(io->io.samio);
+      break;
+#endif
+    default:
+      tmap_error("type is unrecognized", Exit, OutOfRange);
+      break;
+  }
+  return NULL;
+}
+
+char*
+tmap_seq_io_get_rg_ks(tmap_seq_io_t *io)
+{
+  switch(io->type) {
+    case TMAP_SEQ_TYPE_FQ:
+      return NULL;
+    case TMAP_SEQ_TYPE_SFF:
+      return tmap_sff_io_get_rg_ks(io->io.sffio);
+#ifdef HAVE_SAMTOOLS
+    case TMAP_SEQ_TYPE_SAM:
+    case TMAP_SEQ_TYPE_BAM:
+      return tmap_sam_io_get_rg_ks(io->io.samio);
+      break;
+#endif
+    default:
+      tmap_error("type is unrecognized", Exit, OutOfRange);
+      break;
+  }
+  return NULL;
+}
+
 static inline tmap_file_t *
 tmap_seq_io_open(const char *fn, int32_t out_type, int32_t compression)
 {

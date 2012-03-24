@@ -20,6 +20,17 @@ typedef struct {
     int32_t early_eof_ok;  /*!< 0 if the number of reads to read in should match the SFF header, 0 otherwise */
 } tmap_sff_io_t;
 
+/*!
+  @param  sffio  a pointer to a previously initialized SAM/BAM structure
+  @return the FO tag from the SAM Header
+  */
+#define tmap_sff_io_get_rg_fo(sffio) (sffio->gheader->flow->s)
+/*!
+  @param  sffio  a pointer to a previously initialized SAM/BAM structure
+  @return the KS tag from the SAM Header
+  */
+#define tmap_sff_io_get_rg_ks(sffio) (sffio->gheader->key->s)
+
 /*! 
   initializes sff reading structure
   @param  fp  a pointer to a file structure from which to read

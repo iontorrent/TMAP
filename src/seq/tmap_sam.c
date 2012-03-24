@@ -131,16 +131,21 @@ tmap_sam_get_key_seq_int(tmap_sam_t *sam, uint8_t **key_seq)
 int32_t
 tmap_sam_get_flowgram(tmap_sam_t *sam, uint16_t **flowgram, int32_t mem)
 {
-#ifdef bam_auxB2S
   int32_t flowgram_len = 0;
   uint8_t *tag = bam_aux_get(sam->b, "FZ");
   if(NULL == tag) return 0;
   if(0 < mem) free(*flowgram);
   *flowgram = bam_auxB2S(tag, &flowgram_len);
   return flowgram_len;
-#else
-  return 0;
-#endif
+}
+
+int32_t
+tmap_sam_get_flow_start_index(tmap_sam_t *sam)
+{
+  uint8_t *p;
+  p = bam_aux_get(sam->b, "ZF");
+  if(NULL == p) return -1;
+  else return bam_aux2i(p);
 }
 
 #endif

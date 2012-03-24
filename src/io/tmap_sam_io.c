@@ -46,6 +46,7 @@ tmap_sam_io_init_helper(const char *fn, int32_t is_bam)
       tmap_error("Found no @SQ lines in the SAM header", Exit, OutOfRange);
   }
 
+  sam_header_parse(samio->fp->header);
   for(i=0;i<12;i++) {
       p = sam_header2list(samio->fp->header->dict, "RG", rg_tags[i], &n);
       if(1 == n) samio->rg_tags[i] = p[0];
