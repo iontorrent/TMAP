@@ -199,7 +199,7 @@ typedef struct __tmap_map_opt_t {
     char *key_seq; /*!< the key sequence (-K,--key-sequence) */
     int32_t key_seq_use_file; /*!< the key sequence should be from the sff */
     int32_t softclip_key; /*!< soft clip only the last base of the key (-y,--softclip-key) */
-    int32_t sam_sff_tags;  /*!< specifies to output SFF specific SAM tags (-Y,--sam-sff-tags) */
+    int32_t sam_flowspace_tags;  /*!< specifies to output flow space specific SAM tags when available (-Y,--sam-flowspace-tags) */
     int32_t ignore_flowgram;  /*!< specifies to ignore the flowgram if available (-S,--ignore-flowgram) */
     int32_t remove_sff_clipping; /*!< removes SFF clipping (-G,--remove-sff-clipping) */
 

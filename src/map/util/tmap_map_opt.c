@@ -150,7 +150,7 @@ __tmap_map_opt_option_print_func_int_init(fscore)
 __tmap_map_opt_option_print_func_chars_init(flow_order, "not using")
 __tmap_map_opt_option_print_func_chars_init(key_seq, "not using")
 __tmap_map_opt_option_print_func_tf_init(softclip_key)
-__tmap_map_opt_option_print_func_tf_init(sam_sff_tags)
+__tmap_map_opt_option_print_func_tf_init(sam_flowspace_tags)
 __tmap_map_opt_option_print_func_tf_init(ignore_flowgram)
 __tmap_map_opt_option_print_func_tf_init(remove_sff_clipping)
 // pairing
@@ -587,11 +587,11 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_softclip_key,
                            TMAP_MAP_ALGO_FLOWSPACE);
-  tmap_map_opt_options_add(opt->options, "sam-sff-tags", no_argument, 0, 'Y', 
+  tmap_map_opt_options_add(opt->options, "sam-flowspace-tags", no_argument, 0, 'Y', 
                            TMAP_MAP_OPT_TYPE_NONE,
-                           "include SFF specific SAM tags",
+                           "include flow space specific SAM tags when available",
                            NULL,
-                           tmap_map_opt_option_print_func_sam_sff_tags,
+                           tmap_map_opt_option_print_func_sam_flowspace_tags,
                            TMAP_MAP_ALGO_FLOWSPACE);
   tmap_map_opt_options_add(opt->options, "ignore-flowgram", no_argument, 0, 'N', 
                            TMAP_MAP_OPT_TYPE_NONE,
@@ -984,7 +984,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->key_seq = NULL;
   opt->key_seq_use_file = 0;
   opt->softclip_key = 0;
-  opt->sam_sff_tags = 0;
+  opt->sam_flowspace_tags = 0;
   opt->ignore_flowgram = 0;
   opt->remove_sff_clipping = 1;
 
@@ -1424,8 +1424,8 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(c == 'X' || (0 == c && 0 == strcmp("pen-flow-error", options[option_index].name))) {       
           opt->fscore = atoi(optarg);
       }
-      else if(c == 'Y' || (0 == c && 0 == strcmp("sam-sff-tags", options[option_index].name))) {       
-          opt->sam_sff_tags = 1;
+      else if(c == 'Y' || (0 == c && 0 == strcmp("sam-flowspace-tags", options[option_index].name))) {       
+          opt->sam_flowspace_tags = 1;
       }
       else if(c == 'y' || (0 == c && 0 == strcmp("softclip-key", options[option_index].name))) {       
           opt->softclip_key = 1;
@@ -1746,7 +1746,7 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
     if(opt_a->softclip_key != opt_b->softclip_key) {
         tmap_error("option -y was specified outside of the common options", Exit, CommandLineArgument);
     }
-    if(opt_a->sam_sff_tags != opt_b->sam_sff_tags) {
+    if(opt_a->sam_flowspace_tags != opt_b->sam_flowspace_tags) {
         tmap_error("option -Y was specified outside of the common options", Exit, CommandLineArgument);
     }
     if(opt_a->ignore_flowgram != opt_b->ignore_flowgram) {
@@ -1820,7 +1820,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       tmap_error("option -r or option -i must be specified", Exit, CommandLineArgument);
   }
   else if(1 < opt->fn_reads_num) {
-      if(1 == opt->sam_sff_tags) {
+      if(1 == opt->sam_flowspace_tags) {
           tmap_error("options -1 and -2 cannot be used with -Y", Exit, CommandLineArgument);
       }
       else if(1 == opt->flow_order_use_file) {
@@ -2071,7 +2071,7 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->key_seq = tmap_strdup(opt_src->key_seq);
     opt_dest->key_seq_use_file = opt_src->key_seq_use_file;
     opt_dest->softclip_key = opt_src->softclip_key;
-    opt_dest->sam_sff_tags = opt_src->sam_sff_tags;
+    opt_dest->sam_flowspace_tags = opt_src->sam_flowspace_tags;
     opt_dest->ignore_flowgram = opt_src->ignore_flowgram;
     opt_dest->remove_sff_clipping = opt_src->remove_sff_clipping;
 
@@ -2133,7 +2133,7 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "sam_rg=%s\n", opt->sam_rg);
   fprintf(stderr, "bidirectional=%d\n", opt->bidirectional);
   fprintf(stderr, "seq_eq=%d\n", opt->seq_eq);
-  fprintf(stderr, "sam_sff_tags=%d\n", opt->sam_sff_tags);
+  fprintf(stderr, "sam_flowspace_tags=%d\n", opt->sam_flowspace_tags);
   fprintf(stderr, "ignore_flowgram=%d\n", opt->ignore_flowgram);
   fprintf(stderr, "remove_sff_clipping=%d\n", opt->remove_sff_clipping);
   fprintf(stderr, "input_compr=%d\n", opt->input_compr);

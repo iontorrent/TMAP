@@ -23,7 +23,7 @@
   @param  sam_rg        the SAM RG line, NULL otherwise
   @param  flow_order     the flow order, this should be NULL if the input file is SFF and the sam_sff_flags is one
   @param  key_seq       the key sequence, this should be NULL if the input file is SFF and the sam_sff_flags is one
-  @param  sam_sff_tags  1 if SFF specific SAM tags are to be outputted, 0 otherwise
+  @param  sam_flowspace_tags  1 if SFF specific SAM tags are to be outputted, 0 otherwise
   @param  argc          the number of input command line arguments
   @param  argv          the input command line arguments
   @details              the following header tags will be ouptted: \@SQ:SN:LN and \@PG:ID:VN:CL.
@@ -31,14 +31,14 @@
 void
 tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, 
                       tmap_seq_io_t *seqio, char *sam_rg, 
-                      char *flow_order, char *key_seq, int32_t sam_sff_tags, 
+                      char *flow_order, char *key_seq, int32_t sam_flowspace_tags, 
                       int argc, char *argv[]);
 
 /*! 
   prints out a SAM record signifying the sequence is unmapped 
   @param  fp            the file pointer to which to print
   @param  seq           the sequence that is unmapped
-  @param  sam_sff_tags  1 if SFF specific SAM tags are to be outputted, 0 otherwise
+  @param  sam_flowspace_tags  1 if SFF specific SAM tags are to be outputted, 0 otherwise
   @param  bidirectional  1 if a bidirectional SAM tag is to be added, 0 otherwise
   @param  refseq        pointer to the reference sequence (forward)
   @param  end_num       0 if there is no mate (all mate params ignored), 1 if the mate is the first fragment, 2 if the mate is the last fragment
@@ -49,7 +49,7 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq,
   @param  m_pos         the mates position (zero-based), 0 otherwise
   */
 inline void
-tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, int32_t bidirectional, tmap_refseq_t *refseq,
+tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_tags, int32_t bidirectional, tmap_refseq_t *refseq,
                         uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, 
                         uint32_t m_strand, uint32_t m_seqid, uint32_t m_pos);
 
@@ -58,7 +58,7 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
   prints out a mapped SAM record 
   @param  fp          the file pointer to which to print
   @param  seq         the sequence that is mapped
-  @param  sam_sff_tags  1 if SFF specific SAM tags are to be outputted, 0 otherwise
+  @param  sam_flowspace_tags  1 if SFF specific SAM tags are to be outputted, 0 otherwise
   @param  bidirectional  1 if a bidirectional SAM tag is to be added, 0 otherwise
   @param  seq_eq      1 if the SEQ field is to use '=' symbols, 0 otherwise
   @param  refseq      pointer to the reference sequence (forward)
@@ -88,7 +88,7 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
   @details            the format should not include the MD tag, which will be outputted automatically
   */
 inline void
-tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, int32_t bidirectional, int32_t seq_eq, tmap_refseq_t *refseq,
+tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_tags, int32_t bidirectional, int32_t seq_eq, tmap_refseq_t *refseq,
                       uint8_t strand, uint32_t seqid, uint32_t pos, int32_t secondary,
                       uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, double m_num_std, uint32_t m_strand,
                       uint32_t m_seqid, uint32_t m_pos, uint32_t m_tlen,

@@ -577,7 +577,7 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
 
   // SAM header
   tmap_sam_print_header(tmap_file_stdout, index->refseq, (1 == num_ends) ? seqio[0] : NULL, 
-                        driver->opt->sam_rg, driver->opt->flow_order, driver->opt->key_seq, driver->opt->sam_sff_tags, driver->opt->argc, driver->opt->argv);
+                        driver->opt->sam_rg, driver->opt->flow_order, driver->opt->key_seq, driver->opt->sam_flowspace_tags, driver->opt->argc, driver->opt->argv);
 
   tmap_progress_print("processing reads");
   while(1) {
@@ -670,14 +670,14 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
           // write
           if(1 == num_ends) {
               tmap_map_sams_print(seq_buffer[0][i], index->refseq, records[i]->sams[0], 
-                                  0, NULL, driver->opt->sam_sff_tags, driver->opt->bidirectional, driver->opt->seq_eq);
+                                  0, NULL, driver->opt->sam_flowspace_tags, driver->opt->bidirectional, driver->opt->seq_eq);
           }
           else {
               for(j=0;j<num_ends;j++) {
                   tmap_map_sams_print(seq_buffer[j][i], index->refseq, records[i]->sams[j],
                                     (0 == j) ? 1 : ((num_ends-1 == j) ? 2 : 0),
                                     records[i]->sams[(j+1) % num_ends], 
-                                    driver->opt->sam_sff_tags, driver->opt->bidirectional, driver->opt->seq_eq);
+                                    driver->opt->sam_flowspace_tags, driver->opt->bidirectional, driver->opt->seq_eq);
               }
           }
           // free alignments

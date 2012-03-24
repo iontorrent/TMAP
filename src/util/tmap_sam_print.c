@@ -133,7 +133,7 @@ tmap_sam_parse_rg(char *rg, const char *fo, const char *ks, const char *pg)
 
 void
 tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, tmap_seq_io_t *seqio, char *sam_rg, 
-                      char *flow_order, char *key_seq, int32_t sam_sff_tags, int argc, char *argv[])
+                      char *flow_order, char *key_seq, int32_t sam_flowspace_tags, int argc, char *argv[])
 {
   int32_t i;
   // SAM header
@@ -146,7 +146,7 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, tmap_seq_io_t *seq
       }
   }
   // RG
-  if(NULL != seqio && 1 == sam_sff_tags) {
+  if(NULL != seqio && 1 == sam_flowspace_tags) {
       if(NULL != flow_order) { // this should not happen, since it should be checked upstream
           tmap_error("flow order was specified when using sam sff tags", Exit, OutOfRange);
       }
@@ -236,7 +236,7 @@ tmap_sam_print_fz_and_zf(tmap_file_t *fp, tmap_seq_t *seq)
 }
 
 inline void
-tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, int32_t bidirectional, tmap_refseq_t *refseq,
+tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_tags, int32_t bidirectional, tmap_refseq_t *refseq,
                       uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, 
                       uint32_t m_strand, uint32_t m_seqid, uint32_t m_pos)
 {
@@ -280,7 +280,7 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, 
                     tmap_sam_rg_id,
                     PACKAGE_NAME);
   // FZ and ZF
-  if(1 == sam_sff_tags) {
+  if(1 == sam_flowspace_tags) {
       tmap_sam_print_fz_and_zf(fp, seq);
   }
   if(1 == bidirectional) {
@@ -408,7 +408,7 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
 }
 
 inline void
-tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, int32_t bidirectional, int32_t seq_eq, tmap_refseq_t *refseq,
+tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_tags, int32_t bidirectional, int32_t seq_eq, tmap_refseq_t *refseq,
                       uint8_t strand, uint32_t seqid, uint32_t pos, int32_t aln_num,
                       uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, double m_num_std, uint32_t m_strand,
                       uint32_t m_seqid, uint32_t m_pos, uint32_t m_tlen,
@@ -530,7 +530,7 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_sff_tags, in
   if(1 < nh) tmap_file_fprintf(fp, "\tNH:i:%d", nh);
   
   // FZ and ZF
-  if(1 == sam_sff_tags) {
+  if(1 == sam_flowspace_tags) {
       tmap_sam_print_fz_and_zf(fp, seq);
   }
 

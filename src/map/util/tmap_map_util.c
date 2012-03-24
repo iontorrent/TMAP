@@ -312,7 +312,7 @@ tmap_map_sam_copy_and_nullify(tmap_map_sam_t *dest, tmap_map_sam_t *src)
 }
 
 static void
-tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, int32_t sam_sff_tags, int32_t bidirectional, int32_t seq_eq, 
+tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, int32_t sam_flowspace_tags, int32_t bidirectional, int32_t seq_eq, 
                    int32_t nh, int32_t aln_num, int32_t end_num, int32_t mate_unmapped, tmap_map_sam_t *mate)
 {
   int64_t mate_strand, mate_seqid, mate_pos, mate_tlen;
@@ -324,7 +324,7 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
       mate_pos = mate->pos;
   }
   if(NULL == sam) { // unmapped
-      tmap_sam_print_unmapped(tmap_file_stdout, seq, sam_sff_tags, bidirectional, refseq,
+      tmap_sam_print_unmapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, refseq,
                               end_num, mate_unmapped, 0,
                               mate_strand, mate_seqid, mate_pos);
   }
@@ -352,7 +352,7 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
       }
       switch(sam->algo_id) {
         case TMAP_MAP_ALGO_MAP1:
-          tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, bidirectional, seq_eq, refseq, 
+          tmap_sam_print_mapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
                                 sam->strand, sam->seqid, sam->pos, aln_num,
                                 end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
                                 mate_strand, mate_seqid, mate_pos, mate_tlen,
@@ -361,7 +361,7 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
           break;
         case TMAP_MAP_ALGO_MAP2:
           if(0 < sam->aux.map2_aux->XI) {
-              tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, bidirectional, seq_eq, refseq, 
+              tmap_sam_print_mapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
                                     sam->strand, sam->seqid, sam->pos, aln_num,
                                     end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
                                     mate_strand, mate_seqid, mate_pos, mate_tlen,
@@ -374,7 +374,7 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
                                     sam->aux.map2_aux->XI);
           }
           else {
-              tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, bidirectional, seq_eq, refseq, 
+              tmap_sam_print_mapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
                                     sam->strand, sam->seqid, sam->pos, aln_num,
                                     end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
                                     mate_strand, mate_seqid, mate_pos, mate_tlen,
@@ -387,7 +387,7 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
           }
           break;
         case TMAP_MAP_ALGO_MAP3:
-          tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, bidirectional, seq_eq, refseq, 
+          tmap_sam_print_mapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
                                 sam->strand, sam->seqid, sam->pos, aln_num,
                                 end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
                                 mate_strand, mate_seqid, mate_pos, mate_tlen,
@@ -400,7 +400,7 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
                                 sam->seed_end);
           break;
         case TMAP_MAP_ALGO_MAP4:
-          tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, bidirectional, seq_eq, refseq, 
+          tmap_sam_print_mapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
                                 sam->strand, sam->seqid, sam->pos, aln_num,
                                 end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
                                 mate_strand, mate_seqid, mate_pos, mate_tlen,
@@ -410,7 +410,7 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
                                 sam->score_subo);
           break;
         case TMAP_MAP_ALGO_MAPVSW:
-          tmap_sam_print_mapped(tmap_file_stdout, seq, sam_sff_tags, bidirectional, seq_eq, refseq, 
+          tmap_sam_print_mapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
                                 sam->strand, sam->seqid, sam->pos, aln_num,
                                 end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
                                 mate_strand, mate_seqid, mate_pos, mate_tlen,
@@ -425,7 +425,7 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
 
 void 
 tmap_map_sams_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sams_t *sams, int32_t end_num,
-                    tmap_map_sams_t *mates, int32_t sam_sff_tags, int32_t bidirectional, int32_t seq_eq) 
+                    tmap_map_sams_t *mates, int32_t sam_flowspace_tags, int32_t bidirectional, int32_t seq_eq) 
 {
   int32_t i;
   tmap_map_sam_t *mate = NULL;
@@ -441,11 +441,11 @@ tmap_map_sams_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sams_t *sam
   }
   if(0 < sams->n) {
       for(i=0;i<sams->n;i++) {
-          tmap_map_sam_print(seq, refseq, &sams->sams[i], sam_sff_tags, bidirectional, seq_eq, sams->max, i, end_num, mate_unmapped, mate);
+          tmap_map_sam_print(seq, refseq, &sams->sams[i], sam_flowspace_tags, bidirectional, seq_eq, sams->max, i, end_num, mate_unmapped, mate);
       }
   }
   else {
-      tmap_map_sam_print(seq, refseq, NULL, sam_sff_tags, bidirectional, seq_eq, sams->max, 0, end_num, mate_unmapped, mate);
+      tmap_map_sam_print(seq, refseq, NULL, sam_flowspace_tags, bidirectional, seq_eq, sams->max, 0, end_num, mate_unmapped, mate);
   }
 }
 
