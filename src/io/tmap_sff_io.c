@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include "../util/tmap_alloc.h"
+#include "../util/tmap_definitions.h"
 #include "../seq/tmap_sff.h"
 #include "tmap_file.h"
 #include "tmap_sff_io.h"
@@ -81,4 +82,18 @@ tmap_sff_io_read_buffer(tmap_sff_io_t *sffio, tmap_sff_t **sff_buffer, int32_t b
   }
 
   return n;
+}
+
+char***
+tmap_sff_io_get_rg_header(tmap_sff_io_t *sffio, int32_t *n)
+{
+  char ***header = NULL;
+
+  *n = 1;
+  header = tmap_calloc(1, sizeof(char**), "header");
+  header[0] = tmap_calloc(TMAP_SAM_RG_NUM, sizeof(char*), "header[0]");
+  header[0][TMAP_SAM_RG_FO] = tmap_sff_io_get_rg_fo(sffio);
+  header[0][TMAP_SAM_RG_KS] = tmap_sff_io_get_rg_ks(sffio);
+
+  return header;
 }

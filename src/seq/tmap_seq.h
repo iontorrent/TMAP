@@ -177,4 +177,11 @@ tmap_seq_get_flowgram(tmap_seq_t *seq, uint16_t **flowgram, int32_t mem);
 int32_t
 tmap_seq_get_flow_start_index(tmap_seq_t *seq);
 
+/*!
+  @param  seq      pointer to the structure 
+  @return          the rg id, NULL if not available
+*/
+char*
+tmap_seq_get_rg_id(tmap_seq_t *seq);
+
 #endif

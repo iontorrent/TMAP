@@ -18,12 +18,19 @@
  */
 typedef struct {
     bam1_t *b; /*!< the SAM/BAM structure */
-    struct _tmap_sam_io_t *io; /*!< the file from which this SAM was read */
+    const char *fo; /*!< the key sequence associated with this structure */
+    const char *ks; /*!< the flow order associated with this structure */
+    const char *rg_id; /*!< the read group identifier */
+    uint16_t *flowgram; /*!< the flowgram */
+    int32_t flowgram_len; /*!< the flowgram length */
+    int32_t flow_start_index; /*!< the first template base in the flowgram */
     tmap_string_t *name;  /*!< the name string */
     tmap_string_t *seq;  /*!< the sequence string */
     tmap_string_t *qual;  /*!< the quality string */
     int32_t is_int;  /*!< 1 if the sequence is in integer format, 0 otherwise  */
 } tmap_sam_t;
+
+#include "../io/tmap_sam_io.h"
 
 /*! 
   initializes sequence read structure
@@ -96,6 +103,14 @@ inline tmap_string_t *
 tmap_sam_get_qualities(tmap_sam_t *sam);
 
 /*!
+  initializes the flow space information, if any, for this read
+  @param  sam  a pointer to a sequence structure
+  @param  samio  a pointer to the sam io structure
+ */
+void
+tmap_sam_update_flow_info(tmap_sam_t *sam, tmap_sam_io_t *samio);
+
+/*!
   @param  sam        pointer to the structure 
   @param  flow_order a pointer to where the flow order should be stored 
   @return            the length of the flow order
@@ -126,6 +141,13 @@ tmap_sam_get_flowgram(tmap_sam_t *sam, uint16_t **flowgram, int32_t mem);
  */
 int32_t
 tmap_sam_get_flow_start_index(tmap_sam_t *sam);
+
+/*!
+  @param  sam      pointer to the structure 
+  @return          the rg id, NULL if not available
+*/
+char*
+tmap_sam_get_rg_id(tmap_sam_t *sam);
 
 #endif
 

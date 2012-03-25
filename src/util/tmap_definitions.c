@@ -36,6 +36,8 @@ static char *algo_id_to_name[17] = {
     "global options"
 };
 
+const char *TMAP_SAM_RG_TAGS[TMAP_SAM_RG_NUM] = {"ID", "CN", "DS", "DT", "FO", "KS", "LB", "PG", "PI", "PL", "PU", "SM"};
+
 char*
 tmap_algo_id_to_name(uint16_t algo_id)
 {

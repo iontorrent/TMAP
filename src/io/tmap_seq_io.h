@@ -30,79 +30,6 @@ typedef struct {
   } io;
 } tmap_seq_io_t;
 
-/*!
-  @param  seqio  a pointer to a previously initialized sequence structure
-  @return the ID tag for the SAM Header
-  */
-char*
-tmap_seq_io_get_rg_id(tmap_seq_io_t *io);
-/*!
-  @param  seqio  a pointer to a previously initialized sequence structure
-  @return the CN tag for the SAM Header
-  */
-char*
-tmap_seq_io_get_rg_cn(tmap_seq_io_t *io);
-/*!
-  @param  seqio  a pointer to a previously initialized sequence structure
-  @return the DS tag for the SAM Header
-  */
-char*
-tmap_seq_io_get_rg_ds(tmap_seq_io_t *io);
-/*!
-  @param  seqio  a pointer to a previously initialized sequence structure
-  @return the DT tag for the SAM Header
-  */
-char*
-tmap_seq_io_get_rg_dt(tmap_seq_io_t *io);
-/*!
-  @param  seqio  a pointer to a previously initialized sequence structure
-  @return the FO tag for the SAM Header
-  */
-char*
-tmap_seq_io_get_rg_fo(tmap_seq_io_t *io);
-/*!
-  @param  seqio  a pointer to a previously initialized sequence structure
-  @return the KS tag for the SAM Header
-  */
-char*
-tmap_seq_io_get_rg_ks(tmap_seq_io_t *io);
-/*!
-  @param  seqio  a pointer to a previously initialized sequence structure
-  @return the LB tag for the SAM Header
-  */
-char*
-tmap_seq_io_get_rg_lb(tmap_seq_io_t *io);
-/*!
-  @param  seqio  a pointer to a previously initialized sequence structure
-  @return the PG tag for the SAM Header
-  */
-char*
-tmap_seq_io_get_rg_pg(tmap_seq_io_t *io);
-/*!
-  @param  seqio  a pointer to a previously initialized sequence structure
-  @return the PI tag for the SAM Header
-  */
-char*
-tmap_seq_io_get_rg_pi(tmap_seq_io_t *io);
-/*!
-  @param  seqio  a pointer to a previously initialized sequence structure
-  @return the PL tag for the SAM Header
-  */
-char*
-tmap_seq_io_get_rg_pl(tmap_seq_io_t *io);
-/*!
-  @param  seqio  a pointer to a previously initialized sequence structure
-  @return the PU tag for the SAM Header
-  */
-char*
-tmap_seq_io_get_rg_pu(tmap_seq_io_t *io);
-/*!
-  @param  seqio  a pointer to a previously initialized sequence structure
-  @return the SM tag for the SAM Header
-  */
-char*
-tmap_seq_io_get_rg_sm(tmap_seq_io_t *io);
-
 /*! 
   initializes input/output structure
   @param  fn           the file name of the input/output
@@ -148,5 +75,13 @@ tmap_seq_io_read_buffer(tmap_seq_io_t *io, tmap_seq_t **seq_buffer, int32_t buff
   */
 int
 tmap_seq_io_sff2fq_main(int argc, char *argv[]);
+
+/*!
+  @param  io  a pointer to a previously initialized sequence structure
+  @param  n     stores the number of rg ids 
+  @return   the header structure (rg-ids x rg tags)
+ */
+char***
+tmap_seq_io_get_rg_header(tmap_seq_io_t *io, int32_t *n);
 
 #endif

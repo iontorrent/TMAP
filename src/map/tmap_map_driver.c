@@ -369,7 +369,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
               for(j=0;j<num_ends;j++) { // for each end
                   records[low]->sams[j] = tmap_map_util_sw_gen_cigar(index->refseq, records[low]->sams[j], seqs[j], stage->opt);
                   if(0 < records[low]->sams[j]->n) {
-                      //stage_stat->num_with_mapping++;
+                      stage_stat->num_with_mapping++;
                       found = 1;
                   }
               }
@@ -395,7 +395,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
           if(1 == driver->opt->aln_flowspace) {
               for(i=0;i<num_ends;i++) {
                   if(0 < records[low]->sams[i]->n) {
-                      stat->num_with_mapping++;
+                      //stat->num_with_mapping++;
                       // re-align the alignments in flow-space
                       if(NULL != fs) {
                           tmap_seq_t *seq = seq_buffer[i][low];
@@ -567,6 +567,7 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
 
   tmap_progress_print("processing reads");
   while(1) {
+      tmap_progress_print("loading reads");
       // get the reads
       seq_buffer_length = tmap_seq_io_read_buffer(seqio[0], seq_buffer[0], reads_queue_size);
       for(i=1;i<num_ends;i++) {

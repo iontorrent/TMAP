@@ -11,53 +11,6 @@
 #include "tmap_sff_io.h"
 #include "tmap_seq_io.h"
 
-#ifdef HAVE_SAMTOOLS 
-#define tmap_seq_io_get_rg_tag(_name) \
-       char* tmap_seq_io_get_rg_##_name(tmap_seq_io_t *io) { \
-           switch(io->type) { \
-             case TMAP_SEQ_TYPE_FQ: \
-               return NULL; \
-             case TMAP_SEQ_TYPE_SFF: \
-               return tmap_sff_io_get_rg_##_name(io->io.sffio); \
-             case TMAP_SEQ_TYPE_SAM: \
-             case TMAP_SEQ_TYPE_BAM: \
-               return tmap_sam_io_get_rg_##_name(io->io.samio); \
-               break; \
-             default: \
-               tmap_error("type is unrecognized", Exit, OutOfRange); \
-               break; \
-           } \
-           return NULL; \
-       }
-#else
-#define tmap_seq_io_get_rg_tag(_name) \
-       char* tmap_seq_io_get_rg_##_name(tmap_seq_io_t *io) { \
-           switch(io->type) { \
-             case TMAP_SEQ_TYPE_FQ: \
-               return NULL; \
-             case TMAP_SEQ_TYPE_SFF: \
-               return tmap_sff_io_get_rg_##_name(io->io.sffio); \
-             default: \
-               tmap_error("type is unrecognized", Exit, OutOfRange); \
-               break; \
-           } \
-           return NULL; \
-       }
-#endif 
-
-tmap_seq_io_get_rg_tag(id)
-tmap_seq_io_get_rg_tag(cn)
-tmap_seq_io_get_rg_tag(ds)
-tmap_seq_io_get_rg_tag(dt)
-tmap_seq_io_get_rg_tag(fo)
-tmap_seq_io_get_rg_tag(ks)
-tmap_seq_io_get_rg_tag(lb)
-tmap_seq_io_get_rg_tag(pg)
-tmap_seq_io_get_rg_tag(pi)
-tmap_seq_io_get_rg_tag(pl)
-tmap_seq_io_get_rg_tag(pu)
-tmap_seq_io_get_rg_tag(sm)
-
 static inline tmap_file_t *
 tmap_seq_io_open(const char *fn, int32_t out_type, int32_t compression)
 {
@@ -355,4 +308,28 @@ tmap_seq_io_sff2sam_main(int argc, char *argv[])
   tmap_file_fclose(tmap_file_stdout);
 
   return 0;
+}
+
+char ***
+tmap_seq_io_get_rg_header(tmap_seq_io_t *io, int32_t *n)
+{
+  switch(io->type) {
+    case TMAP_SEQ_TYPE_FQ:
+      *n = 0;
+      return NULL;
+    case TMAP_SEQ_TYPE_SFF:
+      return tmap_sff_io_get_rg_header(io->io.sffio, n);
+      break;
+#ifdef HAVE_SAMTOOLS
+    case TMAP_SEQ_TYPE_SAM:
+    case TMAP_SEQ_TYPE_BAM:
+      return tmap_sam_io_get_rg_header(io->io.samio, n);
+      break;
+#endif
+    default:
+      tmap_error("type is unrecognized", Exit, OutOfRange);
+      break;
+  }
+  *n = 0;
+  return NULL;
 }

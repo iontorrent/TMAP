@@ -153,6 +153,25 @@ extern uint8_t tmap_iupac_char_to_bit_string[256];
   */
 extern char tmap_iupac_int_to_char[17];
 
+enum {
+    TMAP_SAM_RG_ID=0,
+    TMAP_SAM_RG_CN,
+    TMAP_SAM_RG_DS,
+    TMAP_SAM_RG_DT,
+    TMAP_SAM_RG_FO,
+    TMAP_SAM_RG_KS,
+    TMAP_SAM_RG_LB,
+    TMAP_SAM_RG_PG,
+    TMAP_SAM_RG_PI,
+    TMAP_SAM_RG_PL,
+    TMAP_SAM_RG_PU,
+    TMAP_SAM_RG_SM,
+    TMAP_SAM_RG_NUM
+};
+
+extern const char *TMAP_SAM_RG_TAGS[TMAP_SAM_RG_NUM];
+
+
 /*! 
   @param  c  the quality value in ASCII format
   @return    the quality value in integer format

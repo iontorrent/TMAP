@@ -124,4 +124,12 @@ tmap_sff_io_read(tmap_sff_io_t *sffio, tmap_sff_t *sff);
 int
 tmap_sff_io_read_buffer(tmap_sff_io_t *sffio, tmap_sff_t **sff_buffer, int32_t buffer_length);
 
+/*!
+  @param  sffio  a pointer to a previously initialized sff structure
+  @param  n     stores the number of rg ids 
+  @return   the header structure (rg-ids x rg tags)
+ */
+char***
+tmap_sff_io_get_rg_header(tmap_sff_io_t *sffio, int32_t *n);
+
 #endif

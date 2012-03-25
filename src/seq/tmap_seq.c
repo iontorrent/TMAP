@@ -417,3 +417,23 @@ tmap_seq_get_flow_start_index(tmap_seq_t *seq)
   }
   return -1;
 }
+
+char*
+tmap_seq_get_rg_id(tmap_seq_t *seq)
+{
+  switch(seq->type) {
+    case TMAP_SEQ_TYPE_FQ:
+    case TMAP_SEQ_TYPE_SFF:
+      return NULL;
+#ifdef HAVE_SAMTOOLS
+    case TMAP_SEQ_TYPE_SAM:
+    case TMAP_SEQ_TYPE_BAM:
+      return tmap_sam_get_rg_id(seq->data.sam);
+      break;
+#endif
+    default:
+      tmap_error("type is unrecognized", Exit, OutOfRange);
+      break;
+  }
+  return NULL;
+}

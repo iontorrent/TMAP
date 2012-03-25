@@ -8,6 +8,7 @@
 #include "../util/tmap_error.h"
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_progress.h"
+#include "../util/tmap_definitions.h"
 #include "../seq/tmap_sam.h"
 #include "tmap_file.h"
 #include "tmap_sam_io.h"
@@ -24,10 +25,8 @@ extern char *bam_nt16_rev_table;
 static inline tmap_sam_io_t *
 tmap_sam_io_init_helper(const char *fn, int32_t is_bam)
 {
-  static char *rg_tags[] = {"ID", "CN", "DS", "DT", "FO", "KS", "LB", "PG", "PI", "PL", "PU", "SM"};
   tmap_sam_io_t *samio = NULL;
-  char **p = NULL;
-  int32_t i, n;
+  int32_t i;
 
   // initialize memory
   samio = tmap_calloc(1, sizeof(tmap_sam_io_t), "samio");
@@ -46,16 +45,15 @@ tmap_sam_io_init_helper(const char *fn, int32_t is_bam)
       tmap_error("Found no @SQ lines in the SAM header", Exit, OutOfRange);
   }
 
-  sam_header_parse(samio->fp->header);
-  for(i=0;i<12;i++) {
-      p = sam_header2list(samio->fp->header->dict, "RG", rg_tags[i], &n);
-      if(1 == n) samio->rg_tags[i] = p[0];
-      else if(1 < n) {
-          tmap_error("Found more than one tag in the RG in the SAM header", Exit, OutOfRange);
-      }
-      else samio->rg_tags[i] = NULL;
-      free(p); p = NULL;
+  // create the rg tables
+  samio->rg_tbls = tmap_calloc(TMAP_SAM_RG_NUM, sizeof(void*), "samio->rg_tabls");
+  if(NULL == samio->fp->header->dict) samio->fp->header->dict = sam_header_parse2(samio->fp->header->text); // parse the header dictionary
+  for(i=0;i<TMAP_SAM_RG_NUM;i++) {
+      // table that goes from RG id to tag value
+      samio->rg_tbls[i] = sam_header2tbl(samio->fp->header->dict, "RG", "ID", (char*)TMAP_SAM_RG_TAGS[i]);
   }
+  // table of rg ids
+  samio->rg_ids = sam_header2list(samio->fp->header->dict, "RG", (char*)TMAP_SAM_RG_TAGS[TMAP_SAM_RG_ID], &samio->rg_ids_num);
 
   return samio;
 }
@@ -75,8 +73,26 @@ tmap_bam_io_init(const char *fn)
 void
 tmap_sam_io_destroy(tmap_sam_io_t *samio)
 {
+  int32_t i;
+  for(i=0;i<TMAP_SAM_RG_NUM;i++) {
+      sam_tbl_destroy(samio->rg_tbls[i]);
+  }
+  free(samio->rg_tbls);
+  free(samio->rg_ids);
   samclose(samio->fp);
   free(samio);
+}
+
+static void
+tmap_sam_io_update_string(tmap_string_t **dst, char *src, int32_t len)
+{
+  if(NULL == (*dst)) (*dst) = tmap_string_init(len+1);
+  else if((*dst)->m < len + 1) {
+      tmap_string_destroy((*dst));
+      (*dst) = tmap_string_init(len+1);
+  }
+  if(NULL != src) memcpy((*dst)->s, src, len);
+  (*dst)->l = len;
 }
 
 int32_t
@@ -94,26 +110,23 @@ tmap_sam_io_read(tmap_sam_io_t *samio, tmap_sam_t *sam)
       // name
       str = bam1_qname(sam->b);
       len = strlen(str);
-      sam->name = tmap_string_init(len+1);
-      memcpy(sam->name->s, str, len+1);
-      sam->name->l = len;
+      tmap_sam_io_update_string(&sam->name, str, len);
+      sam->name->s[len] = '\0';
       // seq and qual
       len = sam->b->core.l_qseq;
-      sam->seq = tmap_string_init(len+1);
-      sam->qual = tmap_string_init(len+1);
-      memcpy(sam->qual->s, (char*)bam1_qual(sam->b), len);
+      tmap_sam_io_update_string(&sam->seq, NULL, len);
+      tmap_sam_io_update_string(&sam->qual, (char*)bam1_qual(sam->b), len);
       for(i=0;i<len;i++) {
           sam->seq->s[i] = bam_nt16_rev_table[bam1_seqi(bam1_seq(sam->b), i)];
           sam->qual->s[i] = QUAL2CHAR(sam->qual->s[i]);
       }
-      sam->seq->l = sam->qual->l = len;
       sam->seq->s[len] = sam->qual->s[len] = '\0';
       // reverse compliment if necessary
       if((sam->b->core.flag & BAM_FREVERSE)) {
           tmap_sam_reverse_compliment(sam);
       }
       // save for later
-      sam->io = samio;
+      tmap_sam_update_flow_info(sam, samio);
       return 1;
   }
   
@@ -133,4 +146,30 @@ tmap_sam_io_read_buffer(tmap_sam_io_t *samio, tmap_sam_t **sam_buffer, int32_t b
 
   return n;
 }
+
+char***
+tmap_sam_io_get_rg_header(tmap_sam_io_t *samio, int32_t *n)
+{
+  int32_t i, j;
+  char ***header = NULL;
+  char *rg_id = NULL;
+
+  if(0 == samio->rg_ids_num) {
+      *n = 0;
+      return NULL;
+  }
+
+  *n = samio->rg_ids_num;
+  header = tmap_calloc(samio->rg_ids_num, sizeof(char**), "header");
+  for(i=0;i<samio->rg_ids_num;i++) { // for each rg id
+      header[i] = tmap_calloc(TMAP_SAM_RG_NUM, sizeof(char*), "header[i]");
+      rg_id = samio->rg_ids[i];
+      for(j=0;j<TMAP_SAM_RG_NUM;j++) { // for each tag
+          header[i][j] = (char*)sam_tbl_get(samio->rg_tbls[j], (const char*)rg_id);
+      }
+  }
+
+  return header;
+}
+
 #endif

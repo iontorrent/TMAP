@@ -18,151 +18,96 @@
 #include "../sw/tmap_sw.h"
 #include "tmap_sam_print.h"
 
-static char tmap_sam_rg_id[1024]="ID";
+static char tmap_sam_rg_id[1024]="NOID";
+static int32_t tmap_sam_rg_id_use = 0;
 
-#define TMAP_SAM_PRINT_RG_HEADER_TAGS 12
+#define TMAP_SAM_NO_RG_SM "NOSM"
 
-// Notes: we could add all the tags as input
-static void
-tmap_sam_parse_rg2(tmap_file_t *fp, char *rg, const char **tags)
+static char **
+tmap_sam_parse_rg(char *rg)
 {
-  static int32_t pg_warned = 0;
-  int32_t i, j, len, tag_i, rg_mem = 0;
-  // ID, CN, DS, DT, LB, PG, PI, PL, PU, SM
-  int32_t tags_found[TMAP_SAM_PRINT_RG_HEADER_TAGS] = {0,0,0,0,0,0,0,0,0,0,0,0};
-  char *tags_name[TMAP_SAM_PRINT_RG_HEADER_TAGS] = {"ID","CN","DS","DT","FO","KS","LB","PG","PI","PL","PU","SM"};
-  char *tags_value[TMAP_SAM_PRINT_RG_HEADER_TAGS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+  char **header = NULL;
+  int32_t i, j, len, tag_i;
+  int32_t tags_found[TMAP_SAM_RG_NUM];
+  int32_t num_found = 0; 
 
-  if(NULL != rg) {
-      len = strlen(rg);
-      rg_mem = len+1;
+  if(NULL == rg) return NULL;
 
-      // convert strings of "\t" to tab characters '\t'
-      for(i=0;i<len-1;i++) {
-          if(rg[i] == '\\' && rg[i+1] == 't') {
-              rg[i] = '\t';
-              // shift down
-              for(j=i+1;j<len-1;j++) {
-                  rg[j] = rg[j+1];
-              }
-              len--;
-              rg[len]='\0';
+  header = tmap_calloc(TMAP_SAM_RG_NUM, sizeof(char*), "header");
+
+  len = strlen(rg);
+
+  // init
+  for(i=0;i<TMAP_SAM_RG_NUM;i++) {
+      tags_found[i] = 0;
+  }
+
+  // convert strings of "\t" to tab characters '\t'
+  for(i=0;i<len-1;i++) {
+      if(rg[i] == '\\' && rg[i+1] == 't') {
+          rg[i] = '\t';
+          // shift down
+          for(j=i+1;j<len-1;j++) {
+              rg[j] = rg[j+1];
           }
+          len--;
+          rg[len]='\0';
       }
+  }
 
-      // must have at least "@RG\t"
-      if(len < 4
-         || 0 != strncmp(rg, "@RG\t", 4)) {
-          tmap_error("Malformed RG line", Exit, OutOfRange);
-      }
-      i = 3;
+  // must have at least "@RG\t"
+  if(len < 4
+     || 0 != strncmp(rg, "@RG\t", 4)) {
+      tmap_error("Malformed RG line", Exit, OutOfRange);
+  }
+  i = 3;
 
-      while(i<len) {
-          if('\t' == rg[i]) {
-              i++; // move past the tab
-              if(len <= i+2) { // must have "XX:" 
-                  tmap_error("Improper tag in the RG line", Exit, OutOfRange);
-              }
-              for(tag_i=0;tag_i<TMAP_SAM_PRINT_RG_HEADER_TAGS;tag_i++) {
-                  if(tags_name[tag_i][0] == rg[i] && tags_name[tag_i][1] == rg[i+1]) { // found!
-                      if(tags[tag_i] != NULL) {
-                          tmap_file_fprintf(tmap_file_stderr, "\n%s tag not allowed in the RG line\n", tags_name[tag_i]);
-                          tmap_error(NULL, Exit, OutOfRange);
-                      }
-                      tags_found[tag_i]++;
-                      // copy over
-                      if(1 < tags_found[i]) {
-                          tmap_file_fprintf(tmap_file_stderr, "\nFound multiple %s tags for the RG SAM header\n", tags_name[tag_i]);
-                          tmap_error(NULL, Exit, OutOfRange);
-                      }
-                      else { // 1 == tags_found[tag_i]
-                          tags_value[tag_i] = tmap_malloc(sizeof(char) * (len + 1), "tags_value[tag_i]");
-                          for(j=i;j<len && '\t' != rg[j];j++) {
-                              tags_value[tag_i][j-i] = rg[j];
-                          }
-                          if(j - i <= 3) {
-                              tmap_file_fprintf(tmap_file_stderr, "\nFound an empty tag in the RG SAM header: %s\n", tags_name[tag_i]);
-                              tmap_error(NULL, Exit, OutOfRange);
-                          }
-                          tags_value[tag_i][j-i] = '\0';
-                      }
-
+  while(i<len) {
+      if('\t' == rg[i]) {
+          i++; // move past the tab
+          if(len <= i+2) { // must have "XX:" 
+              tmap_error("Improper tag in the RG line", Exit, OutOfRange);
+          }
+          for(tag_i=0;tag_i<TMAP_SAM_RG_NUM;tag_i++) {
+              if(TMAP_SAM_RG_TAGS[tag_i][0] == rg[i] && TMAP_SAM_RG_TAGS[tag_i][1] == rg[i+1]) { // found!
+                  tags_found[tag_i]++;
+                  num_found++;
+                  // copy over
+                  if(1 < tags_found[tag_i]) {
+                      tmap_file_fprintf(tmap_file_stderr, "\nFound multiple %s tags for the RG SAM header.\n", TMAP_SAM_RG_TAGS[tag_i]);
+                      tmap_error(NULL, Exit, OutOfRange);
                   }
+                  else { // 1 == tags_found[tag_i]
+                      int32_t l = 0;
+                      // get length
+                      for(j=i+3;j<len && '\t' != rg[j];j++) {
+                          l++;
+                      }
+                      if(l <= 0) {
+                          tmap_file_fprintf(tmap_file_stderr, "\nFound an empty tag in the RG SAM header: %s.\n", TMAP_SAM_RG_TAGS[tag_i]);
+                          tmap_error(NULL, Exit, OutOfRange);
+                      }
+                      header[tag_i] = tmap_malloc(sizeof(char) * (1 + l), "header[tag_i]");
+                      for(j=0;j<l;j++) {
+                          header[tag_i][j] = rg[j + i + 3];
+                      }
+                      header[tag_i][l] = '\0';
+                      i += l + 3 - 1; // subtract one since below we add one to i
+                  }
+                  break;
               }
-              if(j == TMAP_SAM_PRINT_RG_HEADER_TAGS) {
-                  tmap_error("Improper tag in the RG line", Exit, OutOfRange);
-              }
           }
-          i++;
-      }
-  }
-
-  // copy over the input tags
-  for(tag_i=0;tag_i<TMAP_SAM_PRINT_RG_HEADER_TAGS;tag_i++) {
-      if(NULL != tags[tag_i]) {
-          if(NULL != tags_value[tag_i]) tmap_bug(); // should be checked above
-          // copy ver
-          len = strlen(tags[tag_i]);
-          if(len <= 0) {
-              tmap_file_fprintf(tmap_file_stderr, "\nFound an empty tag in the RG SAM header: %s\n", tags[tag_i]);
-              tmap_error(NULL, Exit, OutOfRange);
+          if(TMAP_SAM_RG_NUM == tag_i) {
+              tmap_error("Improper tag in the RG line", Exit, OutOfRange);
           }
-          tags_value[tag_i] = tmap_malloc(sizeof(char) * (len + 1), "tags_value[tag_i]");
-          strcpy(tags_value[tag_i], tags[tag_i]);
-          tags_found[tag_i] = 1;
       }
+      i++;
   }
-
-  // copy over the id
-  if(NULL != tags_value[0]) { // ID
-      strcpy(tmap_sam_rg_id, tags_value[0]);
+  if(0 == num_found) {
+      free(header);
+      return NULL;
   }
-  else {
-      tags_value[0] = tmap_malloc(sizeof(char) * (strlen(tmap_sam_rg_id) + 1), "tags_value[0]");
-      strcpy(tags_value[0], tmap_sam_rg_id);
-      tags_found[0] = 1;
-  }
-
-  if(tags_value[7] != NULL) {
-      if(0 == pg_warned) {
-          if(tags[7] != NULL) {
-              tmap_error("PG specified in the input file's RG; ignoring...", Warn, OutOfRange);
-          }
-          else {
-              tmap_error("PG specified in the command line RG; ignoring...", Warn, OutOfRange);
-          }
-          pg_warned = 1;
-      }
-      free(tags_value[7]);
-      tags_value[7] = NULL;
-  }
-  tags_value[7] = tmap_malloc(sizeof(char) * (strlen(PACKAGE_NAME) + 1), "tags_value[7]");
-  strcpy(tags_value[7], PACKAGE_NAME);
-  
-
-  // print the RG string
-  tmap_file_fprintf(fp, "@RG");
-  for(i=0;i<TMAP_SAM_PRINT_RG_HEADER_TAGS;i++) {
-      if(1 == tags_found[i]) {
-          tmap_file_fprintf(fp, "\t%s:%s",
-                            tags_name[i],
-                            tags_value[i]);
-          free(tags_value[i]);
-          tags_value[i] = NULL;
-      }
-  }
-  tmap_file_fprintf(fp, "\n");
-}
-
-static void
-tmap_sam_parse_rg(tmap_file_t *fp, char *rg, 
-                  const char *id, const char *cn, const char *ds,
-                  const char *dt, const char *fo, const char *ks,
-                  const char *lb, const char *pg, const char *pi,
-                  const char *pl, const char *pu, const char *sm)
-{
-  const char *tags_name[TMAP_SAM_PRINT_RG_HEADER_TAGS] = {id, cn, ds, dt, fo, ks, lb, pg, pi, pl, pu, sm};
-  return tmap_sam_parse_rg2(fp, rg, tags_name);
+  return header;
 }
 
 void
@@ -170,7 +115,10 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, tmap_seq_io_t *seq
                       int32_t sam_flowspace_tags, int32_t ignore_rg_sam_tags, 
                       int argc, char *argv[])
 {
-  int32_t i;
+  int32_t i, j, header_n = 0;
+  char **header_a = NULL;
+  char ***header_b = NULL;
+
   // SAM header
   tmap_file_fprintf(fp, "@HD\tVN:%s\tSO:unsorted\n",
                     TMAP_SAM_PRINT_VERSION);
@@ -181,41 +129,143 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, tmap_seq_io_t *seq
       }
   }
   // RG
-
-  // sft irst
-  if(1 == ignore_rg_sam_tags) {
-      if(1 == sam_flowspace_tags) {
-          // KS/FO only
-          tmap_sam_parse_rg(fp, sam_rg,
-                            NULL, NULL, NULL,
-                            NULL, tmap_seq_io_get_rg_fo(seqio), tmap_seq_io_get_rg_ks(seqio),
-                            NULL, NULL, NULL,
-                            NULL, NULL, NULL);
-      }
-      else { 
-          tmap_sam_parse_rg(fp, sam_rg,
-                            NULL, NULL, NULL,
-                            NULL, NULL, NULL,
-                            NULL, NULL, NULL,
-                            NULL, NULL, NULL);
+  header_a = tmap_sam_parse_rg(sam_rg); // parse the input read group line
+  if(1 == ignore_rg_sam_tags) { // do not get the header from the input file
+      if(1 == sam_flowspace_tags) { // ... except for the RG.FS/RG.KO
+          // get the RG header from the input file
+          header_b = tmap_seq_io_get_rg_header(seqio, &header_n);
+          if(1 < header_n) { 
+              // TODO: we could check to see that FO/KS are the same across all
+              // input read groups
+              tmap_error("Command line read group found with multiple read groups from the input file", Exit, OutOfRange);
+          }
+          else if(1 == header_n) {
+              if(NULL == header_a) {
+                  header_a = tmap_calloc(TMAP_SAM_RG_NUM, sizeof(char*), "header_a");
+                  // copy over default RG.ID
+                  header_a[TMAP_SAM_RG_ID] = tmap_malloc(sizeof(char) * (strlen(tmap_sam_rg_id) + 1), "header_a[TMAP_SAM_RG_ID]");
+                  strcpy(header_a[TMAP_SAM_RG_ID], tmap_sam_rg_id);
+              }
+              for(i=0;i<TMAP_SAM_RG_NUM;i++) { // for each RG.TAG
+                  switch(i) {
+                    case TMAP_SAM_RG_FO:
+                    case TMAP_SAM_RG_KS:
+                      if(NULL != header_a[i] && NULL != header_b[0][i]) {
+                          tmap_error("Command line and input read groups share tags", Exit, OutOfRange);
+                      }
+                      else if(NULL != header_b[0][i]) { // copy over
+                          header_a[i] = tmap_malloc(sizeof(char) * (strlen(header_b[0][i]) + 1), "header_a[i]");
+                          strcpy(header_a[i], header_b[0][i]);
+                      }
+                    default:
+                      break;
+                  }
+              }
+          }
+          // free header_b, it is no longer in use
+          for(i=0;i<header_n;i++) {
+              free(header_b[i]);
+          }
+          free(header_b);
+          header_b = NULL;
+          header_n = 0;
       }
   }
   else { 
-      // use all available tags
-      tmap_sam_parse_rg(fp, sam_rg,
-                        tmap_seq_io_get_rg_id(seqio),
-                        tmap_seq_io_get_rg_cn(seqio),
-                        tmap_seq_io_get_rg_ds(seqio),
-                        tmap_seq_io_get_rg_dt(seqio),
-                        tmap_seq_io_get_rg_fo(seqio),
-                        tmap_seq_io_get_rg_ks(seqio),
-                        tmap_seq_io_get_rg_lb(seqio),
-                        tmap_seq_io_get_rg_pg(seqio),
-                        tmap_seq_io_get_rg_pi(seqio),
-                        tmap_seq_io_get_rg_pl(seqio),
-                        tmap_seq_io_get_rg_pu(seqio),
-                        tmap_seq_io_get_rg_sm(seqio));
-  } 
+      // get the RG header from the input file
+      header_b = tmap_seq_io_get_rg_header(seqio, &header_n);
+  }
+
+  // reconcile the RG headers
+  if(NULL != header_a) { // header a exists
+      if(NULL != header_b && 1 == header_n) { // header b exists, and only one line...
+          // check to see if they are mutually exclusive
+          for(i=0;i<TMAP_SAM_RG_NUM;i++) {
+              if(NULL != header_a[i] && NULL != header_b[0][i]) {
+                  tmap_file_fprintf(tmap_file_stderr, "\nFound both command line and input file read group information for the same tag: %s.\n", TMAP_SAM_RG_TAGS[i]);
+                  tmap_error(NULL, Exit, OutOfRange);
+              }
+              else if(NULL == header_a[i] && NULL != header_b[0][i]) { // copy over
+                  header_a[i] = tmap_calloc(1+strlen(header_b[0][i]), sizeof(char), "header_a[i]");
+                  strcpy(header_a[i], header_b[0][i]);
+              }
+          }
+          // free
+          free(header_b[0]);
+          free(header_b);
+          header_b = NULL;
+          header_n = 0;
+      }
+      if(0 == header_n) { // no header b
+          if(NULL != header_a[TMAP_SAM_RG_ID]) {
+              strcpy(tmap_sam_rg_id, header_a[TMAP_SAM_RG_ID]);
+          }
+          else {
+              header_a[TMAP_SAM_RG_ID] = tmap_malloc(sizeof(char) * (strlen(tmap_sam_rg_id) + 1), "header_a[i]");
+              strcpy(header_a[TMAP_SAM_RG_ID], tmap_sam_rg_id);
+          }
+          if(NULL == header_a[TMAP_SAM_RG_SM]) { // for Picard
+              header_a[TMAP_SAM_RG_SM] = tmap_malloc(sizeof(char) * (strlen(TMAP_SAM_NO_RG_SM) + 1), "header_a[i]");
+              strcpy(header_a[TMAP_SAM_RG_SM], TMAP_SAM_NO_RG_SM);
+          }
+          tmap_sam_rg_id_use = 1;
+          tmap_file_fprintf(fp, "@RG");
+          for(i=0;i<TMAP_SAM_RG_NUM;i++) {
+              if(NULL != header_a[i]) {
+                  tmap_file_fprintf(fp, "\t%s:%s", TMAP_SAM_RG_TAGS[i], header_a[i]);
+              }
+          }
+          tmap_file_fprintf(fp, "\n");
+      }
+      else { // both header_a and header_b exist 
+          tmap_error("Found both command line and input file read group information", Exit, OutOfRange);
+      }
+  }
+  else { // no header_a exists
+      if(NULL != header_b) { // no header_b exists
+          tmap_sam_rg_id_use = 0;
+          for(i=0;i<header_n;i++) { // for each RG.ID
+              if(NULL == header_b[i][TMAP_SAM_RG_ID]) {
+                  if(1 == header_n && TMAP_SEQ_TYPE_SFF == seqio->type) { // make an exception for SFF files
+                      header_b[i][TMAP_SAM_RG_ID] = tmap_sam_rg_id;
+                      tmap_sam_rg_id_use = 1;
+                  }
+                  else {
+                      tmap_error("missing RG.ID found in the RG SAM Header", Exit, OutOfRange);
+                  }
+              }
+              // RG.SM for picard
+              if(NULL == header_b[i][TMAP_SAM_RG_SM]) {
+                  header_b[i][TMAP_SAM_RG_SM] = TMAP_SAM_NO_RG_SM;
+              }
+              tmap_file_fprintf(fp, "@RG");
+              for(j=0;j<TMAP_SAM_RG_NUM;j++) { // for each RG.TAG
+                  if(NULL != header_b[i][j]) {
+                      tmap_file_fprintf(fp, "\t%s:%s", TMAP_SAM_RG_TAGS[j], header_b[i][j]);
+                  }
+              }
+              tmap_file_fprintf(fp, "\n");
+          }
+      }
+      else {
+          header_a = tmap_calloc(TMAP_SAM_RG_NUM, sizeof(char*), "header_a");
+          // RG.ID
+          header_a[TMAP_SAM_RG_ID] = tmap_malloc(sizeof(char) * (strlen(tmap_sam_rg_id) + 1), "header_a[i]");
+          strcpy(header_a[TMAP_SAM_RG_ID], tmap_sam_rg_id);
+          // RG.SM for Picard
+          header_a[TMAP_SAM_RG_SM] = tmap_malloc(sizeof(char) * (strlen(TMAP_SAM_NO_RG_SM) + 1), "header_a[i]");
+          strcpy(header_a[TMAP_SAM_RG_SM], TMAP_SAM_NO_RG_SM);
+          tmap_sam_rg_id_use = 1;
+          tmap_file_fprintf(fp, "@RG");
+          for(i=0;i<TMAP_SAM_RG_NUM;i++) {
+              if(NULL != header_a[i]) {
+                  tmap_file_fprintf(fp, "\t%s:%s", TMAP_SAM_RG_TAGS[i], header_a[i]);
+              }
+          }
+          tmap_file_fprintf(fp, "\n");
+      }
+  }
+
   // PG
   tmap_file_fprintf(fp, "@PG\tID:%s\tVN:%s\tCL:",
                     PACKAGE_NAME, PACKAGE_VERSION);
@@ -224,6 +274,18 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, tmap_seq_io_t *seq
       tmap_file_fprintf(fp, "%s", argv[i]);
   }
   tmap_file_fprintf(fp, "\n");
+
+  // free
+  for(i=0;i<header_n;i++) {
+      free(header_b[i]);
+  }
+  free(header_b);
+  if(NULL != header_a) {
+      for(i=0;i<TMAP_SAM_RG_NUM;i++) {
+          free(header_a[i]);
+      }
+  }
+  free(header_a);
 }
 
 static inline void
@@ -233,6 +295,22 @@ tmap_sam_print_flowgram(tmap_file_t *fp, uint16_t *flowgram, int32_t length)
   tmap_file_fprintf(fp, "\tFZ:B:S");
   for(i=0;i<length;i++) {
       tmap_file_fprintf(fp, ",%u", flowgram[i]);
+  }
+}
+
+static inline void
+tmap_sam_print_rg(tmap_file_t *fp, tmap_seq_t *seq)
+{
+  // RG 
+  if(1 == tmap_sam_rg_id_use) {
+      tmap_file_fprintf(fp, "\tRG:Z:%s", tmap_sam_rg_id);
+  }
+  else if(0 == tmap_sam_rg_id_use) {
+      char *id = tmap_seq_get_rg_id(seq);
+      if(NULL == id) {
+          tmap_error("Missing Record RG.ID in the input file", Exit, OutOfRange);
+      }
+      tmap_file_fprintf(fp, "\tRG:Z:%s", id);
   }
 }
 
@@ -265,6 +343,7 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_
   bases = tmap_seq_get_bases(seq);
   qualities = tmap_seq_get_qualities(seq);
   
+  // set the flag
   flag = 0x4;
   if(0 < end_num) { // mate info
       flag |= 0x1;
@@ -276,6 +355,7 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_
 
   // name, flag, seqid, pos, mapq, cigar
   tmap_file_fprintf(fp, "%s\t%u\t*\t%u\t%u\t*", name->s, flag, 0, 0);
+
   // NB: hard clipped portions of the read is not reported
   // mate info
   if(0 == end_num) { // no mate
@@ -290,13 +370,17 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_
                         m_pos+1,
                         0);
   }
+
   // bases and qual
   tmap_file_fprintf(fp, "\t%s\t%s",
                     (0 == bases->l) ? "*" : bases->s, (0 == qualities->l) ? "*" : qualities->s);
-  // optional tags
-  tmap_file_fprintf(fp, "\tRG:Z:%s\tPG:Z:%s",
-                    tmap_sam_rg_id,
-                    PACKAGE_NAME);
+
+  // RG 
+  tmap_sam_print_rg(fp, seq);
+
+  // PG
+  tmap_file_fprintf(fp, "\tPG:Z:%s", PACKAGE_NAME);
+
   // FZ and ZF
   if(1 == sam_flowspace_tags) {
       tmap_sam_print_fz_and_zf(fp, seq);
@@ -533,10 +617,11 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_ta
       tmap_file_fprintf(fp, "\t%s\t%s", bases->s, (0 == qualities->l) ? "*" : qualities->s);
   }
   
-  // RG and PG
-  tmap_file_fprintf(fp, "\tRG:Z:%s\tPG:Z:%s",
-                    tmap_sam_rg_id,
-                    PACKAGE_NAME);
+  // RG 
+  tmap_sam_print_rg(fp, seq);
+
+  // PG
+  tmap_file_fprintf(fp, "\tPG:Z:%s", PACKAGE_NAME);
 
   // MD and NM
   tmap_file_fprintf(fp, "\tMD:Z:%s\tNM:i:%d", md->s, nm);

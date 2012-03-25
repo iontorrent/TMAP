@@ -1851,9 +1851,11 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->seq_eq, 0, 1, "-I");
 #ifdef HAVE_SAMTOOLS
   tmap_error_cmd_check_int(opt->ignore_rg_sam_tags, 0, 1, "-C");
+  /*
   if(0 == opt->ignore_rg_sam_tags && NULL != opt->sam_rg) {
-      tmap_error("Cannot use -C with -R", Exit, CommandLineArgument);
+      tmap_error("Must use -C with -R", Exit, CommandLineArgument);
   }
+  */
 #endif
   if(TMAP_FILE_BZ2_COMPRESSION == opt->output_compr
      && -1 == opt->reads_queue_size) {
