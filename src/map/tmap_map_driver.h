@@ -22,10 +22,17 @@ typedef int32_t (*tmap_map_driver_func_init)(void **data, tmap_refseq_t *refseq,
 /*!
   This function will be invoked before a thread begins process its sequences.
   @param  data  the thread persistent data
+  @param  flow_order the flow order
+  @param  flow_order_len the flow order length
+  @param  key_seq the flow order
+  @param  key_seq_len the flow order length
   @param  opt   the program options
   @return       0 upon success, non-zero otherwise
  */
-typedef int32_t (*tmap_map_driver_func_thread_init)(void **data, tmap_map_opt_t *opt);
+typedef int32_t (*tmap_map_driver_func_thread_init)(void **data, 
+                                                    uint8_t *flow_order, int32_t flow_order_len, 
+                                                    uint8_t *key_seq, int32_t key_seq_len, 
+                                                    tmap_map_opt_t *opt);
 
 /*!
   This function will be invoked to map a sequence.

@@ -44,6 +44,7 @@ tmap_map3_aux_core_seed_helper(uint8_t *query,
                                int32_t offset,
                                uint8_t *flow_order,
                                uint8_t flow_i,
+                               int32_t hp_diff,
                                tmap_refseq_t *refseq,
                                tmap_bwt_t *bwt,
                                tmap_sa_t *sa,
@@ -99,7 +100,7 @@ tmap_map3_aux_core_seed_helper(uint8_t *query,
           int32_t bases_to_align = seed_length - (i - offset + k);
           int32_t bases_left = query_length - i - n_bases;
           if(0 < n_bases - k // bases to delete
-             && n_bases - k <= opt->hp_diff // not too many to delete
+             && n_bases - k <= hp_diff // not too many to delete
              && (i != offset || 0 != k) // do not delete the entire flow
              && bases_to_align <= bases_left) { // enough bases 
               // match exactly from here onwards
@@ -122,7 +123,7 @@ tmap_map3_aux_core_seed_helper(uint8_t *query,
       if(i + n_bases < offset + seed_length) { // not the last flow
           cur_sa = next_sa; // already considered the 'n_bases' of this flow
           // insert
-          for(k=1;k<=opt->hp_diff;k++) { // # of bases to insert
+          for(k=1;k<=hp_diff;k++) { // # of bases to insert
               tmap_bwt_match_hash_2occ(bwt, &cur_sa, flow_order[flow_i], &tmp_sa, hash);
               if(tmp_sa.l < tmp_sa.k) { // no match, do not continue
                   break;
@@ -155,6 +156,7 @@ static inline void
 tmap_map3_aux_core_seed(uint8_t *query,
                         int32_t query_length,
                         uint8_t *flow_order,
+                        int32_t hp_diff,
                         tmap_refseq_t *refseq,
                         tmap_bwt_t *bwt,
                         tmap_sa_t *sa,
@@ -182,7 +184,7 @@ tmap_map3_aux_core_seed(uint8_t *query,
           }
 
           // add seeds
-          tmap_map3_aux_core_seed_helper(query, query_length, i, flow_order, flow_i,
+          tmap_map3_aux_core_seed_helper(query, query_length, i, flow_order, flow_i, hp_diff,
                                          refseq, bwt, sa, hash, opt, seeds, n_seeds, m_seeds,
                                          seed_length);
 
@@ -310,7 +312,7 @@ tmap_map3_aux_core(tmap_seq_t *seq,
                    tmap_bwt_match_hash_t *hash,
                    tmap_map_opt_t *opt)
 {
-  int32_t i, j, n, seed_length;
+  int32_t i, j, n, seed_length, hp_diff = 0;
   int32_t seq_len;
   tmap_string_t *bases;
   uint8_t *query;
@@ -322,7 +324,7 @@ tmap_map3_aux_core(tmap_seq_t *seq,
   if(0 < opt->hp_diff) {
       // set up the flow order to be used
       if(NULL == flow_order) {
-          tmap_bug();
+          hp_diff = 0;
       }
       else {
           flow = tmap_malloc(sizeof(uint8_t)*flow_order_len, "flow[0]");
@@ -379,11 +381,11 @@ tmap_map3_aux_core(tmap_seq_t *seq,
   seeds = tmap_malloc(m_seeds*sizeof(tmap_map3_aux_seed_t), "seeds");
 
   // seed the alignment
-  tmap_map3_aux_core_seed(query, seq_len, flow,
+  tmap_map3_aux_core_seed(query, seq_len, flow, hp_diff,
                           refseq, bwt, sa, hash, opt, &seeds, &n_seeds, &m_seeds,
                           seed_length, opt->seed_step, opt->fwd_search);
   if(0 == n_seeds) { // try the seeding in the opposite direction
-      tmap_map3_aux_core_seed(query, seq_len, flow,
+      tmap_map3_aux_core_seed(query, seq_len, flow, hp_diff,
                               refseq, bwt, sa, hash, opt, &seeds, &n_seeds, &m_seeds,
                               seed_length, opt->seed_step, 1-opt->fwd_search);
   }
@@ -450,7 +452,7 @@ tmap_map3_aux_core(tmap_seq_t *seq,
   seeds=NULL;
 
   // free
-  if(0 < opt->hp_diff) {
+  if(0 < hp_diff) {
       free(flow);
   }
 

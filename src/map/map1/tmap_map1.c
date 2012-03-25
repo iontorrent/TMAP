@@ -174,8 +174,11 @@ tmap_map1_init(void **data, tmap_refseq_t *refseq, tmap_map_opt_t *opt)
   return 0;
 }
 
-int32_t 
-tmap_map1_thread_init(void **data, tmap_map_opt_t *opt)
+int32_t
+tmap_map1_thread_init(void **data, 
+                      uint8_t *flow_order, int32_t flow_order_len,
+                      uint8_t *key_seq, int32_t key_seq_len,
+                      tmap_map_opt_t *opt)
 {
   tmap_map1_thread_data_t *d = NULL;
   d = tmap_calloc(1, sizeof(tmap_map1_thread_data_t), "d");

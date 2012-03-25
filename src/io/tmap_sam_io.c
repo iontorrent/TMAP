@@ -50,6 +50,9 @@ tmap_sam_io_init_helper(const char *fn, int32_t is_bam)
   for(i=0;i<12;i++) {
       p = sam_header2list(samio->fp->header->dict, "RG", rg_tags[i], &n);
       if(1 == n) samio->rg_tags[i] = p[0];
+      else if(1 < n) {
+          tmap_error("Found more than one tag in the RG in the SAM header", Exit, OutOfRange);
+      }
       else samio->rg_tags[i] = NULL;
       free(p); p = NULL;
   }

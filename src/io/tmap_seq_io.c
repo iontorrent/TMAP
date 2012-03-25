@@ -11,47 +11,52 @@
 #include "tmap_sff_io.h"
 #include "tmap_seq_io.h"
 
-char*
-tmap_seq_io_get_rg_fo(tmap_seq_io_t *io)
-{
-  switch(io->type) {
-    case TMAP_SEQ_TYPE_FQ:
-      return NULL;
-    case TMAP_SEQ_TYPE_SFF:
-      return tmap_sff_io_get_rg_fo(io->io.sffio);
-#ifdef HAVE_SAMTOOLS
-    case TMAP_SEQ_TYPE_SAM:
-    case TMAP_SEQ_TYPE_BAM:
-      return tmap_sam_io_get_rg_fo(io->io.samio);
-      break;
-#endif
-    default:
-      tmap_error("type is unrecognized", Exit, OutOfRange);
-      break;
-  }
-  return NULL;
-}
+#ifdef HAVE_SAMTOOLS 
+#define tmap_seq_io_get_rg_tag(_name) \
+       char* tmap_seq_io_get_rg_##_name(tmap_seq_io_t *io) { \
+           switch(io->type) { \
+             case TMAP_SEQ_TYPE_FQ: \
+               return NULL; \
+             case TMAP_SEQ_TYPE_SFF: \
+               return tmap_sff_io_get_rg_##_name(io->io.sffio); \
+             case TMAP_SEQ_TYPE_SAM: \
+             case TMAP_SEQ_TYPE_BAM: \
+               return tmap_sam_io_get_rg_##_name(io->io.samio); \
+               break; \
+             default: \
+               tmap_error("type is unrecognized", Exit, OutOfRange); \
+               break; \
+           } \
+           return NULL; \
+       }
+#else
+#define tmap_seq_io_get_rg_tag(_name) \
+       char* tmap_seq_io_get_rg_##_name(tmap_seq_io_t *io) { \
+           switch(io->type) { \
+             case TMAP_SEQ_TYPE_FQ: \
+               return NULL; \
+             case TMAP_SEQ_TYPE_SFF: \
+               return tmap_sff_io_get_rg_##_name(io->io.sffio); \
+             default: \
+               tmap_error("type is unrecognized", Exit, OutOfRange); \
+               break; \
+           } \
+           return NULL; \
+       }
+#endif 
 
-char*
-tmap_seq_io_get_rg_ks(tmap_seq_io_t *io)
-{
-  switch(io->type) {
-    case TMAP_SEQ_TYPE_FQ:
-      return NULL;
-    case TMAP_SEQ_TYPE_SFF:
-      return tmap_sff_io_get_rg_ks(io->io.sffio);
-#ifdef HAVE_SAMTOOLS
-    case TMAP_SEQ_TYPE_SAM:
-    case TMAP_SEQ_TYPE_BAM:
-      return tmap_sam_io_get_rg_ks(io->io.samio);
-      break;
-#endif
-    default:
-      tmap_error("type is unrecognized", Exit, OutOfRange);
-      break;
-  }
-  return NULL;
-}
+tmap_seq_io_get_rg_tag(id)
+tmap_seq_io_get_rg_tag(cn)
+tmap_seq_io_get_rg_tag(ds)
+tmap_seq_io_get_rg_tag(dt)
+tmap_seq_io_get_rg_tag(fo)
+tmap_seq_io_get_rg_tag(ks)
+tmap_seq_io_get_rg_tag(lb)
+tmap_seq_io_get_rg_tag(pg)
+tmap_seq_io_get_rg_tag(pi)
+tmap_seq_io_get_rg_tag(pl)
+tmap_seq_io_get_rg_tag(pu)
+tmap_seq_io_get_rg_tag(sm)
 
 static inline tmap_file_t *
 tmap_seq_io_open(const char *fn, int32_t out_type, int32_t compression)
@@ -325,7 +330,7 @@ tmap_seq_io_sff2sam_main(int argc, char *argv[])
   tmap_file_stdout = tmap_file_fdopen(fileno(stdout), "wb", TMAP_FILE_NO_COMPRESSION);
   
   // SAM header
-  tmap_sam_print_header(tmap_file_stdout, NULL, io_in, sam_rg, NULL, NULL, sam_flowspace_tags, argc, argv);
+  tmap_sam_print_header(tmap_file_stdout, NULL, io_in, sam_rg, sam_flowspace_tags, 0, argc, argv);
   if(0 < tmap_seq_io_read(io_in, seq_in)) {
       // get the key sequence from the first entry
       key_seq_len = tmap_seq_get_key_seq_int(seq_in, &key_seq);

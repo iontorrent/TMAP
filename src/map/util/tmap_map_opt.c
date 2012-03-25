@@ -136,6 +136,9 @@ __tmap_map_opt_option_print_func_int_init(aln_output_mode)
 __tmap_map_opt_option_print_func_chars_init(sam_rg, "not using")
 __tmap_map_opt_option_print_func_tf_init(bidirectional)
 __tmap_map_opt_option_print_func_tf_init(seq_eq)
+#ifdef HAVE_SAMTOOLS
+__tmap_map_opt_option_print_func_tf_init(ignore_rg_sam_tags)
+#endif
 __tmap_map_opt_option_print_func_compr_init(input_compr_gz, input_compr, TMAP_FILE_GZ_COMPRESSION)
 __tmap_map_opt_option_print_func_compr_init(input_compr_bz2, input_compr, TMAP_FILE_BZ2_COMPRESSION)
 __tmap_map_opt_option_print_func_compr_init(output_compr_gz, output_compr, TMAP_FILE_GZ_COMPRESSION)
@@ -147,12 +150,11 @@ __tmap_map_opt_option_print_func_double_init(sample_reads)
 __tmap_map_opt_option_print_func_verbosity_init()
 // flowspace
 __tmap_map_opt_option_print_func_int_init(fscore)
-__tmap_map_opt_option_print_func_chars_init(flow_order, "not using")
-__tmap_map_opt_option_print_func_chars_init(key_seq, "not using")
 __tmap_map_opt_option_print_func_tf_init(softclip_key)
 __tmap_map_opt_option_print_func_tf_init(sam_flowspace_tags)
 __tmap_map_opt_option_print_func_tf_init(ignore_flowgram)
 __tmap_map_opt_option_print_func_tf_init(remove_sff_clipping)
+__tmap_map_opt_option_print_func_tf_init(aln_flowspace)
 // pairing
 __tmap_map_opt_option_print_func_int_init(pairing)
 __tmap_map_opt_option_print_func_int_init(strandedness)
@@ -507,6 +509,14 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_seq_eq,
                            TMAP_MAP_ALGO_GLOBAL);
+#ifdef HAVE_SAMTOOLS
+  tmap_map_opt_options_add(opt->options, "ignore-rg-from-sam", no_argument, 0, 'C', 
+                           TMAP_MAP_OPT_TYPE_NONE,
+                           "specifies to not use the RG header and RG record tags in the SAM file",
+                           NULL,
+                           tmap_map_opt_option_print_func_ignore_rg_sam_tags,
+                           TMAP_MAP_ALGO_GLOBAL);
+#endif
   tmap_map_opt_options_add(opt->options, "input-gz", no_argument, 0, 'z', 
                            TMAP_MAP_OPT_TYPE_NONE,
                            "the input is gz (gzip) compressed",
@@ -569,18 +579,6 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_fscore,
                            TMAP_MAP_ALGO_FLOWSPACE);
-  tmap_map_opt_options_add(opt->options, "flow-order", required_argument, 0, 'F', 
-                           TMAP_MAP_OPT_TYPE_STRING,
-                           "the flow order ([ACGT]{4+} or \"file\")",
-                           NULL,
-                           tmap_map_opt_option_print_func_flow_order,
-                           TMAP_MAP_ALGO_FLOWSPACE);
-  tmap_map_opt_options_add(opt->options, "key-sequence", required_argument, 0, 'K', 
-                           TMAP_MAP_OPT_TYPE_STRING,
-                           "the key sequence ([ACGT]{4+} or \"file\")",
-                           NULL,
-                           tmap_map_opt_option_print_func_key_seq,
-                           TMAP_MAP_ALGO_FLOWSPACE);
   tmap_map_opt_options_add(opt->options, "softclip-key", no_argument, 0, 'y', 
                            TMAP_MAP_OPT_TYPE_NONE,
                            "soft clip only the last base of the key",
@@ -604,6 +602,12 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            "do not remove SFF clipping",
                            NULL,
                            tmap_map_opt_option_print_func_remove_sff_clipping,
+                           TMAP_MAP_ALGO_FLOWSPACE);
+  tmap_map_opt_options_add(opt->options, "final-flowspace", no_argument, 0, 'F', 
+                           TMAP_MAP_OPT_TYPE_NONE,
+                           "produce the final alignment in flow space",
+                           NULL,
+                           tmap_map_opt_option_print_func_aln_flowspace,
                            TMAP_MAP_ALGO_FLOWSPACE);
 
   // pairing options
@@ -968,6 +972,9 @@ tmap_map_opt_init(int32_t algo_id)
   opt->sam_rg = NULL;
   opt->bidirectional = 0;
   opt->seq_eq = 0;
+#ifdef HAVE_SAMTOOLS
+  opt->ignore_rg_sam_tags = 0;
+#endif
   opt->input_compr = TMAP_FILE_NO_COMPRESSION;
   opt->output_compr = TMAP_FILE_NO_COMPRESSION;
   opt->shm_key = 0;
@@ -979,14 +986,11 @@ tmap_map_opt_init(int32_t algo_id)
 
   // flowspace options
   opt->fscore = TMAP_MAP_OPT_FSCORE;
-  opt->flow_order = NULL;
-  opt->flow_order_use_file = 0;
-  opt->key_seq = NULL;
-  opt->key_seq_use_file = 0;
   opt->softclip_key = 0;
   opt->sam_flowspace_tags = 0;
   opt->ignore_flowgram = 0;
   opt->remove_sff_clipping = 1;
+  opt->aln_flowspace = 0;
 
   // pairing options
   opt->pairing = 0;
@@ -1095,9 +1099,6 @@ tmap_map_opt_destroy(tmap_map_opt_t *opt)
   free(opt->fn_reads);
   free(opt->fn_sam);
   free(opt->sam_rg);
-
-  free(opt->flow_order);
-  free(opt->key_seq);
 
   for(i=0;i<opt->num_sub_opts;i++) {
       tmap_map_opt_destroy(opt->sub_opts[i]);
@@ -1287,6 +1288,11 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(c == 'B' || (0 == c && 0 == strcmp("max-seed-band", options[option_index].name))) {       
           opt->max_seed_band = atoi(optarg);
       }
+#ifdef HAVE_SAMTOOLS
+      else if(c == 'C' || (0 == c && 0 == strcmp("ignore-rg-from-sam", options[option_index].name))) {
+          opt->ignore_rg_sam_tags = 1;
+      }
+#endif
       else if(c == 'D' || (0 == c && 0 == strcmp("bidirectional", options[option_index].name))) {       
           opt->bidirectional = 1;
       }
@@ -1395,28 +1401,11 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
       // End of global options
       // Flowspace options
-      else if(c == 'F' || (0 == c && 0 == strcmp("flow-order", options[option_index].name))) {       
-          free(opt->flow_order);
-          opt->flow_order = tmap_strdup(optarg); 
-          if(0 == strcmp("file", opt->flow_order) || 0 == strcmp("FILE", opt->flow_order)) {
-              opt->flow_order_use_file = 1;
-          }
-          else {
-              opt->flow_order_use_file = 0;
-          }
+      else if(c == 'F' || (0 == c && 0 == strcmp("final-flowspace", options[option_index].name))) {       
+          opt->aln_flowspace = 1;
       }
       else if(c == 'G' || (0 == c && 0 == strcmp("remove-sff-clipping", options[option_index].name))) {       
           opt->remove_sff_clipping = 0; 
-      }
-      else if(c == 'K' || (0 == c && 0 == strcmp("key-sequence", options[option_index].name))) {       
-          free(opt->key_seq);
-          opt->key_seq = tmap_strdup(optarg);
-          if(0 == strcmp("file", opt->key_seq) || 0 == strcmp("FILE", opt->key_seq)) {
-              opt->key_seq_use_file = 1;
-          }
-          else {
-              opt->key_seq_use_file = 0;
-          }
       }
       else if(c == 'N' || (0 == c && 0 == strcmp("use-flowgram", options[option_index].name))) {       
           opt->ignore_flowgram = 1;
@@ -1731,18 +1720,6 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
     if(opt_a->fscore != opt_b->fscore) {
         tmap_error("option -X was specified outside of the common options", Exit, CommandLineArgument);
     }
-    if(0 != tmap_map_opt_file_check_with_null(opt_a->flow_order, opt_b->flow_order)) {
-        tmap_error("option -F was specified outside of the common options", Exit, CommandLineArgument);
-    }
-    if(opt_a->flow_order_use_file != opt_b->flow_order_use_file) {
-        tmap_error("option -F was specified outside of the common options", Exit, CommandLineArgument);
-    }
-    if(0 != tmap_map_opt_file_check_with_null(opt_a->key_seq, opt_b->key_seq)) {
-        tmap_error("option -K was specified outside of the common options", Exit, CommandLineArgument);
-    }
-    if(opt_a->key_seq_use_file != opt_b->key_seq_use_file) {
-        tmap_error("option -K was specified outside of the common options", Exit, CommandLineArgument);
-    }
     if(opt_a->softclip_key != opt_b->softclip_key) {
         tmap_error("option -y was specified outside of the common options", Exit, CommandLineArgument);
     }
@@ -1754,6 +1731,9 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
     }
     if(opt_a->remove_sff_clipping != opt_b->remove_sff_clipping) {
         tmap_error("option -G was specified outside of the common options", Exit, CommandLineArgument);
+    }
+    if(opt_a->aln_flowspace != opt_b->aln_flowspace) {
+        tmap_error("option -F was specified outside of the common options", Exit, CommandLineArgument);
     }
     // pairing
     if(opt_a->pairing != opt_b->pairing) {
@@ -1823,18 +1803,6 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       if(1 == opt->sam_flowspace_tags) {
           tmap_error("options -1 and -2 cannot be used with -Y", Exit, CommandLineArgument);
       }
-      else if(1 == opt->flow_order_use_file) {
-          tmap_error("options -1 and -2 cannot be used with -F", Exit, CommandLineArgument);
-      }
-      else if(1 == opt->key_seq_use_file) {
-          tmap_error("options -1 and -2 cannot be used with -K", Exit, CommandLineArgument);
-      }
-      else if(NULL != opt->flow_order) {
-          tmap_error("options -1 and -2 cannot be used with -F", Exit, CommandLineArgument);
-      }
-      else if(NULL != opt->key_seq) {
-          tmap_error("options -1 and -2 cannot be used with -K", Exit, CommandLineArgument);
-      }
       else if(0 != opt->pairing) {
           if(opt->strandedness < 0 || 1 < opt->strandedness) {
               tmap_error("option -S was not specified", Exit, CommandLineArgument);
@@ -1868,55 +1836,9 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->pen_gapo, 1, INT32_MAX, "-O");
   tmap_error_cmd_check_int(opt->pen_gape, 1, INT32_MAX, "-E");
   tmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
-  if(NULL != opt->flow_order) {
-      if(0 == strcmp("file", opt->flow_order) || 0 == strcmp("FILE", opt->flow_order)) {
-          if(TMAP_READS_FORMAT_SFF != opt->reads_format) {
-              tmap_error("an SFF was not specified (-r) but you want to use the sff flow order (-F)", Exit, CommandLineArgument);
-          }
-      }
-      else {
-          switch(tmap_validate_flow_order(opt->flow_order)) {
-            case 0:
-              break;
-            case -1:
-              tmap_error("unrecognized DNA base (-F)", Exit, CommandLineArgument);
-            case -2:
-              tmap_error("all DNA bases must be present at least once (-F)", Exit, CommandLineArgument);
-            default:
-              tmap_error("unrecognized error (-F)", Exit, CommandLineArgument);
-              break;
-          }
-      }
-  }
-  if(NULL != opt->key_seq) {
-      if(0 == strcmp("file", opt->key_seq) || 0 == strcmp("FILE", opt->key_seq)) {
-          if(TMAP_READS_FORMAT_SFF != opt->reads_format) {
-              tmap_error("an SFF was not specified (-r) but you want to use the sff key sequence (-K)", Exit, CommandLineArgument);
-          }
-      }
-      else {
-          switch(tmap_validate_key_seq(opt->key_seq)) {
-            case 0:
-              break;
-            case -1:
-              tmap_error("unrecognized DNA base (-K)", Exit, CommandLineArgument); break;
-              break;
-            default:
-              tmap_error("unrecognized error (-K)", Exit, CommandLineArgument);
-              break;
-          }
-      }
-  }
   tmap_error_cmd_check_int(opt->bw, 0, INT32_MAX, "-w");
   tmap_error_cmd_check_int(opt->softclip_type, 0, 3, "-g");
-  if(1 == opt->softclip_key) {
-      if(NULL == opt->key_seq && 0 == opt->key_seq_use_file) {
-          tmap_error("the key sequence (-K) must be specified to use -y", Exit, CommandLineArgument);
-      }
-  }
-  else {
-      tmap_error_cmd_check_int(opt->softclip_key, 0, 0, "-y");
-  }
+  tmap_error_cmd_check_int(opt->softclip_key, 0, 0, "-y");
 
   tmap_error_cmd_check_int(opt->dup_window, -1, INT32_MAX, "-W");
   tmap_error_cmd_check_int(opt->max_seed_band, 1, INT32_MAX, "-B");
@@ -1927,14 +1849,20 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
   tmap_error_cmd_check_int(opt->bidirectional, 0, 1, "-D");
   tmap_error_cmd_check_int(opt->seq_eq, 0, 1, "-I");
+#ifdef HAVE_SAMTOOLS
+  tmap_error_cmd_check_int(opt->ignore_rg_sam_tags, 0, 1, "-C");
+  if(0 == opt->ignore_rg_sam_tags && NULL != opt->sam_rg) {
+      tmap_error("Cannot use -C with -R", Exit, CommandLineArgument);
+  }
+#endif
   if(TMAP_FILE_BZ2_COMPRESSION == opt->output_compr
      && -1 == opt->reads_queue_size) {
-      tmap_error("cannot buffer reads with bzip2 output (options \"-q 1 -J\")", Exit, OutOfRange);
+      tmap_error("cannot buffer reads with bzip2 output (options \"-q 1 -J\")", Exit, CommandLineArgument);
   }
   if(-1 != opt->min_seq_len) tmap_error_cmd_check_int(opt->min_seq_len, 1, INT32_MAX, "--min-seq-length");
   if(-1 != opt->max_seq_len) tmap_error_cmd_check_int(opt->max_seq_len, 1, INT32_MAX, "--max-seq-length");
   if(-1 != opt->min_seq_len && -1 != opt->max_seq_len && opt->max_seq_len < opt->min_seq_len) {
-      tmap_error("The minimum sequence length must be less than the maximum sequence length (--min-seq-length and --max-seq-length)", Exit, OutOfRange);
+      tmap_error("The minimum sequence length must be less than the maximum sequence length (--min-seq-length and --max-seq-length)", Exit, CommandLineArgument);
   }
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
   tmap_error_cmd_check_int(opt->sample_reads, 0, 1, "-x");
@@ -1974,7 +1902,6 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       if(-1 != opt->seed_length) tmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "--seed-length");
       tmap_error_cmd_check_int(opt->max_seed_hits, 1, INT32_MAX, "--max-seed-hits");
       tmap_error_cmd_check_int(opt->hp_diff, 0, INT32_MAX, "--hp-diff");
-      if(0 < opt->hp_diff && (NULL == opt->flow_order && 0 == opt->flow_order_use_file)) tmap_error("--hp-diff option requires a flow order from (-F) or file", Exit, OutOfRange); 
       tmap_error_cmd_check_int(opt->hit_frac, 0, 1, "--hit-frac");
       if(-1 != opt->seed_step) tmap_error_cmd_check_int(opt->seed_step, 1, INT32_MAX, "--seed-step");
       tmap_error_cmd_check_int(opt->skip_seed_frac, 0, 1, "--skip-seed-frac");
@@ -2057,6 +1984,9 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->sam_rg = tmap_strdup(opt_src->sam_rg);
     opt_dest->bidirectional = opt_src->bidirectional;
     opt_dest->seq_eq = opt_src->seq_eq;
+#ifdef HAVE_SAMTOOLS
+    opt_dest->ignore_rg_sam_tags = opt_src->ignore_rg_sam_tags;
+#endif
     opt_dest->input_compr = opt_src->input_compr;
     opt_dest->output_compr = opt_src->output_compr;
     opt_dest->shm_key = opt_src->shm_key;
@@ -2066,14 +1996,11 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     
     // flowspace options
     opt_dest->fscore = opt_src->fscore;
-    opt_dest->flow_order = tmap_strdup(opt_src->flow_order);
-    opt_dest->flow_order_use_file = opt_src->flow_order_use_file;
-    opt_dest->key_seq = tmap_strdup(opt_src->key_seq);
-    opt_dest->key_seq_use_file = opt_src->key_seq_use_file;
     opt_dest->softclip_key = opt_src->softclip_key;
     opt_dest->sam_flowspace_tags = opt_src->sam_flowspace_tags;
     opt_dest->ignore_flowgram = opt_src->ignore_flowgram;
     opt_dest->remove_sff_clipping = opt_src->remove_sff_clipping;
+    opt_dest->aln_flowspace = opt_src->aln_flowspace;
 
     // pairing
     opt_dest->pairing = opt_src->pairing;
@@ -2116,10 +2043,6 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "pen_gapo=%d\n", opt->pen_gapo);
   fprintf(stderr, "pen_gape=%d\n", opt->pen_gape);
   fprintf(stderr, "fscore=%d\n", opt->fscore);
-  fprintf(stderr, "flow_order=%s\n", opt->flow_order);
-  fprintf(stderr, "flow_order_use_file=%d\n", opt->flow_order_use_file);
-  fprintf(stderr, "key_seq=%s\n", opt->key_seq);
-  fprintf(stderr, "key_seq_use_file=%d\n", opt->key_seq_use_file);
   fprintf(stderr, "bw=%d\n", opt->bw);
   fprintf(stderr, "softclip_type=%d\n", opt->softclip_type);
   fprintf(stderr, "softclip_key=%d\n", opt->softclip_key);
@@ -2133,9 +2056,13 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "sam_rg=%s\n", opt->sam_rg);
   fprintf(stderr, "bidirectional=%d\n", opt->bidirectional);
   fprintf(stderr, "seq_eq=%d\n", opt->seq_eq);
+#ifdef HAVE_SAMTOOLS
+  fprintf(stderr, "ignore_rg_sam_tags=%d\n", opt->ignore_rg_sam_tags);
+#endif
   fprintf(stderr, "sam_flowspace_tags=%d\n", opt->sam_flowspace_tags);
   fprintf(stderr, "ignore_flowgram=%d\n", opt->ignore_flowgram);
   fprintf(stderr, "remove_sff_clipping=%d\n", opt->remove_sff_clipping);
+  fprintf(stderr, "aln_flowspace=%d\n", opt->aln_flowspace);
   fprintf(stderr, "input_compr=%d\n", opt->input_compr);
   fprintf(stderr, "output_compr=%d\n", opt->output_compr);
   fprintf(stderr, "shm_key=%d\n", (int)opt->shm_key);

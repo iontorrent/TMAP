@@ -1466,16 +1466,16 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
                                      seq_len, softclip_start, softclip_end, vsw_opt);
       
   if(1 == opt->softclip_key) {
-      // get the last base
-      if(NULL != opt->key_seq) {
-          key_base = tmap_nt_char_to_int[(int)opt->key_seq[strlen(opt->key_seq)-1]]; 
+      uint8_t *key_seq = NULL;
+      int32_t key_seq_len;
+      key_seq_len = tmap_seq_get_key_seq_int(seqs[0], &key_seq);
+      if(NULL == key_seq) {
+          key_base = 0;
       }
       else {
-          if(TMAP_SEQ_TYPE_SFF != seqs[0]->type) {
-              tmap_bug();
-          }
-          key_base = tmap_nt_char_to_int[(int)seqs[0]->data.sff->gheader->key->s[seqs[0]->data.sff->gheader->key->l-1]];
+          key_base = key_seq[0];
       }
+      free(key_seq);
   }
       
   i = start = end = 0;
@@ -1690,7 +1690,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       }
 
       // key trim the data
-      if(1 == opt->softclip_key) {
+      if(1 == opt->softclip_key && 0 != key_base) {
           tmap_map_util_keytrim(query, qlen, target, tlen, strand, key_base, s);
       }
 

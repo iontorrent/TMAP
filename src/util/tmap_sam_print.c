@@ -24,116 +24,151 @@ static char tmap_sam_rg_id[1024]="ID";
 
 // Notes: we could add all the tags as input
 static void
-tmap_sam_parse_rg(char *rg, const char *fo, const char *ks, const char *pg)
+tmap_sam_parse_rg2(tmap_file_t *fp, char *rg, const char **tags)
 {
-  int32_t i, j, len;
+  static int32_t pg_warned = 0;
+  int32_t i, j, len, tag_i, rg_mem = 0;
   // ID, CN, DS, DT, LB, PG, PI, PL, PU, SM
   int32_t tags_found[TMAP_SAM_PRINT_RG_HEADER_TAGS] = {0,0,0,0,0,0,0,0,0,0,0,0};
   char *tags_name[TMAP_SAM_PRINT_RG_HEADER_TAGS] = {"ID","CN","DS","DT","FO","KS","LB","PG","PI","PL","PU","SM"};
   char *tags_value[TMAP_SAM_PRINT_RG_HEADER_TAGS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
 
-  len = strlen(rg);
+  if(NULL != rg) {
+      len = strlen(rg);
+      rg_mem = len+1;
 
-  // convert strings of "\t" to tab characters '\t'
-  for(i=0;i<len-1;i++) {
-      if(rg[i] == '\\' && rg[i+1] == 't') {
-          rg[i] = '\t';
-          // shift down
-          for(j=i+1;j<len-1;j++) {
-              rg[j] = rg[j+1];
+      // convert strings of "\t" to tab characters '\t'
+      for(i=0;i<len-1;i++) {
+          if(rg[i] == '\\' && rg[i+1] == 't') {
+              rg[i] = '\t';
+              // shift down
+              for(j=i+1;j<len-1;j++) {
+                  rg[j] = rg[j+1];
+              }
+              len--;
+              rg[len]='\0';
           }
-          len--;
-          rg[len]='\0';
+      }
+
+      // must have at least "@RG\t"
+      if(len < 4
+         || 0 != strncmp(rg, "@RG\t", 4)) {
+          tmap_error("Malformed RG line", Exit, OutOfRange);
+      }
+      i = 3;
+
+      while(i<len) {
+          if('\t' == rg[i]) {
+              i++; // move past the tab
+              if(len <= i+2) { // must have "XX:" 
+                  tmap_error("Improper tag in the RG line", Exit, OutOfRange);
+              }
+              for(tag_i=0;tag_i<TMAP_SAM_PRINT_RG_HEADER_TAGS;tag_i++) {
+                  if(tags_name[tag_i][0] == rg[i] && tags_name[tag_i][1] == rg[i+1]) { // found!
+                      if(tags[tag_i] != NULL) {
+                          tmap_file_fprintf(tmap_file_stderr, "\n%s tag not allowed in the RG line\n", tags_name[tag_i]);
+                          tmap_error(NULL, Exit, OutOfRange);
+                      }
+                      tags_found[tag_i]++;
+                      // copy over
+                      if(1 < tags_found[i]) {
+                          tmap_file_fprintf(tmap_file_stderr, "\nFound multiple %s tags for the RG SAM header\n", tags_name[tag_i]);
+                          tmap_error(NULL, Exit, OutOfRange);
+                      }
+                      else { // 1 == tags_found[tag_i]
+                          tags_value[tag_i] = tmap_malloc(sizeof(char) * (len + 1), "tags_value[tag_i]");
+                          for(j=i;j<len && '\t' != rg[j];j++) {
+                              tags_value[tag_i][j-i] = rg[j];
+                          }
+                          if(j - i <= 3) {
+                              tmap_file_fprintf(tmap_file_stderr, "\nFound an empty tag in the RG SAM header: %s\n", tags_name[tag_i]);
+                              tmap_error(NULL, Exit, OutOfRange);
+                          }
+                          tags_value[tag_i][j-i] = '\0';
+                      }
+
+                  }
+              }
+              if(j == TMAP_SAM_PRINT_RG_HEADER_TAGS) {
+                  tmap_error("Improper tag in the RG line", Exit, OutOfRange);
+              }
+          }
+          i++;
       }
   }
 
-  // must have at least "@RG\t"
-  if(len < 4
-     || 0 != strncmp(rg, "@RG\t", 4)) {
-      tmap_error("Malformed RG line", Exit, OutOfRange);
+  // copy over the input tags
+  for(tag_i=0;tag_i<TMAP_SAM_PRINT_RG_HEADER_TAGS;tag_i++) {
+      if(NULL != tags[tag_i]) {
+          if(NULL != tags_value[tag_i]) tmap_bug(); // should be checked above
+          // copy ver
+          len = strlen(tags[tag_i]);
+          if(len <= 0) {
+              tmap_file_fprintf(tmap_file_stderr, "\nFound an empty tag in the RG SAM header: %s\n", tags[tag_i]);
+              tmap_error(NULL, Exit, OutOfRange);
+          }
+          tags_value[tag_i] = tmap_malloc(sizeof(char) * (len + 1), "tags_value[tag_i]");
+          strcpy(tags_value[tag_i], tags[tag_i]);
+          tags_found[tag_i] = 1;
+      }
   }
-  i = 3;
-  
-  while(i<len) {
-      if('\t' == rg[i]) {
-          int32_t tag_i = -1;
-          i++; // move past the tab
-          if(len <= i+2) { // must have "XX:" 
-              tmap_error("Improper tag in the RG line", Exit, OutOfRange);
+
+  // copy over the id
+  if(NULL != tags_value[0]) { // ID
+      strcpy(tmap_sam_rg_id, tags_value[0]);
+  }
+  else {
+      tags_value[0] = tmap_malloc(sizeof(char) * (strlen(tmap_sam_rg_id) + 1), "tags_value[0]");
+      strcpy(tags_value[0], tmap_sam_rg_id);
+      tags_found[0] = 1;
+  }
+
+  if(tags_value[7] != NULL) {
+      if(0 == pg_warned) {
+          if(tags[7] != NULL) {
+              tmap_error("PG specified in the input file's RG; ignoring...", Warn, OutOfRange);
           }
-          else if('I' == rg[i] && 'D' == rg[i+1]) {
-              tag_i = 0;
-              // copy over the id
-              for(j=i+3;j<len;j++) {
-                  if('\t' == rg[j]) break;
-                  tmap_sam_rg_id[j-i-3] = rg[j];
-              }
-              if(j == i) tmap_error("Malformed RG line", Exit, OutOfRange);
-              tmap_sam_rg_id[j-i]='\0'; // null terminator
-          }
-          else if('C' == rg[i] && 'N' == rg[i+1]) tag_i=1;
-          else if('D' == rg[i] && 'S' == rg[i+1]) tag_i=2;
-          else if('D' == rg[i] && 'T' == rg[i+1]) tag_i=3;
-          else if('F' == rg[i] && 'O' == rg[i+1]) {
-              tag_i=4;
-              if(NULL != fo) {
-                  tmap_error("FO tag not allowed in the RG line", Exit, OutOfRange);
-              }
-          }
-          else if('K' != rg[i] && 'S' == rg[i+1]) {
-              tag_i=5;
-              if(NULL == ks) {
-                  tmap_error("KS tag not allowed in the RG line", Exit, OutOfRange);
-              }
-          }
-          else if('L' == rg[i] && 'B' == rg[i+1]) tag_i=6;
-          else if('P' == rg[i] && 'G' == rg[i+1]) {
-              tag_i=7;
-              if(NULL != pg) {
-                  tmap_error("PG tag not allowed in the RG line", Exit, OutOfRange);
-              }
-          }
-          else if('P' == rg[i] && 'I' == rg[i+1]) tag_i=8;
-          else if('P' == rg[i] && 'L' == rg[i+1]) tag_i=9;
-          else if('P' == rg[i] && 'U' == rg[i+1]) tag_i=10;
-          else if('S' == rg[i] && 'M' == rg[i+1]) tag_i=11;
           else {
-              tmap_error("Improper tag in the RG line", Exit, OutOfRange);
+              tmap_error("PG specified in the command line RG; ignoring...", Warn, OutOfRange);
           }
-          tags_found[tag_i]++;
-          if(1 == tags_found[tag_i]) {
-              tags_value[tag_i] = tmap_malloc(sizeof(char) * (len + 1), "tags_value[tag_i]");
-              for(j=i;j<len && '\t' != rg[j];j++) {
-                  tags_value[tag_i][j-i] = rg[j];
-              }
-              if(j - i <= 3) {
-                  tmap_file_fprintf(tmap_file_stderr, "\nFound an empty tag in the RG SAM header: %s\n", tags_name[tag_i]);
-                  tmap_error(NULL, Exit, OutOfRange);
-              }
-              tags_value[tag_i][j-i] = '\0';
-          }
+          pg_warned = 1;
       }
-      i++;
+      free(tags_value[7]);
+      tags_value[7] = NULL;
   }
+  tags_value[7] = tmap_malloc(sizeof(char) * (strlen(PACKAGE_NAME) + 1), "tags_value[7]");
+  strcpy(tags_value[7], PACKAGE_NAME);
+  
 
-  strcpy(rg, "@RG");
+  // print the RG string
+  tmap_file_fprintf(fp, "@RG");
   for(i=0;i<TMAP_SAM_PRINT_RG_HEADER_TAGS;i++) {
-      if(1 < tags_found[i]) {
-          tmap_file_fprintf(tmap_file_stderr, "\nFound multiple %s tags for the RG SAM header\n", tags_name[i]);
-          tmap_error(NULL, Exit, OutOfRange);
-      }
-      else if(1 == tags_found[i]) {
-          strcat(rg, "\t");
-          strcat(rg, tags_value[i]);
-          // copy over the tag
+      if(1 == tags_found[i]) {
+          tmap_file_fprintf(fp, "\t%s:%s",
+                            tags_name[i],
+                            tags_value[i]);
           free(tags_value[i]);
+          tags_value[i] = NULL;
       }
   }
+  tmap_file_fprintf(fp, "\n");
+}
+
+static void
+tmap_sam_parse_rg(tmap_file_t *fp, char *rg, 
+                  const char *id, const char *cn, const char *ds,
+                  const char *dt, const char *fo, const char *ks,
+                  const char *lb, const char *pg, const char *pi,
+                  const char *pl, const char *pu, const char *sm)
+{
+  const char *tags_name[TMAP_SAM_PRINT_RG_HEADER_TAGS] = {id, cn, ds, dt, fo, ks, lb, pg, pi, pl, pu, sm};
+  return tmap_sam_parse_rg2(fp, rg, tags_name);
 }
 
 void
 tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, tmap_seq_io_t *seqio, char *sam_rg, 
-                      char *flow_order, char *key_seq, int32_t sam_flowspace_tags, int argc, char *argv[])
+                      int32_t sam_flowspace_tags, int32_t ignore_rg_sam_tags, 
+                      int argc, char *argv[])
 {
   int32_t i;
   // SAM header
@@ -146,59 +181,42 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, tmap_seq_io_t *seq
       }
   }
   // RG
-  if(NULL != seqio && 1 == sam_flowspace_tags) {
-      if(NULL != flow_order) { // this should not happen, since it should be checked upstream
-          tmap_error("flow order was specified when using sam sff tags", Exit, OutOfRange);
+
+  // sft irst
+  if(1 == ignore_rg_sam_tags) {
+      if(1 == sam_flowspace_tags) {
+          // KS/FO only
+          tmap_sam_parse_rg(fp, sam_rg,
+                            NULL, NULL, NULL,
+                            NULL, tmap_seq_io_get_rg_fo(seqio), tmap_seq_io_get_rg_ks(seqio),
+                            NULL, NULL, NULL,
+                            NULL, NULL, NULL);
       }
-      if(NULL != key_seq) { // this should not happen, since it should be checked upstream
-          tmap_error("key sequence was specified when using sam sff tags", Exit, OutOfRange);
-      }
-      if(NULL == (flow_order = tmap_seq_io_get_rg_fo(seqio))) {
-          tmap_error("flow order could not be retrieved from the input", Exit, OutOfRange);
-      }
-      if(NULL == (key_seq = tmap_seq_io_get_rg_ks(seqio))) {
-          tmap_error("key sequence could not be retrieved from the input", Exit, OutOfRange);
-      }
-      if(NULL != sam_rg) { // SAM RG is user-specified
-          tmap_sam_parse_rg(sam_rg, 
-                            flow_order,
-                            key_seq,
-                            PACKAGE_NAME);
-          tmap_file_fprintf(fp, "%s\tFO:%s\tKS:%s\tPG:%s\n",
-                            sam_rg,
-                            flow_order,
-                            key_seq,
-                            PACKAGE_NAME);
-      }
-      else {
-          tmap_file_fprintf(fp, "@RG\tID:%s\tFO:%s\tKS:%s\tPG:%s\n",
-                            tmap_sam_rg_id,
-                            flow_order,
-                            key_seq,
-                            PACKAGE_NAME);
+      else { 
+          tmap_sam_parse_rg(fp, sam_rg,
+                            NULL, NULL, NULL,
+                            NULL, NULL, NULL,
+                            NULL, NULL, NULL,
+                            NULL, NULL, NULL);
       }
   }
-  else {
-      if(NULL != sam_rg) {
-          tmap_sam_parse_rg(sam_rg, NULL, flow_order, PACKAGE_NAME);
-          tmap_file_fprintf(fp, "%s\n", sam_rg);
-      }
-      else if(NULL == flow_order && NULL == key_seq) {
-          tmap_file_fprintf(fp, "@RG\tID:%s\tPG:%s\n",
-                            tmap_sam_rg_id,
-                            PACKAGE_NAME);
-      }
-      else {
-          tmap_file_fprintf(fp, "@RG\tID:%s", tmap_sam_rg_id);
-          if(NULL != flow_order) {
-              tmap_file_fprintf(fp, "\tFO:%s", flow_order);
-          }
-          if(NULL != key_seq) {
-              tmap_file_fprintf(fp, "\tKS:%s", key_seq);
-          }
-          tmap_file_fprintf(fp, "\tPG:%s\n", PACKAGE_NAME);
-      }
-  }
+  else { 
+      // use all available tags
+      tmap_sam_parse_rg(fp, sam_rg,
+                        tmap_seq_io_get_rg_id(seqio),
+                        tmap_seq_io_get_rg_cn(seqio),
+                        tmap_seq_io_get_rg_ds(seqio),
+                        tmap_seq_io_get_rg_dt(seqio),
+                        tmap_seq_io_get_rg_fo(seqio),
+                        tmap_seq_io_get_rg_ks(seqio),
+                        tmap_seq_io_get_rg_lb(seqio),
+                        tmap_seq_io_get_rg_pg(seqio),
+                        tmap_seq_io_get_rg_pi(seqio),
+                        tmap_seq_io_get_rg_pl(seqio),
+                        tmap_seq_io_get_rg_pu(seqio),
+                        tmap_seq_io_get_rg_sm(seqio));
+  } 
+  // PG
   tmap_file_fprintf(fp, "@PG\tID:%s\tVN:%s\tCL:",
                     PACKAGE_NAME, PACKAGE_VERSION);
   for(i=0;i<argc;i++) {

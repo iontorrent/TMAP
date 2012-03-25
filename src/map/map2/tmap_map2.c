@@ -54,7 +54,10 @@ tmap_map2_init(void **data, tmap_refseq_t *refseq, tmap_map_opt_t *opt)
 }
 
 int32_t
-tmap_map2_thread_init(void **data, tmap_map_opt_t *opt)
+tmap_map2_thread_init(void **data, 
+                      uint8_t *flow_order, int32_t flow_order_len,
+                      uint8_t *key_seq, int32_t key_seq_len,
+                      tmap_map_opt_t *opt)
 {
   tmap_map2_thread_data_t *d = NULL;
 

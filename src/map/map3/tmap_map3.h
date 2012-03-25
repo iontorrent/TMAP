@@ -47,11 +47,18 @@ tmap_map3_init(void **data, tmap_refseq_t *refseq, tmap_map_opt_t *opt);
 /*!
  initializes the mapping routine for a given thread
  @param  data  pointer to the mapping data pointer
+ @param  flow_order the flow order
+ @param  flow_order_len the flow order length
+ @param  key_seq the flow order
+ @param  key_seq_len the flow order length
  @param  opt   the program options
  @return       0 if successful, non-zero otherwise
  */
 int32_t 
-tmap_map3_thread_init(void **data, tmap_map_opt_t *opt);
+tmap_map3_thread_init(void **data, 
+                      uint8_t *flow_order, int32_t flow_order_len,
+                      uint8_t *key_seq, int32_t key_seq_len,
+                      tmap_map_opt_t *opt);
 
 /*!
  runs the mapping routine for a given thread

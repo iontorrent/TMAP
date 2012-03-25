@@ -127,20 +127,17 @@ tmap_map3_init(void **data, tmap_refseq_t *refseq, tmap_map_opt_t *opt)
 }
 
 int32_t
-tmap_map3_thread_init(void **data, tmap_map_opt_t *opt)
+tmap_map3_thread_init(void **data, 
+                      uint8_t *flow_order, int32_t flow_order_len,
+                      uint8_t *key_seq, int32_t key_seq_len,
+                      tmap_map_opt_t *opt)
 {
-  int32_t i;
   tmap_map3_thread_data_t *d = NULL;
 
   d = tmap_calloc(1, sizeof(tmap_map3_thread_data_t), "d");
 
-  if(0 == opt->flow_order_use_file && NULL != opt->flow_order) { // copy input flow order
-      d->flow_order_len = strlen(opt->flow_order);
-      d->flow_order = tmap_malloc(sizeof(uint8_t) * d->flow_order_len, "d->flow_order");
-      for(i=0;i<d->flow_order_len;i++) {
-          d->flow_order[i] = tmap_nt_char_to_int[(int)opt->flow_order[i]];
-      }
-  }
+  d->flow_order = flow_order;
+  d->flow_order_len = flow_order_len;
 
   (*data) = (void*)d;
 
@@ -151,16 +148,8 @@ tmap_map_sams_t *
 tmap_map3_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_bwt_match_hash_t *hash, tmap_rand_t *rand, tmap_map_opt_t *opt)
 {
   tmap_map_sams_t *sams = NULL;
-  int32_t i, seq_len;
+  int32_t seq_len;
   tmap_map3_thread_data_t *d = (tmap_map3_thread_data_t*)(*data);
-
-  if(0 == d->flow_order_len && 1 == opt->flow_order_use_file) { // copy the SFF's flow order
-      d->flow_order_len = seqs[0]->data.sff->gheader->flow->l;
-      d->flow_order = tmap_malloc(sizeof(uint8_t) * d->flow_order_len, "d->flow_order");
-      for(i=0;i<d->flow_order_len;i++) {
-          d->flow_order[i] = tmap_nt_char_to_int[(int)seqs[0]->data.sff->gheader->flow->s[i]];
-      }
-  }
 
   seq_len = tmap_seq_get_bases_length(seqs[0]);
   
@@ -180,7 +169,6 @@ tmap_map3_thread_cleanup(void **data, tmap_map_opt_t *opt)
 {
   tmap_map3_thread_data_t *d = (tmap_map3_thread_data_t*)(*data);
 
-  free(d->flow_order);
   free(d);
   (*data) = NULL;
   return 0;

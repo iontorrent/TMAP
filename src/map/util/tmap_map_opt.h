@@ -142,11 +142,11 @@ typedef struct {
  * A list of global command line flags take or available.
  *
  * Taken:
- * ABDEFGIJKLMORSTUWXYZ
+ * ABCDEFGIJLMORSTUWXYZ
  * afghijklmnqrsvwxyz
  *
  * Available:
- * CHUV
+ * HKUV
  * optu
  * 
  * NB: Lets reserve single character flags for global options. 
@@ -185,23 +185,24 @@ typedef struct __tmap_map_opt_t {
     char *sam_rg;  /*!< specifies the RG line in the SAM header (-R,--sam-read-group) */
     int32_t bidirectional;  /*!< specifies the input reads are to be annotated as bidirectional (-D,--bidirectional) */
     int32_t seq_eq;  /*!< specifies to use '=' symbols in the SEQ field (-I,--use-seq-equal) */
+#ifdef HAVE_SAMTOOLS
+    int32_t ignore_rg_sam_tags;  /*!< specifies to not use the RG header and RG record tags in the SAM file (-C,--keep-rg-from-sam) */
+#endif
     int32_t input_compr;  /*!< the input compression type (-j,--input-bz2 and -z,--input-gz) */
     int32_t output_compr;  /*!< the output compression type (-J,--output-bz2 and -Z,--output-gz) */
     key_t shm_key;  /*!< the shared memory key (-k,--shared-memory-key) */
+
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
     double sample_reads;  /*!< sample the reads at this fraction (-x,--sample-reads) */
 #endif
 
     // flowspace tags
     int32_t fscore;  /*!< the flow score penalty (-X,--pen-flow-error) */
-    char *flow_order; /*!< the flow order (-F,--flow-order) */
-    int32_t flow_order_use_file; /*!< the flow order should be from the sff */
-    char *key_seq; /*!< the key sequence (-K,--key-sequence) */
-    int32_t key_seq_use_file; /*!< the key sequence should be from the sff */
     int32_t softclip_key; /*!< soft clip only the last base of the key (-y,--softclip-key) */
     int32_t sam_flowspace_tags;  /*!< specifies to output flow space specific SAM tags when available (-Y,--sam-flowspace-tags) */
     int32_t ignore_flowgram;  /*!< specifies to ignore the flowgram if available (-S,--ignore-flowgram) */
     int32_t remove_sff_clipping; /*!< removes SFF clipping (-G,--remove-sff-clipping) */
+    int32_t aln_flowspace; /*!< produce the final alignment in flow space (-F,--final-flowspace) */
 
     // pairing options
     int32_t pairing; /*!< 0 - no pairing is to be performed, 1 - mate pairs (-S 0 -P 1), 2 - paired end (-S 1 -P 0) (-Q,--pairing)*/

@@ -217,6 +217,9 @@ Specifies the input reads are to be annotated as bidirectional using the XB SAM 
 \subsubsection{\TT{-I,--use-seq-equal}}
 Specifies to use the '=' symbol in the SEQ field.
 
+\subsubsection{\TT{-C,--ignore-rg-from-sam}}
+Specifies to do not use the RG header and RG record tags in the SAM file (if the input file is a SAM file, and SAM input files are enabled).
+
 \subsubsection{\TT{-j,--input-bz2}, \TT{-z,--input-gz}}
 Specifies that the input is bzip2 (\TT{-j}) or gzip (\TT{-z}) compressed.
 This is auto-recognized if the input file name has the extension \TT{.bz2} for bzip2 and \TT{.gz} for gzip.
@@ -270,6 +273,9 @@ Specifies to not use the flowgram, otherwise uses the flowgram for flowspace re-
 
 \subsubsection{\TT{-G,--remove-sff-clipping}}
 Specifies to not remove bases and qualities based on the adapter and quality clipping fields found in the an input SFF file.
+
+\subsubsection{\TT{-F,--final-flowspace}}
+Specifies to produce the final alignment in flow space.
 
 \subsection{Pairing Options}
 These options control how TMAP uses and outputs information about the paired end or mate pair reads.

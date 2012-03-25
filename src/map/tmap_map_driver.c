@@ -45,41 +45,16 @@ tmap_map_driver_get_flow_info(tmap_seq_t *seq, tmap_map_opt_t *opt,
                               uint8_t **flow_order, int32_t *flow_order_len, 
                               uint8_t **key_seq, int32_t *key_seq_len)
 {
-  int32_t i;
   static int32_t warned = 0;
 
   // NB: SAM/BAM could be supported, but is not yet
-  if(1 == opt->flow_order_use_file) {
-      (*flow_order_len) = tmap_seq_get_flow_order_int(seq, flow_order); 
-      if(0 == (*flow_order_len)) {
-          tmap_error("could not retrieve the flow order from the input file", Exit, OutOfRange);
-      }
-  }
-  else if(NULL != opt->flow_order) {
-      (*flow_order_len) = strlen(opt->flow_order);
-      (*flow_order) = tmap_malloc(sizeof(uint8_t) * (*flow_order_len), "flow_order");
-      for(i=0;i<(*flow_order_len);i++) {
-          (*flow_order)[i] = tmap_nt_char_to_int[(int)opt->flow_order[i]];
-      }
-  }
-  else {
+  (*flow_order_len) = tmap_seq_get_flow_order_int(seq, flow_order); 
+  if(0 == (*flow_order_len)) {
       (*flow_order) = NULL;
       (*flow_order_len) = 0;
   }
-  if(1 == opt->key_seq_use_file) {
-      (*key_seq_len) = tmap_seq_get_key_seq_int(seq, key_seq);
-      if(0 == (*key_seq_len)) {
-          tmap_error("could not retrieve the key sequence from the input file", Exit, OutOfRange);
-      }
-  }
-  else if(NULL != opt->key_seq) {
-      (*key_seq_len) = strlen(opt->key_seq);
-      (*key_seq) = tmap_malloc(sizeof(uint8_t) * (*key_seq_len), "key_seq");
-      for(i=0;i<(*key_seq_len);i++) {
-          (*key_seq)[i] = tmap_nt_char_to_int[(int)opt->key_seq[i]];
-      }
-  }
-  else {
+  (*key_seq_len) = tmap_seq_get_key_seq_int(seq, key_seq);
+  if(0 == (*key_seq_len)) {
       (*key_seq) = NULL;
       (*key_seq_len) = 0;
   }
@@ -134,7 +109,10 @@ tmap_map_driver_do_cleanup(tmap_map_driver_t *driver)
 }
 
 static void
-tmap_map_driver_do_threads_init(tmap_map_driver_t *driver, int32_t tid)
+tmap_map_driver_do_threads_init(tmap_map_driver_t *driver, 
+                                uint8_t *flow_order, int32_t flow_order_len,
+                                uint8_t *key_seq, int32_t key_seq_len,
+                                int32_t tid)
 {
   int32_t i, j;
   for(i=0;i<driver->num_stages;i++) {
@@ -142,7 +120,10 @@ tmap_map_driver_do_threads_init(tmap_map_driver_t *driver, int32_t tid)
       for(j=0;j<stage->num_algorithms;j++) {
           tmap_map_driver_algorithm_t *algorithm = stage->algorithms[j];
           if(NULL != algorithm->func_thread_init 
-             && 0 != algorithm->func_thread_init(&algorithm->thread_data[tid], algorithm->opt)) {
+             && 0 != algorithm->func_thread_init(&algorithm->thread_data[tid], 
+                                                 flow_order, flow_order_len,
+                                                 key_seq, key_seq_len,
+                                                 algorithm->opt)) {
               tmap_error("the thread function could not be initialized", Exit, OutOfRange);
           }
       }
@@ -211,9 +192,6 @@ tmap_map_driver_core_worker(int32_t num_ends,
   tmap_seq_t ***seqs = NULL;
   tmap_bwt_match_hash_t *hash=NULL;
 
-  // initialize thread data
-  tmap_map_driver_do_threads_init(driver, tid);
-          
 #ifdef TMAP_DRIVER_USE_HASH
   // init the occurence hash
   hash = tmap_bwt_match_hash_init(); 
@@ -228,6 +206,10 @@ tmap_map_driver_core_worker(int32_t num_ends,
   for(i=0;i<num_ends;i++) {
       seqs[i] = tmap_malloc(sizeof(tmap_seq_t*)*4, "seqs[i]");
   }
+  
+  // initialize thread data
+  tmap_map_driver_do_threads_init(driver, flow_order, flow_order_len, key_seq, key_seq_len, tid);
+          
 
   // Go through the buffer
   while(low < seq_buffer_length) {
@@ -410,31 +392,34 @@ tmap_map_driver_core_worker(int32_t num_ends,
           }
 
           // flowspace re-align and sorting
-          for(i=0;i<num_ends;i++) {
-              if(0 < records[low]->sams[i]->n) {
-                  stat->num_with_mapping++;
-                  // re-align the alignments in flow-space
-                  if(NULL != fs) {
-                      // TODO: if this is run, we do not need to run tmap_sw_global_banded_core...
-                      // NB: seq_buffer should have its key sequence if 0 < key_seq_len
-                      tmap_map_util_fsw(fs, seqs[i][0],
-                                        flow_order, flow_order_len,
-                                        key_seq, key_seq_len,
-                                        records[low]->sams[i], index->refseq, 
-                                        driver->opt->bw, driver->opt->softclip_type, driver->opt->score_thr,
-                                        driver->opt->score_match, driver->opt->pen_mm, driver->opt->pen_gapo,
-                                        driver->opt->pen_gape, driver->opt->fscore, 1-driver->opt->ignore_flowgram);
-                  }
+          if(1 == driver->opt->aln_flowspace) {
+              for(i=0;i<num_ends;i++) {
+                  if(0 < records[low]->sams[i]->n) {
+                      stat->num_with_mapping++;
+                      // re-align the alignments in flow-space
+                      if(NULL != fs) {
+                          tmap_seq_t *seq = seq_buffer[i][low];
+                          // TODO: if this is run, we do not need to run tmap_sw_global_banded_core...
+                          // NB: seq_buffer should have its key sequence if 0 < key_seq_len
+                          tmap_map_util_fsw(fs, seq,
+                                            flow_order, flow_order_len,
+                                            key_seq, key_seq_len,
+                                            records[low]->sams[i], index->refseq, 
+                                            driver->opt->bw, driver->opt->softclip_type, driver->opt->score_thr,
+                                            driver->opt->score_match, driver->opt->pen_mm, driver->opt->pen_gapo,
+                                            driver->opt->pen_gape, driver->opt->fscore, 1-driver->opt->ignore_flowgram);
+                      }
 
-                  // sort by alignment score
-                  if(1 < records[low]->sams[i]->n) {
-                      tmap_sort_introsort(tmap_map_sam_sort_score,
-                                          records[low]->sams[i]->n, 
-                                          records[low]->sams[i]->sams);
+                      // sort by alignment score
+                      if(1 < records[low]->sams[i]->n) {
+                          tmap_sort_introsort(tmap_map_sam_sort_score,
+                                              records[low]->sams[i]->n, 
+                                              records[low]->sams[i]->sams);
+                      }
                   }
-              }
-              if(NULL == seq_buffer[i][low]) {
-                  tmap_error("bug encoutereed", Exit, OutOfRange);
+                  if(NULL == seq_buffer[i][low]) {
+                      tmap_error("bug encoutereed", Exit, OutOfRange);
+                  }
               }
           }
 
@@ -577,7 +562,8 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
 
   // SAM header
   tmap_sam_print_header(tmap_file_stdout, index->refseq, (1 == num_ends) ? seqio[0] : NULL, 
-                        driver->opt->sam_rg, driver->opt->flow_order, driver->opt->key_seq, driver->opt->sam_flowspace_tags, driver->opt->argc, driver->opt->argv);
+                        driver->opt->sam_rg, driver->opt->sam_flowspace_tags, driver->opt->ignore_rg_sam_tags, 
+                        driver->opt->argc, driver->opt->argv);
 
   tmap_progress_print("processing reads");
   while(1) {

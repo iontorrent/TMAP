@@ -21,15 +21,65 @@ typedef struct {
 } tmap_sff_io_t;
 
 /*!
-  @param  sffio  a pointer to a previously initialized SAM/BAM structure
-  @return the FO tag from the SAM Header
+  @param  sffio  a pointer to a previously initialized SFF structure
+  @return the ID tag for the SAM Header
+  */
+#define tmap_sff_io_get_rg_id(sffio) (NULL) 
+/*!
+  @param  sffio  a pointer to a previously initialized SFF structure
+  @return the CN tag for the SAM Header
+  */
+#define tmap_sff_io_get_rg_cn(sffio) (NULL) 
+/*!
+  @param  sffio  a pointer to a previously initialized SFF structure
+  @return the DS tag for the SAM Header
+  */
+#define tmap_sff_io_get_rg_ds(sffio) (NULL) 
+/*!
+  @param  sffio  a pointer to a previously initialized SFF structure
+  @return the DT tag for the SAM Header
+  */
+#define tmap_sff_io_get_rg_dt(sffio) (NULL) 
+/*!
+  @param  sffio  a pointer to a previously initialized SFF structure
+  @return the FO tag for the SAM Header
   */
 #define tmap_sff_io_get_rg_fo(sffio) (sffio->gheader->flow->s)
 /*!
-  @param  sffio  a pointer to a previously initialized SAM/BAM structure
-  @return the KS tag from the SAM Header
+  @param  sffio  a pointer to a previously initialized SFF structure
+  @return the KS tag for the SAM Header
   */
 #define tmap_sff_io_get_rg_ks(sffio) (sffio->gheader->key->s)
+/*!
+  @param  sffio  a pointer to a previously initialized SFF structure
+  @return the LB tag for the SAM Header
+  */
+#define tmap_sff_io_get_rg_lb(sffio) (NULL) 
+/*!
+  @param  sffio  a pointer to a previously initialized SFF structure
+  @return the PG tag for the SAM Header
+  */
+#define tmap_sff_io_get_rg_pg(sffio) (NULL) 
+/*!
+  @param  sffio  a pointer to a previously initialized SFF structure
+  @return the PI tag for the SAM Header
+  */
+#define tmap_sff_io_get_rg_pi(sffio) (NULL) 
+/*!
+  @param  sffio  a pointer to a previously initialized SFF structure
+  @return the PL tag for the SAM Header
+  */
+#define tmap_sff_io_get_rg_pl(sffio) (NULL) 
+/*!
+  @param  sffio  a pointer to a previously initialized SFF structure
+  @return the PU tag for the SAM Header
+  */
+#define tmap_sff_io_get_rg_pu(sffio) (NULL) 
+/*!
+  @param  sffio  a pointer to a previously initialized SFF structure
+  @return the SM tag for the SAM Header
+  */
+#define tmap_sff_io_get_rg_sm(sffio) (NULL) 
 
 /*! 
   initializes sff reading structure
