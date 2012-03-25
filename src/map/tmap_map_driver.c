@@ -575,6 +575,7 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
               tmap_error("the input read files were of differing length", Exit, OutOfRange);
           }
       }
+      tmap_progress_print2("loaded %d reads", seq_buffer_length);
       if(0 == seq_buffer_length) {
           break;
       }
