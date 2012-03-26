@@ -974,6 +974,8 @@ tmap_map_opt_init(int32_t algo_id)
   opt->seq_eq = 0;
 #ifdef HAVE_SAMTOOLS
   opt->ignore_rg_sam_tags = 0;
+#else
+  opt->ignore_rg_sam_tags = 1; // NB: always ignore
 #endif
   opt->input_compr = TMAP_FILE_NO_COMPRESSION;
   opt->output_compr = TMAP_FILE_NO_COMPRESSION;
@@ -1849,8 +1851,8 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
   tmap_error_cmd_check_int(opt->bidirectional, 0, 1, "-D");
   tmap_error_cmd_check_int(opt->seq_eq, 0, 1, "-I");
-#ifdef HAVE_SAMTOOLS
   tmap_error_cmd_check_int(opt->ignore_rg_sam_tags, 0, 1, "-C");
+#ifdef HAVE_SAMTOOLS
   /*
   if(0 == opt->ignore_rg_sam_tags && NULL != opt->sam_rg) {
       tmap_error("Must use -C with -R", Exit, CommandLineArgument);
@@ -1986,9 +1988,7 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->sam_rg = tmap_strdup(opt_src->sam_rg);
     opt_dest->bidirectional = opt_src->bidirectional;
     opt_dest->seq_eq = opt_src->seq_eq;
-#ifdef HAVE_SAMTOOLS
     opt_dest->ignore_rg_sam_tags = opt_src->ignore_rg_sam_tags;
-#endif
     opt_dest->input_compr = opt_src->input_compr;
     opt_dest->output_compr = opt_src->output_compr;
     opt_dest->shm_key = opt_src->shm_key;
@@ -2058,9 +2058,7 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "sam_rg=%s\n", opt->sam_rg);
   fprintf(stderr, "bidirectional=%d\n", opt->bidirectional);
   fprintf(stderr, "seq_eq=%d\n", opt->seq_eq);
-#ifdef HAVE_SAMTOOLS
   fprintf(stderr, "ignore_rg_sam_tags=%d\n", opt->ignore_rg_sam_tags);
-#endif
   fprintf(stderr, "sam_flowspace_tags=%d\n", opt->sam_flowspace_tags);
   fprintf(stderr, "ignore_flowgram=%d\n", opt->ignore_flowgram);
   fprintf(stderr, "remove_sff_clipping=%d\n", opt->remove_sff_clipping);
