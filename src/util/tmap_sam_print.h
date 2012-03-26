@@ -47,11 +47,14 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq,
   @param  m_strand      the mates strand
   @param  m_seqid       the mates seqid (zero-based), 0 otherwise
   @param  m_pos         the mates position (zero-based), 0 otherwise
+  @param  format      optional tag format (printf-style)
+  @param  ...         arguments for the format
   */
 inline void
 tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_tags, int32_t bidirectional, tmap_refseq_t *refseq,
                         uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, 
-                        uint32_t m_strand, uint32_t m_seqid, uint32_t m_pos);
+                        uint32_t m_strand, uint32_t m_seqid, uint32_t m_pos,
+                        const char *format, ...);
 
 
 /*! 

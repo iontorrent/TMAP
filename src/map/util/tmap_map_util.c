@@ -326,7 +326,7 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
   if(NULL == sam) { // unmapped
       tmap_sam_print_unmapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, refseq,
                               end_num, mate_unmapped, 0,
-                              mate_strand, mate_seqid, mate_pos);
+                              mate_strand, mate_seqid, mate_pos, NULL);
   }
   else {
       // Note: samtools does not like this value

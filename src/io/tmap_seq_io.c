@@ -288,12 +288,24 @@ tmap_seq_io_sff2sam_main(int argc, char *argv[])
       // get the key sequence from the first entry
       key_seq_len = tmap_seq_get_key_seq_int(seq_in, &key_seq);
       tmap_seq_remove_key_sequence(seq_in, remove_sff_clipping, key_seq, key_seq_len);
-      tmap_sam_print_unmapped(tmap_file_stdout, seq_in, sam_flowspace_tags, bidirectional, NULL, 0, 0, 0, 0, 0, 0);
+      tmap_sam_print_unmapped(tmap_file_stdout, seq_in, sam_flowspace_tags, bidirectional, 
+                              NULL, 0, 0, 0, 0, 0, 0,
+                              "\tlq:i:%d\trq:i:%d\tla:i:%d\trq:i:%d",
+                              seq_in->data.sff->rheader->clip_qual_left,
+                              seq_in->data.sff->rheader->clip_qual_right,
+                              seq_in->data.sff->rheader->clip_adapter_left,
+                              seq_in->data.sff->rheader->clip_adapter_right);
 
       // no need to get the key sequence
       while(0 < tmap_seq_io_read(io_in, seq_in)) {
           tmap_seq_remove_key_sequence(seq_in, remove_sff_clipping, key_seq, key_seq_len);
-          tmap_sam_print_unmapped(tmap_file_stdout, seq_in, sam_flowspace_tags, bidirectional, NULL, 0, 0, 0, 0, 0, 0);
+          tmap_sam_print_unmapped(tmap_file_stdout, seq_in, sam_flowspace_tags, bidirectional, 
+                                  NULL, 0, 0, 0, 0, 0, 0,
+                                  "\tlq:i:%d\trq:i:%d\tla:i:%d\trq:i:%d",
+                                  seq_in->data.sff->rheader->clip_qual_left,
+                                  seq_in->data.sff->rheader->clip_qual_right,
+                                  seq_in->data.sff->rheader->clip_adapter_left,
+                                  seq_in->data.sff->rheader->clip_adapter_right);
       }
 
       free(key_seq);

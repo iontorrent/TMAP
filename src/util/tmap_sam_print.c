@@ -334,10 +334,12 @@ tmap_sam_print_fz_and_zf(tmap_file_t *fp, tmap_seq_t *seq)
 inline void
 tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_tags, int32_t bidirectional, tmap_refseq_t *refseq,
                       uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, 
-                      uint32_t m_strand, uint32_t m_seqid, uint32_t m_pos)
+                      uint32_t m_strand, uint32_t m_seqid, uint32_t m_pos,
+                      const char *format, ...)
 {
   uint32_t flag = 0;
   tmap_string_t *name=NULL, *bases=NULL, *qualities=NULL;
+  va_list ap;
 
   name = tmap_seq_get_name(seq);
   bases = tmap_seq_get_bases(seq);
@@ -387,6 +389,13 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_
   }
   if(1 == bidirectional) {
       tmap_file_fprintf(fp, "\tXB:i:1");
+  }
+  
+  // optional tags
+  if(NULL != format) {
+      va_start(ap, format);
+      tmap_file_vfprintf(fp, format, ap);
+      va_end(ap);
   }
   tmap_file_fprintf(fp, "\n");
 }
