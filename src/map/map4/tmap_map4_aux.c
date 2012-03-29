@@ -134,20 +134,22 @@ tmap_map4_aux_core(tmap_seq_t *seq,
   if (min_seed_length < 0) tmap_bug(); // this should not happen, or fix it upstream
   if(-1 == max_seed_length || query_len < max_seed_length) max_seed_length = query_len; 
 
-  start = 0;
+  start = 0; // zero-based
   by = (opt->seed_step < 0) ? query_len : opt->seed_step;
 
   max_repr = opt->max_repr;
   max_repr = (opt->max_iwidth < max_repr) ? opt->max_iwidth : max_repr;
 
   // for looping
-  end = (0 == opt->use_min) ? (query_len - max_seed_length + 1) : (query_len - min_seed_length + 1);
+  end = (0 == opt->use_min) ? (query_len - max_seed_length + 1) : (query_len - min_seed_length + 1); // one-based
   
   while(start < end) {
       //fprintf(stderr, "start=%d min_seed_length=%d max_seed_length=%d\n", start, min_seed_length, max_seed_length);
       
       // init iter
-      tmap_map4_aux_smem_iter_set_query(iter, max_seed_length, query + start);
+      tmap_map4_aux_smem_iter_set_query(iter, 
+                                        (max_seed_length < (end - start) ? max_seed_length : (end - start)), 
+                                        query + start);
 
       // iterate
       while (0 < tmap_map4_aux_smem_iter_next(iter, bwt)) {
