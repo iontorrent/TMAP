@@ -380,7 +380,7 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
       "3 - all alignments",
       NULL};
   static char *vsw_type[] = {"0 - lh3",
-      "1 - NoOp",
+      "1 - Psyho",
       "2 - NoOp",
       "3 - folsena",
       NULL};

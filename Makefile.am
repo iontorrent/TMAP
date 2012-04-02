@@ -40,6 +40,7 @@ GLOBAL_SOURCES = \
 				 src/sw/tmap_vsw_definitions.h src/sw/tmap_vsw_definitions.c \
 				 src/sw/tmap_vsw.h src/sw/tmap_vsw.c \
 				 src/sw/tmap_vsw_s0.h src/sw/tmap_vsw_s0.c \
+				 src/sw/tmap_vsw_s1.h src/sw/tmap_vsw_s1.c \
 				 src/sw/tmap_vsw_s3.h src/sw/tmap_vsw_s3.c \
 				 src/sw/tmap_vsw_bm.c 
 

@@ -90,7 +90,6 @@ process(tmap_vsw_data_s3_t *vsw, const uint8_t *bs, const int32_t n, const uint8
     const int16_t* a = abuf;
     __m128i A;
 
-
     if (qec == 0) {
         if (qsc == 0) {
             for (bl=0; bl < nb; bl+=8) {

@@ -27,7 +27,7 @@
 #ifndef TMAP_VSW_H
 #define TMAP_VSW_H
 
-//#define TMAP_VSW_DEBUG_CMP
+#define TMAP_VSW_DEBUG_CMP
 //#define TMAP_VSW_DEBUG
 
 // TODO: document
@@ -38,10 +38,12 @@
 #include <unistd.h>
 #include "tmap_vsw_definitions.h"
 #include "tmap_vsw_s0.h"
+#include "tmap_vsw_s1.h"
 #include "tmap_vsw_s3.h"
   
 enum {
     TMAP_VSW_TYPE_S0 = 0,
+    TMAP_VSW_TYPE_S1 = 1,
     TMAP_VSW_TYPE_S3 = 3
 };
 
@@ -50,10 +52,12 @@ typedef struct {
     int32_t type;
 #ifdef TMAP_VSW_DEBUG_CMP
     tmap_vsw_data_s0_t *s0;
+    tmap_vsw_data_s1_t *s1;
     tmap_vsw_data_s3_t *s3;
 #endif
     union {
         tmap_vsw_data_s0_t *s0;
+        tmap_vsw_data_s1_t *s1;
         tmap_vsw_data_s3_t *s3;
         void *v;
     } data;
