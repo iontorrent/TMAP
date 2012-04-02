@@ -27,7 +27,7 @@
 #ifndef TMAP_VSW_H
 #define TMAP_VSW_H
 
-#define TMAP_VSW_DEBUG_CMP
+//#define TMAP_VSW_DEBUG_CMP
 //#define TMAP_VSW_DEBUG
 
 // TODO: document
