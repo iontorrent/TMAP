@@ -186,6 +186,7 @@ tmap_vsw_process(tmap_vsw_t *vsw,
 
   // update based on current problem
   query_end = target_end = n_best = 0;
+  if(NULL != overflow) (*overflow) = 0;
   if(0 == tmap_vsw_update(vsw, query, qlen, target, tlen)) { // use the default
       score = tmap_vsw_process_s0(vsw->default_s,
                                   query, qlen, target, tlen, 
@@ -323,7 +324,7 @@ tmap_vsw_process(tmap_vsw_t *vsw,
 #endif
 
       // check reverse results
-      if(1 == (*overflow)) {
+      if(NULL != overflow && 1 == (*overflow)) {
           result->query_end = result->query_start = 0;
           result->target_end = result->target_start = 0;
           result->score_fwd = result->score_rev = INT16_MIN;
