@@ -44,10 +44,16 @@ typedef union { int16_t s[8]; __m128i m; } m128si16;
   The parameter and memory for the vectorized alignment.
  */
 typedef struct {
-    int16_t abuf[512];
-    int16_t B[1024+16];
-    int16_t MV[1024+16];
-    m128si16 X[1024+16];
+    int16_t *abuf; //[512];
+    int16_t *B; //[1024+16];
+    int16_t *MV; //[1024+16];
+    m128si16 *X; //[1024+16];
+    int32_t mem_qlen;
+    int32_t mem_tlen;
+    int32_t max_qlen;
+    int32_t max_tlen;
+    int32_t query_start_clip;
+    int32_t query_end_clip;
     tmap_vsw_opt_t *opt; // TODO
 } tmap_vsw_data_s3_t;
 

@@ -58,6 +58,8 @@ typedef struct {
     __m128i *E; /*!< deletion from the query, insertion into the target */
     int32_t qlen_max; /*!< the maximum query size */
     tmap_vsw_opt_t *opt; // TODO
+    int32_t max_qlen; // TODO
+    int32_t max_tlen; // TODO
 } tmap_vsw_data_s0_t;
 
 // returns cell j in the scoring matrix row

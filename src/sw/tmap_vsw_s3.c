@@ -9,6 +9,7 @@
 #include <emmintrin.h>
 #include <pmmintrin.h>
 #include "../util/tmap_alloc.h"
+#include "../util/tmap_definitions.h"
 #include "tmap_vsw_definitions.h"
 #include "tmap_vsw_s3.h"
 
@@ -750,25 +751,60 @@ process(tmap_vsw_data_s3_t *vsw, const uint8_t *bs, const int32_t n, const uint8
     result->target_end = target_end;
     result->n_best = n_best;
 }
+static tmap_vsw_data_s3_t*
+tmap_vsw_data_init_s3_helper(const uint8_t *query, int32_t qlen, int32_t tlen, int32_t query_start_clip, int32_t query_end_clip, tmap_vsw_opt_t *opt)
+{
+  tmap_vsw_data_s3_t *vsw = NULL;
+  vsw = tmap_calloc(1, sizeof(tmap_vsw_data_s3_t), "vsw");
+  vsw->mem_qlen = qlen;
+  vsw->mem_tlen = tlen;
+  tmap_roundup32(vsw->mem_qlen);
+  tmap_roundup32(vsw->mem_tlen);
+  vsw->max_qlen = INT32_MAX;
+  vsw->max_tlen = INT32_MAX;
+  vsw->query_start_clip = query_start_clip;
+  vsw->query_end_clip = query_end_clip;
+  vsw->abuf = tmap_calloc(vsw->mem_qlen, sizeof(int16_t), "vsw->abuf");
+  vsw->B = tmap_calloc(vsw->mem_tlen+16, sizeof(int16_t), "vsw->B");
+  vsw->MV = tmap_calloc(vsw->mem_tlen+16, sizeof(int16_t), "vsw->MV");
+  vsw->X = tmap_calloc(vsw->mem_tlen+16, sizeof(m128si16), "vsw->X");
+  return vsw;
+}
 
 tmap_vsw_data_s3_t*
 tmap_vsw_data_init_s3(const uint8_t *query, int32_t qlen, int32_t query_start_clip, int32_t query_end_clip, tmap_vsw_opt_t *opt)
 {
-  tmap_vsw_data_s3_t *vsw = NULL;
-  vsw = tmap_calloc(1, sizeof(tmap_vsw_data_s3_t), "vsw");
-  return vsw;
+  return tmap_vsw_data_init_s3_helper(query, qlen, qlen, query_start_clip, query_end_clip, opt);
 }
 
 tmap_vsw_data_s3_t*
 tmap_vsw_data_update_s3(tmap_vsw_data_s3_t *vsw, const uint8_t *query, int32_t qlen, const uint8_t *target, int32_t tlen)
 {
-  // Do nothing...
+  int32_t mem_qlen, mem_tlen, qsc, qec;
+  tmap_vsw_opt_t *opt = NULL;
+
+  if(vsw->mem_qlen < qlen || vsw->mem_tlen < tlen) { // update
+      // NB: do not re-use memory, since we want to try to get it all in one
+      // block
+      mem_qlen = (vsw->mem_qlen < qlen) ? qlen : vsw->mem_qlen;
+      mem_tlen = (vsw->mem_tlen < tlen) ? tlen : vsw->mem_tlen;
+      qsc = vsw->query_start_clip;
+      qec = vsw->query_end_clip;
+      opt = vsw->opt;
+      tmap_vsw_data_destroy_s3(vsw); // destroy
+      vsw = tmap_vsw_data_init_s3_helper(query, mem_qlen, mem_tlen, qsc, qec, opt);
+  }
   return vsw;
 }
 
 void
 tmap_vsw_data_destroy_s3(tmap_vsw_data_s3_t *vsw)
 {
+  if(NULL == vsw) return;
+  free(vsw->abuf);
+  free(vsw->B);
+  free(vsw->MV);
+  free(vsw->X);
   free(vsw);
 }
 

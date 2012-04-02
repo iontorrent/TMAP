@@ -89,6 +89,9 @@ tmap_vsw_data_set_mem(tmap_vsw_data_s0_t *prev, const uint8_t *query, int32_t ql
       prev->query_end_clip = query_end_clip;
       // opt
       prev->opt = opt;
+      // set max
+      prev->max_qlen = INT32_MAX;
+      prev->max_tlen = INT32_MAX;
   }
 
   // compute min/max edit scores

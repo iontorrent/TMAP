@@ -27,7 +27,7 @@
 #ifndef TMAP_VSW_H
 #define TMAP_VSW_H
 
-//#define TMAP_VSW_DEBUG_CMP
+#define TMAP_VSW_DEBUG_CMP
 
 // TODO: document
 
@@ -38,6 +38,13 @@
 #include "tmap_vsw_definitions.h"
 #include "tmap_vsw_s0.h"
 #include "tmap_vsw_s3.h"
+  
+// Maximum qlen, otherwise use default algorithm 
+// TODO
+#define TMAP_VSW_MAX_QLEN 512
+// TODO
+// Maximum tlen, otherwise use default algorithm 
+#define TMAP_VSW_MAX_TLEN 1024
 
 enum {
     TMAP_VSW_TYPE_S0 = 0,
@@ -56,8 +63,10 @@ typedef struct {
         tmap_vsw_data_s3_t *s3;
         void *v;
     } data;
+    tmap_vsw_data_s0_t *default_s;
     int32_t query_start_clip;
     int32_t query_end_clip;
+    int32_t use_default; // use default when query/target are too long
     tmap_vsw_opt_t *opt;
 } tmap_vsw_t;
 
