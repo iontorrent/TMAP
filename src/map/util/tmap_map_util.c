@@ -1086,7 +1086,6 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
           s->pos = start_pos - 1; // zero-based
           s->target_len = s->result.target_end + 1;
 
-          // ajust position
           if(1 == strand) {
               s->pos += tlen - s->result.target_end - 1;
           }
@@ -1469,7 +1468,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       // get the strand/start/end positions
       strand = tmp_sam.strand;
       start_pos = tmp_sam.pos + 1;
-      end_pos = tmp_sam.pos + tmp_sam.target_len;
+      end_pos = start_pos + tmp_sam.target_len - 1;
       
       /**
        * Step 1: find the start of the alignment
@@ -1535,8 +1534,8 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
           query_start = seq_len - tmp_sam.result.query_end - 1;
           query_end = seq_len - tmp_sam.result.query_start - 1;
           query += seq_len - tmp_sam.result.query_end - 1; // offset query 
-          target += tlen - tmp_sam.result.target_end - 1;
-          // does not affect tmp_sam.pos
+          // does not affect target offset
+          // does not affect tmp_sam.pos; this was updated earlier
       }
       qlen = tmp_sam.result.query_end - tmp_sam.result.query_start + 1; // update query length
       tlen = tmp_sam.result.target_end - tmp_sam.result.target_start + 1;
