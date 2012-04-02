@@ -160,6 +160,24 @@ tmap_vsw_data_destroy_s0(tmap_vsw_data_s0_t *vsw)
   free(vsw);
 }
 
+static inline int32_t
+tmap_vsw_s0_dir_cmp(int32_t cur_score, int32_t cur_qe, int32_t cur_te,
+                    int32_t next_score, int32_t next_qe, int32_t next_te,
+                    int32_t dir)
+{
+  if(next_score < cur_score) return 0;
+  if(cur_score < next_score) return 1;
+  if(0 == dir) {
+      if(next_qe < cur_qe) return 1;
+      if(next_qe == cur_qe && next_te < cur_te) return 1;
+  }
+  else {
+      if(cur_qe < next_qe) return 1;
+      if(cur_qe == next_qe && cur_te < next_te) return 1; 
+  }
+  return 0;
+}
+
 int32_t
 tmap_vsw_process_s0(tmap_vsw_data_s0_t *vsw,
                     const uint8_t *query, int32_t qlen, const uint8_t *target, int32_t tlen, 
@@ -384,8 +402,8 @@ end_loop:
       }
       if(score_thr <= imax && best <= imax) { // potential best score
           tmap_vsw16_int_t *t;
-          int32_t save_score = 0;
-          if(imax > best || (1 == direction && imax == best)) save_score = 1;
+          //int32_t save_score = 0;
+          //if(imax > best || (1 == direction && imax == best)) save_score = 1;
           if(query_end_clip == 0) { // check the last
               j = (vsw->qlen-1) % slen; // stripe
               k = (vsw->qlen-1) / slen; // byte
@@ -401,7 +419,9 @@ end_loop:
                       (*n_best) = 1;
                   }
               }
-              if(1 == save_score && (best < (int32_t)t[k] || (1 == direction && (int32_t)t[k] == best))) { // found new best score 
+
+              // new best score
+              if(1 == tmap_vsw_s0_dir_cmp(best, (*query_end), (*target_end), (int32_t)t[k], vsw->qlen-1, i, direction)) {
                   (*query_end) = vsw->qlen-1;
                   (*target_end) = i;
                   best = t[k];
@@ -426,10 +446,11 @@ end_loop:
                               (*n_best) = 1;
                           }
                       }
-                      if(1 == save_score && (best < (int32_t)*t || (1 == direction && (int32_t)*t == best))) { // found new best score 
+                      int32_t cur_qe = j + ((k & (tmap_vsw16_values_per_128_bits-1)) * slen);
+                      if(1 == tmap_vsw_s0_dir_cmp(best, (*query_end), (*target_end), (int32_t)*t, cur_qe, i, direction)) {
                           found_best = 1;
                           best = *t;
-                          (*query_end) = j + ((k & (tmap_vsw16_values_per_128_bits-1)) * slen);
+                          (*query_end) = cur_qe;
                           (*target_end) = i;
 #ifdef TMAP_VSW_S0_DEBUG 
                           fprintf(stderr, "FOUND B j=%d k=%d query_end=%d best=%d\n", j, k, (*query_end), best-zero);

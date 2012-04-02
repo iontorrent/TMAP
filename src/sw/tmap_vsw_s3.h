@@ -24,90 +24,74 @@
    SOFTWARE.
    */
 
-#ifndef TMAP_VSW_H
-#define TMAP_VSW_H
-
-//#define TMAP_VSW_DEBUG_CMP
+#ifndef TMAP_VSW_S3_H
+#define TMAP_VSW_S3_H
 
 // TODO: document
+
 
 #include <stdlib.h>
 #include <stdint.h>
 #include <emmintrin.h>
 #include <unistd.h>
+#include <stdio.h>
 #include "tmap_vsw_definitions.h"
-#include "tmap_vsw_s0.h"
-#include "tmap_vsw_s3.h"
-
-enum {
-    TMAP_VSW_TYPE_S0 = 0,
-    TMAP_VSW_TYPE_S3 = 3
-};
 
 // TODO
+typedef union { int16_t s[8]; __m128i m; } m128si16;
+
+/*!
+  The parameter and memory for the vectorized alignment.
+ */
 typedef struct {
-    int32_t type;
-#ifdef TMAP_VSW_DEBUG_CMP
-    tmap_vsw_data_s0_t *s0;
-    tmap_vsw_data_s3_t *s3;
-#endif
-    union {
-        tmap_vsw_data_s0_t *s0;
-        tmap_vsw_data_s3_t *s3;
-        void *v;
-    } data;
-    int32_t query_start_clip;
-    int32_t query_end_clip;
-    tmap_vsw_opt_t *opt;
-} tmap_vsw_t;
+    int16_t abuf[512];
+    int16_t B[1024+16];
+    int16_t MV[1024+16];
+    m128si16 X[1024+16];
+    tmap_vsw_opt_t *opt; // TODO
+} tmap_vsw_data_s3_t;
 
 /*!
   @param  query             the query sequence
   @param  qlen              the query sequence length
-  @param  tlen              the target length
   @param  query_start_clip  1 if we are to clip the start of the query, 0 otherwise
   @param  query_end_clip    1 if we are to clip the end of the query, 0 otherwise
   @param  opt               the previous alignment parameters, NULL if none exist
   @return                   the query sequence in vectorized form
   */
-tmap_vsw_t*
-tmap_vsw_init(const uint8_t *query, int32_t qlen,
-              int32_t tlen,
-              int32_t query_start_clip, int32_t query_end_clip,
-              tmap_vsw_opt_t *opt);
+tmap_vsw_data_s3_t*
+tmap_vsw_data_init_s3(const uint8_t *query, int32_t qlen, int32_t query_start_clip, int32_t query_end_clip, tmap_vsw_opt_t *opt);
 
 // TODO
-tmap_vsw_t*
-tmap_vsw_update(tmap_vsw_t *vsw, const uint8_t *query, int32_t qlen, const uint8_t *target, int32_t tlen);
+tmap_vsw_data_s3_t*
+tmap_vsw_data_update_s3(tmap_vsw_data_s3_t *vsw, const uint8_t *query, int32_t qlen, const uint8_t *target, int32_t tlen);
 
 /*!
-  @param  query  the query sequence
-  */
+  @param  vsw  the query sequence in vectorized form
+ */
 void
-tmap_vsw_destroy(tmap_vsw_t *vsw);
+tmap_vsw_data_destroy_s3(tmap_vsw_data_s3_t *vsw);
 
 /*!
-  @param  vsw               the query in its vectorized form
+  @param  vsw               TODO
   @param  query             the query sequence
   @param  qlen              the query sequence length
   @param  target            the target sequence
   @param  tlen              the target sequence length
+  @param  query_start_clip  1 if we are to clip the start of the query, 0 otherwise
+  @param  query_end_clip    1 if we are to clip the end of the query, 0 otherwise
+  @param  opt               the alignment parameters
+  @param  direction         1 if we are performing forward alignment, 0 otherwise
+  @param  score_thr         the minimum scoring threshold (inclusive)
   @param  result            TODO
   @param  overflow           returns 1 if overflow occurs, 0 otherwise
-  @param  score_thr         the minimum scoring threshold (inclusive)
-  @param  is_rev            1 if the reverse alignment is being performed, 0 for the forward
   @return                   the alignment score
-  @details is_rev explains how to break ties. If is_rev = 0, then query_end needs to be as 
-  small as possible (if there are still several possibilities, choose the one with the smallest
-  value of target_end among them). If is_rev = 1, then query_end needs to be as large as possible 
-  (if there are still several possibilities, choose the one with the largest value of target_end 
-  among them). 
   */
 int32_t
-tmap_vsw_process(tmap_vsw_t *vsw,
-                 const uint8_t *query, int32_t qlen,
-                 uint8_t *target, int32_t tlen, 
-                 tmap_vsw_result_t *result,
-                 int32_t *overflow, int32_t score_thr, int32_t is_rev);
-
+tmap_vsw_process_s3(tmap_vsw_data_s3_t *vsw,
+                    const uint8_t *query, int32_t qlen, const uint8_t *target, int32_t tlen, 
+                    int32_t query_start_clip, int32_t query_end_clip, tmap_vsw_opt_t *opt, 
+                    int32_t direction, int32_t score_thr, 
+                    int32_t *query_end, int32_t *target_end, 
+                    int32_t *n_best, int32_t *overflow);
 #endif

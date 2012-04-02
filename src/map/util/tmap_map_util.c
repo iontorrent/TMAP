@@ -1174,7 +1174,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   seq_len = tmap_seq_get_bases_length(seqs[0]);
 
   // forward
-  vsw = tmap_vsw_init((uint8_t*)tmap_seq_get_bases(seqs[0])->s, seq_len, softclip_start, softclip_end, TMAP_VSW_TYPE_S0, vsw_opt); 
+  vsw = tmap_vsw_init((uint8_t*)tmap_seq_get_bases(seqs[0])->s, seq_len, softclip_start, softclip_end, opt->vsw_type, vsw_opt); 
 
   // core loop
   i = start = end = 0;
@@ -1437,7 +1437,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
   seq_len = tmap_seq_get_bases_length(seqs[0]);
 
   // reverse compliment query
-  vsw = tmap_vsw_init((uint8_t*)tmap_seq_get_bases(seqs[1])->s, seq_len, softclip_end, softclip_start, TMAP_VSW_TYPE_S0, vsw_opt); 
+  vsw = tmap_vsw_init((uint8_t*)tmap_seq_get_bases(seqs[1])->s, seq_len, softclip_end, softclip_start, opt->vsw_type, vsw_opt); 
       
   if(1 == opt->softclip_key) {
       uint8_t *key_seq = NULL;

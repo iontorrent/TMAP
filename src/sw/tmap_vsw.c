@@ -56,10 +56,17 @@ tmap_vsw_init(const uint8_t *query, int32_t qlen,
     case TMAP_VSW_TYPE_S0:
       vsw->data.s0 = tmap_vsw_data_init_s0(query, qlen, query_start_clip, query_end_clip, opt);
       break;
-    case TMAP_VSW_TYPE_S1:
+    case TMAP_VSW_TYPE_S3:
+      vsw->data.s3 = tmap_vsw_data_init_s3(query, qlen, query_start_clip, query_end_clip, opt);
+      break;
     default:
+      tmap_bug();
       break;
   }
+#ifdef TMAP_VSW_DEBUG_CMP
+  vsw->s0 = tmap_vsw_data_init_s0(query, qlen, query_start_clip, query_end_clip, opt);
+  vsw->s3 = tmap_vsw_data_init_s3(query, qlen, query_start_clip, query_end_clip, opt);
+#endif
   return vsw;
 }
 
@@ -72,10 +79,18 @@ tmap_vsw_destroy(tmap_vsw_t *vsw)
       tmap_vsw_data_destroy_s0(vsw->data.s0);
       vsw->data.s0 = NULL;
       break;
-    case TMAP_VSW_TYPE_S1:
+    case TMAP_VSW_TYPE_S3:
+      tmap_vsw_data_destroy_s3(vsw->data.s3);
+      vsw->data.s3 = NULL;
+      break;
     default:
+      tmap_bug();
       break;
   }
+#ifdef TMAP_VSW_DEBUG_CMP
+  tmap_vsw_data_destroy_s0(vsw->s0);
+  tmap_vsw_data_destroy_s3(vsw->s3);
+#endif
   free(vsw);
 }
 
@@ -86,10 +101,17 @@ tmap_vsw_update(tmap_vsw_t *vsw, const uint8_t *query, int32_t qlen, const uint8
     case TMAP_VSW_TYPE_S0:
       tmap_vsw_data_update_s0(vsw->data.s0, query, qlen, target, tlen);
       break;
-    case TMAP_VSW_TYPE_S1:
+    case TMAP_VSW_TYPE_S3:
+      tmap_vsw_data_update_s3(vsw->data.s3, query, qlen, target, tlen);
+      break;
     default:
+      tmap_bug();
       break;
   }
+#ifdef TMAP_VSW_DEBUG_CMP
+  tmap_vsw_data_update_s0(vsw->s0, query, qlen, target, tlen);
+  tmap_vsw_data_update_s3(vsw->s3, query, qlen, target, tlen);
+#endif
   return vsw;
 }
 
@@ -137,11 +159,69 @@ tmap_vsw_process(tmap_vsw_t *vsw,
                           is_rev, score_thr, 
                           &query_end, &target_end, &n_best, overflow);
       break;
-    case TMAP_VSW_TYPE_S1:
+    case TMAP_VSW_TYPE_S3:
+      score = tmap_vsw_process_s3(vsw->data.s3, 
+                          query, qlen, target, tlen, 
+                          vsw->query_start_clip, vsw->query_end_clip, vsw->opt,
+                          is_rev, score_thr, 
+                          &query_end, &target_end, &n_best, overflow);
+      break;
     default:
-      score = INT32_MIN;
+      tmap_bug();
       break;
   }
+  if(score < score_thr) {
+      query_end = target_end = -1;
+      n_best = 0;
+      score = INT32_MIN;
+  }
+
+#ifdef TMAP_VSW_DEBUG_CMP
+  int32_t query_end_s0, target_end_s0, n_best_s0, score_s0;
+  score_s0 = tmap_vsw_process_s0(vsw->s0, 
+                                 query, qlen, target, tlen, 
+                                 vsw->query_start_clip, vsw->query_end_clip, vsw->opt,
+                                 is_rev, score_thr, 
+                                 &query_end_s0, &target_end_s0, &n_best_s0, overflow);
+  int32_t query_end_s3, target_end_s3, n_best_s3, score_s3;
+  score_s3 = tmap_vsw_process_s3(vsw->s3, 
+                              query, qlen, target, tlen, 
+                              vsw->query_start_clip, vsw->query_end_clip, vsw->opt,
+                              is_rev, score_thr, 
+                              &query_end_s3, &target_end_s3, &n_best_s3, overflow);
+  if(score_s0 != score_s3 
+     || query_end_s0 != query_end_s3
+     || target_end_s0 != target_end_s3
+     || n_best_s0 != n_best_s3) {
+      int32_t i;
+      fprintf(stderr, "QSC=%d QEC=%d is_rev=%d\n",
+              vsw->query_start_clip,
+              vsw->query_end_clip,
+              is_rev);
+      /*
+      for(i=target_end_s0-query_end_s0-1;0<i;i--) {
+          fputc(' ', stderr);
+      }
+      */
+      //for(i=0;i<query_end+1;i++) {
+      for(i=0;i<qlen;i++) {
+          fputc("ACGTN"[query[i]], stderr);
+      }
+      fputc('\n', stderr);
+      //for(i=0;i<target_end+1;i++) {
+      for(i=0;i<tlen;i++) {
+          fputc("ACGTN"[target[i]], stderr);
+      }
+      fputc('\n', stderr);
+
+      fprintf(stderr, "score=[%d,%d] QE=[%d,%d] TE=[%d,%d] NB=[%d,%d]\n",
+              score_s0, score_s3,
+              query_end_s0, query_end_s3,
+              target_end_s0, target_end_s3,
+              n_best_s0, n_best_s3);
+      tmap_bug();
+  }
+#endif
   
   if(0 == is_rev) {
 

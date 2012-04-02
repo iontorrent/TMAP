@@ -147,6 +147,7 @@ __tmap_map_opt_option_print_func_int_init(shm_key)
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
 __tmap_map_opt_option_print_func_double_init(sample_reads)
 #endif
+__tmap_map_opt_option_print_func_int_init(vsw_type)
 __tmap_map_opt_option_print_func_verbosity_init()
 // flowspace
 __tmap_map_opt_option_print_func_int_init(fscore)
@@ -378,6 +379,11 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
       "2 - all best hits",
       "3 - all alignments",
       NULL};
+  static char *vsw_type[] = {"0 - lh3",
+      "1 - NoOp",
+      "2 - NoOp",
+      "3 - folsena",
+      NULL};
   static char *pairing[] = {"0 - no pairing is to be performed", "1 - mate pairs (-S 0 -P 1)", "2 - paired end (-S 1 -P 0)", NULL};
   static char *strandedness[] = {"0 - same strand", "1 - opposite strand", NULL};
   static char *positioning[] = {"0 - read one before read two", "1 - read two before read one", NULL};
@@ -559,6 +565,12 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            tmap_map_opt_option_print_func_sample_reads,
                            TMAP_MAP_ALGO_GLOBAL);
 #endif
+  tmap_map_opt_options_add(opt->options, "vsw-type", required_argument, 0, 'H',
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the vectorized smith-waterman algorithm",
+                           vsw_type,
+                           tmap_map_opt_option_print_func_vsw_type,
+                           TMAP_MAP_ALGO_GLOBAL);
   tmap_map_opt_options_add(opt->options, "help", no_argument, 0, 'h', 
                            TMAP_MAP_OPT_TYPE_NONE,
                            "print this message",
@@ -985,6 +997,7 @@ tmap_map_opt_init(int32_t algo_id)
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
   opt->sample_reads = 1.0;
 #endif
+  opt->vsw_type = 0;
 
   // flowspace options
   opt->fscore = TMAP_MAP_OPT_FSCORE;
@@ -1303,6 +1316,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
       else if(c == 'E' || (0 == c && 0 == strcmp("pen-gap-extension", options[option_index].name))) {       
           opt->pen_gape = atoi(optarg);
+      }
+      else if(c == 'H' || (0 == c && 0 == strcmp("vsw-type", options[option_index].name))) {       
+          opt->vsw_type = atoi(optarg); 
       }
       else if(c == 'I' || (0 == c && 0 == strcmp("use-seq-equal", options[option_index].name))) {       
           opt->seq_eq = 1;
@@ -1718,6 +1734,9 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
         tmap_error("option -x was specified outside of the common options", Exit, CommandLineArgument);
     }
 #endif
+    if(opt_a->vsw_type != opt_b->vsw_type) {
+        tmap_error("option -H was specified outside of the common options", Exit, CommandLineArgument);
+    }
     // flowspace
     if(opt_a->fscore != opt_b->fscore) {
         tmap_error("option -X was specified outside of the common options", Exit, CommandLineArgument);
@@ -1871,6 +1890,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
   tmap_error_cmd_check_int(opt->sample_reads, 0, 1, "-x");
 #endif
+  tmap_error_cmd_check_int(opt->vsw_type, 0, 3, "-H");
 
   switch(opt->algo_id) {
     case TMAP_MAP_ALGO_MAP1: // map1 options
@@ -1995,6 +2015,7 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
     opt_dest->sample_reads = opt_src->sample_reads;
 #endif
+    opt_dest->vsw_type = opt_src->vsw_type;
     
     // flowspace options
     opt_dest->fscore = opt_src->fscore;
@@ -2069,6 +2090,7 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
   fprintf(stderr, "sample_reads=%lf\n", opt->sample_reads);
 #endif
+  fprintf(stderr, "vsw_type=%d\n", opt->vsw_type);
   fprintf(stderr, "min_seq_len=%d\n", opt->min_seq_len);
   fprintf(stderr, "max_seq_len=%d\n", opt->max_seq_len);
   fprintf(stderr, "seed_length=%d\n", opt->seed_length);
