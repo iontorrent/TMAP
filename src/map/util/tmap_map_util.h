@@ -99,12 +99,7 @@ typedef struct {
         tmap_map_map_vsw_aux_t *map_vsw_aux; /*!< auxiliary data for map_vsw */
     } aux;
     // for bounding the alignment with vectorized SW
-    int16_t score_fwd; /*!< the alignment score for the forward smith waterman */
-    int16_t score_rev; /*!< the alignment score for the reverse smith waterman */
-    int16_t query_start; /*!< the query start position in the alignment (0-based) */ 
-    int16_t query_end; /*!< the query end position in the alignment (0-based) */ 
-    int16_t target_start; /*!< the target start position in the alignment (0-based) */ 
-    int16_t target_end; /*!< the target end position in the alignment (0-based) */ 
+    tmap_vsw_result_t result; // TODO
     uint32_t seed_start; /*!< the start of the seed in genomic coordinates used to map this read */
     uint32_t seed_end; /*!< the end of the seed in genomic coordinates used to map this read */
 } tmap_map_sam_t;
