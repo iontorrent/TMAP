@@ -64,7 +64,6 @@ typedef struct {
 /*!
   @param  query             the query sequence
   @param  qlen              the query sequence length
-  @param  tlen              the target length
   @param  query_start_clip  1 if we are to clip the start of the query, 0 otherwise
   @param  query_end_clip    1 if we are to clip the end of the query, 0 otherwise
   @param  opt               the previous alignment parameters, NULL if none exist
@@ -72,8 +71,8 @@ typedef struct {
   */
 tmap_vsw_t*
 tmap_vsw_init(const uint8_t *query, int32_t qlen,
-              int32_t tlen,
               int32_t query_start_clip, int32_t query_end_clip,
+              int32_t type,
               tmap_vsw_opt_t *opt);
 
 // TODO

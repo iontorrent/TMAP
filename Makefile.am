@@ -49,7 +49,6 @@ tmap_SOURCES = \
 			   src/server/tmap_shm.h src/server/tmap_shm.c \
 			   src/sam2fs/tmap_sam2fs_aux.h src/sam2fs/tmap_sam2fs_aux.c \
 			   src/sam2fs/tmap_sam2fs.h src/sam2fs/tmap_sam2fs.c \
-			   src/debug/tmap_debug_exact.h src/debug/tmap_debug_exact.c \
 			   src/index/tmap_index_speed.h src/index/tmap_index_speed.c \
 			   src/index/tmap_bwt_check.c src/index/tmap_bwt_check.h \
 			   src/index/tmap_bwt_compare.c src/index/tmap_bwt_compare.h \
