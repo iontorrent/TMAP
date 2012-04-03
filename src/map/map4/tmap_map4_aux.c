@@ -61,12 +61,13 @@ tmap_map4_aux_smem_iter_next(tmap_map4_aux_smem_iter_t *iter, tmap_bwt_t *bwt)
 }
 
 static void
-tmap_bwt_smem_intv_copy(tmap_bwt_smem_intv_t *dest, tmap_bwt_smem_intv_t *src)
+tmap_bwt_smem_intv_copy(tmap_bwt_smem_intv_t *dest, tmap_bwt_smem_intv_t *src, int32_t start_offset)
 {
   dest->x[0] = src->x[0];
   dest->x[1] = src->x[1];
   dest->size = src->size;
   dest->info = src->info;
+  dest->info += ((uint64_t)start_offset << 32) + start_offset;
 }
 
 static tmap_bwt_smem_intv_vec_t *
@@ -80,13 +81,13 @@ tmap_bwt_smem_intv_vec_init()
 }
 
 static void
-tmap_bwt_smem_intv_vec_push(tmap_bwt_smem_intv_vec_t *matches, tmap_bwt_smem_intv_t *p)
+tmap_bwt_smem_intv_vec_push(tmap_bwt_smem_intv_vec_t *matches, tmap_bwt_smem_intv_t *p, int32_t start_offset)
 {
   if (matches->n == matches->m) {
       matches->m = (0 < matches->m) ? (matches->m << 1) : 2;
       matches->a = tmap_realloc(matches->a, sizeof(tmap_bwt_smem_intv_t) * matches->m, "matches->a");
   }
-  tmap_bwt_smem_intv_copy(&matches->a[matches->n++], p);
+  tmap_bwt_smem_intv_copy(&matches->a[matches->n++], p, start_offset);
 }
 
 static void
@@ -167,7 +168,7 @@ tmap_map4_aux_core(tmap_seq_t *seq,
               // too many hits?
               if (p->size <= opt->max_iwidth || p->size < max_repr) {
                   // OK
-                  tmap_bwt_smem_intv_vec_push(matches, p);
+                  tmap_bwt_smem_intv_vec_push(matches, p, start);
               }
               else if (0 < max_repr) {
                   tmap_bwt_smem_intv_t q;
@@ -177,7 +178,7 @@ tmap_map4_aux_core(tmap_seq_t *seq,
 
                   /*
                   p->size = (opt->max_iwidth < max_repr) ? opt->max_iwidth : max_repr;
-                  tmap_bwt_smem_intv_vec_push(matches, p);
+                  tmap_bwt_smem_intv_vec_push(matches, p, start);
                   */
 
                   if (1 == opt->rand_repr) {
@@ -191,7 +192,7 @@ tmap_map4_aux_core(tmap_seq_t *seq,
                               p->x[1] = q.x[1] + k;
                               p->size = 1;
                               // push
-                              tmap_bwt_smem_intv_vec_push(matches, p);
+                              tmap_bwt_smem_intv_vec_push(matches, p, start);
                               // update count
                               c++;
                               if(max_repr <= c) break;
@@ -211,7 +212,7 @@ tmap_map4_aux_core(tmap_seq_t *seq,
                               p->x[1] = q.x[1] + k;
                               p->size = 1;
                               // push
-                              tmap_bwt_smem_intv_vec_push(matches, p);
+                              tmap_bwt_smem_intv_vec_push(matches, p, start);
                               // update count
                               c = 0;
                           }
