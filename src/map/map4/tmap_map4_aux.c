@@ -263,6 +263,8 @@ tmap_map4_aux_core(tmap_seq_t *seq,
               if(0 < tmap_refseq_pac2real(refseq, pacpos, 1, &seqid, &pos, &strand)) {
                   tmap_map_sam_t *s;
 
+                  pos--; // make zero-baed
+
                   //fprintf(stderr, "1 seqid:%u pos:%u strand:%d qstart=%u qend=%u len=%u\n", seqid, pos, strand, qstart, qend, len);
                   // adjust the position
                   if(1 == strand) {
