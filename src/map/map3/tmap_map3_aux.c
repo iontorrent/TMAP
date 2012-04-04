@@ -405,7 +405,7 @@ tmap_map3_aux_core(tmap_seq_t *seq,
       uint32_t seqid, pos, pos_adj;
       tmap_bwt_int_t k, pacpos;
       uint16_t seed_length_ext = seeds[j].seed_length;
-      uint16_t start = seeds[j].seed_length;
+      uint16_t start = seeds[j].start;
       uint8_t strand;
       for(k=seeds[j].k;k<=seeds[j].l;k++) { // through all occurrences
           tmap_map_sam_t *s = NULL;

@@ -1227,7 +1227,6 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
              && sams->sams[end].seqid == sams->sams[end+1].seqid) {
               tmap_map_util_sw_get_start_and_end_pos(&sams->sams[end+1], seq_len, strand, &start_pos_cur, &end_pos_cur);
 
-              //if(start_pos_cur - start_pos_prev <= opt->max_seed_band) { // consider start positions only
               if(start_pos_cur <= end_pos_prev // NB: beware of unsigned int underflow
                  || (start_pos_cur - end_pos_prev) <= opt->max_seed_band) { 
                   end++;
@@ -1563,7 +1562,6 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       /**
        * Step 2: generate the cigar
        */
-
       if(0 < conv) { // NB: there were IUPAC bases
           // init iupac parameters, if necessary
           if(0 == iupac_init) {
