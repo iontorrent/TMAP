@@ -149,7 +149,7 @@ tmap_map4_aux_core(tmap_seq_t *seq,
       
       // init iter
       tmap_map4_aux_smem_iter_set_query(iter, 
-                                        max_seed_length < (query_len - start) ? max_seed_length : (query_len - start)), 
+                                        max_seed_length < (query_len - start) ? max_seed_length : (query_len - start), 
                                         query + start);
 
       // iterate
