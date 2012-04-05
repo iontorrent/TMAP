@@ -4,6 +4,8 @@
 
 TMAP is a fast and accurate alignment software for short and long nucleotide sequences produced by next-generation sequencing technologies.
 
+* The latest TMAP is unsupported.  To use a supported version, please see the TMAP version associated with a Torrent Suite release below.
+
 *  Download TMAP now: http://github.com/iontorrent/TMAP/tags
     * Torrent Suite 2.0.1: http://github.com/iontorrent/TMAP/tarball/tmap.0.2.3
     * Torrent Suite 2.0:   http://github.com/iontorrent/TMAP/tarball/tmap.0.2.3
