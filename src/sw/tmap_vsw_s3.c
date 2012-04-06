@@ -15,6 +15,9 @@
 
 #include "string.h"
 
+// Comment this out to support only QxT = 512x1024
+#define TMAP_VSW_S3_ANY_LENGTH
+
 const int32_t INF = 1073741824;
 const int16_t NINF = -30000;
 
@@ -36,10 +39,11 @@ fill(int16_t *first, int16_t *last, int16_t value)
   while(first != last) *first++ = value;
 }
 
+// NB: converts to characters
 int16_t*
 reverse_copy(const uint8_t *first, const uint8_t *last, int16_t *result)
 {
-  while (first!=last) *result++ = *--last;
+  while (first!=last) *result++ = "ACGTN"[*--last];
   return result;
 }
 
@@ -64,13 +68,14 @@ process(tmap_vsw_data_s3_t *vsw, const uint8_t *bs, const int32_t n, const uint8
     int16_t *MV = vsw->MV;
     m128si16 *X = vsw->X;
 
+    // NB: it is important that we use ASCII values for the bases, apparently
     fill(B, B+8, 0);
     //fill_n(reverse_copy(bs.begin(), bs.end(), B+8), 8, 0);
-    fill_n(reverse_copy(bs, bs+n, B+8), 8, 0);
+    fill_n(reverse_copy(bs, bs+n, B+8), 8, 0); // NB: reverse_copy converts to characters
     fill(MV+8, MV+8+n, oe);
     //copy(as.c_str(), as.c_str() + m, abuf);
-    for(i=0;i<m;i++) {
-        abuf[i] = as[i];
+    for(i=0;i<m;i++) { // convert to characters
+        abuf[i] = "ACGTN"[as[i]];
     }
 
     for(i=0; i<n; i++) {
@@ -761,18 +766,19 @@ tmap_vsw_data_init_s3_helper(const uint8_t *query, int32_t qlen, int32_t tlen, i
 {
   tmap_vsw_data_s3_t *vsw = NULL;
   vsw = tmap_calloc(1, sizeof(tmap_vsw_data_s3_t), "vsw");
-  /*
+#ifdef TMAP_VSW_S3_ANY_LENGTH
   vsw->mem_qlen = qlen;
   vsw->mem_tlen = tlen;
   tmap_roundup32(vsw->mem_qlen);
   tmap_roundup32(vsw->mem_tlen);
   vsw->max_qlen = INT32_MAX;
   vsw->max_tlen = INT32_MAX;
-  */
+#else
   vsw->mem_qlen = 512;
   vsw->mem_tlen = 1024;
   vsw->max_qlen = 512; 
   vsw->max_tlen = 1024; 
+#endif
   vsw->query_start_clip = query_start_clip;
   vsw->query_end_clip = query_end_clip;
   vsw->abuf = tmap_calloc(vsw->mem_qlen, sizeof(int16_t), "vsw->abuf");
@@ -828,6 +834,9 @@ tmap_vsw_process_s3(tmap_vsw_data_s3_t *vsw,
                     int32_t *n_best, int32_t *overflow)
 {
   result_t result;
+  if(vsw->max_qlen < qlen || vsw->max_tlen < tlen) {
+      tmap_bug();
+  }
   process(vsw, target, tlen, query, qlen, 
          query_start_clip, query_end_clip,
          opt->score_match, -opt->pen_mm, -opt->pen_gapo, -opt->pen_gape, direction, &result);

@@ -38,6 +38,28 @@
 #include "tmap_vsw_s0.h"
 #include "tmap_vsw.h"
 
+void
+tmap_vsw_get_max(tmap_vsw_t *vsw, int32_t *max_qlen, int32_t *max_tlen)
+{
+  switch(vsw->type) {
+    case TMAP_VSW_TYPE_S0:
+      (*max_qlen) = vsw->data.s0->max_qlen;
+      (*max_tlen) = vsw->data.s0->max_tlen;
+      break;
+    case TMAP_VSW_TYPE_S1:
+      (*max_qlen) = vsw->data.s1->max_qlen;
+      (*max_tlen) = vsw->data.s1->max_tlen;
+      break;
+    case TMAP_VSW_TYPE_S3:
+      (*max_qlen) = vsw->data.s3->max_qlen;
+      (*max_tlen) = vsw->data.s3->max_tlen;
+      break;
+    default:
+      tmap_bug();
+      break;
+  }
+}
+
 tmap_vsw_t*
 tmap_vsw_init(const uint8_t *query, int32_t qlen,
                     int32_t query_start_clip, int32_t query_end_clip,
@@ -45,6 +67,7 @@ tmap_vsw_init(const uint8_t *query, int32_t qlen,
                     tmap_vsw_opt_t *opt)
 {
   tmap_vsw_t *vsw = NULL;
+  int32_t max_qlen, max_tlen;
   vsw = tmap_calloc(1, sizeof(tmap_vsw_t), "vsw");
   vsw->type = type;
   vsw->query_start_clip = query_start_clip;
@@ -53,20 +76,24 @@ tmap_vsw_init(const uint8_t *query, int32_t qlen,
   switch(type) {
     case TMAP_VSW_TYPE_S0:
       vsw->data.s0 = tmap_vsw_data_init_s0(query, qlen, query_start_clip, query_end_clip, opt);
-      vsw->use_default = 0; // supports any read length and target length
       break;
     case TMAP_VSW_TYPE_S1:
       vsw->data.s1 = tmap_vsw_data_init_s1(query, qlen, query_start_clip, query_end_clip, opt);
-      vsw->use_default = 0; // supports any read length and target length
       break;
     case TMAP_VSW_TYPE_S3:
       vsw->data.s3 = tmap_vsw_data_init_s3(query, qlen, query_start_clip, query_end_clip, opt);
-      vsw->use_default = 1; // does not support any read length and target length
       break;
     default:
       tmap_bug();
       break;
   }
+  // support read lengths?
+  max_qlen = max_tlen = 0;
+  tmap_vsw_get_max(vsw, &max_qlen, &max_tlen); // get the maximum qlen/tlen supported
+  if(INT32_MAX != max_qlen || INT32_MAX != max_tlen) { 
+      vsw->use_default = 1; // does supports any read length and target length
+  }
+  // default VSW
   if(TMAP_VSW_TYPE_S0 == vsw->type) {
       vsw->default_s = vsw->data.s0;
   }
@@ -85,7 +112,7 @@ tmap_vsw_init(const uint8_t *query, int32_t qlen,
   */
 #ifdef TMAP_VSW_DEBUG_CMP
   vsw->s0 = tmap_vsw_data_init_s0(query, qlen, query_start_clip, query_end_clip, opt);
-  vsw->s1 = tmap_vsw_data_init_s1(query, qlen, query_start_clip, query_end_clip, opt);
+  //vsw->s1 = tmap_vsw_data_init_s1(query, qlen, query_start_clip, query_end_clip, opt);
   vsw->s3 = tmap_vsw_data_init_s3(query, qlen, query_start_clip, query_end_clip, opt);
 #endif
   return vsw;
@@ -122,32 +149,10 @@ tmap_vsw_destroy(tmap_vsw_t *vsw)
   */
 #ifdef TMAP_VSW_DEBUG_CMP
   tmap_vsw_data_destroy_s0(vsw->s0);
-  tmap_vsw_data_destroy_s1(vsw->s1);
+  //tmap_vsw_data_destroy_s1(vsw->s1);
   tmap_vsw_data_destroy_s3(vsw->s3);
 #endif
   free(vsw);
-}
-
-void
-tmap_vsw_get_max(tmap_vsw_t *vsw, int32_t *max_qlen, int32_t *max_tlen)
-{
-  switch(vsw->type) {
-    case TMAP_VSW_TYPE_S0:
-      (*max_qlen) = vsw->data.s0->max_qlen;
-      (*max_tlen) = vsw->data.s0->max_tlen;
-      break;
-    case TMAP_VSW_TYPE_S1:
-      (*max_qlen) = vsw->data.s1->max_qlen;
-      (*max_tlen) = vsw->data.s1->max_tlen;
-      break;
-    case TMAP_VSW_TYPE_S3:
-      (*max_qlen) = vsw->data.s3->max_qlen;
-      (*max_tlen) = vsw->data.s3->max_tlen;
-      break;
-    default:
-      tmap_bug();
-      break;
-  }
 }
 
 int32_t
@@ -156,7 +161,7 @@ tmap_vsw_update(tmap_vsw_t *vsw, const uint8_t *query, int32_t qlen, const uint8
   int32_t max_qlen=0, max_tlen=0;
 #ifdef TMAP_VSW_DEBUG_CMP
   vsw->s0 = tmap_vsw_data_update_s0(vsw->s0, query, qlen, target, tlen);
-  vsw->s1 = tmap_vsw_data_update_s1(vsw->s1, query, qlen, target, tlen);
+  //vsw->s1 = tmap_vsw_data_update_s1(vsw->s1, query, qlen, target, tlen);
   vsw->s3 = tmap_vsw_data_update_s3(vsw->s3, query, qlen, target, tlen);
 #endif
   tmap_vsw_get_max(vsw, &max_qlen, &max_tlen); // get the maximum qlen/tlen supported
@@ -204,11 +209,15 @@ tmap_vsw_process_compare2(tmap_vsw_t *vsw,
                                      query_end, target_end, n_best, overflow);
       break;
     case TMAP_VSW_TYPE_S1:
+      return 0;
+      break;
+      /*
       (*score) = tmap_vsw_process_s1(vsw->s1, 
                                      query, qlen, target, tlen, 
                                      vsw->query_start_clip, vsw->query_end_clip, vsw->opt,
                                      is_rev, score_thr, 
                                      query_end, target_end, n_best, overflow);
+                                     */
       break;
     case TMAP_VSW_TYPE_S3:
       (*score) = tmap_vsw_process_s3(vsw->s3, 
@@ -358,13 +367,13 @@ tmap_vsw_process(tmap_vsw_t *vsw,
 
 #ifdef TMAP_VSW_DEBUG_CMP
   tmap_vsw_process_compare(vsw,
-                         query, qlen,
-                         target, tlen, 
-                         result,
-                         overflow, score_thr, is_rev,
-                         TMAP_VSW_TYPE_S0, TMAP_VSW_TYPE_S3);
+                           query, qlen,
+                           target, tlen, 
+                           result,
+                           overflow, score_thr, is_rev,
+                           TMAP_VSW_TYPE_S0, TMAP_VSW_TYPE_S3);
 #endif
-  
+
   if(0 == is_rev) {
 
       result->query_end = query_end;
@@ -429,8 +438,8 @@ tmap_vsw_process(tmap_vsw_t *vsw,
           result->n_best = 0;
           return INT32_MIN; 
       }
-      /*
       else if(result->score_fwd != result->score_rev) { // something went wrong... FIXME
+          int32_t i;
           // Use the default!
           vsw->default_s = tmap_vsw_data_update_s0(vsw->default_s, query, qlen, target, tlen);
           score = tmap_vsw_process_s0(vsw->default_s,
@@ -443,16 +452,14 @@ tmap_vsw_process(tmap_vsw_t *vsw,
               result->target_start = tlen - target_end - 1;
               result->n_best = n_best;
               result->score_rev = score;
+              return result->score_fwd;
           }
-          else {
-              fprintf(stderr, "{%d-%d} {%d-%d}\n",
-                      result->query_start, result->query_end,
-                      result->target_start, result->target_end);
-              fprintf(stderr, "result->score_fwd=%d result->score_rev=%d\n",
-                      result->score_fwd, result->score_rev);
-              fprintf(stderr, "score=%d\n", score);
+
+          // Use clipping core, regardless
+            {
               tmap_sw_param_t ap;
-              int32_t i, matrix[25];
+              tmap_sw_path_t path;
+              int32_t matrix[25];
               ap.matrix=matrix;
               for(i=0;i<25;i++) { 
                   ap.matrix[i] = -(vsw->opt)->pen_mm; 
@@ -463,14 +470,35 @@ tmap_vsw_process(tmap_vsw_t *vsw,
               ap.gap_open = vsw->opt->pen_gapo; ap.gap_ext = vsw->opt->pen_gape; 
               ap.gap_end = vsw->opt->pen_gape; 
               ap.row = 5; 
-              score = tmap_sw_clipping_core(target, tlen, query, qlen, &ap,
+              score = tmap_sw_clipping_core((uint8_t*)target, tlen, (uint8_t*)query, qlen, &ap,
                                             vsw->query_start_clip, vsw->query_end_clip, 
-                                            NULL, NULL, is_rev);
-              fprintf(stderr, "score=%d\n", score);
-              tmap_bug();
+                                            &path, NULL, is_rev);
+              target_end= path.i;
+              query_end= path.j;
+              // store the values
+              result->query_start = qlen - query_end - 1;
+              result->target_start = tlen - target_end - 1;
+              result->n_best = n_best;
+              result->score_rev = score;
+              return result->score_fwd;
+            }
+
+          // Print out lots of debug information... This is really useful,
+          // to me at least.
+          fprintf(stderr, "{%d-%d} {%d-%d}\n",
+                  result->query_start, result->query_end,
+                  result->target_start, result->target_end);
+          fprintf(stderr, "result->score_fwd=%d result->score_rev=%d\n",
+                  result->score_fwd, result->score_rev);
+          fprintf(stderr, "Default VSW score=%d\n", score);
+          fprintf(stderr, "CLIPPING CORE score=%d\n", score);
+          for(i=0;i<qlen;i++) {
+              fputc("ACGTN"[query[i]], stderr);
           }
+          fputc('\n', stderr);
+
+          tmap_bug();
       }
-      */
 
       // return
       return result->score_fwd;

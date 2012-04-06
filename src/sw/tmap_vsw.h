@@ -27,6 +27,7 @@
 #ifndef TMAP_VSW_H
 #define TMAP_VSW_H
 
+// Uncomment this to compare the different smith watermans
 //#define TMAP_VSW_DEBUG_CMP
 //#define TMAP_VSW_DEBUG
 
