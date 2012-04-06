@@ -755,12 +755,18 @@ tmap_vsw_data_init_s3_helper(const uint8_t *query, int32_t qlen, int32_t tlen, i
 {
   tmap_vsw_data_s3_t *vsw = NULL;
   vsw = tmap_calloc(1, sizeof(tmap_vsw_data_s3_t), "vsw");
+  /*
   vsw->mem_qlen = qlen;
   vsw->mem_tlen = tlen;
   tmap_roundup32(vsw->mem_qlen);
   tmap_roundup32(vsw->mem_tlen);
   vsw->max_qlen = INT32_MAX;
   vsw->max_tlen = INT32_MAX;
+  */
+  vsw->mem_qlen = 512;
+  vsw->mem_tlen = 1024;
+  vsw->max_qlen = 512; 
+  vsw->max_tlen = 1024; 
   vsw->query_start_clip = query_start_clip;
   vsw->query_end_clip = query_end_clip;
   vsw->abuf = tmap_calloc(vsw->mem_qlen, sizeof(int16_t), "vsw->abuf");

@@ -61,7 +61,7 @@ tmap_vsw_init(const uint8_t *query, int32_t qlen,
       break;
     case TMAP_VSW_TYPE_S3:
       vsw->data.s3 = tmap_vsw_data_init_s3(query, qlen, query_start_clip, query_end_clip, opt);
-      vsw->use_default = 0; // supports any read length and target length
+      vsw->use_default = 1; // does not support any read length and target length
       break;
     default:
       tmap_bug();
