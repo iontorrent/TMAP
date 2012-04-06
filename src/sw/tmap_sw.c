@@ -373,7 +373,7 @@ tmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
   N_MATRIX_ROW = ap->row;
 
   if(len1 == 0 || len2 == 0) {
-      *path_len = 0;
+      if(NULL != path_len) *path_len = 0;
       return TMAP_SW_MINOR_INF;
   }
   /* calculate b1 and b2 */
@@ -500,26 +500,29 @@ tmap_sw_global_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, co
   if(s->ins_score > max) { max = s->ins_score; type = q->ins_from; ctype = TMAP_SW_FROM_I; }
   if(s->del_score > max) { max = s->del_score; type = q->del_from; ctype = TMAP_SW_FROM_D; }
 
-  p = path;
-  p->ctype = ctype; p->i = i; p->j = j; 
-  ++p;
-  do {
-      switch(ctype) {
-        case TMAP_SW_FROM_M: --i; --j; break;
-        case TMAP_SW_FROM_I: --j; break;
-        case TMAP_SW_FROM_D: --i; break;
-      }
-      q = dpcell[j] + i;
-      ctype = type;
-      switch(type) {
-        case TMAP_SW_FROM_M: type = q->match_from; break;
-        case TMAP_SW_FROM_I: type = q->ins_from; break;
-        case TMAP_SW_FROM_D: type = q->del_from; break;
-      }
-      p->ctype = ctype; p->i = i; p->j = j;
+  if(NULL != path) {
+      p = path;
+      p->ctype = ctype; p->i = i; p->j = j; 
       ++p;
-  } while (i || j);
-  (*path_len) = p - path - 1;
+      do {
+          switch(ctype) {
+            case TMAP_SW_FROM_M: --i; --j; break;
+            case TMAP_SW_FROM_I: --j; break;
+            case TMAP_SW_FROM_D: --i; break;
+          }
+          q = dpcell[j] + i;
+          ctype = type;
+          switch(type) {
+            case TMAP_SW_FROM_M: type = q->match_from; break;
+            case TMAP_SW_FROM_I: type = q->ins_from; break;
+            case TMAP_SW_FROM_D: type = q->del_from; break;
+          }
+          p->ctype = ctype; p->i = i; p->j = j;
+          ++p;
+      } while (i || j);
+      (*path_len) = p - path - 1;
+  }
+
 
   /* free memory */
   for(j = b2 + 1; j <= len2; ++j)
