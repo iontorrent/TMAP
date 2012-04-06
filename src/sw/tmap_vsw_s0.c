@@ -33,14 +33,12 @@
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_definitions.h"
 #include "tmap_sw.h"
-#include "tmap_vsw.h"
-#include "tmap_vsw16.h"
-
-// TODO: remove query profile so it does not need to be filled in each time
+#include "tmap_vsw_definitions.h"
+#include "tmap_vsw_s0.h"
 
 /*
 static void
-tmap_vsw16_query_print_query_profile(tmap_vsw16_query_t *query)
+tmap_vsw_data_s0_print_data_profile(tmap_vsw_data_s0_t *query)
 {
   int32_t a, i, j, k;
 
@@ -58,8 +56,8 @@ tmap_vsw16_query_print_query_profile(tmap_vsw16_query_t *query)
 }
 */
 
-tmap_vsw16_query_t *
-tmap_vsw16_query_init(tmap_vsw16_query_t *prev, const uint8_t *query, int32_t qlen, 
+static tmap_vsw_data_s0_t*
+tmap_vsw_data_set_mem(tmap_vsw_data_s0_t *prev, const uint8_t *query, int32_t qlen, 
                               int32_t query_start_clip, int32_t query_end_clip,
                               tmap_vsw_opt_t *opt)
 {
@@ -81,14 +79,19 @@ tmap_vsw16_query_init(tmap_vsw16_query_t *prev, const uint8_t *query, int32_t ql
       }
       // get the memory needed to hold the stripes for the query 
       qlen_mem = __tmap_vsw_calc_qlen_mem(slen);
-      //prev = tmap_memalign(16, sizeof(tmap_vsw16_query_t) + 15 + qlen_mem * (TMAP_VSW_ALPHABET_SIZE + 3), "prev"); // add three for H0, H1, and E
-      prev = tmap_malloc(sizeof(tmap_vsw16_query_t) + 15 + qlen_mem * (TMAP_VSW_ALPHABET_SIZE + 3), "prev"); // add three for H0, H1, and E
+      //prev = tmap_memalign(16, sizeof(tmap_vsw_data_s0_t) + 15 + qlen_mem * (TMAP_VSW_ALPHABET_SIZE + 3), "prev"); // add three for H0, H1, and E
+      prev = tmap_malloc(sizeof(tmap_vsw_data_s0_t) + 15 + qlen_mem * (TMAP_VSW_ALPHABET_SIZE + 3), "prev"); // add three for H0, H1, and E
       prev->qlen_max = qlen; 
       // update the memory
       prev->qlen_mem = qlen_mem;
       // update clipping
       prev->query_start_clip = query_start_clip;
       prev->query_end_clip = query_end_clip;
+      // opt
+      prev->opt = opt;
+      // set max
+      prev->max_qlen = INT32_MAX;
+      prev->max_tlen = INT32_MAX;
   }
 
   // compute min/max edit scores
@@ -120,7 +123,7 @@ tmap_vsw16_query_init(tmap_vsw16_query_t *prev, const uint8_t *query, int32_t ql
   prev->slen = slen; // update the number of stripes
 
   // NB: align all the memory from one block
-  prev->query_profile = (__m128i*)__tmap_vsw_16((size_t)prev + sizeof(tmap_vsw16_query_t)); // skip over the struct variables, align memory 
+  prev->query_profile = (__m128i*)__tmap_vsw_16((size_t)prev + sizeof(tmap_vsw_data_s0_t)); // skip over the struct variables, align memory 
   prev->H0 = prev->query_profile + (prev->slen * TMAP_VSW_ALPHABET_SIZE); // skip over the query profile
   prev->H1 = prev->H0 + prev->slen; // skip over H0
   prev->E = prev->H1 + prev->slen; // skip over H1
@@ -137,25 +140,57 @@ tmap_vsw16_query_init(tmap_vsw16_query_t *prev, const uint8_t *query, int32_t ql
           }
       }
   }
-  //tmap_vsw16_query_print_query_profile(prev);
+  //tmap_vsw16_data_print_data_profile(prev);
   return prev;
 }
 
+tmap_vsw_data_s0_t*
+tmap_vsw_data_init_s0(const uint8_t *query, int32_t qlen, int32_t query_start_clip, int32_t query_end_clip, tmap_vsw_opt_t *opt)
+{
+  return tmap_vsw_data_set_mem(NULL, query, qlen, query_start_clip, query_end_clip, opt);
+}
+
+tmap_vsw_data_s0_t*
+tmap_vsw_data_update_s0(tmap_vsw_data_s0_t *vsw, const uint8_t *query, int32_t qlen, const uint8_t *target, int32_t tlen)
+{
+  return tmap_vsw_data_set_mem(vsw, query, qlen, vsw->query_start_clip, vsw->query_end_clip, vsw->opt);
+}
+
 void
-tmap_vsw16_query_destroy(tmap_vsw16_query_t *vsw)
+tmap_vsw_data_destroy_s0(tmap_vsw_data_s0_t *vsw)
 {
   // all memory was allocated as one block
   free(vsw);
 }
 
+static inline int32_t
+tmap_vsw_s0_dir_cmp(int32_t cur_score, int32_t cur_qe, int32_t cur_te,
+                    int32_t next_score, int32_t next_qe, int32_t next_te,
+                    int32_t dir)
+{
+  if(next_score < cur_score) return 0;
+  if(cur_score < next_score) return 1;
+  if(0 == dir) {
+      if(next_qe < cur_qe) return 1;
+      if(next_qe == cur_qe && next_te < cur_te) return 1;
+  }
+  else {
+      if(cur_qe < next_qe) return 1;
+      if(cur_qe == next_qe && cur_te < next_te) return 1; 
+  }
+  return 0;
+}
+
 int32_t
-tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_t tlen, 
-                        int32_t query_start_clip, int32_t query_end_clip,
-                        tmap_vsw_opt_t *opt, int16_t *query_end, int16_t *target_end,
-                        int32_t direction, int32_t *overflow, int32_t *n_best, int32_t score_thr)
+tmap_vsw_process_s0(tmap_vsw_data_s0_t *vsw,
+                    const uint8_t *query, int32_t qlen, const uint8_t *target, int32_t tlen, 
+                    int32_t query_start_clip, int32_t query_end_clip, tmap_vsw_opt_t *opt, 
+                    int32_t direction, int32_t score_thr, 
+                    int32_t *query_end, int32_t *target_end, 
+                    int32_t *n_best, int32_t *overflow)
 {
   int32_t slen, i, j, k, sum = 0;
-#ifdef TMAP_VSW_DEBUG
+#ifdef TMAP_VSW_S0_DEBUG
   int32_t l;
 #endif
   uint16_t cmp;
@@ -166,9 +201,9 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
 
   // initialization
   // normalize these
-  zero = query->zero_aln_score; // where the normalized zero alignment score occurs
-  negative_infinity_mm = __tmap_vsw16_mm_set1_epi16(query->min_aln_score); // the minimum possible value
-  positive_infinity_mm = __tmap_vsw16_mm_set1_epi16(query->max_aln_score); // the minimum possible value
+  zero = vsw->zero_aln_score; // where the normalized zero alignment score occurs
+  negative_infinity_mm = __tmap_vsw16_mm_set1_epi16(vsw->min_aln_score); // the minimum possible value
+  positive_infinity_mm = __tmap_vsw16_mm_set1_epi16(vsw->max_aln_score); // the minimum possible value
   score_thr += zero; // for the scoring threshold
   // these are not normalized
   pen_gapoe = __tmap_vsw16_mm_set1_epi16(opt->pen_gapo + opt->pen_gape); // gap open penalty
@@ -180,20 +215,20 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
   if(NULL != n_best) (*n_best) = 0;
   reduce_mm = __tmap_vsw16_mm_set1_epi16(tmap_vsw16_mid_value);
   // vectors
-  H0 = query->H0; 
-  H1 = query->H1; 
-  E = query->E; 
-  slen = query->slen;
-  if(NULL != overflow) *overflow = 0;
-#ifdef TMAP_VSW_DEBUG
-  fprintf(stderr, "qlen=%d tlen=%d\n", query->qlen, tlen);
+  H0 = vsw->H0; 
+  H1 = vsw->H1; 
+  E = vsw->E; 
+  slen = vsw->slen;
+  if(NULL != overflow) (*overflow) = 0;
+#ifdef TMAP_VSW_S0_DEBUG
+  fprintf(stderr, "qlen=%d tlen=%d\n", vsw->qlen, tlen);
   fprintf(stderr, "query_start_clip=%d query_end_clip=%d\n",
           query_start_clip, query_end_clip);
 #endif
 
   // select query end only
-  // check stripe #: __tmap_vsw16_query_index_to_stripe_number(query->qlen, slen) 
-  // check byte # __tmap_vsw16_query_index_to_byte_number(query->qlen, slen)
+  // check stripe #: __tmap_vsw16_data_index_to_stripe_number(vsw->qlen, slen) 
+  // check byte # __tmap_vsw16_data_index_to_byte_number(vsw->qlen, slen)
 
   if(0 == query_start_clip) {
       __m128i f;
@@ -204,7 +239,7 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
       }
       // NB: setting the start == 0 will be done later
       // set the leading insertions 
-      f = __tmap_vsw16_mm_set1_epi16(query->min_aln_score);
+      f = __tmap_vsw16_mm_set1_epi16(vsw->min_aln_score);
       f = __tmap_vsw16_mm_insert_epi16(f, zero, 0); 
       for(j = 0; j < tmap_vsw16_values_per_128_bits; ++j) {
           f = __tmap_vsw16_mm_insert(f , -opt->pen_gapo + -opt->pen_gape + (-opt->pen_gape * slen * j) + zero, j);
@@ -227,9 +262,9 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
   for(i = 0, sum = 0; i < tlen; i++) { // for each base in the target
       __m128i e, h, f, g, max, min, *S;
 
-      max = __tmap_vsw16_mm_set1_epi16(query->min_aln_score); // max is negative infinity
-      min = __tmap_vsw16_mm_set1_epi16(query->max_aln_score); // min is positive infinity
-      S = query->query_profile + target[i] * slen; // s is the 1st score vector
+      max = __tmap_vsw16_mm_set1_epi16(vsw->min_aln_score); // max is negative infinity
+      min = __tmap_vsw16_mm_set1_epi16(vsw->max_aln_score); // min is positive infinity
+      S = vsw->query_profile + target[i] * slen; // s is the 1st score vector
   
       // load H(i-1,-1)
       h = __tmap_vsw_mm_load_si128(H0 + slen - 1); // the last stripe, which holds the j-1 
@@ -241,11 +276,11 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
       // e does not need to be set
 
       // set F to -inf
-      f = __tmap_vsw16_mm_set1_epi16(query->min_aln_score);
+      f = __tmap_vsw16_mm_set1_epi16(vsw->min_aln_score);
       // leading insertions
-      g = __tmap_vsw16_mm_set1_epi16(query->min_aln_score);
+      g = __tmap_vsw16_mm_set1_epi16(vsw->min_aln_score);
       if(0 == query_start_clip) { 
-          g = __tmap_vsw16_mm_set1_epi16(query->min_aln_score);
+          g = __tmap_vsw16_mm_set1_epi16(vsw->min_aln_score);
           g = __tmap_vsw16_mm_insert_epi16(g, -opt->pen_gapo + opt->pen_gape + zero, 0);
           for(j = 1; TMAP_LIKELY(j < tmap_vsw16_values_per_128_bits); j++) {
               // NB: do not include the gap extend, that will be added below
@@ -270,7 +305,7 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
           }
           else {
               g = __tmap_vsw16_mm_subs_epi16(g, pen_gape); // leading insertion
-#ifdef TMAP_VSW_DEBUG 
+#ifdef TMAP_VSW_S0_DEBUG 
               /*
               fprintf(stderr, "h i=%d j=%d", i, j);
               for(k = 0; k < tmap_vsw16_values_per_128_bits; k++) { // for each start position in the stripe
@@ -284,7 +319,7 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
               h = __tmap_vsw16_mm_max_epi16(h, g);
           }
           // compute H(i,j); 
-#ifdef TMAP_VSW_DEBUG 
+#ifdef TMAP_VSW_S0_DEBUG 
           /*
           __m128i s = __tmap_vsw_mm_load_si128(S + j);
           fprintf(stderr, "s i=%d j=%d", i, j);
@@ -324,11 +359,11 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
       
       // NB: we do not need to set E(i,j) as we disallow adjacent insertion and then deletion
       // iterate through each value stored in a stripe
-      f = __tmap_vsw16_mm_set1_epi16(query->min_aln_score);
+      f = __tmap_vsw16_mm_set1_epi16(vsw->min_aln_score);
       // we require at most 'tmap_vsw16_values_per_128_bits' iterations to guarantee F propagation
       for(k = 0; TMAP_LIKELY(k < tmap_vsw16_values_per_128_bits); ++k) { // this block mimics SWPS3; NB: H(i,j) updated in the lazy-F loop cannot exceed max
           f = __tmap_vsw_mm_slli_si128(f, tmap_vsw16_shift_bytes); // since x86 is little endian
-          f = __tmap_vsw16_mm_insert_epi16(f, query->min_aln_score, 0); // set F(i-1,-1)[0] as negative infinity (normalized)
+          f = __tmap_vsw16_mm_insert_epi16(f, vsw->min_aln_score, 0); // set F(i-1,-1)[0] as negative infinity (normalized)
           for(j = 0; TMAP_LIKELY(j < slen); ++j) { 
               h = __tmap_vsw_mm_load_si128(H1 + j); // h=H(i,j)
               h = __tmap_vsw16_mm_max_epi16(h, f); // h=H(i,j) = max{H(i,j), F(i,j)}
@@ -346,7 +381,7 @@ tmap_vsw16_sse2_forward(tmap_vsw16_query_t *query, const uint8_t *target, int32_
           }
       }
 end_loop:
-#ifdef TMAP_VSW_DEBUG 
+#ifdef TMAP_VSW_S0_DEBUG 
       fprintf(stderr, "H1 i=%d target[i]=%d", i, target[i]);
       for(k = l = 0; k < tmap_vsw16_values_per_128_bits; k++) { // for each start position in the stripe
           for(j = 0; j < slen; j++, l++) {
@@ -356,13 +391,13 @@ end_loop:
       fprintf(stderr, "\n");
 #endif
       __tmap_vsw16_max(imax, max); // imax is the maximum number in max
-      if(query->max_aln_score - query->max_edit_score < imax) { // overflow
+      if(vsw->max_aln_score - vsw->max_edit_score < imax) { // overflow
           /*
           fprintf(stderr, "max score - max edit score = %d, imax=%d\n",
-                  query->max_aln_score - query->max_edit_score,
+                  vsw->max_aln_score - vsw->max_edit_score,
                   imax);
                   */
-          if(NULL != overflow) *overflow = 1;
+          if(NULL != overflow) (*overflow) = 1;
           return tmap_vsw16_min_value;
       }
       if(imax > gmax) { 
@@ -370,14 +405,14 @@ end_loop:
       }
       if(score_thr <= imax && best <= imax) { // potential best score
           tmap_vsw16_int_t *t;
-          int32_t save_score = 0;
-          if(imax > best || (1 == direction && imax == best)) save_score = 1;
+          //int32_t save_score = 0;
+          //if(imax > best || (1 == direction && imax == best)) save_score = 1;
           if(query_end_clip == 0) { // check the last
-              j = (query->qlen-1) % slen; // stripe
-              k = (query->qlen-1) / slen; // byte
+              j = (vsw->qlen-1) % slen; // stripe
+              k = (vsw->qlen-1) / slen; // byte
               t = (tmap_vsw16_int_t*)(H1 + j);
-#ifdef TMAP_VSW_DEBUG 
-              fprintf(stderr, "j=%d k=%d slen=%d qlen=%d best=%d pot=%d\n", j, k, slen, query->qlen, best-zero, t[k]-zero);
+#ifdef TMAP_VSW_S0_DEBUG 
+              fprintf(stderr, "j=%d k=%d slen=%d qlen=%d best=%d pot=%d\n", j, k, slen, vsw->qlen, best-zero, t[k]-zero);
 #endif
               if(NULL != n_best) {
                   if(best == (int32_t)t[k]) { // duplicate best score
@@ -387,12 +422,14 @@ end_loop:
                       (*n_best) = 1;
                   }
               }
-              if(1 == save_score && (best < (int32_t)t[k] || (1 == direction && (int32_t)t[k] == best))) { // found new best score 
-                  (*query_end) = query->qlen-1;
+
+              // new best score
+              if(1 == tmap_vsw_s0_dir_cmp(best, (*query_end), (*target_end), (int32_t)t[k], vsw->qlen-1, i, direction)) {
+                  (*query_end) = vsw->qlen-1;
                   (*target_end) = i;
                   best = t[k];
-#ifdef TMAP_VSW_DEBUG 
-                  fprintf(stderr, "FOUND A i=%d query->qlen-1=%d query_end=%d target_end=%d best=%d\n", i, query->qlen-1, *query_end, *target_end, best-zero);
+#ifdef TMAP_VSW_S0_DEBUG 
+                  fprintf(stderr, "FOUND A i=%d vsw->qlen-1=%d query_end=%d target_end=%d best=%d\n", i, vsw->qlen-1, (*query_end), (*target_end), best-zero);
 #endif
               }
           }
@@ -400,7 +437,7 @@ end_loop:
               int32_t found_best = 0;
               t = (tmap_vsw16_int_t*)H1;
               if(best < imax || (best == imax && 1 == direction)) {
-                  *query_end = -1;
+                  (*query_end) = -1;
               }
               for(j = 0; TMAP_LIKELY(j < slen); ++j) { // for each stripe in the query
                   for(k = 0; k < tmap_vsw16_values_per_128_bits; k++, t++) { // for each cell in the stripe
@@ -412,36 +449,37 @@ end_loop:
                               (*n_best) = 1;
                           }
                       }
-                      if(1 == save_score && (best < (int32_t)*t || (1 == direction && (int32_t)*t == best))) { // found new best score 
+                      int32_t cur_qe = j + ((k & (tmap_vsw16_values_per_128_bits-1)) * slen);
+                      if(1 == tmap_vsw_s0_dir_cmp(best, (*query_end), (*target_end), (int32_t)*t, cur_qe, i, direction)) {
                           found_best = 1;
                           best = *t;
-                          (*query_end) = j + ((k & (tmap_vsw16_values_per_128_bits-1)) * slen);
+                          (*query_end) = cur_qe;
                           (*target_end) = i;
-#ifdef TMAP_VSW_DEBUG 
-                          fprintf(stderr, "FOUND B j=%d k=%d query_end=%d best=%d\n", j, k, *query_end, best-zero);
+#ifdef TMAP_VSW_S0_DEBUG 
+                          fprintf(stderr, "FOUND B j=%d k=%d query_end=%d best=%d\n", j, k, (*query_end), best-zero);
 #endif
                       }
                   }
               }
-              if(1 == found_best && -1 == *query_end) {
-                  if(-1 == *query_end) {
+              if(1 == found_best && -1 == (*query_end)) {
+                  if(-1 == (*query_end)) {
                       tmap_bug();
                       tmap_error("bug encountered", Exit, OutOfRange);
                   }
               }
-              //fprintf(stderr, "FOUND B i=%d imax=%d best=%d query_end=%d target_end=%d\n", i, imax-zero, best-zero, *query_end, *target_end);
+              //fprintf(stderr, "FOUND B i=%d imax=%d best=%d query_end=%d target_end=%d\n", i, imax-zero, best-zero, (*query_end), (*target_end));
           }
       }
-      if(query->max_aln_score - query->max_edit_score < imax) { // overflow
+      if(vsw->max_aln_score - vsw->max_edit_score < imax) { // overflow
           if(NULL != overflow) {
-              *overflow = 1;
+              (*overflow) = 1;
               return tmap_vsw16_min_value;
           }
           // When overflow is going to happen, subtract tmap_vsw16_mid_value from all scores. This heuristic
           // may miss the best alignment, but in practice this should happen very rarely.
           sum += tmap_vsw16_mid_value; 
-          if(query->min_aln_score + tmap_vsw16_mid_value < gmax) gmax -= tmap_vsw16_mid_value;
-          else gmax = query->min_aln_score;
+          if(vsw->min_aln_score + tmap_vsw16_mid_value < gmax) gmax -= tmap_vsw16_mid_value;
+          else gmax = vsw->min_aln_score;
           for(j = 0; TMAP_LIKELY(j < slen); ++j) {
               h = __tmap_vsw16_mm_subs_epi16(__tmap_vsw_mm_load_si128(H1 + j), reduce_mm);
               __tmap_vsw_mm_store_si128(H1 + j, h);
@@ -451,7 +489,7 @@ end_loop:
       }
       // check for underflow
       __tmap_vsw16_min(imin, min); // imin is the minimum number in min
-      if(imin < tmap_vsw16_min_value - query->min_edit_score) {
+      if(imin < tmap_vsw16_min_value - vsw->min_edit_score) {
           tmap_bug();
       }
       S = H1; H1 = H0; H0 = S; // swap H0 and H1
@@ -460,5 +498,7 @@ end_loop:
       (*query_end) = (*target_end) = -1;
       return best;
   }
-  return best + sum - zero;
+  else {
+      return best + sum - zero;
+  }
 }

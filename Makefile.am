@@ -37,8 +37,11 @@ GLOBAL_SOURCES = \
 				 src/index/tmap_index_size.h src/index/tmap_index_size.c \
 				 src/sw/tmap_sw.h src/sw/tmap_sw.c \
 				 src/sw/tmap_fsw.h src/sw/tmap_fsw.c \
+				 src/sw/tmap_vsw_definitions.h src/sw/tmap_vsw_definitions.c \
 				 src/sw/tmap_vsw.h src/sw/tmap_vsw.c \
-				 src/sw/tmap_vsw16.h src/sw/tmap_vsw16.c \
+				 src/sw/tmap_vsw_s0.h src/sw/tmap_vsw_s0.c \
+				 src/sw/tmap_vsw_s1.h src/sw/tmap_vsw_s1.c \
+				 src/sw/tmap_vsw_s3.h src/sw/tmap_vsw_s3.c \
 				 src/sw/tmap_vsw_bm.c 
 
 tmap_SOURCES = \
@@ -47,7 +50,6 @@ tmap_SOURCES = \
 			   src/server/tmap_shm.h src/server/tmap_shm.c \
 			   src/sam2fs/tmap_sam2fs_aux.h src/sam2fs/tmap_sam2fs_aux.c \
 			   src/sam2fs/tmap_sam2fs.h src/sam2fs/tmap_sam2fs.c \
-			   src/debug/tmap_debug_exact.h src/debug/tmap_debug_exact.c \
 			   src/index/tmap_index_speed.h src/index/tmap_index_speed.c \
 			   src/index/tmap_bwt_check.c src/index/tmap_bwt_check.h \
 			   src/index/tmap_bwt_compare.c src/index/tmap_bwt_compare.h \

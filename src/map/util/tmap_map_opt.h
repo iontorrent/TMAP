@@ -142,11 +142,11 @@ typedef struct {
  * A list of global command line flags take or available.
  *
  * Taken:
- * ABCDEFGIJLMORSTUWXYZ
+ * ABCDEFGHIJLMORSTUWXYZ
  * afghijklmnqrsvwxyz
  *
  * Available:
- * HKUV
+ * KV
  * optu
  * 
  * NB: Lets reserve single character flags for global options. 
@@ -193,6 +193,7 @@ typedef struct __tmap_map_opt_t {
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
     double sample_reads;  /*!< sample the reads at this fraction (-x,--sample-reads) */
 #endif
+    int32_t vsw_type; /*!< the vectorized smith waterman algorithm (-H,--vsw-type) */
 
     // flowspace tags
     int32_t fscore;  /*!< the flow score penalty (-X,--pen-flow-error) */

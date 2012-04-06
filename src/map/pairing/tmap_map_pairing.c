@@ -24,13 +24,13 @@ tmap_map_pairing_get_strand_diff(tmap_map_sam_t *one, tmap_map_sam_t *two, int32
 static inline int32_t
 tmap_map_pairing_get_left(tmap_map_sam_t *sam, int32_t len)
 {
-  return sam->pos + sam->target_end - len + 1;
+  return sam->pos + sam->result.target_end - len + 1;
 }
 
 static inline int32_t
 tmap_map_pairing_get_right(tmap_map_sam_t *sam, int32_t len)
 {
-  return sam->pos + sam->target_end;
+  return sam->pos + sam->result.target_end;
 }
 
 static int32_t
