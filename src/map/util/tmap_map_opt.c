@@ -997,7 +997,7 @@ tmap_map_opt_init(int32_t algo_id)
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
   opt->sample_reads = 1.0;
 #endif
-  opt->vsw_type = 0;
+  opt->vsw_type = 3;
 
   // flowspace options
   opt->fscore = TMAP_MAP_OPT_FSCORE;
