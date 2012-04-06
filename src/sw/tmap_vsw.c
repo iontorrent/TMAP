@@ -35,7 +35,6 @@
 #include "../util/tmap_definitions.h"
 #include "tmap_sw.h"
 #include "tmap_vsw_definitions.h"
-#include "tmap_vsw_s0.h"
 #include "tmap_vsw.h"
 
 tmap_vsw_t*
@@ -50,43 +49,10 @@ tmap_vsw_init(const uint8_t *query, int32_t qlen,
   vsw->query_start_clip = query_start_clip;
   vsw->query_end_clip = query_end_clip;
   vsw->opt = opt;
-  switch(type) {
-    case TMAP_VSW_TYPE_S0:
-      vsw->data.s0 = tmap_vsw_data_init_s0(query, qlen, query_start_clip, query_end_clip, opt);
-      vsw->use_default = 0; // supports any read length and target length
-      break;
-    case TMAP_VSW_TYPE_S1:
-      vsw->data.s1 = tmap_vsw_data_init_s1(query, qlen, query_start_clip, query_end_clip, opt);
-      vsw->use_default = 0; // supports any read length and target length
-      break;
-    case TMAP_VSW_TYPE_S3:
-      vsw->data.s3 = tmap_vsw_data_init_s3(query, qlen, query_start_clip, query_end_clip, opt);
-      vsw->use_default = 1; // does not support any read length and target length
-      break;
-    default:
-      tmap_bug();
-      break;
-  }
-  if(TMAP_VSW_TYPE_S0 == vsw->type) {
-      vsw->default_s = vsw->data.s0;
-  }
-  else {
-      vsw->default_s = tmap_vsw_data_init_s0(query, qlen, query_start_clip, query_end_clip, opt);
-  }
-  /*
-  if(1 == vsw->use_default) {
-      if(TMAP_VSW_TYPE_S0 == vsw->type) {
-          vsw->default_s = vsw->data.s0;
-      }
-      else {
-          vsw->default_s = tmap_vsw_data_init_s0(query, qlen, query_start_clip, query_end_clip, opt);
-      }
-  }
-  */
+  vsw->algorithm = tmap_vsw_wrapper_init(type);
+  // TODO default algorithm
 #ifdef TMAP_VSW_DEBUG_CMP
-  vsw->s0 = tmap_vsw_data_init_s0(query, qlen, query_start_clip, query_end_clip, opt);
-  vsw->s1 = tmap_vsw_data_init_s1(query, qlen, query_start_clip, query_end_clip, opt);
-  vsw->s3 = tmap_vsw_data_init_s3(query, qlen, query_start_clip, query_end_clip, opt);
+  // TODO
 #endif
   return vsw;
 }
@@ -95,64 +61,26 @@ void
 tmap_vsw_destroy(tmap_vsw_t *vsw)
 {
   if(NULL == vsw) return;
-  switch(vsw->type) {
-    case TMAP_VSW_TYPE_S0:
-      tmap_vsw_data_destroy_s0(vsw->data.s0);
-      vsw->data.s0 = NULL;
-      break;
-    case TMAP_VSW_TYPE_S1:
-      tmap_vsw_data_destroy_s1(vsw->data.s1);
-      vsw->data.s1 = NULL;
-      break;
-    case TMAP_VSW_TYPE_S3:
-      tmap_vsw_data_destroy_s3(vsw->data.s3);
-      vsw->data.s3 = NULL;
-      break;
-    default:
-      tmap_bug();
-      break;
-  }
-  if(TMAP_VSW_TYPE_S0 != vsw->type) {
-      tmap_vsw_data_destroy_s0(vsw->default_s);
-  }
-  /*
-  if(1 == vsw->use_default && TMAP_VSW_TYPE_S0 != vsw->type) {
-      tmap_vsw_data_destroy_s0(vsw->default_s);
-  }
-  */
+  tmap_vsw_wrapper_destroy(vsw->algorithm);
+  // TODO default algorithm
 #ifdef TMAP_VSW_DEBUG_CMP
-  tmap_vsw_data_destroy_s0(vsw->s0);
-  tmap_vsw_data_destroy_s1(vsw->s1);
-  tmap_vsw_data_destroy_s3(vsw->s3);
+  // TODO
 #endif
   free(vsw);
 }
 
+/*
 void
 tmap_vsw_get_max(tmap_vsw_t *vsw, int32_t *max_qlen, int32_t *max_tlen)
 {
-  switch(vsw->type) {
-    case TMAP_VSW_TYPE_S0:
-      (*max_qlen) = vsw->data.s0->max_qlen;
-      (*max_tlen) = vsw->data.s0->max_tlen;
-      break;
-    case TMAP_VSW_TYPE_S1:
-      (*max_qlen) = vsw->data.s1->max_qlen;
-      (*max_tlen) = vsw->data.s1->max_tlen;
-      break;
-    case TMAP_VSW_TYPE_S3:
-      (*max_qlen) = vsw->data.s3->max_qlen;
-      (*max_tlen) = vsw->data.s3->max_tlen;
-      break;
-    default:
-      tmap_bug();
-      break;
-  }
 }
+*/
 
 int32_t
 tmap_vsw_update(tmap_vsw_t *vsw, const uint8_t *query, int32_t qlen, const uint8_t *target, int32_t tlen)
 {
+  // TODO
+  /*
   int32_t max_qlen=0, max_tlen=0;
 #ifdef TMAP_VSW_DEBUG_CMP
   vsw->s0 = tmap_vsw_data_update_s0(vsw->s0, query, qlen, target, tlen);
@@ -183,9 +111,13 @@ tmap_vsw_update(tmap_vsw_t *vsw, const uint8_t *query, int32_t qlen, const uint8
       }
       return 1;
   }
+  */
+  return 1;
 }
   
 #ifdef TMAP_VSW_DEBUG_CMP
+// TODO
+/*
 int32_t
 tmap_vsw_process_compare2(tmap_vsw_t *vsw,
                          const uint8_t *query, int32_t qlen,
@@ -279,6 +211,7 @@ tmap_vsw_process_compare(tmap_vsw_t *vsw,
       from++;
   }
 }
+*/
 #endif
 
 int32_t
@@ -315,40 +248,20 @@ tmap_vsw_process(tmap_vsw_t *vsw,
   query_end = target_end = n_best = 0;
   if(NULL != overflow) (*overflow) = 0;
   if(0 == tmap_vsw_update(vsw, query, qlen, target, tlen)) { // use the default
-      score = tmap_vsw_process_s0(vsw->default_s,
-                                  query, qlen, target, tlen, 
-                                  vsw->query_start_clip, vsw->query_end_clip, vsw->opt,
-                                  is_rev, score_thr, 
-                                  &query_end, &target_end, &n_best, overflow);
+      tmap_bug();
+      // TODO default algorithm
   }
   else {
-      // perform the alignment
-      switch(vsw->type) {
-        case TMAP_VSW_TYPE_S0:
-          score = tmap_vsw_process_s0(vsw->data.s0, 
-                                      query, qlen, target, tlen, 
-                                      vsw->query_start_clip, vsw->query_end_clip, vsw->opt,
-                                      is_rev, score_thr, 
-                                      &query_end, &target_end, &n_best, overflow);
-          break;
-        case TMAP_VSW_TYPE_S1:
-          score = tmap_vsw_process_s1(vsw->data.s1, 
-                                      query, qlen, target, tlen, 
-                                      vsw->query_start_clip, vsw->query_end_clip, vsw->opt,
-                                      is_rev, score_thr, 
-                                      &query_end, &target_end, &n_best, overflow);
-          break;
-        case TMAP_VSW_TYPE_S3:
-          score = tmap_vsw_process_s3(vsw->data.s3, 
-                                      query, qlen, target, tlen, 
-                                      vsw->query_start_clip, vsw->query_end_clip, vsw->opt,
-                                      is_rev, score_thr, 
-                                      &query_end, &target_end, &n_best, overflow);
-          break;
-        default:
-          tmap_bug();
-          break;
-      }
+      tmap_vsw_wrapper_process(vsw->algorithm,
+                               target, tlen, 
+                               query, qlen, 
+                               vsw->opt->score_match,
+                               -vsw->opt->pen_mm,
+                               -vsw->opt->pen_gapo,
+                               -vsw->opt->pen_gape,
+                               is_rev, 
+                               vsw->query_start_clip, vsw->query_end_clip, 
+                               &score, &target_end, &query_end, &n_best);
   }
   if(score < score_thr) {
       query_end = target_end = -1;
@@ -357,12 +270,15 @@ tmap_vsw_process(tmap_vsw_t *vsw,
   }
 
 #ifdef TMAP_VSW_DEBUG_CMP
+  // TODO
+  /*
   tmap_vsw_process_compare(vsw,
                          query, qlen,
                          target, tlen, 
                          result,
                          overflow, score_thr, is_rev,
                          TMAP_VSW_TYPE_S0, TMAP_VSW_TYPE_S3);
+                         */
 #endif
   
   if(0 == is_rev) {
@@ -376,7 +292,7 @@ tmap_vsw_process(tmap_vsw_t *vsw,
       if(NULL != overflow && 1 == (*overflow)) {
           found_forward = 0;
       }
-      else if(result->score_fwd < score_thr) {
+      else if(result->score_fwd <- score_thr) {
           found_forward = 0;
       }
       else if((result->query_end == result->query_start || result->target_end == result->target_start)
@@ -429,50 +345,34 @@ tmap_vsw_process(tmap_vsw_t *vsw,
           result->n_best = 0;
           return INT32_MIN; 
       }
-      /*
       else if(result->score_fwd != result->score_rev) { // something went wrong... FIXME
-          // Use the default!
-          vsw->default_s = tmap_vsw_data_update_s0(vsw->default_s, query, qlen, target, tlen);
-          score = tmap_vsw_process_s0(vsw->default_s,
-                                      query, qlen, target, tlen, 
-                                      vsw->query_start_clip, vsw->query_end_clip, vsw->opt,
-                                      is_rev, score_thr, 
-                                      &query_end, &target_end, &n_best, overflow);
-          if(score == result->score_fwd) { // recovered, I hope
-              result->query_start = qlen - query_end - 1;
-              result->target_start = tlen - target_end - 1;
-              result->n_best = n_best;
-              result->score_rev = score;
-          }
-          else {
-              fprintf(stderr, "{%d-%d} {%d-%d}\n",
-                      result->query_start, result->query_end,
-                      result->target_start, result->target_end);
-              fprintf(stderr, "result->score_fwd=%d result->score_rev=%d\n",
-                      result->score_fwd, result->score_rev);
-              fprintf(stderr, "score=%d\n", score);
-              tmap_sw_param_t ap;
-              int32_t i, matrix[25];
-              ap.matrix=matrix;
-              for(i=0;i<25;i++) { 
-                  ap.matrix[i] = -(vsw->opt)->pen_mm; 
-              } 
-              for(i=0;i<4;i++) { 
-                  ap.matrix[i*5+i] = vsw->opt->score_match; 
-              } 
-              ap.gap_open = vsw->opt->pen_gapo; ap.gap_ext = vsw->opt->pen_gape; 
-              ap.gap_end = vsw->opt->pen_gape; 
-              ap.row = 5; 
-              score = tmap_sw_clipping_core(target, tlen, query, qlen, &ap,
-                                            vsw->query_start_clip, vsw->query_end_clip, 
-                                            NULL, NULL, is_rev);
-              fprintf(stderr, "score=%d\n", score);
-              tmap_bug();
-          }
+          fprintf(stderr, "{%d-%d} {%d-%d}\n",
+                  result->query_start, result->query_end,
+                  result->target_start, result->target_end);
+          fprintf(stderr, "result->score_fwd=%d result->score_rev=%d\n",
+                  result->score_fwd, result->score_rev);
+          fprintf(stderr, "score=%d\n", score);
+          /*
+          tmap_sw_param_t ap;
+          int32_t i, matrix[25];
+          ap.matrix=matrix;
+          for(i=0;i<25;i++) { 
+              ap.matrix[i] = -(vsw->opt)->pen_mm; 
+          } 
+          for(i=0;i<4;i++) { 
+              ap.matrix[i*5+i] = vsw->opt->score_match; 
+          } 
+          ap.gap_open = vsw->opt->pen_gapo; ap.gap_ext = vsw->opt->pen_gape; 
+          ap.gap_end = vsw->opt->pen_gape; 
+          ap.row = 5; 
+          score = tmap_sw_clipping_core((uint8_t*)target, tlen, (uint8_t*)query, qlen, &ap,
+                                        vsw->query_start_clip, vsw->query_end_clip, 
+                                        NULL, NULL, is_rev);
+          fprintf(stderr, "score=%d\n", score);
+          */
+          tmap_bug();
       }
-      */
 
-      // return
       return result->score_fwd;
   }
 }

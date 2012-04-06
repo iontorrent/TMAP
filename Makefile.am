@@ -39,9 +39,22 @@ GLOBAL_SOURCES = \
 				 src/sw/tmap_fsw.h src/sw/tmap_fsw.c \
 				 src/sw/tmap_vsw_definitions.h src/sw/tmap_vsw_definitions.c \
 				 src/sw/tmap_vsw.h src/sw/tmap_vsw.c \
-				 src/sw/tmap_vsw_s0.h src/sw/tmap_vsw_s0.c \
-				 src/sw/tmap_vsw_s1.h src/sw/tmap_vsw_s1.c \
-				 src/sw/tmap_vsw_s3.h src/sw/tmap_vsw_s3.c \
+				 src/sw/lib/vsw.cpp src/sw/lib/vsw.h \
+				 src/sw/lib/vsw16.cpp src/sw/lib/vsw16.h \
+				 src/sw/lib/sw-vector.cpp src/sw/lib/sw-vector.h \
+				 src/sw/lib/Solution.cpp src/sw/lib/Solution.h \
+				 src/sw/lib/Solution1.cpp src/sw/lib/Solution1.h \
+				 src/sw/lib/Solution2.cpp src/sw/lib/Solution2.h \
+				 src/sw/lib/Solution3.cpp src/sw/lib/Solution3.h \
+				 src/sw/lib/Solution4.cpp src/sw/lib/Solution4.h \
+				 src/sw/lib/Solution5.cpp src/sw/lib/Solution5.h \
+				 src/sw/lib/Solution6.cpp src/sw/lib/Solution6.h \
+				 src/sw/lib/Solution7.cpp src/sw/lib/Solution7.h \
+				 src/sw/lib/Solution8.cpp src/sw/lib/Solution8.h \
+				 src/sw/lib/Solution9.cpp src/sw/lib/Solution9.h \
+				 src/sw/lib/Solution10.cpp src/sw/lib/Solution10.h \
+				 src/sw/lib/AffineSWOptimization.cpp src/sw/lib/AffineSWOptimization.h \
+				 src/sw/lib/AffineSWOptimizationWrapper.cpp src/sw/lib/AffineSWOptimizationWrapper.h \
 				 src/sw/tmap_vsw_bm.c 
 
 tmap_SOURCES = \

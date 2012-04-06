@@ -1076,6 +1076,7 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
           s = &sams_tmp->sams[(*idx)];
           // shallow copy previous data 
           (*s) = tmp_sam; 
+          //s->result = tmp_sam.result;
 
           // nullify the cigar
           s->n_cigar = 0;
@@ -1456,7 +1457,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
   start_pos = end_pos = 0;
   while(end < sams->n) {
       uint8_t strand, *query=NULL, *query_rc=NULL, *tmp_target;
-      uint32_t qlen;
+      int32_t qlen;
       tmap_map_sam_t tmp_sam;
       tmap_map_sam_t *s = NULL;
       int32_t query_start, query_end;

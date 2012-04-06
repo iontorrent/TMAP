@@ -37,9 +37,7 @@
 #include <emmintrin.h>
 #include <unistd.h>
 #include "tmap_vsw_definitions.h"
-#include "tmap_vsw_s0.h"
-#include "tmap_vsw_s1.h"
-#include "tmap_vsw_s3.h"
+#include "lib/AffineSWOptimizationWrapper.h"
   
 enum {
     TMAP_VSW_TYPE_S0 = 0,
@@ -51,17 +49,10 @@ enum {
 typedef struct {
     int32_t type;
 #ifdef TMAP_VSW_DEBUG_CMP
-    tmap_vsw_data_s0_t *s0;
-    tmap_vsw_data_s1_t *s1;
-    tmap_vsw_data_s3_t *s3;
+    tmap_vsw_wrapper_t **debug;
+    int32_t n;
 #endif
-    union {
-        tmap_vsw_data_s0_t *s0;
-        tmap_vsw_data_s1_t *s1;
-        tmap_vsw_data_s3_t *s3;
-        void *v;
-    } data;
-    tmap_vsw_data_s0_t *default_s;
+    tmap_vsw_wrapper_t *algorithm;
     int32_t query_start_clip;
     int32_t query_end_clip;
     int32_t use_default; // use default when query/target are too long

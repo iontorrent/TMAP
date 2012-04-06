@@ -17,9 +17,13 @@ AC_CANONICAL_BUILD
 
 # Check for C and C++ compilers
 CFLAGS_TMP=${CFLAGS}; # Save, as AC_PROG_CC sets CFLAGS
+CXXFLAGS_TMP=${CXXFLAGS}; # Save, as AC_PROG_CC sets CFLAGS
 AC_PROG_CC
 AM_PROG_CC_C_O
+AC_PROG_CXX
+AC_PROG_CXX_C_O
 CFLAGS=${CFLAGS_TMP}; # Restore CFLAGS
+CXXFLAGS=${CXXFLAGS_TMP}; # Restore CXXFLAGS
 
 AC_PROG_INSTALL
 AC_GNU_SOURCE
@@ -30,6 +34,7 @@ AC_GNU_SOURCE
 ## 0 - Use this to use the original BWT code 
 extended_CFLAGS="-D_TMAP_BWT_RUN_TYPE=0";
 default_CFLAGS="-Wall -g -O3 -pthread -msse3";
+default_CXXLAGS="-Wall -g -O3 -pthread -msse3";
 ## 1 - Use this to use the optimized code 
 #extended_CFLAGS="-D_TMAP_BWT_RUN_TYPE=0";
 #default_CFLAGS="-Wall -g -O3 -pthread -msse4.1";
@@ -66,6 +71,7 @@ AC_ARG_ENABLE(32bit-support,
 			  [AC_MSG_WARN("Using 64-bit SA intervals; Genome sizes greater than 4Gb are supported")])
 
 CFLAGS="${CFLAGS} ${default_CFLAGS} ${extended_CFLAGS}";
+CXXFLAGS="${CXXFLAGS} ${default_CXXFLAGS} ${extended_CXXFLAGS}";
 
 
 # Checks for typedefs, structures, and compiler characteristics.

@@ -379,10 +379,17 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
       "2 - all best hits",
       "3 - all alignments",
       NULL};
-  static char *vsw_type[] = {"0 - lh3",
-      "1 - Psyho",
-      "2 - NoOp",
-      "3 - folsena",
+  static char *vsw_type[] = {
+      "1 - lh3",
+      "2 - simple VSW",
+      "3 - SHRiMP2 VSW [not working]",
+      "4 - Psyho (Top Coder #1)",
+      "5 - ACRush (Top Coder #2)",
+      "6 - folsena (Top Coder #3)",
+      "7 - logicmachine (Top Coder #4)",
+      "8 - venco (Top Coder #5) [not working]",
+      "9 - Bladze (Top Coder #6)",
+      "10 - ngthuydiem (Top Coder #7) [Farrar cut-and-paste]",
       NULL};
   static char *pairing[] = {"0 - no pairing is to be performed", "1 - mate pairs (-S 0 -P 1)", "2 - paired end (-S 1 -P 0)", NULL};
   static char *strandedness[] = {"0 - same strand", "1 - opposite strand", NULL};
@@ -1890,7 +1897,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
   tmap_error_cmd_check_int(opt->sample_reads, 0, 1, "-x");
 #endif
-  tmap_error_cmd_check_int(opt->vsw_type, 0, 3, "-H");
+  tmap_error_cmd_check_int(opt->vsw_type, 1, 10, "-H");
 
   switch(opt->algo_id) {
     case TMAP_MAP_ALGO_MAP1: // map1 options
