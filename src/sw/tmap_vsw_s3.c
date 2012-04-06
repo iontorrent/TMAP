@@ -23,6 +23,7 @@ typedef struct {
     int32_t query_end;
     int32_t target_end;
     int32_t n_best;
+    int32_t overflow;
 } result_t;
 
 inline int32_t max(int a, int32_t b) {
@@ -54,7 +55,7 @@ process(tmap_vsw_data_s3_t *vsw, const uint8_t *bs, const int32_t n, const uint8
         int32_t mm, int32_t mi, int32_t oe, int32_t e, int32_t dir,
         result_t *result)
 {
-    int32_t opt = NINF, query_end=-1, target_end=-1, n_best=0;
+    int32_t opt = NINF, query_end=-1, target_end=-1, n_best=0, overflow=0;
     int32_t bl, i, j, l, t;
     oe += e;
 
@@ -197,7 +198,6 @@ process(tmap_vsw_data_s3_t *vsw, const uint8_t *bs, const int32_t n, const uint8
 
             for (j=0; j < n; j++)
               opt = max(opt, X[j+l+2].s[l]);
-
             if (dir == 0) {
                 int32_t j;
                 for (j=0;; j++) {
@@ -496,7 +496,11 @@ process(tmap_vsw_data_s3_t *vsw, const uint8_t *bs, const int32_t n, const uint8
                         int32_t tmp_opt_max = NINF;
                         for (l=0; l < lmax; l++)
                           tmp_opt_max = max(tmp_opt_max, tmp_opt.s[l]);
-
+                        if(INT16_MAX - mm <= tmp_opt_max) { // overflow
+                            overflow = 1;
+                            opt = INT16_MIN;
+                            break;
+                        }
                         if (dir == 0) {
                             if (tmp_opt_max > opt) {
                                 opt = tmp_opt_max;
@@ -749,7 +753,9 @@ process(tmap_vsw_data_s3_t *vsw, const uint8_t *bs, const int32_t n, const uint8
     result->query_end = query_end;
     result->target_end = target_end;
     result->n_best = n_best;
+    result->overflow = overflow;
 }
+
 static tmap_vsw_data_s3_t*
 tmap_vsw_data_init_s3_helper(const uint8_t *query, int32_t qlen, int32_t tlen, int32_t query_start_clip, int32_t query_end_clip, tmap_vsw_opt_t *opt)
 {
@@ -828,6 +834,7 @@ tmap_vsw_process_s3(tmap_vsw_data_s3_t *vsw,
   if(result.opt < score_thr) {
       (*query_end) = (*target_end) = -1;
       (*n_best) = 0;
+      if(NULL != overflow) (*overflow) = result.overflow;
       return INT16_MIN;
   }
   else {
