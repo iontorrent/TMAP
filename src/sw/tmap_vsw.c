@@ -67,6 +67,13 @@ tmap_vsw_init(const uint8_t *query, int32_t qlen,
       tmap_bug();
       break;
   }
+  if(TMAP_VSW_TYPE_S0 == vsw->type) {
+      vsw->default_s = vsw->data.s0;
+  }
+  else {
+      vsw->default_s = tmap_vsw_data_init_s0(query, qlen, query_start_clip, query_end_clip, opt);
+  }
+  /*
   if(1 == vsw->use_default) {
       if(TMAP_VSW_TYPE_S0 == vsw->type) {
           vsw->default_s = vsw->data.s0;
@@ -75,6 +82,7 @@ tmap_vsw_init(const uint8_t *query, int32_t qlen,
           vsw->default_s = tmap_vsw_data_init_s0(query, qlen, query_start_clip, query_end_clip, opt);
       }
   }
+  */
 #ifdef TMAP_VSW_DEBUG_CMP
   vsw->s0 = tmap_vsw_data_init_s0(query, qlen, query_start_clip, query_end_clip, opt);
   vsw->s1 = tmap_vsw_data_init_s1(query, qlen, query_start_clip, query_end_clip, opt);
@@ -104,9 +112,14 @@ tmap_vsw_destroy(tmap_vsw_t *vsw)
       tmap_bug();
       break;
   }
+  if(TMAP_VSW_TYPE_S0 != vsw->type) {
+      tmap_vsw_data_destroy_s0(vsw->default_s);
+  }
+  /*
   if(1 == vsw->use_default && TMAP_VSW_TYPE_S0 != vsw->type) {
       tmap_vsw_data_destroy_s0(vsw->default_s);
   }
+  */
 #ifdef TMAP_VSW_DEBUG_CMP
   tmap_vsw_data_destroy_s0(vsw->s0);
   tmap_vsw_data_destroy_s1(vsw->s1);
@@ -416,14 +429,48 @@ tmap_vsw_process(tmap_vsw_t *vsw,
           result->n_best = 0;
           return INT32_MIN; 
       }
-      else if(result->score_fwd != result->score_rev) {
-          fprintf(stderr, "{%d-%d} {%d-%d}\n",
-                  result->query_start, result->query_end,
-                  result->target_start, result->target_end);
-          fprintf(stderr, "result->score_fwd=%d result->score_rev=%d\n",
-                  result->score_fwd, result->score_rev);
-          tmap_bug();
+      /*
+      else if(result->score_fwd != result->score_rev) { // something went wrong... FIXME
+          // Use the default!
+          vsw->default_s = tmap_vsw_data_update_s0(vsw->default_s, query, qlen, target, tlen);
+          score = tmap_vsw_process_s0(vsw->default_s,
+                                      query, qlen, target, tlen, 
+                                      vsw->query_start_clip, vsw->query_end_clip, vsw->opt,
+                                      is_rev, score_thr, 
+                                      &query_end, &target_end, &n_best, overflow);
+          if(score == result->score_fwd) { // recovered, I hope
+              result->query_start = qlen - query_end - 1;
+              result->target_start = tlen - target_end - 1;
+              result->n_best = n_best;
+              result->score_rev = score;
+          }
+          else {
+              fprintf(stderr, "{%d-%d} {%d-%d}\n",
+                      result->query_start, result->query_end,
+                      result->target_start, result->target_end);
+              fprintf(stderr, "result->score_fwd=%d result->score_rev=%d\n",
+                      result->score_fwd, result->score_rev);
+              fprintf(stderr, "score=%d\n", score);
+              tmap_sw_param_t ap;
+              int32_t i, matrix[25];
+              ap.matrix=matrix;
+              for(i=0;i<25;i++) { 
+                  ap.matrix[i] = -(vsw->opt)->pen_mm; 
+              } 
+              for(i=0;i<4;i++) { 
+                  ap.matrix[i*5+i] = vsw->opt->score_match; 
+              } 
+              ap.gap_open = vsw->opt->pen_gapo; ap.gap_ext = vsw->opt->pen_gape; 
+              ap.gap_end = vsw->opt->pen_gape; 
+              ap.row = 5; 
+              score = tmap_sw_clipping_core(target, tlen, query, qlen, &ap,
+                                            vsw->query_start_clip, vsw->query_end_clip, 
+                                            NULL, NULL, is_rev);
+              fprintf(stderr, "score=%d\n", score);
+              tmap_bug();
+          }
       }
+      */
 
       // return
       return result->score_fwd;
