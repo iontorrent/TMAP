@@ -7,7 +7,7 @@
 #include <mmintrin.h>
 #include <xmmintrin.h>
 #include <emmintrin.h>
-#include <pmmintrin.h>
+#include <pmmintrin.h> // REQUIRES SSE3
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_definitions.h"
 #include "tmap_vsw_definitions.h"
@@ -54,7 +54,7 @@ process(tmap_vsw_data_s3_t *vsw, const uint8_t *bs, const int32_t n, const uint8
         int32_t mm, int32_t mi, int32_t oe, int32_t e, int32_t dir,
         result_t *result)
 {
-    int32_t opt = NINF, query_end, target_end, n_best;
+    int32_t opt = NINF, query_end=-1, target_end=-1, n_best=0;
     int32_t bl, i, j, l, t;
     oe += e;
 

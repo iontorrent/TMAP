@@ -140,7 +140,7 @@ tmap_vsw_get_max(tmap_vsw_t *vsw, int32_t *max_qlen, int32_t *max_tlen)
 int32_t
 tmap_vsw_update(tmap_vsw_t *vsw, const uint8_t *query, int32_t qlen, const uint8_t *target, int32_t tlen)
 {
-  int32_t max_qlen, max_tlen;
+  int32_t max_qlen=0, max_tlen=0;
 #ifdef TMAP_VSW_DEBUG_CMP
   vsw->s0 = tmap_vsw_data_update_s0(vsw->s0, query, qlen, target, tlen);
   vsw->s1 = tmap_vsw_data_update_s1(vsw->s1, query, qlen, target, tlen);
@@ -275,7 +275,7 @@ tmap_vsw_process(tmap_vsw_t *vsw,
               tmap_vsw_result_t *result,
               int32_t *overflow, int32_t score_thr, int32_t is_rev)
 {
-  int32_t found_forward = 1, query_end, target_end, n_best, score;
+  int32_t found_forward = 1, query_end, target_end, n_best, score = INT32_MIN;
 #ifdef TMAP_VSW_DEBUG
   int32_t i;
 #endif

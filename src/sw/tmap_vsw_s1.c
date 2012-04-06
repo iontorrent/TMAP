@@ -62,6 +62,7 @@ typedef struct {
     int32_t n_best;
 } result_t;
 
+/*
 static INLINE int16_t 
 findMax16(const __m128i *mMax) 
 {
@@ -136,6 +137,7 @@ hashDNA(const uint8_t *s, const int len)
   mhash = _mm_mullo_epi16(mhash, mmul);
   mhash = _mm_add_epi16(mhash, m1b);
 
+  // TODO: fix me: warning: dereferencing pointer ‘p’ does break strict-aliasing rules
   uint32_t* p = (uint32_t*)&mhash;
   h = h * 1337 + p[0];
   h = h * 1337 + p[1];
@@ -636,24 +638,6 @@ outA81_##qec: \
                 goto processFastVariantA8BitBreak; \
             } \
  \
- \
-            /* \
-               if (curMax > 255 + mi - mm) { \
-               int c0 = (m - i) * mm; \
-               int c1 = (m - i) * -e + o; \
-            c0 = min(24, c0); \
-            __m128i mshift = _mm_set1_epi8(c0); \
-            REP(j, segNo) { \
-            M0[j] = _mm_subs_epu8(M0[j], mshift); \
-            V[j] = _mm_subs_epu8(V[j], mshift); \
-            } \
-            shift += c0; \
-            opt -= c0; \
-            lastMax -= c0; \
-            curMax -= c0; \
-            } \
-            */ \
- \
             if (curMax + (m - i) * mm < opt) { \
                 iter = -1; \
                 goto processFastVariantA8BitBreak; \
@@ -944,6 +928,7 @@ NOINLINE  void convertTable(__m128i *T0, __m128i *T1, int segNo) {
  \
     calcInvalidPos(0, int8_t*, 16); \
 } while(0)
+*/
 
 static void
 process(tmap_vsw_data_s1_t *vsw, const uint8_t *bs, const int32_t n, const uint8_t *as, int32_t m,
@@ -952,6 +937,9 @@ process(tmap_vsw_data_s1_t *vsw, const uint8_t *bs, const int32_t n, const uint8
         result_t *result)
 
 {
+  // TODO: implement
+  tmap_bug();
+  /*
   const uint8_t *a = NULL, *b = NULL;
   tmap_vsw_s1_qres_t *htdata = vsw->htdata;
   int32_t res_min_pos = 0, res_max_pos = 0, opt = 0, pos;
@@ -967,6 +955,8 @@ process(tmap_vsw_data_s1_t *vsw, const uint8_t *bs, const int32_t n, const uint8
 
   int32_t iter = -1;
   int32_t i, j;
+
+  result->n_best = 0;
   
   a = as;
   b = bs;
@@ -1089,6 +1079,7 @@ similar:
   result->target_end = pos & 1023;
   result->query_end = pos >> 10;
   result->opt = opt;
+  */
 }
 
 /*
@@ -1167,6 +1158,9 @@ tmap_vsw_process_s1(tmap_vsw_data_s1_t *vsw,
                     int32_t *n_best, int32_t *overflow)
 {
   result_t result;
+  result.n_best = 0;
+  result.opt = INT32_MIN;
+  result.query_end = result.target_end = -1;
   process(vsw, target, tlen, query, qlen,
          query_start_clip, query_end_clip,
          opt->score_match, -opt->pen_mm, -opt->pen_gapo, -opt->pen_gape, direction, &result);

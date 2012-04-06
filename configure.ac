@@ -29,7 +29,7 @@ AC_GNU_SOURCE
 # condition on BWT Type!
 ## 0 - Use this to use the original BWT code 
 extended_CFLAGS="-D_TMAP_BWT_RUN_TYPE=0";
-default_CFLAGS="-Wall -g -O3 -pthread -msse2";
+default_CFLAGS="-Wall -g -O3 -pthread -msse3";
 ## 1 - Use this to use the optimized code 
 #extended_CFLAGS="-D_TMAP_BWT_RUN_TYPE=0";
 #default_CFLAGS="-Wall -g -O3 -pthread -msse4.1";
@@ -77,7 +77,7 @@ AC_CHECK_LIB([z], [gzread])
 AC_CHECK_LIB([m], [pow])
 AC_CHECK_LIB([pthread], [pthread_create])
 #AC_CHECK_LIB([libtcmalloc_minimal],malloc) # Use this to not include the heap profiler and checker
-AC_CHECK_FUNCS([pow strdup memset strchr strdup strstr memmove getopt_long])
+AC_CHECK_FUNCS([pow strdup memset strchr strdup strstr memmove getopt_long gettimeofday])
 
 # Check types
 AC_TYPE_INT8_T
@@ -97,6 +97,7 @@ AC_CHECK_SIZEOF([long int])
 
 # Checks for header files.
 AC_HEADER_STDC
+AC_HEADER_STDBOOL
 AC_CHECK_HEADERS([stdlib.h stdio.h stdint.h string.h sys/time.h unistd.h float.h zlib.h bzlib.h pthread.h limits.h netinet/in.h emmintrin.h getopt.h])
 
 AC_C_INLINE
