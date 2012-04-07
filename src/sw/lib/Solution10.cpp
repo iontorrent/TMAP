@@ -1,6 +1,30 @@
 // Coder: ngthuydiem
 // Submission: 23 
 // URL: http://community.topcoder.com/longcontest/?module=ViewProblemSolution&pm=11786&rd=15078&cr=23054943&subnum=23
+
+/*
+     Copyright 2006, by Michael Farrar.  All rights reserved. The SWSSE2
+     program and documentation may not be sold or incorporated into a
+     commercial product, in whole or in part, without written consent of
+     Michael Farrar.
+
+     For further information regarding permission for use or reproduction,
+     please contact Michael Farrar at:
+
+         farrar.michael@gmail.com
+
+
+     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+     EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+     MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+     IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+     CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+     TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+     SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+/* Permission was received from Michael Farrar to use the SWSSE2 code as long as 
+it was released under GPL v2. He passed suddenly in late 2010.  RIP. */ 
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <emmintrin.h> // use SSE2
