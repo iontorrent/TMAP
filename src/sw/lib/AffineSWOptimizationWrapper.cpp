@@ -24,6 +24,7 @@ tmap_vsw_wrapper_process(tmap_vsw_wrapper_t *v,
   for(i=0;i<tlen;i++) b += "ACGTN"[target[i]];
   for(i=0;i<qlen;i++) a += "ACGTN"[query[i]];
   
+  /*
   // Top coder style
   for(i=0;i<tlen;i++) fputc("ACGTN"[target[i]], stderr);
   fputc('\t', stderr);
@@ -33,6 +34,7 @@ tmap_vsw_wrapper_process(tmap_vsw_wrapper_t *v,
           qsc, qec,
           mm, mi, o, e, dir,
           -1, -1, -1, -1);
+          */
 
   return v->process(b, a, qsc, qec, mm, mi, o, e, dir, opt, te, qe, n_best);
 }
