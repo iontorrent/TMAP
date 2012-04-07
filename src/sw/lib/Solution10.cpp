@@ -62,7 +62,7 @@ SwStripedData * swStripedInitByte(unsigned char   *querySeq,
 
   int weight;
 
-  short *ps;
+  //short *ps;
   char *pc;
 
   signed char *matrixRow;
@@ -1354,5 +1354,5 @@ int Solution10::process(string& b, string& a, int qsc, int qec,
         free (swData->pData);
         free (swData);
     }
-    return 1;
+    return (*opt);
 }

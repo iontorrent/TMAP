@@ -1094,5 +1094,6 @@ int Solution9::process(string& target, string& query, int queryStartClip, int qu
     (*_te) = TargetEnd;
     (*_qe) = QueryEnd;
     (*_n_best) = NBest;
+    return Opt;
 }
 

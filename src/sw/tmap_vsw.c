@@ -50,7 +50,7 @@ tmap_vsw_init(const uint8_t *query, int32_t qlen,
   vsw->query_end_clip = query_end_clip;
   vsw->opt = opt;
   vsw->algorithm = tmap_vsw_wrapper_init(type);
-  // TODO default algorithm
+  vsw->algorithm_default = tmap_vsw_wrapper_init(1);
 #ifdef TMAP_VSW_DEBUG_CMP
   // TODO
 #endif
@@ -62,7 +62,7 @@ tmap_vsw_destroy(tmap_vsw_t *vsw)
 {
   if(NULL == vsw) return;
   tmap_vsw_wrapper_destroy(vsw->algorithm);
-  // TODO default algorithm
+  tmap_vsw_wrapper_destroy(vsw->algorithm_default);
 #ifdef TMAP_VSW_DEBUG_CMP
   // TODO
 #endif
@@ -247,21 +247,35 @@ tmap_vsw_process(tmap_vsw_t *vsw,
   // update based on current problem
   query_end = target_end = n_best = 0;
   if(NULL != overflow) (*overflow) = 0;
+  /*
   if(0 == tmap_vsw_update(vsw, query, qlen, target, tlen)) { // use the default
       tmap_bug();
       // TODO default algorithm
   }
-  else {
-      tmap_vsw_wrapper_process(vsw->algorithm,
-                               target, tlen, 
-                               query, qlen, 
-                               vsw->opt->score_match,
-                               -vsw->opt->pen_mm,
-                               -vsw->opt->pen_gapo,
-                               -vsw->opt->pen_gape,
-                               is_rev, 
-                               vsw->query_start_clip, vsw->query_end_clip, 
-                               &score, &target_end, &query_end, &n_best);
+  */
+  if(tmap_vsw_wrapper_process(vsw->algorithm,
+                           target, tlen, 
+                           query, qlen, 
+                           vsw->opt->score_match,
+                           -vsw->opt->pen_mm,
+                           -vsw->opt->pen_gapo,
+                           -vsw->opt->pen_gape,
+                           is_rev, 
+                           vsw->query_start_clip, vsw->query_end_clip, 
+                           &score, &target_end, &query_end, &n_best) <= INT16_MIN) {
+      // try the default
+      if(0 != vsw->type) {
+          tmap_vsw_wrapper_process(vsw->algorithm_default,
+                                   target, tlen, 
+                                   query, qlen, 
+                                   vsw->opt->score_match,
+                                   -vsw->opt->pen_mm,
+                                   -vsw->opt->pen_gapo,
+                                   -vsw->opt->pen_gape,
+                                   is_rev, 
+                                   vsw->query_start_clip, vsw->query_end_clip, 
+                                   &score, &target_end, &query_end, &n_best);
+      }
   }
   if(score < score_thr) {
       query_end = target_end = -1;
@@ -346,6 +360,33 @@ tmap_vsw_process(tmap_vsw_t *vsw,
           return INT32_MIN; 
       }
       else if(result->score_fwd != result->score_rev) { // something went wrong... FIXME
+          // use the default
+          if(0 != vsw->type) {
+              tmap_vsw_wrapper_process(vsw->algorithm_default,
+                                       target, tlen, 
+                                       query, qlen, 
+                                       vsw->opt->score_match,
+                                       -vsw->opt->pen_mm,
+                                       -vsw->opt->pen_gapo,
+                                       -vsw->opt->pen_gape,
+                                       is_rev, 
+                                       vsw->query_start_clip, vsw->query_end_clip, 
+                                       &score, &target_end, &query_end, &n_best);
+              result->query_start = qlen - query_end - 1;
+              result->target_start = tlen - target_end - 1;
+              result->n_best = n_best;
+              result->score_rev = score;
+              if(result->score_fwd != result->score_rev) { // something went wrong... again...
+                  // ignore
+                  result->query_end = result->query_start = 0;
+                  result->target_end = result->target_start = 0;
+                  result->score_fwd = result->score_rev = INT16_MIN;
+                  result->n_best = 0;
+                  return INT32_MIN;
+              }
+              return score;
+          }
+          // Bug!
           fprintf(stderr, "{%d-%d} {%d-%d}\n",
                   result->query_start, result->query_end,
                   result->target_start, result->target_end);

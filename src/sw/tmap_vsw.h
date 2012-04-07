@@ -53,6 +53,7 @@ typedef struct {
     int32_t n;
 #endif
     tmap_vsw_wrapper_t *algorithm;
+    tmap_vsw_wrapper_t *algorithm_default;
     int32_t query_start_clip;
     int32_t query_end_clip;
     int32_t use_default; // use default when query/target are too long
