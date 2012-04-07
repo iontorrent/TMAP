@@ -1,12 +1,17 @@
 #include <cstring>
 #include <sstream>
+#define __STDC_LIMIT_MACROS // Seriously, I want these, now
+#include <stdint.h>
+#include <limits>
 #include "sw-vector.h"
-#include "solution3.h"
+#include "Solution3.h"
 
 // SHRiMP2's Vectorized Smith Waterman
 // NOTE: this does not work
 
 using namespace std;
+
+#define max(a, b) ((a)>(b)?a:b)
 
 // Input: ASCII character
 // Output: 2-bit DNA value

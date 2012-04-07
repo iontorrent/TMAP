@@ -30,7 +30,7 @@
 #include <stdint.h>
 #include "../../util/tmap_definitions.h"
 #include "../../util/tmap_alloc.h"
-#include "solution4.h"
+#include "Solution4.h"
 
 using namespace std;
 

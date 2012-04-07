@@ -7,7 +7,7 @@
 #include <cstring>
 #include <pmmintrin.h>
 #include <cstdio>
-#include "solution9.h"
+#include "Solution9.h"
 
 using namespace std;
 

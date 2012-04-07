@@ -31,7 +31,10 @@
 #include <ext/pool_allocator.h>
 #include <emmintrin.h>
 #include <pmmintrin.h>
-#include "solution8.h"
+#define __STDC_LIMIT_MACROS // Seriously, I want these, now
+#include <stdint.h>
+#include <limits>
+#include "Solution8.h"
 
 #define _mm_loadu_si128 _mm_lddqu_si128
 //#define volatile

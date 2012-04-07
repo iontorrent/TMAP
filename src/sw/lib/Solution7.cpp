@@ -9,7 +9,7 @@
 #include <cstring>
 #include <xmmintrin.h>
 #include <emmintrin.h>
-#include "solution7.h"
+#include "Solution7.h"
 
 using namespace std;
 

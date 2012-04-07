@@ -7,14 +7,13 @@
 
 #include <cstring>
 #include <sstream>
-#include "solution.h"
+#include "Solution.h"
 
 using namespace std;
 
 #define Q_MAX 512
 #define T_MAX 1024
 
-#define max(a, b) ((a)>(b)?a:b)
 
 class Solution3 : public Solution {
 public:

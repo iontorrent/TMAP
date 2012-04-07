@@ -1,23 +1,26 @@
+#include <stdlib.h>
 #include <cstring>
 #include <sstream>
 #include "../../util/tmap_alloc.h"
-#include "solution2.h"
+#include "Solution2.h"
 
-// Ivan's solution
+// Ivan's Solution
 
 using namespace std;
+
+#define max(a, b) ((a)>(b)?a:b)
 
 void Solution2::resize(int n)
 {
   int i;
   if(n <= mem) return;
-  M = (int**)realloc(M, sizeof(int*) * n);
-  H = (int**)realloc(H, sizeof(int*) * n);
-  V = (int**)realloc(V, sizeof(int*) * n);
+  M = (int**)tmap_realloc(M, sizeof(int*) * n, "M");
+  H = (int**)tmap_realloc(H, sizeof(int*) * n, "H");
+  V = (int**)tmap_realloc(V, sizeof(int*) * n, "V");
   for(i=0;i<mem;i++) {
-      M[i] = (int*)realloc(M[i], sizeof(int) * n);
-      H[i] = (int*)realloc(H[i], sizeof(int) * n);
-      V[i] = (int*)realloc(V[i], sizeof(int) * n);
+      M[i] = (int*)tmap_realloc(M[i], sizeof(int) * n, "M[i]");
+      H[i] = (int*)tmap_realloc(H[i], sizeof(int) * n, "H[i]");
+      V[i] = (int*)tmap_realloc(V[i], sizeof(int) * n, "V[i]");
   }
   for(;i<n;i++) {
       M[i] = (int*)tmap_malloc(sizeof(int) * n, "M[i]");

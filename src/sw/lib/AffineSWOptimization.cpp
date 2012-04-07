@@ -1,15 +1,15 @@
 #include <cstring>
 #include <sstream>
-#include "solution1.h"
-#include "solution2.h"
-#include "solution3.h"
-#include "solution4.h"
-#include "solution5.h"
-#include "solution6.h"
-#include "solution7.h"
-#include "solution8.h"
-#include "solution9.h"
-#include "solution10.h"
+#include "Solution1.h"
+#include "Solution2.h"
+#include "Solution3.h"
+#include "Solution4.h"
+#include "Solution5.h"
+#include "Solution6.h"
+#include "Solution7.h"
+#include "Solution8.h"
+#include "Solution9.h"
+#include "Solution10.h"
 #include "AffineSWOptimization.h"
 
 using namespace std;

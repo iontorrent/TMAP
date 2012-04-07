@@ -10,7 +10,7 @@
 #include <xmmintrin.h>
 #include <emmintrin.h>
 #include <pmmintrin.h>
-#include "solution6.h"
+#include "Solution6.h"
 
 using namespace std;
 

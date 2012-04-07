@@ -25,7 +25,9 @@
    */
 
 #include <stdlib.h>
+#define __STDC_LIMIT_MACROS // Seriously, I want these, now
 #include <stdint.h>
+#include <limits>
 #include <emmintrin.h>
 #include <unistd.h>
 #include <stdio.h>

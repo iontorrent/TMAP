@@ -16,7 +16,7 @@
 #include <cstring>
 #include <xmmintrin.h>
 #include <emmintrin.h>
-#include "solution.h"
+#include "Solution.h"
 
 using namespace std;
 

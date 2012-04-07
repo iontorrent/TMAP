@@ -6,7 +6,7 @@
 #include "vsw16.h"
 #include "vsw.h"
 #include "vsw16.h"
-#include "solution1.h"
+#include "Solution1.h"
 
 // TMAP Vectorized Smith Waterman
 

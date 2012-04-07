@@ -32,7 +32,7 @@
 #include <xmmintrin.h>
 #include "../../util/tmap_alloc.h"
 #include "../../util/tmap_definitions.h"
-#include "solution5.h"
+#include "Solution5.h"
 
 using namespace std;
 

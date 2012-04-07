@@ -7,14 +7,12 @@
 
 #include <cstring>
 #include <sstream>
-#include "solution.h"
+#include "Solution.h"
 
 using namespace std;
 
 const int INF = 1073741824;
 const int MAX_DIM = 1025;
-
-#define max(a, b) ((a)>(b)?a:b)
 
 class Solution2 : public Solution {
 public:

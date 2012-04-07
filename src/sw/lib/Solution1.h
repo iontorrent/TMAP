@@ -7,7 +7,7 @@
 
 #include <cstring>
 #include <sstream>
-#include "solution.h"
+#include "Solution.h"
 #include "vsw16.h"
 #include "vsw.h"
 

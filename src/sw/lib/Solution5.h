@@ -7,7 +7,7 @@
 
 #include <cstring>
 #include <sstream>
-#include "solution.h"
+#include "Solution.h"
 
 using namespace std;
   

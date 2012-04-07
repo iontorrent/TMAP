@@ -1,10 +1,12 @@
 // Coder: ngthuydiem
 // Submission: 23 
 // URL: http://community.topcoder.com/longcontest/?module=ViewProblemSolution&pm=11786&rd=15078&cr=23054943&subnum=23
+#include <stdlib.h>
+#include <stdio.h>
 #include <emmintrin.h> // use SSE2
 #include <cstring>
 #include <sstream>
-#include "solution10.h"
+#include "Solution10.h"
 using namespace std;
 
 #define max(a, b) ((a)>(b)?a:b)
