@@ -1323,7 +1323,7 @@ int Solution10::process(string& b, string& a, int qsc, int qec,
 
     int i;
 
-    SwStripedData *swData;    
+    SwStripedData *swData=NULL;    
 
     if (unlikely(flag)) {                
         gapOpen = -(o+e);

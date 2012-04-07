@@ -28,7 +28,7 @@ int Solution6::process(string& bs, string& as, int qsc, int qec,
                           int mm, int mi, int oe, int e, int dir,
                           int *_opt, int *_te, int *_qe, int *_n_best) {
     const int n = bs.size(), m = as.size();
-    int opt = NINF, query_end, target_end, n_best;
+    int opt = NINF, query_end=-1, target_end=-1, n_best=0;
     oe += e;
 
     short abuf[512];
