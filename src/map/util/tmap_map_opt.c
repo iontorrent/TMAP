@@ -574,7 +574,7 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
 #endif
   tmap_map_opt_options_add(opt->options, "vsw-type", required_argument, 0, 'H',
                            TMAP_MAP_OPT_TYPE_INT,
-                           "the vectorized smith-waterman algorithm",
+                           "the vectorized smith-waterman algorithm (very untested)",
                            vsw_type,
                            tmap_map_opt_option_print_func_vsw_type,
                            TMAP_MAP_ALGO_GLOBAL);
