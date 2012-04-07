@@ -1,7 +1,6 @@
 // Coder: ACRush
 // Submission: 27
 // URL: http://community.topcoder.com/longcontest/?module=ViewProblemSolution&pm=11786&rd=15078&cr=19849563&subnum=27
-//#define LOCAL
 //#define DEBUG
 //#define PRINT
 
@@ -28,22 +27,22 @@
 #include <cstring>
 #include <ctime>
 
-//#ifndef LOCAL
 #include <emmintrin.h>
 #include <pmmintrin.h>
 #include <xmmintrin.h>
-//#endif
+#include "../../util/tmap_alloc.h"
+#include "../../util/tmap_definitions.h"
 #include "solution5.h"
 
 using namespace std;
 
 #define SIZE(A) ((int)A.size())
 #define LENGTH(A) ((int)A.length())
-typedef long long int64;
-typedef unsigned long long uint64;
-typedef unsigned int uint;
-typedef unsigned short ushort;
-typedef unsigned char uchar;
+typedef int64_t int64;
+typedef uint64_t uint64;
+typedef uint32_t uint;
+typedef uint16_t ushort;
+typedef uint8_t uchar;
 typedef pair<int,int> ipair;
 #define MP(A,B) make_pair(A,B)
 typedef vector<string> VS;
@@ -53,22 +52,6 @@ typedef vector<int> VI;
 const double pi=acos(-1.0);
 inline int sqr(int x) { return x*x; }
 inline double sqr(double x) { return x*x; }
-static int opt,query_end,target_end,n_best;
-
-int LOG(const char* s,...)
-{
-#ifdef PRINT
-  va_list va;
-  va_start(va,s);
-  FILE *f=fopen("test.log","a");
-  int ret=vfprintf(f,s,va);
-  fclose(f);
-  va_end(va);
-  return ret;
-#else
-  return 0;
-#endif
-}
 
 #ifdef DEBUG
 #define ASSERT(_Expression) (void)((!!(_Expression)||(__assert((#_Expression),__LINE__),0)));
@@ -80,68 +63,6 @@ void __assert(const char *_Message,const unsigned _Line)
   exit(0);
 }
 #endif
-
-#ifdef LOCAL
-#ifdef _MSC_VER
-#define TIMES_PER_SEC (1.75e9)
-#else
-#define TIMES_PER_SEC (1.6508566e9)
-#endif
-#else
-#define TIMES_PER_SEC (3.589e9)
-#endif
-
-#ifdef LOCAL
-class Timer
-{
-public:
-  static uint64 timeUsed[1000];
-  int id;
-  uint64 startTime;
-  Timer(int id=0)
-    {
-      this->id=id;
-      startTime=rdtsc();
-    }
-  ~Timer()
-    {
-      timeUsed[id]+=(rdtsc()-startTime);
-    }
-  static void show()
-    {
-      for (int i=0;i<1000;i++) if (timeUsed[i]>0)
-        {
-          char str[100];
-          sprintf(str,"%.6lf",timeUsed[i]/TIMES_PER_SEC);
-          string s=str;
-          if (LENGTH(s)<15) s=" "+s;
-          printf("%4d %s\n",i,s.c_str());
-        }
-    }
-};
-uint64 Timer::timeUsed[1000]={0};
-
-class Counter
-{
-public:
-  static uint64 cnt[1000];
-  Counter(int id=0)
-    {
-      cnt[id]++;
-    }
-  ~Counter()
-    {
-    }
-  static void show()
-    {
-      for (int i=0;i<1000;i++) if (cnt[i]>0)
-        printf("Counter %d %d\n",i,cnt[i]);
-    }
-};
-uint64 Counter::cnt[1000]={0};
-#endif
-
-const int MAX_LENGTH=1040;
 const int INF=1073741824;
 
 inline int max(int a,int b)
@@ -157,73 +78,7 @@ inline int max(int a,int b,int c)
   return (a>b)?((a>c)?a:c):((b>c)?b:c);
 }
 
-#ifdef LOCAL
-int __opt;
-#endif
-
-#ifdef LOCAL
-#define ALIGN16 __declspec(align(16))
-#endif
-
-static int m,n;
-char target[MAX_LENGTH],query[MAX_LENGTH];
-int a[MAX_LENGTH],b[MAX_LENGTH],ca[MAX_LENGTH],cb[MAX_LENGTH];
-int task_id;
-int match_score,mismatch_score,gap_open,gap_extension;
-int direction;
-uint batch8[1024];
-uint mismatch_score_batch16;
-
-struct dpstate
-{
-  int idx,f,h;
-};
-int sizeq[2];
-dpstate dp_buffer[MAX_LENGTH*3+100];
-
-int q[3][MAX_LENGTH];
-struct dpstate_large
-{
-  int f,h;
-};
-dpstate_large dp_large[MAX_LENGTH][MAX_LENGTH];
-int counter_task2;
-bool vf[MAX_LENGTH][MAX_LENGTH];
-bool vh[MAX_LENGTH][MAX_LENGTH];
-
-#ifdef LOCAL
-ALIGN16 short hbuffer16[MAX_LENGTH*3+100];
-ALIGN16 uchar hbuffer8[MAX_LENGTH*3+100];
-#else
-short hbuffer16[MAX_LENGTH*3+100] __attribute__ ((aligned (16)));
-uchar hbuffer8[MAX_LENGTH*3+100] __attribute__ ((aligned (16)));
-#endif
-
-#ifdef LOCAL
-ALIGN16 int int_buffer[4];
-ALIGN16 short short_buffer[8];
-ALIGN16 uchar uchar_buffer[16];
-#else
-int int_buffer[4] __attribute__ ((aligned (16)));
-short short_buffer[8] __attribute__ ((aligned (16)));
-uchar uchar_buffer[16] __attribute__ ((aligned (16)));
-#endif
-
-
-int vdeg[256],vgraph[256][MAX_LENGTH];
-int vfirst[256],vnext[MAX_LENGTH];
-
-int testcase_id=0;
-int measure_id;
-
-int est_opt;
-int first_j,last_j;
-char result[1024];
-
-bool valid0[256];
-int encode_idx[128];
-
-void init()
+void Solution5::init()
 {
   encode_idx['A']=0;
   encode_idx['C']=1;
@@ -242,8 +97,6 @@ void init()
     }
 }
 
-void solve();
-
 int get_task_id(int qsc,int qec)
 {
   if (qsc==1 && qec==1) return 1;
@@ -253,23 +106,111 @@ int get_task_id(int qsc,int qec)
   return 0;
 }
 
-Solution5::Solution5() {
+void Solution5::resize(int mem) {
+    int i, prev;
+    if(mem < MAX_LENGTH) return;
+    prev = MAX_LENGTH;
+    MAX_LENGTH = mem;
+    tmap_roundup32(MAX_LENGTH);
+    target = (char*)tmap_realloc(target, sizeof(char) * MAX_LENGTH, "target");
+    query = (char*)tmap_realloc(query, sizeof(char) * MAX_LENGTH, "query");
+    a = (int*)tmap_realloc(a, sizeof(int) * MAX_LENGTH, "a");
+    b = (int*)tmap_realloc(b, sizeof(int) * MAX_LENGTH, "b");
+    ca = (int*)tmap_realloc(ca, sizeof(int) * MAX_LENGTH, "ca");
+    cb = (int*)tmap_realloc(cb, sizeof(int) * MAX_LENGTH, "cb");
+    dp_buffer = (dpstate_t*)tmap_realloc(dp_buffer, sizeof(dpstate_t) * (100 + (MAX_LENGTH * 3)), "dp_buffer");
+    for(i=0;i<3;i++) q[i] = (int*)tmap_realloc(q[i], sizeof(int) * MAX_LENGTH, "q[i]");
+    dp_large = (dpstate_large_t**)tmap_realloc(dp_large, sizeof(dpstate_large_t*) * MAX_LENGTH, "dp_large");
+    vf = (bool**)tmap_realloc(vf, sizeof(bool*) * MAX_LENGTH, "vf");
+    vh = (bool**)tmap_realloc(vh, sizeof(bool*) * MAX_LENGTH, "vh");
+    for(i=0;i<MAX_LENGTH;i++) {
+        if(prev <= i) {
+            dp_large[i] = NULL;
+            vf[i] = vh[i] = NULL;
+        }
+        dp_large[i] = (dpstate_large_t*)tmap_realloc(dp_large[i], sizeof(dpstate_large_t) * MAX_LENGTH, "dp_large");
+        vf[i] = (bool*)tmap_realloc(vf[i], sizeof(bool) * MAX_LENGTH, "vf[i]");
+        vh[i] = (bool*)tmap_realloc(vh[i], sizeof(bool) * MAX_LENGTH, "vh");
+    }
+    hbuffer16 = (short*)tmap_realloc(hbuffer16, sizeof(short) * (100 + (MAX_LENGTH * 3)), "hbuffer16");
+    hbuffer8 = (uint8_t*)tmap_realloc(hbuffer8, sizeof(uint8_t) * (100 + (MAX_LENGTH * 3)), "hbuffer8");
+    for(i=0;i<256;i++) vgraph[i] = (int*)tmap_realloc(vgraph[i], sizeof(int) * MAX_LENGTH, "vgraph[i]");
+    vnext = (int*)tmap_realloc(vnext, sizeof(int) * MAX_LENGTH, "vnext");
+    shuffle = (int*)tmap_realloc(shuffle, sizeof(int) * MAX_LENGTH, "shuffle");
+    for(i=0;i<4;i++) {
+        cost8[i] = (uint8_t*)tmap_realloc(cost8[i], sizeof(uint8_t) * MAX_LENGTH, "cost8[i]");
+        cost16[i] = (short*)tmap_realloc(cost16[i], sizeof(short) * MAX_LENGTH, "cost16");
+    }
+    transfer_h = (short*)tmap_realloc(transfer_h, sizeof(short) * MAX_LENGTH, "transfer_h");
+    transfer_e = (short*)tmap_realloc(transfer_e, sizeof(short) * MAX_LENGTH, "transfer_e");
+    best_end_points = (int*)tmap_realloc(best_end_points, sizeof(int) * MAX_LENGTH, "best_end_points");
 }
 
-#ifdef LOCAL
-int process(string& s_target, string& s_query, int qsc, int qec, int v_match_score, 
-               int v_mismatch_score, int v_gap_open, int v_gap_extension, int v_direction,
-               int *_opt, int *_te, int *_qe, int *_n_best)
-#else
+Solution5::Solution5() {
+    int i;
+    n_best = 1;
+    m = n = 0;
+    testcase_id=0;
+    MAX_LENGTH=0;
+    target = query = NULL;
+    a = b = ca = cb = NULL;
+    dp_buffer= NULL;
+    for(i=0;i<3;i++) q[i] = NULL;
+    dp_large = NULL;
+    vf = vh = NULL;
+    hbuffer16 = NULL;
+    hbuffer8 = NULL;
+    for(i=0;i<256;i++) vgraph[i] = NULL;
+    vnext = NULL;
+    shuffle = NULL;
+    for(i=0;i<4;i++) {
+        cost8[i] = NULL;
+        cost16[i] = NULL;
+    }
+    transfer_h = transfer_e = NULL;
+    best_end_points = NULL;
+
+    // resize
+    resize(1040);
+}
+
+Solution5::~Solution5() {
+    int i;
+    free(target);
+    free(query);
+    free(a);
+    free(b);
+    free(ca);
+    free(cb);
+    free(dp_buffer);
+    for(i=0;i<3;i++) free(q[i]);
+    for(i=0;i<MAX_LENGTH;i++) {
+        free(dp_large[i]);
+        free(vf[i]);
+        free(vh[i]);
+    }
+    free(dp_large);
+    free(vf);
+    free(vh);
+    free(hbuffer16);
+    free(hbuffer8);
+    for(i=0;i<256;i++) free(vgraph[i]);
+    free(vnext);
+    free(shuffle);
+    for(i=0;i<4;i++) {
+        free(cost8[i]);
+        free(cost16[i]);
+    }
+    free(transfer_h);
+    free(transfer_e);
+    free(best_end_points);
+}
+
 int Solution5::
 process(string& s_target, string& s_query, int qsc, int qec, int v_match_score, 
         int v_mismatch_score, int v_gap_open, int v_gap_extension, int v_direction,
         int *_opt, int *_te, int *_qe, int *_n_best)
-#endif
 {
-#ifdef LOCAL
-  Timer t99(99);
-#endif
   if (testcase_id==0)
     {
       init();
@@ -295,6 +236,8 @@ process(string& s_target, string& s_query, int qsc, int qec, int v_match_score,
   int l_target=LENGTH(s_target);
   const char *v_query=s_query.c_str();
   const char *v_target=s_target.c_str();
+  if(l_query < l_target) resize(l_target);
+  else resize(l_query);
   est_opt=0;
   if (testcase_id>0 && 
       direction==v_direction && 
@@ -303,9 +246,6 @@ process(string& s_target, string& s_query, int qsc, int qec, int v_match_score,
       m>=l_target &&
       memcmp(v_query,query,n*sizeof(char))==0)
     {
-#ifdef LOCAL
-      Timer t0(0);
-#endif
       int mid_l=m-l_target;
       int max_l=mid_l+l_target/10;
       int ck_l=l_target;
@@ -318,10 +258,6 @@ process(string& s_target, string& s_query, int qsc, int qec, int v_match_score,
               //sscanf(result,"%d%d%d%d",&opt,&query_end,&target_end,&n_best);
               if (dest<m && first_j>=src && last_j<=dest)
                 {
-#ifdef LOCAL
-                  Counter c91(91);
-#endif
-                  char new_result[1024];
                   //sprintf(new_result,"%d %d %d %d",opt,query_end,target_end-src,n_best);
                   target_end -= src;
                   testcase_id++;
@@ -334,9 +270,6 @@ process(string& s_target, string& s_query, int qsc, int qec, int v_match_score,
               if (dest>m-1) dest=m-1;
               if (first_j<=dest && src<=last_j)
                 {
-#ifdef LOCAL
-                  Counter c92(92);
-#endif
                   int range=last_j-first_j+1;
                   int overlap=min(last_j,dest)-max(first_j,src)+1;
                   if (task_id==1)
@@ -360,9 +293,6 @@ process(string& s_target, string& s_query, int qsc, int qec, int v_match_score,
             }
         }
     }
-#ifdef LOCAL
-  //est_opt=__opt;
-#endif
   n=l_query;
   memcpy(query,v_query,n*sizeof(char));
   m=l_target;
@@ -392,9 +322,9 @@ process(string& s_target, string& s_query, int qsc, int qec, int v_match_score,
    return -1;
    }
    */
-#define encode(c) encode_idx[c]
+#define encode(c) encode_idx[(int)c]
 
-void shift_right16(__m128i &a,short first)
+void Solution5::shift_right16(__m128i &a,short first)
 {
   __m128i *p=(__m128i*)short_buffer;
   _mm_store_si128(p,a);
@@ -403,7 +333,7 @@ void shift_right16(__m128i &a,short first)
   a=_mm_load_si128(p);
 }
 
-void shift_right8(__m128i &a,uchar first)
+void Solution5::shift_right8(__m128i &a,uchar first)
 {
   __m128i *p=(__m128i*)uchar_buffer;
   _mm_store_si128(p,a);
@@ -412,41 +342,20 @@ void shift_right8(__m128i &a,uchar first)
   a=_mm_load_si128(p);
 }
 
-int shuffle[MAX_LENGTH];
-#ifdef LOCAL
-ALIGN16 uchar cost8[4][MAX_LENGTH];
-ALIGN16 short cost16[4][MAX_LENGTH];
-#else
-uchar cost8[4][MAX_LENGTH] __attribute__ ((aligned (16)));
-short cost16[4][MAX_LENGTH] __attribute__ ((aligned (16)));
-#endif
-
-short transfer_h[MAX_LENGTH],transfer_e[MAX_LENGTH];
-
-#ifdef LOCAL
-int cc1=0,cc2=0,cc3=0;
-#endif
-
 #define ZERO (45)
 #define LBOUND1 (30)
 #define LBOUND2 (15)
 
-void brute_force()
+void Solution5::brute_force()
 {
-#ifdef LOCAL
-  Timer t95(95);
-#endif
     {
-#ifdef LOCAL
-      Timer t70(70);
-#endif
       for (int i=0;i<n;i++) a[i]=encode(query[i]);
       for (int j=0;j<m;j++) b[j]=encode(target[j]);
     }
   gap_open+=gap_extension;
   //int opt=1,min_last_j,max_last_j,n_best,query_end,target_end;
   int min_last_j,max_last_j; 
-  opt=-1;
+  opt=1;
   if (est_opt-1>opt) opt=est_opt-1;
   int start_i=0;
   int m_ext_g=60;
@@ -676,7 +585,7 @@ void brute_force()
               uchar *h0=h[(i+1)&1];
               for (int j=0;j<length;j++) 
                 {
-                  int pos=shuffle[j];
+                  //int pos=shuffle[j];
                   transfer_h[shuffle[j]]=h0[j]-ZERO;
                   transfer_e[shuffle[j]]=e[j]-ZERO;
                 }
@@ -715,9 +624,6 @@ void brute_force()
   int rounds=m_ext_g/mk+1;
   int length=(mk<<3);
     {
-#ifdef LOCAL
-      Timer t71(71);
-#endif
       for (int c=0;c<4;c++)
         {
           uint *tmp=(uint*)cost16[c];
@@ -741,9 +647,6 @@ void brute_force()
   h[1]=hbuffer16+length;
   short *e=hbuffer16+length+length;
     {
-#ifdef LOCAL
-      Timer t72(72);
-#endif
       if (start_i==0)
         for (int j=0;j<length;j++) { h[0][j]=0; e[j]=gap_open; }
       else
@@ -758,9 +661,6 @@ void brute_force()
   __m128i *vHLoad=(__m128i*)h[(start_i+1)&1];
   __m128i *vHStore=(__m128i*)h[start_i&1];
     {
-#ifdef LOCAL
-      Timer t73(73);
-#endif
       for (int i=start_i;i<n;i++)
         {
           __m128i *vProfile=(__m128i*)cost16[a[i]];
@@ -989,9 +889,6 @@ void brute_force()
             }
           if (task_id==1 || task_id==2)
             {
-#ifdef LOCAL
-              Timer t74(74);
-#endif
               m01=m_zero; m02=m_zero; m03=m_zero; m04=m_zero; 
               m05=m_zero; m06=m_zero; m07=m_zero; m08=m_zero; 
               int j=0;    
@@ -1045,9 +942,6 @@ void brute_force()
     }
   if (task_id==3 || task_id==4)
     {
-#ifdef LOCAL
-      Timer t75(75);
-#endif
       query_end=n-1;
       for (int j=0;j<length;j++) if (shuffle[j]<m)
         {
@@ -1071,19 +965,12 @@ void brute_force()
   gap_open-=gap_extension;
 }
 
-void solve_task1()
+void Solution5::solve_task1()
 {
-#ifdef LOCAL
-  Counter c1(1);
-  Timer t98(98);
-#endif
 #ifdef DEBUG
   ASSERT(measure_id==0);
 #endif
     {
-#ifdef LOCAL
-      Timer t13(13);
-#endif
       ca[n]=0;
       uchar s=0;
       for (int i=n-1;i>=0;i--) { a[i]=encode(query[i]); s=(s<<2)|a[i]; ca[i]=s; }
@@ -1096,9 +983,6 @@ void solve_task1()
           if (i<=m-8) vnext[i]=vfirst[s],vfirst[s]=i;
         }
     }
-#ifdef LOCAL
-  Timer t14(14);
-#endif
 #ifdef DEBUG
   int cc=0;
 #endif
@@ -1109,7 +993,7 @@ void solve_task1()
   gap_open<<=16;
   gap_extension<<=16;
   int gap_open_and_extension=gap_open+gap_extension;
-  dpstate *dp[3];
+  dpstate_t *dp[3];
   dp[0]=dp_buffer;
   dp[1]=dp[0]+m+5;
   dp[2]=dp[1]+m+5;
@@ -1117,7 +1001,7 @@ void solve_task1()
   int size0=0;
   for (int i=0;i<=n;i++)
     {
-      dpstate *q0=dp[i&1],*q1=dp[(i+1)&1];
+      dpstate_t *q0=dp[i&1],*q1=dp[(i+1)&1];
 #ifdef DEBUG
       ASSERT(size0>=0 && size0<=MAX_LENGTH);
 #endif
@@ -1126,11 +1010,8 @@ void solve_task1()
       if (baseline<1) baseline=1;
       if (i+7<n && 1>=baseline)
         {
-#ifdef LOCAL            
-          //Timer t11(11);
-#endif
           int pos=1,key=ca[i];
-          dpstate *q2=dp[2];
+          dpstate_t *q2=dp[2];
           q0[size0+1].idx=m+2;
           int key_exp=ca[i+4];
           for (int j=vfirst[key];j>=0;j=vnext[j])
@@ -1188,9 +1069,6 @@ void solve_task1()
         }
       else
         {
-#ifdef LOCAL
-          //Timer t12(12);
-#endif
 #ifdef DEBUG
           for (int cl=1;cl+1<=size0;cl++) ASSERT(q0[cl].idx<q0[cl+1].idx);
           ASSERT(q1==dp[(i+1)&1] && q1->idx==-1);
@@ -1342,19 +1220,13 @@ void solve_task1()
   query_end--; target_end--;
 }
 
-void solve_task2()
+void Solution5::solve_task2()
 {
-#ifdef LOCAL
-  Counter c2(2);
-#endif
 #ifdef DEBUG
   ASSERT(measure_id==0);
 #endif
   int gap_open_and_extension=gap_open+gap_extension;
     {
-#ifdef LOCAL
-      Timer t23(23);
-#endif
       if (counter_task2==60000) counter_task2=0;
       if (counter_task2==0) memset(dp_large,0,sizeof(dp_large));
       counter_task2++;
@@ -1404,7 +1276,9 @@ void solve_task2()
             {
               first_j=src;
               last_j=src+n-1;
-              int n_best=1,target_end=first_j;
+              n_best=1;
+              //int target_end=first_j;
+              target_end=first_j;
               for (int j=src+1;j+n-1<m;j++) if (ca[0]==cb[j] && memcmp(a,b+j,n*sizeof(int))==0)
                 {
                   last_j=j+n-1;
@@ -1433,11 +1307,10 @@ void solve_task2()
 #endif
   //int opt=-INF,query_end,target_end,n_best;
   opt=-INF;
-  int best_end_points[MAX_LENGTH];
   int size0=0;
   for (int i=0;i<=n;i++)
     {
-      dpstate_large *dp0=dp_large[i],*dp1=dp_large[i+1];
+      dpstate_large_t *dp0=dp_large[i],*dp1=dp_large[i+1];
 #ifdef DEBUG
       ASSERT(size0>=0 && size0<=MAX_LENGTH);
 #endif
@@ -1446,9 +1319,6 @@ void solve_task2()
       if (baseline<0) baseline=0;
       if (i+6<n)
         {
-#ifdef LOCAL            
-          Timer t21(21);
-#endif
           int pos=0,*q2=q[2],key_exp=ca[i+3];
           q0[size0]=m+2;
           for (int j=vfirst[ca[i]&((1<<6)-1)];j>=0;j=vnext[j])
@@ -1501,9 +1371,6 @@ void solve_task2()
         }
       else
         {
-#ifdef LOCAL
-          Timer t22(22);
-#endif
           int g0=-1,last_added=-1;
           int ckey=a[i];
           q0[size0]=m;
@@ -1602,12 +1469,10 @@ void solve_task2()
         }
     }
     {
-#ifdef LOCAL
-      Timer t24(24);
-#endif
 #ifdef DEBUG
       for (int i=0;i+1<n_best;i++) ASSERT(best_end_points[i]<best_end_points[i+1]);
 #endif
+      // FIXME: (n_best < 1) can occur
       first_j=m-best_end_points[n_best-1];
       reverse(best_end_points,best_end_points+n_best);
       for (int i=0;i<n_best;i++)
@@ -1730,20 +1595,13 @@ void solve_task2()
   gap_extension>>=16;
 }
 
-void solve_task3()
+void Solution5::solve_task3()
 {
-#ifdef LOCAL
-  Counter c3(3);
-  Timer t98(98);
-#endif
 #ifdef DEBUG
   ASSERT(measure_id==0);
 #endif
   int gap_open_and_extension=gap_open+gap_extension;
     {
-#ifdef LOCAL
-      Timer t33(33);
-#endif
       ca[n]=0;
       uchar s=0;
       for (int i=n-1;i>=0;i--) { a[i]=encode(query[i]); s=(s<<2)|a[i]; ca[i]=s; }
@@ -1788,7 +1646,9 @@ void solve_task3()
             {
               first_j=src;
               last_j=src+n-1;
-              int n_best=1,target_end=last_j;
+              n_best=1;
+              //int target_end=last_j;
+              target_end=last_j;
               for (int j=src+1;j+n-1<m;j++) if (ca[0]==cb[j] && memcmp(query,target+j,n*sizeof(char))==0)
                 {
                   last_j=j+n-1;
@@ -1805,14 +1665,14 @@ void solve_task3()
 #ifdef DEBUG
   int cc=0;
 #endif
-  int opt=-INF,target_end,n_best;
+  //int opt=-INF,target_end,n_best;
   opt=-INF;
   match_score<<=16;
   mismatch_score<<=16;
   gap_open<<=16;
   gap_extension<<=16;
   gap_open_and_extension<<=16;
-  dpstate *dp[3];
+  dpstate_t *dp[3];
   dp[0]=dp_buffer;
   dp[1]=dp[0]+m+5;
   dp[2]=dp[1]+m+5;
@@ -1820,7 +1680,7 @@ void solve_task3()
   int size0=0;
   for (int i=0;i<=n;i++)
     {
-      dpstate *q0=dp[i&1],*q1=dp[(i+1)&1];
+      dpstate_t *q0=dp[i&1],*q1=dp[(i+1)&1];
 #ifdef DEBUG
       ASSERT(size0>=0 && size0<=MAX_LENGTH);
 #endif
@@ -1828,11 +1688,8 @@ void solve_task3()
       if (baseline<1) baseline=1;
       if (i+7<n && 1>=baseline)
         {
-#ifdef LOCAL            
-          Timer t31(31);
-#endif
           int pos=1,key=ca[i];
-          dpstate *q2=dp[2];
+          dpstate_t *q2=dp[2];
           q0[size0+1].idx=m+2;
           int key_exp=ca[i+4];
           for (int j=vfirst[key];j>=0;j=vnext[j])
@@ -1887,9 +1744,6 @@ void solve_task3()
         }
       else
         {
-#ifdef LOCAL
-          Timer t32(32);
-#endif
 #ifdef DEBUG
           for (int cl=1;cl+1<=size0;cl++) ASSERT(q0[cl].idx<q0[cl+1].idx);
           ASSERT(q1==dp[(i+1)&1] && q1->idx==-1);
@@ -2038,7 +1892,7 @@ void solve_task3()
   target_end--;
 }
 
-void solve()
+void Solution5::solve()
 {
   if (measure_id!=0) { brute_force(); return; }
   if (task_id==4) { brute_force(); return; }
@@ -2058,99 +1912,3 @@ void solve()
       return;
     }
 }
-
-#ifdef LOCAL
-
-char __buffer[128<<10];
-int __bufferL=0;
-int __current=0;
-FILE *fin;
-
-char __readchar()
-{
-  if (__current==__bufferL)
-    {
-      __bufferL=fread(__buffer,sizeof(char),128<<10,fin);
-      if (__bufferL==0) return 0;
-      __current=0;
-    }
-  return __buffer[__current++];
-}
-
-void __readstring(char *s)
-{
-  char c;
-  do{ c=__readchar(); }while (c<=32);
-  for (;c>32;c=__readchar()) { *s=c; s++; }
-  *s=0;
-}
-
-char __buffer_used_for_nextint[1024];
-
-int __nextint()
-{
-  __readstring(__buffer_used_for_nextint);
-  int op=1;
-  char *p=__buffer_used_for_nextint;
-  if (*p=='-') p++,op=-1;
-  int val=0;
-  for (;*p!=0;p++) val=val*10+(*p-'0');
-  if (op<0) val=-val;
-  return val;
-}
-
-int main(int argc,char **args)
-{
-  string filename="..\\Data\\1.txt";
-  if (argc==2) filename=args[1];
-  fin=fopen(filename.c_str(),"r");
-  uint64 start_time=rdtsc();
-  int case_id;
-  int c[2000];
-  memset(c,0,sizeof(c));
-  for (case_id=0;case_id<50000;case_id++)
-    {
-      char target[1500],query[1500];
-      __readstring(target);
-      if (target[0]=='#') break;
-      __readstring(query);
-      int query_start_clip=__nextint();
-      int query_end_clip=__nextint();
-      int match_score=__nextint();
-      int mismatch_score=__nextint();
-      int gap_open=__nextint();
-      int gap_extension=__nextint();
-      int direction=__nextint();
-      int opt=__nextint();
-      int query_end=__nextint();
-      int target_end=__nextint();
-      int n_best=__nextint();
-      //if (case_id!=29302) continue;
-#ifdef DEBUG
-      printf("Case : %d\n",case_id);
-#endif
-      __opt=opt;
-      c[opt/20]++;
-      string ret=process(target,query,query_start_clip,query_end_clip,match_score,mismatch_score,gap_open,gap_extension,direction);
-      int r_opt,r_query_end,r_target_end,r_n_best;
-      sscanf(ret.c_str(),"%d%d%d%d",&r_opt,&r_query_end,&r_target_end,&r_n_best);
-      if (r_opt!=opt || r_query_end!=query_end || r_target_end!=target_end || r_n_best!=n_best)
-        {
-          printf("ERROR in CASE # %d\n",case_id);
-          return 0;
-        }
-    }
-  uint64 end_time=rdtsc();
-  fclose(fin);
-  printf("ALLPASSED   %d  : %.3lf\n",case_id,(double)(end_time-start_time)/1e9);
-  Counter::show();
-  Timer::show();
-  //for (int i=0;i<2000;i++) if (c[i]>0) printf("%d %d\n",i,c[i]);
-  //printf("n_states = %d\n",n_states);
-  printf("cc1 = %d\n",cc1);
-  printf("cc2 = %d\n",cc2);
-  printf("cc3 = %d\n",cc3);
-  return 0;
-}
-
-#endif
