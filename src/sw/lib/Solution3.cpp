@@ -4,6 +4,7 @@
 #include "solution3.h"
 
 // SHRiMP2's Vectorized Smith Waterman
+// NOTE: this does not work
 
 using namespace std;
 
@@ -31,6 +32,9 @@ static uint8_t nt_char_to_int[256] = {
 Solution3::Solution3() {
     n = 0;
     // dummy ctor
+}
+
+Solution3::~Solution3() {
 }
 
 int Solution3::process(string& b, string& a, int qsc, int qec,

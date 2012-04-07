@@ -1,5 +1,6 @@
 #include <cstring>
 #include <sstream>
+#include "../../util/tmap_alloc.h"
 #include "solution2.h"
 
 // Ivan's solution
@@ -19,9 +20,9 @@ void Solution2::resize(int n)
       V[i] = (int*)realloc(V[i], sizeof(int) * n);
   }
   for(;i<n;i++) {
-      M[i] = (int*)malloc(sizeof(int) * n);
-      H[i] = (int*)malloc(sizeof(int) * n);
-      V[i] = (int*)malloc(sizeof(int) * n);
+      M[i] = (int*)tmap_malloc(sizeof(int) * n, "M[i]");
+      H[i] = (int*)tmap_malloc(sizeof(int) * n, "H[i]");
+      V[i] = (int*)tmap_malloc(sizeof(int) * n, "V[i]");
   }
   mem = n;
 }
@@ -30,14 +31,28 @@ Solution2::Solution2()
 {
   int i;
   mem = MAX_DIM;
-  M = (int**)malloc(sizeof(int*) * MAX_DIM);
-  H = (int**)malloc(sizeof(int*) * MAX_DIM);
-  V = (int**)malloc(sizeof(int*) * MAX_DIM);
+  M = (int**)tmap_malloc(sizeof(int*) * MAX_DIM, "M");
+  H = (int**)tmap_malloc(sizeof(int*) * MAX_DIM, "H");
+  V = (int**)tmap_malloc(sizeof(int*) * MAX_DIM, "V");
   for(i=0;i<MAX_DIM;i++) {
-      M[i] = (int*)malloc(sizeof(int) * MAX_DIM);
-      H[i] = (int*)malloc(sizeof(int) * MAX_DIM);
-      V[i] = (int*)malloc(sizeof(int) * MAX_DIM);
+      M[i] = (int*)tmap_malloc(sizeof(int) * MAX_DIM, "M[i]");
+      H[i] = (int*)tmap_malloc(sizeof(int) * MAX_DIM, "H[i]");
+      V[i] = (int*)tmap_malloc(sizeof(int) * MAX_DIM, "V[i]");
   }
+}
+
+Solution2::~Solution2()
+{
+  int i;
+  for(i=0;i<MAX_DIM;i++) {
+      free(M[i]);
+      free(H[i]);
+      free(V[i]);
+  }
+  free(M);
+  free(H);
+  free(V);
+  M = H = V = NULL;
 }
 
 int Solution2::process(string& b, string& a, int qsc, int qec,

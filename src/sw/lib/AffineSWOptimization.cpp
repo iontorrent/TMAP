@@ -61,6 +61,7 @@ int AffineSWOptimization::process(string b, string a, int qsc, int qec,
 
 AffineSWOptimization::~AffineSWOptimization()
 {
+  //s->~Solution();
   delete s;
 }
 

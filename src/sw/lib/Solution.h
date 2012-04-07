@@ -17,6 +17,8 @@ public:
   virtual int process(string& b, string& a, int qsc, int qec,
                  int mm, int mi, int o, int e, int dir,
                  int *opt, int *te, int *qe, int *n_best) = 0;
+
+  virtual ~Solution();
 };
 
 #endif

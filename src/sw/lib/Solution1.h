@@ -13,9 +13,6 @@
 
 using namespace std;
 
-#define Q_MAX 512
-#define T_MAX 1024
-
 class Solution1 : public Solution {
 public:
   Solution1();
@@ -28,11 +25,12 @@ public:
 
   int32_t query_cmp(string q, int n, uint8_t *query, int32_t query_len);
 private:
+  int32_t q_max, t_max;
   vsw_opt_t *vsw_opt;
   vsw_query_t* vsw_query;
-  uint8_t query[Q_MAX];
+  uint8_t *query;
   int32_t query_len;
-  uint8_t target[T_MAX];
+  uint8_t *target;
   int32_t target_len;
 };
 #endif

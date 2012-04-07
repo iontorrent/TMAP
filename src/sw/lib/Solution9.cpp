@@ -158,6 +158,9 @@ Solution9::Solution9() {
     assert(NegInfiniteSIMDShiftedBigDataShort16[0] == -INFINITE16);
 }
 
+Solution9::~Solution9() {
+}
+
 int GetVariant(int queryStartClip, int queryEndClip) {
     return (4 - (queryEndClip << 1) - queryStartClip);
 }

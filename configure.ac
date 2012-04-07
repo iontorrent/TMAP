@@ -34,7 +34,7 @@ AC_GNU_SOURCE
 ## 0 - Use this to use the original BWT code 
 extended_CFLAGS="-D_TMAP_BWT_RUN_TYPE=0";
 default_CFLAGS="-Wall -g -O3 -pthread -msse3";
-default_CXXLAGS="-Wall -g -O3 -pthread -msse3";
+default_CXXFLAGS="-Wall -g -O3 -pthread -msse3";
 ## 1 - Use this to use the optimized code 
 #extended_CFLAGS="-D_TMAP_BWT_RUN_TYPE=0";
 #default_CFLAGS="-Wall -g -O3 -pthread -msse4.1";

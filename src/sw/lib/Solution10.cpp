@@ -1279,6 +1279,9 @@ string currentQuery="";
 
 Solution10::Solution10() {
 }
+  
+Solution10::~Solution10() {
+}
 
 // b: target (1-1024), a: query (1-512)
 // qsc: query start clip (bool), qec: query end clip (bool)

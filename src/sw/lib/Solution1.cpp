@@ -1,5 +1,8 @@
 #include <cstring>
 #include <sstream>
+#include <stdint.h>
+#include "../../util/tmap_alloc.h"
+#include "../../util/tmap_definitions.h"
 #include "vsw16.h"
 #include "vsw.h"
 #include "vsw16.h"
@@ -36,11 +39,14 @@ Solution1::Solution1() {
     // dummy ctor
     vsw_opt = NULL;
     vsw_query = NULL;
-    target[0] = query[0] = '\0';
+    target = query = NULL;
     target_len = query_len = 0;
+    q_max = t_max = 0;
 }
 
 Solution1::~Solution1() {
+    free(query);
+    free(target);
     vsw_opt_destroy(vsw_opt);
     vsw_opt = NULL;
     if(NULL != vsw_query) vsw_query_destroy(vsw_query);
@@ -59,6 +65,11 @@ int Solution1::process(string& b, string& a, int qsc, int qec,
     // set query
     if(0 == query_cmp(a, m, query, query_len)) {
         query_len = m;
+        if(q_max < query_len) {
+            q_max = query_len;
+            tmap_roundup32(q_max);
+            query = (uint8_t*)tmap_realloc(query, sizeof(uint8_t) * q_max, "query");
+        }
         for(i=0;i<m;i++) {
             query[i] = nt_char_to_int[(int)a[i]];
         }
@@ -71,6 +82,11 @@ int Solution1::process(string& b, string& a, int qsc, int qec,
 
     // set target
     target_len = n;
+    if(t_max < target_len) {
+        t_max = target_len;
+        tmap_roundup32(t_max);
+        target = (uint8_t*)tmap_realloc(target, sizeof(uint8_t) * t_max, "target");
+    }
     for(i=0;i<(int)target_len;i++) {
         target[i] = nt_char_to_int[(int)b[i]];
     }
@@ -102,6 +118,7 @@ int Solution1::process(string& b, string& a, int qsc, int qec,
 
 int32_t Solution1::query_cmp(string q, int n, uint8_t *query, int32_t query_len) {
     int i;
+    if(NULL == query) return 0;
     if(query_len != n) return 0;
     for(i=0;i<n;i++) {
         if(q[i] != "ACGTN"[query[i]]) return 0;

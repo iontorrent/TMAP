@@ -19,6 +19,7 @@ using namespace std;
 class Solution3 : public Solution {
 public:
   Solution3();
+  ~Solution3();
 
   virtual int process(string& b, string& a, int qsc, int qec,
                  int mm, int mi, int o, int e, int dir,

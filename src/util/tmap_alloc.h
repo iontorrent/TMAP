@@ -4,6 +4,10 @@
 
 #include "tmap_error.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*! 
   Memory Allocation Routines. 
   */
@@ -110,5 +114,9 @@ tmap_calloc1(size_t num, size_t size, const char *function_name, const char *var
   */
 inline char *
 tmap_strdup1(const char *str, const char *function_name);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -21,16 +21,18 @@ tmap_vsw_wrapper_process(tmap_vsw_wrapper_t *v,
   int i;
   string a, b;
 
-  for(i=0;i<tlen;i++) b += target[i];
-  for(i=0;i<qlen;i++) a += query[i];
+  for(i=0;i<tlen;i++) b += "ACGTN"[target[i]];
+  for(i=0;i<qlen;i++) a += "ACGTN"[query[i]];
   
-  /*
-  fprintf(stderr, "%s tlen=%d qlen=%d\n", __func__, tlen, qlen);
-  fprintf(stderr, "%s mm=%d mi=%d o=%d e=%d\n", __func__, mm, mi, o, e);
-  fprintf(stderr, "%s dir=%d qsc=%d qec=%d\n", __func__, dir, qsc, qec);
-  cerr << "b: " << b << endl;
-  cerr << "a: " << a << endl;
-  */
+  // Top coder style
+  for(i=0;i<tlen;i++) fputc("ACGTN"[target[i]], stderr);
+  fputc('\t', stderr);
+  for(i=0;i<qlen;i++) fputc("ACGTN"[query[i]], stderr);
+  fputc('\t', stderr);
+  fprintf(stderr, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
+          qsc, qec,
+          mm, mi, o, e, dir,
+          -1, -1, -1, -1);
 
   return v->process(b, a, qsc, qec, mm, mi, o, e, dir, opt, te, qe, n_best);
 }
@@ -38,6 +40,7 @@ tmap_vsw_wrapper_process(tmap_vsw_wrapper_t *v,
 void
 tmap_vsw_wrapper_destroy(tmap_vsw_wrapper_t *v)
 {
+  //v->~AffineSWOptimization();
   delete v;
 }
 
