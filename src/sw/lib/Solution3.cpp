@@ -36,6 +36,8 @@ static uint8_t nt_char_to_int[256] = {
 
 Solution3::Solution3() {
     n = 0;
+    max_qlen = 512;
+    max_tlen = 1024;
     // dummy ctor
 }
 

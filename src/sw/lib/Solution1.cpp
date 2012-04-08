@@ -42,6 +42,8 @@ Solution1::Solution1() {
     target = query = NULL;
     target_len = query_len = 0;
     q_max = t_max = 0;
+    max_qlen = 1 << 31;
+    max_tlen = 1 << 31;
 }
 
 Solution1::~Solution1() {

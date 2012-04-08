@@ -1499,7 +1499,6 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
 
       // NB: if match/mismatch penalties are on the opposite strands, we may
       // have wrong scores
-      
       tmp_sam.score = tmap_vsw_process(vsw, query_rc, qlen, target, tlen,
                                        &tmp_sam.result, &overflow, opt->score_thr, 1);
       if(1 == overflow) {

@@ -46,6 +46,8 @@ using namespace std;
     }
 
 class Solution7 : public Solution {
+public:
+    Solution7();
 
 private:
     typedef unsigned char      uint8_t;

@@ -1307,6 +1307,8 @@ Solution10::Solution10() {
 }
   
 Solution10::~Solution10() {
+    max_qlen = 512;
+    max_tlen = 1024;
 }
 
 // b: target (1-1024), a: query (1-512)

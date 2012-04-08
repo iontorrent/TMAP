@@ -156,6 +156,8 @@ const __m128i NegInfiniteSIMDShiftedBig16 = *((__m128i*)(NegInfiniteSIMDShiftedB
 
 Solution9::Solution9() {
     assert(NegInfiniteSIMDShiftedBigDataShort16[0] == -INFINITE16);
+    max_qlen = 512;
+    max_tlen = 1024;
 }
 
 Solution9::~Solution9() {

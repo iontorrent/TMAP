@@ -42,6 +42,8 @@ Solution2::Solution2()
       H[i] = (int*)tmap_malloc(sizeof(int) * MAX_DIM, "H[i]");
       V[i] = (int*)tmap_malloc(sizeof(int) * MAX_DIM, "V[i]");
   }
+  max_qlen = 512;
+  max_tlen = 1024;
 }
 
 Solution2::~Solution2()

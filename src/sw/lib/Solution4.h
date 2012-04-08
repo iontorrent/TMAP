@@ -46,6 +46,7 @@ private:
   int lastMax;
   int opt, n_best, res_min_pos, res_max_pos;
   qres_t *HTDATA;
+  int32_t HTDATA_l;
   int64_t count0, count1;
 
   // Utility functions

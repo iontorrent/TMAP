@@ -172,6 +172,9 @@ Solution5::Solution5() {
 
     // resize
     resize(1040);
+  
+    max_qlen = 512;
+    max_tlen = 1024;
 }
 
 Solution5::~Solution5() {

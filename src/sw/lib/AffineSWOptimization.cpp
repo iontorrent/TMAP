@@ -51,17 +51,25 @@ AffineSWOptimization::AffineSWOptimization(int type) {
         fprintf(stderr, "Error: unknown type: %d\n", type);
         exit(1);
     }
+    hash = new AffineSWOptimizationHash();
 }
 
 int AffineSWOptimization::process(string b, string a, int qsc, int qec,
                                      int mm, int mi, int o, int e, int dir,
                                      int *opt, int *te, int *qe, int *n_best) {
-    return s->process(b, a, qsc, qec, mm, mi, o, e, dir, opt, te, qe, n_best);
+    // try the hash
+    if(!hash->process(b, a, qsc, qec, mm, mi, o, e, dir, opt, te, qe, n_best)) {
+        s->process(b, a, qsc, qec, mm, mi, o, e, dir, opt, te, qe, n_best);
+        // add to the hash
+        hash->add(b, a, qsc, qec, mm, mi, o, e, dir, opt, te, qe, n_best);
+    }
+    return (*opt);
 }
 
 AffineSWOptimization::~AffineSWOptimization()
 {
   //s->~Solution();
+  delete hash;
   delete s;
 }
 

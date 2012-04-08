@@ -14,7 +14,7 @@
 #define CONVERT
 //#define USE_COUNTERS
 #define FAST_UPDATE
-#define USE_HASHING
+//#define USE_HASHING
 #define FULL_HEURISTIC
 
 #include <algorithm>
@@ -80,11 +80,20 @@ INLINE int16_t Solution4::findMax16(const __m128i &mMax) {
     __m128i m = _mm_max_epi16(mshift, mMax);
     mshift = _mm_srli_si128(m, 4);
     m = _mm_max_epi16(mshift, m);
+    return max(_mm_extract_epi16(m, 0), _mm_extract_epi16(m, 4));
+    /*
     int16_t* p = (int16_t*)&m;
     return max(p[0], p[4]);
+    */
 }
 
 INLINE int16_t Solution4::findMax16Simple(const __m128i &mMax) {
+    __m128i m = mMax;
+    m = _mm_max_epi16(m, _mm_srli_si128(m, 8)); 
+    m = _mm_max_epi16(m, _mm_srli_si128(m, 4)); 
+    m = _mm_max_epi16(m, _mm_srli_si128(m, 2)); 
+    return (int16_t)(_mm_extract_epi16(m, 0) & 0xffff); 
+    /*
     int16_t* p = (int16_t*)&mMax;
     int16_t mx = p[0];
     mx = max(mx, p[1]);
@@ -95,6 +104,7 @@ INLINE int16_t Solution4::findMax16Simple(const __m128i &mMax) {
     mx = max(mx, p[6]);
     mx = max(mx, p[7]);
     return mx;    
+    */
 }
 
 /*
@@ -161,28 +171,31 @@ NOINLINE uint64_t Solution4::hashDNA(const string &s, const int len) {
     mhash = _mm_mullo_epi16(mhash, mmul);
     mhash = _mm_add_epi16(mhash, m1b);
 
+    /*
     uint32_t* p = (uint32_t*)&mhash;
     h = h * 1337 + p[0];
     h = h * 1337 + p[1];
     h = h * 1337 + p[2];
     h = h * 1337 + p[3];
+    */
+    h = h * 1337 + (uint64_t)_mm_extract_epi16(mhash, 0);
+    h = h * 1337 + (uint64_t)_mm_extract_epi16(mhash, 1);
+    h = h * 1337 + (uint64_t)_mm_extract_epi16(mhash, 2);
+    h = h * 1337 + (uint64_t)_mm_extract_epi16(mhash, 3);
     return h;
 }
 
 int Solution4::resize(int a, int b) {
-    int i, MAX_DIMA_OLD=MAX_DIMA;
     if(MAX_DIMB < b) {
+        fprintf(stderr, "RESIZED B\n");
         MAX_DIMB = b;
         tmap_roundup32(MAX_DIMB);
         BUFFER = (int16_t*)tmap_realloc(BUFFER, (MAX_DIMB + 64) * 9 * sizeof(int16_t), "BUFFER");
     }
     if(MAX_DIMA < a) {
+        fprintf(stderr, "RESIZED A\n");
         MAX_DIMA = a;
         tmap_roundup32(MAX_DIMA);
-        HTDATA = (qres_t*)tmap_realloc(HTDATA, (MAX_DIMA + 64) * sizeof(qres_t), "HTDATA"); 
-        for(i=MAX_DIMA_OLD;i<MAX_DIMA;i++) {
-            HTDATA[i].hash = -1;
-        }
     }
     return 1;
 }
@@ -197,10 +210,15 @@ Solution4::Solution4() {
     MAX_DIMA = 512;
     MAX_DIMB = 1024;
     BUFFER = (int16_t*)tmap_malloc((MAX_DIMB + 64) * 9 * sizeof(int16_t), "BUFFER");
-    HTDATA = (qres_t*)tmap_malloc((MAX_DIMA + 64) * sizeof(qres_t), "HTDATA"); 
-    for(i=0;i<MAX_DIMA;i++) {
+    HTDATA_l = MAX_DIMA;
+    //HTDATA_l = 0x4000; // 2^14
+    //tmap_roundup32(HTDATA_l);
+    HTDATA = (qres_t*)tmap_malloc((HTDATA_l + 64) * sizeof(qres_t), "HTDATA"); 
+    for(i=0;i<HTDATA_l;i++) {
         HTDATA[i].hash = -1;
     }
+    max_qlen = 512;
+    max_tlen = 1024;
 }
 
 Solution4::~Solution4() {
@@ -271,6 +289,7 @@ template <int qec> NOINLINE void Solution4::processFastVariantB16BitA(string &a,
     __m128i mo = _mm_set1_epi16(o + e);
     __m128i me = _mm_set1_epi16(e);
     __m128i minf = _mm_set1_epi16(-INF);
+
 
     REP(i, segNo) M0[i] = _mm_setzero_si128();
     REP(i, segNo) V[i] = minf;
@@ -924,7 +943,10 @@ NOINLINE void Solution4::convert16Bit(string &b, int qsc, int mm, int mi) {
     const int16_t SCHAR[4] = {'A', 'C', 'G', 'T'};
     __m128i mmul = _mm_set1_epi16(mm - mi);
     __m128i madd = _mm_set1_epi16(mi);
-    REP(i, len) STARG[i] = b[POS[i]];
+    REP(i, len) {
+        if(n <= POS[i]) STARG[i] = 0;
+        else STARG[i] = b[POS[i]];
+    }
     REP(c, 4) {
         __m128i mChar = _mm_set1_epi16(SCHAR[c]);
         REP(k, segNo) {
@@ -1017,7 +1039,10 @@ void Solution4::preprocess8Bit(string &b, int qsc, int mm, int mi) {
 
         const int8_t SCHAR[4] = {'A', 'C', 'G', 'T'};
         __m128i mmul = _mm_set1_epi8(mm - mi);
-        REP(i, len) STARG[i] = b[POS[i]];
+        REP(i, len) {
+            if(n <= POS[i]) STARG[i] = 0;
+            else STARG[i] = b[POS[i]];
+        }
         REP(c, 4) {
             __m128i mChar = _mm_set1_epi8(SCHAR[c]);
             REP(k, segNo) {
@@ -1054,7 +1079,7 @@ NOINLINE int Solution4::process(string &b, string &a, int qsc, int qec,
     if (qsc) hash ^= 0x5555555555555555ULL;
     if (qec) hash ^= 0xCCCCCCCCCCCCCCCCULL;
     uint32_t hh = hash >> 8;
-    int htpos = hash & (MAX_DIMA - 1); // MAX_DIMA must be a power of two
+    int htpos = hash & (HTDATA_l - 1); // HTDATA_l must be a power of two
 
     if (HTDATA[htpos].hash == hh) {
         qres_t &res = HTDATA[htpos];
@@ -1130,7 +1155,6 @@ process16bit:
     preprocess16Bit(b, qsc, mm, mi);
 
 go16bit:
-
 
     if (qsc) {
         if (qec) {

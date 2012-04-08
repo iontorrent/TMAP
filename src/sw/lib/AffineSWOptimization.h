@@ -8,6 +8,7 @@
 #include <cstring>
 #include <sstream>
 #include "Solution.h"
+#include "AffineSWOptimizationHash.h"
 
 using namespace std;
 
@@ -15,13 +16,17 @@ class AffineSWOptimization {
 public:
   AffineSWOptimization(int type);
 
-  int32_t process(string b, string a, int qsc, int qec,
+  int process(string b, string a, int qsc, int qec,
                  int mm, int mi, int o, int e, int dir,
-                 int *opt, int *te, int *ts, int *n_best);
+                 int *opt, int *te, int *qe, int *n_best);
 
   ~AffineSWOptimization();
+
+  int getMaxQlen() { return s->getMaxQlen(); }
+  int getMaxTlen() { return s->getMaxTlen(); }
 private:
   int myType;
   Solution *s;
+  AffineSWOptimizationHash *hash;
 };
 #endif

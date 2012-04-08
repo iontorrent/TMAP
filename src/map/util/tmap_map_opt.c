@@ -380,6 +380,7 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
       "3 - all alignments",
       NULL};
   static char *vsw_type[] = {
+      "NB: currently only #1 and #6 have been tested",
       "1 - lh3/ksw.c/nh13",
       "2 - simple VSW",
       "3 - SHRiMP2 VSW [not working]",

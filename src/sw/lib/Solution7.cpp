@@ -697,3 +697,9 @@ int Solution7::process(
   (*n_best) = result.n_best;
   return result.opt;
 }
+
+Solution7::Solution7() 
+{
+  max_qlen = 512;
+  max_tlen = 1024;
+}

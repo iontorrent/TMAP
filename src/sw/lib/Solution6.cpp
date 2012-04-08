@@ -22,6 +22,8 @@ inline int max(int a, int b) {
 }
 
 Solution6::Solution6() {
+  max_qlen = 512;
+  max_tlen = 1024;
 }
 
 int Solution6::process(string& bs, string& as, int qsc, int qec,

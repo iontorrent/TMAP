@@ -54,6 +54,7 @@ GLOBAL_SOURCES = \
 				 src/sw/lib/Solution9.cpp src/sw/lib/Solution9.h \
 				 src/sw/lib/Solution10.cpp src/sw/lib/Solution10.h \
 				 src/sw/lib/AffineSWOptimization.cpp src/sw/lib/AffineSWOptimization.h \
+				 src/sw/lib/AffineSWOptimizationHash.cpp src/sw/lib/AffineSWOptimizationHash.h \
 				 src/sw/lib/AffineSWOptimizationWrapper.cpp src/sw/lib/AffineSWOptimizationWrapper.h \
 				 src/sw/tmap_vsw_bm.c 
 

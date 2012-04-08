@@ -116,102 +116,137 @@ tmap_vsw_update(tmap_vsw_t *vsw, const uint8_t *query, int32_t qlen, const uint8
 }
   
 #ifdef TMAP_VSW_DEBUG_CMP
-// TODO
-/*
-int32_t
-tmap_vsw_process_compare2(tmap_vsw_t *vsw,
-                         const uint8_t *query, int32_t qlen,
-                         uint8_t *target, int32_t tlen, 
-                         tmap_vsw_result_t *result,
-                         int32_t *overflow, int32_t score_thr, int32_t is_rev,
-                         int32_t *query_end, int32_t *target_end, int32_t *n_best, int32_t *score,
-                         int32_t type)
-{
-  switch(type) {
-    case TMAP_VSW_TYPE_S0:
-      (*score) = tmap_vsw_process_s0(vsw->s0, 
-                                     query, qlen, target, tlen, 
-                                     vsw->query_start_clip, vsw->query_end_clip, vsw->opt,
-                                     is_rev, score_thr, 
-                                     query_end, target_end, n_best, overflow);
-      break;
-    case TMAP_VSW_TYPE_S1:
-      (*score) = tmap_vsw_process_s1(vsw->s1, 
-                                     query, qlen, target, tlen, 
-                                     vsw->query_start_clip, vsw->query_end_clip, vsw->opt,
-                                     is_rev, score_thr, 
-                                     query_end, target_end, n_best, overflow);
-      break;
-    case TMAP_VSW_TYPE_S3:
-      (*score) = tmap_vsw_process_s3(vsw->s3, 
-                                     query, qlen, target, tlen, 
-                                     vsw->query_start_clip, vsw->query_end_clip, vsw->opt,
-                                     is_rev, score_thr, 
-                                     query_end, target_end, n_best, overflow);
-      break;
-    default:
-      return 0;
-  }
-  return 1;
-}
-
 static void
 tmap_vsw_process_compare(tmap_vsw_t *vsw,
                          const uint8_t *query, int32_t qlen,
                          uint8_t *target, int32_t tlen, 
                          tmap_vsw_result_t *result,
-                         int32_t *overflow, int32_t score_thr, int32_t is_rev,
-                         int32_t from, int32_t to)
+                         int32_t *overflow, int32_t score_thr, int32_t is_rev)
 {
   int32_t query_end_type0, target_end_type0, n_best_type0, score_type0;
   int32_t query_end_type1, target_end_type1, n_best_type1, score_type1;
-  int32_t baseline = from;
 
-  // base line
-  tmap_vsw_process_compare2(vsw, query, qlen, target, tlen, result,
-                            overflow, score_thr, is_rev,
-                            &query_end_type0, &target_end_type0, &n_best_type0, &score_type0,
-                            from);
+  query_end_type0 = target_end_type0 = n_best_type0 = score_type0 = 0;
+  query_end_type1 = target_end_type1 = n_best_type1 = score_type1 = 0;
+  
+  // baseline
+  tmap_vsw_wrapper_process(vsw->algorithm_default,
+                           target, tlen, 
+                           query, qlen, 
+                           vsw->opt->score_match,
+                           -vsw->opt->pen_mm,
+                           -vsw->opt->pen_gapo,
+                           -vsw->opt->pen_gape,
+                           is_rev, 
+                           vsw->query_start_clip, vsw->query_end_clip, 
+                           &score_type0, &target_end_type0, &query_end_type0, &n_best_type0);
+  // current
+  tmap_vsw_wrapper_process(vsw->algorithm,
+                           target, tlen, 
+                           query, qlen, 
+                           vsw->opt->score_match,
+                           -vsw->opt->pen_mm,
+                           -vsw->opt->pen_gapo,
+                           -vsw->opt->pen_gape,
+                           is_rev, 
+                           vsw->query_start_clip, vsw->query_end_clip, 
+                           &score_type1, &target_end_type1, &query_end_type1, &n_best_type1);
 
-  // go through the rest
-  from++;
-  while(from <= to) {
-      if(1 == tmap_vsw_process_compare2(vsw, query, qlen, target, tlen, result,
-                                        overflow, score_thr, is_rev,
-                                        &query_end_type1, &target_end_type1, &n_best_type1, &score_type1,
-                                        from)) {
-          if(score_type0 != score_type1 
-             || query_end_type0 != query_end_type1
-             || target_end_type0 != target_end_type1
-             || n_best_type0 != n_best_type1) {
-              int32_t i;
-              fprintf(stderr, "baseline=%d current-type=%d\n",
-                      baseline, from);
+  if(tlen <= target_end_type0) tmap_bug();
+  if(qlen <= query_end_type0) tmap_bug();
+  /*
+  if(tlen <= target_end_type1) tmap_bug();
+  if(qlen <= query_end_type1) tmap_bug();
+  */
 
-              fprintf(stderr, "QSC=%d QEC=%d is_rev=%d\n",
-                      vsw->query_start_clip,
-                      vsw->query_end_clip,
-                      is_rev);
-              for(i=0;i<qlen;i++) {
-                  fputc("ACGTN"[query[i]], stderr);
-              }
-              fputc('\n', stderr);
-              for(i=0;i<tlen;i++) {
-                  fputc("ACGTN"[target[i]], stderr);
-              }
-              fputc('\n', stderr);
-              fprintf(stderr, "score=[%d,%d] QE=[%d,%d] TE=[%d,%d] NB=[%d,%d]\n",
-                      score_type0, score_type1,
-                      query_end_type0, query_end_type1,
-                      target_end_type0, target_end_type1,
-                      n_best_type0, n_best_type1);
-              tmap_bug();
-          }
+  if(score_type0 != score_type1
+     || target_end_type0 != target_end_type1
+     || query_end_type0 != query_end_type1
+     || n_best_type0 != n_best_type1) {
+      int32_t i;
+      fprintf(stderr, "in %s is_rev=%d\n", __func__, is_rev);
+      fprintf(stderr, "query_start_clip=%d\n", vsw->query_start_clip);
+      fprintf(stderr, "query_end_clip=%d\n", vsw->query_end_clip);
+      fprintf(stderr, "qlen=%d tlen=%d\n", qlen, tlen);
+      for(i=0;i<qlen;i++) {
+          fputc("ACGTN"[query[i]], stderr);
       }
-      from++;
+      fputc('\n', stderr);
+      for(i=0;i<tlen;i++) {
+          fputc("ACGTN"[target[i]], stderr);
+      }
+      fputc('\n', stderr);
+      fprintf(stderr, "tlen=%d qlen=%d score=[%d,%d] target_end=[%d,%d] query_end=[%d,%d] n_best=[%d,%d]\n",
+              tlen, qlen,
+              score_type0, score_type1,
+              target_end_type0, target_end_type1,
+              query_end_type0, query_end_type1,
+              n_best_type0, n_best_type1);
+      do {
+          tmap_sw_param_t ap;
+          tmap_sw_path_t *path = NULL;
+          int32_t i, matrix[25], n_cigar, score, path_len;
+          uint32_t *cigar = NULL;
+          ap.matrix=matrix;
+          for(i=0;i<25;i++) { 
+              ap.matrix[i] = -(vsw->opt)->pen_mm; 
+          } 
+          for(i=0;i<4;i++) { 
+              ap.matrix[i*5+i] = vsw->opt->score_match; 
+          } 
+          ap.gap_open = vsw->opt->pen_gapo; ap.gap_ext = vsw->opt->pen_gape; 
+          ap.gap_end = vsw->opt->pen_gape; 
+          ap.row = 5; 
+          path_len = 0;
+          path = tmap_calloc(1024, sizeof(tmap_sw_path_t), "path");
+          score = tmap_sw_clipping_core((uint8_t*)target, tlen, (uint8_t*)query, qlen, &ap,
+                                        vsw->query_start_clip, vsw->query_end_clip, 
+                                        path, &path_len, is_rev);
+          // print out the path
+          cigar = tmap_sw_path2cigar(path, path_len, &n_cigar);
+          fprintf(stderr, "tmap_sw_clipping_core score=%d\n", score);
+          for(i=0;i<n_cigar;i++) {
+              fprintf(stderr, "%d%c", cigar[i]>>4, "MIDNSHP"[cigar[i]&0xf]);
+          }
+          fputc('\n', stderr);
+          free(path);
+          free(cigar);
+      } while(0);
+      // try the opposite direction
+      // baseline
+      tmap_vsw_wrapper_process(vsw->algorithm_default,
+                               target, tlen, 
+                               query, qlen, 
+                               vsw->opt->score_match,
+                               -vsw->opt->pen_mm,
+                               -vsw->opt->pen_gapo,
+                               -vsw->opt->pen_gape,
+                               1-is_rev, 
+                               vsw->query_start_clip, vsw->query_end_clip, 
+                               &score_type0, &target_end_type0, &query_end_type0, &n_best_type0);
+      fprintf(stderr, "baseline opposite reverse tlen=%d qlen=%d score=[%d,%d] target_end=[%d,%d] query_end=[%d,%d] n_best=[%d,%d]\n",
+              tlen, qlen,
+              score_type0, score_type1,
+              target_end_type0, target_end_type1,
+              query_end_type0, query_end_type1,
+              n_best_type0, n_best_type1);
+      // top coder
+      for(i=0;i<tlen;i++) fputc("ACGTN"[target[i]], stderr);
+      fputc('\t', stderr);
+      for(i=0;i<qlen;i++) fputc("ACGTN"[query[i]], stderr);
+      fputc('\t', stderr);
+      fprintf(stderr, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
+              vsw->query_start_clip, vsw->query_end_clip, 
+              vsw->opt->score_match,
+              -vsw->opt->pen_mm,
+              -vsw->opt->pen_gapo,
+              -vsw->opt->pen_gape,
+              is_rev,
+              -1, -1, -1, -1);
+      fprintf(stderr, "Error: algorithms produced different results!\n");
+      exit(1);
   }
 }
-*/
 #endif
 
 int32_t
@@ -253,47 +288,44 @@ tmap_vsw_process(tmap_vsw_t *vsw,
       // TODO default algorithm
   }
   */
-  if(tmap_vsw_wrapper_process(vsw->algorithm,
-                           target, tlen, 
-                           query, qlen, 
-                           vsw->opt->score_match,
-                           -vsw->opt->pen_mm,
-                           -vsw->opt->pen_gapo,
-                           -vsw->opt->pen_gape,
-                           is_rev, 
-                           vsw->query_start_clip, vsw->query_end_clip, 
-                           &score, &target_end, &query_end, &n_best) <= INT16_MIN) {
-      // try the default
-      if(0 != vsw->type) {
-          tmap_vsw_wrapper_process(vsw->algorithm_default,
-                                   target, tlen, 
-                                   query, qlen, 
-                                   vsw->opt->score_match,
-                                   -vsw->opt->pen_mm,
-                                   -vsw->opt->pen_gapo,
-                                   -vsw->opt->pen_gape,
-                                   is_rev, 
-                                   vsw->query_start_clip, vsw->query_end_clip, 
-                                   &score, &target_end, &query_end, &n_best);
-      }
+
+  if(tlen <= tmap_vsw_wrapper_get_max_tlen(vsw->algorithm)
+     && qlen <= tmap_vsw_wrapper_get_max_qlen(vsw->algorithm)) {
+      tmap_vsw_wrapper_process(vsw->algorithm,
+                               target, tlen, 
+                               query, qlen, 
+                               vsw->opt->score_match,
+                               -vsw->opt->pen_mm,
+                               -vsw->opt->pen_gapo,
+                               -vsw->opt->pen_gape,
+                               is_rev, 
+                               vsw->query_start_clip, vsw->query_end_clip, 
+                               &score, &target_end, &query_end, &n_best);
+#ifdef TMAP_VSW_DEBUG_CMP
+      tmap_vsw_process_compare(vsw,
+                               query, qlen,
+                               target, tlen, 
+                               result,
+                               overflow, score_thr, is_rev);
+#endif
   }
-  if(score < score_thr) {
+  else { // try the default
+      tmap_vsw_wrapper_process(vsw->algorithm_default,
+                               target, tlen, 
+                               query, qlen, 
+                               vsw->opt->score_match,
+                               -vsw->opt->pen_mm,
+                               -vsw->opt->pen_gapo,
+                               -vsw->opt->pen_gape,
+                               is_rev, 
+                               vsw->query_start_clip, vsw->query_end_clip, 
+                               &score, &target_end, &query_end, &n_best);
+  }
+  if(score < score_thr || 0 == n_best) {
       query_end = target_end = -1;
       n_best = 0;
       score = INT32_MIN;
   }
-
-#ifdef TMAP_VSW_DEBUG_CMP
-  // TODO
-  /*
-  tmap_vsw_process_compare(vsw,
-                         query, qlen,
-                         target, tlen, 
-                         result,
-                         overflow, score_thr, is_rev,
-                         TMAP_VSW_TYPE_S0, TMAP_VSW_TYPE_S3);
-                         */
-#endif
   
   if(0 == is_rev) {
 
@@ -311,6 +343,9 @@ tmap_vsw_process(tmap_vsw_t *vsw,
       }
       else if((result->query_end == result->query_start || result->target_end == result->target_start)
               && result->score_fwd <= 0) {
+          found_forward = 0;
+      }
+      else if(n_best <= 0) {
           found_forward = 0;
       }
       else if(-1 == result->query_end) {

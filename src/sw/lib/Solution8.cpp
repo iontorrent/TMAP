@@ -1411,6 +1411,8 @@ KET;
 
 Solution8::Solution8() : printed(0) {
     SNS::init();
+    max_qlen = 512;
+    max_tlen = 1024;
 }
 
 Solution8::~Solution8() {

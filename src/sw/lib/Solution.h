@@ -19,6 +19,13 @@ public:
                  int *opt, int *te, int *qe, int *n_best) = 0;
 
   virtual ~Solution();
+
+  int getMaxQlen() { return max_qlen; }
+  int getMaxTlen() { return max_tlen; }
+  
+protected:
+  int max_qlen;
+  int max_tlen;
 };
 
 #endif

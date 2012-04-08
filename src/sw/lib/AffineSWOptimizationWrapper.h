@@ -20,6 +20,12 @@ extern "C" {
 
     void
       tmap_vsw_wrapper_destroy(tmap_vsw_wrapper_t *v);
+
+    int
+      tmap_vsw_wrapper_get_max_qlen(tmap_vsw_wrapper_t *v);
+    
+    int
+      tmap_vsw_wrapper_get_max_tlen(tmap_vsw_wrapper_t *v);
 #ifdef __cplusplus 
 }
 #endif

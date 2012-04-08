@@ -1,5 +1,7 @@
 #define __STDC_LIMIT_MACROS // Seriously, I want these, now
 #include <stdint.h>
+#include <stdlib.h> // HERE
+#include <stdio.h> // HERE
 #include <limits>
 #include <iostream>
 #include "AffineSWOptimization.h"
@@ -24,11 +26,22 @@ tmap_vsw_wrapper_process(tmap_vsw_wrapper_t *v,
   int i;
   string a, b;
 
+  /*
+  fprintf(stderr, "query=%d qlen=%d target=%d tlen=%d\n",
+          (NULL == query) ? 0 : 1,
+          qlen,
+          (NULL == target) ? 0 : 1,
+          tlen);
+  if(NULL == query || 0 == qlen || NULL == target || 0 == tlen) {
+      exit(1);
+  }
+  */
+
   for(i=0;i<tlen;i++) b += "ACGTN"[target[i]];
   for(i=0;i<qlen;i++) a += "ACGTN"[query[i]];
   
-  /*
   // Top coder style
+  /*
   for(i=0;i<tlen;i++) fputc("ACGTN"[target[i]], stderr);
   fputc('\t', stderr);
   for(i=0;i<qlen;i++) fputc("ACGTN"[query[i]], stderr);
@@ -37,7 +50,7 @@ tmap_vsw_wrapper_process(tmap_vsw_wrapper_t *v,
           qsc, qec,
           mm, mi, o, e, dir,
           -1, -1, -1, -1);
-          */
+  */
 
   return v->process(b, a, qsc, qec, mm, mi, o, e, dir, opt, te, qe, n_best);
 }
@@ -49,3 +62,14 @@ tmap_vsw_wrapper_destroy(tmap_vsw_wrapper_t *v)
   delete v;
 }
 
+int
+tmap_vsw_wrapper_get_max_qlen(tmap_vsw_wrapper_t *v)
+{
+  return v->getMaxQlen();
+}
+
+int
+tmap_vsw_wrapper_get_max_tlen(tmap_vsw_wrapper_t *v)
+{
+  return v->getMaxTlen();
+}
