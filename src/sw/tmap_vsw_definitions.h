@@ -116,7 +116,7 @@ typedef struct {
     int32_t query_end; /*!< the end alignment position in the query (0-based) */
     int32_t target_start; /*!< the start alignment position in the target (0-based) */
     int32_t target_end; /*!< the end alignment position in the target (0-based) */
-    int32_t n_best; // TODO
+    int32_t n_best; /*!< the number of best scoring alignments */
 } tmap_vsw_result_t;
 
 /*!

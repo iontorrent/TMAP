@@ -27,7 +27,7 @@
   */
 tmap_map2_aln_t **
 tmap_map2_core_aln(const tmap_map_opt_t *opt, const tmap_bwtl_t *target, 
-               const tmap_refseq_t *refseq, 
+               const tmap_refseq_t *query_refseq, 
                const tmap_bwt_t *query_bwt, 
                const tmap_sa_t *query_sa,
                tmap_bwt_match_hash_t *hash,

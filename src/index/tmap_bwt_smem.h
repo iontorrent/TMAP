@@ -59,6 +59,7 @@ typedef struct {
 /*!
   @param  bwt     the bwt
   @param  len     the query length
+  @param  q       the query
   @param  x       the start index into the query for the search (0-based)
   @param  mem     where the matches should be stored
   @param  tmpvec  temporary memory

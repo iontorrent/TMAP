@@ -54,6 +54,7 @@ typedef struct {
   @param  qlen              the query sequence length
   @param  query_start_clip  1 if we are to clip the start of the query, 0 otherwise
   @param  query_end_clip    1 if we are to clip the end of the query, 0 otherwise
+  @param  type              the VSW type
   @param  opt               the previous alignment parameters, NULL if none exist
   @return                   the query sequence in vectorized form
   */
@@ -64,7 +65,7 @@ tmap_vsw_init(const uint8_t *query, int32_t qlen,
               tmap_vsw_opt_t *opt);
 
 /*!
-  @param  query  the query sequence
+  @param  vsw  the structure to destroy
   */
 void
 tmap_vsw_destroy(tmap_vsw_t *vsw);
@@ -75,8 +76,8 @@ tmap_vsw_destroy(tmap_vsw_t *vsw);
   @param  qlen              the query sequence length
   @param  target            the target sequence
   @param  tlen              the target sequence length
-  @param  result            TODO
-  @param  overflow           returns 1 if overflow occurs, 0 otherwise
+  @param  result            the structure in which to store the results
+  @param  overflow          returns 1 if overflow occurs, 0 otherwise
   @param  score_thr         the minimum scoring threshold (inclusive)
   @param  is_rev            1 if the reverse alignment is being performed, 0 for the forward
   @return                   the alignment score
