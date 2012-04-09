@@ -51,9 +51,6 @@ tmap_vsw_init(const uint8_t *query, int32_t qlen,
   vsw->opt = opt;
   vsw->algorithm = tmap_vsw_wrapper_init(type);
   vsw->algorithm_default = tmap_vsw_wrapper_init(1);
-#ifdef TMAP_VSW_DEBUG_CMP
-  // TODO
-#endif
   return vsw;
 }
 
@@ -63,58 +60,9 @@ tmap_vsw_destroy(tmap_vsw_t *vsw)
   if(NULL == vsw) return;
   tmap_vsw_wrapper_destroy(vsw->algorithm);
   tmap_vsw_wrapper_destroy(vsw->algorithm_default);
-#ifdef TMAP_VSW_DEBUG_CMP
-  // TODO
-#endif
   free(vsw);
 }
 
-/*
-void
-tmap_vsw_get_max(tmap_vsw_t *vsw, int32_t *max_qlen, int32_t *max_tlen)
-{
-}
-*/
-
-int32_t
-tmap_vsw_update(tmap_vsw_t *vsw, const uint8_t *query, int32_t qlen, const uint8_t *target, int32_t tlen)
-{
-  // TODO
-  /*
-  int32_t max_qlen=0, max_tlen=0;
-#ifdef TMAP_VSW_DEBUG_CMP
-  vsw->s0 = tmap_vsw_data_update_s0(vsw->s0, query, qlen, target, tlen);
-  vsw->s1 = tmap_vsw_data_update_s1(vsw->s1, query, qlen, target, tlen);
-  vsw->s3 = tmap_vsw_data_update_s3(vsw->s3, query, qlen, target, tlen);
-#endif
-  tmap_vsw_get_max(vsw, &max_qlen, &max_tlen); // get the maximum qlen/tlen supported
-  if(1 == vsw->use_default && (max_qlen < qlen || max_tlen < tlen)) { // not suported
-      // update the default only
-      vsw->default_s = tmap_vsw_data_update_s0(vsw->default_s, query, qlen, target, tlen);
-      return 0;
-  }
-  else {
-      // update the current algorithm
-      switch(vsw->type) {
-        case TMAP_VSW_TYPE_S0:
-          vsw->data.s0 = tmap_vsw_data_update_s0(vsw->data.s0, query, qlen, target, tlen);
-          break;
-        case TMAP_VSW_TYPE_S1:
-          vsw->data.s1 = tmap_vsw_data_update_s1(vsw->data.s1, query, qlen, target, tlen);
-          break;
-        case TMAP_VSW_TYPE_S3:
-          vsw->data.s3 = tmap_vsw_data_update_s3(vsw->data.s3, query, qlen, target, tlen);
-          break;
-        default:
-          tmap_bug();
-          break;
-      }
-      return 1;
-  }
-  */
-  return 1;
-}
-  
 #ifdef TMAP_VSW_DEBUG_CMP
 static void
 tmap_vsw_process_compare(tmap_vsw_t *vsw,
@@ -282,12 +230,6 @@ tmap_vsw_process(tmap_vsw_t *vsw,
   // update based on current problem
   query_end = target_end = n_best = 0;
   if(NULL != overflow) (*overflow) = 0;
-  /*
-  if(0 == tmap_vsw_update(vsw, query, qlen, target, tlen)) { // use the default
-      tmap_bug();
-      // TODO default algorithm
-  }
-  */
 
   if(tlen <= tmap_vsw_wrapper_get_max_tlen(vsw->algorithm)
      && qlen <= tmap_vsw_wrapper_get_max_qlen(vsw->algorithm)) {
