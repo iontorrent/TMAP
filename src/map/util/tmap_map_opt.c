@@ -380,7 +380,7 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
       "3 - all alignments",
       NULL};
   static char *vsw_type[] = {
-      "NB: currently only #1 and #6 have been tested",
+      "NB: currently only #1, #4, and #6 have been tested",
       "1 - lh3/ksw.c/nh13",
       "2 - simple VSW",
       "3 - SHRiMP2 VSW [not working]",
@@ -1899,6 +1899,16 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->sample_reads, 0, 1, "-x");
 #endif
   tmap_error_cmd_check_int(opt->vsw_type, 1, 10, "-H");
+  // Warn users
+  switch(opt->vsw_type) {
+    case 1:
+    case 4:
+    case 6:
+      break;
+    default:
+      tmap_error("the option -H value has not been extensively tested; proceed with caution", Warn, CommandLineArgument);
+      break;
+  }
 
   switch(opt->algo_id) {
     case TMAP_MAP_ALGO_MAP1: // map1 options
