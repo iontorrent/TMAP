@@ -1136,6 +1136,15 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
   return tmp_sam.score;
 }
 
+typedef struct {
+    int8_t strand;
+    int32_t start;
+    int32_t end;
+    uint32_t start_pos;
+    uint32_t end_pos;
+    int32_t filtered;
+} tmap_map_util_gen_score_t;
+
 tmap_map_sams_t *
 tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                  tmap_map_sams_t *sams, 
@@ -1143,7 +1152,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                  tmap_rand_t *rand,
                  tmap_map_opt_t *opt)
 {
-  int32_t i;
+  int32_t i, j;
   int32_t start, end;
   tmap_map_sams_t *sams_tmp = NULL;
   int32_t seq_len=0, target_mem=0;
@@ -1155,6 +1164,8 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   int32_t softclip_start, softclip_end;
   uint32_t start_pos_prev=0, end_pos_prev=0;
   uint32_t start_pos_cur=0, end_pos_cur=0;
+  tmap_map_util_gen_score_t *groups = NULL;
+  int32_t num_groups = 0, num_groups_filtered = 0;
 
   if(0 == sams->n) {
       return sams;
@@ -1177,10 +1188,10 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   // forward
   vsw = tmap_vsw_init((uint8_t*)tmap_seq_get_bases(seqs[0])->s, seq_len, softclip_start, softclip_end, opt->vsw_type, vsw_opt); 
 
-  // core loop
-  i = start = end = 0;
-  best_subo_score = INT32_MIN;
+  // determine groups
+  start = end = 0;
   start_pos = end_pos = 0;
+  best_subo_score = INT32_MIN; // track the best sub-optimal hit
   while(end < sams->n) {
       uint8_t strand;
 
@@ -1192,7 +1203,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           start_pos_prev = start_pos;
           end_pos_prev = end_pos;
       }
-
+      
       // sub-optimal score
       if(best_subo_score < sams->sams[end].score_subo) {
           best_subo_score = sams->sams[end].score_subo;
@@ -1200,7 +1211,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
 
       // check if the hits can be banded
       if(end + 1 < sams->n) {              
-         // printf("%s seed start: %d end: %d next start: %d  next end: %d\n", seq_name, sams->sams[end].pos, (sams->sams[end].pos + sams->sams[end].target_len), sams->sams[end+1].pos, (sams->sams[end+1].pos + sams->sams[end+1].target_len));
+         // fprintf(stderr, "%s seed start: %d end: %d next start: %d  next end: %d\n", seq_name, sams->sams[end].pos, (sams->sams[end].pos + sams->sams[end].target_len), sams->sams[end+1].pos, (sams->sams[end+1].pos + sams->sams[end+1].target_len));
           if(sams->sams[end].strand == sams->sams[end+1].strand 
              && sams->sams[end].seqid == sams->sams[end+1].seqid) {
               tmap_map_util_sw_get_start_and_end_pos(&sams->sams[end+1], seq_len, strand, &start_pos_cur, &end_pos_cur);
@@ -1218,7 +1229,18 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
               }
           }
       }
-      //fprintf(stderr, "seqid=%u start_pos=%u end_pos=%u\n", sams->sams[end].seqid, start_pos, end_pos);
+      
+      // add a group
+      num_groups++;
+      // realloc
+      groups = tmap_realloc(groups, sizeof(tmap_map_util_gen_score_t) * num_groups, "groups");
+      // update
+      groups[num_groups-1].strand = strand;
+      groups[num_groups-1].start = start;
+      groups[num_groups-1].end = end;
+      groups[num_groups-1].start_pos = start_pos;
+      groups[num_groups-1].end_pos = end_pos;
+      groups[num_groups-1].filtered = 1; // assume filtered, guilty
 
       // NB: if match/mismatch penalties are on the opposite strands, we may
       // have wrong score
@@ -1232,24 +1254,123 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
        * if a region has ≥fC q-hits, only then it is processed further. "
        */
       if((end - start + 1) > ( sams->n * opt->stage_seed_freqc) ) {
-          // generate the score
-          tmap_map_util_sw_gen_score_helper(refseq, sams, seqs[0], sams_tmp, &i, start, end,
-                                  strand, vsw, seq_len, start_pos, end_pos,
-                                  &target_mem, &target,
-                                  softclip_start, softclip_end,
-                                  opt->max_seed_band, // NB: this may be modified as banding is unrolled
-                                  opt->score_thr-1,
-                                  vsw_opt, rand, opt);
-
+          groups[num_groups-1].filtered = 0; 
+      }
+      else {
+          num_groups_filtered++;
       }
       // update start/end
       end++;
       start = end;
   }
 
-  // realloc
-  tmap_map_sams_realloc(sams_tmp, i);
+  // process unfiltered...
+  for(i=j=0;i<num_groups;i++) { // go through each group
+      tmap_map_util_gen_score_t *group = NULL;
+      group = &groups[i];
+      /*
+      fprintf(stderr, "start=%d end=%d strand=%d start_pos=%u end_pos=%u filtered=%d\n", 
+              group->start,
+              group->end,
+              group->strand,
+              group->start_pos,
+              group->end_pos,
+              group->filtered);
+              */
+      if(1 == group->filtered) continue;
 
+      // generate the score
+      tmap_map_util_sw_gen_score_helper(refseq, sams, seqs[0], sams_tmp, &j, group->start, group->end,
+                                        group->strand, vsw, seq_len, group->start_pos, group->end_pos,
+                                        &target_mem, &target,
+                                        softclip_start, softclip_end,
+                                        opt->max_seed_band, // NB: this may be modified as banding is unrolled
+                                        opt->score_thr-1,
+                                        vsw_opt, rand, opt);
+
+  }
+  //fprintf(stderr, "unfiltered # = %d\n", j);
+
+  // only if we applied the freqc filter
+  if(0 < opt->stage_seed_freqc) {
+      // check if we filtered too many groups, and so if we should keep
+      // representative hits.
+      /*
+      fprintf(stderr, "Should we get representatives %lf < %lf\n",
+              opt->stage_seed_freqc_group_frac,
+              (double)num_groups_filtered / num_groups);
+              */
+      if(opt->stage_seed_freqc_group_frac <= (double)num_groups_filtered / num_groups) {
+          int32_t best_score = INT32_MIN, best_score_filt = INT32_MIN;
+          double pr = 0.0;
+          int32_t k, c, n;
+
+          // get the best score from a group that passed the filter
+          for(k=0;k<j;k++) { // NB: keep k for later
+              if(best_score < sams_tmp->sams[k].score) {
+                  best_score = sams_tmp->sams[k].score;
+              }
+          }
+
+          // choose uniformly
+          pr = num_groups / (1+opt->stage_seed_freqc_rand_repr);
+          for(i=c=n=0;i<num_groups;i++,c++) {
+              tmap_map_util_gen_score_t *group = NULL;
+              group = &groups[i];
+              if(0 == group->filtered) continue;
+              if(pr < c) {
+                  if(n == opt->stage_seed_freqc_rand_repr) break;
+                  // generate the score
+                  tmap_map_util_sw_gen_score_helper(refseq, sams, seqs[0], sams_tmp, &j, group->start, group->end,
+                                                    group->strand, vsw, seq_len, group->start_pos, group->end_pos,
+                                                    &target_mem, &target,
+                                                    softclip_start, softclip_end,
+                                                    opt->max_seed_band, // NB: this may be modified as banding is unrolled
+                                                    opt->score_thr-1,
+                                                    vsw_opt, rand, opt);
+                  group->filtered = 0; // no longer filtered
+                  n++;
+                  // reset
+                  c = 0;
+              }
+          }
+
+          // get the best from the filtered
+          for(;k<j;k++) {
+              if(best_score_filt < sams_tmp->sams[k].score) {
+                  best_score_filt = sams_tmp->sams[k].score;
+              }
+          }
+
+          /*
+          fprintf(stderr, "best_score=%d best_score_filt=%d\n",
+                  best_score,
+                  best_score_filt);
+                  */
+          // check if we should redo ALL the filtered groups
+          if(best_score < best_score_filt) {
+              // NB: do not redo others...
+              for(i=0;i<num_groups;i++) {
+                  tmap_map_util_gen_score_t *group = NULL;
+                  group = &groups[i];
+                  if(0 == group->filtered) continue;
+                  // generate the score
+                  tmap_map_util_sw_gen_score_helper(refseq, sams, seqs[0], sams_tmp, &j, group->start, group->end,
+                                                    group->strand, vsw, seq_len, group->start_pos, group->end_pos,
+                                                    &target_mem, &target,
+                                                    softclip_start, softclip_end,
+                                                    opt->max_seed_band, // NB: this may be modified as banding is unrolled
+                                                    opt->score_thr-1,
+                                                    vsw_opt, rand, opt);
+              }
+          }
+      }
+  }
+
+  // realloc
+  tmap_map_sams_realloc(sams_tmp, j);
+
+  //fprintf(stderr, "# of final = %d\n", sams_tmp->n);
   // update the sub-optimal
   for(i=0;i<sams_tmp->n;i++) {
       sams_tmp->sams[i].score_subo = best_subo_score;
@@ -1260,6 +1381,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   free(target);
   tmap_vsw_opt_destroy(vsw_opt);
   tmap_vsw_destroy(vsw);
+  free(groups);
 
   return sams_tmp;
 }

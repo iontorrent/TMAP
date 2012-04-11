@@ -206,11 +206,13 @@ __tmap_map_opt_option_print_func_int_init(max_repr)
 __tmap_map_opt_option_print_func_tf_init(rand_repr)
 __tmap_map_opt_option_print_func_tf_init(use_min)
 // mapvsw options
-// mapall options
+// stage options
 __tmap_map_opt_option_print_func_int_init(stage_score_thr)
 __tmap_map_opt_option_print_func_int_init(stage_mapq_thr)
 __tmap_map_opt_option_print_func_tf_init(stage_keep_all)
 __tmap_map_opt_option_print_func_double_init(stage_seed_freqc)
+__tmap_map_opt_option_print_func_double_init(stage_seed_freqc_group_frac)
+__tmap_map_opt_option_print_func_int_init(stage_seed_freqc_rand_repr)
 __tmap_map_opt_option_print_func_int_init(stage_seed_max_length)
 
 static int32_t
@@ -915,6 +917,18 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_stage_seed_freqc,
                            TMAP_MAP_ALGO_STAGE);
+  tmap_map_opt_options_add(opt->options, "stage-seed-freq-cutoff-group-frac", required_argument, 0, 0,
+                           TMAP_MAP_OPT_TYPE_FLOAT,
+                           "if more than this fraction of groups were filtered, keep representative hits",
+                           NULL,
+                           tmap_map_opt_option_print_func_stage_seed_freqc_group_frac,
+                           TMAP_MAP_ALGO_STAGE);
+  tmap_map_opt_options_add(opt->options, "stage-seed-freq-cutoff-rand-repr", required_argument, 0, 0,
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the number of representative hits to keep",
+                           NULL,
+                           tmap_map_opt_option_print_func_stage_seed_freqc_rand_repr,
+                           TMAP_MAP_ALGO_STAGE);
   tmap_map_opt_options_add(opt->options, "stage-seed-max-length", required_argument, 0, 0, 
                            TMAP_MAP_OPT_TYPE_INT,
                            "the length of the prefix of the read to consider during seeding",
@@ -1084,6 +1098,8 @@ tmap_map_opt_init(int32_t algo_id)
       opt->stage_mapq_thr = 23; // 0.5% error
       opt->stage_keep_all = 0;
       opt->stage_seed_freqc = 0.0; //all-pass filter as default
+      opt->stage_seed_freqc_group_frac = 0.9; 
+      opt->stage_seed_freqc_rand_repr = 2; 
       opt->stage_seed_max_length = -1;
       break;
     default:
@@ -1608,6 +1624,12 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(0 == strcmp("stage-seed-freq-cutoff", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_STAGE) {
           opt->stage_seed_freqc = atof(optarg);
       }
+      else if(0 == strcmp("stage-seed-freq-cutoff-group-frac", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_STAGE) {
+          opt->stage_seed_freqc_group_frac = atof(optarg);
+      }
+      else if(0 == strcmp("stage-seed-freq-cutoff-rand-repr", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_STAGE) {
+          opt->stage_seed_freqc_rand_repr = atoi(optarg);
+      }
       else if(0 == strcmp("stage-seed-max-length", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_STAGE) {
           opt->stage_seed_max_length = atoi(optarg);
       }
@@ -1809,6 +1831,12 @@ tmap_map_opt_check_stage(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
   if(opt_a->stage_seed_freqc != opt_b->stage_seed_freqc) {
       tmap_error("option --stage-seed-freqc specified outside of stage options", Exit, CommandLineArgument);
   }
+  if(opt_a->stage_seed_freqc_group_frac != opt_b->stage_seed_freqc_group_frac) {
+      tmap_error("option --stage-seed-freqc-group-frac specified outside of stage options", Exit, CommandLineArgument);
+  }
+  if(opt_a->stage_seed_freqc_rand_repr != opt_b->stage_seed_freqc_rand_repr) {
+      tmap_error("option --stage-seed-freqc-rand-repr specified outside of stage options", Exit, CommandLineArgument);
+  }
   if(opt_a->stage_seed_max_length != opt_b->stage_seed_max_length) {
       tmap_error("option --stage-score-thres specified outside of stage options", Exit, CommandLineArgument);
   }
@@ -1974,6 +2002,8 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       tmap_error_cmd_check_int(opt->stage_mapq_thr, 0, 255, "--stage-mapq-thres");
       tmap_error_cmd_check_int(opt->stage_keep_all, 0, 1, "--stage-keep-all");
       tmap_error_cmd_check_int(opt->stage_seed_freqc, 0.0, 1.0, "--stage-seed-freq-cutoff");
+      tmap_error_cmd_check_int(opt->stage_seed_freqc_group_frac, 0.0, 1.0, "--stage-seed-freq-cutoff-group-frac");
+      tmap_error_cmd_check_int(opt->stage_seed_freqc_rand_repr, 0, INT32_MAX, "--stage-seed-freq-cutoff-rand-repr");
       if(-1 != opt->stage_seed_max_length) tmap_error_cmd_check_int(opt->stage_seed_max_length, 1, INT32_MAX, "--stage-max-seed-length");
       break;
     default:
@@ -2062,6 +2092,8 @@ tmap_map_opt_copy_stage(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
   opt_dest->stage_mapq_thr = opt_src->stage_mapq_thr;
   opt_dest->stage_keep_all = opt_src->stage_keep_all;
   opt_dest->stage_seed_freqc = opt_src->stage_seed_freqc;
+  opt_dest->stage_seed_freqc_group_frac = opt_src->stage_seed_freqc_group_frac;
+  opt_dest->stage_seed_freqc_rand_repr = opt_src->stage_seed_freqc_rand_repr;
   opt_dest->stage_seed_max_length = opt_src->stage_seed_max_length;
 }
 
@@ -2143,5 +2175,7 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "stage_mapq_thr=%d\n", opt->stage_mapq_thr);
   fprintf(stderr, "stage_keep_all=%d\n", opt->stage_keep_all);
   fprintf(stderr, "stage_seed_freqc=%.2f\n", opt->stage_seed_freqc);
+  fprintf(stderr, "stage_seed_freqc_group_frac=%.2f\n", opt->stage_seed_freqc_group_frac);
+  fprintf(stderr, "stage_seed_freqc_rand_repr=%d\n", opt->stage_seed_freqc_rand_repr);
   fprintf(stderr, "stage_seed_max_length=%d\n", opt->stage_seed_max_length);
 }

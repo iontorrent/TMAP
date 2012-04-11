@@ -276,6 +276,8 @@ typedef struct __tmap_map_opt_t {
     int32_t stage_mapq_thr;  /*!< the stage one mapping quality threshold (--stage-mapq-thres) */
     int32_t stage_keep_all;  /*!< keep mappings that do not pass the first stage threshold for the next stage (--stage-keep-all) */
     double  stage_seed_freqc; /*!< the minimum frequency a seed must occur in order to be considered for mapping (--stage-seed-freq-cutoff) */
+    double  stage_seed_freqc_group_frac; /*!< if more than this fraction of groups were filtered, keep representative hits (--stage-seed-freq-cutoff-group-frac) */
+    int32_t stage_seed_freqc_rand_repr; /*!< the number of representative hits to keep (--stage-seed-freq-cutoff-rand-repr) */
     int32_t stage_seed_max_length; /*< the length of the prefix of the read to consider during seeding (--stage-seed-max-length) */
 
     // sub-options
