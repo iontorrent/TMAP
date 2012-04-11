@@ -3,7 +3,7 @@
 
 import os
 import sys
-from optparse import OptionParser
+import argparse
 import progressbar
 
 fields = ['qname', 'flag', 'rname', 'pos', 'mapq',
@@ -125,15 +125,19 @@ def main(options):
     pbar.finish()
 
 if __name__ == '__main__':
-    parser = OptionParser()
-    parser.add_option('--sam1', help="first sam file to diff.  will be called sam1 in diff out", dest='sam1')
-    parser.add_option('--sam2', help="second sam file to diff.  will be called sam2 in diff out", dest='sam2')
-    parser.add_option('--fields',
+    parser = argparse.ArgumentParser(description="Diff two SAM files")
+    parser.add_argument('--sam1', help="first sam file to diff.  will be called sam1 in diff out", dest='sam1')
+    parser.add_argument('--sam2', help="second sam file to diff.  will be called sam2 in diff out", dest='sam2')
+    parser.add_argument('--fields',
                       help="comma seperated list of fields:%s\t\t\t\t\t to diff between the"
                       "sam records use names from the same spec. for optional tags"
                       "use their 2 letter abbreviation.  Default:  pos" % (str(fields)),
                       dest='fields', action="append", default=[])
-    parser.add_option('--full-qname', help="keep the full query name", dest='full_qname', action="store_true", default=False)
-    parser.add_option('--min-mapq', help="examine only those records with a given minimum mapping quality", type="int", dest="min_mapq", default=0)
-    options, args = parser.parse_args()
+    parser.add_argument('--full-qname', help="keep the full query name", dest='full_qname', action="store_true", default=False)
+    parser.add_argument('--min-mapq', help="examine only those records with a given minimum mapping quality", type=int, dest="min_mapq", default=0)
+    options = parser.parse_args()
+    for field in options.fields:
+        if not field in fields:
+            sys.stderr.write( "Error: field not recognized [%s]\n" % field)
+            sys.exit()
     main(options)
