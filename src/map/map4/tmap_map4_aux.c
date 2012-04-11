@@ -173,7 +173,7 @@ tmap_map4_aux_core(tmap_seq_t *seq,
               else if (0 < max_repr) {
                   tmap_bwt_smem_intv_t q;
                   double pr = 0.0;
-                  int32_t c;
+                  int32_t c, m;
                   // Keep only representative hits
 
                   /*
@@ -203,10 +203,11 @@ tmap_map4_aux_core(tmap_seq_t *seq,
                   }
                   else {
                       // choose uniformly the representitive hits
-                      pr = p->size / (double)max_repr;
+                      pr = p->size / (double)(max_repr+1);
                       q = *p;
-                      for (k = c = 0; k < q.size; ++k, ++c) {
+                      for (k = c = m = 0; k < q.size; ++k, ++c) {
                           if (pr < c) {
+                              if(m == max_repr) break;
                               // fake
                               p->x[0] = q.x[0] + k;
                               p->x[1] = q.x[1] + k;
@@ -215,6 +216,7 @@ tmap_map4_aux_core(tmap_seq_t *seq,
                               tmap_bwt_smem_intv_vec_push(matches, p, start);
                               // update count
                               c = 0;
+                              m++;
                           }
                       }
                       // reset
