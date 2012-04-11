@@ -31,7 +31,7 @@ urlcolor=myurlcolor     % color of external links
 % TODO check all options are present
 
 % Version number
-\newcommand{\Version}{0.3.9}
+\newcommand{\Version}{0.3.10}
 
 % layout
 \setlength\topmargin{0in}
@@ -89,7 +89,7 @@ Please see \autoref{chap:faq} for common questions and their answers.
 
 If you have anything that you would be useful to add to this guide, feel free to relay the addition to the TMAP developers.
 This includes but is not limited to bugs, typos, and explanations.
-Please see \url{http://ioncommunity.iontorrent.com} for more details.
+Please see the \url{http://ioncommunity.iontorrent.com}{Ion Community} for more details.
 
 Enjoy!
 
@@ -173,15 +173,17 @@ Specifies that the type of soft-clipping to perform.
 	\item soft-clip only the right portion of the read.
 	\item do not soft-clip any portion of the read
 \end{enumerate}
+See \autoref{sec:howtosoftclip} to learn how bases are soft clipped.
 
 \subsubsection{\TT{-W,--duplicate-window INT}}
 Specifies to remove duplicate mappings that occur within this bp window.
 
 \subsubsection{\TT{-B,--max-seed-band INT}}
-Specifies the window in bases in which to group seeds.
+Specifies the window in bases in which to group seeds prior to Smith Waterman.
 
 \subsubsection{\TT{-U,--no-unroll-banding}}
-Specifies to not unroll the grouped seeds from banding if multiple alignments are found
+Specifies to not unroll the grouped seeds from banding if multiple alignments are found.
+By default, if multiple best scoring alignments are found within a group of seeds (see \TT{-B}), the seeds are ungrouped and Smith Waterman is performed on each seed.
 
 \subsubsection{\TT{-T,--score-thres INT}}
 Specifies the number of multiples of the match score (\TT{-A}) for the minimum scoring threshold.
@@ -230,6 +232,26 @@ Specifies that the output should be bzip2 (\TT{-J}) or gzip (\TT{-Z}) compressed
 \subsubsection{\TT{-k,--shared-memory-key INT}}
 Specifies the shared memory key if the reference index has been loaded into shared memory.
 
+\subsubsection{\TT{-H,--vsw-type INT}}
+Specifies the vectorized Smith Waterman algorithm to use.
+There are many existing implementations of Smith Waterman, which is a crucial step in TMAP used to determine the quality of each candidate alignment.
+TMAP includes a number of implementations, including those obtained from a  \href{http://community.topcoder.com/longcontest/?module=ViewProblemStatement&rd=15078&pm=11786}{Top Coder contest}.
+These implementations vary on speed and correctness, and so your mileage may vary.  
+Please proceed with caution. 
+The algorithms included are:
+\begin{enumerate}
+\item lh3/ksw.c/nh13
+\item simple VSW
+\item SHRiMP2 VSW [not working]
+\item Psyho (Top Coder \#1)
+\item ACRush (Top Coder \#2)
+\item folsena (Top Coder \#3)
+\item logicmachine (Top Coder \#4)
+\item venco (Top Coder \#5) [not working]
+\item Bladze (Top Coder \#6)
+\item ngthuydiem (Top Coder \#7) [Farrar cut-and-paste]
+\end{enumerate}
+NB: currently only \#1, \#4, and \#6 have been tested.
 \subsubsection{\TT{-v,--verbose}}
 Specifies to print verbose progress messages, otherwise progress messages will be surpressed.
 
@@ -255,12 +277,6 @@ See \autoref{sec:fs-realign} for a description of flow space re-alignment.
 Specifies the flow score penalty.
 This number must always be positive.
 
-\subsubsection{\TT{-F,--flow-order STRING}}
-Specifies the flow order ([ACGT]{4+} or ``file'' to obtain it from the input file.
-
-\subsubsection{\TT{-K,--key-sequence STRING}}
-Specifies the key sequence ([ACGT]{4+} or ``file'' to obtain it from the input file.
-
 \subsubsection{\TT{-y,--softclip-key}}
 Specifies to soft clip only the last base of the key sequence.
 
@@ -280,6 +296,8 @@ Specifies to produce the final alignment in flow space.
 \subsection{Pairing Options}
 These options control how TMAP uses and outputs information about the paired end or mate pair reads.
 Pairing will be performed when exactly two input read files are given using the \TT{-r} option twice.
+Currently, the insert size distribution must be given prior to running TMAP.
+Read rescue significantly improves specificity at the cost of slower run times.
 
 \subsubsection{\TT{-Q,--pairing}}
 Specifies the pairing orientation.
@@ -322,6 +340,9 @@ Specifies to perform read rescuing during pairing.
 
 \subsubsection{\TT{-l,--read-rescue-std-num FLOAT}}
 Specifies the number of insert size standard deviations to search around the inferred rescue position.
+
+\subsubsection{\TT{-m,--read-rescue-mapq-thr INT}}
+Specifies the mapping quality threshold for read rescue.
 
 \section{tmap index}
 \label{sec:index}
@@ -494,24 +515,32 @@ See \autoref{sec:commonoptions} for common options that are in use in this comma
 \subsubsection{\TT{--hit-frac FLOAT}}
 Specifies the fraction of seed positions that are under the maximum (\TT{--max-seed-hits}).
 
+\subsubsection{\TT{--seed-step INT}}
+Specifies the number of bases to increase the seed for each seed increase iteration (-1 to disable).
+The algorithm tries to find SMEMs starting at specific offsets within the read.
+Beginning at the start of the read, this option controls how many bases to skip to obtain the next offset
+
+\subsubsection{\TT{--min-seed-length INT}}
+Specifies the minimum number of bases to use to seed (smallest SMEM).
+With a value of $-1$ will set the seed length to $\left(ceiling(log_4(R)) + 2\right)$ where $R$ is the reference genome length.
+
+\subsubsection{\TT{--max-seed-length INT}}
+Specifies the maximum number of bases to use to seed (longest SMEM).
+
 \subsubsection{\TT{--max-iwidth INT}}
 Specifies the maximum interval size to accept a hit.
 
 \subsubsection{\TT{--max-repr INT}}
 Specified the maximum representitive hits for repetitive hits.
+This is useful in repetitive genomes, where the returned SMEM masks the correct seed, which is contained in smaller SMEM.
+This will keep a number of repetitive SMEM hits.
 
 \subsubsection{\TT{--rand-repr}}
 Specifies to choose the representitive hits randomly, otherwise uniformly.
+See \TT{--max-repr} for details on repetitive htis.
 
 \subsubsection{\TT{--use-min}}
 Specifies when seed stepping, try seeding when at least the minimum seed length is present, otherwise maximum.
-
-\subsubsection{\TT{--min-seed-length INT}}
-Specifies the minimum number of bases to use to seed.
-With a value of $-1$ will set the seed length to $\left(ceiling(log_4(R)) + 2\right)$ where $R$ is the reference genome length.
-
-\subsubsection{\TT{--max-seed-length INT}}
-Specifies the maximum number of bases to use to seed.
 
 \section{tmap mapvsw}
 \label{sec:mapvsw}
@@ -776,6 +805,7 @@ This is enabled by using a complementary-multiply-with-carry random number gener
 Of course, if different options are used, then the results will post likely vary, even if a different number of threads are used.
 
 \section{How does TMAP soft clip bases in the read?} 
+\label{sec:howtosoftclip}
 TMAP has the ability to soft clip bases during alignment, that is to not include in the alignment bases that are present in the read.  
 This may be useful to only map high quality portions of the read, for example if the 3' end of the read has many low quality bases called but their inclusion in the alignment results in many mismatches or insertions/deletions (indels).
 
@@ -805,7 +835,7 @@ REF:  GATTA
 The details of the local alignment algorithms and their variations are well characterized in the Literature or in an Introduction to Bioinformatics text book (\cite{jones2004}).  
 Using the local alignment and the scoring parameters to determine the soft-clipping is a powerful and flexible solution to trade off reduced alignment length for higher quality alignments via soft-clipping.
 
-For how soft-clipping is represented in SAM files, see the SAM specification for more details (\url{http://samtools.sourceforge.net/SAM1.pdf}).
+For how soft-clipping is represented in SAM files, see the \url{http://samtools.sourceforge.net/SAM1.pdf}{SAM specification} for more details.
 
 \section{What is flow space re-alignment}
 \label{sec:fs-realign}

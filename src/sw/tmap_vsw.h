@@ -30,8 +30,6 @@
 //#define TMAP_VSW_DEBUG_CMP
 //#define TMAP_VSW_DEBUG
 
-// TODO: document
-
 #include <stdlib.h>
 #include <stdint.h>
 #include <emmintrin.h>
@@ -39,25 +37,16 @@
 #include "tmap_vsw_definitions.h"
 #include "lib/AffineSWOptimizationWrapper.h"
   
-enum {
-    TMAP_VSW_TYPE_S0 = 0,
-    TMAP_VSW_TYPE_S1 = 1,
-    TMAP_VSW_TYPE_S3 = 3
-};
-
-// TODO
+/*!
+  Used to run the underlying vectorized smith waterman (VSW) types
+  */
 typedef struct {
-    int32_t type;
-#ifdef TMAP_VSW_DEBUG_CMP
-    tmap_vsw_wrapper_t **debug;
-    int32_t n;
-#endif
-    tmap_vsw_wrapper_t *algorithm;
-    tmap_vsw_wrapper_t *algorithm_default;
-    int32_t query_start_clip;
-    int32_t query_end_clip;
-    int32_t use_default; // use default when query/target are too long
-    tmap_vsw_opt_t *opt;
+    int32_t type; /*!< the vectorized smith waterman type */
+    tmap_vsw_wrapper_t *algorithm; /*!< the main VSW algorithm */
+    tmap_vsw_wrapper_t *algorithm_default; /*!< the VSW algorithm to test if the main algorithm fails */
+    int32_t query_start_clip; /*!< 1 if we are to clip the start of the query, 0 otherwise */
+    int32_t query_end_clip; /*!< 1 if we are to clip the end of the query, 0 otherwise */
+    tmap_vsw_opt_t *opt; /*!< the alignment parameters */
 } tmap_vsw_t;
 
 /*!
@@ -65,6 +54,7 @@ typedef struct {
   @param  qlen              the query sequence length
   @param  query_start_clip  1 if we are to clip the start of the query, 0 otherwise
   @param  query_end_clip    1 if we are to clip the end of the query, 0 otherwise
+  @param  type              the VSW type
   @param  opt               the previous alignment parameters, NULL if none exist
   @return                   the query sequence in vectorized form
   */
@@ -74,12 +64,8 @@ tmap_vsw_init(const uint8_t *query, int32_t qlen,
               int32_t type,
               tmap_vsw_opt_t *opt);
 
-// TODO
-int32_t
-tmap_vsw_update(tmap_vsw_t *vsw, const uint8_t *query, int32_t qlen, const uint8_t *target, int32_t tlen);
-
 /*!
-  @param  query  the query sequence
+  @param  vsw  the structure to destroy
   */
 void
 tmap_vsw_destroy(tmap_vsw_t *vsw);
@@ -90,8 +76,8 @@ tmap_vsw_destroy(tmap_vsw_t *vsw);
   @param  qlen              the query sequence length
   @param  target            the target sequence
   @param  tlen              the target sequence length
-  @param  result            TODO
-  @param  overflow           returns 1 if overflow occurs, 0 otherwise
+  @param  result            the structure in which to store the results
+  @param  overflow          returns 1 if overflow occurs, 0 otherwise
   @param  score_thr         the minimum scoring threshold (inclusive)
   @param  is_rev            1 if the reverse alignment is being performed, 0 for the forward
   @return                   the alignment score

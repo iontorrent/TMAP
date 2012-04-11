@@ -99,7 +99,7 @@ typedef struct {
         tmap_map_map_vsw_aux_t *map_vsw_aux; /*!< auxiliary data for map_vsw */
     } aux;
     // for bounding the alignment with vectorized SW
-    tmap_vsw_result_t result; // TODO
+    tmap_vsw_result_t result; /*!< the VSW boundaries (query/target start/end and scores) */
     uint32_t seed_start; /*!< the start of the seed in genomic coordinates used to map this read */
     uint32_t seed_end; /*!< the end of the seed in genomic coordinates used to map this read */
 } tmap_map_sam_t;

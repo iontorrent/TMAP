@@ -380,7 +380,7 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
       "3 - all alignments",
       NULL};
   static char *vsw_type[] = {
-      "NB: currently only #1 and #6 have been tested",
+      "NB: currently only #1, #4, and #6 have been tested",
       "1 - lh3/ksw.c/nh13",
       "2 - simple VSW",
       "3 - SHRiMP2 VSW [not working]",
@@ -711,7 +711,7 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            TMAP_MAP_ALGO_MAP3 | TMAP_MAP_ALGO_MAP4);
   tmap_map_opt_options_add(opt->options, "seed-step", required_argument, 0, 0, 
                            TMAP_MAP_OPT_TYPE_INT,
-                           "the number of bases to increase the seed while repetitive (-1 to disable)",
+                           "the number of bases to increase the seed for each seed increase iteration (-1 to disable)",
                            NULL,
                            tmap_map_opt_option_print_func_seed_step,
                            TMAP_MAP_ALGO_MAP3 | TMAP_MAP_ALGO_MAP4);
@@ -1899,6 +1899,16 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->sample_reads, 0, 1, "-x");
 #endif
   tmap_error_cmd_check_int(opt->vsw_type, 1, 10, "-H");
+  // Warn users
+  switch(opt->vsw_type) {
+    case 1:
+    case 4:
+    case 6:
+      break;
+    default:
+      tmap_error("the option -H value has not been extensively tested; proceed with caution", Warn, CommandLineArgument);
+      break;
+  }
 
   switch(opt->algo_id) {
     case TMAP_MAP_ALGO_MAP1: // map1 options
@@ -1906,7 +1916,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       tmap_error_cmd_check_int(opt->seed_max_diff, 0, INT32_MAX, "--seed-max-diff");
       if(-1 != opt->seed2_length) tmap_error_cmd_check_int(opt->seed2_length, 1, INT32_MAX, "--seed2-length");
       if(-1 != opt->seed_length && -1 != opt->seed2_length) {
-          tmap_error_cmd_check_int(opt->seed_length, 1, opt->seed2_length, "The secondary seed length (--seed2-length) must be less than the primary seed length (--seed-length)");
+          tmap_error_cmd_check_int(opt->seed_length, 1, opt->seed2_length, "The secondary seed length (--seed2-length) must be greater than the primary seed length (--seed-length)");
       }
       tmap_error_cmd_check_int((opt->max_diff_fnr < 0) ? opt->max_diff: (int32_t)opt->max_diff_fnr, 0, INT32_MAX, "--max-diff");
       tmap_error_cmd_check_int((int32_t)opt->max_err_rate, 0, INT32_MAX, "--max-error-rate");

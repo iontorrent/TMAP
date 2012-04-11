@@ -27,6 +27,7 @@ tmap_map4_aux_smem_iter_destroy(tmap_map4_aux_smem_iter_t *iter);
   @param  sa             the SA structure 
   @param  hash           the occurrence hash
   @param  iter           the shared memory iterator
+  @param  rand           the random number generator to use
   @param  opt            the program options
   @return                the alignments
   the sequences should be in 2-bit format
