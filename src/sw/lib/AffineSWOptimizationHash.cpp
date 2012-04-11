@@ -114,5 +114,5 @@ void AffineSWOptimizationHash::add(string b, string a, int _qsc, int _qec,
 
 AffineSWOptimizationHash::~AffineSWOptimizationHash()
 {
-  delete hash;
+  delete [] hash;
 }
