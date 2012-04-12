@@ -187,13 +187,11 @@ NOINLINE uint64_t Solution4::hashDNA(const string &s, const int len) {
 
 int Solution4::resize(int a, int b) {
     if(MAX_DIMB < b) {
-        fprintf(stderr, "RESIZED B\n");
         MAX_DIMB = b;
         tmap_roundup32(MAX_DIMB);
         BUFFER = (int16_t*)tmap_realloc(BUFFER, (MAX_DIMB + 64) * 9 * sizeof(int16_t), "BUFFER");
     }
     if(MAX_DIMA < a) {
-        fprintf(stderr, "RESIZED A\n");
         MAX_DIMA = a;
         tmap_roundup32(MAX_DIMA);
     }
@@ -280,7 +278,7 @@ template <class T, int DEFAULT_VALUE> INLINE void Solution4::updateResultLast() 
     }
 }
 
-template <int qec> NOINLINE void Solution4::processFastVariantB16BitA(string &a, int mm, int mi, int o, int e) {
+template <int qec> NOINLINE void Solution4::processFastVariantB16BitA(const string &a, int mm, int mi, int o, int e) {
 
     __m128i mo = _mm_set1_epi16(o + e);
     __m128i me = _mm_set1_epi16(e);
@@ -373,7 +371,7 @@ outB11:
 
 }
 
-template <int qec> NOINLINE void Solution4::processFastVariantB16BitB(string &a, int mm, int mi, int o, int e) {
+template <int qec> NOINLINE void Solution4::processFastVariantB16BitB(const string &a, int mm, int mi, int o, int e) {
 
     __m128i mo = _mm_set1_epi16(o + e);
     __m128i me = _mm_set1_epi16(e);
@@ -545,7 +543,7 @@ outB22:
 
 }
 
-template <int qec> NOINLINE void Solution4::processFastVariantA16Bit(string &a, int mm, int mi, int o, int e, int iter) {
+template <int qec> NOINLINE void Solution4::processFastVariantA16Bit(const string &a, int mm, int mi, int o, int e, int iter) {
     __m128i mo = _mm_set1_epi16(o + e);
     __m128i me = _mm_set1_epi16(e);
     __m128i mmin = _mm_set1_epi16(MIN_VAL);
@@ -904,7 +902,7 @@ template <class T, int SIZE> NOINLINE  void Solution4::calcInvalidPos(int value)
     }
 }
 
-NOINLINE void Solution4::convert16Bit(string &b, int qsc, int mm, int mi) {
+NOINLINE void Solution4::convert16Bit(const string &b, int qsc, int mm, int mi) {
 
     segNo *= 2;
     int len64 = len;
@@ -959,7 +957,7 @@ NOINLINE void Solution4::convert16Bit(string &b, int qsc, int mm, int mi) {
 
 }
 
-NOINLINE void Solution4::preprocess16Bit(string &b, int qsc, int mm, int mi) {
+NOINLINE void Solution4::preprocess16Bit(const string &b, int qsc, int mm, int mi) {
     segNo = (n + 7) / 8;
     len = segNo * 8;
     int len64 = len;
@@ -1006,7 +1004,7 @@ NOINLINE void Solution4::preprocess16Bit(string &b, int qsc, int mm, int mi) {
     calcInvalidPos<int16_t*, 8>(mi);        
 }
 
-void Solution4::preprocess8Bit(string &b, int qsc, int mm, int mi) {
+void Solution4::preprocess8Bit(const string &b, int qsc, int mm, int mi) {
     segNo = (n + 15) / 16;
     len = segNo * 16;
     int len64 = len / 2;
@@ -1054,11 +1052,12 @@ void Solution4::preprocess8Bit(string &b, int qsc, int mm, int mi) {
 
 }
 
-NOINLINE int Solution4::process(string &b, string &a, int qsc, int qec, 
+NOINLINE int Solution4::process(const string &b, const string &a, int qsc, int qec, 
                                 int mm, int mi, int o, int e, int dir,
                                 int *_opt, int *_te, int *_qe, int *_n_best) {
+    string _a = a;
     n = b.S;
-    m = a.S;
+    m = _a.S;
 
     resize(m, n);
 
@@ -1068,7 +1067,7 @@ NOINLINE int Solution4::process(string &b, string &a, int qsc, int qec,
     int iter = -1;
 
 #ifdef USE_HASHING
-    uint64_t curHashA = hashDNA(a, m);
+    uint64_t curHashA = hashDNA(_a, m);
     uint64_t curHashB = hashDNA(b, n);
 
     uint64_t hash = curHashA ^ curHashB;
@@ -1095,7 +1094,7 @@ NOINLINE int Solution4::process(string &b, string &a, int qsc, int qec,
         int offs = n - m + 1;
         //uint32_t h = 0;
         REP(i, offs) {
-            REP(j, m) if (a[j] != b[i+j]) {
+            REP(j, m) if (_a[j] != b[i+j]) {
                 goto next;
             }
             if (corr == 0) c0 = i;
@@ -1113,8 +1112,8 @@ next: ;
     }
 #endif
 
-    // IMPORANT! CHANGE BACK!
-    REP(i, m) a[i] = tmap_nt_char_to_int[(int)a[i]];
+    // To integers
+    REP(i, m) _a[i] = tmap_nt_char_to_int[(int)_a[i]];
 
     opt = MIN_VAL;
     lastMax = MIN_VAL;
@@ -1129,9 +1128,9 @@ next: ;
 
     if (qsc) {
         if (qec) {
-            iter = processFastVariantA8Bit<1>(a, mm, mi, o, e);
+            iter = processFastVariantA8Bit<1>(_a, mm, mi, o, e);
         } else {
-            iter = processFastVariantA8Bit<0>(a, mm, mi, o, e);
+            iter = processFastVariantA8Bit<0>(_a, mm, mi, o, e);
         }
     } else {
     }
@@ -1155,15 +1154,15 @@ go16bit:
 
     if (qsc) {
         if (qec) {
-            processFastVariantA16Bit<1>(a, mm, mi, o, e, iter);
+            processFastVariantA16Bit<1>(_a, mm, mi, o, e, iter);
         } else {
-            processFastVariantA16Bit<0>(a, mm, mi, o, e, iter);
+            processFastVariantA16Bit<0>(_a, mm, mi, o, e, iter);
         }
     } else {
         if (qec) {
-            processFastVariantB16BitA<1>(a, mm, mi, o, e);
+            processFastVariantB16BitA<1>(_a, mm, mi, o, e);
         } else {
-            processFastVariantB16BitB<0>(a, mm, mi, o, e);
+            processFastVariantB16BitB<0>(_a, mm, mi, o, e);
         }
     }
 
@@ -1193,8 +1192,5 @@ similar:
     (*_qe) = query_end;
     (*_n_best) = n_best;
     
-    // convert back
-    REP(i, m) a[i] = "ACGTN"[(int)a[i]];
-
     return opt;
 }

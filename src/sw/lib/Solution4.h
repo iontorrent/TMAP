@@ -24,7 +24,7 @@ public:
   Solution4();
   ~Solution4();
 
-  virtual int process(string &b, string &a, int qsc, int qec, 
+  virtual int process(const string& b, const string& a, int qsc, int qec, 
                       int mm, int mi, int o, int e, int dir,
                       int *opt, int *te, int *qe, int *n_best);
 private:
@@ -57,15 +57,15 @@ private:
   int resize(int a, int b);
   template <class T, bool BYTE> void updateResult(int i, int curMax);
   template <class T, int DEFAULT_VALUE> void updateResultLast();
-  template <int qec> void processFastVariantB16BitA(string &a, int mm, int mi, int o, int e);
-  template <int qec> void processFastVariantB16BitB(string &a, int mm, int mi, int o, int e);
-  template <int qec> void processFastVariantA16Bit(string &a, int mm, int mi, int o, int e, int iter);
+  template <int qec> void processFastVariantB16BitA(const string &a, int mm, int mi, int o, int e);
+  template <int qec> void processFastVariantB16BitB(const string &a, int mm, int mi, int o, int e);
+  template <int qec> void processFastVariantA16Bit(const string &a, int mm, int mi, int o, int e, int iter);
   template <int qec> int processFastVariantA8Bit(const string &a, const int mm, const int mi, const int o, const int e);
   void convertTable(__m128i *T0, __m128i *T1);
   template <class T, int SIZE> void calcInvalidPos(int value);
-  void convert16Bit(string &b, int qsc, int mm, int mi);
-  void preprocess16Bit(string &b, int qsc, int mm, int mi);
-  void preprocess8Bit(string &b, int qsc, int mm, int mi);
+  void convert16Bit(const string &b, int qsc, int mm, int mi);
+  void preprocess16Bit(const string &b, int qsc, int mm, int mi);
+  void preprocess8Bit(const string &b, int qsc, int mm, int mi);
 };
 
 #endif

@@ -126,7 +126,7 @@ private:
 
 public:
     virtual int process(
-        string& target, string& query,
+        const string& target, const string& query,
         int query_start_clip, int query_end_clip,
         int match_score, int mismatch_score,
         int gap_open, int gap_extension, int dir,

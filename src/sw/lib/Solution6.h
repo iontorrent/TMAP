@@ -16,7 +16,7 @@ class Solution6 : public Solution {
 public:
     Solution6();
 
-    virtual int process(string& bs, string& as, int qsc, int qec,
+    virtual int process(const string& bs, const string& as, int qsc, int qec,
                         int mm, int mi, int oe, int e, int dir,
                         int *opt, int *te, int *qe, int *n_best);
 };

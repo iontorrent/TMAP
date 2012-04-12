@@ -35,7 +35,7 @@ public:
   Solution9();
   ~Solution9();
 
-  virtual int process(string& b, string& a, int qsc, int qec,
+  virtual int process(const string& b, const string& a, int qsc, int qec,
                          int mm, int mi, int o, int e, int dir,
                          int *opt, int *te, int *qe, int *n_best);
 private:

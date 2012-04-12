@@ -1418,7 +1418,7 @@ Solution8::Solution8() : printed(0) {
 Solution8::~Solution8() {
     SNS::close();
 }
-int Solution8::process(string& t, string& q, int qsc, int qec,
+int Solution8::process(const string& t, const string& q, int qsc, int qec,
                int ma, int mi, int go, int ge, int dir,
                int *opt, int *te, int *qe, int *n_best) {
 #if defined(CLOCK) && !defined(HOME_RUN)

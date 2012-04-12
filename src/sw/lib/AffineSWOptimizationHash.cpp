@@ -72,7 +72,7 @@ static uint64_t hashDNA(const string &s) {
     return h >> 8;
 }
 
-bool AffineSWOptimizationHash::process(string b, string a, int _qsc, int _qec,
+bool AffineSWOptimizationHash::process(const string &b, const string &a, int _qsc, int _qec,
                                           int mm, int mi, int o, int e, int dir,
                                           int *opt, int *te, int *qe, int *n_best)
 {
@@ -103,7 +103,7 @@ bool AffineSWOptimizationHash::process(string b, string a, int _qsc, int _qec,
   return false;
 }
 
-void AffineSWOptimizationHash::add(string b, string a, int _qsc, int _qec,
+void AffineSWOptimizationHash::add(const string &b, const string &a, int _qsc, int _qec,
                                           int mm, int mi, int o, int e, int dir,
                                           int *opt, int *te, int *qe, int *n_best)
 {

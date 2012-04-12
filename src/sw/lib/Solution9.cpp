@@ -990,7 +990,7 @@ void Solution9::DoSetup16(const string& target, const string& query) {
 
 }
 
-int Solution9::process(string& target, string& query, int queryStartClip, int queryEndClip,
+int Solution9::process(const string& target, const string& query, int queryStartClip, int queryEndClip,
                           int matchScore, int mismatchScore, int gapOpen, int gapExtension, int direction,
                           int *_opt, int *_te, int *_qe, int *_n_best) {
 
@@ -1098,4 +1098,3 @@ int Solution9::process(string& target, string& query, int queryStartClip, int qu
     (*_n_best) = NBest;
     return Opt;
 }
-

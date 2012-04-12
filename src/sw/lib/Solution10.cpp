@@ -1316,7 +1316,7 @@ Solution10::~Solution10() {
 // mm: match score (1,10), mi: mismatch score (-10 -1)
 // o: gap openning (-10 -2), e: gap extension o+1 to -1
 // dir: direction (bool)
-int Solution10::process(string& b, string& a, int qsc, int qec,
+int Solution10::process(const string& b, const string& a, int qsc, int qec,
                            int mm, int mi, int o, int e, int dir,
                            int *opt, int *te, int *qe, int *n_best) {
     int n = b.size(), m = a.size();

@@ -55,7 +55,7 @@ Solution1::~Solution1() {
     vsw_query = NULL;
 }
 
-int Solution1::process(string& b, string& a, int qsc, int qec,
+int Solution1::process(const string& b, const string& a, int qsc, int qec,
                                      int mm, int mi, int o, int e, int dir,
                                      int *_opt, int *_te, int *_qe, int *_n_best) {
     int i, score;

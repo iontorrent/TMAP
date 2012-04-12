@@ -26,7 +26,7 @@ Solution6::Solution6() {
   max_tlen = 1024;
 }
 
-int Solution6::process(string& bs, string& as, int qsc, int qec,
+int Solution6::process(const string& bs, const string& as, int qsc, int qec,
                           int mm, int mi, int oe, int e, int dir,
                           int *_opt, int *_te, int *_qe, int *_n_best) {
     const int n = bs.size(), m = as.size();

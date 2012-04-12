@@ -44,7 +44,7 @@ Solution3::Solution3() {
 Solution3::~Solution3() {
 }
 
-int Solution3::process(string& b, string& a, int qsc, int qec,
+int Solution3::process(const string& b, const string& a, int qsc, int qec,
                           int mm, int mi, int o, int e, int dir,
                           int *_opt, int *_te, int *_qe, int *_n_best) {
     int i, bl, al;
