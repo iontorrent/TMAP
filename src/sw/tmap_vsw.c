@@ -197,12 +197,13 @@ tmap_vsw_process_compare(tmap_vsw_t *vsw,
 }
 #endif
 
-int32_t
+static int32_t
 tmap_vsw_process(tmap_vsw_t *vsw,
               const uint8_t *query, int32_t qlen,
               uint8_t *target, int32_t tlen, 
               tmap_vsw_result_t *result,
-              int32_t *overflow, int32_t score_thr, int32_t is_rev)
+              int32_t *overflow, int32_t score_thr, 
+              int32_t is_rev, int32_t direction)
 {
   int32_t found_forward = 1, query_end, target_end, n_best, score = INT32_MIN;
 #ifdef TMAP_VSW_DEBUG
@@ -240,7 +241,7 @@ tmap_vsw_process(tmap_vsw_t *vsw,
                                -vsw->opt->pen_mm,
                                -vsw->opt->pen_gapo,
                                -vsw->opt->pen_gape,
-                               is_rev, 
+                               direction, 
                                vsw->query_start_clip, vsw->query_end_clip, 
                                &score, &target_end, &query_end, &n_best);
 #ifdef TMAP_VSW_DEBUG_CMP
@@ -248,7 +249,7 @@ tmap_vsw_process(tmap_vsw_t *vsw,
                                query, qlen,
                                target, tlen, 
                                result,
-                               overflow, score_thr, is_rev);
+                               overflow, score_thr, direction);
 #endif
   }
   else { // try the default
@@ -259,7 +260,7 @@ tmap_vsw_process(tmap_vsw_t *vsw,
                                -vsw->opt->pen_mm,
                                -vsw->opt->pen_gapo,
                                -vsw->opt->pen_gape,
-                               is_rev, 
+                               direction, 
                                vsw->query_start_clip, vsw->query_end_clip, 
                                &score, &target_end, &query_end, &n_best);
   }
@@ -346,7 +347,7 @@ tmap_vsw_process(tmap_vsw_t *vsw,
                                        -vsw->opt->pen_mm,
                                        -vsw->opt->pen_gapo,
                                        -vsw->opt->pen_gape,
-                                       is_rev, 
+                                       direction, 
                                        vsw->query_start_clip, vsw->query_end_clip, 
                                        &score, &target_end, &query_end, &n_best);
               result->query_start = qlen - query_end - 1;
@@ -385,7 +386,7 @@ tmap_vsw_process(tmap_vsw_t *vsw,
           ap.row = 5; 
           score = tmap_sw_clipping_core((uint8_t*)target, tlen, (uint8_t*)query, qlen, &ap,
                                         vsw->query_start_clip, vsw->query_end_clip, 
-                                        NULL, NULL, is_rev);
+                                        NULL, NULL, direction);
           fprintf(stderr, "score=%d\n", score);
           */
           tmap_bug();
@@ -393,4 +394,24 @@ tmap_vsw_process(tmap_vsw_t *vsw,
 
       return result->score_fwd;
   }
+}
+
+int32_t
+tmap_vsw_process_fwd(tmap_vsw_t *vsw,
+              const uint8_t *query, int32_t qlen,
+              uint8_t *target, int32_t tlen, 
+              tmap_vsw_result_t *result,
+              int32_t *overflow, int32_t score_thr, int32_t direction)
+{
+  return tmap_vsw_process(vsw, query, qlen, target, tlen, result, overflow, score_thr, 0, direction);
+}
+
+int32_t
+tmap_vsw_process_rev(tmap_vsw_t *vsw,
+              const uint8_t *query, int32_t qlen,
+              uint8_t *target, int32_t tlen, 
+              tmap_vsw_result_t *result,
+              int32_t *overflow, int32_t score_thr, int32_t direction)
+{
+  return tmap_vsw_process(vsw, query, qlen, target, tlen, result, overflow, score_thr, 1, direction);
 }

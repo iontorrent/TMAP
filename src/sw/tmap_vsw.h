@@ -71,6 +71,8 @@ void
 tmap_vsw_destroy(tmap_vsw_t *vsw);
 
 /*!
+  Performs alignment in the sequencing direction.  This will update query_end and target_end
+  in the results.
   @param  vsw               the query in its vectorized form
   @param  query             the query sequence
   @param  qlen              the query sequence length
@@ -79,19 +81,47 @@ tmap_vsw_destroy(tmap_vsw_t *vsw);
   @param  result            the structure in which to store the results
   @param  overflow          returns 1 if overflow occurs, 0 otherwise
   @param  score_thr         the minimum scoring threshold (inclusive)
-  @param  is_rev            1 if the reverse alignment is being performed, 0 for the forward
+  @param  direction            1 if the reverse alignment is being performed, 0 for the forward
+  @param
   @return                   the alignment score
-  @details is_rev explains how to break ties. If is_rev = 0, then query_end needs to be as 
+  @details direction explains how to break ties. If direction = 0, then query_end needs to be as 
   small as possible (if there are still several possibilities, choose the one with the smallest
-  value of target_end among them). If is_rev = 1, then query_end needs to be as large as possible 
+  value of target_end among them). If direction = 1, then query_end needs to be as large as possible 
   (if there are still several possibilities, choose the one with the largest value of target_end 
   among them). 
   */
 int32_t
-tmap_vsw_process(tmap_vsw_t *vsw,
+tmap_vsw_process_fwd(tmap_vsw_t *vsw,
                  const uint8_t *query, int32_t qlen,
                  uint8_t *target, int32_t tlen, 
                  tmap_vsw_result_t *result,
-                 int32_t *overflow, int32_t score_thr, int32_t is_rev);
+                 int32_t *overflow, int32_t score_thr, int32_t direction);
+
+/*!
+  Performs alignment in the reverse of the sequencing direction.  This will update query_start 
+  and target_start in the results.
+  @param  vsw               the query in its vectorized form
+  @param  query             the query sequence
+  @param  qlen              the query sequence length
+  @param  target            the target sequence
+  @param  tlen              the target sequence length
+  @param  result            the structure in which to store the results
+  @param  overflow          returns 1 if overflow occurs, 0 otherwise
+  @param  score_thr         the minimum scoring threshold (inclusive)
+  @param  direction            1 if the reverse alignment is being performed, 0 for the forward
+  @param
+  @return                   the alignment score
+  @details direction explains how to break ties. If direction = 0, then query_end needs to be as 
+  small as possible (if there are still several possibilities, choose the one with the smallest
+  value of target_end among them). If direction = 1, then query_end needs to be as large as possible 
+  (if there are still several possibilities, choose the one with the largest value of target_end 
+  among them). 
+  */
+int32_t
+tmap_vsw_process_rev(tmap_vsw_t *vsw,
+                 const uint8_t *query, int32_t qlen,
+                 uint8_t *target, int32_t tlen, 
+                 tmap_vsw_result_t *result,
+                 int32_t *overflow, int32_t score_thr, int32_t direction);
 
 #endif

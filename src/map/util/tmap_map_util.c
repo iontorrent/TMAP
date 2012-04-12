@@ -966,8 +966,35 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
   tmp_sam.result.query_start = tmp_sam.result.query_end = 0;
   tmp_sam.result.target_start = tmp_sam.result.target_end = 0;
 
-  tmp_sam.score = tmap_vsw_process(vsw, query, qlen, (*target), tlen,
-                                   &tmp_sam.result, &overflow, opt->score_thr, 0);
+  /**
+   * Discussion on choosing alignments.
+   *
+   * In general, we would like to choose the alignment using the *most* number
+   * of query bases.  The complication comes when using soft-clipping.  
+   *
+   * When no soft-clipping occurs, then the whole query will be used.  
+   *
+   * When there is only soft-clipping at the 3' end of the query (start of the 
+   * read), we can search for the alignment with the greatest query end when 
+   * searching in the 5'->3' direction.  Since the query start is fixed, as there 
+   * is no 5' start-clipping, we are then guaranteed to find the alignment with
+   * the most number of query bases if we fix the query end when we align in the
+   * 3'->5' direction.
+   *
+   * When there is only soft-clipping at the 5' end of the query (start of the
+   * read), we can search for the alignment with the greatest query end when
+   * searching in the 5'->3' direction, as the query end is fixed.  Then, when
+   * aligning in the 3'->5' direction, we can search for the alignment with the
+   * smallest query start (which in the 3'->5' direction is the one with the one
+   * with the largest query end).
+   *
+   * We cannot guarantee anything if we are allowing soft-clipping on both the
+   * 5' and 3' ends.
+   */
+
+  // NB: this aligns in the sequencing direction
+  tmp_sam.score = tmap_vsw_process_fwd(vsw, query, qlen, (*target), tlen,
+                                   &tmp_sam.result, &overflow, opt->score_thr, 1);
 
   if(1 == overflow) {
       return INT32_MIN;
@@ -1621,7 +1648,8 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
 
       // NB: if match/mismatch penalties are on the opposite strands, we may
       // have wrong scores
-      tmp_sam.score = tmap_vsw_process(vsw, query_rc, qlen, target, tlen,
+      // NB: this aligns in the opposite direction than sequencing 
+      tmp_sam.score = tmap_vsw_process_rev(vsw, query_rc, qlen, target, tlen,
                                        &tmp_sam.result, &overflow, opt->score_thr, 1);
       if(1 == overflow) {
           tmap_bug();
@@ -1640,6 +1668,9 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       fprintf(stderr, "tmp_sam.result.target_end=%d\n", tmp_sam.result.target_end);
       fprintf(stderr, "tmp_sam.pos=%u\n", tmp_sam.pos);
       */
+
+      // NB: target_start and target_end are inverted for the reverse strand but we 
+      // only care about their difference. 
 
       // adjust the query and target based off of the start of the alignment
       query = (uint8_t*)tmap_seq_get_bases(seqs[strand])->s; // forward genomic strand
