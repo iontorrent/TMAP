@@ -10,6 +10,8 @@
 #include "Solution.h"
 #include "AffineSWOptimizationHash.h"
 
+#define AFFINESWOPTIMIZATION_USE_HASH
+
 using namespace std;
 
 class AffineSWOptimization {

@@ -1660,6 +1660,10 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
           tmap_reverse_compliment_int(target, tlen);
       }
 
+      if(tmp_sam.score < opt->score_thr) { // this could happen if VSW fails
+          continue;
+      }
+
       /*
       fprintf(stderr, "qlen=%d tlen=%d\n", qlen, tlen);
       fprintf(stderr, "tmp_sam.result.query_start=%d\n", tmp_sam.result.query_start);

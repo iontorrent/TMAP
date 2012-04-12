@@ -1,6 +1,7 @@
 #include <cstring>
 #include <sstream>
 #include <stdio.h>
+#include <iostream>
 #define __STDC_LIMIT_MACROS // Seriously, I want these, no
 #include <stdint.h>
 #include <emmintrin.h>
@@ -17,6 +18,8 @@ AffineSWOptimizationHash::AffineSWOptimizationHash()
   for(i=0;i<size;i++) {
       hash[i].tlen = 0;
       hash[i].hash = -1;
+      hash[i].dir = 0;
+      hash[i].b.clear();
   }
   query = "";
 }
@@ -27,7 +30,8 @@ static uint64_t hashDNA(const string &s) {
     uint64_t h = 1;
     if (len < 16) {
         for(j=0;j<len;j++) h = h * 1337 + s[j];
-        return h;
+        return h >> 8;
+        //return h;
     }
 
     __m128i mhash = _mm_set1_epi16(1);
@@ -64,7 +68,8 @@ static uint64_t hashDNA(const string &s) {
     h = h * 1337 + (uint64_t)_mm_extract_epi16(mhash, 1);
     h = h * 1337 + (uint64_t)_mm_extract_epi16(mhash, 2);
     h = h * 1337 + (uint64_t)_mm_extract_epi16(mhash, 3);
-    return h;
+    //return h;
+    return h >> 8;
 }
 
 bool AffineSWOptimizationHash::process(string b, string a, int _qsc, int _qec,
@@ -72,21 +77,22 @@ bool AffineSWOptimizationHash::process(string b, string a, int _qsc, int _qec,
                                           int *opt, int *te, int *qe, int *n_best)
 {
   int i;
-  if(_qsc != qsc || _qec != qec || 0 != a.compare(query)) {
+  if(_qsc != qsc || _qec != qec || 0 != a.compare(query)) { // reset the hash?
       // reset the hash
       for(i=0;i<size;i++) {
           hash[i].tlen = 0;
           hash[i].hash = -1;
+          hash[i].dir = 0;
+          hash[i].b.clear();
       }
       query = a;
       qsc = _qsc;
       qec = _qec;
   }
   else {
-      //uint32_t hh = hashDNA(b) >> 8;
       uint32_t hh = hashDNA(b);
       int htpos = hh % size;
-      if (hash[htpos].hash == hh && hash[htpos].tlen == (int)b.size()) {
+      if (hash[htpos].hash == hh && hash[htpos].tlen == (int)b.size() && dir == hash[htpos].dir && 0 == b.compare(hash[htpos].b)) {
           (*opt) = hash[htpos].opt;
           (*te) = hash[htpos].te;
           (*qe) = hash[htpos].qe;
@@ -101,7 +107,6 @@ void AffineSWOptimizationHash::add(string b, string a, int _qsc, int _qec,
                                           int mm, int mi, int o, int e, int dir,
                                           int *opt, int *te, int *qe, int *n_best)
 {
-  //uint32_t hh = hashDNA(b) >> 8;
   uint32_t hh = hashDNA(b);
   int htpos = hh % size;
   hash[htpos].hash = hh;
@@ -110,6 +115,8 @@ void AffineSWOptimizationHash::add(string b, string a, int _qsc, int _qec,
   hash[htpos].te = (*te);
   hash[htpos].qe = (*qe);
   hash[htpos].n_best = (*n_best);
+  hash[htpos].dir = dir;
+  hash[htpos].b = b;
 }
 
 AffineSWOptimizationHash::~AffineSWOptimizationHash()

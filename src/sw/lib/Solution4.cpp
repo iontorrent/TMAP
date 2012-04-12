@@ -202,10 +202,6 @@ int Solution4::resize(int a, int b) {
 
 Solution4::Solution4() {
     int i;
-    DNA_CONV['A'] = 0;
-    DNA_CONV['C'] = 1;
-    DNA_CONV['G'] = 2;
-    DNA_CONV['T'] = 3;
     // Initial dimentions 
     MAX_DIMA = 512;
     MAX_DIMB = 1024;
@@ -1117,7 +1113,8 @@ next: ;
     }
 #endif
 
-    REP(i, m) a[i] = DNA_CONV[(int)a[i]];
+    // IMPORANT! CHANGE BACK!
+    REP(i, m) a[i] = tmap_nt_char_to_int[(int)a[i]];
 
     opt = MIN_VAL;
     lastMax = MIN_VAL;
@@ -1195,6 +1192,9 @@ similar:
     (*_te) = target_end;
     (*_qe) = query_end;
     (*_n_best) = n_best;
+    
+    // convert back
+    REP(i, m) a[i] = "ACGTN"[(int)a[i]];
 
     return opt;
 }

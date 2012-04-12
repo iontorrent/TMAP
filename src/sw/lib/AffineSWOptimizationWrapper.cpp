@@ -1,7 +1,7 @@
 #define __STDC_LIMIT_MACROS // Seriously, I want these, now
 #include <stdint.h>
-#include <stdlib.h> // HERE
-#include <stdio.h> // HERE
+//#include <stdlib.h>
+//#include <stdio.h>
 #include <limits>
 #include <iostream>
 #include "AffineSWOptimization.h"

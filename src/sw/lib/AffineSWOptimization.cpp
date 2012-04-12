@@ -1,5 +1,6 @@
 #include <cstring>
 #include <sstream>
+#include <iostream>
 #include "Solution1.h"
 #include "Solution2.h"
 #include "Solution3.h"
@@ -51,12 +52,17 @@ AffineSWOptimization::AffineSWOptimization(int type) {
         fprintf(stderr, "Error: unknown type: %d\n", type);
         exit(1);
     }
+#ifdef AFFINESWOPTIMIZATION_USE_HASH
     hash = new AffineSWOptimizationHash();
+#else
+    hash = NULL;
+#endif
 }
 
 int AffineSWOptimization::process(string b, string a, int qsc, int qec,
                                      int mm, int mi, int o, int e, int dir,
                                      int *opt, int *te, int *qe, int *n_best) {
+#ifdef AFFINESWOPTIMIZATION_USE_HASH
     // try the hash
     if(!hash->process(b, a, qsc, qec, mm, mi, o, e, dir, opt, te, qe, n_best)) {
         s->process(b, a, qsc, qec, mm, mi, o, e, dir, opt, te, qe, n_best);
@@ -64,12 +70,16 @@ int AffineSWOptimization::process(string b, string a, int qsc, int qec,
         hash->add(b, a, qsc, qec, mm, mi, o, e, dir, opt, te, qe, n_best);
     }
     return (*opt);
+#else
+    return s->process(b, a, qsc, qec, mm, mi, o, e, dir, opt, te, qe, n_best);
+#endif
 }
 
 AffineSWOptimization::~AffineSWOptimization()
 {
-  //s->~Solution();
+#ifdef AFFINESWOPTIMIZATION_USE_HASH
   delete hash;
+#endif
   delete s;
 }
 

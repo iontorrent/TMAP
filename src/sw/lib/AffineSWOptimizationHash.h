@@ -13,6 +13,8 @@ using namespace std;
 typedef struct {
     unsigned long long int hash;
     int tlen;
+    int dir;
+    string b;
     int opt;
     int te;
     int qe;
