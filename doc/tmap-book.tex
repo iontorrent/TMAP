@@ -887,6 +887,32 @@ TCAATAAAATTTT
 The first alignment may be prefered in base space due to the use of affine gap penalties (see \autoref{sec:indel-scoring}) and the other scoring parameters.
 If we penalize insertions or deletions due to homopolymer differences less than other insertions or deletions, the latter alignment may be more likely.
 Given Ion Torrent data, the latter may be more faithful to the underlying error mode.
+
+\section{How are multiple equally scoring alignments in the same region chosen?}
+
+In some cases, there exist two alignments of a read in the same target region with equal score. 
+Although these alignments have the same score, they may contain a different number of query bases.
+For example, the following two alignments can be produced when the end of the query is allowed to be clipped. 
+
+Example 1:
+\begin{verbatim}
+GGGCGGTAGCAGCCTGCCTGGGAATGGGCCACCCCGAATCCCGACCCGAAATAAATGCACCAGCATGCTGACGCGGTAAAACAGGAGCCGCCGGCAATACGCCAGTTTCACCCTCATCCACCTGAGGTCCTATGTTATCACCTACTGCCATAGAG
+||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| --|||||||||||||||||  ||||||SSSSSSSSSSSSSSSSSSSSSSSSSSSS
+GGGCGGTAGCAGCCTGCCTGGGAATGGGCCACCCCGAATCCCGACCCGAAATAAATGCACCAGCATGCTGACGCGGTAAAACAGGAGCCGCCGGCAATAG--CAGTTTCACCCTCATCCCACTGAGG----------------------------
+\end{verbatim}
+
+Example 2:
+\begin{verbatim}
+GGGCGGTAGCAGCCTGCCTGGGAATGGGCCACCCCGAATCCCGACCCGAAATAAATGCACCAGCATGCTGACGCGGTAAAACAGGAGCCGCCGGCAATACGCCAGTTTCACCCTCATCCACCTGAGGTCCTATGTTATCACCTACTGCCATAGAG
+||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| --|||||||||||||||||SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+GGGCGGTAGCAGCCTGCCTGGGAATGGGCCACCCCGAATCCCGACCCGAAATAAATGCACCAGCATGCTGACGCGGTAAAACAGGAGCCGCCGGCAATAG--CAGTTTCACCCTCATCC------------------------------------
+\end{verbatim}
+
+If the penalty for having two mismatches is equal to the score of having six matches, then the two alignments will be equivalently scored.
+
+TMAP will guarantee to find the alignment with the contains the most number of query bases (the first one above) unless the user specifies that soft-clipping is allowed on both ends of the read.
+In the latter case, no guarantee can be made.
+
 \chapter{Appendix}
 
 % References
