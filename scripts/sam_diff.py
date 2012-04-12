@@ -3,8 +3,10 @@
 
 import os
 import sys
+import time
 import argparse
 import progressbar
+from collections import deque
 
 fields = ['qname', 'flag', 'rname', 'pos', 'mapq',
           'cigar', 'rnext', 'pnext', 'tlen', 'seq',
@@ -42,31 +44,44 @@ class Record(object):
 class Sam(object):
 
     def __init__(self, sam, full_qname ):
-        self.records = {}
+        self.buf = deque()
+        self.buf_l = 10000
         self.sam = sam
-        self._parse_file( full_qname )
-
-    def _parse_file(self, full_qname ):
-        fp = open( self.sam, "r" )
-        fp = fp.readlines()
-        widgets = [
-                    "parsing %s: " % ( self.sam ),
-                    progressbar.Percentage(),
-                    progressbar.Bar()
-                    ]
-        pbar = progressbar.ProgressBar(widgets=widgets, maxval=len(fp)).start()
-        for i,line in enumerate(fp):
+        self.record = None
+        self.name = None
+        self.fp = open( self.sam, "r" )
+        self.full_qname = full_qname
+        for line in self.fp:
             if line[0] == '@':
-                #not supporting headers for now
+                # not supporting headers for now
                 continue
-            line = line.rstrip()
-            tokens = line.split('\t')
-            rec = Record(tokens)
-            self.records[ self._hash_name( rec.qname, full_qname ) ] = rec
-            pbar.update(i+1)
-        pbar.finish()
+            break
+        self.get_next();
 
-    def _hash_name( self, name, full_qname ):
+    def get_next(self):
+        self.record = None;
+        self.name = None
+        if 0 == len(self.buf):
+            ctr = 0
+            for line in self.fp:
+                line = line.rstrip();
+                tokens = line.split('\t')
+                self.buf.append(Record(tokens))
+                ctr += 1
+                if self.buf_l == ctr:
+                    break
+        if 0 < len(self.buf):
+            self.record = self.buf.popleft()
+            self.name = self._get_name( self.record.qname, self.full_qname )
+        if None == self.record and None != self.fp:
+            self.close()
+        return self.record
+
+    def close(self):
+        self.fp.close();
+        self.fp = None
+
+    def _get_name( self, name, full_qname ):
         if full_qname:
             return name
         else:
@@ -81,48 +96,69 @@ def main(options):
     sam2 = Sam(options.sam2, options.full_qname)
     fields = options.fields
     #fields = options.fields.split(',')
-    widgets = [
-                "diffing: ", 
-                progressbar.Percentage(),
-                progressbar.Bar()
-                ]
-    pbar = progressbar.ProgressBar( widgets=widgets, maxval=len( sam1.records) ).start()
+    #widgets = [
+    #            "diffing: ", 
+    #            progressbar.Percentage(),
+    #            progressbar.Bar()
+    #            ]
+    #pbar = progressbar.ProgressBar( widgets=widgets, maxval=len( sam1.records) ).start()
+    #widgets = ['Processed: ', progressbar.Counter(), ' records (', progressbar.Timer(), ')']
+    #pbar = progressbar.ProgressBar( widgets=widgets).start()
 
-    for i, read in enumerate( (sam1.records.keys() ) ):
-        if read not in sam2.records:
-            print "read", read,"not in sam2"
-        else:
-            if 0 < options.min_mapq:
-                mapq1 = int(getattr( sam1.records[ read ], 'mapq' ))
-                mapq2 = int(getattr( sam2.records[ read ], 'mapq' ))
-                if mapq1 < options.min_mapq and mapq2 < options.min_mapq:
-                    continue
-            diff_str = "[%s]" % (read)
-            for field in fields:
-                cont = [False, False] #var to track these 2 exceptions below to see which one failed
-                try:
-                    attr1 = getattr( sam1.records[ read ], field )
-                except:
-                    #print sam1.sam, read, "doesn't have the: ", field, " tag"
-                    cont[0] = True
-                try:
-                    attr2 = getattr( sam2.records[ read ], field )
-                except:
-                    cont[1] = True
-                if cont[0] and cont[1]:
-                    continue
-                elif cont[0] and not cont[1]:
-                    print read, sam1.sam, "has the field: ", field, " and", sam2.sam, "does not"
-                    continue
-                elif not cont[0] and cont[1]:
-                    print read, sam2.sam, "has the field: ", field, " and", sam1.sam, "does not"
-                    continue
-                if not diff_field( getattr(sam1.records[ read ], field), getattr(sam2.records[ read ], field) ):
-                    diff_str = "%s -- %s[%s]=%s %s[%s]=%s" % (diff_str, sam1.sam, field, str(attr1), sam2.sam, field, str(attr2))
-            if len(diff_str) > len(read) + 2:
-                print diff_str
-        pbar.update(i+1)
-    pbar.finish()
+    sys.stderr.write("Processing")
+    counter = 1
+    while True:
+        r1 = sam1.get_next()
+        r2 = sam2.get_next()
+        if None == r1 and None == r2:
+            break
+        elif None == r1 and None != r2:
+            sys.stderr.write("Error: early EOF on input file #1.\n")
+            sys.exit(1)
+        elif None != r1 and None == r2:
+            sys.stderr.write("Error: early EOF on input file #2.\n")
+            sys.exit(1)
+
+        if sam1.name != sam2.name: 
+            sys.stderr.write("Error: read names do not match: [%s] != [%s].\n" % (sam1.name, sam2.name))
+            sys.exit(1)
+
+        if 0 < options.min_mapq:
+            mapq1 = int(getattr( r1, 'mapq' ))
+            mapq2 = int(getattr( r2, 'mapq' ))
+            if mapq1 < options.min_mapq and mapq2 < options.min_mapq:
+                continue
+        diff_str = "[%s]" % (sam1.name)
+        for field in fields:
+            cont = [False, False] #var to track these 2 exceptions below to see which one failed
+            try:
+                attr1 = getattr( r1, field )
+            except:
+                #print sam1.sam, sam1.name, "doesn't have the: ", field, " tag"
+                cont[0] = True
+            try:
+                attr2 = getattr( r2, field )
+            except:
+                cont[1] = True
+            if cont[0] and cont[1]:
+                continue
+            elif cont[0] and not cont[1]:
+                print sam1.name, sam1.sam, "has the field: ", field, " and", sam2.sam, "does not"
+                continue
+            elif not cont[0] and cont[1]:
+                print sam1.name, sam2.sam, "has the field: ", field, " and", sam1.sam, "does not"
+                continue
+            if not diff_field( getattr(r1, field), getattr(r2, field) ):
+                diff_str = "%s -- %s[%s]=%s %s[%s]=%s" % (diff_str, sam1.sam, field, str(attr1), sam2.sam, field, str(attr2))
+        if len(diff_str) > len(sam1.name) + 2:
+            print diff_str
+        #pbar.update(counter)
+        if 0 == (counter % 10000):
+            sys.stderr.write("\rProcessed %d records" % counter)
+            sys.stderr.flush()
+        counter = counter + 1
+    sys.stderr.write("\rProcessed %d records\n" % counter)
+    #pbar.finish()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Diff two SAM files")
