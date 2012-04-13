@@ -8,6 +8,13 @@ from optparse import OptionParser
 from itertools import *
 import progressbar
 
+def diff_pos(pos1, pos2, wiggle):
+    """returns true if abs(pos2 - pos1) <= wiggle"""
+    if pos1 < pos2:
+        return pos2 - pos1 <= wiggle
+    else:
+        return pos1 - pos2 <= wiggle
+
 def diff_field(field1, field2):
     """returns true if field1 == field2"""
     return field1 == field2
@@ -63,7 +70,7 @@ def main(options):
 	    if flag_sam1 & 4 == 0 and flag_sam2 & 4 == 0: #both reads mapped
 		if not diff_field( rname_sam1, rname_sam2 ): #if chr are not equal
 		    reads_mapped_diff_aln_pos += 1
-		elif not diff_field( pos_sam1, pos_sam2 ): #if pos are not same
+		elif not diff_pos( pos_sam1, pos_sam2, options.wiggle ): #if pos are not same
 		    reads_mapped_diff_aln_pos += 1
 		else:
 		    (cigar_sam1_MD, count1) = re.subn(r'[MD]', '|', re.subn(r'\d+[SIHNP]', '', cigar_sam1)[0])
@@ -78,7 +85,7 @@ def main(options):
 		if mapq_sam1 > options.min_mapq and mapq_sam2 > options.min_mapq: #if mapq > options.mapq
 		    if not diff_field( rname_sam1, rname_sam2 ): #if chr are not equal
 			reads_mapped_with_min_mapq_diff_aln_pos += 1
-		    elif not diff_field( pos_sam1, pos_sam2 ): #if pos are not same
+		    elif not diff_pos( pos_sam1, pos_sam2, options.wiggle ): #if pos are not same
 			reads_mapped_with_min_mapq_diff_aln_pos += 1
 		    else:
 			(cigar_sam1_MD, count1) = re.subn(r'[MD]', '|', re.subn(r'\d+[SIHNP]', '', cigar_sam1)[0])
@@ -121,6 +128,7 @@ if __name__ == '__main__':
     parser = OptionParser()
     parser.add_option('--sam1', help="first sam file to diff.  will be called sam1 in diff out", dest='sam1')
     parser.add_option('--sam2', help="second sam file to diff.  will be called sam2 in diff out", dest='sam2')
+    parser.add_option('--wiggle', help="allow positions to be within this window to be considered the same", default=0, dest='wiggle')
     #parser.add_option('--ver1', help="tmap version 1", dest='ver1')
     #parser.add_option('--ver2', help="tmap version 2", dest='ver2')
     parser.add_option('--min-mapq', help="examine only those records with a given minimum mapping quality", type="int", dest="min_mapq", default=0)
