@@ -1164,6 +1164,7 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
 }
 
 typedef struct {
+    uint32_t seqid;
     int8_t strand;
     int32_t start;
     int32_t end;
@@ -1220,9 +1221,11 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   start_pos = end_pos = 0;
   best_subo_score = INT32_MIN; // track the best sub-optimal hit
   while(end < sams->n) {
+      uint32_t seqid;
       uint8_t strand;
 
       // get the strand/start/end positions
+      seqid = sams->sams[end].seqid;
       strand = sams->sams[end].strand;
       //first pass, setup start and end
       if(start == end) {
@@ -1262,6 +1265,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       // realloc
       groups = tmap_realloc(groups, sizeof(tmap_map_util_gen_score_t) * num_groups, "groups");
       // update
+      groups[num_groups-1].seqid = seqid;
       groups[num_groups-1].strand = strand;
       groups[num_groups-1].start = start;
       groups[num_groups-1].end = end;
@@ -1296,9 +1300,10 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       tmap_map_util_gen_score_t *group = NULL;
       group = &groups[i];
       /*
-      fprintf(stderr, "start=%d end=%d strand=%d start_pos=%u end_pos=%u filtered=%d\n", 
+      fprintf(stderr, "start=%d end=%d seqid=%u strand=%d start_pos=%u end_pos=%u filtered=%d\n", 
               group->start,
               group->end,
+              group->seqid,
               group->strand,
               group->start_pos,
               group->end_pos,
@@ -1319,7 +1324,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   //fprintf(stderr, "unfiltered # = %d\n", j);
 
   // only if we applied the freqc filter
-  if(0 < opt->stage_seed_freqc) {
+  if(0 < opt->stage_seed_freqc && 0 < opt->stage_seed_freqc_rand_repr) {
       // check if we filtered too many groups, and so if we should keep
       // representative hits.
       /*
@@ -1339,7 +1344,35 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
               }
           }
 
-          // choose uniformly
+          // the # added
+          n = 0;
+
+          // pick the one with the most # of seeds
+          c = k = -1;
+          for(i=0;i<num_groups;i++) {
+              tmap_map_util_gen_score_t *group = NULL;
+              group = &groups[i];
+              if(0 == group->filtered) continue;
+              if(c < group->end - group->start + 1) { 
+                  c = group->end - group->start + 1;
+                  k = i;
+              }
+          }
+          if(0 <= k) {
+              tmap_map_util_gen_score_t *group = NULL;
+              group = &groups[k];
+              // generate the score
+              tmap_map_util_sw_gen_score_helper(refseq, sams, seqs[0], sams_tmp, &j, group->start, group->end,
+                                                group->strand, vsw, seq_len, group->start_pos, group->end_pos,
+                                                &target_mem, &target,
+                                                softclip_start, softclip_end,
+                                                opt->max_seed_band, // NB: this may be modified as banding is unrolled
+                                                opt->score_thr-1,
+                                                vsw_opt, rand, opt);
+              group->filtered = 0; // no longer filtered
+          }
+
+          // now, choose uniformly
           pr = num_groups / (1+opt->stage_seed_freqc_rand_repr);
           for(i=c=n=0;i<num_groups;i++,c++) {
               tmap_map_util_gen_score_t *group = NULL;
