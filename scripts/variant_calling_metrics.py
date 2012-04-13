@@ -118,6 +118,9 @@ def main(options):
     #print options.ver1 + "_" + options.ver2 + "_" + options.sam1 + "_" + options.sam2
     print "Reads mapping only in version1 = " + str(reads_mapped_only_in_sam1)
     print "Reads mapping only in version2 = " + str(reads_mapped_only_in_sam2)
+    print "Reads above mapqv " + str(options.min_mapq) + " mapping only in version1 = " + str(reads_mapped_with_min_mapq_only_in_sam1)
+    print "Reads above mapqv " + str(options.min_mapq) + " mapping only in version2 = " + str(reads_mapped_with_min_mapq_only_in_sam2)
+    print ""
     print "Reads mapping in both versions:"
     print "At different alignment positions = " + str(reads_mapped_diff_aln_pos)
     print "With different alignment lengths = " + str(reads_mapped_le_aln_len + reads_mapped_ge_aln_len)
@@ -126,8 +129,6 @@ def main(options):
     print "With different cigar strings = " + str(reads_mapped_diff_cigar_string)
     print ""
     print "Reads mapping in both versions above mapq " + str(options.min_mapq) + " :" 
-    print "Reads above mapqv " + str(options.min_mapq) + " mapping only in version1 = " + str(reads_mapped_with_min_mapq_only_in_sam1)
-    print "Reads above mapqv " + str(options.min_mapq) + " mapping only in version2 = " + str(reads_mapped_with_min_mapq_only_in_sam2)
     print "At different alignment positions above mapq " + str(options.min_mapq) + " = " + str(reads_mapped_with_min_mapq_diff_aln_pos)
     print "With different alignment lengths above mapq " + str(options.min_mapq) + " = " + str(reads_mapped_with_min_mapq_le_aln_len + reads_mapped_with_min_mapq_ge_aln_len)
     print "With version1 smaller alignment lengths above mapq " + str(options.min_mapq) + " = " + str(reads_mapped_with_min_mapq_le_aln_len)
