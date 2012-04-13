@@ -490,6 +490,27 @@ tmap_map2_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
   return sams;
 }
 
+static void
+tmap_map2_aux_core_update_opt(tmap_map_opt_t *dst, tmap_map_opt_t *src, int32_t qlen)
+{
+    double ll = log(qlen);
+    int32_t i, k;
+    *dst = *src;
+    dst->score_thr = src->score_thr;
+    if (dst->score_thr < ll * dst->length_coef) dst->score_thr = (int)(ll * dst->length_coef + .499);
+    // set band width: the query length sets a boundary on the maximum band width
+    k = (qlen * dst->score_match - 2 * dst->pen_gapo) / (2 * dst->pen_gape + dst->score_match);
+    if(0 == dst->pen_gape) {
+        i = (qlen * dst->score_match - dst->score_match - dst->score_thr);
+    }
+    else {
+        i = (qlen * dst->score_match - dst->score_match - dst->score_thr) / dst->pen_gape;
+    }
+    if (k > i) k = i;
+    if (k < 1) k = 1; // I do not know if k==0 causes troubles
+    dst->bw = src->bw < k? src->bw : k;
+}
+
 tmap_map_sams_t *
 tmap_map2_aux_core(tmap_map_opt_t *_opt,
                    tmap_seq_t *seqs[4],
@@ -515,9 +536,10 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
   bases = tmap_seq_get_bases(seqs[0]);
   l = bases->l;
 
+  // update the local opt
+  tmap_map2_aux_core_update_opt(&opt, _opt, l);
+
   // set opt->score_thr
-  opt.score_thr = _opt->score_thr; // reset opt->score_thr
-  if(opt.score_thr < log(l) * opt.length_coef) opt.score_thr = (int)(log(l) * opt.length_coef + .499);
   if(pool->max_l < l) { // then enlarge working space for tmap_sw_extend_core()
       int32_t tmp;
       if(0 == opt.pen_gape) {
@@ -529,19 +551,6 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
       pool->max_l = l;
       pool->aln_mem = tmap_realloc(pool->aln_mem, sizeof(uint8_t) * (tmp + 2) * 24, "pool->aln_mem");
   }
-
-  // set opt->bw
-  opt.bw = _opt->bw;
-  k = (l * opt.score_match - 2 * opt.pen_gapo) / (2 * opt.pen_gape + opt.score_match);
-  if(0 == opt.pen_gape) {
-      i = (l * opt.score_match - opt.score_match - opt.score_thr);
-  }
-  else {
-      i = (l * opt.score_match - opt.score_match - opt.score_thr) / opt.pen_gape;
-  }
-  if(k > i) k = i;
-  if(k < 1) k = 1; // I do not know if k==0 causes troubles
-  opt.bw = _opt->bw < k ? _opt->bw: k;
 
   // get the number of Ns
   for(i=num_n=0;i<l;i++) {
