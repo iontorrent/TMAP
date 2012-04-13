@@ -172,8 +172,17 @@ if __name__ == '__main__':
     parser.add_argument('--full-qname', help="keep the full query name", dest='full_qname', action="store_true", default=False)
     parser.add_argument('--min-mapq', help="examine only those records with a given minimum mapping quality", type=int, dest="min_mapq", default=0)
     options = parser.parse_args()
+    if None == options.sam1:
+        parser.print_help()
+        sys.stderr.write( "Error: --sam1 not given\n");
+        sys.exit(1);
+    if None == options.sam2:
+        parser.print_help()
+        sys.stderr.write( "Error: --sam2 not given\n");
+        sys.exit(1);
     for field in options.fields:
         if not field in fields:
             sys.stderr.write( "Error: field not recognized [%s]\n" % field)
+            parser.print_help()
             sys.exit()
     main(options)
