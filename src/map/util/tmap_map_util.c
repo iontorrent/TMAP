@@ -1194,6 +1194,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   uint32_t start_pos_cur=0, end_pos_cur=0;
   tmap_map_util_gen_score_t *groups = NULL;
   int32_t num_groups = 0, num_groups_filtered = 0;
+  double stage_seed_freqc = opt->stage_seed_freqc;
 
   if(0 == sams->n) {
       return sams;
@@ -1216,7 +1217,11 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   // forward
   vsw = tmap_vsw_init((uint8_t*)tmap_seq_get_bases(seqs[0])->s, seq_len, softclip_start, softclip_end, opt->vsw_type, vsw_opt); 
 
+  // pre-allocate groups
+  groups = tmap_calloc(sams->n, sizeof(tmap_map_util_gen_score_t), "groups");
+
   // determine groups
+  num_groups = num_groups_filtered = 0;
   start = end = 0;
   start_pos = end_pos = 0;
   best_subo_score = INT32_MIN; // track the best sub-optimal hit
@@ -1233,7 +1238,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           start_pos_prev = start_pos;
           end_pos_prev = end_pos;
       }
-      
+
       // sub-optimal score
       if(best_subo_score < sams->sams[end].score_subo) {
           best_subo_score = sams->sams[end].score_subo;
@@ -1241,7 +1246,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
 
       // check if the hits can be banded
       if(end + 1 < sams->n) {              
-         // fprintf(stderr, "%s seed start: %d end: %d next start: %d  next end: %d\n", seq_name, sams->sams[end].pos, (sams->sams[end].pos + sams->sams[end].target_len), sams->sams[end+1].pos, (sams->sams[end+1].pos + sams->sams[end+1].target_len));
+          // fprintf(stderr, "%s seed start: %d end: %d next start: %d  next end: %d\n", seq_name, sams->sams[end].pos, (sams->sams[end].pos + sams->sams[end].target_len), sams->sams[end+1].pos, (sams->sams[end+1].pos + sams->sams[end+1].target_len));
           if(sams->sams[end].strand == sams->sams[end+1].strand 
              && sams->sams[end].seqid == sams->sams[end+1].seqid) {
               tmap_map_util_sw_get_start_and_end_pos(&sams->sams[end+1], seq_len, strand, &start_pos_cur, &end_pos_cur);
@@ -1259,11 +1264,9 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
               }
           }
       }
-      
+
       // add a group
       num_groups++;
-      // realloc
-      groups = tmap_realloc(groups, sizeof(tmap_map_util_gen_score_t) * num_groups, "groups");
       // update
       groups[num_groups-1].seqid = seqid;
       groups[num_groups-1].strand = strand;
@@ -1271,38 +1274,79 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       groups[num_groups-1].end = end;
       groups[num_groups-1].start_pos = start_pos;
       groups[num_groups-1].end_pos = end_pos;
-      groups[num_groups-1].filtered = 1; // assume filtered, guilty
-
-      // NB: if match/mismatch penalties are on the opposite strands, we may
-      // have wrong score
-      // NOTE:  end >(sams->n * opt->seed_freqc ) comes from 
-      /*
-       * Anatomy of a hash-based long read sequence mapping algorithm for next 
-       * generation DNA sequencing
-       * Sanchit Misra, Bioinformatics, 2011
-       * "For each read, we find the maximum of the number of q-hits in 
-       * all regions, say C. We keep the cutoff as a fraction f of C. Hence, 
-       * if a region has ≥fC q-hits, only then it is processed further. "
-       */
-      if((end - start + 1) > ( sams->n * opt->stage_seed_freqc) ) {
-          groups[num_groups-1].filtered = 0; 
-      }
-      else {
-          num_groups_filtered++;
-      }
+      groups[num_groups-1].filtered = 0; // assume filtered, guilty
       // update start/end
       end++;
       start = end;
   }
+
+  // resize
+  if(num_groups < sams->n) {
+      groups = tmap_realloc(groups, num_groups * sizeof(tmap_map_util_gen_score_t), "groups");
+  }
+
+  // filter groups
+  // NB: if we happen to filter all the groups, iteratively relax the filter
+  // settings.
+  do {
+      num_groups_filtered = 0;
+
+      for(i=0;i<num_groups;i++) {
+          tmap_map_util_gen_score_t *group = NULL;
+          group = &groups[i];
+
+          // NB: if match/mismatch penalties are on the opposite strands, we may
+          // have wrong score
+          // NOTE:  end >(sams->n * opt->seed_freqc ) comes from 
+          /*
+           * Anatomy of a hash-based long read sequence mapping algorithm for next 
+           * generation DNA sequencing
+           * Sanchit Misra, Bioinformatics, 2011
+           * "For each read, we find the maximum of the number of q-hits in 
+           * all regions, say C. We keep the cutoff as a fraction f of C. Hence, 
+           * if a region has ≥fC q-hits, only then it is processed further. "
+           */
+          if((group->end - group->start + 1) > ( sams->n * stage_seed_freqc) ) {
+              group->filtered = 0;
+          }
+          else {
+              group->filtered = 1;
+              num_groups_filtered++;
+          }
+      }
+
+      /*
+         fprintf(stderr, "stage_seed_freqc=%lf num_groups=%d num_groups_filtered=%d\n",
+         stage_seed_freqc,
+         num_groups,
+         num_groups_filtered);
+         */
+      if(num_groups == num_groups_filtered) { // update
+          stage_seed_freqc /= 2.0;
+          // reset
+          for(i=0;i<num_groups;i++) {
+              tmap_map_util_gen_score_t *group = NULL;
+              group = &groups[i];
+              group->filtered = 0;
+          }
+      }
+  } while(num_groups == num_groups_filtered && 1.0 / num_groups < stage_seed_freqc);
+
+  /*
+  fprintf(stderr, "num_groups=%d num_groups_filtered=%d\n",
+          num_groups,
+          num_groups_filtered);
+          */
 
   // process unfiltered...
   for(i=j=0;i<num_groups;i++) { // go through each group
       tmap_map_util_gen_score_t *group = NULL;
       group = &groups[i];
       /*
-      fprintf(stderr, "start=%d end=%d seqid=%u strand=%d start_pos=%u end_pos=%u filtered=%d\n", 
+      fprintf(stderr, "start=%d end=%d num=%d seqid=%u strand=%d start_pos=%u end_pos=%u filtered=%d\n", 
               group->start,
               group->end,
+              group->end - group->start + 1,
               group->seqid,
               group->strand,
               group->start_pos,
@@ -1324,7 +1368,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   //fprintf(stderr, "unfiltered # = %d\n", j);
 
   // only if we applied the freqc filter
-  if(0 < opt->stage_seed_freqc && 0 < opt->stage_seed_freqc_rand_repr) {
+  if(0 < stage_seed_freqc && 0 < opt->stage_seed_freqc_rand_repr) {
       // check if we filtered too many groups, and so if we should keep
       // representative hits.
       /*
@@ -1335,7 +1379,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       if(opt->stage_seed_freqc_group_frac <= (double)num_groups_filtered / num_groups) {
           int32_t best_score = INT32_MIN, best_score_filt = INT32_MIN;
           double pr = 0.0;
-          int32_t k, c, n;
+          int32_t k, l, c, n;
 
           // get the best score from a group that passed the filter
           for(k=0;k<j;k++) { // NB: keep k for later
@@ -1348,19 +1392,19 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           n = 0;
 
           // pick the one with the most # of seeds
-          c = k = -1;
+          c = l = -1;
           for(i=0;i<num_groups;i++) {
               tmap_map_util_gen_score_t *group = NULL;
               group = &groups[i];
               if(0 == group->filtered) continue;
               if(c < group->end - group->start + 1) { 
                   c = group->end - group->start + 1;
-                  k = i;
+                  l = i;
               }
           }
-          if(0 <= k) {
+          if(0 <= l) {
               tmap_map_util_gen_score_t *group = NULL;
-              group = &groups[k];
+              group = &groups[l];
               // generate the score
               tmap_map_util_sw_gen_score_helper(refseq, sams, seqs[0], sams_tmp, &j, group->start, group->end,
                                                 group->strand, vsw, seq_len, group->start_pos, group->end_pos,
@@ -1396,7 +1440,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           }
 
           // get the best from the filtered
-          for(;k<j;k++) {
+          for(;k<j;k++) { // NB: k should not have been modified
               if(best_score_filt < sams_tmp->sams[k].score) {
                   best_score_filt = sams_tmp->sams[k].score;
               }
