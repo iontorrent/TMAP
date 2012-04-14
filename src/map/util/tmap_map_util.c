@@ -1195,6 +1195,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   tmap_map_util_gen_score_t *groups = NULL;
   int32_t num_groups = 0, num_groups_filtered = 0;
   double stage_seed_freqc = opt->stage_seed_freqc;
+  int32_t max_group_size = 0;
 
   if(0 == sams->n) {
       return sams;
@@ -1274,7 +1275,10 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       groups[num_groups-1].end = end;
       groups[num_groups-1].start_pos = start_pos;
       groups[num_groups-1].end_pos = end_pos;
-      groups[num_groups-1].filtered = 0; // assume filtered, guilty
+      groups[num_groups-1].filtered = 0; // assume not filtered, not guilty
+      if(max_group_size < end - start + 1) {
+          max_group_size++;
+      }
       // update start/end
       end++;
       start = end;
@@ -1292,8 +1296,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       num_groups_filtered = 0;
 
       for(i=0;i<num_groups;i++) {
-          tmap_map_util_gen_score_t *group = NULL;
-          group = &groups[i];
+          tmap_map_util_gen_score_t *group = &groups[i];
 
           // NB: if match/mismatch penalties are on the opposite strands, we may
           // have wrong score
@@ -1316,32 +1319,63 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       }
 
       /*
-         fprintf(stderr, "stage_seed_freqc=%lf num_groups=%d num_groups_filtered=%d\n",
-         stage_seed_freqc,
-         num_groups,
-         num_groups_filtered);
-         */
-      if(num_groups == num_groups_filtered) { // update
+      fprintf(stderr, "stage_seed_freqc=%lf num_groups=%d num_groups_filtered=%d\n",
+              stage_seed_freqc,
+              num_groups,
+              num_groups_filtered);
+              */
+
+      if(opt->stage_seed_freqc_min_groups <= num_groups 
+         && (num_groups - num_groups_filtered) < opt->stage_seed_freqc_min_groups
+         && 1.0 / num_groups < stage_seed_freqc) {
           stage_seed_freqc /= 2.0;
           // reset
           for(i=0;i<num_groups;i++) {
-              tmap_map_util_gen_score_t *group = NULL;
-              group = &groups[i];
+              tmap_map_util_gen_score_t *group = &groups[i];
               group->filtered = 0;
           }
       }
-  } while(num_groups == num_groups_filtered && 1.0 / num_groups < stage_seed_freqc);
+      else {
+          break;
+      }
+  } while(1);
+  
+  if(num_groups < opt->stage_seed_freqc_min_groups) { // if too few groups, always keep
+      // reset
+      for(i=0;i<num_groups;i++) {
+          tmap_map_util_gen_score_t *group = &groups[i];
+          group->filtered = 0;
+      }
+  }
+  else if(!(1.0 / num_groups < stage_seed_freqc)) { // we could not find an effective filter
+      int32_t cur_max = max_group_size * 2; // NB: this should be reduced
+      num_groups_filtered = num_groups;
+      while(num_groups - num_groups_filtered < opt->stage_seed_freqc_min_groups
+            && (num_groups_filtered - num_groups) / (double)num_groups < opt->stage_seed_freqc) {
+          cur_max /= 2;
+          num_groups_filtered = 0;
+          for(i=0;i<num_groups;i++) {
+              tmap_map_util_gen_score_t *group = &groups[i];
+              if(group->end - group->start + 1 < cur_max) {
+                  group->filtered = 1;
+                  num_groups_filtered++;
+              }
+              else {
+                  group->filtered = 0;
+              }
+          }
+      }
+  }
 
   /*
-  fprintf(stderr, "num_groups=%d num_groups_filtered=%d\n",
+  fprintf(stderr, "final num_groups=%d num_groups_filtered=%d\n",
           num_groups,
           num_groups_filtered);
           */
 
   // process unfiltered...
   for(i=j=0;i<num_groups;i++) { // go through each group
-      tmap_map_util_gen_score_t *group = NULL;
-      group = &groups[i];
+      tmap_map_util_gen_score_t *group = &groups[i];
       /*
       fprintf(stderr, "start=%d end=%d num=%d seqid=%u strand=%d start_pos=%u end_pos=%u filtered=%d\n", 
               group->start,
@@ -1354,6 +1388,17 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
               group->filtered);
               */
       if(1 == group->filtered) continue;
+      /*
+      fprintf(stderr, "start=%d end=%d num=%d seqid=%u strand=%d start_pos=%u end_pos=%u filtered=%d\n", 
+              group->start,
+              group->end,
+              group->end - group->start + 1,
+              group->seqid,
+              group->strand,
+              group->start_pos,
+              group->end_pos,
+              group->filtered);
+              */
 
       // generate the score
       tmap_map_util_sw_gen_score_helper(refseq, sams, seqs[0], sams_tmp, &j, group->start, group->end,
@@ -1394,8 +1439,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           // pick the one with the most # of seeds
           c = l = -1;
           for(i=0;i<num_groups;i++) {
-              tmap_map_util_gen_score_t *group = NULL;
-              group = &groups[i];
+              tmap_map_util_gen_score_t *group = &groups[i];
               if(0 == group->filtered) continue;
               if(c < group->end - group->start + 1) { 
                   c = group->end - group->start + 1;
@@ -1403,8 +1447,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
               }
           }
           if(0 <= l) {
-              tmap_map_util_gen_score_t *group = NULL;
-              group = &groups[l];
+              tmap_map_util_gen_score_t *group = &groups[l];
               // generate the score
               tmap_map_util_sw_gen_score_helper(refseq, sams, seqs[0], sams_tmp, &j, group->start, group->end,
                                                 group->strand, vsw, seq_len, group->start_pos, group->end_pos,
@@ -1419,8 +1462,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           // now, choose uniformly
           pr = num_groups / (1+opt->stage_seed_freqc_rand_repr);
           for(i=c=n=0;i<num_groups;i++,c++) {
-              tmap_map_util_gen_score_t *group = NULL;
-              group = &groups[i];
+              tmap_map_util_gen_score_t *group = &groups[i];
               if(0 == group->filtered) continue;
               if(pr < c) {
                   if(n == opt->stage_seed_freqc_rand_repr) break;
@@ -1455,8 +1497,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           if(best_score < best_score_filt) {
               // NB: do not redo others...
               for(i=0;i<num_groups;i++) {
-                  tmap_map_util_gen_score_t *group = NULL;
-                  group = &groups[i];
+                  tmap_map_util_gen_score_t *group = &groups[i];
                   if(0 == group->filtered) continue;
                   // generate the score
                   tmap_map_util_sw_gen_score_helper(refseq, sams, seqs[0], sams_tmp, &j, group->start, group->end,

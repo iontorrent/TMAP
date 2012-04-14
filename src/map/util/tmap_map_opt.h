@@ -278,6 +278,7 @@ typedef struct __tmap_map_opt_t {
     double  stage_seed_freqc; /*!< the minimum frequency a seed must occur in order to be considered for mapping (--stage-seed-freq-cutoff) */
     double  stage_seed_freqc_group_frac; /*!< if more than this fraction of groups were filtered, keep representative hits (--stage-seed-freq-cutoff-group-frac) */
     int32_t stage_seed_freqc_rand_repr; /*!< the number of representative hits to keep (--stage-seed-freq-cutoff-rand-repr) */
+    int32_t stage_seed_freqc_min_groups; /*!< the minimum of groups required after the filter has been applied, otherwise iteratively reduce the filter (--stage-seed-freq-cutoff-min-groups) */
     int32_t stage_seed_max_length; /*< the length of the prefix of the read to consider during seeding (--stage-seed-max-length) */
 
     // sub-options
