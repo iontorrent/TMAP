@@ -47,7 +47,7 @@ def main(options):
     for line1, line2 in izip(open(sam1, "r"), open(sam2, "r")):
         count+=1
         if (count%10000) == 0:
-            sys.stderr.write(str(count)+"\r")
+            sys.stderr.write("\r"+str(count))
 
         if line1.startswith("@") and line2.startswith("@"):
             continue
@@ -114,6 +114,7 @@ def main(options):
 
         else:
             print "Sam record " + temp_line1[0] + " from sam file " + sam1 + " not the same as " + temp_line2[0] + " from sam file " + sam2
+    sys.stderr.write(str(count) + "\n")
 
     #print options.ver1 + "_" + options.ver2 + "_" + options.sam1 + "_" + options.sam2
     print "Reads mapping only in version1 = " + str(reads_mapped_only_in_sam1)
