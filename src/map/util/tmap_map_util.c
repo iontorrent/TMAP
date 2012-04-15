@@ -1779,6 +1779,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       }
 
       if(tmp_sam.score < opt->score_thr) { // this could happen if VSW fails
+          end++;
           continue;
       }
 
