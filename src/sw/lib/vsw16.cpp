@@ -134,11 +134,17 @@ vsw16_sse2_dir_cmp(int32_t cur_score, int32_t cur_qe, int32_t cur_te,
 {
   if(next_score < cur_score) return 0;
   if(cur_score < next_score) return 1;
-  if(0 == dir) {
+  /*
+  fprintf(stderr, "Found at [%d,%d,%d] [%d,%d,%d] dir=%d\n",
+          cur_score, cur_qe, cur_te,
+          next_score, next_qe, next_te,
+          dir);
+  */
+  if(0 == dir) { // min qe, break ties by min te
       if(next_qe < cur_qe) return 1;
       if(next_qe == cur_qe && next_te < cur_te) return 1;
   }
-  else {
+  else { // max qe, break ties by max te
       if(cur_qe < next_qe) return 1;
       if(cur_qe == next_qe && cur_te < next_te) return 1;
   }
@@ -391,9 +397,11 @@ end_loop:
           else { // check all
               int32_t found_best = 0;
               t = (vsw16_int_t*)H1;
+              /*
               if(best < imax || (best == imax && 1 == direction)) {
                   *query_end = -1;
               }
+              */
               for(j = 0; LIKELY(j < slen); ++j) { // for each stripe in the query
                   for(k = 0; k < vsw16_values_per_128_bits; k++, t++) { // for each cell in the stripe
                       if(NULL != n_best) {
