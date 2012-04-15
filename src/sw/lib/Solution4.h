@@ -32,7 +32,8 @@ private:
   int MAX_DIMB;
   int8_t DNA_CONV[128];
   //int16_t BUFFER[MAX_DIMB * 9] __attribute__((aligned(64)));
-  int16_t *BUFFER __attribute__((aligned(64)));
+  void *mem __attribute__((aligned(64)));
+  int16_t *BUFFER;
   int n, m;
   int segNo;
   int len;
