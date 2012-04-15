@@ -69,7 +69,7 @@ tmap_vsw_process_compare(tmap_vsw_t *vsw,
                          const uint8_t *query, int32_t qlen,
                          uint8_t *target, int32_t tlen, 
                          tmap_vsw_result_t *result,
-                         int32_t *overflow, int32_t score_thr, int32_t is_rev)
+                         int32_t *overflow, int32_t score_thr, int32_t dir)
 {
   int32_t query_end_type0, target_end_type0, n_best_type0, score_type0;
   int32_t query_end_type1, target_end_type1, n_best_type1, score_type1;
@@ -87,7 +87,7 @@ tmap_vsw_process_compare(tmap_vsw_t *vsw,
                                -vsw->opt->pen_mm,
                                -vsw->opt->pen_gapo,
                                -vsw->opt->pen_gape,
-                               is_rev, 
+                               dir, 
                                vsw->query_start_clip, vsw->query_end_clip, 
                                &score_type0, &target_end_type0, &query_end_type0, &n_best_type0);
   }
@@ -108,7 +108,7 @@ tmap_vsw_process_compare(tmap_vsw_t *vsw,
       ap.row = 5; 
       score_type0 = tmap_sw_clipping_core((uint8_t*)target, tlen, (uint8_t*)query, qlen, &ap,
                                     vsw->query_start_clip, vsw->query_end_clip, 
-                                    path, &path_len, is_rev);
+                                    path, &path_len, dir);
   }
   // current
   tmap_vsw_wrapper_process(vsw->algorithm,
@@ -118,7 +118,7 @@ tmap_vsw_process_compare(tmap_vsw_t *vsw,
                            -vsw->opt->pen_mm,
                            -vsw->opt->pen_gapo,
                            -vsw->opt->pen_gape,
-                           is_rev, 
+                           dir, 
                            vsw->query_start_clip, vsw->query_end_clip, 
                            &score_type1, &target_end_type1, &query_end_type1, &n_best_type1);
 
@@ -140,7 +140,7 @@ tmap_vsw_process_compare(tmap_vsw_t *vsw,
      || query_end_type0 != query_end_type1
      || n_best_type0 != n_best_type1) {
       int32_t i;
-      fprintf(stderr, "in %s is_rev=%d\n", __func__, is_rev);
+      fprintf(stderr, "in %s dir=%d\n", __func__, dir);
       fprintf(stderr, "query_start_clip=%d\n", vsw->query_start_clip);
       fprintf(stderr, "query_end_clip=%d\n", vsw->query_end_clip);
       fprintf(stderr, "qlen=%d tlen=%d\n", qlen, tlen);
@@ -177,7 +177,7 @@ tmap_vsw_process_compare(tmap_vsw_t *vsw,
           path = tmap_calloc(1024, sizeof(tmap_sw_path_t), "path");
           score = tmap_sw_clipping_core((uint8_t*)target, tlen, (uint8_t*)query, qlen, &ap,
                                         vsw->query_start_clip, vsw->query_end_clip, 
-                                        path, &path_len, is_rev);
+                                        path, &path_len, dir);
           // print out the path
           cigar = tmap_sw_path2cigar(path, path_len, &n_cigar);
           fprintf(stderr, "tmap_sw_clipping_core score=%d\n", score);
@@ -197,7 +197,7 @@ tmap_vsw_process_compare(tmap_vsw_t *vsw,
                                -vsw->opt->pen_mm,
                                -vsw->opt->pen_gapo,
                                -vsw->opt->pen_gape,
-                               1-is_rev, 
+                               1-dir, 
                                vsw->query_start_clip, vsw->query_end_clip, 
                                &score_type0, &target_end_type0, &query_end_type0, &n_best_type0);
       fprintf(stderr, "baseline opposite reverse tlen=%d qlen=%d score=[%d,%d] target_end=[%d,%d] query_end=[%d,%d] n_best=[%d,%d]\n",
@@ -217,7 +217,7 @@ tmap_vsw_process_compare(tmap_vsw_t *vsw,
               -vsw->opt->pen_mm,
               -vsw->opt->pen_gapo,
               -vsw->opt->pen_gape,
-              is_rev,
+              dir,
               -1, -1, -1, -1);
       fprintf(stderr, "Error: algorithms produced different results!\n");
       exit(1);
