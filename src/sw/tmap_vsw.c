@@ -284,16 +284,18 @@ tmap_vsw_process(tmap_vsw_t *vsw,
 #endif
   }
   else { // try the default
-      tmap_vsw_wrapper_process(vsw->algorithm_default,
-                               target, tlen, 
-                               query, qlen, 
-                               vsw->opt->score_match,
-                               -vsw->opt->pen_mm,
-                               -vsw->opt->pen_gapo,
-                               -vsw->opt->pen_gape,
-                               direction, 
-                               vsw->query_start_clip, vsw->query_end_clip, 
-                               &score, &target_end, &query_end, &n_best);
+      if(1 != vsw->type) {
+          tmap_vsw_wrapper_process(vsw->algorithm_default,
+                                   target, tlen, 
+                                   query, qlen, 
+                                   vsw->opt->score_match,
+                                   -vsw->opt->pen_mm,
+                                   -vsw->opt->pen_gapo,
+                                   -vsw->opt->pen_gape,
+                                   direction, 
+                                   vsw->query_start_clip, vsw->query_end_clip, 
+                                   &score, &target_end, &query_end, &n_best);
+      }
   }
   if(score < score_thr || 0 == n_best) {
       query_end = target_end = -1;
@@ -370,7 +372,7 @@ tmap_vsw_process(tmap_vsw_t *vsw,
       }
       else if(result->score_fwd != result->score_rev) { // something went wrong... FIXME
           // use the default
-          if(0 != vsw->type) {
+          if(1 != vsw->type) {
               tmap_vsw_wrapper_process(vsw->algorithm_default,
                                        target, tlen, 
                                        query, qlen, 

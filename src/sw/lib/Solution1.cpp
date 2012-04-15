@@ -1,6 +1,7 @@
 #include <cstring>
 #include <sstream>
 #include <stdint.h>
+#include <limits.h>
 #include "../../util/tmap_alloc.h"
 #include "../../util/tmap_definitions.h"
 #include "vsw16.h"
@@ -42,8 +43,8 @@ Solution1::Solution1() {
     target = query = NULL;
     target_len = query_len = 0;
     q_max = t_max = 0;
-    max_qlen = 1 << 31;
-    max_tlen = 1 << 31;
+    max_qlen = INT_MAX;
+    max_tlen = INT_MAX;
 }
 
 Solution1::~Solution1() {
