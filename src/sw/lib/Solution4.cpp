@@ -28,6 +28,8 @@
 #include <emmintrin.h>
 #include <map>
 #include <stdint.h>
+#include <inttypes.h>
+#include <limits.h>
 #include "../../util/tmap_definitions.h"
 #include "../../util/tmap_alloc.h"
 #include "Solution4.h"
@@ -189,34 +191,55 @@ int Solution4::resize(int a, int b) {
     if(MAX_DIMB < b) {
         MAX_DIMB = b;
         tmap_roundup32(MAX_DIMB);
-        BUFFER = (int16_t*)tmap_realloc(BUFFER, (MAX_DIMB + 64) * 9 * sizeof(int16_t), "BUFFER");
+        free(mem); mem = NULL;
+        mem = (uint8_t*)tmap_malloc(64 + ((MAX_DIMB + 64) * 9 * sizeof(int16_t)), "mem");
+        BUFFER = (int16_t*)(((uintptr_t)mem+64) & ~ 0x3F);
     }
     if(MAX_DIMA < a) {
         MAX_DIMA = a;
         tmap_roundup32(MAX_DIMA);
+        HTDATA_l = MAX_DIMA;
+#ifdef USE_HASHING
+        free(HTDATA); HTDATA = NULL;
+        HTDATA = (qres_t*)tmap_malloc((HTDATA_l + 64) * sizeof(qres_t), "HTDATA"); 
+        for(int i=0;i<HTDATA_l;i++) {
+            HTDATA[i].hash = -1;
+        }
+#endif
     }
     return 1;
 }
 
 Solution4::Solution4() {
-    int i;
+    // Nullify
+    mem = NULL;
+    BUFFER = NULL;
+    HTDATA = NULL;
     // Initial dimentions 
+    MAX_DIMA = MAX_DIMB = 0;
+    /*
     MAX_DIMA = 512;
-    MAX_DIMB = 1024;
-    BUFFER = (int16_t*)tmap_malloc((MAX_DIMB + 64) * 9 * sizeof(int16_t), "BUFFER");
+    MAX_DIMB = 1024; 
+    */
     HTDATA_l = MAX_DIMA;
-    //HTDATA_l = 0x4000; // 2^14
-    //tmap_roundup32(HTDATA_l);
-    HTDATA = (qres_t*)tmap_malloc((HTDATA_l + 64) * sizeof(qres_t), "HTDATA"); 
-    for(i=0;i<HTDATA_l;i++) {
-        HTDATA[i].hash = -1;
-    }
-    max_qlen = 512;
-    max_tlen = 1024;
+    // memory 
+    /*
+    BUFFER = (int16_t*)tmap_malloc((MAX_DIMB + 64) * 9 * sizeof(int16_t), "BUFFER");
+    HTDATA_l = 0x4000; // 2^14
+    tmap_roundup32(HTDATA_l);
+    */
+    resize(MAX_DIMA, MAX_DIMB);
+    // set max
+    /*
+    max_qlen = MAX_DIMA;
+    max_tlen = MAX_DIMB;
+    */
+    max_qlen = INT_MAX;
+    max_tlen = INT_MAX;
 }
 
 Solution4::~Solution4() {
-    free(BUFFER);
+    free(mem);
     free(HTDATA);
 }
 
@@ -1184,7 +1207,7 @@ finish:
 similar:
     int pos = dir == 0 ? res_min_pos : res_max_pos;
 
-    int target_end = pos & 1023;
+    int target_end = pos & (MAX_DIMB-1); //1023;
     int query_end = pos >> 10;
 
     (*_opt) = opt;
