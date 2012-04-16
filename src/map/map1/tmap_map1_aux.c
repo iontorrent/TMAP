@@ -340,6 +340,7 @@ tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_map1_aux_occ_t *occs, tmap_str
           uint8_t strand;
 
           sam_cur = &sams_tmp->sams[j];
+          tmap_map_sam_init(sam_cur);
 
           strand = sams->sams[i].strand;
           aln_ref = sam->aux.map1_aux->aln_ref;

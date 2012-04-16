@@ -122,6 +122,14 @@ typedef struct {
     int32_t n; /*!< the number of records (multi-end) */
 } tmap_map_record_t;
 
+
+/*!
+  initializes
+  @param  s  the mapping structure
+  */
+void
+tmap_map_sam_init(tmap_map_sam_t *s);
+
 /*!
   make a copy of src and store it in dest
   @param  dest  the destination record

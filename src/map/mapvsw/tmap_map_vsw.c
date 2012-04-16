@@ -75,6 +75,7 @@ tmap_map_vsw_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tma
 
       // save
       s = &sams->sams[i];
+      tmap_map_sam_init(s);
 
       // save the hit
       s->algo_id = TMAP_MAP_ALGO_MAPVSW;

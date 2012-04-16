@@ -281,6 +281,7 @@ tmap_map4_aux_core(tmap_seq_t *seq,
 
                   // save
                   s = &sams->sams[n];
+                  tmap_map_sam_init(s);
 
                   // save the hit
                   s->algo_id = TMAP_MAP_ALGO_MAP4;

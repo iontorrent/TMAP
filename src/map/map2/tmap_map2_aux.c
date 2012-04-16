@@ -414,6 +414,7 @@ tmap_map2_aux_store_hits(tmap_refseq_t *refseq, tmap_map_opt_t *opt,
       uint8_t strand;
       int32_t beg;
       tmap_map_sam_t *sam = &sams->sams[j];
+      tmap_map_sam_init(sam);
 
       //strand = (p->flag & 0x10) ? 1 : 0;
 

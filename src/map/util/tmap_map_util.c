@@ -49,6 +49,17 @@ TMAP_SORT_INIT(tmap_map_sam_sort_coord_end, tmap_map_sam_t, __tmap_map_sam_sort_
 TMAP_SORT_INIT(tmap_map_sam_sort_coord_score, tmap_map_sam_t, __tmap_map_sam_sort_coord_score_lt)
 
 void
+tmap_map_sam_init(tmap_map_sam_t *s)
+{
+  // set all to zero
+  memset(s, 0, sizeof(tmap_map_sam_t));
+  // nullify
+  s->algo_id = TMAP_MAP_ALGO_NONE;
+  s->ascore = s->score = INT32_MIN;
+}
+
+
+void
 tmap_map_sam_malloc_aux(tmap_map_sam_t *s)
 {
   switch(s->algo_id) {
@@ -131,14 +142,7 @@ tmap_map_sams_realloc(tmap_map_sams_t *s, int32_t n)
   s->sams = tmap_realloc(s->sams, sizeof(tmap_map_sam_t) * n, "s->sams");
   for(i=s->n;i<n;i++) {
       // nullify
-      s->sams[i].algo_id = TMAP_MAP_ALGO_NONE;
-      s->sams[i].n_cigar = 0;
-      s->sams[i].cigar = NULL;
-      s->sams[i].aux.map1_aux = NULL;
-      s->sams[i].aux.map2_aux = NULL;
-      s->sams[i].aux.map3_aux = NULL;
-      s->sams[i].aux.map_vsw_aux = NULL;
-      s->sams[i].ascore = INT32_MIN;
+      tmap_map_sam_init(&s->sams[i]);
   }
   s->n = n;
 }
@@ -250,7 +254,6 @@ tmap_map_sam_copy(tmap_map_sam_t *dest, tmap_map_sam_t *src)
       }
   }
 }
-
 void
 tmap_map_sams_merge(tmap_map_sams_t *dest, tmap_map_sams_t *src) 
 {
