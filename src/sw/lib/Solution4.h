@@ -15,8 +15,8 @@ typedef struct {
     uint32_t hash;
     short opt;
     short n_best;
-    int res_min_pos;
-    int res_max_pos;
+    int64_t res_min_pos;
+    int64_t res_max_pos;
 } qres_t;
 
 class Solution4 : public Solution {
@@ -45,7 +45,8 @@ private:
   int16_t INVALID_POS[16];
   int INVALID_POS_NO;
   int lastMax;
-  int opt, n_best, res_min_pos, res_max_pos;
+  int opt, n_best;
+  int64_t res_min_pos, res_max_pos;
   qres_t *HTDATA;
   int32_t HTDATA_l;
   int64_t count0, count1;

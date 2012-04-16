@@ -27,6 +27,7 @@
 #include <set>
 #include <emmintrin.h>
 #include <map>
+#define __STDC_LIMIT_MACROS // Seriously, I want these, now
 #include <stdint.h>
 #include <inttypes.h>
 #include <limits.h>
@@ -249,7 +250,7 @@ template <class T, bool BYTE> INLINE void Solution4::updateResult(int i, int cur
         if (lastMax > opt) {
             opt = lastMax;
             n_best = 0;
-            res_min_pos = 1 << 30;
+            res_min_pos = INT64_MAX; // 1 << 30;
             res_max_pos = 0;
         }
 
@@ -259,7 +260,7 @@ template <class T, bool BYTE> INLINE void Solution4::updateResult(int i, int cur
             REP(j, len) {
                 if (MM[j] == opt) {
                     n_best++;
-                    int p = (i << 10) + POS[j];
+                    int64_t p = ((int64_t)i << 32) + POS[j];
                     res_min_pos = min(res_min_pos, p);
                     res_max_pos = max(res_max_pos, p);
                 }
@@ -271,7 +272,7 @@ template <class T, bool BYTE> INLINE void Solution4::updateResult(int i, int cur
                 FOR(j, k, k + 16) {
                     if (MM[j] == opt) {
                         n_best++;
-                        int p = (i << 10) + POS[j];
+                        int64_t p = ((int64_t)i << 32) + POS[j];
                         res_min_pos = min(res_min_pos, p);
                         res_max_pos = max(res_max_pos, p);
                     }
@@ -291,10 +292,10 @@ template <class T, int DEFAULT_VALUE> INLINE void Solution4::updateResultLast() 
         if (MM[j] > opt) {
             opt = MM[j];
             n_best = 1;
-            res_min_pos = res_max_pos = (m << 10) + POS[j];
+            res_min_pos = res_max_pos = ((int64_t)m << 32) + POS[j];
         } else if (MM[j] == opt) {
             n_best++;
-            int p = (m << 10) + POS[j];
+            int64_t p = ((int64_t)m << 32) + POS[j];
             res_min_pos = min(res_min_pos, p);
             res_max_pos = max(res_max_pos, p);
         }
@@ -1128,8 +1129,8 @@ next: ;
         if (corr) {
             n_best = corr;
             opt = mm * m;
-            res_min_pos = (m << 10) + c0 + m - 1 - (1 << 10);
-            res_max_pos = (m << 10) + c1 + m - 1 - (1 << 10);
+            res_min_pos = ((int64_t)m << 32) + c0 + m - 1 - ((int64_t)1 << 32);
+            res_max_pos = ((int64_t)m << 32) + c1 + m - 1 - ((int64_t)1 << 32);
             goto similar;
         }
     }
@@ -1190,8 +1191,8 @@ go16bit:
     }
 
 finish:
-    res_min_pos -= 1 << 10;
-    res_max_pos -= 1 << 10;
+    res_min_pos -= (int64_t)1 << 32;
+    res_max_pos -= (int64_t)1 << 32;
 
 #ifdef USE_HASHING
       {
@@ -1205,10 +1206,10 @@ finish:
 #endif
 
 similar:
-    int pos = dir == 0 ? res_min_pos : res_max_pos;
+    int64_t pos = dir == 0 ? res_min_pos : res_max_pos;
 
     int target_end = pos & (MAX_DIMB-1); //1023;
-    int query_end = pos >> 10;
+    int query_end = pos >> 32;
 
     (*_opt) = opt;
     (*_te) = target_end;
