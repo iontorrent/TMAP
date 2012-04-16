@@ -97,6 +97,7 @@ tmap_bwt_smem1(const tmap_bwt_t *bwt, int32_t len, const uint8_t *q, int32_t x, 
   curr = tmpvec[1]? tmpvec[1] : &a[1];
   tmap_bwt_smem_set_intv(bwt, q[x], ik);
   ik.info = x + 1;
+  ik.flag = 0;
 
   for (i = x + 1, curr->n = 0; i < len; ++i) { // forward search
       if (q[i] < 4) {

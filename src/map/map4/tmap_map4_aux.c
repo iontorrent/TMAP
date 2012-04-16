@@ -68,6 +68,7 @@ tmap_bwt_smem_intv_copy(tmap_bwt_smem_intv_t *dest, tmap_bwt_smem_intv_t *src, i
   dest->size = src->size;
   dest->info = src->info;
   dest->info += ((uint64_t)start_offset << 32) + start_offset;
+  dest->flag = src->flag;
 }
 
 static tmap_bwt_smem_intv_vec_t *
@@ -191,6 +192,7 @@ tmap_map4_aux_core(tmap_seq_t *seq,
                               p->x[0] = q.x[0] + k;
                               p->x[1] = q.x[1] + k;
                               p->size = 1;
+                              p->flag = 1;
                               // push
                               tmap_bwt_smem_intv_vec_push(matches, p, start);
                               // update count
@@ -212,6 +214,7 @@ tmap_map4_aux_core(tmap_seq_t *seq,
                               p->x[0] = q.x[0] + k;
                               p->x[1] = q.x[1] + k;
                               p->size = 1;
+                              p->flag = 1;
                               // push
                               tmap_bwt_smem_intv_vec_push(matches, p, start);
                               // update count
@@ -290,6 +293,7 @@ tmap_map4_aux_core(tmap_seq_t *seq,
                       s->target_len = refseq->annos[seqid].len;
                   }
                   s->score_subo = INT32_MIN;
+                  s->repr_hit = p->flag; 
 
                   // map3 aux data
                   tmap_map_sam_malloc_aux(s);

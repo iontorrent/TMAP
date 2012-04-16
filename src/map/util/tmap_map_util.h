@@ -83,7 +83,8 @@ typedef struct {
     int32_t score; /*!< the alignment score */
     int32_t ascore;  /*!< the base alignment score (SFF only) */
     int32_t pscore;  /*!< the pairing base alignment score (pairing only) */
-    uint8_t proper_pair:1;  /*!< 0 - if not a proper pair, 1 otherwise */
+    uint8_t proper_pair:1;  /*!< 0 if not a proper pair, 1 otherwise */
+    uint8_t repr_hit:1; /*!< 1 if a representative repetitive hit, 0 otherwise */
     double num_stds;  /*!< the number of standard deviations from the mean insert size */
     int16_t pmapq; /*!< the pairing mapping quality */
     int32_t score_subo; /*!< the alignment score of the sub-optimal hit */

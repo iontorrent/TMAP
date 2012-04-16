@@ -1170,7 +1170,8 @@ typedef struct {
     int32_t end;
     uint32_t start_pos;
     uint32_t end_pos;
-    int32_t filtered;
+    int8_t filtered:4;
+    int8_t repr_hit:4;
 } tmap_map_util_gen_score_t;
 
 tmap_map_sams_t *
@@ -1195,7 +1196,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   tmap_map_util_gen_score_t *groups = NULL;
   int32_t num_groups = 0, num_groups_filtered = 0;
   double stage_seed_freqc = opt->stage_seed_freqc;
-  int32_t max_group_size = 0;
+  int32_t max_group_size = 0, repr_hit;
 
   if(0 == sams->n) {
       return sams;
@@ -1226,6 +1227,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   start = end = 0;
   start_pos = end_pos = 0;
   best_subo_score = INT32_MIN; // track the best sub-optimal hit
+  repr_hit = 0;
   while(end < sams->n) {
       uint32_t seqid;
       uint8_t strand;
@@ -1238,6 +1240,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           tmap_map_util_sw_get_start_and_end_pos(&sams->sams[start], seq_len, strand, &start_pos, &end_pos);
           start_pos_prev = start_pos;
           end_pos_prev = end_pos;
+          repr_hit = sams->sams[end].repr_hit;
       }
 
       // sub-optimal score
@@ -1260,6 +1263,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                   }
                   start_pos_prev = start_pos_cur;
                   end_pos_prev = end_pos_cur;
+                  repr_hit |= sams->sams[end].repr_hit; // representitive hit
                   continue; // there may be more to add
 
               }
@@ -1276,6 +1280,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       groups[num_groups-1].start_pos = start_pos;
       groups[num_groups-1].end_pos = end_pos;
       groups[num_groups-1].filtered = 0; // assume not filtered, not guilty
+      groups[num_groups-1].repr_hit = repr_hit;
       if(max_group_size < end - start + 1) {
           max_group_size++;
       }
@@ -1309,7 +1314,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
            * all regions, say C. We keep the cutoff as a fraction f of C. Hence, 
            * if a region has ≥fC q-hits, only then it is processed further. "
            */
-          if((group->end - group->start + 1) > ( sams->n * stage_seed_freqc) ) {
+          if(0 == groups[num_groups-1].repr_hit && (group->end - group->start + 1) > ( sams->n * stage_seed_freqc) ) {
               group->filtered = 0;
           }
           else {

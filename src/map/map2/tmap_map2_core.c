@@ -271,8 +271,8 @@ tmap_map2_core_aln(const tmap_map_opt_t *opt, const tmap_bwtl_t *target,
   tmap_map2_stack_t *stack = (tmap_map2_stack_t*)pool->stack;
   tmap_map2_aln_t *b, *b1, **b_ret;
   int32_t i, j, score_mat[16], *heap, heap_size, n_tot = 0;
-  tmap_hash_t(tmap_map2_qintv) *rhash;
-  tmap_hash_t(64) *chash;
+  tmap_hash_t(tmap_map2_qintv) *rhash = NULL;
+  tmap_hash_t(64) *chash = NULL;
 
   // initialize connectivity hash (chash)
   chash = tmap_map2_core_connectivity(target);

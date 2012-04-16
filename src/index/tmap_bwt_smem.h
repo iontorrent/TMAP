@@ -37,6 +37,7 @@ typedef struct {
     tmap_bwt_int_t x[2]; /*!< the forward and backward suffix intervals */
     tmap_bwt_int_t size; /*!< the interval size */
     uint64_t info; /*!< lower 32 bits store the query index for the forward search, the upper 32 bits store the query index for the reverse search */
+    int8_t flag; /*!< 1 if this is a representative repetitive hit, 0 otherwise */
 } tmap_bwt_smem_intv_t;
 
 /*!
