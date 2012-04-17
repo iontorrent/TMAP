@@ -169,6 +169,7 @@ tmap_map4_aux_core(tmap_seq_t *seq,
               // too many hits?
               if (p->size <= opt->max_iwidth || p->size < max_repr) {
                   // OK
+                  p->flag = 0;
                   tmap_bwt_smem_intv_vec_push(matches, p, start);
               }
               else if (0 < max_repr) {
@@ -296,7 +297,7 @@ tmap_map4_aux_core(tmap_seq_t *seq,
                   s->score_subo = INT32_MIN;
                   s->repr_hit = p->flag; 
 
-                  // map3 aux data
+                  // map4 aux data
                   tmap_map_sam_malloc_aux(s);
 
                   n++;
