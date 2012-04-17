@@ -10,7 +10,7 @@
 #include "Solution.h"
 #include "AffineSWOptimizationHash.h"
 
-#define AFFINESWOPTIMIZATION_USE_HASH
+//#define AFFINESWOPTIMIZATION_USE_HASH
 
 using namespace std;
 
