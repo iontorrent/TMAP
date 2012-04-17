@@ -18,9 +18,11 @@ class AffineSWOptimization {
 public:
   AffineSWOptimization(int type);
 
-  int process(string b, string a, int qsc, int qec,
-                 int mm, int mi, int o, int e, int dir,
-                 int *opt, int *te, int *qe, int *n_best);
+  int process(const uint8_t *target, int32_t tlen,
+              const uint8_t *query, int32_t qlen,
+              int qsc, int qec,
+              int mm, int mi, int o, int e, int dir,
+              int *opt, int *te, int *qe, int *n_best);
 
   ~AffineSWOptimization();
 
@@ -30,5 +32,6 @@ private:
   int myType;
   Solution *s;
   AffineSWOptimizationHash *hash;
+  string a, b;
 };
 #endif

@@ -57,11 +57,22 @@ AffineSWOptimization::AffineSWOptimization(int type) {
 #else
     hash = NULL;
 #endif
+    a.reserve(512);
+    b.reserve(1024);
 }
 
-int AffineSWOptimization::process(string b, string a, int qsc, int qec,
-                                     int mm, int mi, int o, int e, int dir,
-                                     int *opt, int *te, int *qe, int *n_best) {
+int AffineSWOptimization::process(const uint8_t *target, int32_t tlen,
+                                  const uint8_t *query, int32_t qlen,
+                                  int qsc, int qec,
+                                  int mm, int mi, int o, int e, int dir,
+                                  int *opt, int *te, int *qe, int *n_best) {
+    int i;
+    // resize
+    b.resize(tlen);
+    a.resize(qlen);
+    // copy
+    for(i=0;i<tlen;i++) b[i] = "ACGTN"[target[i]];
+    for(i=0;i<qlen;i++) a[i] = "ACGTN"[query[i]];
 #ifdef AFFINESWOPTIMIZATION_USE_HASH
     // try the hash
     if(!hash->process(b, a, qsc, qec, mm, mi, o, e, dir, opt, te, qe, n_best)) {

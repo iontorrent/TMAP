@@ -23,9 +23,6 @@ tmap_vsw_wrapper_process(tmap_vsw_wrapper_t *v,
                          int qsc, int qec,
                          int *opt, int *te, int *qe, int *n_best)
 {
-  int i;
-  string a, b;
-
   /*
   fprintf(stderr, "query=%d qlen=%d target=%d tlen=%d\n",
           (NULL == query) ? 0 : 1,
@@ -37,11 +34,9 @@ tmap_vsw_wrapper_process(tmap_vsw_wrapper_t *v,
   }
   */
 
-  for(i=0;i<tlen;i++) b += "ACGTN"[target[i]];
-  for(i=0;i<qlen;i++) a += "ACGTN"[query[i]];
-  
   // Top coder style
   /*
+  int i;
   for(i=0;i<tlen;i++) fputc("ACGTN"[target[i]], stderr);
   fputc('\t', stderr);
   for(i=0;i<qlen;i++) fputc("ACGTN"[query[i]], stderr);
@@ -52,7 +47,7 @@ tmap_vsw_wrapper_process(tmap_vsw_wrapper_t *v,
           -1, -1, -1, -1);
   */
 
-  return v->process(b, a, qsc, qec, mm, mi, o, e, dir, opt, te, qe, n_best);
+  return v->process(target, tlen, query, qlen, qsc, qec, mm, mi, o, e, dir, opt, te, qe, n_best);
 }
 
 void
