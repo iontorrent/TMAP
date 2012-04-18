@@ -2,7 +2,7 @@
 
 rm -vr tmap-[0-9]* tmap_[0-9]*;
 
-sh autogen.sh && ./configure && make dist;
+sh autogen.sh && ./configure && make -j dist;
 
 TMAP=`ls -1 tmap-[0-9].*.tar.gz | sed 's_.tar.gz__'`;
 tar -zxvf ${TMAP}.tar.gz;
