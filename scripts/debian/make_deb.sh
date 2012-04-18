@@ -1,10 +1,10 @@
 #!/bin/sh
 
-rm -vr tmap-0* tmap_0*;
+rm -vr tmap-[0-9]* tmap_[0-9]*;
 
 sh autogen.sh && ./configure && make dist;
 
-TMAP=`ls -1 tmap-0.*.tar.gz | sed 's_.tar.gz__'`;
+TMAP=`ls -1 tmap-[0-9].*.tar.gz | sed 's_.tar.gz__'`;
 tar -zxvf ${TMAP}.tar.gz;
 
 cd ${TMAP};
