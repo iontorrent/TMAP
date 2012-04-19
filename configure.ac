@@ -35,6 +35,7 @@ AC_GNU_SOURCE
 extended_CFLAGS="-D_TMAP_BWT_RUN_TYPE=0";
 default_CFLAGS="-Wall -g -O3 -pthread -msse3";
 default_CXXFLAGS="-Wall -g -O3 -pthread -msse3";
+extended_CXXFLAGS="-D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS"; # for <stdint.h> and <inttypes.h>
 ## 1 - Use this to use the optimized code 
 #extended_CFLAGS="-D_TMAP_BWT_RUN_TYPE=0";
 #default_CFLAGS="-Wall -g -O3 -pthread -msse4.1";

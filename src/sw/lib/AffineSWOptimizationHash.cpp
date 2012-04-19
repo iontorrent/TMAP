@@ -2,7 +2,6 @@
 #include <sstream>
 #include <stdio.h>
 #include <iostream>
-#define __STDC_LIMIT_MACROS // Seriously, I want these, no
 #include <stdint.h>
 #include <emmintrin.h>
 #include "AffineSWOptimizationHash.h"

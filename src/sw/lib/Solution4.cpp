@@ -27,7 +27,6 @@
 #include <set>
 #include <emmintrin.h>
 #include <map>
-#define __STDC_LIMIT_MACROS // Seriously, I want these, now
 #include <stdint.h>
 #include <inttypes.h>
 #include <limits.h>

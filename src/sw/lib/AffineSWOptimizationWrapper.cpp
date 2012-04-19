@@ -1,4 +1,3 @@
-#define __STDC_LIMIT_MACROS // Seriously, I want these, now
 #include <stdint.h>
 //#include <stdlib.h>
 //#include <stdio.h>

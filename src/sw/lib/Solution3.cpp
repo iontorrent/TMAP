@@ -1,6 +1,5 @@
 #include <cstring>
 #include <sstream>
-#define __STDC_LIMIT_MACROS // Seriously, I want these, now
 #include <stdint.h>
 #include <limits>
 #include "sw-vector.h"

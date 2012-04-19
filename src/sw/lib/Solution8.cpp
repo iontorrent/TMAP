@@ -31,7 +31,6 @@
 #include <ext/pool_allocator.h>
 #include <emmintrin.h>
 #include <pmmintrin.h>
-#define __STDC_LIMIT_MACROS // Seriously, I want these, now
 #include <stdint.h>
 #include <limits>
 #include "Solution8.h"
