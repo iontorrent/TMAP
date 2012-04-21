@@ -248,7 +248,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
               tmap_map_driver_stage_t *stage = driver->stages[i];
 
               // stage stats
-              stage_stat = tmap_calloc(1, sizeof(tmap_map_stats_t), "stage_stat");
+              stage_stat = tmap_map_stats_init();
 
               // seed
               for(j=0;j<num_ends;j++) { // for each end
