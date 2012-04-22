@@ -78,7 +78,7 @@ tmap_vsw_bm_core(int32_t seq_len, int32_t tlen, int32_t n_iter,
               tmp_sam.result.query_start = tmp_sam.result.query_end = 0;
               tmp_sam.result.target_start = tmp_sam.result.target_end = 0;
               // run the vsw
-              tmap_vsw_process(vsw, seq, seq_len, target, tlen,
+              tmap_vsw_process_fwd(vsw, seq, seq_len, target, tlen,
                             &tmp_sam.result, &overflow, opt->score_thr, 0);
           }
           else {
