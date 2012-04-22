@@ -685,7 +685,7 @@ tmap_map_util_remove_duplicates(tmap_map_sams_t *sams, int32_t dup_window, tmap_
       // get the change
       end = best_score_i = i;
       best_score_n = 0;
-      best_score_subo = INT32_MIN;
+      best_score_subo = sams->sams[end].score_subo;
       while(end+1 < sams->n) {
           if(sams->sams[end].seqid == sams->sams[end+1].seqid
              && sams->sams[end].strand == sams->sams[end+1].strand
@@ -896,6 +896,7 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
                         int32_t seq_len, uint32_t start_pos, uint32_t end_pos,
                         int32_t *target_mem, uint8_t **target,
                         int32_t softclip_start, int32_t softclip_end,
+                        int32_t prev_n_best,
                         int32_t max_seed_band, // NB: this may be modified as banding is unrolled
                         int32_t prev_score, // NB: must be greater than or equal to the scoring threshold
                         tmap_vsw_opt_t *vsw_opt,
@@ -905,7 +906,7 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
   tmap_map_sam_t tmp_sam;
   uint8_t *query;
   uint32_t qlen;
-  int32_t tlen, overflow = 0, n_best = 0;
+  int32_t tlen, overflow = 0;
 
   // choose a random one within the window
   if(start == end) {
@@ -999,13 +1000,21 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
   tmp_sam.score = tmap_vsw_process_fwd(vsw, query, qlen, (*target), tlen,
                                    &tmp_sam.result, &overflow, opt->score_thr, 1);
 
+  if(1 < tmp_sam.result.n_best) {
+      tmp_sam.score_subo = tmp_sam.score; // TODO: is this correct?
+  }
+
+  /*
+  fprintf(stderr, "start_pos=%d end_pos=%d start=%d end=%d score=%d n_best=%d\n",
+          start_pos, end_pos, start, end, tmp_sam.score, tmp_sam.result.n_best);
+          */
   if(1 == overflow) {
       return INT32_MIN;
       //tmap_error("bug encountered", Exit, OutOfRange);
   }
 
   if(opt->score_thr <= tmp_sam.score) { // NB: we could also specify 'prev_score <= tmp_sam.score'
-      int32_t add_current = 1;
+      int32_t add_current = 1; // yes, by deafult
 
       // Save local variables
       // TODO: do we need to save this data in this fashion?
@@ -1014,8 +1023,11 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
       int32_t t_end_pos = end_pos;
       uint32_t t_start_pos = start_pos;
       
-      if(0 == opt->no_unroll_banding && 0 <= max_seed_band 
-         && 1 < end - start + 1 && 1 < n_best) { // unroll banding
+      if(1 == opt->unroll_banding // unrolling is turned on 
+         && 0 <= max_seed_band  // do we have enough bases to unrooll
+         && 1 < end - start + 1 // are there enough seeds in this group
+         && ((prev_n_best < 0 && 1 < tmp_sam.result.n_best) // we need to do a first timeunroll 
+             || (prev_n_best == tmp_sam.result.n_best))) { // unroll was not successful, try again
           uint32_t start_pos_prev=0, end_pos_prev=0;
           uint32_t start_pos_cur=0, end_pos_cur=0;
           uint32_t unrolled = 0;
@@ -1057,15 +1069,7 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
                               start_pos_prev = start_pos_cur;
                               end_pos_prev = end_pos_cur;
                               continue; // there may be more to add
-                          }
-                      }
-                  }
-
-                  // do not recurse if we did not unroll
-                  if(0 < max_seed_band && t_start == start && t_end == end) { // we did not unroll any
-                      max_seed_band = (max_seed_band >> 1);
-                      break;
-                  }
+                          } } } // do not recurse if we did not unroll if(0 < max_seed_band && t_start == start && t_end == end) { // we did not unroll any max_seed_band = (max_seed_band >> 1); break; }
                   unrolled = 1; // we are going to unroll
 
                   // TODO: we could hash the alignment result, as unrolling may
@@ -1076,6 +1080,7 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
                                                                 strand, vsw, seq_len, start_pos, end_pos,
                                                                 target_mem, target,
                                                                 softclip_start, softclip_end,
+                                                                tmp_sam.result.n_best,
                                                                 (max_seed_band <= 0) ? -1 : (max_seed_band >> 1),
                                                                 tmp_sam.score,
                                                                 vsw_opt, rand, opt);
@@ -1125,7 +1130,7 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
           fprintf(stderr, "strand=%d pos=%d n_best=%d %d-%d %d-%d %d\n",
                   strand,
                   s->pos,
-                  n_best,
+                  s->result.n_best,
                   s->query_start,
                   s->query_end,
                   s->target_start,
@@ -1413,6 +1418,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                                         group->strand, vsw, seq_len, group->start_pos, group->end_pos,
                                         &target_mem, &target,
                                         softclip_start, softclip_end,
+                                        -1, // this is our first call
                                         opt->max_seed_band, // NB: this may be modified as banding is unrolled
                                         opt->score_thr-1,
                                         vsw_opt, rand, opt);
@@ -1461,6 +1467,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                                                 group->strand, vsw, seq_len, group->start_pos, group->end_pos,
                                                 &target_mem, &target,
                                                 softclip_start, softclip_end,
+                                                -1, // this is our first call
                                                 opt->max_seed_band, // NB: this may be modified as banding is unrolled
                                                 opt->score_thr-1,
                                                 vsw_opt, rand, opt);
@@ -1479,6 +1486,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                                                     group->strand, vsw, seq_len, group->start_pos, group->end_pos,
                                                     &target_mem, &target,
                                                     softclip_start, softclip_end,
+                                                    -1, // this is our first call
                                                     opt->max_seed_band, // NB: this may be modified as banding is unrolled
                                                     opt->score_thr-1,
                                                     vsw_opt, rand, opt);
@@ -1512,6 +1520,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                                                     group->strand, vsw, seq_len, group->start_pos, group->end_pos,
                                                     &target_mem, &target,
                                                     softclip_start, softclip_end,
+                                                    -1, // this is our first call
                                                     opt->max_seed_band, // NB: this may be modified as banding is unrolled
                                                     opt->score_thr-1,
                                                     vsw_opt, rand, opt);
@@ -1523,7 +1532,12 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   // realloc
   tmap_map_sams_realloc(sams_tmp, j);
 
-  //fprintf(stderr, "# of final = %d\n", sams_tmp->n);
+  // sub-optimal score
+  for(i=0;i<sams_tmp->n;i++) {
+      if(best_subo_score < sams_tmp->sams[i].score_subo) {
+          best_subo_score = sams_tmp->sams[i].score_subo;
+      }
+  }
   // update the sub-optimal
   for(i=0;i<sams_tmp->n;i++) {
       sams_tmp->sams[i].score_subo = best_subo_score;

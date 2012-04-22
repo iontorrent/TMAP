@@ -176,7 +176,7 @@ typedef struct __tmap_map_opt_t {
     int32_t softclip_type; /*!< soft clip type (-g,--softclip-type) */
     int32_t dup_window; /*!< remove duplicate alignments from different algorithms within this bp window (-W,--duplicate-window) */
     int32_t max_seed_band; /*!< the band to group seeds (-B,--max-seed-band) */
-    int32_t no_unroll_banding; /*!< do not unroll the grouped seeds from banding if multiple alignments are found (-U,--no-unroll-banding) */
+    int32_t unroll_banding; /*!< unroll the grouped seeds from banding if multiple alignments are found (-U,--unroll-banding) */
     int32_t score_thr;  /*!< the score threshold (match-score-scaled) (-T,--score-thres) */
     int32_t reads_queue_size;  /*!< the reads queue size (-q,--reads-queue-size) */
     int32_t num_threads;  /*!< the number of threads (-n,--num-threads) */
