@@ -642,9 +642,10 @@ tmap_map2_aux_core(tmap_map_opt_t *_opt,
       for(i=0;i<l;i++) {
           uint8_t c = (uint8_t)bases->s[i];
           if(c >= 4) { 
+              // NB: always keep them at "4"
               seq[0]->s[i] = c; // original
-              seq[1]->s[l-1-i] = 3 - c; // reverse compliment
-              rseq[0]->s[l-1-i] = 3 - c; // reverse compliment
+              seq[1]->s[l-1-i] = c; // reverse compliment
+              rseq[0]->s[l-1-i] = c; // reverse compliment
               rseq[1]->s[i] = c; // original
               //rseq[0]->s[l-1-i] = c; // reverse 
               //rseq[1]->s[i] = 3 - c; // compliment
