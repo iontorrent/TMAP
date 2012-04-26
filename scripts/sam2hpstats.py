@@ -178,7 +178,7 @@ class HPStats:
                 num_deletions += self._data[i][j][2]
         print "%d\t%d\t%.2f\t%.2f" % (num_insertions, num_deletions, \
                 100.0 * (num_insertions + num_deletions) / num_total, \
-                (num_insertions + num_deletions) / num_reads)
+                float(num_insertions + num_deletions) / num_reads)
 
 
 def main(options):
@@ -190,11 +190,11 @@ def main(options):
   if options.hpstats:
       hpstats = HPStats(options.hpstats_maxhp, options.hpstats_maxrl)
 
-  n = 0
+  num_reads = 0
   for read in sam.fetch():
     if read.is_unmapped:
         continue
-    n += 1
+    num_reads += 1
     md = read.opt('MD')
     cigar = read.cigar
     qseq = read.seq
@@ -277,7 +277,7 @@ def main(options):
             print ref
   if options.hpstats:
       if options.hpstats_table:
-          hpstats.dump_table(n)
+          hpstats.dump_table(num_reads)
       else:
           hpstats.dump()
 
