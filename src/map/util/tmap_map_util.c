@@ -1123,7 +1123,8 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
           s->target_len = s->result.target_end + 1;
 
           if(1 == strand) {
-              s->pos += tlen - s->result.target_end - 1;
+              if(s->pos + tlen <= s->result.target_end) s->pos = 0;
+              else s->pos += tlen - s->result.target_end - 1;
           }
 
           /*
