@@ -1399,7 +1399,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   for(i=j=0;i<num_groups;i++) { // go through each group
       tmap_map_util_gen_score_t *group = &groups[i];
       /*
-      fprintf(stderr, "start=%d end=%d num=%d seqid=%u strand=%d start_pos=%u end_pos=%u filtered=%d\n", 
+      fprintf(stderr, "start=%d end=%d num=%d seqid=%u strand=%d start_pos=%u end_pos=%u repr_hit=%u filtered=%d\n", 
               group->start,
               group->end,
               group->end - group->start + 1,
@@ -1407,9 +1407,10 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
               group->strand,
               group->start_pos,
               group->end_pos,
+              group->repr_hit,
               group->filtered);
-              */
-      if(1 == group->filtered) continue;
+      */
+      if(1 == group->filtered && 0 == group->repr_hit) continue;
       /*
       fprintf(stderr, "start=%d end=%d num=%d seqid=%u strand=%d start_pos=%u end_pos=%u filtered=%d\n", 
               group->start,
