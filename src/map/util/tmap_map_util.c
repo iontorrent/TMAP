@@ -1213,7 +1213,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   tmap_map_util_gen_score_t *groups = NULL;
   int32_t num_groups = 0, num_groups_filtered = 0;
   double stage_seed_freqc = opt->stage_seed_freqc;
-  int32_t max_group_size = 0, repr_hit;
+  int32_t max_group_size = 0, repr_hit, filter_ok = 0;
 
   if(0 == sams->n) {
       return sams;
@@ -1299,7 +1299,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       groups[num_groups-1].filtered = 0; // assume not filtered, not guilty
       groups[num_groups-1].repr_hit = repr_hit;
       if(max_group_size < end - start + 1) {
-          max_group_size++;
+          max_group_size = end - start + 1;
       }
       // update start/end
       end++;
@@ -1331,7 +1331,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
            * all regions, say C. We keep the cutoff as a fraction f of C. Hence, 
            * if a region has ≥fC q-hits, only then it is processed further. "
            */
-          if(0 == groups[num_groups-1].repr_hit && (group->end - group->start + 1) > ( sams->n * stage_seed_freqc) ) {
+          if(0 == group->repr_hit && (group->end - group->start + 1) > ( sams->n * stage_seed_freqc) ) {
               group->filtered = 0;
           }
           else {
@@ -1348,16 +1348,19 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
               */
 
       if(opt->stage_seed_freqc_min_groups <= num_groups 
-         && (num_groups - num_groups_filtered) < opt->stage_seed_freqc_min_groups
-         && 1.0 / num_groups < stage_seed_freqc) {
+         && (num_groups - num_groups_filtered) < opt->stage_seed_freqc_min_groups) {
           stage_seed_freqc /= 2.0;
           // reset
           for(i=0;i<num_groups;i++) {
               tmap_map_util_gen_score_t *group = &groups[i];
               group->filtered = 0;
           }
+          if(stage_seed_freqc < 1.0 / sams->n) { // the filter will accept all hits
+              break;
+          }
       }
-      else {
+      else { // the filter was succesfull
+          filter_ok = 1;
           break;
       }
   } while(1);
@@ -1369,16 +1372,20 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           group->filtered = 0;
       }
   }
-  else if(!(1.0 / num_groups < stage_seed_freqc)) { // we could not find an effective filter
-      int32_t cur_max = max_group_size * 2; // NB: this should be reduced
+  else if(0 == filter_ok) { // we could not find an effective filter
+      int32_t cur_max;
+      // Try filtering based on retaining the groups with most number of seeds.
+      cur_max = (max_group_size * 2) - 1; // NB: this will be reduced
+      // Assume all are filtered
       num_groups_filtered = num_groups;
-      while(num_groups - num_groups_filtered < opt->stage_seed_freqc_min_groups
-            && (num_groups_filtered - num_groups) / (double)num_groups < opt->stage_seed_freqc) {
-          cur_max /= 2;
+      while(num_groups - num_groups_filtered < opt->stage_seed_freqc_min_groups) { // too many groups were filtered
           num_groups_filtered = 0;
+          // halve the minimum group size
+          cur_max /= 2;
+          // go through the groups
           for(i=0;i<num_groups;i++) {
               tmap_map_util_gen_score_t *group = &groups[i];
-              if(group->end - group->start + 1 < cur_max) {
+              if(group->end - group->start + 1 < cur_max) { // filter if there were too few seeds
                   group->filtered = 1;
                   num_groups_filtered++;
               }
@@ -1409,7 +1416,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
               group->end_pos,
               group->repr_hit,
               group->filtered);
-      */
+              */
       if(1 == group->filtered && 0 == group->repr_hit) continue;
       /*
       fprintf(stderr, "start=%d end=%d num=%d seqid=%u strand=%d start_pos=%u end_pos=%u filtered=%d\n", 
