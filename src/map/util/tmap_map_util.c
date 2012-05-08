@@ -44,9 +44,17 @@
                                             || ( (a).strand == (b).strand && (a).seqid == (b).seqid && (a).pos == (b).pos && (a).score > (b).score) \
                                             ? 1 : 0 )
 
+// sort by max-score, min-seqid, min-position, min-strand
+#define __tmap_map_sam_sort_score_coord_lt(a, b) (  ((a).score > (b).score) \
+                                            || ((a).score == (b).score && (a).strand < (b).strand) \
+                                            || ((a).score == (b).score && (a).strand == (b).strand && (a).seqid < (b).seqid) \
+                                            || ((a).score == (b).score && (a).strand == (b).strand && (a).seqid == (b).seqid && (a).pos < (b).pos) \
+                                            ? 1 : 0 )
+
 TMAP_SORT_INIT(tmap_map_sam_sort_coord, tmap_map_sam_t, __tmap_map_sam_sort_coord_lt)
 TMAP_SORT_INIT(tmap_map_sam_sort_coord_end, tmap_map_sam_t, __tmap_map_sam_sort_coord_end_lt)
 TMAP_SORT_INIT(tmap_map_sam_sort_coord_score, tmap_map_sam_t, __tmap_map_sam_sort_coord_score_lt)
+TMAP_SORT_INIT(tmap_map_sam_sort_score_coord, tmap_map_sam_t, __tmap_map_sam_sort_score_coord_lt)
 
 void
 tmap_map_sam_init(tmap_map_sam_t *s)
@@ -1742,7 +1750,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       }
       free(key_seq);
   }
-      
+  
   i = start = end = 0;
   start_pos = end_pos = 0;
   while(end < sams->n) {
@@ -1979,13 +1987,18 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       
   // realloc
   tmap_map_sams_realloc(sams_tmp, i);
-
+  
   // free memory
   tmap_map_sams_destroy(sams);
   free(path);
   free(target);
   tmap_vsw_destroy(vsw);
   tmap_vsw_opt_destroy(vsw_opt);
+  
+  // sort by max score, then min coordinate
+  if(1 < sams_tmp->n) {
+      tmap_sort_introsort(tmap_map_sam_sort_score_coord, sams_tmp->n, sams_tmp->sams);
+  }
 
   return sams_tmp;
 }
