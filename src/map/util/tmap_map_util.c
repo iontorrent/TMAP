@@ -764,8 +764,8 @@ tmap_map_util_mapq_score(int32_t seq_len, int32_t n_best, int32_t best_score, in
   /*
      fprintf(stderr, "n_best=%d n_best_subo=%d\n",
      n_best, n_best_subo);
-     fprintf(stderr, "best_score=%d best_subo=%d\n",
-     best_score, best_subo);
+     fprintf(stderr, "best_score=%d best_subo_score=%d\n",
+     best_score, best_subo_score);
      */
   // Note: this is the old calculationg, based on BWA-long
   //mapq = (int32_t)((n_best / (1.0 * n_best_subo)) * (best_score - best_subo) * (250.0 / best_score + 0.03 / opt->score_match) + .499);
@@ -840,7 +840,10 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
           best_subo_score2 = cur_score;
       }
   }
-  if(best_subo_score < best_subo_score2) best_subo_score = best_subo_score2;
+  if(best_subo_score < best_subo_score2) {
+      best_subo_score = best_subo_score2;
+      if(0 == n_best_subo) n_best_subo = 1;
+  }
   if(1 < n_best || best_score <= best_subo_score || 0 < best_repetitive) {
       mapq = 0;
   }
@@ -1009,7 +1012,11 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
                                    &tmp_sam.result, &overflow, opt->score_thr, 1);
 
   if(1 < tmp_sam.result.n_best) {
-      tmp_sam.score_subo = tmp_sam.score; // TODO: is this correct?
+      // What happens if soft-clipping or not soft-clipping causes two
+      // alignments to be equally likely? So while we could set the scores to be
+      // similar, we can also down-weight the score a little bit.
+      tmp_sam.score_subo = tmp_sam.score - opt->pen_gapo - opt->pen_gape; 
+      //tmp_sam.score_subo = tmp_sam.score - 1;
   }
 
   /*
@@ -1331,6 +1338,13 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
            * all regions, say C. We keep the cutoff as a fraction f of C. Hence, 
            * if a region has ≥fC q-hits, only then it is processed further. "
            */
+          /*
+          fprintf(stderr, "repr_hit=%d size=%d freq=%lf\n",
+                  group->repr_hit,
+                  (group->end - group->start + 1),
+                  ( sams->n * stage_seed_freqc));
+          */
+
           if(0 == group->repr_hit && (group->end - group->start + 1) > ( sams->n * stage_seed_freqc) ) {
               group->filtered = 0;
           }
@@ -1828,6 +1842,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       fprintf(stderr, "tmp_sam.result.query_end=%d\n", tmp_sam.result.query_end);
       fprintf(stderr, "tmp_sam.result.target_start=%d\n", tmp_sam.result.target_start);
       fprintf(stderr, "tmp_sam.result.target_end=%d\n", tmp_sam.result.target_end);
+      fprintf(stderr, "tmp_sam.result.n_best=%d\n", tmp_sam.result.n_best);
       fprintf(stderr, "tmp_sam.pos=%u\n", tmp_sam.pos);
       */
 
