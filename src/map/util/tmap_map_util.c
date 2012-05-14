@@ -1821,7 +1821,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       // have wrong scores
       // NB: this aligns in the opposite direction than sequencing 
       tmp_sam.score = tmap_vsw_process_rev(vsw, query_rc, qlen, target, tlen,
-                                       &tmp_sam.result, &overflow, opt->score_thr, 1);
+                                       &tmp_sam.result, &overflow, opt->score_thr, 0);
       if(1 == overflow) {
           tmap_bug();
       }
