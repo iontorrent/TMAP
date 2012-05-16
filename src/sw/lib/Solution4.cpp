@@ -184,6 +184,10 @@ NOINLINE uint64_t Solution4::hashDNA(const string &s, const int len) {
     h = h * 1337 + (uint64_t)_mm_extract_epi16(mhash, 1);
     h = h * 1337 + (uint64_t)_mm_extract_epi16(mhash, 2);
     h = h * 1337 + (uint64_t)_mm_extract_epi16(mhash, 3);
+    h = h * 1337 + (uint64_t)_mm_extract_epi16(mhash, 4);
+    h = h * 1337 + (uint64_t)_mm_extract_epi16(mhash, 5);
+    h = h * 1337 + (uint64_t)_mm_extract_epi16(mhash, 6);
+    h = h * 1337 + (uint64_t)_mm_extract_epi16(mhash, 7);
     return h;
 }
 

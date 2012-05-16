@@ -44,9 +44,17 @@
                                             || ( (a).strand == (b).strand && (a).seqid == (b).seqid && (a).pos == (b).pos && (a).score > (b).score) \
                                             ? 1 : 0 )
 
+// sort by max-score, min-seqid, min-position, min-strand
+#define __tmap_map_sam_sort_score_coord_lt(a, b) (  ((a).score > (b).score) \
+                                            || ((a).score == (b).score && (a).strand < (b).strand) \
+                                            || ((a).score == (b).score && (a).strand == (b).strand && (a).seqid < (b).seqid) \
+                                            || ((a).score == (b).score && (a).strand == (b).strand && (a).seqid == (b).seqid && (a).pos < (b).pos) \
+                                            ? 1 : 0 )
+
 TMAP_SORT_INIT(tmap_map_sam_sort_coord, tmap_map_sam_t, __tmap_map_sam_sort_coord_lt)
 TMAP_SORT_INIT(tmap_map_sam_sort_coord_end, tmap_map_sam_t, __tmap_map_sam_sort_coord_end_lt)
 TMAP_SORT_INIT(tmap_map_sam_sort_coord_score, tmap_map_sam_t, __tmap_map_sam_sort_coord_score_lt)
+TMAP_SORT_INIT(tmap_map_sam_sort_score_coord, tmap_map_sam_t, __tmap_map_sam_sort_score_coord_lt)
 
 void
 tmap_map_sam_init(tmap_map_sam_t *s)
@@ -756,8 +764,8 @@ tmap_map_util_mapq_score(int32_t seq_len, int32_t n_best, int32_t best_score, in
   /*
      fprintf(stderr, "n_best=%d n_best_subo=%d\n",
      n_best, n_best_subo);
-     fprintf(stderr, "best_score=%d best_subo=%d\n",
-     best_score, best_subo);
+     fprintf(stderr, "best_score=%d best_subo_score=%d\n",
+     best_score, best_subo_score);
      */
   // Note: this is the old calculationg, based on BWA-long
   //mapq = (int32_t)((n_best / (1.0 * n_best_subo)) * (best_score - best_subo) * (250.0 / best_score + 0.03 / opt->score_match) + .499);
@@ -832,7 +840,10 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
           best_subo_score2 = cur_score;
       }
   }
-  if(best_subo_score < best_subo_score2) best_subo_score = best_subo_score2;
+  if(best_subo_score < best_subo_score2) {
+      best_subo_score = best_subo_score2;
+      if(0 == n_best_subo) n_best_subo = 1;
+  }
   if(1 < n_best || best_score <= best_subo_score || 0 < best_repetitive) {
       mapq = 0;
   }
@@ -1001,7 +1012,11 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
                                    &tmp_sam.result, &overflow, opt->score_thr, 1);
 
   if(1 < tmp_sam.result.n_best) {
-      tmp_sam.score_subo = tmp_sam.score; // TODO: is this correct?
+      // What happens if soft-clipping or not soft-clipping causes two
+      // alignments to be equally likely? So while we could set the scores to be
+      // similar, we can also down-weight the score a little bit.
+      tmp_sam.score_subo = tmp_sam.score - opt->pen_gapo - opt->pen_gape; 
+      //tmp_sam.score_subo = tmp_sam.score - 1;
   }
 
   /*
@@ -1123,7 +1138,8 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
           s->target_len = s->result.target_end + 1;
 
           if(1 == strand) {
-              s->pos += tlen - s->result.target_end - 1;
+              if(s->pos + tlen <= s->result.target_end) s->pos = 0;
+              else s->pos += tlen - s->result.target_end - 1;
           }
 
           /*
@@ -1204,7 +1220,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   tmap_map_util_gen_score_t *groups = NULL;
   int32_t num_groups = 0, num_groups_filtered = 0;
   double stage_seed_freqc = opt->stage_seed_freqc;
-  int32_t max_group_size = 0, repr_hit;
+  int32_t max_group_size = 0, repr_hit, filter_ok = 0;
 
   if(0 == sams->n) {
       return sams;
@@ -1290,7 +1306,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
       groups[num_groups-1].filtered = 0; // assume not filtered, not guilty
       groups[num_groups-1].repr_hit = repr_hit;
       if(max_group_size < end - start + 1) {
-          max_group_size++;
+          max_group_size = end - start + 1;
       }
       // update start/end
       end++;
@@ -1322,7 +1338,14 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
            * all regions, say C. We keep the cutoff as a fraction f of C. Hence, 
            * if a region has ≥fC q-hits, only then it is processed further. "
            */
-          if(0 == groups[num_groups-1].repr_hit && (group->end - group->start + 1) > ( sams->n * stage_seed_freqc) ) {
+          /*
+          fprintf(stderr, "repr_hit=%d size=%d freq=%lf\n",
+                  group->repr_hit,
+                  (group->end - group->start + 1),
+                  ( sams->n * stage_seed_freqc));
+          */
+
+          if(0 == group->repr_hit && (group->end - group->start + 1) > ( sams->n * stage_seed_freqc) ) {
               group->filtered = 0;
           }
           else {
@@ -1339,16 +1362,19 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
               */
 
       if(opt->stage_seed_freqc_min_groups <= num_groups 
-         && (num_groups - num_groups_filtered) < opt->stage_seed_freqc_min_groups
-         && 1.0 / num_groups < stage_seed_freqc) {
+         && (num_groups - num_groups_filtered) < opt->stage_seed_freqc_min_groups) {
           stage_seed_freqc /= 2.0;
           // reset
           for(i=0;i<num_groups;i++) {
               tmap_map_util_gen_score_t *group = &groups[i];
               group->filtered = 0;
           }
+          if(stage_seed_freqc < 1.0 / sams->n) { // the filter will accept all hits
+              break;
+          }
       }
-      else {
+      else { // the filter was succesfull
+          filter_ok = 1;
           break;
       }
   } while(1);
@@ -1360,16 +1386,20 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           group->filtered = 0;
       }
   }
-  else if(!(1.0 / num_groups < stage_seed_freqc)) { // we could not find an effective filter
-      int32_t cur_max = max_group_size * 2; // NB: this should be reduced
+  else if(0 == filter_ok) { // we could not find an effective filter
+      int32_t cur_max;
+      // Try filtering based on retaining the groups with most number of seeds.
+      cur_max = (max_group_size * 2) - 1; // NB: this will be reduced
+      // Assume all are filtered
       num_groups_filtered = num_groups;
-      while(num_groups - num_groups_filtered < opt->stage_seed_freqc_min_groups
-            && (num_groups_filtered - num_groups) / (double)num_groups < opt->stage_seed_freqc) {
-          cur_max /= 2;
+      while(num_groups - num_groups_filtered < opt->stage_seed_freqc_min_groups) { // too many groups were filtered
           num_groups_filtered = 0;
+          // halve the minimum group size
+          cur_max /= 2;
+          // go through the groups
           for(i=0;i<num_groups;i++) {
               tmap_map_util_gen_score_t *group = &groups[i];
-              if(group->end - group->start + 1 < cur_max) {
+              if(group->end - group->start + 1 < cur_max) { // filter if there were too few seeds
                   group->filtered = 1;
                   num_groups_filtered++;
               }
@@ -1390,7 +1420,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   for(i=j=0;i<num_groups;i++) { // go through each group
       tmap_map_util_gen_score_t *group = &groups[i];
       /*
-      fprintf(stderr, "start=%d end=%d num=%d seqid=%u strand=%d start_pos=%u end_pos=%u filtered=%d\n", 
+      fprintf(stderr, "start=%d end=%d num=%d seqid=%u strand=%d start_pos=%u end_pos=%u repr_hit=%u filtered=%d\n", 
               group->start,
               group->end,
               group->end - group->start + 1,
@@ -1398,9 +1428,10 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
               group->strand,
               group->start_pos,
               group->end_pos,
+              group->repr_hit,
               group->filtered);
               */
-      if(1 == group->filtered) continue;
+      if(1 == group->filtered && 0 == group->repr_hit) continue;
       /*
       fprintf(stderr, "start=%d end=%d num=%d seqid=%u strand=%d start_pos=%u end_pos=%u filtered=%d\n", 
               group->start,
@@ -1741,7 +1772,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       }
       free(key_seq);
   }
-      
+  
   i = start = end = 0;
   start_pos = end_pos = 0;
   while(end < sams->n) {
@@ -1790,7 +1821,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       // have wrong scores
       // NB: this aligns in the opposite direction than sequencing 
       tmp_sam.score = tmap_vsw_process_rev(vsw, query_rc, qlen, target, tlen,
-                                       &tmp_sam.result, &overflow, opt->score_thr, 1);
+                                       &tmp_sam.result, &overflow, opt->score_thr, 0);
       if(1 == overflow) {
           tmap_bug();
       }
@@ -1811,6 +1842,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       fprintf(stderr, "tmp_sam.result.query_end=%d\n", tmp_sam.result.query_end);
       fprintf(stderr, "tmp_sam.result.target_start=%d\n", tmp_sam.result.target_start);
       fprintf(stderr, "tmp_sam.result.target_end=%d\n", tmp_sam.result.target_end);
+      fprintf(stderr, "tmp_sam.result.n_best=%d\n", tmp_sam.result.n_best);
       fprintf(stderr, "tmp_sam.pos=%u\n", tmp_sam.pos);
       */
 
@@ -1978,13 +2010,18 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       
   // realloc
   tmap_map_sams_realloc(sams_tmp, i);
-
+  
   // free memory
   tmap_map_sams_destroy(sams);
   free(path);
   free(target);
   tmap_vsw_destroy(vsw);
   tmap_vsw_opt_destroy(vsw_opt);
+  
+  // sort by max score, then min coordinate
+  if(1 < sams_tmp->n) {
+      tmap_sort_introsort(tmap_map_sam_sort_score_coord, sams_tmp->n, sams_tmp->sams);
+  }
 
   return sams_tmp;
 }
