@@ -9,14 +9,14 @@ def reverse_compliment(seq):
             'A':'T', 'C':'G', 'G':'C', 'T':'A', 'N':'N'}
     return "".join([c.get(nt, '') for nt in seq[::-1]])
 
-def make_flow_signal(signal):
-    r = random.gauss(0, 0.25)
+def make_flow_signal(signal, sigma): 
+    r = random.gauss(0, sigma)
     if 0 == signal:
         while r < 0 or 0.5 < r:
-            r = random.gauss(0, 0.25)
+            r = random.gauss(0, sigma)
     else: 
         while r < -0.5 or 0.5 < r:
-            r = random.gauss(0, 0.25)
+            r = random.gauss(0, sigma)
     return (100 * signal) + int(r * 100)
 
 def check_option(parser, value, name):
@@ -32,6 +32,7 @@ def __main__():
     parser.add_option( '-k', '--key-sequence', dest='key_sequence', help='the key sequence to simulate' )
     parser.add_option( '-s', '--sam-file', dest='sam_file', help='the input SAM file' )
     parser.add_option( '-S', '--seed', dest='seed', help='the seed for the random number generator' )
+    parser.add_option( '-d', '--sigma', dest='sigma', default=0.25, type=float, help='the standard deviation for the flow signal' )
 
     (options, args) = parser.parse_args()
     
@@ -47,6 +48,7 @@ def __main__():
 
     flow_order = options.flow_order.upper()
     key_sequence = options.key_sequence.upper()
+    key_sequence_len = len(options.key_sequence)
 
     rg_set = 0
     fp = open(options.sam_file, 'r')
@@ -77,18 +79,29 @@ def __main__():
         elif tokens[1] != '4' and tokens[1] != '0':
             raise( 'unknown flag' )
         seq = key_sequence + seq
-        i = j = 0;
+        zf = 0
+        i = j = k = 0;
         while i < len(seq):
+            # skip non-incorporating flows
             while seq[i] != flow_order[j]:
-                sys.stdout.write(',' + str(make_flow_signal(0)))
+                sys.stdout.write(',' + str(make_flow_signal(0, options.sigma)))
                 j = (j + 1) % len(flow_order)
+                k += 1
+            # for the ZF tag
+            if i <= key_sequence_len:
+                zf = k;
+            # get hp length
             l = 1
             while i < len(seq)-1 and seq[i] == seq[i+1]:
                 l += 1
                 i += 1
-            sys.stdout.write(',' + str(make_flow_signal(l)))
+            # write flow signal
+            sys.stdout.write(',' + str(make_flow_signal(l, options.sigma)))
+            # next flow, next base
             j = (j + 1) % len(flow_order)
+            k += 1
             i += 1
+        sys.stdout.write('\tZF:i:%s' % zf)
         sys.stdout.write('\n')
     fp.close()
 
