@@ -253,7 +253,7 @@ template <class T, bool BYTE> INLINE void Solution4::updateResult(int i, int cur
         if (lastMax > opt) {
             opt = lastMax;
             n_best = 0;
-            res_min_pos = INT64_MAX; // 1 << 30;
+            //res_min_pos = INT64_MAX; // 1 << 30;
             res_max_pos = 0;
         }
 
@@ -264,7 +264,7 @@ template <class T, bool BYTE> INLINE void Solution4::updateResult(int i, int cur
                 if (MM[j] == opt) {
                     n_best++;
                     int64_t p = ((int64_t)i << 32) + POS[j];
-                    res_min_pos = min(res_min_pos, p);
+                    //res_min_pos = min(res_min_pos, p);
                     res_max_pos = max(res_max_pos, p);
                 }
             }
@@ -276,7 +276,7 @@ template <class T, bool BYTE> INLINE void Solution4::updateResult(int i, int cur
                     if (MM[j] == opt) {
                         n_best++;
                         int64_t p = ((int64_t)i << 32) + POS[j];
-                        res_min_pos = min(res_min_pos, p);
+                        //res_min_pos = min(res_min_pos, p);
                         res_max_pos = max(res_max_pos, p);
                     }
                 }
@@ -295,11 +295,12 @@ template <class T, int DEFAULT_VALUE> INLINE void Solution4::updateResultLast() 
         if (MM[j] > opt) {
             opt = MM[j];
             n_best = 1;
-            res_min_pos = res_max_pos = ((int64_t)m << 32) + POS[j];
+            //res_min_pos = res_max_pos = ((int64_t)m << 32) + POS[j];
+            res_max_pos = ((int64_t)m << 32) + POS[j];
         } else if (MM[j] == opt) {
             n_best++;
             int64_t p = ((int64_t)m << 32) + POS[j];
-            res_min_pos = min(res_min_pos, p);
+            //res_min_pos = min(res_min_pos, p);
             res_max_pos = max(res_max_pos, p);
         }
     }
@@ -1088,7 +1089,8 @@ NOINLINE int Solution4::process(const string &b, const string &a, int qsc, int q
 
     resize(m, n);
 
-    opt = n_best = res_min_pos = res_max_pos = 0;
+    //opt = n_best = res_min_pos = res_max_pos = 0;
+    opt = n_best = res_max_pos = 0;
 
 
     int iter = -1;
@@ -1107,7 +1109,7 @@ NOINLINE int Solution4::process(const string &b, const string &a, int qsc, int q
         qres_t &res = HTDATA[htpos];
         opt = res.opt;
         n_best = res.n_best;
-        res_min_pos = res.res_min_pos;
+        //res_min_pos = res.res_min_pos;
         res_max_pos = res.res_max_pos;
         goto similar;
     }
@@ -1132,7 +1134,7 @@ next: ;
         if (corr) {
             n_best = corr;
             opt = mm * m;
-            res_min_pos = ((int64_t)m << 32) + c0 + m - 1 - ((int64_t)1 << 32);
+            //res_min_pos = ((int64_t)m << 32) + c0 + m - 1 - ((int64_t)1 << 32);
             res_max_pos = ((int64_t)m << 32) + c1 + m - 1 - ((int64_t)1 << 32);
             goto similar;
         }
@@ -1194,7 +1196,7 @@ go16bit:
     }
 
 finish:
-    res_min_pos -= (int64_t)1 << 32;
+    //res_min_pos -= (int64_t)1 << 32;
     res_max_pos -= (int64_t)1 << 32;
 
 #ifdef USE_HASHING
@@ -1203,13 +1205,14 @@ finish:
         res.hash = hh;
         res.opt = opt;
         res.n_best = n_best;
-        res.res_min_pos = res_min_pos;
+        //res.res_min_pos = res_min_pos;
         res.res_max_pos = res_max_pos;
       }
 #endif
 
 similar:
-    int64_t pos = dir == 0 ? res_min_pos : res_max_pos;
+    //int64_t pos = dir == 0 ? res_min_pos : res_max_pos;
+    int64_t pos = res_max_pos;
 
     int target_end = pos & (MAX_DIMB-1); //1023;
     int query_end = pos >> 32;

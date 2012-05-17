@@ -183,6 +183,9 @@ void inline Solution9::CheckOpt8(const unsigned char m, const int i, const int j
                 QueryEnd = i;
                 TargetEnd = j;
             }
+            else if(i == QueryEnd && TargetEnd < j) {
+                TargetEnd = j;
+            }
         }
     }
 }
@@ -201,6 +204,9 @@ void inline Solution9::CheckOpt16(const short int m, const int i, const int j) {
 
             if(DIRECTION == true) {
                 QueryEnd = i;
+                TargetEnd = j;
+            }
+            else if(i == QueryEnd && TargetEnd < j) {
                 TargetEnd = j;
             }
         }

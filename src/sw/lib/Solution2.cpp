@@ -125,7 +125,7 @@ int Solution2::process(const string& b, const string& a, int qsc, int qec,
 
     if (dir == 0) {
         for (int i=minI; i <= maxI && query_end == -1; i++)
-          for (int j=minJ; j <= maxJ && query_end == -1; j++)
+          for (int j=maxJ; j >= minJ && query_end == -1; j--) // maximize target end
             if (M[i][j] == opt || V[i][j] == opt || H[i][j] == opt) {
                 query_end = i-1;
                 target_end = j-1;

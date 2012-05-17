@@ -873,10 +873,14 @@ void process(size_t n, size_t m)
               }
               else if ( v == opt ) {
                   n_best += 1;
+                  /*
                   if ( dir ) {
                       best_i = i;
                       best_j = j;
                   }
+                  */
+                  best_i = i;
+                  best_j = j;
               }
           }
       }
@@ -954,10 +958,14 @@ void process(size_t n, size_t m)
               }
               else if ( v == opt ) {
                   n_best += 1;
+                  /*
                   if ( dir ) {
                       best_i = i;
                       best_j = j;
                   }
+                  */
+                  best_i = i;
+                  best_j = j;
               }
           }
       }
@@ -1224,10 +1232,14 @@ void process(size_t n, size_t m)
               }
               else if ( v == opt ) {
                   n_best += 1;
+                  /*
                   if ( dir ) {
                       best_i = i;
                       best_j = j;
                   }
+                  */
+                  best_i = i;
+                  best_j = j;
               }
           }
       }
@@ -1246,6 +1258,7 @@ void process(size_t n, size_t m)
           }
           else if ( v == opt ) {
               n_best += bn[k];
+              /*
               if ( dir ) {
                   if ( i > best_i || i == best_i && j > best_j ) {
                       best_i = i;
@@ -1254,6 +1267,19 @@ void process(size_t n, size_t m)
               }
               else {
                   if ( i < best_i || i == best_i && j < best_j ) {
+                      best_i = i;
+                      best_j = j;
+                  }
+              }
+              */
+              if ( dir ) {
+                  if ( i > best_i || i == best_i && j > best_j ) {
+                      best_i = i;
+                      best_j = j;
+                  }
+              }
+              else {
+                  if ( i < best_i || i == best_i && j > best_j ) {
                       best_i = i;
                       best_j = j;
                   }

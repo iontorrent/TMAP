@@ -139,9 +139,9 @@ vsw16_sse2_dir_cmp(int32_t cur_score, int32_t cur_qe, int32_t cur_te,
           next_score, next_qe, next_te,
           dir);
   */
-  if(0 == dir) { // min qe, break ties by min te
+  if(0 == dir) { // min qe, break ties by max te
       if(next_qe < cur_qe) return 1;
-      if(next_qe == cur_qe && next_te < cur_te) return 1;
+      if(next_qe == cur_qe && cur_te < next_te) return 1;
   }
   else { // max qe, break ties by max te
       if(cur_qe < next_qe) return 1;
