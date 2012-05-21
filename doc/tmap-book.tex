@@ -8,6 +8,7 @@
 \usepackage{color}
 \usepackage[plainpages=false,pdfpagelabels]{hyperref}
 \usepackage{url}
+\usepackage{minitoc}
 % new color
 \definecolor{mylinkcolor}{rgb}{0,0,0.75}
 \definecolor{mycitecolor}{rgb}{0,0.5,0}
@@ -69,6 +70,7 @@ urlcolor=myurlcolor     % color of external links
 \maketitle
 
 % TABLE OF CONTENTS
+\dominitoc
 \tableofcontents
 \addcontentsline{toc}{chapter}{Table of Contents}
 
@@ -770,8 +772,13 @@ This tag stores the original alignment score, if an SFF was inputted.
 \subsubsection{ZF}
 This tag stores the zero-based index of the first flow signal corresponding to the template, inferred from the clipping values in the SFF.
 This this is outputted only when an SFF is inputted and the \TT{-Y} option is used.
+
 \chapter{Commonly Asked Questions}
 \label{chap:faq}
+
+% inform mintoc of a new chapter
+\mtcaddchapter 
+\minitoc
 
 \section{How are IUPAC ambiguity codes handled in the reference/target FASTA?}
 \label{sec:iupac}
