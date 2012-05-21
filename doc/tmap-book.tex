@@ -938,6 +938,26 @@ If the penalty for having two mismatches is equal to the score of having six mat
 TMAP will guarantee to find the alignment with the contains the most number of query bases (the first one above) unless the user specifies that soft-clipping is allowed on both ends of the read.
 In the latter case, no guarantee can be made.
 
+\section{How do I view the default parameters?}
+
+The default parameters are shown using the \TT{-h} option.
+The displayed values are updated for any command line parameters that are given before the \TT{-h} option.
+
+To see the default values for the mapall command:
+\begin{verbatim}
+tmap mapall -h
+\end{verbatim}
+
+To see the default values for the mapall command and stage-specific options:
+\begin{verbatim}
+tmap mapall stage1 -h
+\end{verbatim}
+
+To see the default values for the mapall command, stage-specific options, and a subset of algorithms:
+\begin{verbatim}
+tmap mapall stage1 map1 map2 map3 -h
+\end{verbatim}
+
 \chapter{Appendix}
 
 % References
