@@ -22,7 +22,8 @@ void Solution7::process_with_start_clip(
   int n = target.size(), m = query.size();
 
   // answer
-  int opt = -1, position = -1, n_best = 0;
+  //int opt = -1, position = -1, n_best = 0;
+  int opt = -1, qe=-1 , te=-1, n_best = 0;
 
   // u8 -> i16 bridge parameters
   int i16_begin_line = -1, offset_u8 = 0;
@@ -141,11 +142,13 @@ void Solution7::process_with_start_clip(
               if(row_max >= opt){
                   if(row_max > opt){
                       opt = row_max;
-                      position = dir ? 0 : 0x7fffffff;
+                      //position = dir ? 0 : 0x7fffffff;
+                      qe = te = 0;
                       n_best = 0;
                   }
                   __m128i v_opt; mm_set1_epi8(v_opt, opt);
                   __m128i v_count = _mm_setzero_si128();
+                  /*
                   if(dir){
                       int local_position = 0;
                       for(int j = 0; j < block_num_u8; ++j){
@@ -172,6 +175,22 @@ void Solution7::process_with_start_clip(
                       }
                       local_position |= (i << 16);
                       position = min(position, local_position);
+                  }
+                  */
+                  int local_position = 0;
+                  for(int j = 0; j < block_num_u8; ++j){
+                      __m128i m = _mm_load_si128((__m128i *)(blocks_u8[j].data[store].M));
+                      __m128i f = _mm_cmpeq_epi8(m, v_opt);
+                      v_count = _mm_add_epi8(v_count, f);
+                      const int mask = _mm_movemask_epi8(f);
+                      const int k = 31 - __builtin_clz(mask);
+                      const int p = k * block_num_u8 + j;
+                      if(mask){ local_position = max(p, local_position); }
+                  }
+                  if(dir) {
+                      if(qe < i || (qe == i && te < local_position)) qe = i, te = local_position;
+                  } else {
+                      if(i < qe || (i == qe && te < local_position)) qe = i, te = local_position;
                   }
                   v_count = _mm_sub_epi8(_mm_setzero_si128(), v_count);
                   v_count = _mm_sad_epu8(_mm_setzero_si128(), v_count);
@@ -202,6 +221,7 @@ void Solution7::process_with_start_clip(
               mm_reduction_max_epu8(opt, v_row_max);
               __m128i v_opt; mm_set1_epi8(v_opt, opt);
               __m128i v_count = _mm_setzero_si128();
+              /*
               if(dir){
                   position = 0;
                   for(int j = 0; j < block_num_u8; ++j){
@@ -225,10 +245,22 @@ void Solution7::process_with_start_clip(
                       if(mask){ position = min(p, position); }
                   }
               }
+              */
+              te = 0;
+              for(int j = 0; j < block_num_u8; ++j){
+                  __m128i m = _mm_load_si128((__m128i *)(X_u8 + (j << 4)));
+                  __m128i f = _mm_cmpeq_epi8(m, v_opt);
+                  v_count = _mm_add_epi8(v_count, f);
+                  const int mask = _mm_movemask_epi8(f);
+                  const int k = 31 - __builtin_clz(mask);
+                  const int p = k * block_num_u8 + j;
+                  if(mask){ te = max(p, te); }
+              }
               v_count = _mm_sub_epi8(_mm_setzero_si128(), v_count);
               v_count = _mm_sad_epu8(_mm_setzero_si128(), v_count);
               n_best += _mm_extract_epi16(v_count, 0) + _mm_extract_epi16(v_count, 4);
-              position |= (i << 16);
+              qe = i;
+              //position |= (i << 16);
           }
       }
       opt -= zero;
@@ -341,11 +373,13 @@ void Solution7::process_with_start_clip(
               if(row_max >= opt){
                   if(row_max > opt){
                       opt = row_max;
-                      position = dir ? 0 : 0x7fffffff;
+                      //position = dir ? 0 : 0x7fffffff;
+                      qe = te = 0;
                       n_best = 0;
                   }
                   __m128i v_opt; mm_set1_epi16(v_opt, opt);
                   __m128i v_count = _mm_setzero_si128();
+                  /*
                   if(dir){
                       int local_position = 0;
                       for(int j = 0; j < block_num; ++j){
@@ -372,6 +406,22 @@ void Solution7::process_with_start_clip(
                       }
                       local_position |= (i << 16);
                       position = min(position, local_position);
+                  }
+                  */
+                  int local_position = 0;
+                  for(int j = 0; j < block_num; ++j){
+                      __m128i m = _mm_load_si128((__m128i *)(blocks[j].M));
+                      __m128i f = _mm_cmpeq_epi16(m, v_opt);
+                      v_count = _mm_add_epi8(v_count, f);
+                      const int mask = _mm_movemask_epi8(f);
+                      const int k = (31 - __builtin_clz(mask)) >> 1;
+                      const int p = k * block_num + j;
+                      if(mask){ local_position = max(p, local_position); }
+                  }
+                  if(dir) {
+                      if(qe < i || (qe == i && te < local_position)) qe = i, te = local_position;
+                  } else {
+                      if(i < qe || (i == qe && te < local_position)) qe = i, te = local_position;
                   }
                   v_count = _mm_sub_epi8(_mm_setzero_si128(), v_count);
                   v_count = _mm_sad_epu8(_mm_setzero_si128(), v_count);
@@ -401,6 +451,7 @@ void Solution7::process_with_start_clip(
               mm_reduction_max_epi16(opt, v_row_max);
               __m128i v_opt; mm_set1_epi16(v_opt, opt);
               __m128i v_count = _mm_setzero_si128();
+              /*
               if(dir){
                   position = 0;
                   for(int j = 0; j < block_num; ++j){
@@ -424,18 +475,34 @@ void Solution7::process_with_start_clip(
                       if(mask){ position = min(p, position); }
                   }
               }
+              */
+              te = 0;
+              for(int j = 0; j < block_num; ++j){
+                  __m128i m = _mm_load_si128((__m128i *)(X + (j << 3)));
+                  __m128i f = _mm_cmpeq_epi16(m, v_opt);
+                  v_count = _mm_add_epi8(v_count, f);
+                  const int mask = _mm_movemask_epi8(f);
+                  const int k = (31 - __builtin_clz(mask)) >> 1;
+                  const int p = k * block_num + j;
+                  if(mask){ te = max(p, te); }
+              }
               v_count = _mm_sub_epi8(_mm_setzero_si128(), v_count);
               v_count = _mm_sad_epu8(_mm_setzero_si128(), v_count);
               n_best += (_mm_extract_epi16(v_count, 0) + _mm_extract_epi16(v_count, 4)) >> 1;
-              position |= (i << 16);
+              qe = i;
+              //position |= (i << 16);
           }
       }
   }
 
   // copy answer to result buffer
   result.opt = opt;
+  /*
   result.query_end = position >> 16;
   result.target_end = position & 0xffff;
+  */
+  result.query_end = qe;
+  result.target_end = te;
   result.n_best = n_best;
 }
 
@@ -454,7 +521,8 @@ void Solution7::process_without_start_clip(
   const char *c_query = query.c_str();
 
   // answer
-  int opt = -1, position = -1, n_best = 0;
+  //int opt = -1, position = -1, n_best = 0;
+  int opt = -1, qe = -1, te = -1, n_best = 0;
 
   // get aligned memory block
   uint8_t *aligned_workarea = malign<uint8_t, ALIGN_SIZE>(m_workarea_i16);
@@ -576,7 +644,8 @@ void Solution7::process_without_start_clip(
           if(row_max >= opt){
               if(row_max > opt){
                   opt = row_max;
-                  position = dir ? 0 : 0x7fffffff;
+                  //position = dir ? 0 : 0x7fffffff;
+                  qe = te = 0;
                   n_best = 0;
               }
               mm_set1_epi16(v_row_max, opt);
@@ -587,6 +656,7 @@ void Solution7::process_without_start_clip(
                   __m128i first_block = _mm_load_si128((__m128i *)(first_block_maxval));
                   _mm_store_si128((__m128i *)(blocks[0].M), first_block);
               }
+              /*
               if(dir){
                   int local_position = 0;
                   for(int j = block_end; j >= block_begin; --j){
@@ -612,6 +682,18 @@ void Solution7::process_without_start_clip(
                   }
                   position = min(position, local_position);
               }
+              */
+              int local_position = 0;
+              for(int j = block_end; j >= block_begin; --j){
+                  __m128i x = _mm_load_si128((__m128i *)(blocks[j].M));
+                  __m128i f = _mm_cmpeq_epi16(v_row_max, x);
+                  v_best_num = _mm_add_epi8(v_best_num, f);
+                  const int mask = _mm_movemask_epi8(f);
+                  const int p = (j << 3) + (__builtin_ctz(mask) >> 1);
+                  const int pos = ((i - p) << 16) | p;
+                  local_position = mask ? pos : local_position;
+              }
+              te = max(te, local_position);
               __m128i m = _mm_sub_epi8(_mm_setzero_si128(), v_best_num);
               __m128i sad = _mm_sad_epu8(_mm_setzero_si128(), m);
               n_best += (_mm_extract_epi16(sad, 0) + _mm_extract_epi16(sad, 4)) >> 1;
@@ -635,6 +717,7 @@ void Solution7::process_without_start_clip(
       mm_reduction_max_epi16(opt, v_opt);
       mm_set1_epi16(v_opt, opt);
       __m128i v_count = _mm_setzero_si128();
+      /*
       if(dir){
           for(int i = block_begin; i < block_end; ++i){
               __m128i x = _mm_load_si128((__m128i *)(X + (i << 3)));
@@ -654,15 +737,29 @@ void Solution7::process_without_start_clip(
               if(mask){ position = (i << 3) + k; }
           }
       }
+      */
+      for(int i = block_begin; i < block_end; ++i){
+          __m128i x = _mm_load_si128((__m128i *)(X + (i << 3)));
+          __m128i f = _mm_cmpeq_epi16(x, v_opt);
+          v_count = _mm_add_epi8(v_count, f);
+          const int mask = _mm_movemask_epi8(f);
+          const int k = (31 - __builtin_clz(mask)) >> 1;
+          if(mask){ te = (i << 3) + k; }
+      }
       v_count = _mm_sub_epi8(_mm_setzero_si128(), v_count);
       v_count = _mm_sad_epu8(_mm_setzero_si128(), v_count);
       n_best = (_mm_extract_epi16(v_count, 0) + _mm_extract_epi16(v_count, 4)) >> 1;
-      position |= (m - 1) << 16;
+      //position |= (m - 1) << 16;
+      qe = (m - 1) << 16;
   }
 
   result.opt = opt;
+  /*
   result.query_end = position >> 16;
   result.target_end = position & 0xffff;
+  */
+  result.query_end = qe;
+  result.target_end = te;
   result.n_best = n_best;
 }
 

@@ -173,6 +173,7 @@ int Solution6::process(const string& bs, const string& as, int qsc, int qec,
             for (int j=0; j < n; j++)
               opt = max(opt, X[j+l+2].s[l]);
 
+            /*
             if (dir == 0) {
                 int j;
                 for (j=0;; j++) {
@@ -201,6 +202,20 @@ int Solution6::process(const string& bs, const string& as, int qsc, int qec,
                     if (X[j+l+2].s[l] == opt) {
                         n_best++;
                     }
+                }
+            }
+            */
+            int j;
+            for (j=n-1;; j--) {
+                if (X[j+l+2].s[l] == opt) {
+                    break;
+                }
+            }
+            target_end = j;
+            j--;
+            for (; j >= 0; j--) {
+                if (X[j+l+2].s[l] == opt) {
+                    n_best++;
                 }
             }
           }
@@ -293,6 +308,7 @@ int Solution6::process(const string& bs, const string& as, int qsc, int qec,
                                 int l;
                                 for (l=0;; l++) {
                                     if (tmp_opt.s[l] == opt) {
+                                        /*
                                         int j;
                                         for (j=0; X[j+l+2].s[l] != opt; j++) {
                                             ;
@@ -300,6 +316,19 @@ int Solution6::process(const string& bs, const string& as, int qsc, int qec,
                                         target_end = j;
                                         j++;
                                         for (; j < n; j++) {
+                                            if (X[j+l+2].s[l] == opt) {
+                                                n_best++;
+                                            }
+                                        }
+                                        */
+                                        int j;
+                                        for (j=n-1; X[j+l+2].s[l] != opt; j--) {
+                                            ;
+                                        }
+                                        target_end = j;
+                                        j--;
+                                        n_best++;
+                                        for (; j >=0; j--) {
                                             if (X[j+l+2].s[l] == opt) {
                                                 n_best++;
                                             }
@@ -479,6 +508,7 @@ int Solution6::process(const string& bs, const string& as, int qsc, int qec,
                                 int l;
                                 for (l=0;; l++) {
                                     if (tmp_opt.s[l] == opt) {
+                                        /*
                                         int j;
                                         for (j=0; X[j+l+2].s[l] != opt; j++) {
                                             ;
@@ -486,6 +516,19 @@ int Solution6::process(const string& bs, const string& as, int qsc, int qec,
                                         target_end = j;
                                         j++;
                                         for (; j < n; j++) {
+                                            if (X[j+l+2].s[l] == opt) {
+                                                n_best++;
+                                            }
+                                        }
+                                        */
+                                        int j;
+                                        for (j=n-1; X[j+l+2].s[l] != opt; j--) {
+                                            ;
+                                        }
+                                        target_end = j;
+                                        j--;
+                                        n_best++;
+                                        for (; j >=0; j--) {
                                             if (X[j+l+2].s[l] == opt) {
                                                 n_best++;
                                             }
@@ -638,6 +681,7 @@ int Solution6::process(const string& bs, const string& as, int qsc, int qec,
                             int l;
                             for (l=0;; l++) {
                                 if (tmp_opt.s[l] == opt) {
+                                    /*
                                     int j;
                                     for (j=0; X[j+l+2].s[l] != opt; j++) {
                                         ;
@@ -645,6 +689,19 @@ int Solution6::process(const string& bs, const string& as, int qsc, int qec,
                                     target_end = j;
                                     j++;
                                     for (; j < n; j++) {
+                                        if (X[j+l+2].s[l] == opt) {
+                                            n_best++;
+                                        }
+                                    }
+                                    */
+                                    int j;
+                                    for (j=n-1; X[j+l+2].s[l] != opt; j--) {
+                                        ;
+                                    }
+                                    target_end = j;
+                                    j--;
+                                    n_best++;
+                                    for (; j >=0; j--) {
                                         if (X[j+l+2].s[l] == opt) {
                                             n_best++;
                                         }

@@ -575,7 +575,9 @@ void Solution5::brute_force()
                       else 
                         {
                           n_best++;
-                          if (direction==1) query_end=i,target_end=pos_j;
+                          //if (direction==1) query_end=i,target_end=pos_j;
+                          if (direction==1) query_end=i;
+                          target_end=pos_j;
                           if (pos_j>max_last_j) max_last_j=pos_j;
                           if (pos_j<min_last_j) min_last_j=pos_j;
                         }
@@ -613,7 +615,8 @@ void Solution5::brute_force()
                         if (shuffle[j]<min_last_j) min_last_j=shuffle[j];
                       }
                 }
-              target_end=(direction==1)?max_last_j:min_last_j;
+              //target_end=(direction==1)?max_last_j:min_last_j;
+              target_end=max_last_j;
             }
           first_j=min_last_j-n-(n*match_score-opt)/(-gap_extension)-2;
           if (first_j<0) first_j=0;
@@ -934,7 +937,9 @@ void Solution5::brute_force()
                           else 
                             {
                               n_best++;
-                              if (direction==1) query_end=i,target_end=pos_j;
+                              //if (direction==1) query_end=i,target_end=pos_j;
+                              if (direction==1) query_end=i;
+                              target_end=pos_j;
                               if (pos_j>max_last_j) max_last_j=pos_j;
                               if (pos_j<min_last_j) min_last_j=pos_j;
                             }
@@ -959,7 +964,8 @@ void Solution5::brute_force()
                 if (shuffle[j]<min_last_j) min_last_j=shuffle[j];
               }
         }
-      target_end=(direction==1)?max_last_j:min_last_j;
+      //target_end=(direction==1)?max_last_j:min_last_j;
+      target_end=max_last_j;
     }
   first_j=min_last_j-n-(n*match_score-opt)/(-gap_extension)-2;
   if (first_j<0) first_j=0;
@@ -1063,7 +1069,9 @@ void Solution5::solve_task1()
                 else 
                   {
                     n_best++;
-                    if (direction==1) { query_end=i; target_end=j; }
+                    //if (direction==1) { query_end=i; target_end=j; }
+                    if (direction==1) { query_end=i; }
+                    target_end=j; 
                     if (j-1>last_j) last_j=j-1;
                     int pos_j=f0&((1<<16)-1);
                     if (pos_j<first_j) first_j=pos_j;
@@ -1126,7 +1134,9 @@ void Solution5::solve_task1()
                     else 
                       {
                         n_best++;
-                        if (direction==1) { query_end=i; target_end=j; }
+                        //if (direction==1) { query_end=i; target_end=j; }
+                        if (direction==1) { query_end=i; }
+                        target_end=j; 
                         if (j-1>last_j) last_j=j-1;
                         int pos_j=f0&((1<<16)-1);
                         if (pos_j<first_j) first_j=pos_j;
@@ -1203,7 +1213,9 @@ void Solution5::solve_task1()
                 else 
                   {
                     n_best++;
-                    if (direction==1) { query_end=i; target_end=j; }
+                    //if (direction==1) { query_end=i; target_end=j; }
+                    if (direction==1) { query_end=i; }
+                    target_end=j; 
                     if (j-1>last_j) last_j=j-1;
                     int pos_j=f0&((1<<16)-1);
                     if (pos_j<first_j) first_j=pos_j;
@@ -1286,7 +1298,7 @@ void Solution5::solve_task2()
                 {
                   last_j=j+n-1;
                   n_best++;
-                  if (direction==0) target_end=j;
+                  //if (direction==0) target_end=j;
                 }
               target_end=m-1-target_end;
               swap(first_j,last_j);
@@ -1578,7 +1590,8 @@ void Solution5::solve_task2()
       if (direction==0)
         {
           query_end=respos_all.begin()->first;
-          target_end=respos_all.begin()->second;
+          //target_end=respos_all.begin()->second;
+          target_end=(--respos_all.end())->second;
         }
       else
         {
@@ -1656,7 +1669,8 @@ void Solution5::solve_task3()
                 {
                   last_j=j+n-1;
                   n_best++;
-                  if (direction==1) target_end=last_j;
+                  //if (direction==1) target_end=last_j;
+                  target_end=last_j;
                 }
               //printf(result,"%d %d %d %d",greedy_cost,n-1,target_end,n_best);
               opt = greedy_cost;
@@ -1738,8 +1752,11 @@ void Solution5::solve_task3()
                 else
                   {
                     if (j-1!=last_j) n_best++;
-                    if (direction==0) { if (j<target_end) target_end=j; }
-                    else { if (j>target_end) target_end=j; }
+                    /*
+                       if (direction==0) { if (j<target_end) target_end=j; }
+                       else { if (j>target_end) target_end=j; }
+                       */
+                    if (j>target_end) target_end=j; 
                     if (j-1>last_j) last_j=j-1;
                     int pos_j=f0&((1<<16)-1); if (pos_j<first_j) first_j=pos_j;
                   }
@@ -1771,8 +1788,11 @@ void Solution5::solve_task3()
                     else 
                       {
                         if (j-1!=last_j) n_best++;
+                        /*
                         if (direction==0) { if (j<target_end) target_end=j; }
                         else { if (j>target_end) target_end=j; }
+                        */
+                        if (j>target_end) target_end=j; 
                         if (j-1>last_j) last_j=j-1;
                         int pos_j=f0&((1<<16)-1);
                         if (pos_j<first_j) first_j=pos_j;

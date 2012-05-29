@@ -15,7 +15,7 @@ typedef struct {
     uint32_t hash;
     short opt;
     short n_best;
-    int64_t res_min_pos;
+    //int64_t res_min_pos;
     int64_t res_max_pos;
 } qres_t;
 

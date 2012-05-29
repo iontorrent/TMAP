@@ -989,7 +989,7 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
    *
    * When no soft-clipping occurs, then the whole query will be used.  
    *
-   * When there is only soft-clipping at the 3' end of the query (start of the 
+   * When there is only soft-clipping at the 3' end of the query (end of the 
    * read), we can search for the alignment with the greatest query end when 
    * searching in the 5'->3' direction.  Since the query start is fixed, as there 
    * is no 5' start-clipping, we are then guaranteed to find the alignment with
@@ -1819,9 +1819,10 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
 
       // NB: if match/mismatch penalties are on the opposite strands, we may
       // have wrong scores
-      // NB: this aligns in the opposite direction than sequencing 
+      // NB: this aligns in the opposite direction than sequencing (3'->5') 
       tmp_sam.score = tmap_vsw_process_rev(vsw, query_rc, qlen, target, tlen,
-                                       &tmp_sam.result, &overflow, opt->score_thr, 0);
+                                       &tmp_sam.result, &overflow, opt->score_thr, 
+                                       (1 ==  softclip_end && 1 == softclip_start) ? 0 : 1); // NB: to guarantee correct soft-clipping if both ends are clipped
       if(1 == overflow) {
           tmap_bug();
       }

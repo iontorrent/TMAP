@@ -8,6 +8,7 @@
 \usepackage{color}
 \usepackage[plainpages=false,pdfpagelabels]{hyperref}
 \usepackage{url}
+\usepackage{minitoc}
 % new color
 \definecolor{mylinkcolor}{rgb}{0,0,0.75}
 \definecolor{mycitecolor}{rgb}{0,0.5,0}
@@ -69,6 +70,7 @@ urlcolor=myurlcolor     % color of external links
 \maketitle
 
 % TABLE OF CONTENTS
+\dominitoc
 \tableofcontents
 \addcontentsline{toc}{chapter}{Table of Contents}
 
@@ -770,8 +772,13 @@ This tag stores the original alignment score, if an SFF was inputted.
 \subsubsection{ZF}
 This tag stores the zero-based index of the first flow signal corresponding to the template, inferred from the clipping values in the SFF.
 This this is outputted only when an SFF is inputted and the \TT{-Y} option is used.
+
 \chapter{Commonly Asked Questions}
 \label{chap:faq}
+
+% inform mintoc of a new chapter
+\mtcaddchapter 
+\minitoc
 
 \section{How are IUPAC ambiguity codes handled in the reference/target FASTA?}
 \label{sec:iupac}
@@ -937,6 +944,26 @@ If the penalty for having two mismatches is equal to the score of having six mat
 
 TMAP will guarantee to find the alignment with the contains the most number of query bases (the first one above) unless the user specifies that soft-clipping is allowed on both ends of the read.
 In the latter case, no guarantee can be made.
+
+\section{How do I view the default parameters?}
+
+The default parameters are shown using the \TT{-h} option.
+The displayed values are updated for any command line parameters that are given before the \TT{-h} option.
+
+To see the default values for the mapall command:
+\begin{verbatim}
+tmap mapall -h
+\end{verbatim}
+
+To see the default values for the mapall command and stage-specific options:
+\begin{verbatim}
+tmap mapall stage1 -h
+\end{verbatim}
+
+To see the default values for the mapall command, stage-specific options, and a subset of algorithms:
+\begin{verbatim}
+tmap mapall stage1 map1 map2 map3 -h
+\end{verbatim}
 
 \chapter{Appendix}
 
