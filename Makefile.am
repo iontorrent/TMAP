@@ -18,11 +18,13 @@ GLOBAL_SOURCES = \
 				 src/seq/tmap_sff.h src/seq/tmap_sff.c \
 				 src/seq/tmap_sam.h src/seq/tmap_sam.c \
 				 src/seq/tmap_seq.h src/seq/tmap_seq.c \
+				 src/seq/tmap_seqs.h src/seq/tmap_seqs.c \
 				 src/io/tmap_file.h src/io/tmap_file.c \
 				 src/io/tmap_fq_io.h src/io/tmap_fq_io.c \
 				 src/io/tmap_sff_io.h src/io/tmap_sff_io.c \
 				 src/io/tmap_sam_io.h src/io/tmap_sam_io.c \
 				 src/io/tmap_seq_io.h src/io/tmap_seq_io.c \
+				 src/io/tmap_seqs_io.h src/io/tmap_seqs_io.c \
 				 src/index/tmap_bwt.h src/index/tmap_bwt.c \
 				 src/index/tmap_bwt_aux.h src/index/tmap_bwt_aux.c \
 				 src/index/tmap_bwtl.h src/index/tmap_bwtl.c \
