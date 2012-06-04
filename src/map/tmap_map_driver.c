@@ -562,7 +562,8 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
 
   // SAM header
   tmap_sam_print_header(tmap_file_stdout, index->refseq, (1 == num_ends) ? seqio[0] : NULL, 
-                        driver->opt->sam_rg, driver->opt->sam_flowspace_tags, driver->opt->ignore_rg_sam_tags, 
+                        // TODO: sam header
+                        NULL, /*driver->opt->sam_rg, */driver->opt->sam_flowspace_tags, driver->opt->ignore_rg_sam_tags, 
                         driver->opt->argc, driver->opt->argv);
 
   tmap_progress_print("processing reads");

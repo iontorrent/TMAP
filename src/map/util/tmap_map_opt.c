@@ -88,12 +88,12 @@ static char *tmap_map_opt_input_types[] = {"INT", "FLOAT", "NUM", "FILE", "STRIN
   }
 
 // array of character arrays (i.e. list of file names)
-#define __tmap_map_opt_option_print_func_fns_init(_name_array, _name_length) \
+#define __tmap_map_opt_option_print_func_char_array_init(_name_array, _name_length, _default) \
   static void tmap_map_opt_option_print_func_##_name_array(void *arg) { \
       tmap_map_opt_t *opt = (tmap_map_opt_t*)arg; \
       int32_t i; \
       tmap_file_fprintf(tmap_file_stderr, "["); \
-      if(0 == opt->_name_length) tmap_file_fprintf(tmap_file_stderr, "stdin"); \
+      if(0 == opt->_name_length) tmap_file_fprintf(tmap_file_stderr, _default); \
       else { \
           for(i=0;i<opt->_name_length;i++) { \
               if(0 < i) tmap_file_fprintf(tmap_file_stderr, ","); \
@@ -117,7 +117,7 @@ static char *tmap_map_opt_input_types[] = {"INT", "FLOAT", "NUM", "FILE", "STRIN
  */
 // global options
 __tmap_map_opt_option_print_func_chars_init(fn_fasta, "not using")
-__tmap_map_opt_option_print_func_fns_init(fn_reads, fn_reads_num)
+__tmap_map_opt_option_print_func_char_array_init(fn_reads, fn_reads_num, "stdin")
 __tmap_map_opt_option_print_func_reads_format_init(reads_format)
 __tmap_map_opt_option_print_func_chars_init(fn_sam, "stdout")
 __tmap_map_opt_option_print_func_int_init(score_match)
@@ -133,7 +133,7 @@ __tmap_map_opt_option_print_func_int_init(score_thr)
 __tmap_map_opt_option_print_func_int_init(reads_queue_size)
 __tmap_map_opt_option_print_func_int_autodetected_init(num_threads, num_threads_autodetected)
 __tmap_map_opt_option_print_func_int_init(aln_output_mode)
-__tmap_map_opt_option_print_func_chars_init(sam_rg, "not using")
+__tmap_map_opt_option_print_func_char_array_init(sam_rg, sam_rg_num, "not using")
 __tmap_map_opt_option_print_func_tf_init(bidirectional)
 __tmap_map_opt_option_print_func_tf_init(seq_eq)
 __tmap_map_opt_option_print_func_tf_init(ignore_rg_sam_tags)
@@ -1003,6 +1003,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->num_threads_autodetected = 1;
   opt->aln_output_mode = TMAP_MAP_OPT_ALN_MODE_RAND_BEST;
   opt->sam_rg = NULL;
+  opt->sam_rg = 0;
   opt->bidirectional = 0;
   opt->seq_eq = 0;
   opt->ignore_rg_sam_tags = 0;
@@ -1133,6 +1134,9 @@ tmap_map_opt_destroy(tmap_map_opt_t *opt)
   }
   free(opt->fn_reads);
   free(opt->fn_sam);
+  for(i=0;i<opt->sam_rg_num;i++) {
+      free(opt->sam_rg[i]);
+  }
   free(opt->sam_rg);
 
   for(i=0;i<opt->num_sub_opts;i++) {
@@ -1352,20 +1356,10 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           opt->pen_gapo = atoi(optarg);
       }
       else if(c == 'R' || (0 == c && 0 == strcmp("sam-read-group", options[option_index].name))) {       
-          if(NULL == opt->sam_rg) {
-              // add five for the string "@RG\t" and null terminator
-              opt->sam_rg = tmap_realloc(opt->sam_rg, sizeof(char) * (5 + strlen(optarg)), "opt->sam_rg");
-              strcpy(opt->sam_rg, "@RG\t");
-              strcat(opt->sam_rg, optarg);
-          }
-          else {
-              // add two for the tab separator and null terminator
-              opt->sam_rg = tmap_realloc(opt->sam_rg, sizeof(char) * (2 + strlen(optarg) + strlen(opt->sam_rg)), "opt->sam_rg");
-              if(0 < strlen(optarg) && '\t' != optarg[0]) strcat(opt->sam_rg, "\t"); // add a tab separator
-              strcat(opt->sam_rg, optarg);
-          }
-          // remove trailing white spaces
-          tmap_chomp(opt->sam_rg);
+          opt->sam_rg = tmap_realloc(opt->sam_rg, sizeof(char*) * (1 + opt->sam_rg_num), "opt->sam_rg_num");
+          opt->sam_rg[opt->sam_rg_num] = tmap_strdup(optarg);
+          tmap_chomp(opt->sam_rg[opt->sam_rg_num]); // remove trailing white spaces
+          opt->sam_rg_num++;
       }
       else if(c == 'T' || (0 == c && 0 == strcmp("score-thres", options[option_index].name))) {       
           opt->score_thr = atoi(optarg);
@@ -1738,8 +1732,13 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
         tmap_error("option -n was specified outside of the common options", Exit, CommandLineArgument);
     }
     /* NB: "aln_output_mode" or "-a" may be modified by mapall */
-    if(0 != tmap_map_opt_file_check_with_null(opt_a->sam_rg, opt_b->sam_rg)) {
+    if(opt_a->sam_rg_num != opt_b->sam_rg_num) {
         tmap_error("option -R was specified outside of the common options", Exit, CommandLineArgument);
+    }
+    for(i=0;i<opt_a->sam_rg_num;i++) {
+        if(0 != tmap_map_opt_file_check_with_null(opt_a->sam_rg[i], opt_b->sam_rg[i])) {
+            tmap_error("option -R was specified outside of the common options", Exit, CommandLineArgument);
+        }
     }
     if(opt_a->bidirectional != opt_b->bidirectional) {
         tmap_error("option -D was specified outside of the common options", Exit, CommandLineArgument);
@@ -2052,7 +2051,10 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     else {
         opt_dest->aln_output_mode = TMAP_MAP_OPT_ALN_MODE_ALL;
     }
-    opt_dest->sam_rg = tmap_strdup(opt_src->sam_rg);
+    opt_dest->sam_rg = tmap_malloc(sizeof(char*)*opt_dest->sam_rg_num, "opt_dest->sam_rg");
+    for(i=0;i<opt_dest->sam_rg_num;i++) {
+        opt_dest->sam_rg[i] = tmap_strdup(opt_src->sam_rg[i]);
+    }
     opt_dest->bidirectional = opt_src->bidirectional;
     opt_dest->seq_eq = opt_src->seq_eq;
     opt_dest->ignore_rg_sam_tags = opt_src->ignore_rg_sam_tags;
@@ -2126,7 +2128,10 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "reads_queue_size=%d\n", opt->reads_queue_size);
   fprintf(stderr, "num_threads=%d\n", opt->num_threads);
   fprintf(stderr, "aln_output_mode=%d\n", opt->aln_output_mode);
-  fprintf(stderr, "sam_rg=%s\n", opt->sam_rg);
+  for(i=0;i<opt->sam_rg_num;i++) {
+      if(0 < i) fprintf(stderr, ",");
+      fprintf(stderr, "sam_rg=%s", opt->sam_rg[i]);
+  }
   fprintf(stderr, "bidirectional=%d\n", opt->bidirectional);
   fprintf(stderr, "seq_eq=%d\n", opt->seq_eq);
   fprintf(stderr, "ignore_rg_sam_tags=%d\n", opt->ignore_rg_sam_tags);
