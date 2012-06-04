@@ -71,6 +71,165 @@ tmap_bam_io_init(const char *fn)
   return tmap_sam_io_init_helper(fn, 1);
 }
 
+static void
+tmap_sam_io_init2_fs_and_add(tmap_seqs_io_t *io_in,
+                         sam_header_records_t *records,
+                         sam_header_record_t *record,
+                         int32_t sam_flowspace_tags)
+{
+  char tag[2];
+  // add @RG.KS and @RG.FO
+  if(io_in->type == TMAP_SEQ_TYPE_SFF && sam_flowspace_tags) {
+      if(io_in->n <= records->n) tmap_error("Too many read groups specified", Exit, OutOfRange);
+      // @RG.KS
+      tag[0]='K';tag[1]='S';
+      if(0 == sam_header_record_add(record, tag, tmap_sff_io_get_rg_ks(io_in->seqios[records->n]->io.sff))) {
+          tmap_error("Could not add the KS tag", Exit, OutOfRange);
+      }
+      // @RG.FO
+      tag[0]='F';tag[1]='O';
+      if(0 == sam_header_record_add(record, tag, tmap_sff_io_get_rg_fo(io_in->seqios[records->n]->io.sff))) {
+          tmap_error("Could not add the FO tag", Exit, OutOfRange);
+      }
+  }
+  // check for the @RG.ID and @RG.SM tags
+  if(NULL == sam_header_record_get(record, "ID")) tmap_bug(); // should not happen
+  if(NULL == sam_header_record_get(record, "SM")) tmap_error("SM tag missing from the read group", Exit, OutOfRange);
+  // add the read group
+  if(0 == sam_header_records_add(records, record)) tmap_bug(); 
+}
+
+inline tmap_sam_io_t *
+tmap_sam_io_init2(const char *fn, const char *mod,
+                  tmap_refseq_t *refseq,
+                  tmap_seqs_io_t *io_in,
+                  const char **rg_sam, int32_t rg_sam_num,
+                  int32_t sam_flowspace_tags,
+                  int32_t argc, const char *argv[])
+{
+  tmap_sam_io_t *io = NULL;
+  sam_header_t *header = NULL; // the output header
+  sam_header_records_t *records = NULL;
+  sam_header_record_t *record = NULL;
+  char tag[2];
+  char *command_line= NULL;
+  int32_t i;
+
+  // @HD
+  if(io_in->type == TMAP_SEQ_TYPE_SAM || io_in->type == TMAP_SEQ_TYPE_BAM) {
+      // should be only one input file
+      if(1 != io_in->n) {
+          tmap_bug();
+      }
+      // get the current header
+      header = io_in->seqios[0]->io.samio->fp->header->header; // wow, that's a lot of pointers
+      if(NULL == header) {
+          tmap_bug();
+      }
+  }
+  else {
+      // empty header
+      header = sam_header_init();
+      // @HD - header line
+      records = sam_header_get_records(header, "HD"); // get the header line
+      if(NULL == records) tmap_bug();
+      record = sam_header_record_init("HD"); // new header line
+      if(0 == sam_header_record_add(record, "VN", "1.4")) tmap_bug(); // version number
+      if(0 == sam_header_records_add(records, record)) tmap_bug(); // add the header line
+      // nullify
+      record = NULL;
+      records = NULL;
+  }
+
+  // @SQ
+  if(NULL != refseq) {
+      records = sam_header_get_records(header, "SQ"); // get the sequence dictionary
+      if(NULL == records) tmap_bug();
+      for(i=0;i<refseq->num_annos;i++) { // for each reference sequence
+          char num[32];
+          record = sam_header_record_init("SQ"); // new reference sequence record
+          if(0 == sam_header_record_add(record, "SN", refseq->annos[i].name->s)) tmap_bug(); // reference sequence name
+          if(sprintf(num, "%d", refseq->annos[i].len) < 0) tmap_bug(); // integer to string
+          if(0 == sam_header_record_add(record, "SN", num)) tmap_bug(); // reference sequence name
+          if(0 == sam_header_records_add(records, record)) tmap_bug(); // add the reference sequence record
+      }
+      record = NULL;
+      records = NULL;
+  }
+
+  // @RG - read group
+  if(0 < rg_sam_num) { // @RG specified on the command line
+      // Check for SAM/BAM
+      if(io_in->type == TMAP_SEQ_TYPE_SAM || io_in->type == TMAP_SEQ_TYPE_BAM) {
+          tmap_error("Cannot specify the read groups on the command line when using SAM/BAM as input."
+                     "  Please embed in the SAM/BAM header instead.", Exit, OutOfRange);
+      }
+      record = NULL;
+      records = sam_header_get_records(header, "RG"); // get the read group
+      if(NULL == records) tmap_bug();
+      // go through the command line arguments
+      for(i=0;i<sam_rg_num;i++) {
+          if(strlen(sam_rg[i]) < 4) tmap_error("Read group too small", Exit, OutOfRange);
+          if(':' != sam_rg[i][2]) tmap_error("Read group improperly formatted (no colon)", Exit, OutOfRange);
+
+          // check for id
+          if('I' == sam_rg[i][0] && 'D' == sam_rg[i][1]) { // new read group
+              if(NULL != record) { // add the record
+                  tmap_sam_io_init2_fs_and_add(io_in, records, record, sam_flowspace_tags); // add @RG.KS and @RG.FO
+              }
+              record = sam_header_record_init("RG"); // new read group
+          }
+          // add the tag/value to the record
+          tag[0]=sam_rg[i][0]; tag[1]=sam_rg[i][1]; // setup the tag
+          if(0 == sam_header_record_add(record, tag, sam_rg[i]+3)) tmap_bug(); // add the tag/value
+      }
+      if(NULL != record) { // add the record
+          tmap_sam_io_init2_fs_and_add(io_in, records, record, sam_flowspace_tags); // add @RG.KS and @RG.FO
+      }
+      // check that the # of read groups added was the same as the # of input files...
+      if(records->n != io_in->n) tmap_error("The number of read groups did not match the number of input files", Exit, OutOfRange);
+  }
+  else if(io_in->type != TMAP_SEQ_TYPE_SAM && io_in->type != TMAP_SEQ_TYPE_BAM) { // dummy...
+      records = sam_header_get_records(header, "RG"); // get the read group
+      if(NULL == records) tmap_bug();
+      for(i=0;i<io_in->n;i++) { // for each input file
+          char buf[32];
+          record = sam_header_record_init("RG"); // new read group
+          if(1 == io_in->n) strcpy(buf, "NOID");
+          else if(sprintf(buf, "NOID.%d", i+1) < 0) tmap_bug();
+          if(0 == sam_header_record_add(record, "ID", buf)) tmap_bug(); // dummy ID
+          if(0 == sam_header_record_add(record, "SM", "NOSM")) tmap_bug(); // dummy SM, for Picard validation
+          tmap_sam_io_init2_fs_and_add(io_in, records, record, sam_flowspace_tags); // add @RG.KS and @RG.FO
+      }
+  }
+
+  // @PG - program group
+  // TODO: check for previous program group ID and set @PG.PP
+  records = sam_header_get_records(header, "PG"); // get the program group records
+  if(NULL == records) tmap_bug();
+  record = sam_header_record_init("PG"); // new program group
+  if(0 == sam_header_record_add(record, "ID", PACKAGE_NAME)) tmap_bug(); // @PG.ID
+  if(0 == sam_header_record_add(record, "VN", PACKAGE_VERSION)) tmap_bug(); // @PG.VN
+  // @PG.CL
+  command_line = NULL;
+  j = 1; // for the EOL
+  for(i=0;i<argc;i++) {
+      if(0 < i) j++;
+      j += strlen(argv[i]);
+      command_line = tmap_realloc(command_line, sizeof(char) * j, "command_line");
+      if(0 < i) strcat(command_line, " ");
+      strcat(command_line, argv[i]);
+  }
+  if(0 == sam_header_record_add(record, "CL", command_line)) tmap_bug(); // @PG.CL
+  free(command_line);
+
+  // TODO: create bam_header_t
+
+  // 2. Open the BAM file...
+
+  return io;
+}
+
 void
 tmap_sam_io_destroy(tmap_sam_io_t *samio)
 {

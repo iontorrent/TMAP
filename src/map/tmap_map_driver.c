@@ -481,24 +481,25 @@ tmap_map_driver_core_thread_worker(void *arg)
 void 
 tmap_map_driver_core(tmap_map_driver_t *driver)
 {
-  uint32_t i, j, n_reads_processed=0;
-  int32_t seqs_buffer_length=0;
-  tmap_seqs_io_t *io_in = NULL;
-  tmap_seqs_t **seqs_buffer = NULL;
-  tmap_map_record_t **records=NULL;
-  tmap_index_t *index = NULL;
-  tmap_map_stats_t *stat = NULL;
+  uint32_t i, j, n_reads_processed=0; // # of reads processed
+  int32_t seqs_buffer_length=0; // # of reads read in
+  tmap_seqs_io_t *io_in = NULL; // input file(s)
+  tmap_sam_io_t *io_out = NULL; // output file
+  tmap_seqs_t **seqs_buffer = NULL; // buffer for the reads
+  tmap_map_record_t **records=NULL; // buffer for the mapped data
+  tmap_index_t *index = NULL; // reference indes
+  tmap_map_stats_t *stat = NULL; // alignment statistics
 #ifdef HAVE_LIBPTHREAD
-  tmap_rand_t **rand = NULL;
-  tmap_map_stats_t **stats = NULL;
+  tmap_rand_t **rand = NULL; // random # generator for each thread
+  tmap_map_stats_t **stats = NULL; // alignment statistics for each thread
 #else
-  tmap_rand_t *rand = NULL;
+  tmap_rand_t *rand = NULL; // random # generator
 #endif
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
-  tmap_rand_t *rand_core = tmap_rand_init(13);
+  tmap_rand_t *rand_core = tmap_rand_init(13); // random # generator for sampling
   uint32_t k;
 #endif
-  int32_t seq_type, reads_queue_size;
+  int32_t seq_type, reads_queue_size; // read type, read queue size
 
   /*
   if(NULL == driver->opt->fn_reads) {
@@ -516,7 +517,6 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
           tmap_progress_print("%s will be run in stage %d", 
                                tmap_algo_id_to_name(driver->stages[i]->algorithms[j]->opt->algo_id),
                                driver->stages[i]->algorithms[j]->opt->algo_stage);
-          //tmap_progress_print2("\t with seed mapall_seed_freqc=%.2f", driver->stages[i]->opt->stage_seed_freqc);
       }
   }
 
@@ -555,13 +555,22 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
 #else
   rand = tmap_rand_init(13);
 #endif
-
-  // Note: 'tmap_file_stdout' should not have been previously modified
+  
   if(NULL == driver->opt->fn_sam) {
-      tmap_file_stdout = tmap_file_fdopen(fileno(stdout), "wb", driver->opt->output_compr);
+      // NB: writes to stdout
+      // TODO: BAM writing option
+      io_out = tmap_sam_io_init2("-", "w", 
+                                 index->refseq, io_in, 
+                                 driver->opt->sam_rg, driver->opt->sam_rg_num,
+                                 driver->opt->argc, driver->opt->argv);
   }
   else {
-      tmap_file_stdout = tmap_file_fopen(driver->opt->fn_sam, "wb", driver->opt->output_compr);
+      // TODO: BAM writing option
+      io_out = tma_sam_io_init2(driver->opt->fn_sam, "w",
+                                 index->refseq,
+                                 index->refseq, io_in, 
+                                 driver->opt->sam_rg, driver->opt->sam_rg_num,
+                                 driver->opt->argc, driver->opt->argv);
   }
 
   // SAM header

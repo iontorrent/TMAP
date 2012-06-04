@@ -139,8 +139,6 @@ __tmap_map_opt_option_print_func_tf_init(seq_eq)
 __tmap_map_opt_option_print_func_tf_init(ignore_rg_sam_tags)
 __tmap_map_opt_option_print_func_compr_init(input_compr_gz, input_compr, TMAP_FILE_GZ_COMPRESSION)
 __tmap_map_opt_option_print_func_compr_init(input_compr_bz2, input_compr, TMAP_FILE_BZ2_COMPRESSION)
-__tmap_map_opt_option_print_func_compr_init(output_compr_gz, output_compr, TMAP_FILE_GZ_COMPRESSION)
-__tmap_map_opt_option_print_func_compr_init(output_compr_bz2, output_compr, TMAP_FILE_BZ2_COMPRESSION)
 __tmap_map_opt_option_print_func_int_init(shm_key)
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
 __tmap_map_opt_option_print_func_double_init(sample_reads)
@@ -1008,7 +1006,6 @@ tmap_map_opt_init(int32_t algo_id)
   opt->seq_eq = 0;
   opt->ignore_rg_sam_tags = 0;
   opt->input_compr = TMAP_FILE_NO_COMPRESSION;
-  opt->output_compr = TMAP_FILE_NO_COMPRESSION;
   opt->shm_key = 0;
   opt->min_seq_len = -1;
   opt->max_seq_len = -1;
@@ -1345,9 +1342,6 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(c == 'I' || (0 == c && 0 == strcmp("use-seq-equal", options[option_index].name))) {       
           opt->seq_eq = 1;
       }
-      else if(c == 'J' || (0 == c && 0 == strcmp("output-bz2", options[option_index].name))) {       
-          opt->output_compr = TMAP_FILE_BZ2_COMPRESSION;
-      }
       else if(c == 'M' || (0 == c && 0 == strcmp("pen-mismatch", options[option_index].name))) {       
           opt->pen_mm = atoi(optarg);
       }                                           
@@ -1366,9 +1360,6 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
       else if(c == 'W' || (0 == c && 0 == strcmp("duplicate-window", options[option_index].name))) {       
           opt->dup_window = atoi(optarg);
-      }
-      else if(c == 'Z' || (0 == c && 0 == strcmp("output-gz", options[option_index].name))) {       
-          opt->output_compr = TMAP_FILE_GZ_COMPRESSION;
       }
       else if(c == 'a' || (0 == c && 0 == strcmp("aln-output-mode", options[option_index].name))) {       
           opt->aln_output_mode = atoi(optarg);
@@ -1749,9 +1740,6 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
     if(opt_a->input_compr != opt_b->input_compr) {
         tmap_error("option -j or -z was specified outside of the common options", Exit, CommandLineArgument);
     }
-    if(opt_a->output_compr != opt_b->output_compr) {
-        tmap_error("option -J or -Z was specified outside of the common options", Exit, CommandLineArgument);
-    }
     if(opt_a->shm_key != opt_b->shm_key) {
         tmap_error("option -k was specified outside of the common options", Exit, CommandLineArgument);
     }
@@ -1911,10 +1899,6 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       tmap_error("Must use -C with -R", Exit, CommandLineArgument);
   }
   */
-  if(TMAP_FILE_BZ2_COMPRESSION == opt->output_compr
-     && -1 == opt->reads_queue_size) {
-      tmap_error("cannot buffer reads with bzip2 output (options \"-q 1 -J\")", Exit, CommandLineArgument);
-  }
   if(-1 != opt->min_seq_len) tmap_error_cmd_check_int(opt->min_seq_len, 1, INT32_MAX, "--min-seq-length");
   if(-1 != opt->max_seq_len) tmap_error_cmd_check_int(opt->max_seq_len, 1, INT32_MAX, "--max-seq-length");
   if(-1 != opt->min_seq_len && -1 != opt->max_seq_len && opt->max_seq_len < opt->min_seq_len) {
@@ -2059,7 +2043,6 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->seq_eq = opt_src->seq_eq;
     opt_dest->ignore_rg_sam_tags = opt_src->ignore_rg_sam_tags;
     opt_dest->input_compr = opt_src->input_compr;
-    opt_dest->output_compr = opt_src->output_compr;
     opt_dest->shm_key = opt_src->shm_key;
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
     opt_dest->sample_reads = opt_src->sample_reads;
@@ -2140,7 +2123,6 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "remove_sff_clipping=%d\n", opt->remove_sff_clipping);
   fprintf(stderr, "aln_flowspace=%d\n", opt->aln_flowspace);
   fprintf(stderr, "input_compr=%d\n", opt->input_compr);
-  fprintf(stderr, "output_compr=%d\n", opt->output_compr);
   fprintf(stderr, "shm_key=%d\n", (int)opt->shm_key);
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
   fprintf(stderr, "sample_reads=%lf\n", opt->sample_reads);
