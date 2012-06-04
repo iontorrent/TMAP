@@ -33,7 +33,7 @@ typedef struct {
   @return              pointer to the initialized memory for reading/writing sequences
   */
 inline tmap_seqs_io_t *
-tmap_seqs_io_init(const char **fns, int32_t fn_num, int8_t seq_type, int32_t compression);
+tmap_seqs_io_init(char **fns, int32_t fn_num, int8_t seq_type, int32_t compression);
 
 /*! 
   destroys input/output structure

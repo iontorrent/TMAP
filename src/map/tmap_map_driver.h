@@ -4,6 +4,7 @@
 
 #include <sys/types.h>
 #include "../index/tmap_index.h"
+#include "../seq/tmap_seqs.h"
 
 #ifdef HAVE_LIBPTHREAD
 #define TMAP_MAP_DRIVER_THREAD_BLOCK_SIZE 512
@@ -150,9 +151,8 @@ tmap_map_driver_destroy(tmap_map_driver_t *driver);
   Driver data to be passed to a thread                         
   */
 typedef struct {                                            
-    int32_t num_ends;  /*!< the number of mates (one for fragments) */
-    tmap_seq_t ***seq_buffer;  /*!< the buffers of sequences */    
-    int32_t seq_buffer_length;  /*!< the buffers length */
+    tmap_seqs_t **seqs_buffer;  /*!< the buffers of sequences */    
+    int32_t seqs_buffer_length;  /*!< the buffers length */
     tmap_map_record_t **records;  /*!< the alignments for each sequence */
     tmap_index_t *index;  /*!< pointer to the reference index */
     tmap_map_driver_t *driver;  /*!< the main driver object */
@@ -164,9 +164,9 @@ typedef struct {
 /*!
   The core worker routine of mapall
   @param  num_ends             the number of ends
-  @param  seq_buffer           the buffer of sequences
+  @param  seqs_buffer           the buffer of sequences
   @param  records              the records to return
-  @param  seq_buffer_length    the number of sequences in the buffer
+  @param  seqs_buffer_length    the number of sequences in the buffer
   @param  index                the reference index
   @param  driver               the driver
   @param  stat                 the driver statistics
@@ -174,10 +174,9 @@ typedef struct {
   @param  tid                  the thread ids
  */
 void
-tmap_map_driver_core_worker(int32_t num_ends, 
-                            tmap_seq_t ***seq_buffer, 
+tmap_map_driver_core_worker(tmap_seqs_t **seqs_buffer, 
                             tmap_map_record_t **records,
-                            int32_t seq_buffer_length,
+                            int32_t seqs_buffer_length,
                             tmap_index_t *index,
                             tmap_map_driver_t *driver,
                             tmap_map_stats_t* stat,

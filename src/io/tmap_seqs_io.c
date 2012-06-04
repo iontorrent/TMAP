@@ -13,8 +13,8 @@
 #include "tmap_seq_io.h"
 #include "tmap_seqs_io.h"
 
-inline tmap_seqs_io_t *
-tmap_seqs_io_init(const char **fns, int32_t fn_num, int8_t seq_type, int32_t compression)
+inline tmap_seqs_io_t*
+tmap_seqs_io_init(char **fns, int32_t fn_num, int8_t seq_type, int32_t compression)
 {
   tmap_seqs_io_t *io= NULL;
   int32_t i;
@@ -26,10 +26,17 @@ tmap_seqs_io_init(const char **fns, int32_t fn_num, int8_t seq_type, int32_t com
       tmap_error("Multi-SAM/BAM not supported", Exit, OutOfRange);
   }
 
-  io->n = fn_num;
-  io->seqios = tmap_calloc(fn_num, sizeof(tmap_seq_io_t*), "io->seqios");
-  for(i=0;i<io->n;i++) {
-      io->seqios[i] = tmap_seq_io_init(fns[i], seq_type, 0, compression); // NB: always reading
+  if(NULL == fns) { // stdin
+      io->n = 1;
+      io->seqios = tmap_calloc(1, sizeof(tmap_seq_io_t*), "io->seqios");
+      io->seqios[0] = tmap_seq_io_init("-", seq_type, 0, compression); // NB: always reading
+  }
+  else { // from file(s)
+      io->n = fn_num;
+      io->seqios = tmap_calloc(fn_num, sizeof(tmap_seq_io_t*), "io->seqios");
+      for(i=0;i<io->n;i++) {
+          io->seqios[i] = tmap_seq_io_init(fns[i], seq_type, 0, compression); // NB: always reading
+      }
   }
 
   return io;

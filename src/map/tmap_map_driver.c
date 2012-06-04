@@ -22,7 +22,7 @@
 #include "../index/tmap_bwt_match_hash.h"
 #include "../index/tmap_sa.h"
 #include "../index/tmap_index.h"
-#include "../io/tmap_seq_io.h"
+#include "../io/tmap_seqs_io.h"
 #include "../server/tmap_shm.h"
 #include "../sw/tmap_fsw.h"
 #include "../sw/tmap_sw.h"
@@ -174,10 +174,9 @@ tmap_map_driver_init_seqs(tmap_seq_t **seqs, tmap_seq_t *seq, int32_t max_length
 }
 
 void
-tmap_map_driver_core_worker(int32_t num_ends, 
-                            tmap_seq_t ***seq_buffer, 
+tmap_map_driver_core_worker(tmap_seqs_t **seqs_buffer, 
                             tmap_map_record_t **records, 
-                            int32_t seq_buffer_length,
+                            int32_t seqs_buffer_length,
                             tmap_index_t *index,
                             tmap_map_driver_t *driver,
                             tmap_map_stats_t *stat,
@@ -191,6 +190,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
   tmap_fsw_flowseq_t *fs = NULL;
   tmap_seq_t ***seqs = NULL;
   tmap_bwt_match_hash_t *hash=NULL;
+  int32_t max_num_ends = 0;
 
 #ifdef TMAP_DRIVER_USE_HASH
   // init the occurence hash
@@ -198,24 +198,26 @@ tmap_map_driver_core_worker(int32_t num_ends,
 #endif
 
   // initialize flow space info
-  if(0 < seq_buffer_length) {
-      fs = tmap_map_driver_get_flow_info(seq_buffer[0][0], driver->opt, &flow_order, &flow_order_len, &key_seq, &key_seq_len);
+  // TODO
+  if(0 < seqs_buffer_length) {
+      fs = tmap_map_driver_get_flow_info(seqs_buffer[0]->seqs[0], driver->opt, &flow_order, &flow_order_len, &key_seq, &key_seq_len);
   }
   // init memory
-  seqs = tmap_malloc(sizeof(tmap_seq_t**)*num_ends, "seqs");
-  for(i=0;i<num_ends;i++) {
-      seqs[i] = tmap_malloc(sizeof(tmap_seq_t*)*4, "seqs[i]");
+  max_num_ends = 2;
+  seqs = tmap_malloc(sizeof(tmap_seq_t**)*max_num_ends, "seqs");
+  for(i=0;i<max_num_ends;i++) {
+      seqs[i] = tmap_calloc(4, sizeof(tmap_seq_t*), "seqs[i]");
   }
   
   // initialize thread data
   tmap_map_driver_do_threads_init(driver, flow_order, flow_order_len, key_seq, key_seq_len, tid);
-          
 
   // Go through the buffer
-  while(low < seq_buffer_length) {
+  while(low < seqs_buffer_length) {
       if(tid == (low % driver->opt->num_threads)) {
           tmap_map_stats_t *stage_stat = NULL;
           tmap_map_record_t *record_prev = NULL;
+          int32_t num_ends;
           
 #ifdef TMAP_DRIVER_USE_HASH
 #ifdef TMAP_DRIVER_CLEAR_HASH_PER_READ
@@ -223,11 +225,21 @@ tmap_map_driver_core_worker(int32_t num_ends,
           tmap_bwt_match_hash_clear(hash);
 #endif
 #endif
+
+          num_ends = seqs_buffer[low]->n;
+          if(max_num_ends < num_ends) {
+              seqs = tmap_realloc(seqs, sizeof(tmap_seq_t**)*num_ends, "seqs");
+              while(max_num_ends < num_ends) {
+                  seqs[max_num_ends] = tmap_calloc(4, sizeof(tmap_seq_t*), "seqs[max_num_ends]");
+                  max_num_ends++;
+              }
+              max_num_ends = num_ends;
+          }
               
           // remove key sequences
           for(i=0;i<num_ends;i++) {
               tmap_seq_t *seq = NULL;
-              seq = seq_buffer[i][low];
+              seq = seqs_buffer[low]->seqs[i];
               if(0 == tmap_seq_remove_key_sequence(seq, driver->opt->remove_sff_clipping, key_seq, key_seq_len)) {
                   // key sequence did not match
                   continue;
@@ -236,7 +248,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
 
           // init
           for(i=0;i<num_ends;i++) {
-              tmap_map_driver_init_seqs(seqs[i], seq_buffer[i][low], -1);
+              tmap_map_driver_init_seqs(seqs[i], seqs_buffer[low]->seqs[i], -1);
               stat->num_reads++;
           }
 
@@ -256,7 +268,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
                   // should we seed using the whole read?
                   if(0 < stage->opt->stage_seed_max_length && stage->opt->stage_seed_max_length < tmap_seq_get_bases_length(seqs[j][0])) {
                       stage_seqs = tmap_calloc(4, sizeof(tmap_seq_t*), "seqs[i]");
-                      tmap_map_driver_init_seqs(stage_seqs, seq_buffer[i][low], stage->opt->stage_seed_max_length);
+                      tmap_map_driver_init_seqs(stage_seqs, seqs_buffer[low]->seqs[i], stage->opt->stage_seed_max_length);
                   }
                   else {
                       stage_seqs = seqs[j];
@@ -398,9 +410,9 @@ tmap_map_driver_core_worker(int32_t num_ends,
                       //stat->num_with_mapping++;
                       // re-align the alignments in flow-space
                       if(NULL != fs) {
-                          tmap_seq_t *seq = seq_buffer[i][low];
+                          tmap_seq_t *seq = seqs_buffer[low]->seqs[i];
                           // TODO: if this is run, we do not need to run tmap_sw_global_banded_core...
-                          // NB: seq_buffer should have its key sequence if 0 < key_seq_len
+                          // NB: seqs_buffer should have its key sequence if 0 < key_seq_len
                           tmap_map_util_fsw(fs, seq,
                                             flow_order, flow_order_len,
                                             key_seq, key_seq_len,
@@ -417,7 +429,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
                                               records[low]->sams[i]->sams);
                       }
                   }
-                  if(NULL == seq_buffer[i][low]) {
+                  if(NULL == seqs_buffer[low]->seqs[i]) {
                       tmap_error("bug encoutereed", Exit, OutOfRange);
                   }
               }
@@ -442,7 +454,7 @@ tmap_map_driver_core_worker(int32_t num_ends,
   }
   free(flow_order);
   free(key_seq);
-  for(i=0;i<num_ends;i++) {
+  for(i=0;i<max_num_ends;i++) {
       free(seqs[i]);
   }
   free(seqs);
@@ -460,7 +472,7 @@ tmap_map_driver_core_thread_worker(void *arg)
 {
   tmap_map_driver_thread_data_t *thread_data = (tmap_map_driver_thread_data_t*)arg;
 
-  tmap_map_driver_core_worker(thread_data->num_ends, thread_data->seq_buffer, thread_data->records, thread_data->seq_buffer_length, 
+  tmap_map_driver_core_worker(thread_data->seqs_buffer, thread_data->records, thread_data->seqs_buffer_length, 
                            thread_data->index, thread_data->driver, thread_data->stat, thread_data->rand, thread_data->tid);
 
   return arg;
@@ -470,9 +482,9 @@ void
 tmap_map_driver_core(tmap_map_driver_t *driver)
 {
   uint32_t i, j, n_reads_processed=0;
-  int32_t seq_buffer_length=0;
-  tmap_seq_io_t **seqio=NULL;
-  tmap_seq_t ***seq_buffer = NULL;
+  int32_t seqs_buffer_length=0;
+  tmap_seqs_io_t *io_in = NULL;
+  tmap_seqs_t **seqs_buffer = NULL;
   tmap_map_record_t **records=NULL;
   tmap_index_t *index = NULL;
   tmap_map_stats_t *stat = NULL;
@@ -486,7 +498,7 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
   tmap_rand_t *rand_core = tmap_rand_init(13);
   uint32_t k;
 #endif
-  int32_t seq_type, reads_queue_size, num_ends;
+  int32_t seq_type, reads_queue_size;
 
   /*
   if(NULL == driver->opt->fn_reads) {
@@ -511,12 +523,7 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
   // open the reads file for reading
   // NB: may have no fns (streaming in)
   seq_type = tmap_reads_format_to_seq_type(driver->opt->reads_format); 
-  num_ends = (0 == driver->opt->fn_reads_num) ? 1 : driver->opt->fn_reads_num;
-  seqio = tmap_malloc(sizeof(tmap_seq_io_t*)*num_ends, "seqio");
-  for(i=0;i<num_ends;i++) {
-      seqio[i] = tmap_seq_io_init((0 == driver->opt->fn_reads_num) ? "-" : driver->opt->fn_reads[i], 
-                                  seq_type, 0, driver->opt->input_compr);
-  }
+  io_in = tmap_seqs_io_init(driver->opt->fn_reads, driver->opt->fn_reads_num, seq_type, driver->opt->input_compr);
 
   // get the index
   index = tmap_index_init(driver->opt->fn_fasta, driver->opt->shm_key);
@@ -531,12 +538,9 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
   else {
       reads_queue_size = driver->opt->reads_queue_size;
   }
-  seq_buffer = tmap_malloc(sizeof(tmap_seq_t**)*num_ends, "seq_buffer");
-  for(i=0;i<num_ends;i++) {
-      seq_buffer[i] = tmap_malloc(sizeof(tmap_seq_t*)*reads_queue_size, "seq_buffer[i]");
-      for(j=0;j<reads_queue_size;j++) { // initialize the buffer
-          seq_buffer[i][j] = tmap_seq_init(seq_type);
-      }
+  seqs_buffer = tmap_malloc(sizeof(tmap_seqs_t*)*reads_queue_size, "seqs_buffer");
+  for(i=0;i<reads_queue_size;i++) { // initialize the buffer
+      seqs_buffer[i] = tmap_seqs_init(seq_type);
   }
   records = tmap_malloc(sizeof(tmap_map_record_t*)*reads_queue_size, "records");
 
@@ -561,51 +565,46 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
   }
 
   // SAM header
+  // TODO
+  /*
   tmap_sam_print_header(tmap_file_stdout, index->refseq, (1 == num_ends) ? seqio[0] : NULL, 
                         // TODO: sam header
-                        NULL, /*driver->opt->sam_rg, */driver->opt->sam_flowspace_tags, driver->opt->ignore_rg_sam_tags, 
+                        driver->opt->sam_rg, driver->opt->sam_flowspace_tags, driver->opt->ignore_rg_sam_tags, 
                         driver->opt->argc, driver->opt->argv);
+                        */
 
   tmap_progress_print("processing reads");
   while(1) {
       tmap_progress_print("loading reads");
       // get the reads
-      seq_buffer_length = tmap_seq_io_read_buffer(seqio[0], seq_buffer[0], reads_queue_size);
-      for(i=1;i<num_ends;i++) {
-          if(seq_buffer_length != tmap_seq_io_read_buffer(seqio[i], seq_buffer[i], reads_queue_size)) {
-              tmap_error("the input read files were of differing length", Exit, OutOfRange);
-          }
-      }
-      tmap_progress_print2("loaded %d reads", seq_buffer_length);
-      if(0 == seq_buffer_length) {
+      seqs_buffer_length = tmap_seqs_io_read_buffer(io_in, seqs_buffer, reads_queue_size);
+      tmap_progress_print2("loaded %d reads", seqs_buffer_length);
+      if(0 == seqs_buffer_length) {
           break;
       }
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
       // sample reads
       if(driver->opt->sample_reads < 1) {
-          for(i=j=0;i<seq_buffer_length;i++) {
+          for(i=j=0;i<seqs_buffer_length;i++) {
               if(driver->opt->sample_reads < tmap_rand_get(rand_core)) continue; // skip
               if(j < i) {
-                  for(k=0;k<num_ends;k++) {
-                      // swap
-                      tmap_seq_t *seq;
-                      seq = seq_buffer[k][j];
-                      seq_buffer[k][j] = seq_buffer[k][i]; 
-                      seq_buffer[k][i] = seq;
-                  }
+                  tmap_seqs_t *seqs;
+                  seqs = seqs_buffer[j];
+                  seqs_buffer[j] = seqs_buffer[i]; 
+                  seqs_buffer[i] = seqs;
               }
               j++;
           }
-          tmap_progress_print2("sampling %d out of %d [%.2lf%%]", j, seq_buffer_length, 100.0*j/(double)seq_buffer_length);
-          seq_buffer_length = j;
-          if(0 == seq_buffer_length) continue;
+          tmap_progress_print2("sampling %d out of %d [%.2lf%%]", j, seqs_buffer_length, 100.0*j/(double)seqs_buffer_length);
+          seqs_buffer_length = j;
+          if(0 == seqs_buffer_length) continue;
       }
 #endif
 
       // do alignment
 #ifdef HAVE_LIBPTHREAD
       if(1 == driver->opt->num_threads) {
-          tmap_map_driver_core_worker(num_ends, seq_buffer, records, seq_buffer_length, index,
+          tmap_map_driver_core_worker(seqs_buffer, records, seqs_buffer_length, index,
                                       driver, stat, rand[0], 0);
       }
       else {
@@ -621,9 +620,8 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
 
           // create threads
           for(i=0;i<driver->opt->num_threads;i++) {
-              thread_data[i].num_ends = num_ends;
-              thread_data[i].seq_buffer = seq_buffer;
-              thread_data[i].seq_buffer_length = seq_buffer_length;
+              thread_data[i].seqs_buffer = seqs_buffer;
+              thread_data[i].seqs_buffer_length = seqs_buffer_length;
               thread_data[i].records = records;
               thread_data[i].index = index;
               thread_data[i].driver = driver;
@@ -648,27 +646,30 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
           free(thread_data);
       }
 #else 
-      tmap_map_driver_core_worker(num_ends, seq_buffer, records, seq_buffer_length, index,
+      tmap_map_driver_core_worker(seqs_buffer, records, seqs_buffer_length, index,
                                   driver, stat, rand, 0);
 #endif
 
       if(-1 != driver->opt->reads_queue_size) {
           tmap_progress_print("writing alignments");
       }
-      for(i=0;i<seq_buffer_length;i++) {
+      for(i=0;i<seqs_buffer_length;i++) {
           // write
+          // TODO
+          /*
           if(1 == num_ends) {
-              tmap_map_sams_print(seq_buffer[0][i], index->refseq, records[i]->sams[0], 
+              tmap_map_sams_print(seqs_buffer[0][i], index->refseq, records[i]->sams[0], 
                                   0, NULL, driver->opt->sam_flowspace_tags, driver->opt->bidirectional, driver->opt->seq_eq);
           }
           else {
               for(j=0;j<num_ends;j++) {
-                  tmap_map_sams_print(seq_buffer[j][i], index->refseq, records[i]->sams[j],
+                  tmap_map_sams_print(seqs_buffer[j][i], index->refseq, records[i]->sams[j],
                                     (0 == j) ? 1 : ((num_ends-1 == j) ? 2 : 0),
                                     records[i]->sams[(j+1) % num_ends], 
                                     driver->opt->sam_flowspace_tags, driver->opt->bidirectional, driver->opt->seq_eq);
               }
           }
+          */
           // free alignments
           tmap_map_record_destroy(records[i]); 
           records[i] = NULL;
@@ -680,7 +681,7 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
           tmap_file_fflush(tmap_file_stdout, 0); // flush
       }
 
-      n_reads_processed += seq_buffer_length;
+      n_reads_processed += seqs_buffer_length;
       if(-1 != driver->opt->reads_queue_size) {
           tmap_progress_print2("processed %d reads", n_reads_processed);
           tmap_progress_print2("stats [%.2lf,%.2lf,%.2lf,%.2lf,%.2lf]",
@@ -709,15 +710,11 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
 
   // free memory
   tmap_index_destroy(index);
-  for(i=0;i<num_ends;i++) {
-      tmap_seq_io_destroy(seqio[i]);
-      for(j=0;j<reads_queue_size;j++) {
-          tmap_seq_destroy(seq_buffer[i][j]);
-      }
-      free(seq_buffer[i]);
+  tmap_seqs_io_destroy(io_in);
+  for(i=0;i<reads_queue_size;i++) {
+      tmap_seqs_destroy(seqs_buffer[i]);
   }
-  free(seqio);
-  free(seq_buffer);
+  free(seqs_buffer);
   free(records);
   tmap_map_stats_destroy(stat);
 #ifdef HAVE_LIBPTHREAD
