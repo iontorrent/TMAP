@@ -9,10 +9,8 @@
 #include <pthread.h>
 #endif
 
-#ifdef HAVE_SAMTOOLS
-#include <sam.h>
-#include <bam.h>
-#endif
+#include "../samtools/sam.h"
+#include "../samtools/bam.h"
 
 #include "../util/tmap_error.h"
 #include "../util/tmap_alloc.h"
@@ -26,7 +24,6 @@
 #include "tmap_sam2fs_aux.h"
 #include "tmap_sam2fs.h"
 
-#ifdef HAVE_SAMTOOLS
 
 // from bam.h
 extern char *bam_nt16_rev_table;
@@ -1104,4 +1101,3 @@ tmap_sam2fs_main(int argc, char *argv[])
 
   return 0;
 }  
-#endif

@@ -136,9 +136,7 @@ __tmap_map_opt_option_print_func_int_init(aln_output_mode)
 __tmap_map_opt_option_print_func_chars_init(sam_rg, "not using")
 __tmap_map_opt_option_print_func_tf_init(bidirectional)
 __tmap_map_opt_option_print_func_tf_init(seq_eq)
-#ifdef HAVE_SAMTOOLS
 __tmap_map_opt_option_print_func_tf_init(ignore_rg_sam_tags)
-#endif
 __tmap_map_opt_option_print_func_compr_init(input_compr_gz, input_compr, TMAP_FILE_GZ_COMPRESSION)
 __tmap_map_opt_option_print_func_compr_init(input_compr_bz2, input_compr, TMAP_FILE_BZ2_COMPRESSION)
 __tmap_map_opt_option_print_func_compr_init(output_compr_gz, output_compr, TMAP_FILE_GZ_COMPRESSION)
@@ -416,11 +414,7 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            TMAP_MAP_ALGO_GLOBAL);
   tmap_map_opt_options_add(opt->options, "reads-format", required_argument, 0, 'i', 
                            TMAP_MAP_OPT_TYPE_STRING,
-#ifdef HAVE_SAMTOOLS
                            "the reads file format (opt->options, fastq|fq|fasta|fa|sff|sam|bam)",
-#else
-                           "the reads file format (opt->options, fastq|fq|fasta|fa|sff)",
-#endif
                            NULL,
                            tmap_map_opt_option_print_func_reads_format,
                            TMAP_MAP_ALGO_GLOBAL);
@@ -526,14 +520,12 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_seq_eq,
                            TMAP_MAP_ALGO_GLOBAL);
-#ifdef HAVE_SAMTOOLS
   tmap_map_opt_options_add(opt->options, "ignore-rg-from-sam", no_argument, 0, 'C', 
                            TMAP_MAP_OPT_TYPE_NONE,
                            "specifies to not use the RG header and RG record tags in the SAM file",
                            NULL,
                            tmap_map_opt_option_print_func_ignore_rg_sam_tags,
                            TMAP_MAP_ALGO_GLOBAL);
-#endif
   tmap_map_opt_options_add(opt->options, "input-gz", no_argument, 0, 'z', 
                            TMAP_MAP_OPT_TYPE_NONE,
                            "the input is gz (gzip) compressed",
@@ -1013,11 +1005,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->sam_rg = NULL;
   opt->bidirectional = 0;
   opt->seq_eq = 0;
-#ifdef HAVE_SAMTOOLS
   opt->ignore_rg_sam_tags = 0;
-#else
-  opt->ignore_rg_sam_tags = 1; // NB: always ignore
-#endif
   opt->input_compr = TMAP_FILE_NO_COMPRESSION;
   opt->output_compr = TMAP_FILE_NO_COMPRESSION;
   opt->shm_key = 0;
@@ -1335,11 +1323,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(c == 'B' || (0 == c && 0 == strcmp("max-seed-band", options[option_index].name))) {       
           opt->max_seed_band = atoi(optarg);
       }
-#ifdef HAVE_SAMTOOLS
       else if(c == 'C' || (0 == c && 0 == strcmp("ignore-rg-from-sam", options[option_index].name))) {
           opt->ignore_rg_sam_tags = 1;
       }
-#endif
       else if(c == 'D' || (0 == c && 0 == strcmp("bidirectional", options[option_index].name))) {       
           opt->bidirectional = 1;
       }
@@ -1921,13 +1907,11 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->bidirectional, 0, 1, "-D");
   tmap_error_cmd_check_int(opt->seq_eq, 0, 1, "-I");
   tmap_error_cmd_check_int(opt->ignore_rg_sam_tags, 0, 1, "-C");
-#ifdef HAVE_SAMTOOLS
   /*
   if(0 == opt->ignore_rg_sam_tags && NULL != opt->sam_rg) {
       tmap_error("Must use -C with -R", Exit, CommandLineArgument);
   }
   */
-#endif
   if(TMAP_FILE_BZ2_COMPRESSION == opt->output_compr
      && -1 == opt->reads_queue_size) {
       tmap_error("cannot buffer reads with bzip2 output (options \"-q 1 -J\")", Exit, CommandLineArgument);

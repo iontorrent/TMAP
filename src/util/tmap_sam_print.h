@@ -3,9 +3,7 @@
 #define TMAP_SAM_PRINT_H
 
 #include <config.h>
-#ifdef HAVE_SAMTOOLS
-#include <bam.h>
-#endif
+#include "../samtools/bam.h"
 #include "../index/tmap_refseq.h"
 #include "../io/tmap_file.h"
 #include "../io/tmap_seq_io.h"
@@ -99,7 +97,6 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_ta
                       int32_t score, int32_t ascore, int32_t pscore, int32_t nh, int32_t algo_id, int32_t algo_stage,
                       const char *format, ...);
 
-#ifdef HAVE_SAMTOOLS
 /*!
   recreates an MD given the new reference/read alignment
   @param  b     the SAM/BAM structure
@@ -118,6 +115,5 @@ tmap_sam_md1(bam1_t *b, char *ref, int32_t len);
   */
 void
 tmap_sam_update_cigar_and_md(bam1_t *b, char *ref, char *read, int32_t len);
-#endif
 
 #endif

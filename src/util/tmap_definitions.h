@@ -81,10 +81,8 @@ enum {
     TMAP_READS_FORMAT_FASTA    = 0, /*!< the reads are in FASTA format */
     TMAP_READS_FORMAT_FASTQ    = 1, /*!< the reads are in FASTQ format */
     TMAP_READS_FORMAT_SFF      = 2, /*!< the reads are in SFF format */
-#ifdef HAVE_SAMTOOLS
     TMAP_READS_FORMAT_SAM      = 3, /*!< the reads are in SAM format */
     TMAP_READS_FORMAT_BAM      = 4 /*!< the reads are in BAM format */
-#endif
 };
 
 #ifdef TMAP_BWT_32_BIT

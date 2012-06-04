@@ -4,11 +4,9 @@
 #include <stdarg.h>
 #include <config.h>
 
-#ifdef HAVE_SAMTOOLS
-#include <kstring.h>
-#include <sam.h>
-#include <bam.h>
-#endif
+#include "../samtools/kstring.h"
+#include "../samtools/sam.h"
+#include "../samtools/bam.h"
 
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_definitions.h"
@@ -688,7 +686,6 @@ tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_ta
   free(bases_eq);
 }
 
-#ifdef HAVE_SAMTOOLS
 // from bam_md.c in SAMtools
 // modified not fill in the NM tag, and not to start the reference a c->pos
 static void 
@@ -903,4 +900,3 @@ tmap_sam_update_cigar_and_md(bam1_t *b, char *ref, char *read, int32_t len)
   // Note: the md tag must be updated
   tmap_sam_md1(b, ref, len);
 }
-#endif
