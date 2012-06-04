@@ -3,15 +3,12 @@
 #define TMAP_SAM_H
 
 #include <config.h>
-#ifdef HAVE_SAMTOOLS
-#include <bam.h>
-#include <sam.h>
-#endif
+#include "../samtools/bam.h"
+#include "../samtools/sam.h"
 #include "../util/tmap_definitions.h"
 #include "../index/tmap_refseq.h"
 #include "../io/tmap_file.h"
 
-#ifdef HAVE_SAMTOOLS
 
 /*!
  Structure for holding SAM/BAM records
@@ -148,7 +145,5 @@ tmap_sam_get_flow_start_index(tmap_sam_t *sam);
 */
 char*
 tmap_sam_get_rg_id(tmap_sam_t *sam);
-
-#endif
 
 #endif

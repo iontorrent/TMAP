@@ -7,6 +7,7 @@
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_progress.h"
 #include "../util/tmap_sam_print.h"
+#include "../samtools/sam_header.h"
 #include "tmap_seq_io.h"
 #include "tmap_sff_io.h"
 #include "tmap_seq_io.h"
@@ -40,7 +41,6 @@ tmap_seq_io_init(const char *fn, int8_t seq_type, int32_t out_type, int32_t comp
   io = tmap_calloc(1, sizeof(tmap_seq_io_t), "io");
   io->type = seq_type;
 
-#ifdef HAVE_SAMTOOLS
   if(TMAP_SEQ_TYPE_SAM == io->type || TMAP_SEQ_TYPE_BAM == io->type) {
       if(1 == out_type) {
           tmap_error("Writing not supported with a SAM/BAM file", Exit, OutOfRange);
@@ -49,7 +49,6 @@ tmap_seq_io_init(const char *fn, int8_t seq_type, int32_t out_type, int32_t comp
           tmap_error("Compression not supported with a SAM/BAM file", Exit, OutOfRange);
       }
   }
-#endif
 
   switch(io->type) {
     case TMAP_SEQ_TYPE_FQ:
@@ -60,7 +59,6 @@ tmap_seq_io_init(const char *fn, int8_t seq_type, int32_t out_type, int32_t comp
       io->fp = tmap_seq_io_open(fn, out_type, compression);
       io->io.sffio = tmap_sff_io_init(io->fp);
       break;
-#ifdef HAVE_SAMTOOLS
     case TMAP_SEQ_TYPE_SAM:
       io->fp = NULL;
       io->io.samio = tmap_sam_io_init(fn);
@@ -69,7 +67,6 @@ tmap_seq_io_init(const char *fn, int8_t seq_type, int32_t out_type, int32_t comp
       io->fp = NULL;
       io->io.samio = tmap_bam_io_init(fn);
       break;
-#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -90,12 +87,10 @@ tmap_seq_io_destroy(tmap_seq_io_t *io)
       tmap_file_fclose(io->fp);
       tmap_sff_io_destroy(io->io.sffio);
       break;
-#ifdef HAVE_SAMTOOLS
     case TMAP_SEQ_TYPE_SAM:
     case TMAP_SEQ_TYPE_BAM:
       tmap_sam_io_destroy(io->io.samio);
       break;
-#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -119,13 +114,11 @@ tmap_seq_io_read(tmap_seq_io_t *io, tmap_seq_t *seq)
       seq->type = io->type;
       return tmap_sff_io_read(io->io.sffio, seq->data.sff);
       break;
-#ifdef HAVE_SAMTOOLS
     case TMAP_SEQ_TYPE_SAM:
     case TMAP_SEQ_TYPE_BAM:
       seq->type = io->type;
       return tmap_sam_io_read(io->io.samio, seq->data.sam);
       break;
-#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -172,12 +165,10 @@ tmap_seq_io_print2(tmap_file_t *fp, tmap_seq_t *seq)
     case TMAP_SEQ_TYPE_SFF:
       tmap_error("SFF writing is unsupported", Exit, OutOfRange);
       break;
-#ifdef HAVE_SAMTOOLS
     case TMAP_SEQ_TYPE_SAM:
     case TMAP_SEQ_TYPE_BAM:
       tmap_error("SAM/BAM writing is unsupported", Exit, OutOfRange);
       break;
-#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -322,26 +313,20 @@ tmap_seq_io_sff2sam_main(int argc, char *argv[])
   return 0;
 }
 
-char ***
-tmap_seq_io_get_rg_header(tmap_seq_io_t *io, int32_t *n)
+sam_header_t*
+tmap_seq_io_get_sam_header(tmap_seq_io_t *io)
 {
   switch(io->type) {
     case TMAP_SEQ_TYPE_FQ:
-      *n = 0;
-      return NULL;
     case TMAP_SEQ_TYPE_SFF:
-      return tmap_sff_io_get_rg_header(io->io.sffio, n);
-      break;
-#ifdef HAVE_SAMTOOLS
+      return NULL;
     case TMAP_SEQ_TYPE_SAM:
     case TMAP_SEQ_TYPE_BAM:
-      return tmap_sam_io_get_rg_header(io->io.samio, n);
+      return tmap_sam_io_get_sam_header(io->io.samio);
       break;
-#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
   }
-  *n = 0;
   return NULL;
 }

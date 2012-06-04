@@ -122,7 +122,6 @@ typedef struct {
     int32_t n; /*!< the number of records (multi-end) */
 } tmap_map_record_t;
 
-
 /*!
   initializes
   @param  s  the mapping structure

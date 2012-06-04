@@ -4,86 +4,17 @@
 #include <stdarg.h>
 #include <config.h>
 
-#ifdef HAVE_SAMTOOLS
-#include <kstring.h>
-#include <sam.h>
-#include <bam.h>
-#include <sam_header.h>
-#endif
+#include "../samtools/kstring.h"
+#include "../samtools/sam.h"
+#include "../samtools/bam.h"
+#include "../samtools/sam.h"
+#include "../samtools/sam_header.h"
 
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_definitions.h"
 #include "../util/tmap_string.h"
 #include "tmap_sam.h"
 #include "../io/tmap_sam_io.h"
-
-#ifdef HAVE_SAMTOOLS
-
-/*
- * Hopefully, someday, SAMtools will accept these functions as part of the 
- * API. Boilerplate code is useful in APIs, not those that use the APIs.
- */
-
-static inline void *
-bam_auxB2_helper(const uint8_t *s, int32_t *l, char type)
-{
-  void *p = NULL;
-  size_t size;
-  if(s == NULL) return NULL;
-  if('B' != *s) return NULL;
-  s++;
-  if(type != *s) return NULL;
-  size = bam_aux_type2size(type);
-  s++;
-  *l = (*(int32_t*)(s));
-  s += 4;
-  p = malloc(size * (*l));
-  if(NULL == p) return 0;
-  memcpy(p, s, size * (*l));
-  return p;
-}
-
-int8_t *
-bam_auxB2c(const uint8_t *s, int32_t *l)
-{
-  return (int8_t*)bam_auxB2_helper(s, l, 'c');
-}
-
-uint8_t *
-bam_auxB2C(const uint8_t *s, int32_t *l)
-{
-  return (uint8_t*)bam_auxB2_helper(s, l, 'C');
-}
-
-int16_t *
-bam_auxB2s(const uint8_t *s, int32_t *l)
-{
-  return (int16_t*)bam_auxB2_helper(s, l, 's');
-}
-
-uint16_t *
-bam_auxB2S(const uint8_t *s, int32_t *l)
-{
-  return (uint16_t*)bam_auxB2_helper(s, l, 'S');
-}
-
-int32_t *
-bam_auxB2i(const uint8_t *s, int32_t *l)
-{
-  return (int32_t*)bam_auxB2_helper(s, l, 'i');
-}
-
-uint32_t *
-bam_auxB2I(const uint8_t *s, int32_t *l)
-{
-  return (uint32_t*)bam_auxB2_helper(s, l, 'I');
-}
-
-float *
-bam_auxB2f(const uint8_t *s, int32_t *l)
-{
-  return (float*)bam_auxB2_helper(s, l, 'f');
-}
 
 tmap_sam_t *
 tmap_sam_init()
@@ -197,8 +128,8 @@ tmap_sam_update_flow_info(tmap_sam_t *sam, tmap_sam_io_t *samio)
   if(NULL == tag) return;
   sam->rg_id = bam_aux2Z(tag);
   if(NULL == sam->rg_id) return;
-  sam->fo = sam_tbl_get(samio->rg_tbls[TMAP_SAM_RG_FO], (const char*)sam->rg_id);
-  sam->ks = sam_tbl_get(samio->rg_tbls[TMAP_SAM_RG_KS], (const char*)sam->rg_id);
+  //sam->fo = sam_tbl_get(samio->rg_tbls[TMAP_SAM_RG_FO], (const char*)sam->rg_id);
+  //sam->ks = sam_tbl_get(samio->rg_tbls[TMAP_SAM_RG_KS], (const char*)sam->rg_id);
 }
 
 int32_t
@@ -250,5 +181,3 @@ tmap_sam_get_rg_id(tmap_sam_t *sam)
 {
   return (char*)sam->rg_id;
 }
-
-#endif

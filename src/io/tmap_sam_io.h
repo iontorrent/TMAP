@@ -4,9 +4,8 @@
 
 #include <config.h>
 
-#ifdef HAVE_SAMTOOLS
-#include <bam.h>
-#include <sam.h>
+#include "../samtools/bam.h"
+#include "../samtools/sam.h"
 
 /*! 
   A SAM/BAM Reading Library
@@ -16,9 +15,6 @@
 */
 typedef struct _tmap_sam_io_t {
     samfile_t *fp;  /*!< the file pointer to the SAM/BAM file */
-    void **rg_tbls; /*!< the read group id to tag tables */
-    char **rg_ids; /*!< the read group ids */
-    int32_t rg_ids_num; /*!< the number of read group ids */
 } tmap_sam_io_t;
 
 #include "../seq/tmap_sam.h"
@@ -128,12 +124,9 @@ tmap_sam_io_read_buffer(tmap_sam_io_t *samio, tmap_sam_t **sam_buffer, int32_t b
 
 /*!
   @param  samio  a pointer to a previously initialized SAM/BAM structure
-  @param  n     stores the number of rg ids 
-  @return   the header structure (rg-ids x rg tags)
+  @return   the SAM header structure 
  */
-char***
-tmap_sam_io_get_rg_header(tmap_sam_io_t *samio, int32_t *n);
-
-#endif
+sam_header_t*
+tmap_sam_io_get_sam_header(tmap_sam_io_t *samio);
 
 #endif

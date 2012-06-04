@@ -58,8 +58,21 @@ GLOBAL_SOURCES = \
 				 src/sw/lib/AffineSWOptimizationWrapper.cpp src/sw/lib/AffineSWOptimizationWrapper.h \
 				 src/sw/tmap_vsw_bm.c 
 
+samtools_SOURCES = \
+				   src/samtools/bam.c src/samtools/bam.h \
+				   src/samtools/sam.c src/samtools/sam.h \
+				   src/samtools/sam_header.c src/samtools/sam_header.h \
+				   src/samtools/bam_import.c \
+				   src/samtools/bam_aux.c \
+				   src/samtools/bam_pileup.c \
+				   src/samtools/razf.c src/samtools/razf.h \
+				   src/samtools/bgzf.c src/samtools/bgzf.h \
+				   src/samtools/faidx.c src/samtools/faidx.h \
+				   src/samtools/kstring.c src/samtools/kstring.h
+
 tmap_SOURCES = \
 			   ${GLOBAL_SOURCES} \
+			   ${samtools_SOURCES} \
 			   src/server/tmap_server.h src/server/tmap_server.c \
 			   src/server/tmap_shm.h src/server/tmap_shm.c \
 			   src/sam2fs/tmap_sam2fs_aux.h src/sam2fs/tmap_sam2fs_aux.c \

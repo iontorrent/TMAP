@@ -23,6 +23,7 @@ static int32_t tmap_sam_rg_id_use = 0;
 
 #define TMAP_SAM_NO_RG_SM "NOSM"
 
+/*
 static char **
 tmap_sam_parse_rg(char *rg)
 {
@@ -109,6 +110,7 @@ tmap_sam_parse_rg(char *rg)
   }
   return header;
 }
+*/
 
 void
 tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, tmap_seq_io_t *seqio, char *sam_rg, 
@@ -129,6 +131,7 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, tmap_seq_io_t *seq
       }
   }
   // RG
+  /* HERE
   header_a = tmap_sam_parse_rg(sam_rg); // parse the input read group line
   if(1 == ignore_rg_sam_tags) { // do not get the header from the input file
       if(1 == sam_flowspace_tags) { // ... except for the RG.FS/RG.KO
@@ -265,6 +268,7 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, tmap_seq_io_t *seq
           tmap_file_fprintf(fp, "\n");
       }
   }
+  */
 
   // PG
   tmap_file_fprintf(fp, "@PG\tID:%s\tVN:%s\tCL:",

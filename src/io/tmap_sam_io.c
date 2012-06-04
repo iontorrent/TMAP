@@ -14,8 +14,7 @@
 #include "tmap_sam_io.h"
 #include "tmap_seq_io.h"
 
-#ifdef HAVE_SAMTOOLS
-#include <sam_header.h>
+#include "../samtools/sam_header.h"
 // from sam.c
 #define TYPE_BAM  1
 #define TYPE_READ 2
@@ -45,6 +44,7 @@ tmap_sam_io_init_helper(const char *fn, int32_t is_bam)
       tmap_error("Found no @SQ lines in the SAM header", Exit, OutOfRange);
   }
 
+  /* HERE
   // create the rg tables
   samio->rg_tbls = tmap_calloc(TMAP_SAM_RG_NUM, sizeof(void*), "samio->rg_tabls");
   if(NULL == samio->fp->header->dict) samio->fp->header->dict = sam_header_parse2(samio->fp->header->text); // parse the header dictionary
@@ -54,6 +54,7 @@ tmap_sam_io_init_helper(const char *fn, int32_t is_bam)
   }
   // table of rg ids
   samio->rg_ids = sam_header2list(samio->fp->header->dict, "RG", (char*)TMAP_SAM_RG_TAGS[TMAP_SAM_RG_ID], &samio->rg_ids_num);
+  */
 
   return samio;
 }
@@ -74,11 +75,13 @@ void
 tmap_sam_io_destroy(tmap_sam_io_t *samio)
 {
   int32_t i;
+  /* HERE
   for(i=0;i<TMAP_SAM_RG_NUM;i++) {
       sam_tbl_destroy(samio->rg_tbls[i]);
   }
   free(samio->rg_tbls);
   free(samio->rg_ids);
+  */
   samclose(samio->fp);
   free(samio);
 }
@@ -154,6 +157,7 @@ tmap_sam_io_get_rg_header(tmap_sam_io_t *samio, int32_t *n)
   char ***header = NULL;
   char *rg_id = NULL;
 
+  /* HERE
   if(0 == samio->rg_ids_num) {
       *n = 0;
       return NULL;
@@ -168,8 +172,13 @@ tmap_sam_io_get_rg_header(tmap_sam_io_t *samio, int32_t *n)
           header[i][j] = (char*)sam_tbl_get(samio->rg_tbls[j], (const char*)rg_id);
       }
   }
+  */
 
   return header;
 }
-
-#endif
+      
+sam_header_t*
+tmap_sam_io_get_sam_header(tmap_sam_io_t *samio)
+{
+  return samio->fp->header->header;
+}
