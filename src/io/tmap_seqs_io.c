@@ -271,8 +271,8 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
       command_line[j-1] = '\0';
   }
   if(0 == sam_header_record_add(record, "CL", command_line)) tmap_bug(); // @PG.CL
+  if(0 == sam_header_records_add(records, record)) tmap_bug(); // add the record
   free(command_line);
-
 
   // Create a BAM Header from the SAM Header
   bam_header = bam_header_init(); // empty

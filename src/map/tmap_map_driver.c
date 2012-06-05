@@ -562,6 +562,8 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
                                       driver->opt->sam_rg, driver->opt->sam_rg_num,
                                       driver->opt->sam_flowspace_tags,
                                       driver->opt->argc, driver->opt->argv);
+
+  // open the output files
   if(NULL == driver->opt->fn_sam) {
       // NB: writes to stdout
       // TODO: BAM writing option
@@ -572,14 +574,9 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
       io_out = tmap_sam_io_init2(driver->opt->fn_sam, "w", header);
   }
 
-  // SAM header
-  // TODO
-  /*
-  tmap_sam_print_header(tmap_file_stdout, index->refseq, (1 == num_ends) ? seqio[0] : NULL, 
-                        // TODO: sam header
-                        driver->opt->sam_rg, driver->opt->sam_flowspace_tags, driver->opt->ignore_rg_sam_tags, 
-                        driver->opt->argc, driver->opt->argv);
-                        */
+  // destroy the BAM Header
+  bam_header_destroy(header);
+  header = NULL;
 
   tmap_progress_print("processing reads");
   while(1) {
