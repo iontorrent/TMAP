@@ -538,20 +538,6 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            tmap_map_opt_option_print_func_input_compr_bz2,
                            TMAP_MAP_ALGO_GLOBAL);
 #endif
-  tmap_map_opt_options_add(opt->options, "output-gz", no_argument, 0, 'Z', 
-                           TMAP_MAP_OPT_TYPE_NONE,
-                           "the output is gz (gzip) compressed",
-                           NULL,
-                           tmap_map_opt_option_print_func_output_compr_gz,
-                           TMAP_MAP_ALGO_GLOBAL);
-#ifndef DISABLE_BZ2
-  tmap_map_opt_options_add(opt->options, "output-bz2", no_argument, 0, 'J', 
-                           TMAP_MAP_OPT_TYPE_NONE,
-                           "the output is bz2 (bzip2) compressed",
-                           NULL,
-                           tmap_map_opt_option_print_func_output_compr_bz2,
-                           TMAP_MAP_ALGO_GLOBAL);
-#endif
   tmap_map_opt_options_add(opt->options, "shared-memory-key", required_argument, 0, 'k', 
                            TMAP_MAP_OPT_TYPE_INT,
                            "use shared memory with the following key",

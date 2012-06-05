@@ -500,6 +500,7 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
   uint32_t k;
 #endif
   int32_t seq_type, reads_queue_size; // read type, read queue size
+  bam_header_t *header = NULL; // BAM Header
 
   /*
   if(NULL == driver->opt->fn_reads) {
@@ -556,21 +557,19 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
   rand = tmap_rand_init(13);
 #endif
   
+  // BAM Header
+  header = tmap_seqs_io_to_bam_header(index->refseq, io_in, 
+                                      driver->opt->sam_rg, driver->opt->sam_rg_num,
+                                      driver->opt->sam_flowspace_tags,
+                                      driver->opt->argc, driver->opt->argv);
   if(NULL == driver->opt->fn_sam) {
       // NB: writes to stdout
       // TODO: BAM writing option
-      io_out = tmap_sam_io_init2("-", "w", 
-                                 index->refseq, io_in, 
-                                 driver->opt->sam_rg, driver->opt->sam_rg_num,
-                                 driver->opt->argc, driver->opt->argv);
+      io_out = tmap_sam_io_init2("-", "w", header); 
   }
   else {
       // TODO: BAM writing option
-      io_out = tma_sam_io_init2(driver->opt->fn_sam, "w",
-                                 index->refseq,
-                                 index->refseq, io_in, 
-                                 driver->opt->sam_rg, driver->opt->sam_rg_num,
-                                 driver->opt->argc, driver->opt->argv);
+      io_out = tmap_sam_io_init2(driver->opt->fn_sam, "w", header);
   }
 
   // SAM header
