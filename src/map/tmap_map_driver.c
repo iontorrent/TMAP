@@ -636,12 +636,15 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
           tmap_map_record_destroy(records[i]); 
           records[i] = NULL;
       }
+      // TODO
+      /*
       if(-1 == driver->opt->reads_queue_size) {
           tmap_file_fflush(tmap_file_stdout, 1);
       }
       else {
           tmap_file_fflush(tmap_file_stdout, 0); // flush
       }
+      */
 
       n_reads_processed += seqs_buffer_length;
       if(-1 != driver->opt->reads_queue_size) {
@@ -668,7 +671,8 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
   tmap_map_driver_do_cleanup(driver);
 
   // close the input/output
-  tmap_file_fclose(tmap_file_stdout);
+  //tmap_file_fclose(tmap_file_stdout);
+  tmap_sam_io_destroy(io_out);
 
   // free memory
   tmap_index_destroy(index);
