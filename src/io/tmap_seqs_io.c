@@ -197,7 +197,7 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
           record = sam_header_record_init("SQ"); // new reference sequence record
           if(0 == sam_header_record_add(record, "SN", refseq->annos[i].name->s)) tmap_bug(); // reference sequence name
           if(sprintf(num, "%u", (uint32_t)refseq->annos[i].len) < 0) tmap_bug(); // integer to string
-          if(0 == sam_header_record_add(record, "SN", num)) tmap_bug(); // reference sequence name
+          if(0 == sam_header_record_add(record, "LN", num)) tmap_bug(); // reference sequence length
           if(0 == sam_header_records_add(records, record)) tmap_bug(); // add the reference sequence record
       }
       record = NULL;
@@ -260,12 +260,15 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
   // @PG.CL
   command_line = NULL;
   j = 1; // for the EOL
+  command_line = tmap_realloc(command_line, sizeof(char) * j, "command_line");
+  command_line[j-1] = '\0';
   for(i=0;i<argc;i++) {
       if(0 < i) j++;
       j += strlen(argv[i]);
       command_line = tmap_realloc(command_line, sizeof(char) * j, "command_line");
       if(0 < i) strcat(command_line, " ");
       strcat(command_line, argv[i]);
+      command_line[j-1] = '\0';
   }
   if(0 == sam_header_record_add(record, "CL", command_line)) tmap_bug(); // @PG.CL
   free(command_line);
