@@ -203,7 +203,7 @@ tmap_sam_convert_init_aux(bam1_t *b, tmap_string_t *qname,
   // 1. (b)->core.n_cigar
   b->core.n_cigar = (uint32_t)n_cigar;
   // 2. (b)->core.l_qname
-  b->core.l_qname = (uint32_t)qname->l;
+  b->core.l_qname = (uint32_t)qname->l + 1; // zero-tailing
   // 3. (b)->core.l_qseq
   b->core.l_qseq = (uint32_t)seq->l;
 
@@ -235,7 +235,7 @@ tmap_sam_convert_init_aux(bam1_t *b, tmap_string_t *qname,
 
   // qual
   for(i=0;i<qual->l;i++) {
-      bam1_qual(b)[i] = qual->s[i];
+      bam1_qual(b)[i] = qual->s[i] - 33;
   }
 }
 
@@ -426,7 +426,7 @@ tmap_sam_convert_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_
           }
           // qual
           for(i=0;i<qualities->l;i++) {
-              bam1_qual(b)[i] = qualities->s[i];
+              bam1_qual(b)[i] = qualities->s[i] - 33;
           }
       }
       // update the cigar
