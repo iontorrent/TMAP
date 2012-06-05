@@ -187,7 +187,6 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
 
   // @SQ
   if(NULL != refseq) {
-      sam_header_records_t *records = sam_header_get_records(header, "SQ");
       for(i=0;i<refseq->num_annos;i++) { // for each reference sequence
           char num[32];
           record = sam_header_record_init("SQ"); // new reference sequence record
