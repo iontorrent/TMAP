@@ -227,6 +227,9 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
               record = sam_header_record_init("RG"); // new read group
           }
           // add the tag/value to the record
+          if(NULL == record) {
+              tmap_error("The read group ID must be specified first", Exit, OutOfRange);
+          }
           tag[0]=rg_sam[i][0]; tag[1]=rg_sam[i][1]; // setup the tag
           if(0 == sam_header_record_add(record, tag, rg_sam[i]+3)) tmap_bug(); // add the tag/value
       }

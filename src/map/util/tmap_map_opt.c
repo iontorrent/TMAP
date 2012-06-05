@@ -987,7 +987,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->num_threads_autodetected = 1;
   opt->aln_output_mode = TMAP_MAP_OPT_ALN_MODE_RAND_BEST;
   opt->sam_rg = NULL;
-  opt->sam_rg = 0;
+  opt->sam_rg_num = 0;
   opt->bidirectional = 0;
   opt->seq_eq = 0;
   opt->ignore_rg_sam_tags = 0;
@@ -1231,6 +1231,29 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
   return 1;
 }
 
+static void
+tmap_map_opt_add_tabbed(char ***dest, int32_t *dest_num, char *str)
+{
+  int32_t i, j, l;
+
+  l = strlen(str);
+  i = j = 0;
+  while(i < l) {
+      j = i;
+      while(j < l && '\t' != str[j]) {
+          j++;
+      }
+      // add
+      (*dest_num)++;
+      (*dest) = tmap_realloc((*dest), sizeof(char*) * (*dest_num), "(*dest)");
+      (*dest)[(*dest_num)-1] = tmap_malloc(sizeof(char) * (j - i + 1), "(*dest)[(*dest_num)-1]");
+      strncpy((*dest)[(*dest_num)-1], str + i, (j - i));
+      (*dest)[(*dest_num)-1][(j-i)] = '\0';
+      tmap_chomp((*dest)[(*dest_num)-1]); // remove trailing white spaces
+      i = j + 1;
+  }
+}
+
 int32_t
 tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
 {
@@ -1336,10 +1359,7 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           opt->pen_gapo = atoi(optarg);
       }
       else if(c == 'R' || (0 == c && 0 == strcmp("sam-read-group", options[option_index].name))) {       
-          opt->sam_rg = tmap_realloc(opt->sam_rg, sizeof(char*) * (1 + opt->sam_rg_num), "opt->sam_rg_num");
-          opt->sam_rg[opt->sam_rg_num] = tmap_strdup(optarg);
-          tmap_chomp(opt->sam_rg[opt->sam_rg_num]); // remove trailing white spaces
-          opt->sam_rg_num++;
+          tmap_map_opt_add_tabbed(&opt->sam_rg, &opt->sam_rg_num, optarg);
       }
       else if(c == 'T' || (0 == c && 0 == strcmp("score-thres", options[option_index].name))) {       
           opt->score_thr = atoi(optarg);
@@ -2021,6 +2041,7 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     else {
         opt_dest->aln_output_mode = TMAP_MAP_OPT_ALN_MODE_ALL;
     }
+    opt_dest->sam_rg_num = opt_src->sam_rg_num; 
     opt_dest->sam_rg = tmap_malloc(sizeof(char*)*opt_dest->sam_rg_num, "opt_dest->sam_rg");
     for(i=0;i<opt_dest->sam_rg_num;i++) {
         opt_dest->sam_rg[i] = tmap_strdup(opt_src->sam_rg[i]);
