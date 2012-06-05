@@ -567,17 +567,18 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
   if(NULL == driver->opt->fn_sam) {
       // NB: writes to stdout
       // TODO: BAM writing option
-      io_out = tmap_sam_io_init2("-", "w", header); 
+      io_out = tmap_sam_io_init2("-", "wh", header); 
   }
   else {
       // TODO: BAM writing option
-      io_out = tmap_sam_io_init2(driver->opt->fn_sam, "w", header);
+      io_out = tmap_sam_io_init2(driver->opt->fn_sam, "wh", header);
   }
 
   // destroy the BAM Header
   bam_header_destroy(header);
   header = NULL;
 
+  // main processing loop
   tmap_progress_print("processing reads");
   while(1) {
       tmap_progress_print("loading reads");
