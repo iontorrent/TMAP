@@ -117,8 +117,6 @@ tmap_sam_io_read(tmap_sam_io_t *samio, tmap_sam_t *sam)
       if((sam->b->core.flag & BAM_FREVERSE)) {
           tmap_sam_reverse_compliment(sam);
       }
-      // save for later
-      tmap_sam_update_flow_info(sam, samio);
       return 1;
   }
   

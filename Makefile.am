@@ -13,7 +13,7 @@ GLOBAL_SOURCES = \
 				 src/util/tmap_levenshtein.h src/util/tmap_levenshtein.c \
 				 src/util/tmap_sort.h \
 				 src/util/tmap_vec.h \
-				 src/util/tmap_sam_print.h src/util/tmap_sam_print.c \
+				 src/util/tmap_sam_convert.h src/util/tmap_sam_convert.c \
 				 src/seq/tmap_fq.h src/seq/tmap_fq.c \
 				 src/seq/tmap_sff.h src/seq/tmap_sff.c \
 				 src/seq/tmap_sam.h src/seq/tmap_sam.c \

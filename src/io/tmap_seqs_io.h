@@ -47,20 +47,22 @@ tmap_seqs_io_destroy(tmap_seqs_io_t *io);
   reads in a reading structure
   @param  io     a pointer to a previously initialized sequence structure
   @param  seqs   the sequence structure in which to store the data
+  @param  header  the (output) SAM header
   @return        non-negative if successfull, -1 indicates an a EOF, -2 indicates a truncated quality string
   */
 inline int
-tmap_seqs_io_read(tmap_seqs_io_t *io, tmap_seqs_t *seqs);
+tmap_seqs_io_read(tmap_seqs_io_t *io, tmap_seqs_t *seqs, sam_header_t *header);
 
 /*! 
   reads sequences into a buffer
   @param  io             a pointer to a previously initialized sequence structure
   @param  seqs_buffer    the sequence structure in which to store the data
   @param  buffer_length  the number of sequences to read
+  @param  header         the (output) SAM header
   @return                the number of sequences read
   */
 int
-tmap_seqs_io_read_buffer(tmap_seqs_io_t *io, tmap_seqs_t **seqs_buffer, int32_t buffer_length);
+tmap_seqs_io_read_buffer(tmap_seqs_io_t *io, tmap_seqs_t **seqs_buffer, int32_t buffer_length, sam_header_t *header);
 
 /*!
   creates a new BAM header

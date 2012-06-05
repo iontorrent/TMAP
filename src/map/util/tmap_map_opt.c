@@ -150,7 +150,6 @@ __tmap_map_opt_option_print_func_int_init(fscore)
 __tmap_map_opt_option_print_func_tf_init(softclip_key)
 __tmap_map_opt_option_print_func_tf_init(sam_flowspace_tags)
 __tmap_map_opt_option_print_func_tf_init(ignore_flowgram)
-__tmap_map_opt_option_print_func_tf_init(remove_sff_clipping)
 __tmap_map_opt_option_print_func_tf_init(aln_flowspace)
 // pairing
 __tmap_map_opt_option_print_func_int_init(pairing)
@@ -596,12 +595,6 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_ignore_flowgram,
                            TMAP_MAP_ALGO_FLOWSPACE);
-  tmap_map_opt_options_add(opt->options, "remove-sff-clipping", no_argument, 0, 'G', 
-                           TMAP_MAP_OPT_TYPE_NONE,
-                           "do not remove SFF clipping",
-                           NULL,
-                           tmap_map_opt_option_print_func_remove_sff_clipping,
-                           TMAP_MAP_ALGO_FLOWSPACE);
   tmap_map_opt_options_add(opt->options, "final-flowspace", no_argument, 0, 'F', 
                            TMAP_MAP_OPT_TYPE_NONE,
                            "produce the final alignment in flow space",
@@ -1005,7 +998,6 @@ tmap_map_opt_init(int32_t algo_id)
   opt->softclip_key = 0;
   opt->sam_flowspace_tags = 0;
   opt->ignore_flowgram = 0;
-  opt->remove_sff_clipping = 1;
   opt->aln_flowspace = 0;
 
   // pairing options
@@ -1431,9 +1423,6 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(c == 'F' || (0 == c && 0 == strcmp("final-flowspace", options[option_index].name))) {       
           opt->aln_flowspace = 1;
       }
-      else if(c == 'G' || (0 == c && 0 == strcmp("remove-sff-clipping", options[option_index].name))) {       
-          opt->remove_sff_clipping = 0; 
-      }
       else if(c == 'N' || (0 == c && 0 == strcmp("use-flowgram", options[option_index].name))) {       
           opt->ignore_flowgram = 1;
       }
@@ -1770,9 +1759,6 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
     if(opt_a->ignore_flowgram != opt_b->ignore_flowgram) {
         tmap_error("option -S was specified outside of the common options", Exit, CommandLineArgument);
     }
-    if(opt_a->remove_sff_clipping != opt_b->remove_sff_clipping) {
-        tmap_error("option -G was specified outside of the common options", Exit, CommandLineArgument);
-    }
     if(opt_a->aln_flowspace != opt_b->aln_flowspace) {
         tmap_error("option -F was specified outside of the common options", Exit, CommandLineArgument);
     }
@@ -2061,7 +2047,6 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->softclip_key = opt_src->softclip_key;
     opt_dest->sam_flowspace_tags = opt_src->sam_flowspace_tags;
     opt_dest->ignore_flowgram = opt_src->ignore_flowgram;
-    opt_dest->remove_sff_clipping = opt_src->remove_sff_clipping;
     opt_dest->aln_flowspace = opt_src->aln_flowspace;
 
     // pairing
@@ -2127,7 +2112,6 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "ignore_rg_sam_tags=%d\n", opt->ignore_rg_sam_tags);
   fprintf(stderr, "sam_flowspace_tags=%d\n", opt->sam_flowspace_tags);
   fprintf(stderr, "ignore_flowgram=%d\n", opt->ignore_flowgram);
-  fprintf(stderr, "remove_sff_clipping=%d\n", opt->remove_sff_clipping);
   fprintf(stderr, "aln_flowspace=%d\n", opt->aln_flowspace);
   fprintf(stderr, "input_compr=%d\n", opt->input_compr);
   fprintf(stderr, "shm_key=%d\n", (int)opt->shm_key);

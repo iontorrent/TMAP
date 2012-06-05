@@ -67,7 +67,6 @@ typedef struct {
     tmap_sff_read_header_t *rheader;  /*!< pointer to the read header */
     tmap_sff_read_t *read;  /*!< pointer to the read */
     uint8_t is_int;  /*!< 1 if the bases are integer values, 0 otherwise */
-    int32_t flow_start_index;  /*! < the zero-based index to the first template flow, -1 if not set */
 } tmap_sff_t;
 
 /*! 
@@ -182,7 +181,7 @@ tmap_sff_get_qualities(tmap_sff_t *sff);
   @param  remove_clipping  1 if we are to remove clipped sequence, 0 otherwise
   @param  key_seq          the key sequence to enforce, NULL otherwise
   @param  key_seq_len      the key sequence length, 0 otherwise
-  @return                  0 if the key sequence did not match, 1 otherwise 
+  @return                  the zero-based index to the first template flow, -1 if not set 
   @details                 this will not modify the header but will set the flow_start_index
   */
 int32_t
@@ -206,12 +205,11 @@ tmap_sff_get_key_seq_int(tmap_sff_t *sff, uint8_t **key_seq);
 
 /*!
   @param  sff      pointer to the structure 
-  @param  flowgram  pionter to where the flowgram should be stored
-  @param  mem      memory size already allocated to flowgram
+  @param  flowgram  pointer to where the flowgram should be stored
   @return          the flowgram length
  */
 int32_t
-tmap_sff_get_flowgram(tmap_sff_t *sff, uint16_t **flowgram, int32_t mem);
+tmap_sff_get_flowgram(tmap_sff_t *sff, uint16_t **flowgram);
 
 /*!
   @param  sff      pointer to the structure 

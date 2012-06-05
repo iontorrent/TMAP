@@ -4,7 +4,7 @@
 #include <math.h>
 #include "../../util/tmap_alloc.h"
 #include "../../util/tmap_error.h"
-#include "../../util/tmap_sam_print.h"
+#include "../../util/tmap_sam_convert.h"
 #include "../../util/tmap_progress.h"
 #include "../../util/tmap_sort.h"
 #include "../../util/tmap_definitions.h"
@@ -322,7 +322,7 @@ tmap_map_sam_copy_and_nullify(tmap_map_sam_t *dest, tmap_map_sam_t *src)
   }
 }
 
-static void
+static bam1_t*
 tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, int32_t sam_flowspace_tags, int32_t bidirectional, int32_t seq_eq, 
                    int32_t nh, int32_t aln_num, int32_t end_num, int32_t mate_unmapped, tmap_map_sam_t *mate)
 {
@@ -335,7 +335,7 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
       mate_pos = mate->pos;
   }
   if(NULL == sam) { // unmapped
-      tmap_sam_print_unmapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, refseq,
+      return tmap_sam_convert_unmapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, refseq,
                               end_num, mate_unmapped, 0,
                               mate_strand, mate_seqid, mate_pos, NULL);
   }
@@ -363,84 +363,87 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
       }
       switch(sam->algo_id) {
         case TMAP_MAP_ALGO_MAP1:
-          tmap_sam_print_mapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
-                                sam->strand, sam->seqid, sam->pos, aln_num,
-                                end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
-                                mate_strand, mate_seqid, mate_pos, mate_tlen,
-                                sam->mapq, sam->cigar, sam->n_cigar,
-                                sam->score, sam->ascore, sam->pscore, nh, sam->algo_id, sam->algo_stage, "");
+          return tmap_sam_convert_mapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
+                                         sam->strand, sam->seqid, sam->pos, aln_num,
+                                         end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
+                                         mate_strand, mate_seqid, mate_pos, mate_tlen,
+                                         sam->mapq, sam->cigar, sam->n_cigar,
+                                         sam->score, sam->ascore, sam->pscore, nh, sam->algo_id, sam->algo_stage, "");
           break;
         case TMAP_MAP_ALGO_MAP2:
           if(0 < sam->aux.map2_aux->XI) {
-              tmap_sam_print_mapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
-                                    sam->strand, sam->seqid, sam->pos, aln_num,
-                                    end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
-                                    mate_strand, mate_seqid, mate_pos, mate_tlen,
-                                    sam->mapq, sam->cigar, sam->n_cigar,
-                                    sam->score, sam->ascore, sam->pscore, nh, sam->algo_id, sam->algo_stage, 
-                                    "\tXS:i:%d\tXT:i:%d\t\tXF:i:%d\tXE:i:%d\tXI:i:%d",
-                                    sam->score_subo,
-                                    sam->n_seeds,
-                                    sam->aux.map2_aux->XF, sam->aux.map2_aux->XE, 
-                                    sam->aux.map2_aux->XI);
+              return tmap_sam_convert_mapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
+                                             sam->strand, sam->seqid, sam->pos, aln_num,
+                                             end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
+                                             mate_strand, mate_seqid, mate_pos, mate_tlen,
+                                             sam->mapq, sam->cigar, sam->n_cigar,
+                                             sam->score, sam->ascore, sam->pscore, nh, sam->algo_id, sam->algo_stage, 
+                                             "\tXS:i:%d\tXT:i:%d\t\tXF:i:%d\tXE:i:%d\tXI:i:%d",
+                                             sam->score_subo,
+                                             sam->n_seeds,
+                                             sam->aux.map2_aux->XF, sam->aux.map2_aux->XE, 
+                                             sam->aux.map2_aux->XI);
           }
           else {
-              tmap_sam_print_mapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
-                                    sam->strand, sam->seqid, sam->pos, aln_num,
-                                    end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
-                                    mate_strand, mate_seqid, mate_pos, mate_tlen,
-                                    sam->mapq, sam->cigar, sam->n_cigar,
-                                    sam->score, sam->ascore, sam->pscore, nh, sam->algo_id, sam->algo_stage, 
-                                    "\tXS:i:%d\tXT:i:%d\tXF:i:%d\tXE:i:%d",
-                                    sam->score_subo,
-                                    sam->n_seeds,
-                                    sam->aux.map2_aux->XF, sam->aux.map2_aux->XE);
+              return tmap_sam_convert_mapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
+                                             sam->strand, sam->seqid, sam->pos, aln_num,
+                                             end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
+                                             mate_strand, mate_seqid, mate_pos, mate_tlen,
+                                             sam->mapq, sam->cigar, sam->n_cigar,
+                                             sam->score, sam->ascore, sam->pscore, nh, sam->algo_id, sam->algo_stage, 
+                                             "\tXS:i:%d\tXT:i:%d\tXF:i:%d\tXE:i:%d",
+                                             sam->score_subo,
+                                             sam->n_seeds,
+                                             sam->aux.map2_aux->XF, sam->aux.map2_aux->XE);
           }
           break;
         case TMAP_MAP_ALGO_MAP3:
-          tmap_sam_print_mapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
-                                sam->strand, sam->seqid, sam->pos, aln_num,
-                                end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
-                                mate_strand, mate_seqid, mate_pos, mate_tlen,
-                                sam->mapq, sam->cigar, sam->n_cigar,
-                                sam->score, sam->ascore, sam->pscore, nh, sam->algo_id, sam->algo_stage, 
-                                "\tXS:i:%d\tXT:i:%d\tZS:i:%d\tZE:i:%d",
-                                sam->score_subo,
-                                sam->n_seeds,
-                                sam->seed_start,
-                                sam->seed_end);
+          return tmap_sam_convert_mapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
+                                         sam->strand, sam->seqid, sam->pos, aln_num,
+                                         end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
+                                         mate_strand, mate_seqid, mate_pos, mate_tlen,
+                                         sam->mapq, sam->cigar, sam->n_cigar,
+                                         sam->score, sam->ascore, sam->pscore, nh, sam->algo_id, sam->algo_stage, 
+                                         "\tXS:i:%d\tXT:i:%d\tZS:i:%d\tZE:i:%d",
+                                         sam->score_subo,
+                                         sam->n_seeds,
+                                         sam->seed_start,
+                                         sam->seed_end);
           break;
         case TMAP_MAP_ALGO_MAP4:
-          tmap_sam_print_mapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
-                                sam->strand, sam->seqid, sam->pos, aln_num,
-                                end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
-                                mate_strand, mate_seqid, mate_pos, mate_tlen,
-                                sam->mapq, sam->cigar, sam->n_cigar,
-                                sam->score, sam->ascore, sam->pscore, nh, sam->algo_id, sam->algo_stage, 
-                                "\tXS:i:%d",
-                                sam->score_subo);
+          return tmap_sam_convert_mapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
+                                         sam->strand, sam->seqid, sam->pos, aln_num,
+                                         end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
+                                         mate_strand, mate_seqid, mate_pos, mate_tlen,
+                                         sam->mapq, sam->cigar, sam->n_cigar,
+                                         sam->score, sam->ascore, sam->pscore, nh, sam->algo_id, sam->algo_stage, 
+                                         "\tXS:i:%d",
+                                         sam->score_subo);
           break;
         case TMAP_MAP_ALGO_MAPVSW:
-          tmap_sam_print_mapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
-                                sam->strand, sam->seqid, sam->pos, aln_num,
-                                end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
-                                mate_strand, mate_seqid, mate_pos, mate_tlen,
-                                sam->mapq, sam->cigar, sam->n_cigar,
-                                sam->score, sam->ascore, sam->pscore, nh, sam->algo_id, sam->algo_stage, 
-                                "\tXS:i:%d",
-                                sam->score_subo);
+          return tmap_sam_convert_mapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
+                                         sam->strand, sam->seqid, sam->pos, aln_num,
+                                         end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
+                                         mate_strand, mate_seqid, mate_pos, mate_tlen,
+                                         sam->mapq, sam->cigar, sam->n_cigar,
+                                         sam->score, sam->ascore, sam->pscore, nh, sam->algo_id, sam->algo_stage, 
+                                         "\tXS:i:%d",
+                                         sam->score_subo);
           break;
       }
   }
+  return NULL;
 }
 
 void 
-tmap_map_sams_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sams_t *sams, int32_t end_num,
+tmap_map_sams_print(tmap_sam_io_t *io_out, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sams_t *sams, int32_t end_num,
                     tmap_map_sams_t *mates, int32_t sam_flowspace_tags, int32_t bidirectional, int32_t seq_eq) 
 {
   int32_t i;
   tmap_map_sam_t *mate = NULL;
   int32_t mate_unmapped = 0;
+  bam1_t *b = NULL;
+
   if(NULL != mates) {
       if(0 < mates->n) {
           // assumes the mates are sorted by their alignment score
@@ -452,11 +455,23 @@ tmap_map_sams_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sams_t *sam
   }
   if(0 < sams->n) {
       for(i=0;i<sams->n;i++) {
-          tmap_map_sam_print(seq, refseq, &sams->sams[i], sam_flowspace_tags, bidirectional, seq_eq, sams->max, i, end_num, mate_unmapped, mate);
+          b = tmap_map_sam_print(seq, refseq, &sams->sams[i], sam_flowspace_tags, bidirectional, seq_eq, sams->max, i, end_num, mate_unmapped, mate);
+          // TODO: make samwrite an API call
+          if(samwrite(io_out->fp, b) <= 0) {
+              tmap_error("Error writing the SAM file", Exit, WriteFileError);
+          }
+          bam_destroy1(b);
+          b = NULL;
       }
   }
   else {
-      tmap_map_sam_print(seq, refseq, NULL, sam_flowspace_tags, bidirectional, seq_eq, sams->max, 0, end_num, mate_unmapped, mate);
+      b = tmap_map_sam_print(seq, refseq, NULL, sam_flowspace_tags, bidirectional, seq_eq, sams->max, 0, end_num, mate_unmapped, mate);
+      // TODO: make samwrite an API call
+      if(samwrite(io_out->fp, b) <= 0) {
+          tmap_error("Error writing the SAM file", Exit, WriteFileError);
+      }
+      bam_destroy1(b);
+      b = NULL;
   }
 }
 
@@ -1761,16 +1776,13 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
   vsw = tmap_vsw_init((uint8_t*)tmap_seq_get_bases(seqs[1])->s, seq_len, softclip_end, softclip_start, opt->vsw_type, vsw_opt); 
       
   if(1 == opt->softclip_key) {
-      uint8_t *key_seq = NULL;
-      int32_t key_seq_len;
-      key_seq_len = tmap_seq_get_key_seq_int(seqs[0], &key_seq);
-      if(NULL == key_seq) {
+      // get first base
+      if(NULL == seqs[0]->ks) {
           key_base = 0;
       }
       else {
-          key_base = key_seq[0];
+          key_base = tmap_nt_char_to_int[(uint8_t)seqs[0]->ks[0]];
       }
-      free(key_seq);
   }
   
   i = start = end = 0;

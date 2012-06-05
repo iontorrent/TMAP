@@ -479,6 +479,24 @@ tmap_compliment(char *seq, int32_t len)
   }
 }
 
+inline void
+tmap_to_int(char *seq, int32_t len) 
+{
+  int32_t i;
+  for(i=0;i<len;i++) {
+      seq[i] = (char)tmap_nt_char_to_int[(uint8_t)seq[i]];
+  }
+}
+
+inline void
+tmap_to_char(char *seq, int32_t len) 
+{
+  int32_t i;
+  for(i=0;i<len;i++) {
+      seq[i] = "ACGTN"[(uint8_t)seq[i]];
+  }
+}
+
 int32_t
 tmap_chomp(char *str)
 {

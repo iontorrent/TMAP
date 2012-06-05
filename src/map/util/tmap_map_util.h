@@ -237,6 +237,7 @@ tmap_map_sam_copy_and_nullify(tmap_map_sam_t *dest, tmap_map_sam_t *src);
 
 /*!
   prints the SAM records
+  @param  io_out        the output stream
   @param  seq           the original read sequence
   @param  refseq        the reference sequence
   @param  sams          the mappings to print
@@ -247,7 +248,7 @@ tmap_map_sam_copy_and_nullify(tmap_map_sam_t *dest, tmap_map_sam_t *src);
   @param  seq_eq        1 if the SEQ field is to use '=' symbols, 0 otherwise
   */
 void
-tmap_map_sams_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sams_t *sams, int32_t end_num, 
+tmap_map_sams_print(tmap_sam_io_t *io_out, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sams_t *sams, int32_t end_num, 
                     tmap_map_sams_t *mates, int32_t sam_flowspace_tags, int32_t bidirectional, int32_t seq_eq);
 
 /*!

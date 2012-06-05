@@ -6,7 +6,7 @@
 #include "../util/tmap_error.h"
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_progress.h"
-#include "../util/tmap_sam_print.h"
+#include "../util/tmap_sam_convert.h"
 #include "../samtools/sam_header.h"
 #include "tmap_seq_io.h"
 #include "tmap_sff_io.h"
@@ -54,7 +54,7 @@ tmap_seqs_io_destroy(tmap_seqs_io_t *io)
 }
 
 inline int
-tmap_seqs_io_read(tmap_seqs_io_t *io, tmap_seqs_t *seqs)
+tmap_seqs_io_read(tmap_seqs_io_t *io, tmap_seqs_t *seqs, sam_header_t *header)
 {
   int32_t i;
 
@@ -79,6 +79,7 @@ tmap_seqs_io_read(tmap_seqs_io_t *io, tmap_seqs_t *seqs)
           tmap_seq_t *seq = tmap_seqs_get(seqs, i);
           if(tmap_seq_io_read(io->seqios[0], seq) < 0) return EOF; // TODO: better error checking
           tmap_seqs_add(seqs, seq); 
+          tmap_seq_update(seq, i, header);
           // break if not paired
           if(0 == (seq->data.sam->b->core.flag & BAM_FPAIRED)) break;
       }
@@ -89,6 +90,7 @@ tmap_seqs_io_read(tmap_seqs_io_t *io, tmap_seqs_t *seqs)
           tmap_seq_t *seq = tmap_seqs_get(seqs, i);
           if(tmap_seq_io_read(io->seqios[i], seq) < 0) return EOF; // TODO: better error checking
           tmap_seqs_add(seqs, seq); 
+          tmap_seq_update(seq, i, header);
       }
   }
 
@@ -96,7 +98,7 @@ tmap_seqs_io_read(tmap_seqs_io_t *io, tmap_seqs_t *seqs)
 }
 
 int
-tmap_seqs_io_read_buffer(tmap_seqs_io_t *io, tmap_seqs_t **seqs_buffer, int32_t buffer_length)
+tmap_seqs_io_read_buffer(tmap_seqs_io_t *io, tmap_seqs_t **seqs_buffer, int32_t buffer_length, sam_header_t *header)
 {
   int32_t n = 0;
 
@@ -110,7 +112,7 @@ tmap_seqs_io_read_buffer(tmap_seqs_io_t *io, tmap_seqs_t **seqs_buffer, int32_t 
           tmap_seqs_destroy(seqs_buffer[n]);
           seqs_buffer[n] = tmap_seqs_init(io->type);
       }
-      if(tmap_seqs_io_read(io, seqs_buffer[n]) < 0) {
+      if(tmap_seqs_io_read(io, seqs_buffer[n], header) < 0) {
           break;
       }
       n++;
@@ -201,6 +203,7 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
   // @RG - read group
   if(0 < rg_sam_num) { // @RG specified on the command line
       // Check for SAM/BAM
+      // TODO: this should be possible...
       if(io_in->type == TMAP_SEQ_TYPE_SAM || io_in->type == TMAP_SEQ_TYPE_BAM) {
           tmap_error("Cannot specify the read groups on the command line when using SAM/BAM as input."
                      "  Please embed in the SAM/BAM header instead.", Exit, OutOfRange);

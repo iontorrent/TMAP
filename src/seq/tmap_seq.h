@@ -6,6 +6,7 @@
 #include "tmap_fq.h"
 #include "tmap_sff.h"
 #include "tmap_sam.h"
+#include "../samtools/sam_header.h"
 
 /*! 
   An Abstract Library for DNA Sequence Data
@@ -33,6 +34,12 @@ typedef struct {
         tmap_sff_t *sff;  /*!< the pointer to the sff structure */
         tmap_sam_t *sam;  /*!< the pointer to the SAM/BAM structure */
     } data;
+    const char *ks; /*!< the key sequence associated with this structure, NULL if none */
+    const char *fo; /*!< the flow order associated with this structure, NULL if none */
+    const sam_header_record_t *rg_record; /*!< the read group record associated with this structure, NULL if none */
+    int32_t fo_start_idx; /*!< the flow order start index associated with this structure, -1 if none */
+    uint16_t *flowgram; /*!< the flowgram */
+    int32_t flowgram_len; /*!< the flowgram length */
 } tmap_seq_t;
 
 /*! 
@@ -140,42 +147,12 @@ tmap_seq_t *
 tmap_seq_sff2fq(tmap_seq_t *seq);
 
 /*!
-  @param  seq        pointer to the structure 
-  @param  flow_order a pointer to where the flow order should be stored 
-  @return            the length of the flow order, zero if none was found
- */
-int32_t
-tmap_seq_get_flow_order_int(tmap_seq_t *seq, uint8_t **flow_order);
-
-/*!
-  @param  seq      pointer to the structure 
-  @param  key_seq  pointer to where the key sequence should be stored 
-  @return          the length of the key sequence, zero if none was found
- */
-int32_t
-tmap_seq_get_key_seq_int(tmap_seq_t *seq, uint8_t **key_seq);
-
-/*!
-  @param  seq      pointer to the structure 
-  @param  flowgram  pionter to where the flowgram should be stored
-  @param  mem      memory size already allocated to flowgram
-  @return          the flowgram length
- */
-int32_t
-tmap_seq_get_flowgram(tmap_seq_t *seq, uint16_t **flowgram, int32_t mem);
-
-/*!
-  @param  seq      pointer to the structure 
-  @return          the flowgram start index
- */
-int32_t
-tmap_seq_get_flow_start_index(tmap_seq_t *seq);
-
-/*!
-  @param  seq      pointer to the structure 
-  @return          the rg id, NULL if not available
-*/
-char*
-tmap_seq_get_rg_id(tmap_seq_t *seq);
+  Updates the Read Group record pointer, and flow space information.
+  @param  seq  pointer to the structure to update
+  @param  idx  the file index from which the read was read, corresponding to the ith read group
+  @param  header  the SAM Header
+  */
+void
+tmap_seq_update(tmap_seq_t *seq, int32_t idx, sam_header_t *header);
 
 #endif

@@ -6,7 +6,7 @@
 #include "../util/tmap_error.h"
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_progress.h"
-#include "../util/tmap_sam_print.h"
+#include "../util/tmap_sam_convert.h"
 #include "../samtools/sam_header.h"
 #include "tmap_seq_io.h"
 #include "tmap_sff_io.h"
@@ -265,6 +265,9 @@ tmap_seq_io_sff2sam_main(int argc, char *argv[])
       tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [-R -Y -v -h] <in.sff>\n", PACKAGE, argv[0]);
       return 1; 
   }
+  
+  // HERE TODO
+  /*
 
   // input
   io_in = tmap_seq_io_init(argv[optind], TMAP_SEQ_TYPE_SFF, 0, TMAP_FILE_NO_COMPRESSION);
@@ -309,6 +312,7 @@ tmap_seq_io_sff2sam_main(int argc, char *argv[])
 
   // output
   tmap_file_fclose(tmap_file_stdout);
+  */
 
   return 0;
 }

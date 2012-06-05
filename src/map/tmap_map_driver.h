@@ -23,16 +23,10 @@ typedef int32_t (*tmap_map_driver_func_init)(void **data, tmap_refseq_t *refseq,
 /*!
   This function will be invoked before a thread begins process its sequences.
   @param  data  the thread persistent data
-  @param  flow_order the flow order
-  @param  flow_order_len the flow order length
-  @param  key_seq the flow order
-  @param  key_seq_len the flow order length
   @param  opt   the program options
   @return       0 upon success, non-zero otherwise
  */
 typedef int32_t (*tmap_map_driver_func_thread_init)(void **data, 
-                                                    uint8_t *flow_order, int32_t flow_order_len, 
-                                                    uint8_t *key_seq, int32_t key_seq_len, 
                                                     tmap_map_opt_t *opt);
 
 /*!
@@ -151,6 +145,7 @@ tmap_map_driver_destroy(tmap_map_driver_t *driver);
   Driver data to be passed to a thread                         
   */
 typedef struct {                                            
+    sam_header_t *sam_header;  /*!< the SAM Header */
     tmap_seqs_t **seqs_buffer;  /*!< the buffers of sequences */    
     int32_t seqs_buffer_length;  /*!< the buffers length */
     tmap_map_record_t **records;  /*!< the alignments for each sequence */
@@ -163,6 +158,7 @@ typedef struct {
 
 /*!
   The core worker routine of mapall
+  @param  sam_header           the SAM Header
   @param  num_ends             the number of ends
   @param  seqs_buffer           the buffer of sequences
   @param  records              the records to return
@@ -174,7 +170,8 @@ typedef struct {
   @param  tid                  the thread ids
  */
 void
-tmap_map_driver_core_worker(tmap_seqs_t **seqs_buffer, 
+tmap_map_driver_core_worker(sam_header_t *sam_header,
+                            tmap_seqs_t **seqs_buffer, 
                             tmap_map_record_t **records,
                             int32_t seqs_buffer_length,
                             tmap_index_t *index,

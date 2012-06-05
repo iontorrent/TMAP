@@ -13,27 +13,9 @@
                     
 #define TMAP_SAM_PRINT_VERSION "1.4"
 
-/*! 
-  prints out a SAM header
-  @param  fp            the output file pointer
-  @param  refseq        pointer to the reference sequence (forward)
-  @param  seqio         the input reading data structure, NULL otherwise
-  @param  sam_rg        the SAM RG line, NULL otherwise
-  @param  sam_flowspace_tags  1 if SFF specific SAM tags are to be outputted, 0 otherwise
-  @param  ignore_rg_sam_tags 1 if we are to ignore RG tags from the input file, 0 otherwise
-  @param  argc          the number of input command line arguments
-  @param  argv          the input command line arguments
-  @details              the following header tags will be outptted: \@SQ:SN:LN and \@PG:ID:VN:CL.  
-  The sam_flowspace_tags tags precedence over ignore_rg_sam_tags
-  */
-void
-tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq, 
-                      tmap_seq_io_t *seqio, char *sam_rg, 
-                      int32_t sam_flowspace_tags, int32_t ignore_rg_sam_tags, 
-                      int argc, char *argv[]);
 
 /*! 
-  prints out a SAM record signifying the sequence is unmapped 
+  converts to a SAM record signifying the sequence is unmapped 
   @param  fp            the file pointer to which to print
   @param  seq           the sequence that is unmapped
   @param  sam_flowspace_tags  1 if SFF specific SAM tags are to be outputted, 0 otherwise
@@ -47,16 +29,17 @@ tmap_sam_print_header(tmap_file_t *fp, tmap_refseq_t *refseq,
   @param  m_pos         the mates position (zero-based), 0 otherwise
   @param  format      optional tag format (printf-style)
   @param  ...         arguments for the format
+  @return             the populated BAM structure
   */
-inline void
-tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_tags, int32_t bidirectional, tmap_refseq_t *refseq,
+inline bam1_t*
+tmap_sam_convert_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_tags, int32_t bidirectional, tmap_refseq_t *refseq,
                         uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, 
                         uint32_t m_strand, uint32_t m_seqid, uint32_t m_pos,
                         const char *format, ...);
 
 
 /*! 
-  prints out a mapped SAM record 
+  converts to a mapped SAM record 
   @param  fp          the file pointer to which to print
   @param  seq         the sequence that is mapped
   @param  sam_flowspace_tags  1 if SFF specific SAM tags are to be outputted, 0 otherwise
@@ -86,10 +69,11 @@ tmap_sam_print_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_
   @param  algo_stage  the algorithm stage (1 or 2) 
   @param  format      optional tag format (printf-style)
   @param  ...         arguments for the format
+  @return             the populated BAM structure
   @details            the format should not include the MD tag, which will be outputted automatically
   */
-inline void
-tmap_sam_print_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_tags, int32_t bidirectional, int32_t seq_eq, tmap_refseq_t *refseq,
+inline bam1_t*
+tmap_sam_convert_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_tags, int32_t bidirectional, int32_t seq_eq, tmap_refseq_t *refseq,
                       uint8_t strand, uint32_t seqid, uint32_t pos, int32_t secondary,
                       uint32_t end_num, uint32_t m_unmapped, uint32_t m_prop, double m_num_std, uint32_t m_strand,
                       uint32_t m_seqid, uint32_t m_pos, uint32_t m_tlen,

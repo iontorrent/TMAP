@@ -305,79 +305,19 @@ tmap_seq_sff2fq(tmap_seq_t *seq)
   return ret;
 }
 
-int32_t
-tmap_seq_get_flow_order_int(tmap_seq_t *seq, uint8_t **flow_order)
-{
-  switch(seq->type) {
-    case TMAP_SEQ_TYPE_FQ:
-      break;
-    case TMAP_SEQ_TYPE_SFF:
-      return tmap_sff_get_flow_order_int(seq->data.sff, flow_order);
-      break;
-    case TMAP_SEQ_TYPE_SAM:
-    case TMAP_SEQ_TYPE_BAM:
-      return tmap_sam_get_flow_order_int(seq->data.sam, flow_order);
-      break;
-    default:
-      tmap_error("type is unrecognized", Exit, OutOfRange);
-      break;
-  }
-  return 0;
-}
-
-int32_t
-tmap_seq_get_key_seq_int(tmap_seq_t *seq, uint8_t **key_seq)
-{
-  switch(seq->type) {
-    case TMAP_SEQ_TYPE_FQ:
-      break;
-    case TMAP_SEQ_TYPE_SFF:
-      return tmap_sff_get_key_seq_int(seq->data.sff, key_seq);
-      break;
-    case TMAP_SEQ_TYPE_SAM:
-    case TMAP_SEQ_TYPE_BAM:
-      return tmap_sam_get_key_seq_int(seq->data.sam, key_seq);
-      break;
-    default:
-      tmap_error("type is unrecognized", Exit, OutOfRange);
-      break;
-  }
-  return 0;
-}
-
 // NB: includes key bases if present
-int32_t
-tmap_seq_get_flowgram(tmap_seq_t *seq, uint16_t **flowgram, int32_t mem)
+static int32_t
+tmap_seq_get_flowgram(tmap_seq_t *seq, uint16_t **flowgram)
 {
   switch(seq->type) {
     case TMAP_SEQ_TYPE_FQ:
       break;
     case TMAP_SEQ_TYPE_SFF:
-      return tmap_sff_get_flowgram(seq->data.sff, flowgram, mem);
+      return tmap_sff_get_flowgram(seq->data.sff, flowgram);
       break;
     case TMAP_SEQ_TYPE_SAM:
     case TMAP_SEQ_TYPE_BAM:
-      return tmap_sam_get_flowgram(seq->data.sam, flowgram, mem);
-      break;
-    default:
-      tmap_error("type is unrecognized", Exit, OutOfRange);
-      break;
-  }
-  return 0;
-}
-
-int32_t
-tmap_seq_get_flow_start_index(tmap_seq_t *seq)
-{
-  switch(seq->type) {
-    case TMAP_SEQ_TYPE_FQ:
-      return -1;
-    case TMAP_SEQ_TYPE_SFF:
-      return tmap_sff_get_flow_start_index(seq->data.sff);
-      break;
-    case TMAP_SEQ_TYPE_SAM:
-    case TMAP_SEQ_TYPE_BAM:
-      return tmap_sam_get_flow_start_index(seq->data.sam);
+      return tmap_sam_get_flowgram(seq->data.sam, flowgram);
       break;
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
@@ -386,20 +326,73 @@ tmap_seq_get_flow_start_index(tmap_seq_t *seq)
   return -1;
 }
 
-char*
-tmap_seq_get_rg_id(tmap_seq_t *seq)
+void
+tmap_seq_update(tmap_seq_t *seq, int32_t idx, sam_header_t *header)
 {
+  char *rg_id = NULL;
+
+  // Read Group
   switch(seq->type) {
     case TMAP_SEQ_TYPE_FQ:
     case TMAP_SEQ_TYPE_SFF:
-      return NULL;
+      break;
     case TMAP_SEQ_TYPE_SAM:
     case TMAP_SEQ_TYPE_BAM:
-      return tmap_sam_get_rg_id(seq->data.sam);
+      rg_id = tmap_sam_get_rg_id(seq->data.sam);
       break;
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
   }
-  return NULL;
+  if(NULL == rg_id) { // did not find in SAM/BAM
+      sam_header_records_t *records = NULL;
+      // NB: assume that it is from the ith record in the header 
+      records = sam_header_get_records(header, "RG");
+      if(NULL != records) { // it exists
+          if(idx < 0 || records->n <= idx) {
+              tmap_error("RG records index was out of bounds", Exit, OutOfRange);
+          }
+          seq->rg_record = records->records[idx]; // copy over
+      }
+  }
+  else { // found in SAM/BAM
+      sam_header_record_t **records = NULL;
+      int32_t n = 0;
+      records = sam_header_get_record(header, "RG", "ID", rg_id, &n);
+      if(0 == n) {
+          fprintf(stderr, "Read Group Identifier: [%s]\n", rg_id);
+          tmap_error("Did not find the @RG.ID in the SAM/BAM Header", Exit, OutOfRange);
+      }
+      else if(1 < n) {
+          fprintf(stderr, "Read Group Identifier: [%s]\n", rg_id);
+          tmap_error("Found more than one @RG.ID in the SAM/BAM Header", Exit, OutOfRange);
+      }
+      seq->rg_record = records[0];
+      free(records); // NB: shallow copied
+  }
+
+  // key sequence and flow order
+  if(NULL != seq->rg_record) { // It should exist in the SAM/BAM Header
+      seq->ks = sam_header_record_get(seq->rg_record, "KS");
+      seq->fo = sam_header_record_get(seq->rg_record, "FO");
+        
+      // flow order index start
+      if(NULL != seq->ks && TMAP_SEQ_TYPE_SFF != seq->type) { // only if it is an SFF
+          char *key_seq = NULL;
+          int32_t key_seq_len = 0;
+
+          key_seq_len = strlen(seq->ks); // len
+          key_seq = tmap_strdup(seq->ks); // clone
+          tmap_to_int(key_seq, key_seq_len); // to integer
+          // in addition, remove key sequence and trimming
+          seq->fo_start_idx = tmap_seq_remove_key_sequence(seq, 1, (uint8_t*)key_seq, key_seq_len); // remove key sequence etc.
+          free(key_seq); // free
+      }
+      else if(TMAP_SEQ_TYPE_SAM == seq->type || TMAP_SEQ_TYPE_BAM == seq->type) { // Try the ZF tag...
+          seq->fo_start_idx = tmap_sam_get_fo_start_idx(seq->data.sam);
+      }
+
+      // flowgram information...
+      seq->flowgram_len = tmap_seq_get_flowgram(seq, &seq->flowgram);
+  }
 }

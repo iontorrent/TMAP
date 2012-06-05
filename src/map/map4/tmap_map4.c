@@ -12,7 +12,7 @@
 #include "../../util/tmap_alloc.h"
 #include "../../util/tmap_definitions.h"
 #include "../../util/tmap_progress.h"
-#include "../../util/tmap_sam_print.h"
+#include "../../util/tmap_sam_convert.h"
 #include "../../seq/tmap_seq.h"
 #include "../../index/tmap_refseq.h"
 #include "../../index/tmap_bwt_gen.h"
@@ -72,8 +72,6 @@ tmap_map4_init(void **data, tmap_refseq_t *refseq, tmap_map_opt_t *opt)
 
 int32_t
 tmap_map4_thread_init(void **data, 
-                      uint8_t *flow_order, int32_t flow_order_len,
-                      uint8_t *key_seq, int32_t key_seq_len,
                       tmap_map_opt_t *opt)
 {
   tmap_map4_thread_data_t *d = NULL;

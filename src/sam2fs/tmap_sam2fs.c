@@ -16,7 +16,7 @@
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_progress.h"
 #include "../util/tmap_definitions.h"
-#include "../util/tmap_sam_print.h"
+#include "../util/tmap_sam_convert.h"
 #include "../io/tmap_file.h"
 #include "../sw/tmap_fsw.h"
 #include "../sw/tmap_sw.h"
