@@ -228,12 +228,14 @@ int
 tmap_seq_io_sff2sam_main(int argc, char *argv[])
 {
   int c, help = 0;
-  tmap_seq_io_t *io_in = NULL;
+  //tmap_seq_io_t *io_in = NULL;
   char *sam_rg = NULL;
-  tmap_seq_t *seq_in = NULL;
+  //tmap_seq_t *seq_in = NULL;
   int bidirectional = 0, sam_flowspace_tags = 0, remove_sff_clipping = 1;
+  /*
   uint8_t *key_seq = NULL;
   int key_seq_len = 0;
+  */
 
   while((c = getopt(argc, argv, "DGR:Yvh")) >= 0) {
       switch(c) {

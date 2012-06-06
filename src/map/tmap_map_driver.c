@@ -671,7 +671,6 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
   tmap_map_driver_do_cleanup(driver);
 
   // close the input/output
-  //tmap_file_fclose(tmap_file_stdout);
   tmap_sam_io_destroy(io_out);
 
   // free memory
