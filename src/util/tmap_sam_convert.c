@@ -54,23 +54,17 @@ tmap_sam_convert_pg(tmap_seq_t *seq, bam1_t *b)
 }
 
 static inline void 
-tmap_sam_convert_fz_and_zf(tmap_file_t *fp, tmap_seq_t *seq)
+tmap_sam_convert_fz_and_zf(tmap_seq_t *seq, bam1_t *b)
 {
-  // TODO
-  /*
-  uint16_t *flowgram = NULL;
-  int32_t flow_start_index;
-  int32_t flowgram_len;
-  flowgram_len = tmap_seq_get_flowgram(seq, &flowgram, 0);
-  if(NULL != flowgram) {
-      tmap_sam_convert_flowgram(fp, flowgram, flowgram_len);
-      free(flowgram);
+  // ZF
+  if(0 <= seq->fo_start_idx) { // exists
+      bam_aux_append(b, "ZF", 'i', 4, (uint8_t*)&seq->fo_start_idx);
   }
-  flow_start_index = tmap_seq_get_flow_start_index(seq);
-  if(0 <= flow_start_index) {
-      tmap_file_fprintf(fp, "\tZF:i:%d", flow_start_index);
+
+  // FZ
+  if(NULL != seq->flowgram && 0 < seq->flowgram_len) {
+      bam_aux_appendB(b, "FZ", 'B', 'S', seq->flowgram_len, (uint8_t*)seq->flowgram);
   }
-  */
 }
 
 static inline tmap_string_t *
@@ -314,13 +308,13 @@ tmap_sam_convert_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspac
   // PG
   tmap_sam_convert_pg(seq, b);
   
-  // TODO: FZ/ZF and optional tags
-  /*
-
   // FZ and ZF
   if(1 == sam_flowspace_tags) {
       tmap_sam_convert_fz_and_zf(fp, seq);
   }
+  
+  // TODO: optional tags
+  /*
   if(1 == bidirectional) {
       tmap_file_fprintf(fp, "\tXB:i:1");
   }
@@ -491,7 +485,7 @@ tmap_sam_convert_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_
 
   // TODO support 'seq_eq'
   // TODO support missing qualities
-  // TODO: FZ/ZF and optional tags
+  // TODO: optional tags
   
   // RG 
   tmap_sam_convert_rg(seq, b);
@@ -500,9 +494,6 @@ tmap_sam_convert_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_
   tmap_sam_convert_pg(seq, b);
 
   /*
-  // PG
-  tmap_file_fprintf(fp, "\tPG:Z:%s", PACKAGE_NAME);
-
   // MD and NM
   tmap_file_fprintf(fp, "\tMD:Z:%s\tNM:i:%d", md->s, nm);
 
@@ -511,12 +502,14 @@ tmap_sam_convert_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_
 
   // NH
   if(1 < nh) tmap_file_fprintf(fp, "\tNH:i:%d", nh);
+  */
   
   // FZ and ZF
   if(1 == sam_flowspace_tags) {
       tmap_sam_convert_fz_and_zf(fp, seq);
   }
-
+  
+  /*
   // XA
   if(0 < algo_stage) {
       tmap_file_fprintf(fp, "\tXA:Z:%s-%d", tmap_algo_id_to_name(algo_id), algo_stage);
