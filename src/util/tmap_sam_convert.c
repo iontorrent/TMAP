@@ -67,6 +67,69 @@ tmap_sam_convert_fz_and_zf(tmap_seq_t *seq, bam1_t *b)
   }
 }
 
+static inline void
+tmap_sam_convert_add_optional(bam1_t *b, const char *format, va_list ap)
+{
+  int32_t start, len;
+
+  len = strlen(format);
+  start = 0;
+  while(start < len) {
+      char tag[2];
+      char type;
+
+      // tab
+      if('\t' != format[start]) {
+          start++;
+          continue;
+      }
+      start++;
+
+      // check for space
+      if(len - start < 7) tmap_bug();
+
+      // tag
+      tag[0] = format[start]; start++;
+      tag[1] = format[start]; start++;
+      // colon
+      if(':' != format[start]) tmap_bug();
+      start++;
+      // type
+      type = format[start]; start++;
+      // colon
+      if(':' != format[start]) tmap_bug();
+      start++;
+      // ignore percentage sign and specifier
+
+      // append based on type
+      char A;
+      int32_t i;
+      float f;
+      char *Z;
+      switch(type) {
+        case 'A':
+          A = (char)va_arg(ap, int32_t);
+          bam_aux_append(b, tag, type, sizeof(char), (uint8_t*)&A);
+          break;
+        case 'i':
+          i = va_arg(ap, int32_t);
+          bam_aux_append(b, tag, type, sizeof(int32_t), (uint8_t*)&i);
+          break;
+        case 'f':
+          f = (float)va_arg(ap, double);
+          bam_aux_append(b, tag, type, sizeof(float), (uint8_t*)&f);
+          break;
+        case 'Z':
+          Z = va_arg(ap, char*);
+          bam_aux_append(b, tag, type, 1+strlen(Z), (uint8_t*)Z);
+          break;
+        default:
+          // NB: not supported
+          tmap_bug();
+      }
+  }
+}
+
 static inline tmap_string_t *
 tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are characters
             uint32_t seqid, uint32_t pos, // seqid and pos are 0-based
@@ -310,7 +373,7 @@ tmap_sam_convert_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspac
   
   // FZ and ZF
   if(1 == sam_flowspace_tags) {
-      tmap_sam_convert_fz_and_zf(fp, seq);
+      tmap_sam_convert_fz_and_zf(seq, b);
   }
   
   // XB
@@ -319,16 +382,10 @@ tmap_sam_convert_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspac
       bam_aux_append(b, "XB", 'i', sizeof(int32_t), (uint8_t*)&xb);
   }
   
-  // TODO: optional tags
-  /*
   // optional tags
-  if(NULL != format) {
-      va_start(ap, format);
-      tmap_file_vfprintf(fp, format, ap);
-      va_end(ap);
-  }
-  tmap_file_fprintf(fp, "\n");
-  */
+  va_start(ap, format);
+  tmap_sam_convert_add_optional(b, format, ap);
+  va_end(ap);
 
   return b;
 }
@@ -509,7 +566,7 @@ tmap_sam_convert_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_
 
   // FZ and ZF
   if(1 == sam_flowspace_tags) {
-      tmap_sam_convert_fz_and_zf(fp, seq);
+      tmap_sam_convert_fz_and_zf(seq, b);
   }
   
   // XA
@@ -538,15 +595,9 @@ tmap_sam_convert_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_
   }
 
   // optional tags
-  /*
-  if(NULL != format) {
-      va_start(ap, format);
-      tmap_file_vfprintf(fp, format, ap);
-      va_end(ap);
-  }
-  // new line
-  tmap_file_fprintf(fp, "\n");
-  */
+  va_start(ap, format);
+  tmap_sam_convert_add_optional(b, format, ap);
+  va_end(ap);
 
   if(1 == strand) { // reverse back
       tmap_string_reverse_compliment(bases, 0);
