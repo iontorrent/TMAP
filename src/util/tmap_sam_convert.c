@@ -313,12 +313,14 @@ tmap_sam_convert_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspac
       tmap_sam_convert_fz_and_zf(fp, seq);
   }
   
-  // TODO: optional tags
-  /*
+  // XB
   if(1 == bidirectional) {
-      tmap_file_fprintf(fp, "\tXB:i:1");
+      int32_t xb = 1;
+      bam_aux_append(b, "XB", 'i', sizeof(int32_t), (uint8_t*)&xb);
   }
   
+  // TODO: optional tags
+  /*
   // optional tags
   if(NULL != format) {
       va_start(ap, format);
@@ -510,28 +512,33 @@ tmap_sam_convert_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_
       tmap_sam_convert_fz_and_zf(fp, seq);
   }
   
-  /*
   // XA
   if(0 < algo_stage) {
-      tmap_file_fprintf(fp, "\tXA:Z:%s-%d", tmap_algo_id_to_name(algo_id), algo_stage);
+      // TODO
+      //tmap_file_fprintf(fp, "\tXA:Z:%s-%d", tmap_algo_id_to_name(algo_id), algo_stage);
   }
   
   // XZ
   if(TMAP_SEQ_TYPE_SFF == seq->type && INT32_MIN != ascore) {
-      tmap_file_fprintf(fp, "\tXZ:i:%d", ascore);
+      bam_aux_append(b, "XZ", 'i', sizeof(int32_t), (uint8_t*)&ascore);
   }
   
+  // YP/YS
   if(0 < end_num) { // mate info
-      tmap_file_fprintf(fp, "\tYP:i:%d", pscore);
+      bam_aux_append(b, "YP", 'i', sizeof(int32_t), (uint8_t*)&pscore);
       if(0 == m_unmapped) {
-          tmap_file_fprintf(fp, "\tYS:f:%f", m_num_std);
+          bam_aux_append(b, "YS", 'f', sizeof(float), (uint8_t*)&m_num_std);
       }
   }
+
+  // XB
   if(1 == bidirectional) {
-      tmap_file_fprintf(fp, "\tXB:i:1");
+      int32_t xb = 1;
+      bam_aux_append(b, "XB", 'i', sizeof(int32_t), (uint8_t*)&xb);
   }
 
   // optional tags
+  /*
   if(NULL != format) {
       va_start(ap, format);
       tmap_file_vfprintf(fp, format, ap);
@@ -539,11 +546,12 @@ tmap_sam_convert_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_
   }
   // new line
   tmap_file_fprintf(fp, "\n");
+  */
+
   if(1 == strand) { // reverse back
       tmap_string_reverse_compliment(bases, 0);
       tmap_string_reverse(qualities);
   }
-  */
 
   // free
   tmap_string_destroy(md);
