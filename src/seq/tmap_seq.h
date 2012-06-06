@@ -37,6 +37,7 @@ typedef struct {
     const char *ks; /*!< the key sequence associated with this structure, NULL if none */
     const char *fo; /*!< the flow order associated with this structure, NULL if none */
     const sam_header_record_t *rg_record; /*!< the read group record associated with this structure, NULL if none */
+    const sam_header_record_t *pg_record; /*!< the program group record associated with this structure, NULL if none */
     int32_t fo_start_idx; /*!< the flow order start index associated with this structure, -1 if none */
     uint16_t *flowgram; /*!< the flowgram */
     int32_t flowgram_len; /*!< the flowgram length */

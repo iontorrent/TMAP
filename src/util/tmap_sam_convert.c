@@ -31,7 +31,6 @@ tmap_sam_convert_flowgram(tmap_file_t *fp, uint16_t *flowgram, int32_t length)
 // TODO: store program ID
 // TODO: store read group
 
-
 static inline void
 tmap_sam_convert_rg(tmap_seq_t *seq, bam1_t *b)
 {
@@ -41,6 +40,17 @@ tmap_sam_convert_rg(tmap_seq_t *seq, bam1_t *b)
   if(NULL == id) return;
   // append
   bam_aux_append(b, "RG", 'Z', 1+strlen(id), (uint8_t*)id);
+}
+
+static inline void
+tmap_sam_convert_pg(tmap_seq_t *seq, bam1_t *b)
+{
+  char *id = NULL;
+  if(NULL == seq->pg_record) return;
+  id = sam_header_record_get(seq->pg_record, "ID");
+  if(NULL == id) return;
+  // append
+  bam_aux_append(b, "PG", 'Z', 1+strlen(id), (uint8_t*)id);
 }
 
 static inline void 
@@ -300,12 +310,12 @@ tmap_sam_convert_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspac
 
   // RG 
   tmap_sam_convert_rg(seq, b);
-  
-  // TODO: PG/FZ/ZF and optional tags
-  /*
 
   // PG
-  tmap_file_fprintf(fp, "\tPG:Z:%s", PACKAGE_NAME);
+  tmap_sam_convert_pg(seq, b);
+  
+  // TODO: FZ/ZF and optional tags
+  /*
 
   // FZ and ZF
   if(1 == sam_flowspace_tags) {
@@ -481,10 +491,13 @@ tmap_sam_convert_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_
 
   // TODO support 'seq_eq'
   // TODO support missing qualities
-  // TODO: RG/PG/FZ/ZF and optional tags
+  // TODO: FZ/ZF and optional tags
   
   // RG 
   tmap_sam_convert_rg(seq, b);
+  
+  // PG
+  tmap_sam_convert_pg(seq, b);
 
   /*
   // PG

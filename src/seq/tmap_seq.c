@@ -330,6 +330,9 @@ void
 tmap_seq_update(tmap_seq_t *seq, int32_t idx, sam_header_t *header)
 {
   char *rg_id = NULL;
+  sam_header_records_t *records = NULL;
+  sam_header_record_t **record_list = NULL;
+  int32_t n = 0;
 
   // Read Group
   switch(seq->type) {
@@ -345,7 +348,6 @@ tmap_seq_update(tmap_seq_t *seq, int32_t idx, sam_header_t *header)
       break;
   }
   if(NULL == rg_id) { // did not find in SAM/BAM
-      sam_header_records_t *records = NULL;
       // NB: assume that it is from the ith record in the header 
       records = sam_header_get_records(header, "RG");
       if(NULL != records) { // it exists
@@ -356,9 +358,8 @@ tmap_seq_update(tmap_seq_t *seq, int32_t idx, sam_header_t *header)
       }
   }
   else { // found in SAM/BAM
-      sam_header_record_t **records = NULL;
-      int32_t n = 0;
-      records = sam_header_get_record(header, "RG", "ID", rg_id, &n);
+      n = 0;
+      record_list = sam_header_get_record(header, "RG", "ID", rg_id, &n);
       if(0 == n) {
           fprintf(stderr, "Read Group Identifier: [%s]\n", rg_id);
           tmap_error("Did not find the @RG.ID in the SAM/BAM Header", Exit, OutOfRange);
@@ -367,8 +368,18 @@ tmap_seq_update(tmap_seq_t *seq, int32_t idx, sam_header_t *header)
           fprintf(stderr, "Read Group Identifier: [%s]\n", rg_id);
           tmap_error("Found more than one @RG.ID in the SAM/BAM Header", Exit, OutOfRange);
       }
-      seq->rg_record = records[0];
-      free(records); // NB: shallow copied
+      seq->rg_record = record_list[0];
+      free(record_list); // NB: shallow copied
+  }
+
+  // Program Group
+  // NB: assumes the last item in the header
+  records = sam_header_get_records(header, "PG");
+  if(NULL != records && 0 < records->n) { // it exists
+      seq->pg_record = records->records[records->n-1]; // copy over
+  }
+  else {
+      seq->pg_record = NULL;
   }
 
   // key sequence and flow order
