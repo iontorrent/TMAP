@@ -33,22 +33,14 @@ tmap_sam_convert_flowgram(tmap_file_t *fp, uint16_t *flowgram, int32_t length)
 
 
 static inline void
-tmap_sam_convert_rg(tmap_file_t *fp, tmap_seq_t *seq)
+tmap_sam_convert_rg(tmap_seq_t *seq, bam1_t *b)
 {
-  // TODO
-  /*
-  // RG 
-  if(1 == tmap_sam_rg_id_use) {
-      tmap_file_fprintf(fp, "\tRG:Z:%s", tmap_sam_rg_id);
-  }
-  else if(0 == tmap_sam_rg_id_use) {
-      char *id = tmap_seq_get_rg_id(seq);
-      if(NULL == id) {
-          tmap_error("Missing Record RG.ID in the input file", Exit, OutOfRange);
-      }
-      tmap_file_fprintf(fp, "\tRG:Z:%s", id);
-  }
-  */
+  char *id = NULL;
+  if(NULL == seq->rg_record) return;
+  id = sam_header_record_get(seq->rg_record, "ID");
+  if(NULL == id) return;
+  // append
+  bam_aux_append(b, "RG", 'Z', 1+strlen(id), (uint8_t*)id);
 }
 
 static inline void 
@@ -306,11 +298,11 @@ tmap_sam_convert_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspac
       b->core.mpos = m_pos;
   }
 
-  // TODO: RG/PG/FZ/ZF and optional tags
-
-  /*
   // RG 
-  tmap_sam_convert_rg(fp, seq);
+  tmap_sam_convert_rg(seq, b);
+  
+  // TODO: PG/FZ/ZF and optional tags
+  /*
 
   // PG
   tmap_file_fprintf(fp, "\tPG:Z:%s", PACKAGE_NAME);
@@ -490,10 +482,11 @@ tmap_sam_convert_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_
   // TODO support 'seq_eq'
   // TODO support missing qualities
   // TODO: RG/PG/FZ/ZF and optional tags
-  /*
+  
   // RG 
-  tmap_sam_convert_rg(fp, seq);
+  tmap_sam_convert_rg(seq, b);
 
+  /*
   // PG
   tmap_file_fprintf(fp, "\tPG:Z:%s", PACKAGE_NAME);
 
