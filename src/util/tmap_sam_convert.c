@@ -493,17 +493,18 @@ tmap_sam_convert_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_
   // PG
   tmap_sam_convert_pg(seq, b);
 
-  /*
-  // MD and NM
-  tmap_file_fprintf(fp, "\tMD:Z:%s\tNM:i:%d", md->s, nm);
+  // MD
+  bam_aux_append(b, "MD", 'Z', md->l + 1, (uint8_t*)md->s);
+
+  // NM
+  bam_aux_append(b, "NM", 'i', sizeof(int32_t), (uint8_t*)&nm);
 
   // AS
-  tmap_file_fprintf(fp, "\tAS:i:%d", score);
+  bam_aux_append(b, "AS", 'i', sizeof(int32_t), (uint8_t*)&score);
 
   // NH
-  if(1 < nh) tmap_file_fprintf(fp, "\tNH:i:%d", nh);
-  */
-  
+  bam_aux_append(b, "NH", 'i', sizeof(int32_t), (uint8_t*)&nh);
+
   // FZ and ZF
   if(1 == sam_flowspace_tags) {
       tmap_sam_convert_fz_and_zf(fp, seq);
