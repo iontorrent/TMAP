@@ -14,6 +14,7 @@
 #include "../util/tmap_sam_print.h"
 #include "../util/tmap_sort.h"
 #include "../util/tmap_rand.h"
+#include "../util/tmap_hash.h"
 #include "../seq/tmap_seq.h"
 #include "../index/tmap_refseq.h"
 #include "../index/tmap_bwt_gen.h"
@@ -232,6 +233,11 @@ tmap_map_driver_core_worker(int32_t num_ends,
                   // key sequence did not match
                   continue;
               }
+          }
+                            
+          // re-initialize the random seed
+          if(driver->opt->rand_read_name) {
+              tmap_rand_reinit(rand, tmap_hash_str_hash_func(tmap_seq_get_name(seq_buffer[0][low])->s));
           }
 
           // init
