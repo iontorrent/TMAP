@@ -187,6 +187,7 @@ typedef struct __tmap_map_opt_t {
     int32_t bidirectional;  /*!< specifies the input reads are to be annotated as bidirectional (-D,--bidirectional) */
     int32_t seq_eq;  /*!< specifies to use '=' symbols in the SEQ field (-I,--use-seq-equal) */
     int32_t ignore_rg_sam_tags;  /*!< specifies to not use the RG header and RG record tags in the SAM file (-C,--keep-rg-from-sam) */
+    int32_t rand_read_name;  /*!< specifies to randomize based on the read name (-u,--rand-read-name) */
     int32_t input_compr;  /*!< the input compression type (-j,--input-bz2 and -z,--input-gz) */
     key_t shm_key;  /*!< the shared memory key (-k,--shared-memory-key) */
 

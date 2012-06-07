@@ -28,6 +28,13 @@ tmap_rand_t*
 tmap_rand_init(uint64_t seed);
 
 /*!
+  @param  r     the random number generator to reinitialize
+  @param  seed  the random seed
+ */
+void
+tmap_rand_reinit(tmap_rand_t *r, uint64_t seed);
+
+/*!
   @param  r  the initialized random number generator
   @return    a random 64-bit integer
  */

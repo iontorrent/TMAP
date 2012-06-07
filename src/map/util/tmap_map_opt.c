@@ -137,6 +137,7 @@ __tmap_map_opt_option_print_func_char_array_init(sam_rg, sam_rg_num, "not using"
 __tmap_map_opt_option_print_func_tf_init(bidirectional)
 __tmap_map_opt_option_print_func_tf_init(seq_eq)
 __tmap_map_opt_option_print_func_tf_init(ignore_rg_sam_tags)
+__tmap_map_opt_option_print_func_tf_init(rand_read_name)
 __tmap_map_opt_option_print_func_compr_init(input_compr_gz, input_compr, TMAP_FILE_GZ_COMPRESSION)
 __tmap_map_opt_option_print_func_compr_init(input_compr_bz2, input_compr, TMAP_FILE_BZ2_COMPRESSION)
 __tmap_map_opt_option_print_func_int_init(shm_key)
@@ -522,6 +523,12 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            "specifies to not use the RG header and RG record tags in the SAM file",
                            NULL,
                            tmap_map_opt_option_print_func_ignore_rg_sam_tags,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "rand-read-name", no_argument, 0, 'u', 
+                           TMAP_MAP_OPT_TYPE_NONE,
+                           "specifies to randomize based on the read name",
+                           NULL,
+                           tmap_map_opt_option_print_func_rand_read_name,
                            TMAP_MAP_ALGO_GLOBAL);
   tmap_map_opt_options_add(opt->options, "input-gz", no_argument, 0, 'z', 
                            TMAP_MAP_OPT_TYPE_NONE,
@@ -984,6 +991,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->bidirectional = 0;
   opt->seq_eq = 0;
   opt->ignore_rg_sam_tags = 0;
+  opt->rand_read_name = 0;
   opt->input_compr = TMAP_FILE_NO_COMPRESSION;
   opt->shm_key = 0;
   opt->min_seq_len = -1;
@@ -1331,9 +1339,6 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(c == 'D' || (0 == c && 0 == strcmp("bidirectional", options[option_index].name))) {       
           opt->bidirectional = 1;
       }
-      else if(c == 'U' || (0 == c && 0 == strcmp("unroll-banding", options[option_index].name))) {       
-          opt->unroll_banding = 1;
-      }
       else if(c == 'E' || (0 == c && 0 == strcmp("pen-gap-extension", options[option_index].name))) {       
           opt->pen_gape = atoi(optarg);
       }
@@ -1355,6 +1360,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
       else if(c == 'T' || (0 == c && 0 == strcmp("score-thres", options[option_index].name))) {       
           opt->score_thr = atoi(optarg);
+      }
+      else if(c == 'U' || (0 == c && 0 == strcmp("unroll-banding", options[option_index].name))) {       
+          opt->unroll_banding = 1;
       }
       else if(c == 'W' || (0 == c && 0 == strcmp("duplicate-window", options[option_index].name))) {       
           opt->dup_window = atoi(optarg);
@@ -1400,6 +1408,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(c == 's' || (0 == c && 0 == strcmp("fn-sam", options[option_index].name))) {       
           free(opt->fn_sam);
           opt->fn_sam = tmap_strdup(optarg);
+      }
+      else if(c == 'u' || (0 == c && 0 == strcmp("rand-read-name", options[option_index].name))) {
+          opt->rand_read_name = 1;
       }
       else if(c == 'v' || (0 == c && 0 == strcmp("verbose", options[option_index].name))) {       
           tmap_progress_set_verbosity(1);
@@ -1886,6 +1897,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->bidirectional, 0, 1, "-D");
   tmap_error_cmd_check_int(opt->seq_eq, 0, 1, "-I");
   tmap_error_cmd_check_int(opt->ignore_rg_sam_tags, 0, 1, "-C");
+  tmap_error_cmd_check_int(opt->rand_read_name, 0, 1, "-u");
   /*
   if(0 == opt->ignore_rg_sam_tags && NULL != opt->sam_rg) {
       tmap_error("Must use -C with -R", Exit, CommandLineArgument);
@@ -2035,6 +2047,7 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->bidirectional = opt_src->bidirectional;
     opt_dest->seq_eq = opt_src->seq_eq;
     opt_dest->ignore_rg_sam_tags = opt_src->ignore_rg_sam_tags;
+    opt_dest->rand_read_name = opt_src->rand_read_name;
     opt_dest->input_compr = opt_src->input_compr;
     opt_dest->shm_key = opt_src->shm_key;
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
@@ -2110,6 +2123,7 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "bidirectional=%d\n", opt->bidirectional);
   fprintf(stderr, "seq_eq=%d\n", opt->seq_eq);
   fprintf(stderr, "ignore_rg_sam_tags=%d\n", opt->ignore_rg_sam_tags);
+  fprintf(stderr, "rand_read_name=%d\n", opt->rand_read_name);
   fprintf(stderr, "sam_flowspace_tags=%d\n", opt->sam_flowspace_tags);
   fprintf(stderr, "ignore_flowgram=%d\n", opt->ignore_flowgram);
   fprintf(stderr, "aln_flowspace=%d\n", opt->aln_flowspace);
