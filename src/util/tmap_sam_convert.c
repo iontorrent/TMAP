@@ -72,6 +72,8 @@ tmap_sam_convert_add_optional(bam1_t *b, const char *format, va_list ap)
 {
   int32_t start, len;
 
+  if(NULL == format) return;
+
   len = strlen(format);
   start = 0;
   while(start < len) {
