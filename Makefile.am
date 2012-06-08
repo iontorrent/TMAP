@@ -70,6 +70,9 @@ samtools_SOURCES = \
 				   src/samtools/razf.c src/samtools/razf.h \
 				   src/samtools/bgzf.c src/samtools/bgzf.h \
 				   src/samtools/faidx.c src/samtools/faidx.h \
+				   src/samtools/bam_endian.h \
+				   src/samtools/khash.h \
+				   src/samtools/kseq.h \
 				   src/samtools/kstring.c src/samtools/kstring.h
 
 tmap_SOURCES = \
