@@ -412,7 +412,7 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            TMAP_MAP_ALGO_GLOBAL);
   tmap_map_opt_options_add(opt->options, "reads-format", required_argument, 0, 'i', 
                            TMAP_MAP_OPT_TYPE_STRING,
-                           "the reads file format (opt->options, fastq|fq|fasta|fa|sff|sam|bam)",
+                           "the reads file format (fastq|fq|fasta|fa|sff|sam|bam)",
                            NULL,
                            tmap_map_opt_option_print_func_reads_format,
                            TMAP_MAP_ALGO_GLOBAL);
