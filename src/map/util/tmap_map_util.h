@@ -123,6 +123,22 @@ typedef struct {
 } tmap_map_record_t;
 
 /*!
+  Stores multiple mappings for BAMs
+  */
+typedef struct {
+    bam1_t **bams; /*!< the bam records */
+    int32_t n; /*!< the number of hits */
+} tmap_map_bam_t;
+    
+/*!
+  The multi-end BAM record structure
+  */
+typedef struct {
+    tmap_map_bam_t **bams;  /*!< the bam hits */
+    int32_t n; /*!< the number of records (multi-end) */
+} tmap_map_bams_t;
+
+/*!
   initializes
   @param  s  the mapping structure
   */
@@ -212,6 +228,22 @@ tmap_map_record_merge(tmap_map_record_t *dest, tmap_map_record_t *src);
 void 
 tmap_map_record_destroy(tmap_map_record_t *record);
 
+// TODO
+tmap_map_bam_t*
+tmap_map_bam_init(int32_t n);
+
+// TODO
+void
+tmap_map_bam_destroy(tmap_map_bam_t *b);
+
+// TODO
+tmap_map_bams_t*
+tmap_map_bams_init(int32_t n);
+
+// TODO
+void
+tmap_map_bams_destroy(tmap_map_bams_t *b); 
+
 /*!
   merges src into dest
   @param  dest  the destination mapping structure
@@ -236,8 +268,7 @@ void
 tmap_map_sam_copy_and_nullify(tmap_map_sam_t *dest, tmap_map_sam_t *src);
 
 /*!
-  prints the SAM records
-  @param  io_out        the output stream
+  converts the alignment record to SAM/BAM records
   @param  seq           the original read sequence
   @param  refseq        the reference sequence
   @param  sams          the mappings to print
@@ -246,9 +277,10 @@ tmap_map_sam_copy_and_nullify(tmap_map_sam_t *dest, tmap_map_sam_t *src);
   @param  sam_flowspace_tags  1 if SFF specific SAM tags are to be outputted, 0 otherwise
   @param  bidirectional  1 if a bidirectional SAM tag is to be added, 0 otherwise
   @param  seq_eq        1 if the SEQ field is to use '=' symbols, 0 otherwise
+  @return  the BAM records for this read
   */
-void
-tmap_map_sams_print(tmap_sam_io_t *io_out, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sams_t *sams, int32_t end_num, 
+tmap_map_bam_t*
+tmap_map_sams_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sams_t *sams, int32_t end_num, 
                     tmap_map_sams_t *mates, int32_t sam_flowspace_tags, int32_t bidirectional, int32_t seq_eq);
 
 /*!

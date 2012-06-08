@@ -16,6 +16,7 @@
 #include "../../sw/tmap_sw.h"
 #include "../../sw/tmap_fsw.h"
 #include "../../sw/tmap_vsw.h"
+#include "../../samtools/bam.h"
 #include "tmap_map_opt.h"
 #include "tmap_map_util.h"
 
@@ -227,6 +228,50 @@ tmap_map_record_destroy(tmap_map_record_t *record)
   free(record);
 }
 
+tmap_map_bam_t*
+tmap_map_bam_init(int32_t n)
+{
+  tmap_map_bam_t *b = NULL;
+  b = tmap_calloc(1, sizeof(tmap_map_bam_t), "b");
+  if(0 < n) b->bams = tmap_calloc(n, sizeof(bam1_t*), "b->bams");
+  b->n = n;
+  return b;
+}
+
+void
+tmap_map_bam_destroy(tmap_map_bam_t *b) 
+{
+  int32_t i;
+  if(NULL == b) return;
+  for(i=0;i<b->n;i++) {
+      bam_destroy1(b->bams[i]);
+  }
+  free(b->bams);
+  free(b);
+}
+
+tmap_map_bams_t*
+tmap_map_bams_init(int32_t n)
+{
+  tmap_map_bams_t *b = NULL;
+  b = tmap_calloc(1, sizeof(tmap_map_bams_t), "b");
+  if(0 < n) b->bams = tmap_calloc(n, sizeof(tmap_map_bam_t*), "b->bams");
+  b->n = n;
+  return b;
+}
+
+void
+tmap_map_bams_destroy(tmap_map_bams_t *b) 
+{
+  int32_t i;
+  if(NULL == b) return;
+  for(i=0;i<b->n;i++) {
+      tmap_map_bam_destroy(b->bams[i]);
+  }
+  free(b->bams);
+  free(b);
+}
+
 inline void
 tmap_map_sam_copy(tmap_map_sam_t *dest, tmap_map_sam_t *src)
 {
@@ -435,14 +480,14 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
   return NULL;
 }
 
-void 
-tmap_map_sams_print(tmap_sam_io_t *io_out, tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sams_t *sams, int32_t end_num,
+tmap_map_bam_t*
+tmap_map_sams_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sams_t *sams, int32_t end_num,
                     tmap_map_sams_t *mates, int32_t sam_flowspace_tags, int32_t bidirectional, int32_t seq_eq) 
 {
   int32_t i;
   tmap_map_sam_t *mate = NULL;
   int32_t mate_unmapped = 0;
-  bam1_t *b = NULL;
+  tmap_map_bam_t *bams = NULL;
 
   if(NULL != mates) {
       if(0 < mates->n) {
@@ -454,25 +499,17 @@ tmap_map_sams_print(tmap_sam_io_t *io_out, tmap_seq_t *seq, tmap_refseq_t *refse
       }
   }
   if(0 < sams->n) {
+      bams = tmap_map_bam_init(sams->n);
       for(i=0;i<sams->n;i++) {
-          b = tmap_map_sam_print(seq, refseq, &sams->sams[i], sam_flowspace_tags, bidirectional, seq_eq, sams->max, i, end_num, mate_unmapped, mate);
-          // TODO: make samwrite an API call
-          if(samwrite(io_out->fp, b) <= 0) {
-              tmap_error("Error writing the SAM file", Exit, WriteFileError);
-          }
-          bam_destroy1(b);
-          b = NULL;
+          bams->bams[i] = tmap_map_sam_print(seq, refseq, &sams->sams[i], sam_flowspace_tags, bidirectional, seq_eq, sams->max, i, end_num, mate_unmapped, mate);
       }
   }
   else {
-      b = tmap_map_sam_print(seq, refseq, NULL, sam_flowspace_tags, bidirectional, seq_eq, sams->max, 0, end_num, mate_unmapped, mate);
-      // TODO: make samwrite an API call
-      if(samwrite(io_out->fp, b) <= 0) {
-          tmap_error("Error writing the SAM file", Exit, WriteFileError);
-      }
-      bam_destroy1(b);
-      b = NULL;
+      bams = tmap_map_bam_init(1);
+      bams->bams[0] = tmap_map_sam_print(seq, refseq, NULL, sam_flowspace_tags, bidirectional, seq_eq, sams->max, 0, end_num, mate_unmapped, mate);
   }
+
+  return bams;
 }
 
 void

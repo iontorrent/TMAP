@@ -149,6 +149,7 @@ typedef struct {
     tmap_seqs_t **seqs_buffer;  /*!< the buffers of sequences */    
     int32_t seqs_buffer_length;  /*!< the buffers length */
     tmap_map_record_t **records;  /*!< the alignments for each sequence */
+    tmap_map_bams_t **bams;  /*!< the BAM alignments for each sequence */
     tmap_index_t *index;  /*!< pointer to the reference index */
     tmap_map_driver_t *driver;  /*!< the main driver object */
     tmap_map_stats_t *stat; /*!< the driver statistics */
@@ -162,6 +163,7 @@ typedef struct {
   @param  num_ends             the number of ends
   @param  seqs_buffer           the buffer of sequences
   @param  records              the records to return
+  @param  bams                 the bams to return
   @param  seqs_buffer_length    the number of sequences in the buffer
   @param  index                the reference index
   @param  driver               the driver
@@ -173,6 +175,7 @@ void
 tmap_map_driver_core_worker(sam_header_t *sam_header,
                             tmap_seqs_t **seqs_buffer, 
                             tmap_map_record_t **records,
+                            tmap_map_bams_t **bams,
                             int32_t seqs_buffer_length,
                             tmap_index_t *index,
                             tmap_map_driver_t *driver,

@@ -138,6 +138,7 @@ void
 tmap_map_driver_core_worker(sam_header_t *sam_header,
                             tmap_seqs_t **seqs_buffer, 
                             tmap_map_record_t **records, 
+                            tmap_map_bams_t **bams,
                             int32_t seqs_buffer_length,
                             tmap_index_t *index,
                             tmap_map_driver_t *driver,
@@ -401,6 +402,26 @@ tmap_map_driver_core_worker(sam_header_t *sam_header,
           free(key_seq);
           */
 
+          // convert the record to bam
+          if(1 == seqs_buffer[low]->n) {
+              bams[low] = tmap_map_bams_init(1); 
+              bams[low]->bams[0] = tmap_map_sams_print(seqs_buffer[low]->seqs[0], index->refseq, records[low]->sams[0], 
+                                                          0, NULL, driver->opt->sam_flowspace_tags, driver->opt->bidirectional, driver->opt->seq_eq);
+          }
+          else {
+              bams[low] = tmap_map_bams_init(seqs_buffer[low]->n);
+              for(j=0;j<seqs_buffer[low]->n;j++) {
+                  bams[low]->bams[j] = tmap_map_sams_print(seqs_buffer[low]->seqs[j], index->refseq, records[low]->sams[j],
+                                                           (0 == j) ? 1 : ((seqs_buffer[low]->n-1 == j) ? 2 : 0),
+                                                           records[low]->sams[(j+1) % seqs_buffer[low]->n], 
+                                                           driver->opt->sam_flowspace_tags, driver->opt->bidirectional, driver->opt->seq_eq);
+              }
+          }
+
+          // free alignments, for space
+          tmap_map_record_destroy(records[low]); 
+          records[low] = NULL;
+
           // free seqs
           for(i=0;i<num_ends;i++) {
               for(j=0;j<4;j++) {
@@ -433,7 +454,7 @@ tmap_map_driver_core_thread_worker(void *arg)
 {
   tmap_map_driver_thread_data_t *thread_data = (tmap_map_driver_thread_data_t*)arg;
 
-  tmap_map_driver_core_worker(thread_data->sam_header, thread_data->seqs_buffer, thread_data->records, 
+  tmap_map_driver_core_worker(thread_data->sam_header, thread_data->seqs_buffer, thread_data->records, thread_data->bams, 
                               thread_data->seqs_buffer_length, thread_data->index, thread_data->driver, 
                               thread_data->stat, thread_data->rand, thread_data->tid);
 
@@ -443,12 +464,13 @@ tmap_map_driver_core_thread_worker(void *arg)
 void 
 tmap_map_driver_core(tmap_map_driver_t *driver)
 {
-  uint32_t i, j, n_reads_processed=0; // # of reads processed
+  uint32_t i, j, k, n_reads_processed=0; // # of reads processed
   int32_t seqs_buffer_length=0; // # of reads read in
   tmap_seqs_io_t *io_in = NULL; // input file(s)
   tmap_sam_io_t *io_out = NULL; // output file
   tmap_seqs_t **seqs_buffer = NULL; // buffer for the reads
   tmap_map_record_t **records=NULL; // buffer for the mapped data
+  tmap_map_bams_t **bams=NULL;// buffer for the mapped BAM data
   tmap_index_t *index = NULL; // reference indes
   tmap_map_stats_t *stat = NULL; // alignment statistics
 #ifdef HAVE_LIBPTHREAD
@@ -506,6 +528,7 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
       seqs_buffer[i] = tmap_seqs_init(seq_type);
   }
   records = tmap_malloc(sizeof(tmap_map_record_t*)*reads_queue_size, "records");
+  bams = tmap_malloc(sizeof(tmap_map_bams_t*)*reads_queue_size, "bams");
 
   stat = tmap_map_stats_init();
 #ifdef HAVE_LIBPTHREAD
@@ -571,7 +594,7 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
       // do alignment
 #ifdef HAVE_LIBPTHREAD
       if(1 == driver->opt->num_threads) {
-          tmap_map_driver_core_worker(io_out->fp->header->header, seqs_buffer, records, 
+          tmap_map_driver_core_worker(io_out->fp->header->header, seqs_buffer, records, bams, 
                                       seqs_buffer_length, index, driver, stat, rand[0], 0);
       }
       else {
@@ -591,6 +614,7 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
               thread_data[i].seqs_buffer = seqs_buffer;
               thread_data[i].seqs_buffer_length = seqs_buffer_length;
               thread_data[i].records = records;
+              thread_data[i].bams = bams;
               thread_data[i].index = index;
               thread_data[i].driver = driver;
               thread_data[i].stat = stats[i];
@@ -614,7 +638,7 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
           free(thread_data);
       }
 #else 
-      tmap_map_driver_core_worker(io_out->fp->header->header, seqs_buffer, records, 
+      tmap_map_driver_core_worker(io_out->fp->header->header, seqs_buffer, records, bams, 
                                   seqs_buffer_length, index, driver, stat, rand, 0);
 #endif
 
@@ -622,24 +646,19 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
           tmap_progress_print("writing alignments");
       }
       for(i=0;i<seqs_buffer_length;i++) {
-          tmap_seqs_t *seqs = seqs_buffer[i];
-
           // write
-          if(1 == seqs->n) {
-              tmap_map_sams_print(io_out, seqs->seqs[0], index->refseq, records[i]->sams[0], 
-                                  0, NULL, driver->opt->sam_flowspace_tags, driver->opt->bidirectional, driver->opt->seq_eq);
-          }
-          else {
-              for(j=0;j<seqs->n;j++) {
-                  tmap_map_sams_print(io_out, seqs->seqs[j], index->refseq, records[i]->sams[j],
-                                      (0 == j) ? 1 : ((seqs->n-1 == j) ? 2 : 0),
-                                      records[i]->sams[(j+1) % seqs->n], 
-                                      driver->opt->sam_flowspace_tags, driver->opt->bidirectional, driver->opt->seq_eq);
+          for(j=0;j<bams[i]->n;j++) { // for each end
+              for(k=0;k<bams[i]->bams[j]->n;k++) { // for each hit
+                  bam1_t *b = NULL;
+                  b = bams[i]->bams[j]->bams[k]; // that's a lot of BAMs
+                  if(samwrite(io_out->fp, b) <= 0) {
+                      tmap_error("Error writing the SAM file", Exit, WriteFileError);
+                  }
               }
           }
-          // free alignments
-          tmap_map_record_destroy(records[i]); 
-          records[i] = NULL;
+          tmap_map_bams_destroy(bams[i]);
+          bams[i] = NULL;
+          
       }
       // TODO
       /*
@@ -686,6 +705,7 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
   }
   free(seqs_buffer);
   free(records);
+  free(bams);
   tmap_map_stats_destroy(stat);
 #ifdef HAVE_LIBPTHREAD
   for(i=0;i<driver->opt->num_threads;i++) {

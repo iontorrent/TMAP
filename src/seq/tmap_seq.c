@@ -384,6 +384,7 @@ tmap_seq_update(tmap_seq_t *seq, int32_t idx, sam_header_t *header)
   }
 
   // key sequence and flow order
+  seq->fo_start_idx = -1;
   if(NULL != seq->rg_record) { // It should exist in the SAM/BAM Header
       seq->ks = sam_header_record_get(seq->rg_record, "KS");
       seq->fo = sam_header_record_get(seq->rg_record, "FO");
