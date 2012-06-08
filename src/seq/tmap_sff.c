@@ -459,13 +459,15 @@ tmap_sff_get_qualities(tmap_sff_t *sff)
 }
 
 inline int32_t 
-tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping, uint8_t *key_seq, int32_t key_seq_len)
+tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping)
 {
   int32_t i, was_int, flow_start_index;
   int32_t left, right; // zero-based
   int32_t key_match = 1;
   uint8_t *flow_order = NULL;
-      
+  uint8_t *key_seq = NULL;
+  int32_t key_seq_len;
+
   was_int = 1;
   if(0 == sff->is_int) {
       was_int = 0;
@@ -473,6 +475,7 @@ tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping, uint8_t *
   }
 
   // check if the key sequence matches
+  key_seq_len = tmap_sff_get_key_seq_int(sff, &key_seq);
   if(NULL != key_seq && 0 < key_seq_len) {
       // NB: key_seq and sff must be in integer format
       for(i=0;i<key_seq_len;i++) {
@@ -482,6 +485,8 @@ tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping, uint8_t *
           }
       }
   }
+  free(key_seq); // free
+  key_seq = NULL;
 
   if(1 == remove_clipping) {
       // left clipping
@@ -580,7 +585,7 @@ tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping, uint8_t *
       sff->read->bases->s[sff->read->bases->l] = '\0';
       sff->read->quality->s[sff->read->quality->l] = '\0';
   }
-      
+
   return flow_start_index;
 }
 

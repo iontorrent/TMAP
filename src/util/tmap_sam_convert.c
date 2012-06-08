@@ -408,35 +408,47 @@ tmap_sam_convert_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_
   tmap_string_t *md = NULL;
   int32_t nm;
   bam1_t *b = NULL;
+  uint32_t *cur_cigar;
 
   /*
   fprintf(stderr, "end_num=%d m_unmapped=%d m_prop=%d m_strand=%d m_seqid=%d m_pos=%d m_tlen=%d\n",
           end_num, m_unmapped, m_prop, m_strand, m_seqid, m_pos, m_tlen);
   */
-  
-  // TODO: add hard clips to the cigar...
-  /*
+
+  // Copy the cigar, in case of clipping 
+  cur_cigar = cigar;
+  cigar = tmap_calloc(n_cigar, sizeof(uint32_t), "cigar");
+  memcpy(cigar, cur_cigar, sizeof(uint32_t) * n_cigar);
+
+  // Add hard clips to the cigar...
   if(TMAP_SEQ_TYPE_SFF == seq->type) {
       if(0 == strand && 0 < seq->data.sff->rheader->clip_left) {
-          tmap_file_fprintf(fp, "%dH", seq->data.sff->rheader->clip_left);
+          cigar = tmap_realloc(cigar, sizeof(uint32_t) * (n_cigar+1), "cigar");
+          for(i=n_cigar;0<i;i--) {
+              cigar[i] = cigar[i-1];
+          }
+          cigar[0] = (seq->data.sff->rheader->clip_left << 4) | BAM_CHARD_CLIP;
+          n_cigar++;
       }
       else if(1 == strand && 0 < seq->data.sff->rheader->clip_right) {
-          tmap_file_fprintf(fp, "%dH", seq->data.sff->rheader->clip_right);
+          cigar = tmap_realloc(cigar, sizeof(uint32_t) * (n_cigar+1), "cigar");
+          for(i=n_cigar;0<i;i--) {
+              cigar[i] = cigar[i-1];
+          }
+          cigar[0] = (seq->data.sff->rheader->clip_right << 4) | BAM_CHARD_CLIP;
+          n_cigar++;
       }
-  }
-  for(i=0;i<n_cigar;i++) {
-      tmap_file_fprintf(fp, "%d%c",
-                        cigar[i]>>4, "MIDNSHP"[cigar[i]&0xf]);
-  }
-  if(TMAP_SEQ_TYPE_SFF == seq->type) {
       if(1 == strand && 0 < seq->data.sff->rheader->clip_left) {
-          tmap_file_fprintf(fp, "%dH", seq->data.sff->rheader->clip_left);
+          cigar = tmap_realloc(cigar, sizeof(uint32_t) * (n_cigar+1), "cigar");
+          cigar[n_cigar] = (seq->data.sff->rheader->clip_left << 4) | BAM_CHARD_CLIP;
+          n_cigar++;
       }
       else if(0 == strand && 0 < seq->data.sff->rheader->clip_right) {
-          tmap_file_fprintf(fp, "%dH", seq->data.sff->rheader->clip_right);
+          cigar = tmap_realloc(cigar, sizeof(uint32_t) * (n_cigar+1), "cigar");
+          cigar[n_cigar] = (seq->data.sff->rheader->clip_right << 4) | BAM_CHARD_CLIP;
+          n_cigar++;
       }
   }
-  */
 
   name = tmap_seq_get_name(seq);
   bases = tmap_seq_get_bases(seq);
@@ -609,6 +621,7 @@ tmap_sam_convert_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_
   // free
   tmap_string_destroy(md);
   free(bases_eq);
+  free(cigar);
 
   return b;
 }

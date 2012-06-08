@@ -273,10 +273,10 @@ tmap_seq_get_qualities(tmap_seq_t *seq)
 }
 
 inline int32_t
-tmap_seq_remove_key_sequence(tmap_seq_t *seq, int32_t remove_clipping, uint8_t *key_seq, int32_t key_seq_len)
+tmap_seq_remove_key_sequence(tmap_seq_t *seq, int32_t remove_clipping)
 {
   if(TMAP_SEQ_TYPE_SFF != seq->type) return 1; // ignore
-  return tmap_sff_remove_key_sequence(seq->data.sff, remove_clipping, key_seq, key_seq_len);
+  return tmap_sff_remove_key_sequence(seq->data.sff, remove_clipping);
 }
 
 tmap_seq_t *
@@ -388,16 +388,9 @@ tmap_seq_update(tmap_seq_t *seq, int32_t idx, sam_header_t *header)
       seq->fo = sam_header_record_get(seq->rg_record, "FO");
         
       // flow order index start
-      if(NULL != seq->ks && TMAP_SEQ_TYPE_SFF != seq->type) { // only if it is an SFF
-          char *key_seq = NULL;
-          int32_t key_seq_len = 0;
-
-          key_seq_len = strlen(seq->ks); // len
-          key_seq = tmap_strdup(seq->ks); // clone
-          tmap_to_int(key_seq, key_seq_len); // to integer
+      if(NULL != seq->ks && NULL != seq->fo && TMAP_SEQ_TYPE_SFF == seq->type) { // only if it is an SFF
           // in addition, remove key sequence and trimming
-          seq->fo_start_idx = tmap_seq_remove_key_sequence(seq, 1, (uint8_t*)key_seq, key_seq_len); // remove key sequence etc.
-          free(key_seq); // free
+          seq->fo_start_idx = tmap_seq_remove_key_sequence(seq, 1); 
       }
       else if(TMAP_SEQ_TYPE_SAM == seq->type || TMAP_SEQ_TYPE_BAM == seq->type) { // Try the ZF tag...
           seq->fo_start_idx = tmap_sam_get_fo_start_idx(seq->data.sam);
