@@ -259,7 +259,7 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
           if(NULL == sam_header_record_get(record, "SM")) {
               if(0 == sam_header_record_add(record, "SM", "NOSM")) tmap_bug(); // dummy SM, for Picard validation
           }
-          if(NULL == sam_header_record_get(record, "pG")) {
+          if(NULL == sam_header_record_get(record, "PG")) {
               if(0 == sam_header_record_add(record, "PG", PACKAGE_NAME)) tmap_bug(); // dummy PG
           }
       }
