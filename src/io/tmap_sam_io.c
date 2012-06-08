@@ -35,9 +35,11 @@ tmap_sam_io_init_helper(const char *fn, int32_t is_bam)
   }
 
   // check if there are sequences in the header
+  /*
   if(samio->fp->header->n_targets == 0) {
       tmap_error("Found no @SQ lines in the SAM header", Exit, OutOfRange);
   }
+  */
 
   return samio;
 }

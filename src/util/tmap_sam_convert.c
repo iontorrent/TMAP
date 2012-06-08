@@ -16,21 +16,6 @@
 #include "../sw/tmap_sw.h"
 #include "tmap_sam_convert.h"
 
-// TODO: store flowgram
-static inline void
-tmap_sam_convert_flowgram(tmap_file_t *fp, uint16_t *flowgram, int32_t length)
-{
-  int32_t i;
-  tmap_file_fprintf(fp, "\tFZ:B:S");
-  for(i=0;i<length;i++) {
-      tmap_file_fprintf(fp, ",%u", flowgram[i]);
-  }
-}
-
-// TODO: store flow index start
-// TODO: store program ID
-// TODO: store read group
-
 static inline void
 tmap_sam_convert_rg(tmap_seq_t *seq, bam1_t *b)
 {
@@ -392,6 +377,24 @@ tmap_sam_convert_unmapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspac
   return b;
 }
 
+// from src/samtools/padding.c
+static void 
+tmap_sam_convert_replace_cigar(bam1_t *b, int n, uint32_t *cigar)
+{
+  if (n != b->core.n_cigar) {
+      int o = b->core.l_qname + b->core.n_cigar * 4;
+      if (b->data_len + (n - b->core.n_cigar) * 4 > b->m_data) {
+          b->m_data = b->data_len + (n - b->core.n_cigar) * 4;
+          tmap_roundup32(b->m_data);
+          b->data = (uint8_t*)realloc(b->data, b->m_data);
+      }
+      memmove(b->data + b->core.l_qname + n * 4, b->data + o, b->data_len - o);
+      memcpy(b->data + b->core.l_qname, cigar, n * 4);
+      b->data_len += (n - b->core.n_cigar) * 4;
+      b->core.n_cigar = n;
+  } else memcpy(b->data + b->core.l_qname, cigar, n * 4);
+}
+
 inline bam1_t*
 tmap_sam_convert_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_tags, int32_t bidirectional, int32_t seq_eq, tmap_refseq_t *refseq,
                       uint8_t strand, uint32_t seqid, uint32_t pos, int32_t aln_num,
@@ -479,12 +482,11 @@ tmap_sam_convert_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_
   if(TMAP_SEQ_TYPE_SAM == seq->type || TMAP_SEQ_TYPE_BAM == seq->type) {
       // copy from original
       bam1_t *o = seq->data.sam->b; 
+      // HERE END
       (*b) = (*o); // shallow copy
       // copy auxiliary data
       b->data = tmap_calloc(o->m_data, sizeof(uint8_t), "b->data");
-      for(i=0;i<o->data_len;i++) {
-          b->data[i] = o->data[i];
-      }
+      memcpy(b->data, o->data, sizeof(uint8_t) * o->m_data); // o->data_len
       // NB: name/bases/qualities should already be set
       // check the cigar
       if(0 < b->core.n_cigar) tmap_bug(); // TODO: reset the cigar...
@@ -499,18 +501,8 @@ tmap_sam_convert_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_
           }
       }
       // update the cigar
-      // NB: assumes there was no cigar previously
       if(0 < n_cigar) {
-          int len = b->data_len - b->core.l_qname; // amount of data to shift up...
-          b->core.n_cigar = n_cigar;
-          b->data = tmap_realloc(b->data, sizeof(uint8_t) * (b->m_data + (4 * n_cigar)), "b->data");
-          for(i=0;i<len;i++) { // shift up
-              b->data[i+b->core.l_qname] = b->data[i+b->core.l_qname+(4*n_cigar)];
-          }
-          for(i=0;i<n_cigar;i++) {
-              // TODO: validate that the format is the same
-              bam1_cigar(b)[i] = cigar[i];
-          }
+          tmap_sam_convert_replace_cigar(b, n_cigar, cigar);
       }
   }
   else {
