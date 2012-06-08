@@ -144,7 +144,12 @@ tmap_seqs_io_init2_fs_and_add(tmap_seqs_io_t *io_in,
   }
   // check for the @RG.ID and @RG.SM tags
   if(NULL == sam_header_record_get(record, "ID")) tmap_bug(); // should not happen
-  if(NULL == sam_header_record_get(record, "SM")) tmap_error("SM tag missing from the read group", Exit, OutOfRange);
+  if(NULL == sam_header_record_get(record, "SM")) {
+      if(0 == sam_header_record_add(record, "SM", "NOSM")) tmap_bug(); // dummy SM, for Picard validation
+  }
+  if(NULL == sam_header_record_get(record, "PG")) {
+      if(0 == sam_header_record_add(record, "PG", PACKAGE_NAME)) tmap_bug(); // dummy PG
+  }
   // add the read group
   if(0 == sam_header_add_record(header, record)) tmap_bug(); 
 }
@@ -243,6 +248,20 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
           if(0 == sam_header_record_add(record, "SM", "NOSM")) tmap_bug(); // dummy SM, for Picard validation
           if(0 == sam_header_record_add(record, "PG", PACKAGE_NAME)) tmap_bug(); // dummy PG
           tmap_seqs_io_init2_fs_and_add(io_in, header, record); // add @RG.KS and @RG.FO
+      }
+  }
+  else {
+      // check that SM/PG are present
+      sam_header_records_t *records = sam_header_get_records(header, "RG"); // get the header line
+      for(i=0;i<records->n;i++) {
+          record = records->records[i];
+          if(NULL == sam_header_record_get(record, "ID")) tmap_error("Missing @RG.ID in the SAM/BAM Header", Exit, OutOfRange);
+          if(NULL == sam_header_record_get(record, "SM")) {
+              if(0 == sam_header_record_add(record, "SM", "NOSM")) tmap_bug(); // dummy SM, for Picard validation
+          }
+          if(NULL == sam_header_record_get(record, "pG")) {
+              if(0 == sam_header_record_add(record, "PG", PACKAGE_NAME)) tmap_bug(); // dummy PG
+          }
       }
   }
 
