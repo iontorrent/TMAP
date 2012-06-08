@@ -70,7 +70,6 @@ tmap_seqs_io_read_buffer(tmap_seqs_io_t *io, tmap_seqs_t **seqs_buffer, int32_t 
   @param  io_in  the input file IO structure
   @param  rg_sam  the RG tag elements
   @param  rg_sam_num  the number of RG tag elements
-  @param  sam_flowspace_tags  1 if to output flow space tags if an SFF, 0 otherwise
   @param  argc  the number of command line arguments
   @param  argv  the command line arguments
   @return  a pointer to the initialized BAM Header
@@ -79,7 +78,6 @@ bam_header_t *
 tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
                            tmap_seqs_io_t *io_in,
                            char **rg_sam, int32_t rg_sam_num,
-                           int32_t sam_flowspace_tags,
                            int32_t argc, char *argv[]);
 
 #endif

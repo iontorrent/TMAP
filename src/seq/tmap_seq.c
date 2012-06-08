@@ -355,6 +355,7 @@ tmap_seq_update(tmap_seq_t *seq, int32_t idx, sam_header_t *header)
               tmap_error("RG records index was out of bounds", Exit, OutOfRange);
           }
           seq->rg_record = records->records[idx]; // copy over
+          if(NULL == seq->rg_record) tmap_bug();
       }
   }
   else { // found in SAM/BAM

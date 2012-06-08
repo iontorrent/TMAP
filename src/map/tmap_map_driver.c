@@ -522,7 +522,6 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
   // BAM Header
   header = tmap_seqs_io_to_bam_header(index->refseq, io_in, 
                                       driver->opt->sam_rg, driver->opt->sam_rg_num,
-                                      driver->opt->sam_flowspace_tags,
                                       driver->opt->argc, driver->opt->argv);
 
   // open the output files

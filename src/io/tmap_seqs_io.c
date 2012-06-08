@@ -124,23 +124,22 @@ tmap_seqs_io_read_buffer(tmap_seqs_io_t *io, tmap_seqs_t **seqs_buffer, int32_t 
 static void
 tmap_seqs_io_init2_fs_and_add(tmap_seqs_io_t *io_in,
                               sam_header_t *header,
-                              sam_header_record_t *record,
-                              int32_t sam_flowspace_tags)
+                              sam_header_record_t *record)
 {
   char tag[2];
   // add @RG.KS and @RG.FO
-  if(io_in->type == TMAP_SEQ_TYPE_SFF && sam_flowspace_tags) {
+  if(io_in->type == TMAP_SEQ_TYPE_SFF) {
       sam_header_records_t *records = sam_header_get_records(header, record->tag); // get the header line
       if(io_in->n <= records->n) tmap_error("Too many read groups specified", Exit, OutOfRange);
       // @RG.KS
       tag[0]='K';tag[1]='S';
       if(0 == sam_header_record_add(record, tag, tmap_sff_io_get_rg_ks(io_in->seqios[records->n]->io.sffio))) {
-          tmap_error("Could not add the KS tag", Exit, OutOfRange);
+          tmap_error("Could not add the KS tag; most likely it is already present", Exit, OutOfRange);
       }
       // @RG.FO
       tag[0]='F';tag[1]='O';
       if(0 == sam_header_record_add(record, tag, tmap_sff_io_get_rg_fo(io_in->seqios[records->n]->io.sffio))) {
-          tmap_error("Could not add the FO tag", Exit, OutOfRange);
+          tmap_error("Could not add the FO tag; most likely it is already present", Exit, OutOfRange);
       }
   }
   // check for the @RG.ID and @RG.SM tags
@@ -154,7 +153,6 @@ bam_header_t *
 tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
                            tmap_seqs_io_t *io_in,
                            char **rg_sam, int32_t rg_sam_num,
-                           int32_t sam_flowspace_tags,
                            int32_t argc, char *argv[])
 {
   bam_header_t *bam_header = NULL;
@@ -217,7 +215,7 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
           // check for id
           if('I' == rg_sam[i][0] && 'D' == rg_sam[i][1]) { // new read group
               if(NULL != record) { // add the record
-                  tmap_seqs_io_init2_fs_and_add(io_in, header, record, sam_flowspace_tags); // add @RG.KS and @RG.FO
+                  tmap_seqs_io_init2_fs_and_add(io_in, header, record); // add @RG.KS and @RG.FO
               }
               record = sam_header_record_init("RG"); // new read group
           }
@@ -229,7 +227,7 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
           if(0 == sam_header_record_add(record, tag, rg_sam[i]+3)) tmap_bug(); // add the tag/value
       }
       if(NULL != record) { // add the record
-          tmap_seqs_io_init2_fs_and_add(io_in, header, record, sam_flowspace_tags); // add @RG.KS and @RG.FO
+          tmap_seqs_io_init2_fs_and_add(io_in, header, record); // add @RG.KS and @RG.FO
       }
       // check that the # of read groups added was the same as the # of input files...
       sam_header_records_t *records = sam_header_get_records(header, "RG"); // get the header line
@@ -243,7 +241,8 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
           else if(sprintf(buf, "NOID.%d", i+1) < 0) tmap_bug();
           if(0 == sam_header_record_add(record, "ID", buf)) tmap_bug(); // dummy ID
           if(0 == sam_header_record_add(record, "SM", "NOSM")) tmap_bug(); // dummy SM, for Picard validation
-          tmap_seqs_io_init2_fs_and_add(io_in, header, record, sam_flowspace_tags); // add @RG.KS and @RG.FO
+          if(0 == sam_header_record_add(record, "PG", PACKAGE_NAME)) tmap_bug(); // dummy PG
+          tmap_seqs_io_init2_fs_and_add(io_in, header, record); // add @RG.KS and @RG.FO
       }
   }
 

@@ -698,11 +698,9 @@ Specific details can be found below.
 
 \subsubsection{RG}
 The RG field can be populated using the \TT{-R} option.
-By default the \TT{ID} and \TT{PG} tags are included.
+By default the \TT{ID}, \TT{SM}, and \TT{PG} tags are included.
 When specifying an RG line, do not include the PG tag as it will be populated by tmap:
-If the input is a file with flowspace information (SFF or SAM/BAM) and the \TT{-Y} option is used, then a comment line will be placed in the header with the following tags:
-RG, FO, and KS.
-The RG tag in the comment is the associated read group ID.
+If the input is a file with flowspace information (SFF or SAM/BAM), then the read group will include the FO and KS tags.
 The FO and KS tags indicate the flow order and the key sequence.
 
 \subsubsection{PG}
