@@ -10,6 +10,7 @@
 #include "util/tmap_progress.h"
 #include "util/tmap_levenshtein.h"
 #include "io/tmap_file.h"
+#include "samtools/bam.h"
 #include "tmap_main.h"
 
 tmap_file_t *tmap_file_stdout;
@@ -211,6 +212,7 @@ main(int argc, char *argv[])
       tmap_file_stderr = tmap_file_fdopen(fileno(stderr), "w", TMAP_FILE_NO_COMPRESSION); // set stderr
       tmap_progress_set_command(argv[1]); // set output progress
       tmap_progress_set_start_time(); // set start time
+      bam_verbose = 0; // No verbosity in SAMtools
 
       c = commands;
       while(0 <= c->type) {
