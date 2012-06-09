@@ -140,6 +140,7 @@ __tmap_map_opt_option_print_func_tf_init(ignore_rg_sam_tags)
 __tmap_map_opt_option_print_func_tf_init(rand_read_name)
 __tmap_map_opt_option_print_func_compr_init(input_compr_gz, input_compr, TMAP_FILE_GZ_COMPRESSION)
 __tmap_map_opt_option_print_func_compr_init(input_compr_bz2, input_compr, TMAP_FILE_BZ2_COMPRESSION)
+__tmap_map_opt_option_print_func_int_init(output_type)
 __tmap_map_opt_option_print_func_int_init(shm_key)
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
 __tmap_map_opt_option_print_func_double_init(sample_reads)
@@ -391,6 +392,7 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
       "9 - Bladze (Top Coder #6)",
       "10 - ngthuydiem (Top Coder #7) [Farrar cut-and-paste]",
       NULL};
+  static char *output_type[] = {"0 - SAM", "1 - BAM (compressed)", "2 - BAM (uncompressed)", NULL};
   static char *pairing[] = {"0 - no pairing is to be performed", "1 - mate pairs (-S 0 -P 1)", "2 - paired end (-S 1 -P 0)", NULL};
   static char *strandedness[] = {"0 - same strand", "1 - opposite strand", NULL};
   static char *positioning[] = {"0 - read one before read two", "1 - read two before read one", NULL};
@@ -544,6 +546,12 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            tmap_map_opt_option_print_func_input_compr_bz2,
                            TMAP_MAP_ALGO_GLOBAL);
 #endif
+  tmap_map_opt_options_add(opt->options, "output-type", required_argument, 0, 'o', 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the output type",
+                           output_type,
+                           tmap_map_opt_option_print_func_output_type,
+                           TMAP_MAP_ALGO_GLOBAL);
   tmap_map_opt_options_add(opt->options, "shared-memory-key", required_argument, 0, 'k', 
                            TMAP_MAP_OPT_TYPE_INT,
                            "use shared memory with the following key",
@@ -993,6 +1001,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->ignore_rg_sam_tags = 0;
   opt->rand_read_name = 0;
   opt->input_compr = TMAP_FILE_NO_COMPRESSION;
+  opt->output_type = 0;
   opt->shm_key = 0;
   opt->min_seq_len = -1;
   opt->max_seq_len = -1;
@@ -1392,6 +1401,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(c == 'k' || (0 == c && 0 == strcmp("shared-memory-key", options[option_index].name))) {       
           opt->shm_key = atoi(optarg);
       }
+      else if(c == 'o' || (0 == c && 0 == strcmp("output-type", options[option_index].name))) {
+          opt->output_type = atoi(optarg);
+      }
       else if(c == 'n' || (0 == c && 0 == strcmp("num-threads", options[option_index].name))) {       
           opt->num_threads = atoi(optarg);
           opt->num_threads_autodetected = 0;
@@ -1746,6 +1758,9 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
     if(opt_a->input_compr != opt_b->input_compr) {
         tmap_error("option -j or -z was specified outside of the common options", Exit, CommandLineArgument);
     }
+    if(opt_a->output_type != opt_b->output_type) {
+        tmap_error("option -o was specified outside of the common options", Exit, CommandLineArgument);
+    }
     if(opt_a->shm_key != opt_b->shm_key) {
         tmap_error("option -k was specified outside of the common options", Exit, CommandLineArgument);
     }
@@ -1898,6 +1913,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->seq_eq, 0, 1, "-I");
   tmap_error_cmd_check_int(opt->ignore_rg_sam_tags, 0, 1, "-C");
   tmap_error_cmd_check_int(opt->rand_read_name, 0, 1, "-u");
+  tmap_error_cmd_check_int(opt->output_type, 0, 2, "-o");
   /*
   if(0 == opt->ignore_rg_sam_tags && NULL != opt->sam_rg) {
       tmap_error("Must use -C with -R", Exit, CommandLineArgument);
@@ -2049,6 +2065,7 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->ignore_rg_sam_tags = opt_src->ignore_rg_sam_tags;
     opt_dest->rand_read_name = opt_src->rand_read_name;
     opt_dest->input_compr = opt_src->input_compr;
+    opt_dest->output_type = opt_src->output_type;
     opt_dest->shm_key = opt_src->shm_key;
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
     opt_dest->sample_reads = opt_src->sample_reads;
@@ -2128,6 +2145,7 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "ignore_flowgram=%d\n", opt->ignore_flowgram);
   fprintf(stderr, "aln_flowspace=%d\n", opt->aln_flowspace);
   fprintf(stderr, "input_compr=%d\n", opt->input_compr);
+  fprintf(stderr, "output_type=%d\n", opt->output_type);
   fprintf(stderr, "shm_key=%d\n", (int)opt->shm_key);
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
   fprintf(stderr, "sample_reads=%lf\n", opt->sample_reads);

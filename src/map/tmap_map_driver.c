@@ -555,15 +555,19 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
                                       driver->opt->sam_rg, driver->opt->sam_rg_num,
                                       driver->opt->argc, driver->opt->argv);
 
-  // open the output files
-  if(NULL == driver->opt->fn_sam) {
-      // NB: writes to stdout
-      // TODO: BAM writing option
-      io_out = tmap_sam_io_init2("-", "wh", header); 
-  }
-  else {
-      // TODO: BAM writing option
-      io_out = tmap_sam_io_init2(driver->opt->fn_sam, "wh", header);
+  // open the output file
+  switch(driver->opt->output_type) {
+    case 0: // SAM
+      io_out = tmap_sam_io_init2((NULL == driver->opt->fn_sam) ? "-" : driver->opt->fn_sam, "wh", header); 
+      break;
+    case 1:
+      io_out = tmap_sam_io_init2((NULL == driver->opt->fn_sam) ? "-" : driver->opt->fn_sam, "wb", header); 
+      break;
+    case 2:
+      io_out = tmap_sam_io_init2((NULL == driver->opt->fn_sam) ? "-" : driver->opt->fn_sam, "wbu", header); 
+      break;
+    default:
+      tmap_bug();
   }
 
   // destroy the BAM Header
