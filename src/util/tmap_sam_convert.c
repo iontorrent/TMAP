@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <config.h>
+#include <math.h>
 
 #include "../samtools/kstring.h"
 #include "../samtools/sam.h"
@@ -154,6 +155,19 @@ tmap_sam_convert_fz_and_zf(tmap_seq_t *seq, bam1_t *b)
   if(NULL != seq->flowgram && 0 < seq->flowgram_len) {
       tmap_sam_convert_replace_tagB_S(b, "FZ", seq->flowgram_len, seq->flowgram);
   }
+}
+
+static inline void
+tmap_sam_convert_add_xa(bam1_t *b, int32_t algo_id, int32_t algo_stage)
+{
+  char *str = NULL;
+  char *name = NULL;
+
+  name = tmap_algo_id_to_name(algo_id);
+  str = tmap_malloc(sizeof(char) * (1 + strlen(name) + (int)(1.0 + log10(algo_stage)) + 1), "str"); // EOL + name + num + dash
+  if(0 == sprintf(str, "%s-%d", name, algo_stage)) tmap_bug(); 
+  tmap_sam_convert_replace_tagZ(b, "XA", str);
+  free(str);
 }
 
 static inline void
@@ -662,8 +676,7 @@ tmap_sam_convert_mapped(tmap_file_t *fp, tmap_seq_t *seq, int32_t sam_flowspace_
   
   // XA
   if(0 < algo_stage) {
-      // TODO
-      //tmap_file_fprintf(fp, "\tXA:Z:%s-%d", tmap_algo_id_to_name(algo_id), algo_stage);
+      tmap_sam_convert_add_xa(b, algo_id, algo_stage);
   }
   
   // XZ
