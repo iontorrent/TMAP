@@ -148,6 +148,7 @@ typedef struct {
     sam_header_t *sam_header;  /*!< the SAM Header */
     tmap_seqs_t **seqs_buffer;  /*!< the buffers of sequences */    
     int32_t seqs_buffer_length;  /*!< the buffers length */
+    int32_t *buffer_idx; /*!< the current zero-based index into the buffer */
     tmap_map_record_t **records;  /*!< the alignments for each sequence */
     tmap_map_bams_t **bams;  /*!< the BAM alignments for each sequence */
     tmap_index_t *index;  /*!< pointer to the reference index */
@@ -165,6 +166,7 @@ typedef struct {
   @param  records              the records to return
   @param  bams                 the bams to return
   @param  seqs_buffer_length    the number of sequences in the buffer
+  @param  buffer_idx            the current zero-based index into the buffer
   @param  index                the reference index
   @param  driver               the driver
   @param  stat                 the driver statistics
@@ -177,6 +179,7 @@ tmap_map_driver_core_worker(sam_header_t *sam_header,
                             tmap_map_record_t **records,
                             tmap_map_bams_t **bams,
                             int32_t seqs_buffer_length,
+                            int32_t *buffer_idx,
                             tmap_index_t *index,
                             tmap_map_driver_t *driver,
                             tmap_map_stats_t* stat,

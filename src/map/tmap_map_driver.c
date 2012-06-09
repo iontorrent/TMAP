@@ -140,6 +140,7 @@ tmap_map_driver_core_worker(sam_header_t *sam_header,
                             tmap_map_record_t **records, 
                             tmap_map_bams_t **bams,
                             int32_t seqs_buffer_length,
+                            int32_t *buffer_idx,
                             tmap_index_t *index,
                             tmap_map_driver_t *driver,
                             tmap_map_stats_t *stat,
@@ -432,8 +433,10 @@ tmap_map_driver_core_worker(sam_header_t *sam_header,
           tmap_map_record_destroy(record_prev);
       }
       // next
+      (*buffer_idx) = low;
       low++;
   }
+  (*buffer_idx) = seqs_buffer_length;
                   
   // free thread variables
   for(i=0;i<max_num_ends;i++) {
@@ -455,7 +458,7 @@ tmap_map_driver_core_thread_worker(void *arg)
   tmap_map_driver_thread_data_t *thread_data = (tmap_map_driver_thread_data_t*)arg;
 
   tmap_map_driver_core_worker(thread_data->sam_header, thread_data->seqs_buffer, thread_data->records, thread_data->bams, 
-                              thread_data->seqs_buffer_length, thread_data->index, thread_data->driver, 
+                              thread_data->seqs_buffer_length, thread_data->buffer_idx, thread_data->index, thread_data->driver, 
                               thread_data->stat, thread_data->rand, thread_data->tid);
 
   return arg;
@@ -474,6 +477,9 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
   tmap_index_t *index = NULL; // reference indes
   tmap_map_stats_t *stat = NULL; // alignment statistics
 #ifdef HAVE_LIBPTHREAD
+  pthread_attr_t *attr = NULL;
+  pthread_t *threads = NULL;
+  tmap_map_driver_thread_data_t *thread_data=NULL;
   tmap_rand_t **rand = NULL; // random # generator for each thread
   tmap_map_stats_t **stats = NULL; // alignment statistics for each thread
 #else
@@ -485,6 +491,8 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
 #endif
   int32_t seq_type, reads_queue_size; // read type, read queue size
   bam_header_t *header = NULL; // BAM Header
+  int32_t buffer_idx; // buffer index for processing data with a single thread
+
 
   /*
   if(NULL == driver->opt->fn_reads) {
@@ -594,16 +602,14 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
       // do alignment
 #ifdef HAVE_LIBPTHREAD
       if(1 == driver->opt->num_threads) {
+          buffer_idx = 0;
           tmap_map_driver_core_worker(io_out->fp->header->header, seqs_buffer, records, bams, 
-                                      seqs_buffer_length, index, driver, stat, rand[0], 0);
+                                      seqs_buffer_length, &buffer_idx, index, driver, stat, rand[0], 0);
       }
       else {
-          pthread_attr_t attr;
-          pthread_t *threads = NULL;
-          tmap_map_driver_thread_data_t *thread_data=NULL;
-
-          pthread_attr_init(&attr);
-          pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+          attr = tmap_calloc(1, sizeof(pthread_attr_t), "attr");
+          pthread_attr_init(attr);
+          pthread_attr_setdetachstate(attr, PTHREAD_CREATE_JOINABLE);
 
           threads = tmap_calloc(driver->opt->num_threads, sizeof(pthread_t), "threads");
           thread_data = tmap_calloc(driver->opt->num_threads, sizeof(tmap_map_driver_thread_data_t), "thread_data");
@@ -613,6 +619,7 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
               thread_data[i].sam_header = io_out->fp->header->header;
               thread_data[i].seqs_buffer = seqs_buffer;
               thread_data[i].seqs_buffer_length = seqs_buffer_length;
+              thread_data[i].buffer_idx = tmap_calloc(1, sizeof(int32_t), "thread_data[i].buffer_id");
               thread_data[i].records = records;
               thread_data[i].bams = bams;
               thread_data[i].index = index;
@@ -620,32 +627,36 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
               thread_data[i].stat = stats[i];
               thread_data[i].rand = rand[i];
               thread_data[i].tid = i;
-              if(0 != pthread_create(&threads[i], &attr, tmap_map_driver_core_thread_worker, &thread_data[i])) {
+              if(0 != pthread_create(&threads[i], attr, tmap_map_driver_core_thread_worker, &thread_data[i])) {
                   tmap_error("error creating threads", Exit, ThreadError);
               }
           }
-
-          // join threads
-          for(i=0;i<driver->opt->num_threads;i++) {
-              if(0 != pthread_join(threads[i], NULL)) {
-                  tmap_error("error joining threads", Exit, ThreadError);
-              }
-              // add the stats
-              tmap_map_stats_add(stat, stats[i]);
-          }
-
-          free(threads);
-          free(thread_data);
       }
 #else 
+      buffer_idx = 0;
       tmap_map_driver_core_worker(io_out->fp->header->header, seqs_buffer, records, bams, 
-                                  seqs_buffer_length, index, driver, stat, rand, 0);
+                                  seqs_buffer_length, &buffer_idx, index, driver, stat, rand, 0);
 #endif
 
+      /*
       if(-1 != driver->opt->reads_queue_size) {
           tmap_progress_print("writing alignments");
       }
+      */
+
+      // write data
       for(i=0;i<seqs_buffer_length;i++) {
+#ifdef HAVE_LIBPTHREAD
+          if(1 < driver->opt->num_threads) {
+              // NB: we will write data as threads process the data.  This is to
+              // facilitate SAM/BAM writing, which may be slow, especially for
+              // BAM.
+              int32_t tid = (i % driver->opt->num_threads);
+              while((*thread_data[tid].buffer_idx) <= i) {
+                  usleep(1000*1000); // sleep
+              }
+          }
+#endif
           // write
           for(j=0;j<bams[i]->n;j++) { // for each end
               for(k=0;k<bams[i]->bams[j]->n;k++) { // for each hit
@@ -658,8 +669,26 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
           }
           tmap_map_bams_destroy(bams[i]);
           bams[i] = NULL;
-          
       }
+
+#ifdef HAVE_LIBPTHREAD
+      // join threads
+      if(1 <driver->opt->num_threads) {
+          // join threads
+          for(i=0;i<driver->opt->num_threads;i++) {
+              if(0 != pthread_join(threads[i], NULL)) {
+                  tmap_error("error joining threads", Exit, ThreadError);
+              }
+              // add the stats
+              tmap_map_stats_add(stat, stats[i]);
+              // free the buffer index
+              free(thread_data[i].buffer_idx);
+          }
+          free(threads); threads = NULL;
+          free(thread_data); thread_data = NULL;
+          free(attr); attr = NULL;
+      }
+#endif
       // TODO
       /*
       if(-1 == driver->opt->reads_queue_size) {
