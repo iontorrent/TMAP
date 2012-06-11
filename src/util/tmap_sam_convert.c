@@ -18,18 +18,105 @@
 #include "tmap_sam_convert.h"
 
 /**
- * TODO:
- * - is there a more efficient way to query, add, and replace optional tags?
+ * This is an attempt to quickly determine if an optional tag is already present
+ * within a BAM record, since SAMtools is O(n) for determining if a tag is
+ * present.  It just feels good that it is now just O(1).
  */
+typedef struct {
+    uint8_t values[403]; // 52 * 62 bits
+    int32_t num_tags;
+} tmap_sam_convert_tag_opt_t;
+
+#define __tmap_sam_convert_tag_opt_get_idx(_tag, _val1, _val2) do { \
+  if('A' <= _tag[0] && _tag[0] <= 'Z') _val1 = _tag[0] - 'A'; \
+  else if('a' <= _tag[0] && _tag[0] <= 'z') _val1 = _tag[0] - 'a' + ('Z' - 'A' + 1); \
+  else tmap_bug(); \
+  if('A' <= _tag[1] && _tag[1] <= 'Z') _val2 = _tag[1] - 'A'; \
+  else if('a' <= _tag[1] && _tag[1] <= 'z') _val2 = _tag[1] - 'a' + ('Z' - 'A' + 1); \
+  else if('0' <= _tag[1] && _tag[1] <= '9') _val2 = _tag[1] - '0' + ('z' - 'a' + 1) + ('Z' - 'A' + 1); \
+  else tmap_bug(); \
+  _val1 = (_val1 * 62) + _val2; \
+  _val2 = (_val2 & 7); \
+  _val1 = _val1 >> 3; \
+} while(0)
+
+void
+tmap_sam_convert_tag_opt_add(tmap_sam_convert_tag_opt_t *t, const uint8_t tag[2])
+{
+  uint32_t val1, val2;
+  __tmap_sam_convert_tag_opt_get_idx(tag, val1, val2);
+  t->values[val1] |= (0x1 << val2); 
+  t->num_tags++;
+}
+
+uint8_t
+tmap_sam_convert_tag_opt_get(tmap_sam_convert_tag_opt_t *t, const char tag[2])
+{
+  uint32_t val1, val2;
+  if(0 == t->num_tags) return 0;
+  __tmap_sam_convert_tag_opt_get_idx(tag, val1, val2);
+  return ((t->values[val1] >> val2) & 0x1);
+}
+
+// from bam_aux.c
+#define __skip_tag(s) do { \
+    int type = toupper(*(s)); \
+    ++(s); \
+    if (type == 'Z' || type == 'H') { while (*(s)) ++(s); ++(s); } \
+    else if (type == 'B') (s) += 5 + bam_aux_type2size(*(s)) * (*(int32_t*)((s)+1)); \
+    else (s) += bam_aux_type2size(type); \
+} while(0)
+
+tmap_sam_convert_tag_opt_t*
+tmap_sam_convert_tag_opt_init(bam1_t *b)
+{
+  uint8_t *s;
+  tmap_sam_convert_tag_opt_t *t = NULL;
+  // TODO: we could detect from b->core.l_aux == 0 that there are no tags
+  t = tmap_calloc(1, sizeof(tmap_sam_convert_tag_opt_t), "t");
+  // populate
+  s = bam1_aux(b);
+  while(s < b->data + b->data_len) {
+      tmap_sam_convert_tag_opt_add(t, s);
+      s += 2;
+      __skip_tag(s);
+  }
+  char tag[2];
+  for(tag[0]=0;tag[0]<127;tag[0]++) {
+      if(!('A' <= tag[0] && tag[0] <= 'Z')
+         && !('a' <= tag[0] && tag[0] <= 'z')) {
+          continue;
+      }
+      for(tag[1]=0;tag[1]<127;tag[1]++) {
+          if(!('A' <= tag[1] && tag[1] <= 'Z')
+             && !('a' <= tag[1] && tag[1] <= 'z')
+             && !('0' <= tag[1] && tag[1] <= '9')) {
+              continue;
+          }
+          // test
+          if(1 == tmap_sam_convert_tag_opt_get(t, tag)) {
+              fprintf(stderr, "Found tag [%c%c]\n", tag[0], tag[1]);
+          }
+      }
+  }
+  return t;
+}
+
+void
+tmap_sam_convert_tag_opt_destroy(tmap_sam_convert_tag_opt_t *t)
+{
+  free(t);
+}
 
 static inline void
-tmap_sam_convert_replace_tagA(bam1_t *b, const char tag[2], char value)
+tmap_sam_convert_replace_tagA(bam1_t *b, const char tag[2], char value, tmap_sam_convert_tag_opt_t *t)
 {
   uint8_t *ex_s = NULL;
   char ex_value = 0;
   // check if it exists
-  ex_s = bam_aux_get(b, tag);
-  if(NULL != ex_s) { // exists
+  if(1 == tmap_sam_convert_tag_opt_get(t, tag)) {
+      ex_s = bam_aux_get(b, tag);
+      if(NULL == ex_s) tmap_bug();
       ex_value = bam_aux2A(ex_s); // get value
       if(value == ex_value) return; // OK
       else bam_aux_del(b, ex_s); // Delete
@@ -39,13 +126,14 @@ tmap_sam_convert_replace_tagA(bam1_t *b, const char tag[2], char value)
 }
 
 static inline void
-tmap_sam_convert_replace_tagi(bam1_t *b, const char tag[2], int32_t value)
+tmap_sam_convert_replace_tagi(bam1_t *b, const char tag[2], int32_t value, tmap_sam_convert_tag_opt_t *t)
 {
   uint8_t *ex_s = NULL;
   int32_t ex_value = 0;
   // check if it exists
-  ex_s = bam_aux_get(b, tag);
-  if(NULL != ex_s) { // exists
+  if(1 == tmap_sam_convert_tag_opt_get(t, tag)) {
+      ex_s = bam_aux_get(b, tag);
+      if(NULL == ex_s) tmap_bug();
       ex_value = bam_aux2i(ex_s); // get value
       if(value == ex_value) return; // OK
       else bam_aux_del(b, ex_s); // Delete
@@ -55,13 +143,14 @@ tmap_sam_convert_replace_tagi(bam1_t *b, const char tag[2], int32_t value)
 }
 
 static inline void
-tmap_sam_convert_replace_tagf(bam1_t *b, const char tag[2], float value)
+tmap_sam_convert_replace_tagf(bam1_t *b, const char tag[2], float value, tmap_sam_convert_tag_opt_t *t)
 {
   uint8_t *ex_s = NULL;
   float ex_value = 0;
   // check if it exists
-  ex_s = bam_aux_get(b, tag);
-  if(NULL != ex_s) { // exists
+  if(1 == tmap_sam_convert_tag_opt_get(t, tag)) {
+      ex_s = bam_aux_get(b, tag);
+      if(NULL == ex_s) tmap_bug();
       ex_value = bam_aux2f(ex_s); // get value
       if(!(value != ex_value)) return; // OK
       else bam_aux_del(b, ex_s); // Delete
@@ -71,13 +160,14 @@ tmap_sam_convert_replace_tagf(bam1_t *b, const char tag[2], float value)
 }
 
 static inline void
-tmap_sam_convert_replace_tagZ(bam1_t *b, const char tag[2], const char *value)
+tmap_sam_convert_replace_tagZ(bam1_t *b, const char tag[2], const char *value, tmap_sam_convert_tag_opt_t *t)
 {
   uint8_t *ex_s = NULL;
   char *ex_value = NULL;
   // check if it exists
-  ex_s = bam_aux_get(b, tag);
-  if(NULL != ex_s) { // exists
+  if(1 == tmap_sam_convert_tag_opt_get(t, tag)) {
+      ex_s = bam_aux_get(b, tag);
+      if(NULL == ex_s) tmap_bug();
       ex_value = bam_aux2Z(ex_s); // get value
       if(0 == strcmp(value, ex_value)) return; // OK
       else bam_aux_del(b, ex_s); // Delete
@@ -87,14 +177,15 @@ tmap_sam_convert_replace_tagZ(bam1_t *b, const char tag[2], const char *value)
 }
 
 static inline void
-tmap_sam_convert_replace_tagB_S(bam1_t *b, const char tag[2], int32_t len, const uint16_t *value)
+tmap_sam_convert_replace_tagB_S(bam1_t *b, const char tag[2], int32_t len, const uint16_t *value, tmap_sam_convert_tag_opt_t *t)
 {
   uint8_t *ex_s = NULL;
   uint16_t *ex_value = NULL;
   int32_t ex_len = 0;
   // check if it exists
-  ex_s = bam_aux_get(b, tag);
-  if(NULL != ex_s) { // exists
+  if(1 == tmap_sam_convert_tag_opt_get(t, tag)) {
+      ex_s = bam_aux_get(b, tag);
+      if(NULL == ex_s) tmap_bug();
       ex_value = bam_auxB2S(ex_s, &len);
       if(len == ex_len && 0 == memcmp(ex_value, value, len)) return; // OK
       else bam_aux_del(b, ex_s); // Delete
@@ -122,43 +213,43 @@ tmap_sam_convert_replace_cigar(bam1_t *b, int n, uint32_t *cigar)
 }
 
 static inline void
-tmap_sam_convert_rg(tmap_seq_t *seq, bam1_t *b)
+tmap_sam_convert_rg(tmap_seq_t *seq, bam1_t *b, tmap_sam_convert_tag_opt_t *t)
 {
   char *id = NULL;
   if(NULL == seq->rg_record) return;
   id = sam_header_record_get(seq->rg_record, "ID");
   if(NULL == id) return;
   // append
-  tmap_sam_convert_replace_tagZ(b, "RG", id);
+  tmap_sam_convert_replace_tagZ(b, "RG", id, t);
 }
 
 static inline void
-tmap_sam_convert_pg(tmap_seq_t *seq, bam1_t *b)
+tmap_sam_convert_pg(tmap_seq_t *seq, bam1_t *b, tmap_sam_convert_tag_opt_t *t)
 {
   char *id = NULL;
   if(NULL == seq->pg_record) return;
   id = sam_header_record_get(seq->pg_record, "ID");
   if(NULL == id) return;
   // append
-  tmap_sam_convert_replace_tagZ(b, "PG", id);
+  tmap_sam_convert_replace_tagZ(b, "PG", id, t);
 }
 
 static inline void 
-tmap_sam_convert_fz_and_zf(tmap_seq_t *seq, bam1_t *b)
+tmap_sam_convert_fz_and_zf(tmap_seq_t *seq, bam1_t *b, tmap_sam_convert_tag_opt_t *t)
 {
   // ZF
   if(0 <= seq->fo_start_idx) { // exists
-      tmap_sam_convert_replace_tagi(b, "ZF", seq->fo_start_idx);
+      tmap_sam_convert_replace_tagi(b, "ZF", seq->fo_start_idx, t);
   }
 
   // FZ
   if(NULL != seq->flowgram && 0 < seq->flowgram_len) {
-      tmap_sam_convert_replace_tagB_S(b, "FZ", seq->flowgram_len, seq->flowgram);
+      tmap_sam_convert_replace_tagB_S(b, "FZ", seq->flowgram_len, seq->flowgram, t);
   }
 }
 
 static inline void
-tmap_sam_convert_add_xa(bam1_t *b, int32_t algo_id, int32_t algo_stage)
+tmap_sam_convert_add_xa(bam1_t *b, int32_t algo_id, int32_t algo_stage, tmap_sam_convert_tag_opt_t *t)
 {
   char *str = NULL;
   char *name = NULL;
@@ -166,12 +257,12 @@ tmap_sam_convert_add_xa(bam1_t *b, int32_t algo_id, int32_t algo_stage)
   name = tmap_algo_id_to_name(algo_id);
   str = tmap_malloc(sizeof(char) * (1 + strlen(name) + (int)(1.0 + log10(algo_stage)) + 1), "str"); // EOL + name + num + dash
   if(0 == sprintf(str, "%s-%d", name, algo_stage)) tmap_bug(); 
-  tmap_sam_convert_replace_tagZ(b, "XA", str);
+  tmap_sam_convert_replace_tagZ(b, "XA", str, t);
   free(str);
 }
 
 static inline void
-tmap_sam_convert_add_optional(bam1_t *b, const char *format, va_list ap)
+tmap_sam_convert_add_optional(bam1_t *b, const char *format, va_list ap, tmap_sam_convert_tag_opt_t *t)
 {
   int32_t start, len;
 
@@ -214,19 +305,19 @@ tmap_sam_convert_add_optional(bam1_t *b, const char *format, va_list ap)
       switch(type) {
         case 'A':
           A = (char)va_arg(ap, int32_t);
-          tmap_sam_convert_replace_tagA(b, tag, A);
+          tmap_sam_convert_replace_tagA(b, tag, A, t);
           break;
         case 'i':
           i = va_arg(ap, int32_t);
-          tmap_sam_convert_replace_tagi(b, tag, i);
+          tmap_sam_convert_replace_tagi(b, tag, i, t);
           break;
         case 'f':
           f = (float)va_arg(ap, double);
-          tmap_sam_convert_replace_tagf(b, tag, f);
+          tmap_sam_convert_replace_tagf(b, tag, f, t);
           break;
         case 'Z':
           Z = va_arg(ap, char*);
-          tmap_sam_convert_replace_tagZ(b, tag, Z);
+          tmap_sam_convert_replace_tagZ(b, tag, Z, t);
           break;
         default:
           // NB: not supported
@@ -400,7 +491,6 @@ tmap_sam_convert_init_aux(bam1_t *b, tmap_string_t *qname,
 
   // cigar
   for(i=0;i<b->core.n_cigar;i++) {
-      // TODO: validate that the format is the same
       bam1_cigar(b)[i] = cigar[i];
   }
 
@@ -431,6 +521,7 @@ tmap_sam_convert_unmapped(tmap_seq_t *seq, int32_t sam_flowspace_tags, int32_t b
   int32_t i;
   va_list ap;
   bam1_t *b = NULL;
+  tmap_sam_convert_tag_opt_t *t = NULL;
 
   b = tmap_calloc(1, sizeof(bam1_t), "b"); 
 
@@ -455,6 +546,9 @@ tmap_sam_convert_unmapped(tmap_seq_t *seq, int32_t sam_flowspace_tags, int32_t b
                                 tmap_seq_get_bases(seq),
                                 tmap_seq_get_qualities(seq));
   }
+  
+  // hash optional tags
+  t = tmap_sam_convert_tag_opt_init(b);
 
   // set the flag
   // NB: these are additive
@@ -490,25 +584,27 @@ tmap_sam_convert_unmapped(tmap_seq_t *seq, int32_t sam_flowspace_tags, int32_t b
   }
 
   // RG 
-  tmap_sam_convert_rg(seq, b);
+  tmap_sam_convert_rg(seq, b, t);
 
   // PG
-  tmap_sam_convert_pg(seq, b);
+  tmap_sam_convert_pg(seq, b, t);
   
   // FZ and ZF
   if(1 == sam_flowspace_tags) {
-      tmap_sam_convert_fz_and_zf(seq, b);
+      tmap_sam_convert_fz_and_zf(seq, b, t);
   }
   
   // XB
   if(1 == bidirectional) {
-      tmap_sam_convert_replace_tagi(b, "XB", bidirectional);
+      tmap_sam_convert_replace_tagi(b, "XB", bidirectional, t);
   }
   
   // optional tags
   va_start(ap, format);
-  tmap_sam_convert_add_optional(b, format, ap);
+  tmap_sam_convert_add_optional(b, format, ap, t);
   va_end(ap);
+  
+  tmap_sam_convert_tag_opt_destroy(t);
 
   return b;
 }
@@ -529,7 +625,8 @@ tmap_sam_convert_mapped(tmap_seq_t *seq, int32_t sam_flowspace_tags, int32_t bid
   tmap_string_t *md = NULL;
   int32_t nm;
   bam1_t *b = NULL;
-  uint32_t *cur_cigar;
+  uint32_t *cur_cigar = NULL;
+  tmap_sam_convert_tag_opt_t *t = NULL;
 
   /*
   fprintf(stderr, "end_num=%d m_unmapped=%d m_prop=%d m_strand=%d m_seqid=%d m_pos=%d m_tlen=%d\n",
@@ -627,6 +724,9 @@ tmap_sam_convert_mapped(tmap_seq_t *seq, int32_t sam_flowspace_tags, int32_t bid
                                 cigar, n_cigar,
                                 bases, qualities);
   }
+  
+  // hash optional tags
+  t = tmap_sam_convert_tag_opt_init(b);
 
   // flag
   // NB: these are additive
@@ -670,54 +770,54 @@ tmap_sam_convert_mapped(tmap_seq_t *seq, int32_t sam_flowspace_tags, int32_t bid
   }
   
   // RG 
-  tmap_sam_convert_rg(seq, b);
+  tmap_sam_convert_rg(seq, b, t);
   
   // PG
-  tmap_sam_convert_pg(seq, b);
+  tmap_sam_convert_pg(seq, b, t);
 
   // MD
-  tmap_sam_convert_replace_tagZ(b, "MD", md->s);
+  tmap_sam_convert_replace_tagZ(b, "MD", md->s, t);
 
   // NM
-  tmap_sam_convert_replace_tagi(b, "NM", nm);
+  tmap_sam_convert_replace_tagi(b, "NM", nm, t);
 
   // AS
-  tmap_sam_convert_replace_tagi(b, "AS", score);
+  tmap_sam_convert_replace_tagi(b, "AS", score, t);
 
   // NH
-  tmap_sam_convert_replace_tagi(b, "NH", nh);
+  tmap_sam_convert_replace_tagi(b, "NH", nh, t);
 
   // FZ and ZF
   if(1 == sam_flowspace_tags) {
-      tmap_sam_convert_fz_and_zf(seq, b);
+      tmap_sam_convert_fz_and_zf(seq, b, t);
   }
   
   // XA
   if(0 < algo_stage) {
-      tmap_sam_convert_add_xa(b, algo_id, algo_stage);
+      tmap_sam_convert_add_xa(b, algo_id, algo_stage, t);
   }
   
   // XZ
   if(TMAP_SEQ_TYPE_SFF == seq->type && INT32_MIN != ascore) {
-      tmap_sam_convert_replace_tagi(b, "XZ", ascore);
+      tmap_sam_convert_replace_tagi(b, "XZ", ascore, t);
   }
   
   // YP/YS
   if(0 < end_num) { // mate info
-      tmap_sam_convert_replace_tagi(b, "YP", pscore);
+      tmap_sam_convert_replace_tagi(b, "YP", pscore, t);
       if(0 == m_unmapped) {
-          tmap_sam_convert_replace_tagi(b, "YS", m_num_std);
+          tmap_sam_convert_replace_tagi(b, "YS", m_num_std, t);
       }
   }
 
   // XB
   if(1 == bidirectional) {
-      tmap_sam_convert_replace_tagi(b, "XB", bidirectional);
+      tmap_sam_convert_replace_tagi(b, "XB", bidirectional, t);
   }
 
   // optional tags
   va_start(ap, format);
-  tmap_sam_convert_add_optional(b, format, ap);
+  tmap_sam_convert_add_optional(b, format, ap, t);
   va_end(ap);
 
   if(1 == strand) { // reverse back
@@ -729,6 +829,7 @@ tmap_sam_convert_mapped(tmap_seq_t *seq, int32_t sam_flowspace_tags, int32_t bid
   tmap_string_destroy(md);
   free(bases_eq);
   free(cigar);
+  tmap_sam_convert_tag_opt_destroy(t);
 
   return b;
 }
