@@ -370,9 +370,7 @@ tmap_sam_convert_init_aux(bam1_t *b, tmap_string_t *qname,
   b->core.l_qname = (uint32_t)qname->l + 1; // zero-tailing
   // 3. (b)->core.l_qseq
   b->core.l_qseq = (uint32_t)seq->l;
-
-  // TODO: missing qual string
-  if(seq->l != qual->l) tmap_bug(); 
+  if(0 < qual->l && seq->l != qual->l) tmap_bug(); 
 
   // from bam1_aux
   b->data_len = b->m_data = b->core.n_cigar*4 + b->core.l_qname + b->core.l_qseq + (b->core.l_qseq + 1)/2;
@@ -398,8 +396,15 @@ tmap_sam_convert_init_aux(bam1_t *b, tmap_string_t *qname,
   }
 
   // qual
-  for(i=0;i<qual->l;i++) {
-      bam1_qual(b)[i] = qual->s[i] - 33;
+  if(0 < qual->l) { 
+      for(i=0;i<qual->l;i++) {
+          bam1_qual(b)[i] = qual->s[i] - 33;
+      }
+  }
+  else { // missing quality string
+      for(i=0;i<qual->l;i++) {
+          bam1_qual(b)[i] = 0xff;
+      }
   }
 }
 
