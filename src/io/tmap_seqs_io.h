@@ -80,4 +80,13 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
                            char **rg_sam, int32_t rg_sam_num,
                            int32_t argc, char *argv[]);
 
+/*! 
+  main-like function for 'tmap sff2sam'
+  @param  argc  the number of arguments
+  @param  argv  the argument list
+  @return       0 if executed successful
+  */
+int
+tmap_seqs_io_sff2sam_main(int argc, char *argv[]);
+
 #endif

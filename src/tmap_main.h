@@ -55,7 +55,7 @@ tmap_sa_bwt2sa_main(int argc, char *argv[]);
 extern int
 tmap_seq_io_sff2fq_main(int argc, char *argv[]);
 extern int
-tmap_seq_io_sff2sam_main(int argc, char *argv[]);
+tmap_seqs_io_sff2sam_main(int argc, char *argv[]);
 extern int
 tmap_refseq_refinfo_main(int argc, char *argv[]);
 extern int

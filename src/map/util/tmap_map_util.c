@@ -380,7 +380,7 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
       mate_pos = mate->pos;
   }
   if(NULL == sam) { // unmapped
-      return tmap_sam_convert_unmapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, refseq,
+      return tmap_sam_convert_unmapped(seq, sam_flowspace_tags, bidirectional, refseq,
                               end_num, mate_unmapped, 0,
                               mate_strand, mate_seqid, mate_pos, NULL);
   }
@@ -408,7 +408,7 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
       }
       switch(sam->algo_id) {
         case TMAP_MAP_ALGO_MAP1:
-          return tmap_sam_convert_mapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
+          return tmap_sam_convert_mapped(seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
                                          sam->strand, sam->seqid, sam->pos, aln_num,
                                          end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
                                          mate_strand, mate_seqid, mate_pos, mate_tlen,
@@ -417,7 +417,7 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
           break;
         case TMAP_MAP_ALGO_MAP2:
           if(0 < sam->aux.map2_aux->XI) {
-              return tmap_sam_convert_mapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
+              return tmap_sam_convert_mapped(seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
                                              sam->strand, sam->seqid, sam->pos, aln_num,
                                              end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
                                              mate_strand, mate_seqid, mate_pos, mate_tlen,
@@ -430,7 +430,7 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
                                              sam->aux.map2_aux->XI);
           }
           else {
-              return tmap_sam_convert_mapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
+              return tmap_sam_convert_mapped(seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
                                              sam->strand, sam->seqid, sam->pos, aln_num,
                                              end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
                                              mate_strand, mate_seqid, mate_pos, mate_tlen,
@@ -443,7 +443,7 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
           }
           break;
         case TMAP_MAP_ALGO_MAP3:
-          return tmap_sam_convert_mapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
+          return tmap_sam_convert_mapped(seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
                                          sam->strand, sam->seqid, sam->pos, aln_num,
                                          end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
                                          mate_strand, mate_seqid, mate_pos, mate_tlen,
@@ -456,7 +456,7 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
                                          sam->seed_end);
           break;
         case TMAP_MAP_ALGO_MAP4:
-          return tmap_sam_convert_mapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
+          return tmap_sam_convert_mapped(seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
                                          sam->strand, sam->seqid, sam->pos, aln_num,
                                          end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
                                          mate_strand, mate_seqid, mate_pos, mate_tlen,
@@ -466,7 +466,7 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
                                          sam->score_subo);
           break;
         case TMAP_MAP_ALGO_MAPVSW:
-          return tmap_sam_convert_mapped(tmap_file_stdout, seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
+          return tmap_sam_convert_mapped(seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
                                          sam->strand, sam->seqid, sam->pos, aln_num,
                                          end_num, mate_unmapped, sam->proper_pair, sam->num_stds,
                                          mate_strand, mate_seqid, mate_pos, mate_tlen,

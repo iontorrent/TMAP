@@ -300,3 +300,99 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
 
   return bam_header;
 }
+
+int
+tmap_seqs_io_sff2sam_main(int argc, char *argv[])
+{
+  int c, help = 0;
+  tmap_seqs_io_t *io_in = NULL;
+  tmap_seqs_t *seqs = NULL;
+  char **sam_rg = NULL;
+  int32_t sam_rg_num = 0;
+  int bidirectional = 0, sam_flowspace_tags = 0, remove_sff_clipping = 1;
+  int out_type = 0;
+  tmap_sam_io_t *io_out = NULL;
+  bam_header_t *header = NULL; // BAM Header
+  int32_t i;
+
+  /*
+  uint8_t *key_seq = NULL;
+  int key_seq_len = 0;
+  */
+
+  while((c = getopt(argc, argv, "DGR:Yvh")) >= 0) {
+      switch(c) {
+        case 'D': bidirectional = 1; break;
+        case 'G': remove_sff_clipping = 0; break;
+        case 'R':
+                  sam_rg = tmap_realloc(sam_rg, (1+sam_rg_num) * sizeof(char*), "sam_rg");
+                  sam_rg[sam_rg_num] = tmap_strdup(optarg);
+                  sam_rg_num++;
+                  break;
+        case 'Y': sam_flowspace_tags = 1; break;
+        case 'v': tmap_progress_set_verbosity(1); break;
+        case 'h': help = 1; break;
+        default: return 1;
+      }
+  }
+  if(1 != argc - optind || 1 == help) {
+      tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [-R -Y -v -h] <in.sff>\n", PACKAGE, argv[0]);
+      return 1; 
+  }
+
+  // input
+  io_in = tmap_seqs_io_init(&argv[optind], 1, TMAP_SEQ_TYPE_SFF, TMAP_FILE_NO_COMPRESSION);
+
+  // BAM Header
+  header = tmap_seqs_io_to_bam_header(NULL, io_in, sam_rg, sam_rg_num, argc, argv);
+
+  // open the output file
+  switch(out_type) {
+    case 0: // SAM
+      io_out = tmap_sam_io_init2("-", "wh", header);
+      break;
+    case 1:
+      io_out = tmap_sam_io_init2("-", "wb", header);
+      break;
+    case 2:
+      io_out = tmap_sam_io_init2("-", "wu", header);
+      break;
+    default:
+      tmap_bug();
+  }
+
+  // destroy the BAM Header
+  bam_header_destroy(header);
+  header = NULL;
+
+  seqs = tmap_seqs_init(TMAP_SEQ_TYPE_SFF);
+  while(0 < tmap_seqs_io_read(io_in, seqs, io_out->fp->header->header)) {
+      bam1_t *b = NULL;
+      tmap_seq_t *seq = seqs->seqs[0];
+      b = tmap_sam_convert_unmapped(seq, sam_flowspace_tags, bidirectional, NULL,
+                                    0, 0, 0,
+                                    0, 0, 0,
+                                    "\tlq:i:%d\trq:i:%d\tla:i:%d\trq:i:%d",
+                                    seq->data.sff->rheader->clip_qual_left,
+                                    seq->data.sff->rheader->clip_qual_right,
+                                    seq->data.sff->rheader->clip_adapter_left,
+                                    seq->data.sff->rheader->clip_adapter_right);
+      if(samwrite(io_out->fp, b) <= 0) {
+          tmap_error("Error writing the SAM file", Exit, WriteFileError);
+      }
+      bam_destroy1(b); 
+      tmap_seqs_destroy(seqs);
+      seqs = tmap_seqs_init(TMAP_SEQ_TYPE_SFF);
+  }
+  tmap_seqs_destroy(seqs);
+
+  // free memory
+  tmap_seqs_io_destroy(io_in);
+  tmap_sam_io_destroy(io_out);
+  for(i=0;i<sam_rg_num;i++) {
+      free(sam_rg[i]);
+  }
+  free(sam_rg);
+
+  return 0;
+}
