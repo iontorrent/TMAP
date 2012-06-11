@@ -238,7 +238,7 @@ tmap_sam_convert_add_optional(bam1_t *b, const char *format, va_list ap)
 static inline tmap_string_t *
 tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are characters
             uint32_t seqid, uint32_t pos, // seqid and pos are 0-based
-            uint32_t *cigar, int32_t n_cigar, int32_t *nm, char *read_bases_eq)
+            uint32_t *cigar, int32_t n_cigar, int32_t *nm, char *bases_eq)
 {
   int32_t i, j;
   uint32_t ref_i, read_i, ref_start, ref_end;
@@ -289,11 +289,11 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
               ref_base = target[ref_i];
 
               if(read_base == ref_base) { // a match
-                  if(NULL != read_bases_eq) read_bases_eq[read_i] = '=';
+                  if(NULL != bases_eq) bases_eq[read_i] = '=';
                   l++;
               }
               else {
-                  if(NULL != read_bases_eq) read_bases_eq[read_i] = read_bases[read_i];
+                  if(NULL != bases_eq) bases_eq[read_i] = read_bases[read_i];
                   tmap_string_lsprintf(md, md->l, "%d%c", l, tmap_iupac_int_to_char[ref_base]);
                   l = 0;
                   (*nm)++;
@@ -304,9 +304,9 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
           if(j < op_len) break;
       }
       else if(BAM_CINS == op) {
-          if(NULL != read_bases_eq) {
+          if(NULL != bases_eq) {
               for(j=0;j<op_len;j++) {
-                  read_bases_eq[read_i+j] = read_bases[read_i+j];
+                  bases_eq[read_i+j] = read_bases[read_i+j];
               }
           }
           read_i += op_len;
@@ -328,9 +328,9 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
           ref_i += op_len;
       }
       else if(BAM_CSOFT_CLIP == op) {
-          if(NULL != read_bases_eq) {
+          if(NULL != bases_eq) {
               for(j=0;j<op_len;j++) {
-                  read_bases_eq[read_i+j] = read_bases[read_i+j];
+                  bases_eq[read_i+j] = read_bases[read_i+j];
               }
           }
           read_i += op_len;
@@ -346,11 +346,25 @@ tmap_sam_md(tmap_refseq_t *refseq, char *read_bases, // read bases are character
       }
   }
   tmap_string_lsprintf(md, md->l, "%d", l);
-  if(NULL != read_bases_eq) read_bases_eq[read_i] = '\0';
+  if(NULL != bases_eq) bases_eq[read_i] = '\0';
 
   free(target);
 
   return md;
+}
+      
+static void
+tmap_sam_convert_to_seq_eq(bam1_t *b, char *bases_eq)
+{
+  int32_t i;
+  uint8_t *seq = NULL;
+
+  seq = bam1_seq(b);
+  for(i=0;i<b->core.l_qseq;i++) {
+      if('=' == bases_eq[i]) {
+          seq[i/2] &= (i&1) ? 0xf0 : 0x0f;
+      }
+  }
 }
 
 static void
@@ -592,8 +606,6 @@ tmap_sam_convert_mapped(tmap_seq_t *seq, int32_t sam_flowspace_tags, int32_t bid
       b->data = tmap_calloc(o->m_data, sizeof(uint8_t), "b->data");
       memcpy(b->data, o->data, sizeof(uint8_t) * o->m_data); // o->data_len
       // NB: name/bases/qualities should already be set
-      // check the cigar
-      if(0 < b->core.n_cigar) tmap_bug(); // TODO: reset the cigar...
       if(1 == strand) { // reset bases and qualities on the reverse strand (should be the same length)
           // seq
           for(i=0;i<bases->l;i++) {
@@ -652,9 +664,10 @@ tmap_sam_convert_mapped(tmap_seq_t *seq, int32_t sam_flowspace_tags, int32_t bid
       b->core.isize = m_tlen;
   }
 
-  // TODO support 'seq_eq'
-  // TODO support missing qualities
-  // TODO: optional tags
+  // convert matching bases to '=' values
+  if(1 == seq_eq) {
+      tmap_sam_convert_to_seq_eq(b, bases_eq);
+  }
   
   // RG 
   tmap_sam_convert_rg(seq, b);
