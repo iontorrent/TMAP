@@ -17,6 +17,9 @@
 #include "tmap_map1.h"
 #include "tmap_map1_aux.h"
 
+#define TMAP_MAP1_AUX_STACK_INIT_SIZE 4096
+#define TMAP_MAP1_AUX_STACK_TOO_BIG 262144 // TODO: are these good values?
+
 #define STATE_M 0
 #define STATE_I 1
 #define STATE_D 2
@@ -76,10 +79,10 @@ tmap_map1_aux_stack_init()
   stack = tmap_calloc(1, sizeof(tmap_map1_aux_stack_t), "stack");
 
   // small memory pool
-  stack->entry_pool_length = 1024; 
-  stack->entry_pool = tmap_malloc(stack->entry_pool_length*sizeof(tmap_map1_aux_stack_entry_t*), "stack->entry_pool");
+  stack->entry_pool_length = TMAP_MAP1_AUX_STACK_INIT_SIZE; 
+  stack->entry_pool = tmap_calloc(stack->entry_pool_length, sizeof(tmap_map1_aux_stack_entry_t*), "stack->entry_pool");
   for(i=0;i<stack->entry_pool_length;i++) {
-      stack->entry_pool[i] = tmap_malloc(sizeof(tmap_map1_aux_stack_entry_t), "stack->entry_pool[i]");
+      stack->entry_pool[i] = tmap_calloc(1, sizeof(tmap_map1_aux_stack_entry_t), "stack->entry_pool[i]");
   }
 
   // nullify bins
@@ -104,7 +107,7 @@ tmap_map1_aux_stack_destroy(tmap_map1_aux_stack_t *stack)
   free(stack);
 }
 
-static void
+static tmap_map1_aux_stack_t*
 tmap_map1_aux_stack_reset(tmap_map1_aux_stack_t *stack,
                           int32_t max_mm, int32_t max_gapo, int32_t max_gape, 
                           const tmap_map_opt_t *opt)
@@ -115,6 +118,12 @@ tmap_map1_aux_stack_reset(tmap_map1_aux_stack_t *stack,
   // move to the beginning of the memory pool
   stack->entry_pool_i = 0;
   stack->best_score = INT32_MAX;
+
+  if(TMAP_MAP1_AUX_STACK_TOO_BIG < stack->entry_pool_length) {
+      tmap_map1_aux_stack_destroy(stack);
+      stack = tmap_map1_aux_stack_init();
+  }
+
   // clear the bins 
   for(i=0;i<stack->n_bins;i++) {
       /*
@@ -123,6 +132,7 @@ tmap_map1_aux_stack_reset(tmap_map1_aux_stack_t *stack,
       }
       */
       stack->bins[i].n_entries = 0;
+
   }
   // resize the bins if necessary
   n_bins_needed = aln_score(max_mm+1, max_gapo+1, max_gape+1, opt);
@@ -138,6 +148,8 @@ tmap_map1_aux_stack_reset(tmap_map1_aux_stack_t *stack,
       stack->n_bins = n_bins_needed;
   }
   stack->n_entries = 0;
+  
+  return stack;
 }
 
 static inline void
@@ -302,7 +314,6 @@ tmap_map1_aux_stack_shadow(tmap_bwt_int_t x, tmap_bwt_int_t max,
   }
 }
 
-// TODO
 static tmap_map_sams_t *
 tmap_map1_sam_to_real(tmap_map_sams_t *sams, tmap_map1_aux_occ_t *occs, tmap_string_t *bases, int32_t seed2_len,
                        tmap_refseq_t *refseq, tmap_bwt_t *bwt, tmap_sa_t *sa, tmap_bwt_match_hash_t *hash, tmap_map_opt_t *opt) 
@@ -492,7 +503,7 @@ tmap_map1_aux_core(tmap_seq_t *seq, tmap_index_t *index,
   match_sa_start.k = 0;
   match_sa_start.l = bwt->seq_len;
 
-  tmap_map1_aux_stack_reset(stack, max_mm, max_gapo, max_gape, opt); // reset stack
+  stack = tmap_map1_aux_stack_reset(stack, max_mm, max_gapo, max_gape, opt); // reset stack
   tmap_map1_aux_stack_push(stack, bases->l, &match_sa_start, 0, 0, 0, STATE_M, 0, NULL, opt);
 
   while(0 < tmap_map1_aux_stack_size(stack) && tmap_map1_aux_stack_size(stack) < opt->max_entries) {
