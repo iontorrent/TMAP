@@ -43,7 +43,7 @@ typedef struct {
 void
 tmap_sam_convert_tag_opt_add(tmap_sam_convert_tag_opt_t *t, const uint8_t tag[2])
 {
-  uint32_t val1, val2;
+  uint32_t val1=0, val2=0;
   __tmap_sam_convert_tag_opt_get_idx(tag, val1, val2);
   t->values[val1] |= (0x1 << val2); 
   t->num_tags++;
@@ -52,7 +52,7 @@ tmap_sam_convert_tag_opt_add(tmap_sam_convert_tag_opt_t *t, const uint8_t tag[2]
 uint8_t
 tmap_sam_convert_tag_opt_get(tmap_sam_convert_tag_opt_t *t, const char tag[2])
 {
-  uint32_t val1, val2;
+  uint32_t val1=0, val2=0;
   if(0 == t->num_tags) return 0;
   __tmap_sam_convert_tag_opt_get_idx(tag, val1, val2);
   return ((t->values[val1] >> val2) & 0x1);
