@@ -387,12 +387,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
 
 /*!
   re-aligns mappings in flow space
-  @param  fs             the flow sequence structure to re-use, NULL otherwise
   @param  seq            the seq read sequence
-  @param  flow_order      the flow order
-  @param  flow_order_len  the flow order length
-  @param  key_seq        the key sequence
-  @param  key_seq_len    the key sequence length
   @param  sams           the mappings to adjust 
   @param  refseq         the reference sequence
   @param  bw             the band width
@@ -404,12 +399,10 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
   @param  pen_gape       the gap extension penalty
   @param  fscore         the flow penalty
   @param  use_flowgram   1 to use the flowgram if available, 0 otherwise
+  @return  1 if successful, 0 otherwise
   */
-void
-tmap_map_util_fsw(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, 
-                  uint8_t *flow_order, int32_t flow_order_len,
-                  uint8_t *key_seq, int32_t key_seq_len,
-                  tmap_map_sams_t *sams, tmap_refseq_t *refseq,
+int32_t
+tmap_map_util_fsw(tmap_seq_t *seq, tmap_map_sams_t *sams, tmap_refseq_t *refseq,
                   int32_t bw, int32_t softclip_type, int32_t score_thr,
                   int32_t score_match, int32_t pen_mm, int32_t pen_gapo, 
                   int32_t pen_gape, int32_t fscore, int32_t use_flowgram);

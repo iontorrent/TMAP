@@ -1183,6 +1183,7 @@ tmap_fsw_print_aln(tmap_file_t *fp, int64_t score, tmap_fsw_path_t *path, int32_
   free(aln);
 }
 
+// TODO: use the flow index start
 tmap_fsw_flowseq_t *
 tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow_order, int32_t flow_order_len, uint8_t *key_seq, uint8_t key_seq_len, int32_t use_flowgram)
 {

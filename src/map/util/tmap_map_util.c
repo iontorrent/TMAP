@@ -2077,11 +2077,8 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
 }
 
 // TODO: make sure the "longest" read alignment is found
-void
-tmap_map_util_fsw(tmap_fsw_flowseq_t *fseq, tmap_seq_t *seq, 
-                  uint8_t *flow_order, int32_t flow_order_len,
-                  uint8_t *key_seq, int32_t key_seq_len,
-                  tmap_map_sams_t *sams, tmap_refseq_t *refseq,
+int32_t 
+tmap_map_util_fsw(tmap_seq_t *seq, tmap_map_sams_t *sams, tmap_refseq_t *refseq,
                   int32_t bw, int32_t softclip_type, int32_t score_thr,
                   int32_t score_match, int32_t pen_mm, int32_t pen_gapo, 
                   int32_t pen_gape, int32_t fscore, int32_t use_flowgram)
@@ -2091,13 +2088,30 @@ tmap_map_util_fsw(tmap_fsw_flowseq_t *fseq, tmap_seq_t *seq,
   int32_t target_mem = 0, target_len = 0;
   int32_t was_int = 1;
 
+  tmap_fsw_flowseq_t *fseq = NULL;
   tmap_fsw_path_t *path = NULL;
   int32_t path_mem = 0, path_len = 0;
   tmap_fsw_param_t param;
   int32_t matrix[25];
   int32_t start_softclip_len = 0;
+  uint8_t *flow_order = NULL;
+  int32_t flow_order_len = 0;
+  uint8_t *key_seq = NULL;
+  int32_t key_seq_len = 0;
 
-  if(0 == sams->n) return;
+  if(0 == sams->n || NULL == seq->fo || NULL == seq->ks) return 0;
+
+  // flow order
+  flow_order_len = strlen(seq->fo);
+  flow_order = tmap_malloc(sizeof(uint8_t)*(flow_order_len+1), "flow_order");
+  memcpy(flow_order, seq->fo, flow_order_len);
+  tmap_to_int((char*)flow_order, flow_order_len);
+  
+  // key sequence
+  key_seq_len = strlen(seq->ks);
+  key_seq = tmap_malloc(sizeof(uint8_t)*(key_seq_len+1), "key_seq");
+  memcpy(key_seq, seq->ks, key_seq_len);
+  tmap_to_int((char*)key_seq, key_seq_len);
 
   // generate the alignment parameters
   param.matrix = matrix;
@@ -2111,7 +2125,13 @@ tmap_map_util_fsw(tmap_fsw_flowseq_t *fseq, tmap_seq_t *seq,
   }
 
   // get flow sequence 
-  fseq = tmap_fsw_flowseq_from_seq(fseq, seq, flow_order, flow_order_len, key_seq, key_seq_len, use_flowgram);
+  fseq = tmap_fsw_flowseq_from_seq(NULL, seq, flow_order, flow_order_len, key_seq, key_seq_len, use_flowgram);
+
+  if(NULL == fseq) {
+      free(flow_order);
+      free(key_seq);
+      return 0;
+  }
 
   // go through each hit
   for(i=0;i<sams->n;i++) {
@@ -2326,8 +2346,11 @@ tmap_map_util_fsw(tmap_fsw_flowseq_t *fseq, tmap_seq_t *seq,
   // free
   free(target);
   free(path);
+  free(flow_order);
+  free(key_seq);
 
   if(0 == was_int) {
       tmap_seq_to_char(seq);
   }
+  return 1;
 }

@@ -355,40 +355,24 @@ tmap_map_driver_core_worker(sam_header_t *sam_header,
           }
 
           // flowspace re-align and sorting
-          // initialize flow space info
-          // TODO
-          /*
-             tmap_fsw_flowseq_t *fs = NULL;
-             int32_t flow_order_len = 0, key_seq_len = 0;
-             uint8_t *flow_order = NULL, *key_seq = NULL;
-             if(0 < seqs_buffer_length) {
-             fs = tmap_map_driver_get_flow_info(seqs_buffer[0]->seqs[0], driver->opt, &flow_order, &flow_order_len, &key_seq, &key_seq_len);
-             }
-             */
-          /* TODO
           if(1 == driver->opt->aln_flowspace) {
               for(i=0;i<num_ends;i++) {
                   if(0 < records[low]->sams[i]->n) {
                       //stat->num_with_mapping++;
                       // re-align the alignments in flow-space
-                      if(NULL != fs) {
-                          tmap_seq_t *seq = seqs_buffer[low]->seqs[i];
-                          // TODO: if this is run, we do not need to run tmap_sw_global_banded_core...
-                          // NB: seqs_buffer should have its key sequence if 0 < key_seq_len
-                          tmap_map_util_fsw(fs, seq,
-                                            flow_order, flow_order_len,
-                                            key_seq, key_seq_len,
-                                            records[low]->sams[i], index->refseq, 
-                                            driver->opt->bw, driver->opt->softclip_type, driver->opt->score_thr,
-                                            driver->opt->score_match, driver->opt->pen_mm, driver->opt->pen_gapo,
-                                            driver->opt->pen_gape, driver->opt->fscore, 1-driver->opt->ignore_flowgram);
-                      }
-
-                      // sort by alignment score
-                      if(1 < records[low]->sams[i]->n) {
-                          tmap_sort_introsort(tmap_map_sam_sort_score,
-                                              records[low]->sams[i]->n, 
-                                              records[low]->sams[i]->sams);
+                      tmap_seq_t *seq = seqs_buffer[low]->seqs[i];
+                      // TODO: if this is run, we do not need to run tmap_sw_global_banded_core...
+                      // NB: seqs_buffer should have its key sequence if 0 < key_seq_len
+                      if(1 == tmap_map_util_fsw(seq, records[low]->sams[i], index->refseq, 
+                                        driver->opt->bw, driver->opt->softclip_type, driver->opt->score_thr,
+                                        driver->opt->score_match, driver->opt->pen_mm, driver->opt->pen_gapo,
+                                        driver->opt->pen_gape, driver->opt->fscore, 1-driver->opt->ignore_flowgram)) {
+                          // sort by alignment score
+                          if(1 < records[low]->sams[i]->n) {
+                              tmap_sort_introsort(tmap_map_sam_sort_score,
+                                                  records[low]->sams[i]->n, 
+                                                  records[low]->sams[i]->sams);
+                          }
                       }
                   }
                   if(NULL == seqs_buffer[low]->seqs[i]) {
@@ -396,12 +380,6 @@ tmap_map_driver_core_worker(sam_header_t *sam_header,
                   }
               }
           }
-          if(NULL != fs) {
-          tmap_fsw_flowseq_destroy(fs);
-          }
-          free(flow_order);
-          free(key_seq);
-          */
 
           // convert the record to bam
           if(1 == seqs_buffer[low]->n) {
@@ -693,16 +671,9 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
           free(attr); attr = NULL;
       }
 #endif
-      // TODO
-      /*
-      if(-1 == driver->opt->reads_queue_size) {
-          tmap_file_fflush(tmap_file_stdout, 1);
-      }
-      else {
-          tmap_file_fflush(tmap_file_stdout, 0); // flush
-      }
-      */
+      // TODO: should we flush when writing SAM and processing one read at a time?
 
+      // print statistics
       n_reads_processed += seqs_buffer_length;
       if(-1 != driver->opt->reads_queue_size) {
           tmap_progress_print2("processed %d reads", n_reads_processed);
