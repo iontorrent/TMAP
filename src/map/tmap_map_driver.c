@@ -662,7 +662,9 @@ tmap_map_driver_infer_pairing(tmap_seqs_io_t *io_in,
 #endif
 
   if(isize_num < 8) {
-      tmap_error("failed to infer the insert size distribution (too few reads)", Exit, OutOfRange);
+      tmap_error("failed to infer the insert size distribution (too few reads): turning pairing off", Warn, OutOfRange);
+      driver->opt->pairing = -1;
+      return seqs_buffer_length;
   }
 
   // print the # of pairs we are using to infer the insert size distribution
