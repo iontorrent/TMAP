@@ -147,7 +147,7 @@ typedef struct {
  *
  * Available:
  * GKV
- * ptu
+ * t
  * 
  * NB: Lets reserve single character flags for global options. 
 */
@@ -191,7 +191,6 @@ typedef struct __tmap_map_opt_t {
     int32_t input_compr;  /*!< the input compression type (-j,--input-bz2 and -z,--input-gz) */
     int32_t output_type;  /*!< the output type (0 - SAM, 1 - BAM (compressed), 2 - BAM (uncompressed)) */
     key_t shm_key;  /*!< the shared memory key (-k,--shared-memory-key) */
-
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
     double sample_reads;  /*!< sample the reads at this fraction (-x,--sample-reads) */
 #endif
@@ -211,9 +210,11 @@ typedef struct __tmap_map_opt_t {
     double ins_size_mean; /*!< the mean insert size (-b,--ins-size-mean)*/
     double ins_size_std; /*!< the insert size standard deviation (-c,--ins-size-std) */
     double ins_size_std_max_num; /*!< the insert size maximum standard deviation (-d,--ins-size-std-max-num) */
+    double ins_size_outlier_bound; /*!< the insert size 25/75 quartile outlier bound (-p,--ins-size-outlier-bound) */
+    int32_t ins_size_min_mapq; /*!< the minimum mapping quality to consider for computing the insert size (-t,--ins-size-min-mapq) */
     int32_t read_rescue; /*!< specifies to perform read rescuing during pairing (-L,--read-rescue) */
     double read_rescue_std_num; /*!< specifies the number of standard deviations around the mean insert size to perform read rescue (-l,--read-rescue-std-num) */
-    int32_t read_rescue_mapq_thr; /*!< minimum mapping quality for read rescue */
+    int32_t read_rescue_mapq_thr; /*!< minimum mapping quality for read rescue (-m,--read-rescue-mapq-thr) */
 
     // map1/map2/map3 options, but specific to each
     int32_t min_seq_len; /*< the minimum sequence length to examine (-1 to disable) (--min-seq-length) */

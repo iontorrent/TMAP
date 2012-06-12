@@ -20,6 +20,29 @@ enum {
 };
 
 /*!
+  @param  one  the mapping for the first end
+  @param  two  the mapping for the second end
+  @param  strandedness the strandedness orientation
+  @return  1 if the two mappings are consistent with the strandedness parameter, 0 otherwise 
+ */
+int32_t
+tmap_map_pairing_get_strand_diff(tmap_map_sam_t *one, tmap_map_sam_t *two, int32_t strandedness);
+
+/*!
+  Gets the positional difference between two alignments
+  @param  one  the mapping for the first end
+  @param  two  the mapping for the second end
+  @param  one_len  the sequence length for the first end
+  @param  two_len  the sequence length for the second end
+  @param  strandedness the strandedness orientation
+  @param  positioning the positioning orientation
+  @returns the position difference assuming the two reads are from the same contig and match strandedness
+ */
+int32_t
+tmap_map_pairing_get_position_diff(tmap_map_sam_t *one, tmap_map_sam_t *two, int32_t one_len, int32_t two_len,
+                                   int32_t strandedness, int32_t positioning);
+
+/*!
   performs read rescue
   @param  refseq   the reference sequence
   @param  one      the seeds for the first end (A)

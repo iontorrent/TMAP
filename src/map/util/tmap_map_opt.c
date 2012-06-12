@@ -160,6 +160,8 @@ __tmap_map_opt_option_print_func_int_init(positioning)
 __tmap_map_opt_option_print_func_double_init(ins_size_mean)
 __tmap_map_opt_option_print_func_double_init(ins_size_std)
 __tmap_map_opt_option_print_func_double_init(ins_size_std_max_num)
+__tmap_map_opt_option_print_func_double_init(ins_size_outlier_bound)
+__tmap_map_opt_option_print_func_int_init(ins_size_min_mapq)
 __tmap_map_opt_option_print_func_tf_init(read_rescue)
 __tmap_map_opt_option_print_func_double_init(read_rescue_std_num)
 __tmap_map_opt_option_print_func_int_init(read_rescue_mapq_thr)
@@ -654,6 +656,18 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_ins_size_std_max_num,
                            TMAP_MAP_ALGO_PAIRING);
+  tmap_map_opt_options_add(opt->options, "ins-size-outlier-bound", required_argument, 0, 'p',
+                           TMAP_MAP_OPT_TYPE_FLOAT,
+                           "the insert size 25/75 quartile outlier bound",
+                           NULL,
+                           tmap_map_opt_option_print_func_ins_size_outlier_bound,
+                           TMAP_MAP_ALGO_PAIRING);
+  tmap_map_opt_options_add(opt->options, "ins-size-min-mapq", required_argument, 0, 't',
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the minimum mapping quality to consider for computing the insert size",
+                           NULL,
+                           tmap_map_opt_option_print_func_ins_size_min_mapq,
+                           TMAP_MAP_ALGO_PAIRING);
   tmap_map_opt_options_add(opt->options, "read-rescue", no_argument, 0, 'L',
                            TMAP_MAP_OPT_TYPE_NONE,
                            "perform read rescue",
@@ -1023,7 +1037,9 @@ tmap_map_opt_init(int32_t algo_id)
   opt->positioning = -1;
   opt->ins_size_mean = -1.0;
   opt->ins_size_std = -1.0;
-  opt->ins_size_std_max_num  = -1.0;
+  opt->ins_size_std_max_num = 2.0;
+  opt->ins_size_outlier_bound = 2.0;
+  opt->ins_size_min_mapq = 20;
   opt->read_rescue = 0;
   opt->read_rescue_std_num = -1.0;
   opt->read_rescue_mapq_thr = 0;
@@ -1495,6 +1511,12 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(c == 'm' || (0 == c && 0 == strcmp("read-rescue-mapq-thr", options[option_index].name))) {
           opt->read_rescue_mapq_thr = atoi(optarg);
       }
+      else if(c == 'p' || (0 == c && 0 == strcmp("ins-size-outlier-bound", options[option_index].name))) {
+          opt->ins_size_outlier_bound = atof(optarg);
+      }
+      else if(c == 't' || (0 == c && 0 == strcmp("ins-size-max-mapq", options[option_index].name))) {
+          opt->ins_size_min_mapq = atoi(optarg);
+      }
       // End of pairing options 
       // End single flag options
       else if(0 != c) {
@@ -1807,6 +1829,12 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
     if(opt_a->ins_size_std_max_num != opt_b->ins_size_std_max_num) {
         tmap_error("option -d was specified outside the common options", Exit, CommandLineArgument);
     }
+    if(opt_a->ins_size_outlier_bound != opt_b->ins_size_outlier_bound) {
+        tmap_error("option -p was specified outside the common options", Exit, CommandLineArgument);
+    }
+    if(opt_a->ins_size_min_mapq != opt_b->ins_size_min_mapq) {
+        tmap_error("option -t was specified outside the common options", Exit, CommandLineArgument);
+    }
     if(opt_a->read_rescue != opt_b->read_rescue) {
         tmap_error("option -L was specified outside the common options", Exit, CommandLineArgument);
     }
@@ -1850,8 +1878,7 @@ tmap_map_opt_check_stage(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
 void
 tmap_map_opt_check(tmap_map_opt_t *opt)
 {
-  //int32_t i;
-  // global and flowspace options
+  // global 
   if(NULL == opt->fn_fasta && 0 == opt->shm_key) {
       tmap_error("option -f or option -k must be specified", Exit, CommandLineArgument);
   }
@@ -1872,15 +1899,6 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
           else if(opt->positioning < 0 || 1 < opt->positioning) {
               tmap_error("option -P was not specified", Exit, CommandLineArgument);
           }
-          else if(opt->ins_size_mean < 0) {
-              tmap_error("option -b not specified", Exit, CommandLineArgument);
-          }
-          else if(opt->ins_size_std < 0) {
-              tmap_error("option -c not specified", Exit, CommandLineArgument);
-          }
-          else if(opt->ins_size_std_max_num < 0) {
-              tmap_error("option -d was not specified", Exit, CommandLineArgument);
-          }
           else if(1 == opt->read_rescue) {
               if(opt->read_rescue_std_num < 0) {
                   tmap_error("option -l was not specified", Exit, CommandLineArgument);
@@ -1897,11 +1915,8 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->pen_mm, 1, INT32_MAX, "-M");
   tmap_error_cmd_check_int(opt->pen_gapo, 1, INT32_MAX, "-O");
   tmap_error_cmd_check_int(opt->pen_gape, 1, INT32_MAX, "-E");
-  tmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
   tmap_error_cmd_check_int(opt->bw, 0, INT32_MAX, "-w");
   tmap_error_cmd_check_int(opt->softclip_type, 0, 3, "-g");
-  tmap_error_cmd_check_int(opt->softclip_key, 0, 0, "-y");
-
   tmap_error_cmd_check_int(opt->dup_window, -1, INT32_MAX, "-W");
   tmap_error_cmd_check_int(opt->max_seed_band, 1, INT32_MAX, "-B");
   tmap_error_cmd_check_int(opt->unroll_banding, 0, 1, "-U");
@@ -1912,18 +1927,13 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->bidirectional, 0, 1, "-D");
   tmap_error_cmd_check_int(opt->seq_eq, 0, 1, "-I");
   tmap_error_cmd_check_int(opt->ignore_rg_sam_tags, 0, 1, "-C");
-  tmap_error_cmd_check_int(opt->rand_read_name, 0, 1, "-u");
-  tmap_error_cmd_check_int(opt->output_type, 0, 2, "-o");
   /*
   if(0 == opt->ignore_rg_sam_tags && NULL != opt->sam_rg) {
       tmap_error("Must use -C with -R", Exit, CommandLineArgument);
   }
   */
-  if(-1 != opt->min_seq_len) tmap_error_cmd_check_int(opt->min_seq_len, 1, INT32_MAX, "--min-seq-length");
-  if(-1 != opt->max_seq_len) tmap_error_cmd_check_int(opt->max_seq_len, 1, INT32_MAX, "--max-seq-length");
-  if(-1 != opt->min_seq_len && -1 != opt->max_seq_len && opt->max_seq_len < opt->min_seq_len) {
-      tmap_error("The minimum sequence length must be less than the maximum sequence length (--min-seq-length and --max-seq-length)", Exit, CommandLineArgument);
-  }
+  tmap_error_cmd_check_int(opt->rand_read_name, 0, 1, "-u");
+  tmap_error_cmd_check_int(opt->output_type, 0, 2, "-o");
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
   tmap_error_cmd_check_int(opt->sample_reads, 0, 1, "-x");
 #endif
@@ -1938,7 +1948,33 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       tmap_error("the option -H value has not been extensively tested; proceed with caution", Warn, CommandLineArgument);
       break;
   }
+  
+  // flowspace options
+  tmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
+  tmap_error_cmd_check_int(opt->softclip_key, 0, 0, "-y");
+  tmap_error_cmd_check_int(opt->sam_flowspace_tags, 0, 1, "-Y");
+  tmap_error_cmd_check_int(opt->ignore_flowgram, 0, 1, "-S");
+  tmap_error_cmd_check_int(opt->aln_flowspace, 0, 1, "-F");
 
+  // pairing
+  tmap_error_cmd_check_int(opt->pairing, 0, 2, "-Q");
+  tmap_error_cmd_check_int(opt->strandedness, -1, 1, "-S");
+  tmap_error_cmd_check_int(opt->positioning, -1, 1, "-P");
+  tmap_error_cmd_check_int(opt->ins_size_mean+0.99, 0, INT32_MAX, "-b");
+  tmap_error_cmd_check_int(opt->ins_size_std+0.99, 0, INT32_MAX, "-c");
+  tmap_error_cmd_check_int(opt->ins_size_std_max_num+0.99, 0, INT32_MAX, "-d");
+  tmap_error_cmd_check_int(opt->ins_size_outlier_bound+0.99, 0, INT32_MAX, "-p");
+  tmap_error_cmd_check_int(opt->ins_size_min_mapq, 0, INT32_MAX, "-t");
+  tmap_error_cmd_check_int(opt->read_rescue, 0, 1, "-L");
+  tmap_error_cmd_check_int(opt->read_rescue_std_num+0.99, 0, INT32_MAX, "-l");
+  tmap_error_cmd_check_int(opt->read_rescue_mapq_thr, 0, INT32_MAX, "-m");
+
+  // stage/algorithm options
+  if(-1 != opt->min_seq_len) tmap_error_cmd_check_int(opt->min_seq_len, 1, INT32_MAX, "--min-seq-length");
+  if(-1 != opt->max_seq_len) tmap_error_cmd_check_int(opt->max_seq_len, 1, INT32_MAX, "--max-seq-length");
+  if(-1 != opt->min_seq_len && -1 != opt->max_seq_len && opt->max_seq_len < opt->min_seq_len) {
+      tmap_error("The minimum sequence length must be less than the maximum sequence length (--min-seq-length and --max-seq-length)", Exit, CommandLineArgument);
+  }
   switch(opt->algo_id) {
     case TMAP_MAP_ALGO_MAP1: // map1 options
       if(-1 != opt->seed_length) tmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "--seed-length");
@@ -2086,6 +2122,8 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->ins_size_mean = opt_src->ins_size_mean;
     opt_dest->ins_size_std = opt_src->ins_size_std;
     opt_dest->ins_size_std_max_num = opt_src->ins_size_std_max_num;
+    opt_dest->ins_size_outlier_bound = opt_src->ins_size_outlier_bound;
+    opt_dest->ins_size_min_mapq = opt_src->ins_size_min_mapq;
     opt_dest->read_rescue = opt_src->read_rescue;
     opt_dest->read_rescue_std_num = opt_src->read_rescue_std_num;
     opt_dest->read_rescue_mapq_thr = opt_src->read_rescue_mapq_thr;

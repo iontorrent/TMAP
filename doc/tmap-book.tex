@@ -328,7 +328,8 @@ Specifies to produce the final alignment in flow space.
 \subsection{Pairing Options}
 These options control how TMAP uses and outputs information about the paired end or mate pair reads.
 Pairing will be performed when exactly two input read files are given using the \TT{-r} option twice.
-Currently, the insert size distribution must be given prior to running TMAP.
+The insert size distribution (mean and standard deviation) are computed from the first chunk of reads (\TT{-q}).
+Currently, the strandedness (\TT{-S}) and positioning (\TT{-P}) must be given.
 Read rescue significantly improves specificity at the cost of slower run times.
 
 \subsubsection{\TT{-Q,--pairing}}
@@ -366,6 +367,13 @@ Specifies the expected insert size standard deviations.
 \subsubsection{\TT{-d,--ins-size-std-max-num FLOAT}}
 Specifies the maximum number of standard deviations for a pair to be proper.
 See \autoref{sec:samformat} for more informaton about proper pairs.
+
+
+\subsubsection{\TT{-p,--ins-size-outlier-bound FLOAT}}
+Specifies the insert size 25/75 quartile outlier bound.
+
+\subsubsection{\TT{-t,--ins-size-min-mapq INT}}
+Specifies the minimum mapping quality to consider for computing the insert size.
 
 \subsubsection{\TT{-L,--read-rescue}}
 Specifies to perform read rescuing during pairing.

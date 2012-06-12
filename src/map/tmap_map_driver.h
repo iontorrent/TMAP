@@ -155,6 +155,7 @@ typedef struct {
     tmap_map_driver_t *driver;  /*!< the main driver object */
     tmap_map_stats_t *stat; /*!< the driver statistics */
     tmap_rand_t *rand;  /*!< the random number generator */
+    int32_t do_pairing;  /*!< 1 if we are performing pairing paramter calculation, 0 otherwise */
     int32_t tid;  /*!< the zero-based thread id */
 } tmap_map_driver_thread_data_t;
 
@@ -171,6 +172,7 @@ typedef struct {
   @param  driver               the driver
   @param  stat                 the driver statistics
   @param  rand                 the random number generator
+  @param  do_pairing           1 if we are performing pairing paramter calculation, 0 otherwise 
   @param  tid                  the thread ids
  */
 void
@@ -184,6 +186,7 @@ tmap_map_driver_core_worker(sam_header_t *sam_header,
                             tmap_map_driver_t *driver,
                             tmap_map_stats_t* stat,
                             tmap_rand_t *rand,
+                            int32_t do_pairing,
                             int32_t tid);
 
 /*!
