@@ -785,7 +785,7 @@ tmap_sam_convert_mapped(tmap_seq_t *seq, int32_t sam_flowspace_tags, int32_t bid
   tmap_sam_convert_replace_tagi(b, "AS", score, t);
 
   // NH
-  tmap_sam_convert_replace_tagi(b, "NH", nh, t);
+  if(1 < nh) tmap_sam_convert_replace_tagi(b, "NH", nh, t);
 
   // FZ and ZF
   if(1 == sam_flowspace_tags) {

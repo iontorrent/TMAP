@@ -252,6 +252,15 @@ Specifies to do not use the RG header and RG record tags in the SAM file (if the
 Specifies that the input is bzip2 (\TT{-j}) or gzip (\TT{-z}) compressed.
 This is auto-recognized if the input file name has the extension \TT{.bz2} for bzip2 and \TT{.gz} for gzip.
 
+\subsubsection{\TT{-o,--output-type}}
+Specifies the output type:
+\begin{enumerate}
+	\setcounter{enumi}{-1} % start at zero
+	\item SAM.
+	\item BAM (compressed). This is equivalent of using \TT{-o 0} and piping the output into \TT{samtools view -Sb -}.
+	\item BAM (uncompressed). This is equivalent of using \TT{-o 0} and piping the output into \TT{samtools view -Su -}.
+\end{enumerate}
+
 \subsubsection{\TT{-k,--shared-memory-key INT}}
 Specifies the shared memory key if the reference index has been loaded into shared memory.
 
