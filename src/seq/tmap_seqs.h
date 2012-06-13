@@ -44,6 +44,7 @@ tmap_seqs_clone(tmap_seqs_t *seqs);
 
 /*!
   @param  seqs  pointer to the structure
+  @param  seq   pointer to the sequence to add
   @details     performs a shallow copy
   */
 void

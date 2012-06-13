@@ -162,7 +162,6 @@ typedef struct {
 /*!
   The core worker routine of mapall
   @param  sam_header           the SAM Header
-  @param  num_ends             the number of ends
   @param  seqs_buffer           the buffer of sequences
   @param  records              the records to return
   @param  bams                 the bams to return

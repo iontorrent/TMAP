@@ -21,7 +21,7 @@ typedef struct _tmap_sam_io_t {
 
 /*! 
   initializes SAM reading structure
-  @param  fp  a pointer to a file structure from which to read
+  @param  fn  the input file name, or "-" for stdin
   @return     pointer to the initialized memory for reading in SAMs/BAMs
   */
 inline tmap_sam_io_t *
@@ -29,7 +29,7 @@ tmap_sam_io_init(const char *fn);
 
 /*! 
   initializes BAM reading structure
-  @param  fp  a pointer to a file structure from which to read
+  @param  fn  the input file name, or "-" for stdin
   @return     pointer to the initialized memory for reading in SAMs/BAMs
   */
 inline tmap_sam_io_t *
