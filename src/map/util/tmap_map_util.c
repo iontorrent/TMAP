@@ -1975,6 +1975,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       // NB: left genomic indel justification is facilitated by always using the
       // forward strand target/query combination.
       // NB: iupac bases may also increase the score
+      /*
       if(0 < conv) { // NB: there were IUPAC bases
           s->score = tmap_sw_global_banded_core(target, tlen, query, qlen, &par_iupac,
                                                 tmp_sam.result.score_fwd, path, &path_len, 0); 
@@ -1982,6 +1983,19 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       else {
           s->score = tmap_sw_global_banded_core(target, tlen, query, qlen, &par,
                                                 tmp_sam.result.score_fwd, path, &path_len, 0); 
+      }
+      */
+      // NB: use fitting core as there are still bugs where we in
+      // tmap_vsw_process there were two equally scoring alignments and the end
+      // target is the end of the second, and the start target is the start of
+      // the first, so they point to two different alignments.
+      if(0 < conv) { // NB: there were IUPAC bases
+          s->score = tmap_sw_fitting_core(target, tlen, query, qlen, &par_iupac,
+                                          path, &path_len, 0); 
+      }
+      else {
+          s->score = tmap_sw_fitting_core(target, tlen, query, qlen, &par,
+                                          path, &path_len, 0); 
       }
 
       s->pos = s->pos + (path[path_len-1].i-1); // zero-based 
