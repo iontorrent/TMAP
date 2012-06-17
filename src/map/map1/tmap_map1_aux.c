@@ -71,12 +71,10 @@ tmap_map1_aux_stack_entry_print(tmap_file_t *fp, tmap_map1_aux_stack_entry_t *e)
 }
 */
 
-tmap_map1_aux_stack_t *
-tmap_map1_aux_stack_init()
+static void
+tmap_map1_aux_stack_init_helper(tmap_map1_aux_stack_t *stack)
 {
   int32_t i;
-  tmap_map1_aux_stack_t *stack = NULL;
-  stack = tmap_calloc(1, sizeof(tmap_map1_aux_stack_t), "stack");
 
   // small memory pool
   stack->entry_pool_length = TMAP_MAP1_AUX_STACK_INIT_SIZE; 
@@ -89,7 +87,38 @@ tmap_map1_aux_stack_init()
   stack->n_bins = 0;
   stack->bins = NULL;
 
+  // be paranoid
+  stack->entry_pool_i = 0;
+  stack->best_score = 0;   
+  stack->n_entries = 0;
+}
+
+tmap_map1_aux_stack_t *
+tmap_map1_aux_stack_init()
+{
+  tmap_map1_aux_stack_t *stack = NULL;
+  stack = tmap_calloc(1, sizeof(tmap_map1_aux_stack_t), "stack");
+
+  tmap_map1_aux_stack_init_helper(stack);
+
   return stack;
+}
+
+static void
+tmap_map1_aux_stack_destroy_helper(tmap_map1_aux_stack_t *stack, int32_t full)
+{
+  int32_t i;
+  for(i=0;i<stack->n_bins;i++) {
+      free(stack->bins[i].entries);
+  }
+  free(stack->bins);
+  for(i=0;i<stack->entry_pool_length;i++) {
+      free(stack->entry_pool[i]);
+  }
+  free(stack->entry_pool);
+  if(1 == full) {
+      free(stack);
+  }
 }
 
 void
@@ -120,8 +149,8 @@ tmap_map1_aux_stack_reset(tmap_map1_aux_stack_t *stack,
   stack->best_score = INT32_MAX;
 
   if(TMAP_MAP1_AUX_STACK_TOO_BIG < stack->entry_pool_length) {
-      tmap_map1_aux_stack_destroy(stack);
-      stack = tmap_map1_aux_stack_init();
+      tmap_map1_aux_stack_destroy_helper(stack, 0);
+      tmap_map1_aux_stack_init_helper(stack);
   }
 
   // clear the bins 
