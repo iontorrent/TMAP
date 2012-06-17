@@ -1983,6 +1983,33 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
           s->score = tmap_sw_global_banded_core(target, tlen, query, qlen, &par,
                                                 tmp_sam.result.score_fwd, path, &path_len, 0); 
       }
+      if(s->score != tmp_sam.score) {
+          int32_t leading, trailing;
+          // check to see if there are leading/trailing deletions, then redo
+          leading = trailing = 0;
+          // leading
+          for(j=path_len-1;0<=j;j--) {
+              if(TMAP_SW_FROM_D == path[j].ctype) leading++;
+              else break;
+          }
+          // trailing
+          for(j=0;j<path_len;j++) {
+              if(TMAP_SW_FROM_D == path[j].ctype) trailing++;
+              else break;
+          }
+          if(0 < leading || 0 < trailing) {
+              // Redo the alignment
+              if(0 < conv) { // NB: there were IUPAC bases
+                  s->score = tmap_sw_global_banded_core(target + leading, tlen - leading - trailing, query, qlen, &par_iupac,
+                                                        tmp_sam.result.score_fwd, path, &path_len, 0); 
+              }
+              else {
+                  s->score = tmap_sw_global_banded_core(target + leading, tlen - leading - trailing, query, qlen, &par,
+                                                        tmp_sam.result.score_fwd, path, &path_len, 0); 
+              }
+          }
+          // TODO: should we skip otherwise? No, since VSW can differfrom GSW
+      }
 
       s->pos = s->pos + (path[path_len-1].i-1); // zero-based 
       if(path[path_len-1].ctype == TMAP_SW_FROM_I) {
