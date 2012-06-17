@@ -903,6 +903,7 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
               for(k=0;k<bams[i]->bams[j]->n;k++) { // for each hit
                   bam1_t *b = NULL;
                   b = bams[i]->bams[j]->bams[k]; // that's a lot of BAMs
+                  if(NULL == b) tmap_bug();
                   if(samwrite(io_out->fp, b) <= 0) {
                       tmap_error("Error writing the SAM file", Exit, WriteFileError);
                   }
