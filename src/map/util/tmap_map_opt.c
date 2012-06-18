@@ -1909,7 +1909,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
   tmap_error_cmd_check_int(opt->bw, 0, INT32_MAX, "-w");
   tmap_error_cmd_check_int(opt->softclip_type, 0, 3, "-g");
-  tmap_error_cmd_check_int(opt->softclip_key, 0, 0, "-y");
+  tmap_error_cmd_check_int(opt->softclip_key, 0, 1, "-y");
 
   tmap_error_cmd_check_int(opt->dup_window, -1, INT32_MAX, "-W");
   tmap_error_cmd_check_int(opt->max_seed_band, 1, INT32_MAX, "-B");
