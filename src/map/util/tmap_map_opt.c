@@ -1951,7 +1951,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   
   // flowspace options
   tmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
-  tmap_error_cmd_check_int(opt->softclip_key, 0, 0, "-y");
+  tmap_error_cmd_check_int(opt->softclip_key, 0, 1, "-y");
   tmap_error_cmd_check_int(opt->sam_flowspace_tags, 0, 1, "-Y");
   tmap_error_cmd_check_int(opt->ignore_flowgram, 0, 1, "-S");
   tmap_error_cmd_check_int(opt->aln_flowspace, 0, 1, "-F");
