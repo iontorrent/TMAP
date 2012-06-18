@@ -1016,7 +1016,7 @@ tmap_sw_global_banded_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t l
   }
   
   // Step 2: if we have a perfect match, run the perfect match algorithm
-  if(0 == max_bw) { // implies tlen == qlen, not checked 
+  if(0 == max_bw && len1 == len2) { // implies tlen == qlen, not checked 
       int32_t best_i, best_j;
       best_i = len2;
       best_j = len1;

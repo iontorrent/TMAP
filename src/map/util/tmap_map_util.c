@@ -1932,7 +1932,6 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
           }
           // Get the new target
           // NB: IUPAC codes are turned into mismatches
-          start_pos += tmp_sam.result.target_start;
           if(NULL == tmap_refseq_subseq2(refseq, sams->sams[end].seqid+1, start_pos, end_pos, target, 0, NULL)) {
               tmap_bug();
           }
