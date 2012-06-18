@@ -1930,6 +1930,14 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
               __map_util_gen_ap_iupac(par_iupac, opt);
               iupac_init = 1;
           }
+          // update start/end
+          start_pos = tmp_sam.pos + 1; // one-based
+          end_pos = start_pos + tlen - 1;
+          if(target_mem < tlen) { // more memory?
+              target_mem = tlen;
+              tmap_roundup32(target_mem);
+              target = tmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
+          }
           // Get the new target
           // NB: IUPAC codes are turned into mismatches
           if(NULL == tmap_refseq_subseq2(refseq, sams->sams[end].seqid+1, start_pos, end_pos, target, 0, NULL)) {
