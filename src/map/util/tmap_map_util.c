@@ -1992,19 +1992,22 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       }
       if(s->score != tmp_sam.score) {
           int32_t leading, trailing;
-          // check to see if there are leading/trailing deletions, then redo
-          leading = trailing = 0;
-          // leading
-          for(j=path_len-1;0<=j;j--) {
-              if(TMAP_SW_FROM_D == path[j].ctype) leading++;
-              else break;
-          }
-          // trailing
-          for(j=0;j<path_len;j++) {
-              if(TMAP_SW_FROM_D == path[j].ctype) trailing++;
-              else break;
-          }
-          if(0 < leading || 0 < trailing) {
+          while(1) {
+              // check to see if there are leading/trailing deletions, then redo
+              leading = trailing = 0;
+              // leading
+              for(j=path_len-1;0<=j;j--) {
+                  if(TMAP_SW_FROM_D == path[j].ctype) leading++;
+                  else break;
+              }
+              // trailing
+              for(j=0;j<path_len;j++) {
+                  if(TMAP_SW_FROM_D == path[j].ctype) trailing++;
+                  else break;
+              }
+              // do we need to continue?
+              if(0 == leading && 0 == trailing) break; // no need
+              s->pos += leading; // Skip over the leading deletion
               // Redo the alignment
               if(0 < conv) { // NB: there were IUPAC bases
                   s->score = tmap_sw_global_banded_core(target + leading, tlen - leading - trailing, query, qlen, &par_iupac,
