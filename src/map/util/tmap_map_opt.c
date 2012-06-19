@@ -7,11 +7,34 @@
 #include <config.h>
 #include "../../util/tmap_alloc.h"
 #include "../../util/tmap_error.h"
+#include "../../util/tmap_sort.h"
 #include "../../io/tmap_file.h"
 #include "../../seq/tmap_seq.h"
 #include "../../util/tmap_progress.h"
 #include "../../util/tmap_definitions.h"
 #include "tmap_map_opt.h"
+
+// For sorting the @RG fields
+static int32_t 
+tmap_map_opt_sort_rg_convert(const char *val) {
+    if(strlen(val) < 2) return -1;
+    else if('I' == val[0] && 'D' == val[1]) return 0;
+    else if('C' == val[0] && 'N' == val[1]) return 1;
+    else if('D' == val[0] && 'S' == val[1]) return 2;
+    else if('D' == val[0] && 'T' == val[1]) return 3;
+    else if('F' == val[0] && 'O' == val[1]) return 4;
+    else if('K' == val[0] && 'S' == val[1]) return 5;
+    else if('L' == val[0] && 'B' == val[1]) return 6;
+    else if('P' == val[0] && 'G' == val[1]) return 7;
+    else if('P' == val[0] && 'I' == val[1]) return 8;
+    else if('P' == val[0] && 'L' == val[1]) return 9;
+    else if('P' == val[0] && 'U' == val[1]) return 10;
+    else if('S' == val[0] && 'M' == val[1]) return 11;
+    else return -1;
+}
+#define tmap_map_opt_sort_rg_lt(_a, _b) (tmap_map_opt_sort_rg_convert(_a) < tmap_map_opt_sort_rg_convert(_b))
+typedef char* tmap_map_opt_sort_rg_t;
+TMAP_SORT_INIT(tmap_map_opt_sort_rg, tmap_map_opt_sort_rg_t, tmap_map_opt_sort_rg_lt)
   
 static char *tmap_map_opt_input_types[] = {"INT", "FLOAT", "NUM", "FILE", "STRING", "NONE"};
 
@@ -1924,6 +1947,11 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   if(-1 != opt->reads_queue_size) tmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
   tmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
   tmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
+  // SAM RG
+  if(0 < opt->sam_rg_num) {
+      // sort them
+      tmap_sort_introsort(tmap_map_opt_sort_rg, opt->sam_rg_num, opt->sam_rg);
+  }
   tmap_error_cmd_check_int(opt->bidirectional, 0, 1, "-D");
   tmap_error_cmd_check_int(opt->seq_eq, 0, 1, "-I");
   tmap_error_cmd_check_int(opt->ignore_rg_sam_tags, 0, 1, "-C");
