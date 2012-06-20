@@ -6,9 +6,9 @@
 \usepackage{array}
 \usepackage{moreverb}
 \usepackage{color}
+\usepackage{minitoc}
 \usepackage[plainpages=false,pdfpagelabels]{hyperref}
 \usepackage{url}
-\usepackage{minitoc}
 % new color
 \definecolor{mylinkcolor}{rgb}{0,0,0.75}
 \definecolor{mycitecolor}{rgb}{0,0.5,0}
@@ -32,7 +32,7 @@ urlcolor=myurlcolor     % color of external links
 % TODO check all options are present
 
 % Version number
-\newcommand{\Version}{2.3.3}
+\newcommand{\Version}{2.3.5}
 
 % layout
 \setlength\topmargin{0in}
@@ -242,6 +242,9 @@ Specifies the input reads are to be annotated as bidirectional using the XB SAM 
 \subsubsection{\TT{-I,--use-seq-equal}}
 Specifies to use the '=' symbol in the SEQ field.
 
+\subsubsection{\TT{-u,--rand-read-name}}
+Specifies to randomize based on the read name.
+
 \subsubsection{\TT{-C,--ignore-rg-from-sam}}
 Specifies to do not use the RG header and RG record tags in the SAM file (if the input file is a SAM file, and SAM input files are enabled).
 
@@ -249,8 +252,14 @@ Specifies to do not use the RG header and RG record tags in the SAM file (if the
 Specifies that the input is bzip2 (\TT{-j}) or gzip (\TT{-z}) compressed.
 This is auto-recognized if the input file name has the extension \TT{.bz2} for bzip2 and \TT{.gz} for gzip.
 
-\subsubsection{\TT{-J,--output-bz2}, \TT{-Z,--output-gz}}
-Specifies that the output should be bzip2 (\TT{-J}) or gzip (\TT{-Z}) compressed.
+\subsubsection{\TT{-o,--output-type}}
+Specifies the output type:
+\begin{enumerate}
+	\setcounter{enumi}{-1} % start at zero
+	\item SAM.
+	\item BAM (compressed). This is equivalent of using \TT{-o 0} and piping the output into \TT{samtools view -Sb -}.
+	\item BAM (uncompressed). This is equivalent of using \TT{-o 0} and piping the output into \TT{samtools view -Su -}.
+\end{enumerate}
 
 \subsubsection{\TT{-k,--shared-memory-key INT}}
 Specifies the shared memory key if the reference index has been loaded into shared memory.
@@ -319,7 +328,8 @@ Specifies to produce the final alignment in flow space.
 \subsection{Pairing Options}
 These options control how TMAP uses and outputs information about the paired end or mate pair reads.
 Pairing will be performed when exactly two input read files are given using the \TT{-r} option twice.
-Currently, the insert size distribution must be given prior to running TMAP.
+The insert size distribution (mean and standard deviation) are computed from the first chunk of reads (\TT{-q}).
+Currently, the strandedness (\TT{-S}) and positioning (\TT{-P}) must be given.
 Read rescue significantly improves specificity at the cost of slower run times.
 
 \subsubsection{\TT{-Q,--pairing}}
@@ -357,6 +367,13 @@ Specifies the expected insert size standard deviations.
 \subsubsection{\TT{-d,--ins-size-std-max-num FLOAT}}
 Specifies the maximum number of standard deviations for a pair to be proper.
 See \autoref{sec:samformat} for more informaton about proper pairs.
+
+
+\subsubsection{\TT{-p,--ins-size-outlier-bound FLOAT}}
+Specifies the insert size 25/75 quartile outlier bound.
+
+\subsubsection{\TT{-t,--ins-size-min-mapq INT}}
+Specifies the minimum mapping quality to consider for computing the insert size.
 
 \subsubsection{\TT{-L,--read-rescue}}
 Specifies to perform read rescuing during pairing.
@@ -597,8 +614,12 @@ Stage-specific options should not be given in the options for any algorithm in t
 The stage name should be specified by ``stage\%d'', where ``\%d'' is the stage number (one-based).
 Finally, the algorithms and their associated options will be specified for the given stage.
 
-An example would be:\\
-\TT{tmap mapall -f ref.fasta -r reads.fastq -g 1 -M 3 stage1 --stage-keep-all map1 --seed-length 12 --seed-max-diff 4 stage2 map2 --z-best 5 map3 --max-seed-hits 10}.\\
+An example would be:
+\begin{verbatim}
+tmap mapall -f ref.fasta -r reads.fastq -g 1 -M 3 stage1 
+--stage-keep-all map1 --seed-length 12 --seed-max-diff 4 
+stage2 map2 --z-best 5 map3 --max-seed-hits 10
+\end{verbatim}
 In this case, the global options \TT{-f ref.fasta -r reads.fastq -g 1 -M 3} will be applied to all stages and algorithms. 
 Therefore, \TT{map1} algorithm will be applied with the options \TT{-g 1 -M 3 --seed-length 12 --seed-max-diff 4} in the first stage.
 If no mapping is found for a read, the \TT{map2} algorithm with the options \TT{-g 1 -M 3 --z-best 5} and the \TT{map3} algorithm with the options \TT{-g 1 -M 3 --max-seed-hits 10} will be applied in the second stage.
@@ -606,7 +627,10 @@ Notice how the global options \TT{-g 1 -M 3} are applied to all the algorithms w
 It is possible to have the same algorithm run in two different stages.
 
 The recommended values are pre-set, and the following command line is recommended:
-\TT{tmap mapall -f <in.fasta> -r <in.fastq> -n <num.threads> -v map1 map2 map3 > <out.sam>}.
+\begin{verbatim}
+tmap mapall -f <in.fasta> -r <in.fastq> -n <num.threads> -v 
+map1 map2 map3 > <out.sam>
+\end{verbatim}
 
 \subsection{Usage}
 The following options apply to a single stage, and control how mappings are handled between stages.
@@ -691,11 +715,9 @@ Specific details can be found below.
 
 \subsubsection{RG}
 The RG field can be populated using the \TT{-R} option.
-By default the \TT{ID} and \TT{PG} tags are included.
+By default the \TT{ID}, \TT{SM}, and \TT{PG} tags are included.
 When specifying an RG line, do not include the PG tag as it will be populated by tmap:
-If the input is a file with flowspace information (SFF or SAM/BAM) and the \TT{-Y} option is used, then a comment line will be placed in the header with the following tags:
-RG, FO, and KS.
-The RG tag in the comment is the associated read group ID.
+If the input is a file with flowspace information (SFF or SAM/BAM), then the read group will include the FO and KS tags.
 The FO and KS tags indicate the flow order and the key sequence.
 
 \subsubsection{PG}
@@ -840,7 +862,7 @@ This would change the alignment and decrease) the resulting score.
 \section{Will the output of TMAP be the same if run twice?}
 TMAP will always produce the same output if run twice, even when using multiple threads (\TT{-n}).
 This is enabled by using a complementary-multiply-with-carry random number generator, one per thread.
-Of course, if different options are used, then the results will post likely vary, even if a different number of threads are used.
+Of course, if different options are used, then the results will most likely vary, even if a different number of threads are used.
 
 \section{How does TMAP soft clip bases in the read?} 
 \label{sec:howtosoftclip}
@@ -873,7 +895,7 @@ REF:  GATTA
 The details of the local alignment algorithms and their variations are well characterized in the Literature or in an Introduction to Bioinformatics text book (\cite{jones2004}).  
 Using the local alignment and the scoring parameters to determine the soft-clipping is a powerful and flexible solution to trade off reduced alignment length for higher quality alignments via soft-clipping.
 
-For how soft-clipping is represented in SAM files, see the \url{http://samtools.sourceforge.net/SAM1.pdf}{SAM specification} for more details.
+For how soft-clipping is represented in SAM files, see the \href{http://samtools.sourceforge.net/SAM1.pdf}{SAM specification} for more details.
 
 \section{What is flow space re-alignment}
 \label{sec:fs-realign}
@@ -916,7 +938,7 @@ TCA-T-AAATTTT
 |||-|-||||||
 TCAATAAAATTTT
 \end{verbatim}
-The first alignment may be prefered in base space due to the use of affine gap penalties (see \autoref{sec:indel-scoring}) and the other scoring parameters.
+The first alignment may be preferred in base space due to the use of affine gap penalties (see \autoref{sec:indel-scoring}) and the other scoring parameters.
 If we penalize insertions or deletions due to homopolymer differences less than other insertions or deletions, the latter alignment may be more likely.
 Given Ion Torrent data, the latter may be more faithful to the underlying error mode.
 
@@ -928,16 +950,32 @@ For example, the following two alignments can be produced when the end of the qu
 
 Example 1:
 \begin{verbatim}
-GGGCGGTAGCAGCCTGCCTGGGAATGGGCCACCCCGAATCCCGACCCGAAATAAATGCACCAGCATGCTGACGCGGTAAAACAGGAGCCGCCGGCAATACGCCAGTTTCACCCTCATCCACCTGAGGTCCTATGTTATCACCTACTGCCATAGAG
-||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| --|||||||||||||||||  ||||||SSSSSSSSSSSSSSSSSSSSSSSSSSSS
-GGGCGGTAGCAGCCTGCCTGGGAATGGGCCACCCCGAATCCCGACCCGAAATAAATGCACCAGCATGCTGACGCGGTAAAACAGGAGCCGCCGGCAATAG--CAGTTTCACCCTCATCCCACTGAGG----------------------------
+GGGCGGTAGCAGCCTGCCTGGGAATGGGCCACCCCGAATCCCGACCCGAAATAAATGCAC
+||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+GGGCGGTAGCAGCCTGCCTGGGAATGGGCCACCCCGAATCCCGACCCGAAATAAATGCAC
+
+CAGCATGCTGACGCGGTAAAACAGGAGCCGCCGGCAATACGCCAGTTTCACCCTCATCCA
+||||||||||||||||||||||||||||||||||||||| --||||||||||||||||| 
+CAGCATGCTGACGCGGTAAAACAGGAGCCGCCGGCAATAG--CAGTTTCACCCTCATCCC
+
+CCTGAGGTCCTATGTTATCACCTACTGCCATAGAG
+ ||||||SSSSSSSSSSSSSSSSSSSSSSSSSSSS
+ACTGAGG----------------------------
 \end{verbatim}
 
 Example 2:
 \begin{verbatim}
-GGGCGGTAGCAGCCTGCCTGGGAATGGGCCACCCCGAATCCCGACCCGAAATAAATGCACCAGCATGCTGACGCGGTAAAACAGGAGCCGCCGGCAATACGCCAGTTTCACCCTCATCCACCTGAGGTCCTATGTTATCACCTACTGCCATAGAG
-||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| --|||||||||||||||||SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
-GGGCGGTAGCAGCCTGCCTGGGAATGGGCCACCCCGAATCCCGACCCGAAATAAATGCACCAGCATGCTGACGCGGTAAAACAGGAGCCGCCGGCAATAG--CAGTTTCACCCTCATCC------------------------------------
+GGGCGGTAGCAGCCTGCCTGGGAATGGGCCACCCCGAATCCCGACCCGAAATAAATGCAC
+||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+GGGCGGTAGCAGCCTGCCTGGGAATGGGCCACCCCGAATCCCGACCCGAAATAAATGCAC
+
+CAGCATGCTGACGCGGTAAAACAGGAGCCGCCGGCAATACGCCAGTTTCACCCTCATCCA
+||||||||||||||||||||||||||||||||||||||| --|||||||||||||||||S
+CAGCATGCTGACGCGGTAAAACAGGAGCCGCCGGCAATAG--CAGTTTCACCCTCATCC-
+
+CCTGAGGTCCTATGTTATCACCTACTGCCATAGAG
+SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+-----------------------------------
 \end{verbatim}
 
 If the penalty for having two mismatches is equal to the score of having six matches, then the two alignments will be equivalently scored.
@@ -965,6 +1003,63 @@ To see the default values for the mapall command, stage-specific options, and a 
 tmap mapall stage1 map1 map2 map3 -h
 \end{verbatim}
 
+\section{How does the TMAP algorithm work on a high level?}
+
+There are two steps in mapping with TMAP.
+The first step is to build an index of the reference genome onto which we map.
+This index needs only to be built once for each genome, performing much of the mapping work upfront.
+The second step is to map the reads to the reference genome using this index.
+	
+The second step is performed for each run or experiment and there are two sub-steps for each read. 
+The first sub-step tries to quickly find a short/small list of candidate mapping locations, effectively reducing our search space from billions of bases to thousands of bases.  
+This is called the seeding step.  
+The next step examines these locations with a more sensitive algorithm, Smith Waterman, to prioritize these candidates.
+
+\section{Is mapping done in base space or flow space?}
+
+The mapping is done in base space.  
+Due to the high quality of the input data, mapping considering the flow information yields little advantage.  
+TMAP does however carry forward any flow information, outputting it to the SAM file.  The flow information is critical to the downstream variant calling.
+
+\section{How many errors can a read have and still be mapped?}
+\label{sec:numerr}
+
+There is no hard limit to the number of errors a read can have for it to be mapped.
+The practical limit is bounded by a number of factors including but not limited to:
+\begin{enumerate}
+	\item The length of the read (longer reads have a better chance of mapping).
+	\item The quality across the read (reads with the first 100 bp of high quality will more likely be mapped than those with a uniform error rate).
+	\item The sequence complexity of the read relative to the reference (repetitive elements confound mapping).
+	\item The reference genome size (the larger the reference, the more evidence is necessary for confident mapping).
+	\item The error mode of the read (mismatches versus indel error modes).
+	\item The algorithms and parameters chosen (algorithm choice and parameter choice can be tuned to run slower but have higher sensitivity).
+\end{enumerate}
+		
+\section{How long must a read be to map?}
+
+There is no lower or upper limit to how long a read must be to map.
+However, depending on the genome size, we need more evidence for a read to map.  
+Therefore, for larger genomes, for example human, reads must be longer or of higher quality.
+This is intimately related to \autoref{sec:numerr}.
+
+\section{Are mismatches favored over indels when making an alignment?}
+
+The favoring of indels versus mismatches is determined by the alignment
+scoring parameters specified in TMAP.  
+These include the \TT{-A/-M/-O/-E} options.  
+Using these parameters, we favor indels over mismatches, or vice versa.  
+By default, mismatches are favored over indels as SNPs (biological mismatches) are more likely in human (a main application) than indels.
+
+\section{How do I reconcile choices made by TMAP regarding whether to create an indel or mismatch when doing variant calling?}
+
+The final step of TMAP is producing the alignment with Smith Waterman.
+This algorithm is may find multiple optimal alignments in the same small window, but only one is reported by default.
+For example, justifying indels does not change the alignment score but the alignment. 
+Furthermore, TMAP does not use flow space information during mapping, but outputs it to the SAM file.  
+This information is more informative when combining multiple observations (reads) within variant calling.
+Therefore, performing variant calling in a flow space aware manner is critical to the accurate detection of variants. 
+Due to the ambiguity of selecting between multiple optimal alignments, it is difficult to select consistent alignments across reads without examining them all in aggregate, which is effectively variant calling.
+
 \chapter{Appendix}
 
 % References
@@ -972,6 +1067,5 @@ tmap mapall stage1 map1 map2 map3 -h
 \addcontentsline{toc}{chapter}{References}
 \bibliography{tmap-book}
 \bibliographystyle{natbib}
-
 
 \end{document}

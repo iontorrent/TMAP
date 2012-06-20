@@ -7,11 +7,34 @@
 #include <config.h>
 #include "../../util/tmap_alloc.h"
 #include "../../util/tmap_error.h"
+#include "../../util/tmap_sort.h"
 #include "../../io/tmap_file.h"
 #include "../../seq/tmap_seq.h"
 #include "../../util/tmap_progress.h"
 #include "../../util/tmap_definitions.h"
 #include "tmap_map_opt.h"
+
+// For sorting the @RG fields
+static int32_t 
+tmap_map_opt_sort_rg_convert(const char *val) {
+    if(strlen(val) < 2) return -1;
+    else if('I' == val[0] && 'D' == val[1]) return 0;
+    else if('C' == val[0] && 'N' == val[1]) return 1;
+    else if('D' == val[0] && 'S' == val[1]) return 2;
+    else if('D' == val[0] && 'T' == val[1]) return 3;
+    else if('F' == val[0] && 'O' == val[1]) return 4;
+    else if('K' == val[0] && 'S' == val[1]) return 5;
+    else if('L' == val[0] && 'B' == val[1]) return 6;
+    else if('P' == val[0] && 'G' == val[1]) return 7;
+    else if('P' == val[0] && 'I' == val[1]) return 8;
+    else if('P' == val[0] && 'L' == val[1]) return 9;
+    else if('P' == val[0] && 'U' == val[1]) return 10;
+    else if('S' == val[0] && 'M' == val[1]) return 11;
+    else return -1;
+}
+#define tmap_map_opt_sort_rg_lt(_a, _b) (tmap_map_opt_sort_rg_convert(_a) < tmap_map_opt_sort_rg_convert(_b))
+typedef char* tmap_map_opt_sort_rg_t;
+TMAP_SORT_INIT(tmap_map_opt_sort_rg, tmap_map_opt_sort_rg_t, tmap_map_opt_sort_rg_lt)
   
 static char *tmap_map_opt_input_types[] = {"INT", "FLOAT", "NUM", "FILE", "STRING", "NONE"};
 
@@ -88,12 +111,12 @@ static char *tmap_map_opt_input_types[] = {"INT", "FLOAT", "NUM", "FILE", "STRIN
   }
 
 // array of character arrays (i.e. list of file names)
-#define __tmap_map_opt_option_print_func_fns_init(_name_array, _name_length) \
+#define __tmap_map_opt_option_print_func_char_array_init(_name_array, _name_length, _default) \
   static void tmap_map_opt_option_print_func_##_name_array(void *arg) { \
       tmap_map_opt_t *opt = (tmap_map_opt_t*)arg; \
       int32_t i; \
       tmap_file_fprintf(tmap_file_stderr, "["); \
-      if(0 == opt->_name_length) tmap_file_fprintf(tmap_file_stderr, "stdin"); \
+      if(0 == opt->_name_length) tmap_file_fprintf(tmap_file_stderr, _default); \
       else { \
           for(i=0;i<opt->_name_length;i++) { \
               if(0 < i) tmap_file_fprintf(tmap_file_stderr, ","); \
@@ -117,7 +140,7 @@ static char *tmap_map_opt_input_types[] = {"INT", "FLOAT", "NUM", "FILE", "STRIN
  */
 // global options
 __tmap_map_opt_option_print_func_chars_init(fn_fasta, "not using")
-__tmap_map_opt_option_print_func_fns_init(fn_reads, fn_reads_num)
+__tmap_map_opt_option_print_func_char_array_init(fn_reads, fn_reads_num, "stdin")
 __tmap_map_opt_option_print_func_reads_format_init(reads_format)
 __tmap_map_opt_option_print_func_chars_init(fn_sam, "stdout")
 __tmap_map_opt_option_print_func_int_init(score_match)
@@ -133,16 +156,14 @@ __tmap_map_opt_option_print_func_int_init(score_thr)
 __tmap_map_opt_option_print_func_int_init(reads_queue_size)
 __tmap_map_opt_option_print_func_int_autodetected_init(num_threads, num_threads_autodetected)
 __tmap_map_opt_option_print_func_int_init(aln_output_mode)
-__tmap_map_opt_option_print_func_chars_init(sam_rg, "not using")
+__tmap_map_opt_option_print_func_char_array_init(sam_rg, sam_rg_num, "not using")
 __tmap_map_opt_option_print_func_tf_init(bidirectional)
 __tmap_map_opt_option_print_func_tf_init(seq_eq)
-#ifdef HAVE_SAMTOOLS
 __tmap_map_opt_option_print_func_tf_init(ignore_rg_sam_tags)
-#endif
+__tmap_map_opt_option_print_func_tf_init(rand_read_name)
 __tmap_map_opt_option_print_func_compr_init(input_compr_gz, input_compr, TMAP_FILE_GZ_COMPRESSION)
 __tmap_map_opt_option_print_func_compr_init(input_compr_bz2, input_compr, TMAP_FILE_BZ2_COMPRESSION)
-__tmap_map_opt_option_print_func_compr_init(output_compr_gz, output_compr, TMAP_FILE_GZ_COMPRESSION)
-__tmap_map_opt_option_print_func_compr_init(output_compr_bz2, output_compr, TMAP_FILE_BZ2_COMPRESSION)
+__tmap_map_opt_option_print_func_int_init(output_type)
 __tmap_map_opt_option_print_func_int_init(shm_key)
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
 __tmap_map_opt_option_print_func_double_init(sample_reads)
@@ -154,7 +175,6 @@ __tmap_map_opt_option_print_func_int_init(fscore)
 __tmap_map_opt_option_print_func_tf_init(softclip_key)
 __tmap_map_opt_option_print_func_tf_init(sam_flowspace_tags)
 __tmap_map_opt_option_print_func_tf_init(ignore_flowgram)
-__tmap_map_opt_option_print_func_tf_init(remove_sff_clipping)
 __tmap_map_opt_option_print_func_tf_init(aln_flowspace)
 // pairing
 __tmap_map_opt_option_print_func_int_init(pairing)
@@ -163,6 +183,8 @@ __tmap_map_opt_option_print_func_int_init(positioning)
 __tmap_map_opt_option_print_func_double_init(ins_size_mean)
 __tmap_map_opt_option_print_func_double_init(ins_size_std)
 __tmap_map_opt_option_print_func_double_init(ins_size_std_max_num)
+__tmap_map_opt_option_print_func_double_init(ins_size_outlier_bound)
+__tmap_map_opt_option_print_func_int_init(ins_size_min_mapq)
 __tmap_map_opt_option_print_func_tf_init(read_rescue)
 __tmap_map_opt_option_print_func_double_init(read_rescue_std_num)
 __tmap_map_opt_option_print_func_int_init(read_rescue_mapq_thr)
@@ -395,6 +417,7 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
       "9 - Bladze (Top Coder #6)",
       "10 - ngthuydiem (Top Coder #7) [Farrar cut-and-paste]",
       NULL};
+  static char *output_type[] = {"0 - SAM", "1 - BAM (compressed)", "2 - BAM (uncompressed)", NULL};
   static char *pairing[] = {"0 - no pairing is to be performed", "1 - mate pairs (-S 0 -P 1)", "2 - paired end (-S 1 -P 0)", NULL};
   static char *strandedness[] = {"0 - same strand", "1 - opposite strand", NULL};
   static char *positioning[] = {"0 - read one before read two", "1 - read two before read one", NULL};
@@ -416,11 +439,7 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            TMAP_MAP_ALGO_GLOBAL);
   tmap_map_opt_options_add(opt->options, "reads-format", required_argument, 0, 'i', 
                            TMAP_MAP_OPT_TYPE_STRING,
-#ifdef HAVE_SAMTOOLS
-                           "the reads file format (opt->options, fastq|fq|fasta|fa|sff|sam|bam)",
-#else
-                           "the reads file format (opt->options, fastq|fq|fasta|fa|sff)",
-#endif
+                           "the reads file format (fastq|fq|fasta|fa|sff|sam|bam)",
                            NULL,
                            tmap_map_opt_option_print_func_reads_format,
                            TMAP_MAP_ALGO_GLOBAL);
@@ -526,14 +545,18 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_seq_eq,
                            TMAP_MAP_ALGO_GLOBAL);
-#ifdef HAVE_SAMTOOLS
   tmap_map_opt_options_add(opt->options, "ignore-rg-from-sam", no_argument, 0, 'C', 
                            TMAP_MAP_OPT_TYPE_NONE,
                            "specifies to not use the RG header and RG record tags in the SAM file",
                            NULL,
                            tmap_map_opt_option_print_func_ignore_rg_sam_tags,
                            TMAP_MAP_ALGO_GLOBAL);
-#endif
+  tmap_map_opt_options_add(opt->options, "rand-read-name", no_argument, 0, 'u', 
+                           TMAP_MAP_OPT_TYPE_NONE,
+                           "specifies to randomize based on the read name",
+                           NULL,
+                           tmap_map_opt_option_print_func_rand_read_name,
+                           TMAP_MAP_ALGO_GLOBAL);
   tmap_map_opt_options_add(opt->options, "input-gz", no_argument, 0, 'z', 
                            TMAP_MAP_OPT_TYPE_NONE,
                            "the input is gz (gzip) compressed",
@@ -548,20 +571,12 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            tmap_map_opt_option_print_func_input_compr_bz2,
                            TMAP_MAP_ALGO_GLOBAL);
 #endif
-  tmap_map_opt_options_add(opt->options, "output-gz", no_argument, 0, 'Z', 
-                           TMAP_MAP_OPT_TYPE_NONE,
-                           "the output is gz (gzip) compressed",
-                           NULL,
-                           tmap_map_opt_option_print_func_output_compr_gz,
+  tmap_map_opt_options_add(opt->options, "output-type", required_argument, 0, 'o', 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the output type",
+                           output_type,
+                           tmap_map_opt_option_print_func_output_type,
                            TMAP_MAP_ALGO_GLOBAL);
-#ifndef DISABLE_BZ2
-  tmap_map_opt_options_add(opt->options, "output-bz2", no_argument, 0, 'J', 
-                           TMAP_MAP_OPT_TYPE_NONE,
-                           "the output is bz2 (bzip2) compressed",
-                           NULL,
-                           tmap_map_opt_option_print_func_output_compr_bz2,
-                           TMAP_MAP_ALGO_GLOBAL);
-#endif
   tmap_map_opt_options_add(opt->options, "shared-memory-key", required_argument, 0, 'k', 
                            TMAP_MAP_OPT_TYPE_INT,
                            "use shared memory with the following key",
@@ -620,12 +635,6 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_ignore_flowgram,
                            TMAP_MAP_ALGO_FLOWSPACE);
-  tmap_map_opt_options_add(opt->options, "remove-sff-clipping", no_argument, 0, 'G', 
-                           TMAP_MAP_OPT_TYPE_NONE,
-                           "do not remove SFF clipping",
-                           NULL,
-                           tmap_map_opt_option_print_func_remove_sff_clipping,
-                           TMAP_MAP_ALGO_FLOWSPACE);
   tmap_map_opt_options_add(opt->options, "final-flowspace", no_argument, 0, 'F', 
                            TMAP_MAP_OPT_TYPE_NONE,
                            "produce the final alignment in flow space",
@@ -669,6 +678,18 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            "the insert size maximum standard deviation",
                            NULL,
                            tmap_map_opt_option_print_func_ins_size_std_max_num,
+                           TMAP_MAP_ALGO_PAIRING);
+  tmap_map_opt_options_add(opt->options, "ins-size-outlier-bound", required_argument, 0, 'p',
+                           TMAP_MAP_OPT_TYPE_FLOAT,
+                           "the insert size 25/75 quartile outlier bound",
+                           NULL,
+                           tmap_map_opt_option_print_func_ins_size_outlier_bound,
+                           TMAP_MAP_ALGO_PAIRING);
+  tmap_map_opt_options_add(opt->options, "ins-size-min-mapq", required_argument, 0, 't',
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the minimum mapping quality to consider for computing the insert size",
+                           NULL,
+                           tmap_map_opt_option_print_func_ins_size_min_mapq,
                            TMAP_MAP_ALGO_PAIRING);
   tmap_map_opt_options_add(opt->options, "read-rescue", no_argument, 0, 'L',
                            TMAP_MAP_OPT_TYPE_NONE,
@@ -1011,15 +1032,13 @@ tmap_map_opt_init(int32_t algo_id)
   opt->num_threads_autodetected = 1;
   opt->aln_output_mode = TMAP_MAP_OPT_ALN_MODE_RAND_BEST;
   opt->sam_rg = NULL;
+  opt->sam_rg_num = 0;
   opt->bidirectional = 0;
   opt->seq_eq = 0;
-#ifdef HAVE_SAMTOOLS
   opt->ignore_rg_sam_tags = 0;
-#else
-  opt->ignore_rg_sam_tags = 1; // NB: always ignore
-#endif
+  opt->rand_read_name = 0;
   opt->input_compr = TMAP_FILE_NO_COMPRESSION;
-  opt->output_compr = TMAP_FILE_NO_COMPRESSION;
+  opt->output_type = 0;
   opt->shm_key = 0;
   opt->min_seq_len = -1;
   opt->max_seq_len = -1;
@@ -1033,7 +1052,6 @@ tmap_map_opt_init(int32_t algo_id)
   opt->softclip_key = 0;
   opt->sam_flowspace_tags = 0;
   opt->ignore_flowgram = 0;
-  opt->remove_sff_clipping = 1;
   opt->aln_flowspace = 0;
 
   // pairing options
@@ -1042,7 +1060,9 @@ tmap_map_opt_init(int32_t algo_id)
   opt->positioning = -1;
   opt->ins_size_mean = -1.0;
   opt->ins_size_std = -1.0;
-  opt->ins_size_std_max_num  = -1.0;
+  opt->ins_size_std_max_num = 2.0;
+  opt->ins_size_outlier_bound = 2.0;
+  opt->ins_size_min_mapq = 20;
   opt->read_rescue = 0;
   opt->read_rescue_std_num = -1.0;
   opt->read_rescue_mapq_thr = 0;
@@ -1145,6 +1165,9 @@ tmap_map_opt_destroy(tmap_map_opt_t *opt)
   }
   free(opt->fn_reads);
   free(opt->fn_sam);
+  for(i=0;i<opt->sam_rg_num;i++) {
+      free(opt->sam_rg[i]);
+  }
   free(opt->sam_rg);
 
   for(i=0;i<opt->num_sub_opts;i++) {
@@ -1256,6 +1279,29 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
   return 1;
 }
 
+static void
+tmap_map_opt_add_tabbed(char ***dest, int32_t *dest_num, char *str)
+{
+  int32_t i, j, l;
+
+  l = strlen(str);
+  i = j = 0;
+  while(i < l) {
+      j = i;
+      while(j < l && '\t' != str[j]) {
+          j++;
+      }
+      // add
+      (*dest_num)++;
+      (*dest) = tmap_realloc((*dest), sizeof(char*) * (*dest_num), "(*dest)");
+      (*dest)[(*dest_num)-1] = tmap_malloc(sizeof(char) * (j - i + 1), "(*dest)[(*dest_num)-1]");
+      strncpy((*dest)[(*dest_num)-1], str + i, (j - i));
+      (*dest)[(*dest_num)-1][(j-i)] = '\0';
+      tmap_chomp((*dest)[(*dest_num)-1]); // remove trailing white spaces
+      i = j + 1;
+  }
+}
+
 int32_t
 tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
 {
@@ -1335,16 +1381,11 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(c == 'B' || (0 == c && 0 == strcmp("max-seed-band", options[option_index].name))) {       
           opt->max_seed_band = atoi(optarg);
       }
-#ifdef HAVE_SAMTOOLS
       else if(c == 'C' || (0 == c && 0 == strcmp("ignore-rg-from-sam", options[option_index].name))) {
           opt->ignore_rg_sam_tags = 1;
       }
-#endif
       else if(c == 'D' || (0 == c && 0 == strcmp("bidirectional", options[option_index].name))) {       
           opt->bidirectional = 1;
-      }
-      else if(c == 'U' || (0 == c && 0 == strcmp("unroll-banding", options[option_index].name))) {       
-          opt->unroll_banding = 1;
       }
       else if(c == 'E' || (0 == c && 0 == strcmp("pen-gap-extension", options[option_index].name))) {       
           opt->pen_gape = atoi(optarg);
@@ -1355,9 +1396,6 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(c == 'I' || (0 == c && 0 == strcmp("use-seq-equal", options[option_index].name))) {       
           opt->seq_eq = 1;
       }
-      else if(c == 'J' || (0 == c && 0 == strcmp("output-bz2", options[option_index].name))) {       
-          opt->output_compr = TMAP_FILE_BZ2_COMPRESSION;
-      }
       else if(c == 'M' || (0 == c && 0 == strcmp("pen-mismatch", options[option_index].name))) {       
           opt->pen_mm = atoi(optarg);
       }                                           
@@ -1366,29 +1404,16 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           opt->pen_gapo = atoi(optarg);
       }
       else if(c == 'R' || (0 == c && 0 == strcmp("sam-read-group", options[option_index].name))) {       
-          if(NULL == opt->sam_rg) {
-              // add five for the string "@RG\t" and null terminator
-              opt->sam_rg = tmap_realloc(opt->sam_rg, sizeof(char) * (5 + strlen(optarg)), "opt->sam_rg");
-              strcpy(opt->sam_rg, "@RG\t");
-              strcat(opt->sam_rg, optarg);
-          }
-          else {
-              // add two for the tab separator and null terminator
-              opt->sam_rg = tmap_realloc(opt->sam_rg, sizeof(char) * (2 + strlen(optarg) + strlen(opt->sam_rg)), "opt->sam_rg");
-              if(0 < strlen(optarg) && '\t' != optarg[0]) strcat(opt->sam_rg, "\t"); // add a tab separator
-              strcat(opt->sam_rg, optarg);
-          }
-          // remove trailing white spaces
-          tmap_chomp(opt->sam_rg);
+          tmap_map_opt_add_tabbed(&opt->sam_rg, &opt->sam_rg_num, optarg);
       }
       else if(c == 'T' || (0 == c && 0 == strcmp("score-thres", options[option_index].name))) {       
           opt->score_thr = atoi(optarg);
       }
+      else if(c == 'U' || (0 == c && 0 == strcmp("unroll-banding", options[option_index].name))) {       
+          opt->unroll_banding = 1;
+      }
       else if(c == 'W' || (0 == c && 0 == strcmp("duplicate-window", options[option_index].name))) {       
           opt->dup_window = atoi(optarg);
-      }
-      else if(c == 'Z' || (0 == c && 0 == strcmp("output-gz", options[option_index].name))) {       
-          opt->output_compr = TMAP_FILE_GZ_COMPRESSION;
       }
       else if(c == 'a' || (0 == c && 0 == strcmp("aln-output-mode", options[option_index].name))) {       
           opt->aln_output_mode = atoi(optarg);
@@ -1415,6 +1440,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(c == 'k' || (0 == c && 0 == strcmp("shared-memory-key", options[option_index].name))) {       
           opt->shm_key = atoi(optarg);
       }
+      else if(c == 'o' || (0 == c && 0 == strcmp("output-type", options[option_index].name))) {
+          opt->output_type = atoi(optarg);
+      }
       else if(c == 'n' || (0 == c && 0 == strcmp("num-threads", options[option_index].name))) {       
           opt->num_threads = atoi(optarg);
           opt->num_threads_autodetected = 0;
@@ -1431,6 +1459,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(c == 's' || (0 == c && 0 == strcmp("fn-sam", options[option_index].name))) {       
           free(opt->fn_sam);
           opt->fn_sam = tmap_strdup(optarg);
+      }
+      else if(c == 'u' || (0 == c && 0 == strcmp("rand-read-name", options[option_index].name))) {
+          opt->rand_read_name = 1;
       }
       else if(c == 'v' || (0 == c && 0 == strcmp("verbose", options[option_index].name))) {       
           tmap_progress_set_verbosity(1);
@@ -1453,9 +1484,6 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       // Flowspace options
       else if(c == 'F' || (0 == c && 0 == strcmp("final-flowspace", options[option_index].name))) {       
           opt->aln_flowspace = 1;
-      }
-      else if(c == 'G' || (0 == c && 0 == strcmp("remove-sff-clipping", options[option_index].name))) {       
-          opt->remove_sff_clipping = 0; 
       }
       else if(c == 'N' || (0 == c && 0 == strcmp("use-flowgram", options[option_index].name))) {       
           opt->ignore_flowgram = 1;
@@ -1505,6 +1533,12 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
       else if(c == 'm' || (0 == c && 0 == strcmp("read-rescue-mapq-thr", options[option_index].name))) {
           opt->read_rescue_mapq_thr = atoi(optarg);
+      }
+      else if(c == 'p' || (0 == c && 0 == strcmp("ins-size-outlier-bound", options[option_index].name))) {
+          opt->ins_size_outlier_bound = atof(optarg);
+      }
+      else if(c == 't' || (0 == c && 0 == strcmp("ins-size-max-mapq", options[option_index].name))) {
+          opt->ins_size_min_mapq = atoi(optarg);
       }
       // End of pairing options 
       // End single flag options
@@ -1752,8 +1786,13 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
         tmap_error("option -n was specified outside of the common options", Exit, CommandLineArgument);
     }
     /* NB: "aln_output_mode" or "-a" may be modified by mapall */
-    if(0 != tmap_map_opt_file_check_with_null(opt_a->sam_rg, opt_b->sam_rg)) {
+    if(opt_a->sam_rg_num != opt_b->sam_rg_num) {
         tmap_error("option -R was specified outside of the common options", Exit, CommandLineArgument);
+    }
+    for(i=0;i<opt_a->sam_rg_num;i++) {
+        if(0 != tmap_map_opt_file_check_with_null(opt_a->sam_rg[i], opt_b->sam_rg[i])) {
+            tmap_error("option -R was specified outside of the common options", Exit, CommandLineArgument);
+        }
     }
     if(opt_a->bidirectional != opt_b->bidirectional) {
         tmap_error("option -D was specified outside of the common options", Exit, CommandLineArgument);
@@ -1764,8 +1803,8 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
     if(opt_a->input_compr != opt_b->input_compr) {
         tmap_error("option -j or -z was specified outside of the common options", Exit, CommandLineArgument);
     }
-    if(opt_a->output_compr != opt_b->output_compr) {
-        tmap_error("option -J or -Z was specified outside of the common options", Exit, CommandLineArgument);
+    if(opt_a->output_type != opt_b->output_type) {
+        tmap_error("option -o was specified outside of the common options", Exit, CommandLineArgument);
     }
     if(opt_a->shm_key != opt_b->shm_key) {
         tmap_error("option -k was specified outside of the common options", Exit, CommandLineArgument);
@@ -1791,9 +1830,6 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
     if(opt_a->ignore_flowgram != opt_b->ignore_flowgram) {
         tmap_error("option -S was specified outside of the common options", Exit, CommandLineArgument);
     }
-    if(opt_a->remove_sff_clipping != opt_b->remove_sff_clipping) {
-        tmap_error("option -G was specified outside of the common options", Exit, CommandLineArgument);
-    }
     if(opt_a->aln_flowspace != opt_b->aln_flowspace) {
         tmap_error("option -F was specified outside of the common options", Exit, CommandLineArgument);
     }
@@ -1815,6 +1851,12 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
     }
     if(opt_a->ins_size_std_max_num != opt_b->ins_size_std_max_num) {
         tmap_error("option -d was specified outside the common options", Exit, CommandLineArgument);
+    }
+    if(opt_a->ins_size_outlier_bound != opt_b->ins_size_outlier_bound) {
+        tmap_error("option -p was specified outside the common options", Exit, CommandLineArgument);
+    }
+    if(opt_a->ins_size_min_mapq != opt_b->ins_size_min_mapq) {
+        tmap_error("option -t was specified outside the common options", Exit, CommandLineArgument);
     }
     if(opt_a->read_rescue != opt_b->read_rescue) {
         tmap_error("option -L was specified outside the common options", Exit, CommandLineArgument);
@@ -1859,8 +1901,7 @@ tmap_map_opt_check_stage(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
 void
 tmap_map_opt_check(tmap_map_opt_t *opt)
 {
-  //int32_t i;
-  // global and flowspace options
+  // global 
   if(NULL == opt->fn_fasta && 0 == opt->shm_key) {
       tmap_error("option -f or option -k must be specified", Exit, CommandLineArgument);
   }
@@ -1881,15 +1922,6 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
           else if(opt->positioning < 0 || 1 < opt->positioning) {
               tmap_error("option -P was not specified", Exit, CommandLineArgument);
           }
-          else if(opt->ins_size_mean < 0) {
-              tmap_error("option -b not specified", Exit, CommandLineArgument);
-          }
-          else if(opt->ins_size_std < 0) {
-              tmap_error("option -c not specified", Exit, CommandLineArgument);
-          }
-          else if(opt->ins_size_std_max_num < 0) {
-              tmap_error("option -d was not specified", Exit, CommandLineArgument);
-          }
           else if(1 == opt->read_rescue) {
               if(opt->read_rescue_std_num < 0) {
                   tmap_error("option -l was not specified", Exit, CommandLineArgument);
@@ -1906,11 +1938,13 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->pen_mm, 1, INT32_MAX, "-M");
   tmap_error_cmd_check_int(opt->pen_gapo, 1, INT32_MAX, "-O");
   tmap_error_cmd_check_int(opt->pen_gape, 1, INT32_MAX, "-E");
-  tmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
   tmap_error_cmd_check_int(opt->bw, 0, INT32_MAX, "-w");
   tmap_error_cmd_check_int(opt->softclip_type, 0, 3, "-g");
-  tmap_error_cmd_check_int(opt->softclip_key, 0, 1, "-y");
+<<<<<<< HEAD
+  tmap_error_cmd_check_int(opt->softclip_key, 0, 0, "-y");
 
+=======
+>>>>>>> 8c8c1818cc27035c14bea76644db7320c62f4a08
   tmap_error_cmd_check_int(opt->dup_window, -1, INT32_MAX, "-W");
   tmap_error_cmd_check_int(opt->max_seed_band, 1, INT32_MAX, "-B");
   tmap_error_cmd_check_int(opt->unroll_banding, 0, 1, "-U");
@@ -1918,25 +1952,21 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   if(-1 != opt->reads_queue_size) tmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
   tmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
   tmap_error_cmd_check_int(opt->aln_output_mode, 0, 3, "-a");
+  // SAM RG
+  if(0 < opt->sam_rg_num) {
+      // sort them
+      tmap_sort_introsort(tmap_map_opt_sort_rg, opt->sam_rg_num, opt->sam_rg);
+  }
   tmap_error_cmd_check_int(opt->bidirectional, 0, 1, "-D");
   tmap_error_cmd_check_int(opt->seq_eq, 0, 1, "-I");
   tmap_error_cmd_check_int(opt->ignore_rg_sam_tags, 0, 1, "-C");
-#ifdef HAVE_SAMTOOLS
   /*
   if(0 == opt->ignore_rg_sam_tags && NULL != opt->sam_rg) {
       tmap_error("Must use -C with -R", Exit, CommandLineArgument);
   }
   */
-#endif
-  if(TMAP_FILE_BZ2_COMPRESSION == opt->output_compr
-     && -1 == opt->reads_queue_size) {
-      tmap_error("cannot buffer reads with bzip2 output (options \"-q 1 -J\")", Exit, CommandLineArgument);
-  }
-  if(-1 != opt->min_seq_len) tmap_error_cmd_check_int(opt->min_seq_len, 1, INT32_MAX, "--min-seq-length");
-  if(-1 != opt->max_seq_len) tmap_error_cmd_check_int(opt->max_seq_len, 1, INT32_MAX, "--max-seq-length");
-  if(-1 != opt->min_seq_len && -1 != opt->max_seq_len && opt->max_seq_len < opt->min_seq_len) {
-      tmap_error("The minimum sequence length must be less than the maximum sequence length (--min-seq-length and --max-seq-length)", Exit, CommandLineArgument);
-  }
+  tmap_error_cmd_check_int(opt->rand_read_name, 0, 1, "-u");
+  tmap_error_cmd_check_int(opt->output_type, 0, 2, "-o");
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
   tmap_error_cmd_check_int(opt->sample_reads, 0, 1, "-x");
 #endif
@@ -1951,7 +1981,33 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       tmap_error("the option -H value has not been extensively tested; proceed with caution", Warn, CommandLineArgument);
       break;
   }
+  
+  // flowspace options
+  tmap_error_cmd_check_int(opt->fscore, 0, INT32_MAX, "-X");
+  tmap_error_cmd_check_int(opt->softclip_key, 0, 1, "-y");
+  tmap_error_cmd_check_int(opt->sam_flowspace_tags, 0, 1, "-Y");
+  tmap_error_cmd_check_int(opt->ignore_flowgram, 0, 1, "-S");
+  tmap_error_cmd_check_int(opt->aln_flowspace, 0, 1, "-F");
 
+  // pairing
+  tmap_error_cmd_check_int(opt->pairing, 0, 2, "-Q");
+  tmap_error_cmd_check_int(opt->strandedness, -1, 1, "-S");
+  tmap_error_cmd_check_int(opt->positioning, -1, 1, "-P");
+  tmap_error_cmd_check_int(opt->ins_size_mean+0.99, 0, INT32_MAX, "-b");
+  tmap_error_cmd_check_int(opt->ins_size_std+0.99, 0, INT32_MAX, "-c");
+  tmap_error_cmd_check_int(opt->ins_size_std_max_num+0.99, 0, INT32_MAX, "-d");
+  tmap_error_cmd_check_int(opt->ins_size_outlier_bound+0.99, 0, INT32_MAX, "-p");
+  tmap_error_cmd_check_int(opt->ins_size_min_mapq, 0, INT32_MAX, "-t");
+  tmap_error_cmd_check_int(opt->read_rescue, 0, 1, "-L");
+  tmap_error_cmd_check_int(opt->read_rescue_std_num+0.99, 0, INT32_MAX, "-l");
+  tmap_error_cmd_check_int(opt->read_rescue_mapq_thr, 0, INT32_MAX, "-m");
+
+  // stage/algorithm options
+  if(-1 != opt->min_seq_len) tmap_error_cmd_check_int(opt->min_seq_len, 1, INT32_MAX, "--min-seq-length");
+  if(-1 != opt->max_seq_len) tmap_error_cmd_check_int(opt->max_seq_len, 1, INT32_MAX, "--max-seq-length");
+  if(-1 != opt->min_seq_len && -1 != opt->max_seq_len && opt->max_seq_len < opt->min_seq_len) {
+      tmap_error("The minimum sequence length must be less than the maximum sequence length (--min-seq-length and --max-seq-length)", Exit, CommandLineArgument);
+  }
   switch(opt->algo_id) {
     case TMAP_MAP_ALGO_MAP1: // map1 options
       if(-1 != opt->seed_length) tmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "--seed-length");
@@ -2068,12 +2124,17 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     else {
         opt_dest->aln_output_mode = TMAP_MAP_OPT_ALN_MODE_ALL;
     }
-    opt_dest->sam_rg = tmap_strdup(opt_src->sam_rg);
+    opt_dest->sam_rg_num = opt_src->sam_rg_num; 
+    opt_dest->sam_rg = tmap_malloc(sizeof(char*)*opt_dest->sam_rg_num, "opt_dest->sam_rg");
+    for(i=0;i<opt_dest->sam_rg_num;i++) {
+        opt_dest->sam_rg[i] = tmap_strdup(opt_src->sam_rg[i]);
+    }
     opt_dest->bidirectional = opt_src->bidirectional;
     opt_dest->seq_eq = opt_src->seq_eq;
     opt_dest->ignore_rg_sam_tags = opt_src->ignore_rg_sam_tags;
+    opt_dest->rand_read_name = opt_src->rand_read_name;
     opt_dest->input_compr = opt_src->input_compr;
-    opt_dest->output_compr = opt_src->output_compr;
+    opt_dest->output_type = opt_src->output_type;
     opt_dest->shm_key = opt_src->shm_key;
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
     opt_dest->sample_reads = opt_src->sample_reads;
@@ -2085,7 +2146,6 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->softclip_key = opt_src->softclip_key;
     opt_dest->sam_flowspace_tags = opt_src->sam_flowspace_tags;
     opt_dest->ignore_flowgram = opt_src->ignore_flowgram;
-    opt_dest->remove_sff_clipping = opt_src->remove_sff_clipping;
     opt_dest->aln_flowspace = opt_src->aln_flowspace;
 
     // pairing
@@ -2095,6 +2155,8 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->ins_size_mean = opt_src->ins_size_mean;
     opt_dest->ins_size_std = opt_src->ins_size_std;
     opt_dest->ins_size_std_max_num = opt_src->ins_size_std_max_num;
+    opt_dest->ins_size_outlier_bound = opt_src->ins_size_outlier_bound;
+    opt_dest->ins_size_min_mapq = opt_src->ins_size_min_mapq;
     opt_dest->read_rescue = opt_src->read_rescue;
     opt_dest->read_rescue_std_num = opt_src->read_rescue_std_num;
     opt_dest->read_rescue_mapq_thr = opt_src->read_rescue_mapq_thr;
@@ -2142,16 +2204,19 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "reads_queue_size=%d\n", opt->reads_queue_size);
   fprintf(stderr, "num_threads=%d\n", opt->num_threads);
   fprintf(stderr, "aln_output_mode=%d\n", opt->aln_output_mode);
-  fprintf(stderr, "sam_rg=%s\n", opt->sam_rg);
+  for(i=0;i<opt->sam_rg_num;i++) {
+      if(0 < i) fprintf(stderr, ",");
+      fprintf(stderr, "sam_rg=%s", opt->sam_rg[i]);
+  }
   fprintf(stderr, "bidirectional=%d\n", opt->bidirectional);
   fprintf(stderr, "seq_eq=%d\n", opt->seq_eq);
   fprintf(stderr, "ignore_rg_sam_tags=%d\n", opt->ignore_rg_sam_tags);
+  fprintf(stderr, "rand_read_name=%d\n", opt->rand_read_name);
   fprintf(stderr, "sam_flowspace_tags=%d\n", opt->sam_flowspace_tags);
   fprintf(stderr, "ignore_flowgram=%d\n", opt->ignore_flowgram);
-  fprintf(stderr, "remove_sff_clipping=%d\n", opt->remove_sff_clipping);
   fprintf(stderr, "aln_flowspace=%d\n", opt->aln_flowspace);
   fprintf(stderr, "input_compr=%d\n", opt->input_compr);
-  fprintf(stderr, "output_compr=%d\n", opt->output_compr);
+  fprintf(stderr, "output_type=%d\n", opt->output_type);
   fprintf(stderr, "shm_key=%d\n", (int)opt->shm_key);
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
   fprintf(stderr, "sample_reads=%lf\n", opt->sample_reads);

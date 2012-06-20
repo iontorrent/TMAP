@@ -6,11 +6,10 @@
 #include "../seq/tmap_fq.h"
 #include "../seq/tmap_sff.h"
 #include "../seq/tmap_seq.h"
+#include "../samtools/sam_header.h"
 #include "tmap_fq_io.h"
 #include "tmap_sff_io.h"
-#ifdef HAVE_SAMTOOLS
 #include "tmap_sam_io.h"
-#endif
 
 /*! 
   An Abstract DNA Sequence Reading Library
@@ -24,9 +23,7 @@ typedef struct {
   union {
       tmap_fq_io_t *fqio;  /*!< the pointer to the fastq io structure */
       tmap_sff_io_t *sffio;  /*!< the pointer to the sff io structure */
-#ifdef HAVE_SAMTOOLS
       tmap_sam_io_t *samio;  /*!< the pointer to the SAM/BAM io structure */
-#endif
   } io;
 } tmap_seq_io_t;
 
@@ -78,10 +75,9 @@ tmap_seq_io_sff2fq_main(int argc, char *argv[]);
 
 /*!
   @param  io  a pointer to a previously initialized sequence structure
-  @param  n     stores the number of rg ids 
-  @return   the header structure (rg-ids x rg tags)
+  @return     SAM header structure 
  */
-char***
-tmap_seq_io_get_rg_header(tmap_seq_io_t *io, int32_t *n);
+sam_header_t*
+tmap_seq_io_get_sam_header(tmap_seq_io_t *io);
 
 #endif

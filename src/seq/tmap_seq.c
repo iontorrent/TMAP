@@ -22,12 +22,10 @@ tmap_seq_init(int8_t type)
     case TMAP_SEQ_TYPE_SFF:
       seq->data.sff = tmap_sff_init();
       break;
-#ifdef HAVE_SAMTOOLS
     case TMAP_SEQ_TYPE_SAM:
     case TMAP_SEQ_TYPE_BAM:
       seq->data.sam = tmap_sam_init();
       break;
-#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -46,12 +44,10 @@ tmap_seq_destroy(tmap_seq_t *seq)
     case TMAP_SEQ_TYPE_SFF:
       tmap_sff_destroy(seq->data.sff);
       break;
-#ifdef HAVE_SAMTOOLS
     case TMAP_SEQ_TYPE_SAM:
     case TMAP_SEQ_TYPE_BAM:
       tmap_sam_destroy(seq->data.sam);
       break;
-#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -74,12 +70,10 @@ tmap_seq_clone(tmap_seq_t *seq)
     case TMAP_SEQ_TYPE_SFF:
       ret->data.sff = tmap_sff_clone(seq->data.sff);
       break;
-#ifdef HAVE_SAMTOOLS
     case TMAP_SEQ_TYPE_SAM:
     case TMAP_SEQ_TYPE_BAM:
       ret->data.sam = tmap_sam_clone(seq->data.sam);
       break;
-#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -98,12 +92,10 @@ tmap_seq_reverse(tmap_seq_t *seq)
     case TMAP_SEQ_TYPE_SFF:
       tmap_sff_reverse(seq->data.sff);
       break;
-#ifdef HAVE_SAMTOOLS
     case TMAP_SEQ_TYPE_SAM:
     case TMAP_SEQ_TYPE_BAM:
       tmap_sam_reverse(seq->data.sam);
       break;
-#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -120,12 +112,10 @@ tmap_seq_reverse_compliment(tmap_seq_t *seq)
     case TMAP_SEQ_TYPE_SFF:
       tmap_sff_reverse_compliment(seq->data.sff);
       break;
-#ifdef HAVE_SAMTOOLS
     case TMAP_SEQ_TYPE_SAM:
     case TMAP_SEQ_TYPE_BAM:
       tmap_sam_reverse_compliment(seq->data.sam);
       break;
-#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -142,12 +132,10 @@ tmap_seq_compliment(tmap_seq_t *seq)
     case TMAP_SEQ_TYPE_SFF:
       tmap_sff_compliment(seq->data.sff);
       break;
-#ifdef HAVE_SAMTOOLS
     case TMAP_SEQ_TYPE_SAM:
     case TMAP_SEQ_TYPE_BAM:
       tmap_sam_compliment(seq->data.sam);
       break;
-#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -164,12 +152,10 @@ tmap_seq_to_int(tmap_seq_t *seq)
     case TMAP_SEQ_TYPE_SFF:
       tmap_sff_to_int(seq->data.sff);
       break;
-#ifdef HAVE_SAMTOOLS
     case TMAP_SEQ_TYPE_SAM:
     case TMAP_SEQ_TYPE_BAM:
       tmap_sam_to_int(seq->data.sam);
       break;
-#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -186,12 +172,10 @@ tmap_seq_to_char(tmap_seq_t *seq)
     case TMAP_SEQ_TYPE_SFF:
       tmap_sff_to_char(seq->data.sff);
       break;
-#ifdef HAVE_SAMTOOLS
     case TMAP_SEQ_TYPE_SAM:
     case TMAP_SEQ_TYPE_BAM:
       tmap_sam_to_char(seq->data.sam);
       break;
-#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -208,12 +192,10 @@ tmap_seq_is_int(tmap_seq_t *seq)
     case TMAP_SEQ_TYPE_SFF:
       return seq->data.sff->is_int;
       break;
-#ifdef HAVE_SAMTOOLS
     case TMAP_SEQ_TYPE_SAM:
     case TMAP_SEQ_TYPE_BAM:
       return seq->data.sam->is_int;
       break;
-#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -231,12 +213,10 @@ tmap_seq_get_name(tmap_seq_t *seq)
     case TMAP_SEQ_TYPE_SFF:
       return seq->data.sff->rheader->name;
       break;
-#ifdef HAVE_SAMTOOLS
     case TMAP_SEQ_TYPE_SAM:
     case TMAP_SEQ_TYPE_BAM:
       return seq->data.sam->name;
       break;
-#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -254,12 +234,10 @@ tmap_seq_get_bases(tmap_seq_t *seq)
     case TMAP_SEQ_TYPE_SFF:
       return tmap_sff_get_bases(seq->data.sff);
       break;
-#ifdef HAVE_SAMTOOLS
     case TMAP_SEQ_TYPE_SAM:
     case TMAP_SEQ_TYPE_BAM:
       return tmap_sam_get_bases(seq->data.sam);
       break;
-#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -283,12 +261,10 @@ tmap_seq_get_qualities(tmap_seq_t *seq)
     case TMAP_SEQ_TYPE_SFF:
       return tmap_sff_get_qualities(seq->data.sff);
       break;
-#ifdef HAVE_SAMTOOLS
     case TMAP_SEQ_TYPE_SAM:
     case TMAP_SEQ_TYPE_BAM:
       return tmap_sam_get_qualities(seq->data.sam);
       break;
-#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -297,10 +273,10 @@ tmap_seq_get_qualities(tmap_seq_t *seq)
 }
 
 inline int32_t
-tmap_seq_remove_key_sequence(tmap_seq_t *seq, int32_t remove_clipping, uint8_t *key_seq, int32_t key_seq_len)
+tmap_seq_remove_key_sequence(tmap_seq_t *seq, int32_t remove_clipping)
 {
   if(TMAP_SEQ_TYPE_SFF != seq->type) return 1; // ignore
-  return tmap_sff_remove_key_sequence(seq->data.sff, remove_clipping, key_seq, key_seq_len);
+  return tmap_sff_remove_key_sequence(seq->data.sff, remove_clipping);
 }
 
 tmap_seq_t *
@@ -329,88 +305,20 @@ tmap_seq_sff2fq(tmap_seq_t *seq)
   return ret;
 }
 
-int32_t
-tmap_seq_get_flow_order_int(tmap_seq_t *seq, uint8_t **flow_order)
-{
-  switch(seq->type) {
-    case TMAP_SEQ_TYPE_FQ:
-      break;
-    case TMAP_SEQ_TYPE_SFF:
-      return tmap_sff_get_flow_order_int(seq->data.sff, flow_order);
-      break;
-#ifdef HAVE_SAMTOOLS
-    case TMAP_SEQ_TYPE_SAM:
-    case TMAP_SEQ_TYPE_BAM:
-      return tmap_sam_get_flow_order_int(seq->data.sam, flow_order);
-      break;
-#endif
-    default:
-      tmap_error("type is unrecognized", Exit, OutOfRange);
-      break;
-  }
-  return 0;
-}
-
-int32_t
-tmap_seq_get_key_seq_int(tmap_seq_t *seq, uint8_t **key_seq)
-{
-  switch(seq->type) {
-    case TMAP_SEQ_TYPE_FQ:
-      break;
-    case TMAP_SEQ_TYPE_SFF:
-      return tmap_sff_get_key_seq_int(seq->data.sff, key_seq);
-      break;
-#ifdef HAVE_SAMTOOLS
-    case TMAP_SEQ_TYPE_SAM:
-    case TMAP_SEQ_TYPE_BAM:
-      return tmap_sam_get_key_seq_int(seq->data.sam, key_seq);
-      break;
-#endif
-    default:
-      tmap_error("type is unrecognized", Exit, OutOfRange);
-      break;
-  }
-  return 0;
-}
-
 // NB: includes key bases if present
-int32_t
-tmap_seq_get_flowgram(tmap_seq_t *seq, uint16_t **flowgram, int32_t mem)
+static int32_t
+tmap_seq_get_flowgram(tmap_seq_t *seq, uint16_t **flowgram)
 {
   switch(seq->type) {
     case TMAP_SEQ_TYPE_FQ:
       break;
     case TMAP_SEQ_TYPE_SFF:
-      return tmap_sff_get_flowgram(seq->data.sff, flowgram, mem);
+      return tmap_sff_get_flowgram(seq->data.sff, flowgram);
       break;
-#ifdef HAVE_SAMTOOLS
     case TMAP_SEQ_TYPE_SAM:
     case TMAP_SEQ_TYPE_BAM:
-      return tmap_sam_get_flowgram(seq->data.sam, flowgram, mem);
+      return tmap_sam_get_flowgram(seq->data.sam, flowgram);
       break;
-#endif
-    default:
-      tmap_error("type is unrecognized", Exit, OutOfRange);
-      break;
-  }
-  return 0;
-}
-
-int32_t
-tmap_seq_get_flow_start_index(tmap_seq_t *seq)
-{
-  switch(seq->type) {
-    case TMAP_SEQ_TYPE_FQ:
-      return -1;
-    case TMAP_SEQ_TYPE_SFF:
-      return tmap_sff_get_flow_start_index(seq->data.sff);
-      break;
-#ifdef HAVE_SAMTOOLS
-    case TMAP_SEQ_TYPE_SAM:
-    case TMAP_SEQ_TYPE_BAM:
-      return tmap_sam_get_flow_start_index(seq->data.sam);
-      break;
-#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
@@ -418,22 +326,89 @@ tmap_seq_get_flow_start_index(tmap_seq_t *seq)
   return -1;
 }
 
-char*
-tmap_seq_get_rg_id(tmap_seq_t *seq)
+void
+tmap_seq_update(tmap_seq_t *seq, int32_t idx, sam_header_t *header)
 {
+  char *rg_id = NULL;
+  sam_header_records_t *records = NULL;
+  sam_header_record_t **record_list = NULL;
+  int32_t n = 0;
+
+  // Read Group
   switch(seq->type) {
     case TMAP_SEQ_TYPE_FQ:
     case TMAP_SEQ_TYPE_SFF:
-      return NULL;
-#ifdef HAVE_SAMTOOLS
+      break;
     case TMAP_SEQ_TYPE_SAM:
     case TMAP_SEQ_TYPE_BAM:
-      return tmap_sam_get_rg_id(seq->data.sam);
+      rg_id = tmap_sam_get_rg_id(seq->data.sam);
       break;
-#endif
     default:
       tmap_error("type is unrecognized", Exit, OutOfRange);
       break;
   }
-  return NULL;
+  if(NULL == rg_id) { // did not find in SAM/BAM
+      // NB: assume that it is from the ith record in the header 
+      records = sam_header_get_records(header, "RG");
+      if(NULL != records) { // it exists
+          if(idx < 0 || records->n <= idx) {
+              tmap_error("RG records index was out of bounds", Exit, OutOfRange);
+          }
+          seq->rg_record = records->records[idx]; // copy over
+          if(NULL == seq->rg_record) tmap_bug();
+      }
+  }
+  else { // found in SAM/BAM
+      n = 0;
+      record_list = sam_header_get_record(header, "RG", "ID", rg_id, &n);
+      if(0 == n) {
+          fprintf(stderr, "Read Group Identifier: [%s]\n", rg_id);
+          tmap_error("Did not find the @RG.ID in the SAM/BAM Header", Exit, OutOfRange);
+      }
+      else if(1 < n) {
+          fprintf(stderr, "Read Group Identifier: [%s]\n", rg_id);
+          tmap_error("Found more than one @RG.ID in the SAM/BAM Header", Exit, OutOfRange);
+      }
+      seq->rg_record = record_list[0];
+      free(record_list); // NB: shallow copied
+  }
+
+  // Program Group
+  // NB: assumes the last item in the header
+  records = sam_header_get_records(header, "PG");
+  if(NULL != records && 0 < records->n) { // it exists
+      seq->pg_record = records->records[records->n-1]; // copy over
+  }
+  else {
+      seq->pg_record = NULL;
+  }
+
+  // key sequence and flow order
+  seq->fo_start_idx = -1;
+  if(NULL != seq->rg_record) { // It should exist in the SAM/BAM Header
+      seq->ks = sam_header_record_get(seq->rg_record, "KS");
+      seq->fo = sam_header_record_get(seq->rg_record, "FO");
+        
+      // flow order index start
+      if(NULL != seq->ks && NULL != seq->fo && TMAP_SEQ_TYPE_SFF == seq->type) { // only if it is an SFF
+          // in addition, remove key sequence and trimming
+          seq->fo_start_idx = tmap_seq_remove_key_sequence(seq, 1); 
+      }
+      else if(TMAP_SEQ_TYPE_SAM == seq->type || TMAP_SEQ_TYPE_BAM == seq->type) { // Try the ZF tag...
+          seq->fo_start_idx = tmap_sam_get_fo_start_idx(seq->data.sam);
+      }
+
+      // flowgram information...
+      seq->flowgram_len = tmap_seq_get_flowgram(seq, &seq->flowgram);
+
+      // check if all flowspace information is available
+      if((NULL == seq->ks || NULL == seq->fo || -1 == seq->fo_start_idx || NULL == seq->flowgram)// anything missing
+         && (NULL != seq->ks || NULL != seq->fo || -1 != seq->fo_start_idx || NULL != seq->flowgram)) { // anything exists
+          fprintf(stderr, "@RG.KS %s present.\n", (NULL == seq->ks) ? "is not" : "is");
+          fprintf(stderr, "@RG.FO %s present.\n", (NULL == seq->fo) ? "is not" : "is");
+          fprintf(stderr, "@SAM.FZ %s present.\n", (NULL == seq->flowgram) ? "is not" : "is");
+          fprintf(stderr, "@SAM.ZF %s present.\n", (-1 == seq->fo_start_idx) ? "is not" : "is");
+          tmap_error("Not all flowspace information available (@RG.KS and @RG.FO, and @SAM.FZ and @SAM.ZF)", Exit, OutOfRange);
+      }
+  }
 }

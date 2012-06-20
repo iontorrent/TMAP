@@ -81,10 +81,8 @@ enum {
     TMAP_READS_FORMAT_FASTA    = 0, /*!< the reads are in FASTA format */
     TMAP_READS_FORMAT_FASTQ    = 1, /*!< the reads are in FASTQ format */
     TMAP_READS_FORMAT_SFF      = 2, /*!< the reads are in SFF format */
-#ifdef HAVE_SAMTOOLS
     TMAP_READS_FORMAT_SAM      = 3, /*!< the reads are in SAM format */
     TMAP_READS_FORMAT_BAM      = 4 /*!< the reads are in BAM format */
-#endif
 };
 
 #ifdef TMAP_BWT_32_BIT
@@ -301,6 +299,22 @@ tmap_reverse_compliment_int(uint8_t *seq, int32_t len);
   */
 inline void
 tmap_compliment(char *seq, int32_t len); 
+
+/*!
+  converts a string to an integer
+  @param  seq  the character DNA sequence
+  @param  len  the length of the DNA sequence
+  */
+inline void
+tmap_to_int(char *seq, int32_t len); 
+
+/*!
+  converts a integer to string
+  @param  seq  the character integer DNA sequence
+  @param  len  the length of the DNA sequence
+  */
+inline void
+tmap_to_char(char *seq, int32_t len); 
 
 /*!
   removes trailing whitespaces from a given string

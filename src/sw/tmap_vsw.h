@@ -82,7 +82,6 @@ tmap_vsw_destroy(tmap_vsw_t *vsw);
   @param  overflow          returns 1 if overflow occurs, 0 otherwise
   @param  score_thr         the minimum scoring threshold (inclusive)
   @param  direction         how to break ties
-  @param
   @return                   the alignment score
   @details direction explains how to break ties. If direction = 0, then query_end needs to be as 
   small as possible.  If direction = 1, then query_end needs to be as large as possible.  In both
@@ -108,7 +107,6 @@ tmap_vsw_process_fwd(tmap_vsw_t *vsw,
   @param  overflow          returns 1 if overflow occurs, 0 otherwise
   @param  score_thr         the minimum scoring threshold (inclusive)
   @param  direction         how to break ties
-  @param
   @return                   the alignment score
   @details direction explains how to break ties. If direction = 0, then query_end needs to be as 
   small as possible.  If direction = 1, then query_end needs to be as large as possible.  In both

@@ -143,11 +143,11 @@ typedef struct {
  *
  * Taken:
  * ABCDEFGHIJLMORSTUWXYZ
- * afghijklmnqrsvwxyz
+ * afghijklmnoqrsvwxyz
  *
  * Available:
- * KV
- * optu
+ * GKV
+ * t
  * 
  * NB: Lets reserve single character flags for global options. 
 */
@@ -182,14 +182,15 @@ typedef struct __tmap_map_opt_t {
     int32_t num_threads;  /*!< the number of threads (-n,--num-threads) */
     int32_t num_threads_autodetected;  /*!< 1 if the number of threads has been auto detected, 0 otherwise (-n,--num-threads) */
     int32_t aln_output_mode;  /*!< specifies how to choose alignments (-a,--aln-output-mode) */
-    char *sam_rg;  /*!< specifies the RG line in the SAM header (-R,--sam-read-group) */
+    char **sam_rg;  /*!< specifies the RG line in the SAM header (-R,--sam-read-group) */
+    int32_t sam_rg_num;  /*!< the number of rg tags */
     int32_t bidirectional;  /*!< specifies the input reads are to be annotated as bidirectional (-D,--bidirectional) */
     int32_t seq_eq;  /*!< specifies to use '=' symbols in the SEQ field (-I,--use-seq-equal) */
     int32_t ignore_rg_sam_tags;  /*!< specifies to not use the RG header and RG record tags in the SAM file (-C,--keep-rg-from-sam) */
+    int32_t rand_read_name;  /*!< specifies to randomize based on the read name (-u,--rand-read-name) */
     int32_t input_compr;  /*!< the input compression type (-j,--input-bz2 and -z,--input-gz) */
-    int32_t output_compr;  /*!< the output compression type (-J,--output-bz2 and -Z,--output-gz) */
+    int32_t output_type;  /*!< the output type (0 - SAM, 1 - BAM (compressed), 2 - BAM (uncompressed)) */
     key_t shm_key;  /*!< the shared memory key (-k,--shared-memory-key) */
-
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
     double sample_reads;  /*!< sample the reads at this fraction (-x,--sample-reads) */
 #endif
@@ -200,7 +201,6 @@ typedef struct __tmap_map_opt_t {
     int32_t softclip_key; /*!< soft clip only the last base of the key (-y,--softclip-key) */
     int32_t sam_flowspace_tags;  /*!< specifies to output flow space specific SAM tags when available (-Y,--sam-flowspace-tags) */
     int32_t ignore_flowgram;  /*!< specifies to ignore the flowgram if available (-S,--ignore-flowgram) */
-    int32_t remove_sff_clipping; /*!< removes SFF clipping (-G,--remove-sff-clipping) */
     int32_t aln_flowspace; /*!< produce the final alignment in flow space (-F,--final-flowspace) */
 
     // pairing options
@@ -210,9 +210,11 @@ typedef struct __tmap_map_opt_t {
     double ins_size_mean; /*!< the mean insert size (-b,--ins-size-mean)*/
     double ins_size_std; /*!< the insert size standard deviation (-c,--ins-size-std) */
     double ins_size_std_max_num; /*!< the insert size maximum standard deviation (-d,--ins-size-std-max-num) */
+    double ins_size_outlier_bound; /*!< the insert size 25/75 quartile outlier bound (-p,--ins-size-outlier-bound) */
+    int32_t ins_size_min_mapq; /*!< the minimum mapping quality to consider for computing the insert size (-t,--ins-size-min-mapq) */
     int32_t read_rescue; /*!< specifies to perform read rescuing during pairing (-L,--read-rescue) */
     double read_rescue_std_num; /*!< specifies the number of standard deviations around the mean insert size to perform read rescue (-l,--read-rescue-std-num) */
-    int32_t read_rescue_mapq_thr; /*!< minimum mapping quality for read rescue */
+    int32_t read_rescue_mapq_thr; /*!< minimum mapping quality for read rescue (-m,--read-rescue-mapq-thr) */
 
     // map1/map2/map3 options, but specific to each
     int32_t min_seq_len; /*< the minimum sequence length to examine (-1 to disable) (--min-seq-length) */

@@ -4,6 +4,7 @@
 
 #include <sys/types.h>
 #include "../index/tmap_index.h"
+#include "../seq/tmap_seqs.h"
 
 #ifdef HAVE_LIBPTHREAD
 #define TMAP_MAP_DRIVER_THREAD_BLOCK_SIZE 512
@@ -22,16 +23,10 @@ typedef int32_t (*tmap_map_driver_func_init)(void **data, tmap_refseq_t *refseq,
 /*!
   This function will be invoked before a thread begins process its sequences.
   @param  data  the thread persistent data
-  @param  flow_order the flow order
-  @param  flow_order_len the flow order length
-  @param  key_seq the flow order
-  @param  key_seq_len the flow order length
   @param  opt   the program options
   @return       0 upon success, non-zero otherwise
  */
 typedef int32_t (*tmap_map_driver_func_thread_init)(void **data, 
-                                                    uint8_t *flow_order, int32_t flow_order_len, 
-                                                    uint8_t *key_seq, int32_t key_seq_len, 
                                                     tmap_map_opt_t *opt);
 
 /*!
@@ -150,38 +145,47 @@ tmap_map_driver_destroy(tmap_map_driver_t *driver);
   Driver data to be passed to a thread                         
   */
 typedef struct {                                            
-    int32_t num_ends;  /*!< the number of mates (one for fragments) */
-    tmap_seq_t ***seq_buffer;  /*!< the buffers of sequences */    
-    int32_t seq_buffer_length;  /*!< the buffers length */
+    sam_header_t *sam_header;  /*!< the SAM Header */
+    tmap_seqs_t **seqs_buffer;  /*!< the buffers of sequences */    
+    int32_t seqs_buffer_length;  /*!< the buffers length */
+    int32_t *buffer_idx; /*!< the current zero-based index into the buffer */
     tmap_map_record_t **records;  /*!< the alignments for each sequence */
+    tmap_map_bams_t **bams;  /*!< the BAM alignments for each sequence */
     tmap_index_t *index;  /*!< pointer to the reference index */
     tmap_map_driver_t *driver;  /*!< the main driver object */
     tmap_map_stats_t *stat; /*!< the driver statistics */
     tmap_rand_t *rand;  /*!< the random number generator */
+    int32_t do_pairing;  /*!< 1 if we are performing pairing paramter calculation, 0 otherwise */
     int32_t tid;  /*!< the zero-based thread id */
 } tmap_map_driver_thread_data_t;
 
 /*!
   The core worker routine of mapall
-  @param  num_ends             the number of ends
-  @param  seq_buffer           the buffer of sequences
+  @param  sam_header           the SAM Header
+  @param  seqs_buffer           the buffer of sequences
   @param  records              the records to return
-  @param  seq_buffer_length    the number of sequences in the buffer
+  @param  bams                 the bams to return
+  @param  seqs_buffer_length    the number of sequences in the buffer
+  @param  buffer_idx            the current zero-based index into the buffer
   @param  index                the reference index
   @param  driver               the driver
   @param  stat                 the driver statistics
   @param  rand                 the random number generator
+  @param  do_pairing           1 if we are performing pairing paramter calculation, 0 otherwise 
   @param  tid                  the thread ids
  */
 void
-tmap_map_driver_core_worker(int32_t num_ends, 
-                            tmap_seq_t ***seq_buffer, 
+tmap_map_driver_core_worker(sam_header_t *sam_header,
+                            tmap_seqs_t **seqs_buffer, 
                             tmap_map_record_t **records,
-                            int32_t seq_buffer_length,
+                            tmap_map_bams_t **bams,
+                            int32_t seqs_buffer_length,
+                            int32_t *buffer_idx,
                             tmap_index_t *index,
                             tmap_map_driver_t *driver,
                             tmap_map_stats_t* stat,
                             tmap_rand_t *rand,
+                            int32_t do_pairing,
                             int32_t tid);
 
 /*!

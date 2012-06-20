@@ -205,7 +205,7 @@ tmap_sw_global_banded_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t l
                            int32_t score, tmap_sw_path_t *path, int32_t *path_len, int32_t right_j);
 
 /*!
-  Extens an alignment with the local Smith-Waterman.
+  Extends an alignment with the local Smith-Waterman.
   @details            actually, it performs it with banding.
   @param  seq1        the first DNA sequence (in 2-bit format)
   @param  len1        the length of the first sequence
@@ -225,7 +225,7 @@ tmap_sw_extend_core(uint8_t *seq1, int32_t len1,
                     int32_t right_j);
 
 /*!
-  Extens an alignment with the local Smith-Waterman and aligns the entire seq2.
+  Extends an alignment with the local Smith-Waterman and aligns the entire seq2.
   @param  seq1        the first DNA sequence (in 2-bit format)
   @param  len1        the length of the first sequence
   @param  seq2        the second DNA sequence (in 2-bit format)

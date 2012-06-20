@@ -10,7 +10,7 @@
 #include "../util/tmap_map_util.h"
 #include "tmap_map_pairing.h"
 
-static int32_t
+int32_t
 tmap_map_pairing_get_strand_diff(tmap_map_sam_t *one, tmap_map_sam_t *two, int32_t strandedness)
 {
   if(TMAP_MAP_PAIRING_SAME_STRAND == strandedness) {
@@ -33,7 +33,7 @@ tmap_map_pairing_get_right(tmap_map_sam_t *sam, int32_t len)
   return sam->pos + sam->result.target_end;
 }
 
-static int32_t
+int32_t
 tmap_map_pairing_get_position_diff(tmap_map_sam_t *one, tmap_map_sam_t *two, int32_t one_len, int32_t two_len,
                                    int32_t strandedness, int32_t positioning)
 {

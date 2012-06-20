@@ -4,86 +4,17 @@
 #include <stdarg.h>
 #include <config.h>
 
-#ifdef HAVE_SAMTOOLS
-#include <kstring.h>
-#include <sam.h>
-#include <bam.h>
-#include <sam_header.h>
-#endif
+#include "../samtools/kstring.h"
+#include "../samtools/sam.h"
+#include "../samtools/bam.h"
+#include "../samtools/sam.h"
+#include "../samtools/sam_header.h"
 
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_definitions.h"
 #include "../util/tmap_string.h"
 #include "tmap_sam.h"
 #include "../io/tmap_sam_io.h"
-
-#ifdef HAVE_SAMTOOLS
-
-/*
- * Hopefully, someday, SAMtools will accept these functions as part of the 
- * API. Boilerplate code is useful in APIs, not those that use the APIs.
- */
-
-static inline void *
-bam_auxB2_helper(const uint8_t *s, int32_t *l, char type)
-{
-  void *p = NULL;
-  size_t size;
-  if(s == NULL) return NULL;
-  if('B' != *s) return NULL;
-  s++;
-  if(type != *s) return NULL;
-  size = bam_aux_type2size(type);
-  s++;
-  *l = (*(int32_t*)(s));
-  s += 4;
-  p = malloc(size * (*l));
-  if(NULL == p) return 0;
-  memcpy(p, s, size * (*l));
-  return p;
-}
-
-int8_t *
-bam_auxB2c(const uint8_t *s, int32_t *l)
-{
-  return (int8_t*)bam_auxB2_helper(s, l, 'c');
-}
-
-uint8_t *
-bam_auxB2C(const uint8_t *s, int32_t *l)
-{
-  return (uint8_t*)bam_auxB2_helper(s, l, 'C');
-}
-
-int16_t *
-bam_auxB2s(const uint8_t *s, int32_t *l)
-{
-  return (int16_t*)bam_auxB2_helper(s, l, 's');
-}
-
-uint16_t *
-bam_auxB2S(const uint8_t *s, int32_t *l)
-{
-  return (uint16_t*)bam_auxB2_helper(s, l, 'S');
-}
-
-int32_t *
-bam_auxB2i(const uint8_t *s, int32_t *l)
-{
-  return (int32_t*)bam_auxB2_helper(s, l, 'i');
-}
-
-uint32_t *
-bam_auxB2I(const uint8_t *s, int32_t *l)
-{
-  return (uint32_t*)bam_auxB2_helper(s, l, 'I');
-}
-
-float *
-bam_auxB2f(const uint8_t *s, int32_t *l)
-{
-  return (float*)bam_auxB2_helper(s, l, 'f');
-}
 
 tmap_sam_t *
 tmap_sam_init()
@@ -99,7 +30,6 @@ tmap_sam_destroy(tmap_sam_t *sam)
   if(NULL != sam->seq) tmap_string_destroy(sam->seq);
   if(NULL != sam->qual) tmap_string_destroy(sam->qual);
   if(NULL != sam->b) bam_destroy1(sam->b);
-  if(NULL != sam->flowgram) free(sam->flowgram);
   free(sam);
 }
 
@@ -172,83 +102,38 @@ tmap_sam_get_qualities(tmap_sam_t *sam)
     return sam->qual;
 }
 
-void
-tmap_sam_update_flow_info(tmap_sam_t *sam, tmap_sam_io_t *samio)
+int32_t
+tmap_sam_get_flowgram(tmap_sam_t *sam, uint16_t **flowgram)
 {
-  uint8_t *tag;
-  // init
-  sam->fo = NULL;
-  sam->ks = NULL;
-  sam->rg_id = NULL;
-  if(NULL != sam->flowgram) free(sam->flowgram);
-  sam->flowgram = NULL;
-  sam->flowgram_len = 0;
-  // flowgram
+  uint8_t *tag = NULL;
+  int32_t len = -1;
+  (*flowgram) = NULL;
+  // FZ
   tag = bam_aux_get(sam->b, "FZ");
   if(NULL != tag) {
-      sam->flowgram = bam_auxB2S(tag, &sam->flowgram_len);
+      (*flowgram) = bam_auxB2S(tag, &len);
   }
-  // ZF
-  tag = bam_aux_get(sam->b, "ZF");
-  if(NULL != tag) sam->flow_start_index = bam_aux2i(tag);
-  else sam->flow_start_index = -1;
-  // RG
-  tag = bam_aux_get(sam->b, "RG");
-  if(NULL == tag) return;
-  sam->rg_id = bam_aux2Z(tag);
-  if(NULL == sam->rg_id) return;
-  sam->fo = sam_tbl_get(samio->rg_tbls[TMAP_SAM_RG_FO], (const char*)sam->rg_id);
-  sam->ks = sam_tbl_get(samio->rg_tbls[TMAP_SAM_RG_KS], (const char*)sam->rg_id);
-}
-
-int32_t
-tmap_sam_get_flow_order_int(tmap_sam_t *sam, uint8_t **flow_order)
-{
-  int32_t i, flow_order_len;
-  const char *fo = sam->fo;
-  if(NULL == fo) return 0;
-  flow_order_len = strlen(fo); // TODO: cache this
-  (*flow_order) = tmap_malloc(sizeof(uint8_t) * flow_order_len, "flow_order");
-  for(i=0;i<flow_order_len;i++) {
-      (*flow_order)[i] = tmap_nt_char_to_int[(int)fo[i]];
-  }
-  return flow_order_len;
-}
-
-int32_t
-tmap_sam_get_key_seq_int(tmap_sam_t *sam, uint8_t **key_seq)
-{
-  int32_t i, key_seq_len;
-  const char *ks = sam->ks;
-  if(NULL == ks) return 0;
-  key_seq_len = strlen(ks); // TODO: cache this
-  (*key_seq) = tmap_malloc(sizeof(uint8_t) * key_seq_len, "key_seq");
-  for(i=0;i<key_seq_len;i++) {
-      (*key_seq)[i] = tmap_nt_char_to_int[(int)ks[i]];
-  }
-  return key_seq_len;
-}
-
-int32_t
-tmap_sam_get_flowgram(tmap_sam_t *sam, uint16_t **flowgram, int32_t mem)
-{
-  int32_t flowgram_len = sam->flowgram_len;
-  if(NULL == sam->flowgram) return 0;
-  if(mem < flowgram_len) (*flowgram) = tmap_realloc((*flowgram), sizeof(uint16_t) * flowgram_len, "(*flowgram)");
-  memcpy((*flowgram), sam->flowgram, flowgram_len * sizeof(uint16_t));
-  return flowgram_len;
-}
-
-int32_t
-tmap_sam_get_flow_start_index(tmap_sam_t *sam)
-{
-  return sam->flow_start_index;
+  return len;
 }
 
 char*
 tmap_sam_get_rg_id(tmap_sam_t *sam)
 {
-  return (char*)sam->rg_id;
+  uint8_t *tag = NULL;
+  char *value = NULL;
+  // RG
+  tag = bam_aux_get(sam->b, "RG");
+  if(NULL == tag) return NULL;
+  value = bam_aux2Z(tag);
+  return value;
 }
 
-#endif
+int32_t
+tmap_sam_get_fo_start_idx(tmap_sam_t *sam)
+{
+  uint8_t *tag = NULL;
+  // ZF
+  tag = bam_aux_get(sam->b, "ZF");
+  if(NULL != tag) return bam_aux2i(tag);
+  else return -1;
+}

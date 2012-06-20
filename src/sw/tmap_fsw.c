@@ -1183,6 +1183,7 @@ tmap_fsw_print_aln(tmap_file_t *fp, int64_t score, tmap_fsw_path_t *path, int32_
   free(aln);
 }
 
+// TODO: use the flow index start
 tmap_fsw_flowseq_t *
 tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow_order, int32_t flow_order_len, uint8_t *key_seq, uint8_t key_seq_len, int32_t use_flowgram)
 {
@@ -1298,7 +1299,14 @@ tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow
   // NB: the returned flowgram should always include the key sequence
   to_fill = 0;
   if(1 == use_flowgram) {
-      fs->num_flows = tmap_seq_get_flowgram(seq, &fs->flowgram, fs->mem);
+      fs->num_flows = seq->flowgram_len;
+      if(fs->mem < fs->num_flows) {
+          fs->mem = fs->num_flows;
+          fs->flowgram = tmap_realloc(fs->flowgram, sizeof(uint16_t) * fs->mem, "flowgram");
+      }
+      for(j=0;j<fs->num_flows;j++) {
+          fs->flowgram[j] = seq->flowgram[j];
+      }
   }
   else {
       fs->num_flows = 0;
@@ -1310,7 +1318,8 @@ tmap_fsw_flowseq_from_seq(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, uint8_t *flow
       // flowgram
       fs->num_flows = num_flows; 
       if(fs->mem < fs->num_flows) {
-          fs->flowgram = tmap_calloc(fs->num_flows, sizeof(uint16_t), "flowgram");
+          fs->mem = fs->num_flows;
+          fs->flowgram = tmap_realloc(fs->flowgram, sizeof(uint16_t) * fs->mem, "flowgram");
       }
   }
   else if(0 < key_seq_len) {

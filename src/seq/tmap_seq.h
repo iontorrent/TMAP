@@ -5,9 +5,8 @@
 #include <config.h>
 #include "tmap_fq.h"
 #include "tmap_sff.h"
-#ifdef HAVE_SAMTOOLS
 #include "tmap_sam.h"
-#endif
+#include "../samtools/sam_header.h"
 
 /*! 
   An Abstract Library for DNA Sequence Data
@@ -22,10 +21,8 @@ enum {
     TMAP_SEQ_TYPE_NOTYPE = -1, /*!< unknown type */
     TMAP_SEQ_TYPE_FQ = 0, /*!< FASTA/FASTQ input/output */
     TMAP_SEQ_TYPE_SFF = 1, /*!< SFF input/output */
-#ifdef HAVE_SAMTOOLS
     TMAP_SEQ_TYPE_SAM = 2, /*!< SAM input/output */
     TMAP_SEQ_TYPE_BAM = 3 /*!< BAM input/output */
-#endif
 };
 
 /*! 
@@ -35,10 +32,15 @@ typedef struct {
     union {
         tmap_fq_t *fq;  /*!< the pointer to the fastq structure */
         tmap_sff_t *sff;  /*!< the pointer to the sff structure */
-#ifdef HAVE_SAMTOOLS
         tmap_sam_t *sam;  /*!< the pointer to the SAM/BAM structure */
-#endif
     } data;
+    const char *ks; /*!< the key sequence associated with this structure, NULL if none */
+    const char *fo; /*!< the flow order associated with this structure, NULL if none */
+    const sam_header_record_t *rg_record; /*!< the read group record associated with this structure, NULL if none */
+    const sam_header_record_t *pg_record; /*!< the program group record associated with this structure, NULL if none */
+    int32_t fo_start_idx; /*!< the flow order start index associated with this structure, -1 if none */
+    uint16_t *flowgram; /*!< the flowgram */
+    int32_t flowgram_len; /*!< the flowgram length */
 } tmap_seq_t;
 
 /*! 
@@ -130,13 +132,11 @@ tmap_seq_get_qualities(tmap_seq_t *seq);
 /*! 
   @param                   seq  pointer to the structure 
   @param  remove_clipping  1 if we are to remove clipped sequence, 0 otherwise
-  @param  key_seq          the key sequence (integer format) to enforce, NULL otherwise
-  @param  key_seq_len      the key sequence length, 0 otherwise
   @return                  0 if the key sequence did not match, 1 otherwise 
   @details                 this will not modify the header
   */
 int32_t
-tmap_seq_remove_key_sequence(tmap_seq_t *seq, int32_t remove_clipping, uint8_t *key_seq, int32_t key_seq_len);
+tmap_seq_remove_key_sequence(tmap_seq_t *seq, int32_t remove_clipping);
 
 /*! 
   @param  seq  pointer to the structure to convert
@@ -146,42 +146,12 @@ tmap_seq_t *
 tmap_seq_sff2fq(tmap_seq_t *seq);
 
 /*!
-  @param  seq        pointer to the structure 
-  @param  flow_order a pointer to where the flow order should be stored 
-  @return            the length of the flow order, zero if none was found
- */
-int32_t
-tmap_seq_get_flow_order_int(tmap_seq_t *seq, uint8_t **flow_order);
-
-/*!
-  @param  seq      pointer to the structure 
-  @param  key_seq  pointer to where the key sequence should be stored 
-  @return          the length of the key sequence, zero if none was found
- */
-int32_t
-tmap_seq_get_key_seq_int(tmap_seq_t *seq, uint8_t **key_seq);
-
-/*!
-  @param  seq      pointer to the structure 
-  @param  flowgram  pionter to where the flowgram should be stored
-  @param  mem      memory size already allocated to flowgram
-  @return          the flowgram length
- */
-int32_t
-tmap_seq_get_flowgram(tmap_seq_t *seq, uint16_t **flowgram, int32_t mem);
-
-/*!
-  @param  seq      pointer to the structure 
-  @return          the flowgram start index
- */
-int32_t
-tmap_seq_get_flow_start_index(tmap_seq_t *seq);
-
-/*!
-  @param  seq      pointer to the structure 
-  @return          the rg id, NULL if not available
-*/
-char*
-tmap_seq_get_rg_id(tmap_seq_t *seq);
+  Updates the Read Group record pointer, and flow space information.
+  @param  seq  pointer to the structure to update
+  @param  idx  the file index from which the read was read, corresponding to the ith read group
+  @param  header  the SAM Header
+  */
+void
+tmap_seq_update(tmap_seq_t *seq, int32_t idx, sam_header_t *header);
 
 #endif

@@ -5,7 +5,7 @@
 #  or with explicit permission from, Nils Homer.
 
 AC_PREREQ(2.61);
-AC_INIT([tmap],[2.3.3],[nils.homer@lifetech.com],[tmap])
+AC_INIT([tmap],[2.3.5],[nils.homer@lifetech.com],[tmap])
 AC_COPYRIGHT([See LICENSE for copyright information.])
 AC_CONFIG_AUX_DIR(config)
 AM_INIT_AUTOMAKE([dist-bzip2 subdir-objects])
@@ -108,19 +108,6 @@ AC_HEADER_STDBOOL
 AC_CHECK_HEADERS([stdlib.h stdio.h stdint.h string.h sys/time.h unistd.h float.h zlib.h bzlib.h pthread.h limits.h netinet/in.h emmintrin.h getopt.h])
 
 AC_C_INLINE
-
-# test for SAMtools
-AC_MSG_CHECKING(for samtools)
-if test -d "samtools" ; then
-	AC_MSG_RESULT(yes)
-	LDFLAGS="${LDFLAGS} -L./samtools"
-	LIBS="-lbam ${LIBS}";
-	CFLAGS="${CFLAGS} -I./samtools";
-	AC_DEFINE(HAVE_SAMTOOLS, 1, [Define 1 if the samtools library is present]) 
-else 
-	AC_MSG_RESULT(no)
-	AC_MSG_WARN("could not find the samtools source sub-directory; some commands disabled")
-fi
 
 AC_CONFIG_FILES([Makefile])
 

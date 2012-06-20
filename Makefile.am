@@ -13,16 +13,18 @@ GLOBAL_SOURCES = \
 				 src/util/tmap_levenshtein.h src/util/tmap_levenshtein.c \
 				 src/util/tmap_sort.h \
 				 src/util/tmap_vec.h \
-				 src/util/tmap_sam_print.h src/util/tmap_sam_print.c \
+				 src/util/tmap_sam_convert.h src/util/tmap_sam_convert.c \
 				 src/seq/tmap_fq.h src/seq/tmap_fq.c \
 				 src/seq/tmap_sff.h src/seq/tmap_sff.c \
 				 src/seq/tmap_sam.h src/seq/tmap_sam.c \
 				 src/seq/tmap_seq.h src/seq/tmap_seq.c \
+				 src/seq/tmap_seqs.h src/seq/tmap_seqs.c \
 				 src/io/tmap_file.h src/io/tmap_file.c \
 				 src/io/tmap_fq_io.h src/io/tmap_fq_io.c \
 				 src/io/tmap_sff_io.h src/io/tmap_sff_io.c \
 				 src/io/tmap_sam_io.h src/io/tmap_sam_io.c \
 				 src/io/tmap_seq_io.h src/io/tmap_seq_io.c \
+				 src/io/tmap_seqs_io.h src/io/tmap_seqs_io.c \
 				 src/index/tmap_bwt.h src/index/tmap_bwt.c \
 				 src/index/tmap_bwt_aux.h src/index/tmap_bwt_aux.c \
 				 src/index/tmap_bwtl.h src/index/tmap_bwtl.c \
@@ -58,8 +60,24 @@ GLOBAL_SOURCES = \
 				 src/sw/lib/AffineSWOptimizationWrapper.cpp src/sw/lib/AffineSWOptimizationWrapper.h \
 				 src/sw/tmap_vsw_bm.c 
 
+samtools_SOURCES = \
+				   src/samtools/bam.c src/samtools/bam.h \
+				   src/samtools/sam.c src/samtools/sam.h \
+				   src/samtools/sam_header.c src/samtools/sam_header.h \
+				   src/samtools/bam_import.c \
+				   src/samtools/bam_aux.c \
+				   src/samtools/bam_pileup.c \
+				   src/samtools/razf.c src/samtools/razf.h \
+				   src/samtools/bgzf.c src/samtools/bgzf.h \
+				   src/samtools/faidx.c src/samtools/faidx.h \
+				   src/samtools/bam_endian.h \
+				   src/samtools/khash.h \
+				   src/samtools/kseq.h \
+				   src/samtools/kstring.c src/samtools/kstring.h
+
 tmap_SOURCES = \
 			   ${GLOBAL_SOURCES} \
+			   ${samtools_SOURCES} \
 			   src/server/tmap_server.h src/server/tmap_server.c \
 			   src/server/tmap_shm.h src/server/tmap_shm.c \
 			   src/sam2fs/tmap_sam2fs_aux.h src/sam2fs/tmap_sam2fs_aux.c \

@@ -17,8 +17,6 @@ typedef struct {
 /*!
   Core mapping routine
   @param  seq            the sequence to align (complimented)
-  @param  flow_order      the flow order in integer format
-  @param  flow_order_len  the flow order length
   @param  refseq         the reference sequence structure (forward)
   @param  bwt            the BWT structure 
   @param  sa             the SA structure 
@@ -29,8 +27,6 @@ typedef struct {
   */
 tmap_map_sams_t *
 tmap_map3_aux_core(tmap_seq_t *seq,
-                   uint8_t *flow_order,
-                   int32_t flow_order_len,
                    tmap_refseq_t *refseq,
                    tmap_bwt_t *bwt,
                    tmap_sa_t *sa,

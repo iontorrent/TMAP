@@ -17,7 +17,11 @@ TMAP is a fast and accurate alignment software for short and long nucleotide seq
     * Torrent Suite 1.3:   http://github.com/iontorrent/TMAP/tarball/tmap.0.0.19
     * Torrent Suite 1.2:   http://github.com/iontorrent/TMAP/tarball/tmap.0.0.9
 *  See the latest manual: http://github.com/iontorrent/TMAP/blob/master/doc/tmap-book.pdf
-*  Get the latest source code: <pre lang="bsh"><code>git clone git://github.com/iontorrent/TMAP.git</code></pre>
+*  Get the latest source code: 
+    * <pre lang="bsh"><code>git clone git://github.com/iontorrent/TMAP.git</code></pre>
+    * <pre lang="bsh"><code>cd TMAP</code></pre>
+    * <pre lang="bsh"><code>git submodule init</code></pre>
+    * <pre lang="bsh"><code>git submodule update</code></pre>
 
 ##  Pre-requisites
 1. Compiler (required):
@@ -42,20 +46,6 @@ TMAP is a fast and accurate alignment software for short and long nucleotide seq
   After installation, execute the following command:
   <pre lang="bsh"><code>sh autogen.sh && ./configure && make clean && make</code></pre>
   The performance improve should occur when using multiple-threads.
-
-### SAMtools (optional):
-  The following commands rely on linking to samtools:
-  <pre lang="bsh"><code>tmap sam2fs</code></pre>
-  They will will be unavailable if the samtools directory cannot be located.
-  Furthermore, SAM/BAM as input will be unavailable.  The samtools directory must be 
-  placed in this directory.  The easiest way to do this is to a symbolic link:
-  <pre lang="bsh"><code>ln -s <path to samtools> samtools</code></pre>
-  Then the samtools library must be built:
-  <pre lang="bsh"><code>cd samtools
-make
-cd ..</code></pre>
-  After the samtools library is linked and compiled, run:
-  <pre lang="bsh"><code>sh autogen.sh && ./configure && make clean && make</code></pre>
 
 ##  Developer Notes
 

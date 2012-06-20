@@ -122,6 +122,21 @@ typedef struct {
     int32_t n; /*!< the number of records (multi-end) */
 } tmap_map_record_t;
 
+/*!
+  Stores multiple mappings for BAMs
+  */
+typedef struct {
+    bam1_t **bams; /*!< the bam records */
+    int32_t n; /*!< the number of hits */
+} tmap_map_bam_t;
+    
+/*!
+  The multi-end BAM record structure
+  */
+typedef struct {
+    tmap_map_bam_t **bams;  /*!< the bam hits */
+    int32_t n; /*!< the number of records (multi-end) */
+} tmap_map_bams_t;
 
 /*!
   initializes
@@ -213,6 +228,22 @@ tmap_map_record_merge(tmap_map_record_t *dest, tmap_map_record_t *src);
 void 
 tmap_map_record_destroy(tmap_map_record_t *record);
 
+// TODO
+tmap_map_bam_t*
+tmap_map_bam_init(int32_t n);
+
+// TODO
+void
+tmap_map_bam_destroy(tmap_map_bam_t *b);
+
+// TODO
+tmap_map_bams_t*
+tmap_map_bams_init(int32_t n);
+
+// TODO
+void
+tmap_map_bams_destroy(tmap_map_bams_t *b); 
+
 /*!
   merges src into dest
   @param  dest  the destination mapping structure
@@ -237,7 +268,7 @@ void
 tmap_map_sam_copy_and_nullify(tmap_map_sam_t *dest, tmap_map_sam_t *src);
 
 /*!
-  prints the SAM records
+  converts the alignment record to SAM/BAM records
   @param  seq           the original read sequence
   @param  refseq        the reference sequence
   @param  sams          the mappings to print
@@ -246,8 +277,9 @@ tmap_map_sam_copy_and_nullify(tmap_map_sam_t *dest, tmap_map_sam_t *src);
   @param  sam_flowspace_tags  1 if SFF specific SAM tags are to be outputted, 0 otherwise
   @param  bidirectional  1 if a bidirectional SAM tag is to be added, 0 otherwise
   @param  seq_eq        1 if the SEQ field is to use '=' symbols, 0 otherwise
+  @return  the BAM records for this read
   */
-void
+tmap_map_bam_t*
 tmap_map_sams_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sams_t *sams, int32_t end_num, 
                     tmap_map_sams_t *mates, int32_t sam_flowspace_tags, int32_t bidirectional, int32_t seq_eq);
 
@@ -355,12 +387,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
 
 /*!
   re-aligns mappings in flow space
-  @param  fs             the flow sequence structure to re-use, NULL otherwise
   @param  seq            the seq read sequence
-  @param  flow_order      the flow order
-  @param  flow_order_len  the flow order length
-  @param  key_seq        the key sequence
-  @param  key_seq_len    the key sequence length
   @param  sams           the mappings to adjust 
   @param  refseq         the reference sequence
   @param  bw             the band width
@@ -372,12 +399,10 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
   @param  pen_gape       the gap extension penalty
   @param  fscore         the flow penalty
   @param  use_flowgram   1 to use the flowgram if available, 0 otherwise
+  @return  1 if successful, 0 otherwise
   */
-void
-tmap_map_util_fsw(tmap_fsw_flowseq_t *fs, tmap_seq_t *seq, 
-                  uint8_t *flow_order, int32_t flow_order_len,
-                  uint8_t *key_seq, int32_t key_seq_len,
-                  tmap_map_sams_t *sams, tmap_refseq_t *refseq,
+int32_t
+tmap_map_util_fsw(tmap_seq_t *seq, tmap_map_sams_t *sams, tmap_refseq_t *refseq,
                   int32_t bw, int32_t softclip_type, int32_t score_thr,
                   int32_t score_match, int32_t pen_mm, int32_t pen_gapo, 
                   int32_t pen_gape, int32_t fscore, int32_t use_flowgram);

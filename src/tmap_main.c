@@ -10,6 +10,7 @@
 #include "util/tmap_progress.h"
 #include "util/tmap_levenshtein.h"
 #include "io/tmap_file.h"
+#include "samtools/bam.h"
 #include "tmap_main.h"
 
 tmap_file_t *tmap_file_stdout;
@@ -45,7 +46,7 @@ static tmap_command_t commands[] = {
       {tmap_bwt_pac2bwt_main, "pac2bwt", "creates the BWT string file from the packed FASTA file", TMAP_COMMAND_UTILITIES},
       {tmap_sa_bwt2sa_main, "bwt2sa", "creates the SA file from the BWT string file", TMAP_COMMAND_UTILITIES},
       {tmap_seq_io_sff2fq_main, "sff2fq", "converts a SFF file to a FASTQ file", TMAP_COMMAND_UTILITIES},
-      {tmap_seq_io_sff2sam_main, "sff2sam", "converts a SFF file to a SAM file", TMAP_COMMAND_UTILITIES},
+      {tmap_seqs_io_sff2sam_main, "sff2sam", "converts a SFF file to a SAM file", TMAP_COMMAND_UTILITIES},
       {tmap_refseq_refinfo_main, "refinfo", "prints information about the reference", TMAP_COMMAND_UTILITIES},
       {tmap_refseq_pac2fasta_main, "pac2fasta", "converts a packed FASTA to a FASTA file", TMAP_COMMAND_UTILITIES},
       {tmap_bwt_bwtupdate_main, "bwtupdate", "updates the bwt hash width", TMAP_COMMAND_UTILITIES},
@@ -211,6 +212,7 @@ main(int argc, char *argv[])
       tmap_file_stderr = tmap_file_fdopen(fileno(stderr), "w", TMAP_FILE_NO_COMPRESSION); // set stderr
       tmap_progress_set_command(argv[1]); // set output progress
       tmap_progress_set_start_time(); // set start time
+      bam_verbose = 0; // No verbosity in SAMtools
 
       c = commands;
       while(0 <= c->type) {

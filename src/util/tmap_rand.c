@@ -28,6 +28,12 @@ tmap_rand_init(uint64_t seed)
   return r;
 }
 
+void
+tmap_rand_reinit(tmap_rand_t *r, uint64_t seed)
+{
+  tmap_rand_srand0(seed, r);
+}
+
 uint64_t 
 tmap_rand_int(tmap_rand_t *r)
 {

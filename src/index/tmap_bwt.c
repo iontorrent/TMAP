@@ -528,6 +528,8 @@ tmap_bwt_gen_hash(tmap_bwt_t *bwt, int32_t hash_width, uint32_t check_hash)
  * Main BWT API
  */
 
+#define TMAP_BWT_BIT_COUNT 0
+#if TMAP_BWT_BIT_COUNT == 0
 static inline int32_t
 __occ_aux32(uint64_t y, int32_t c)
 {
@@ -537,6 +539,51 @@ __occ_aux32(uint64_t y, int32_t c)
   y = (y & 0x3333333333333333ull) + (y >> 2 & 0x3333333333333333ull);
   return ((y + (y >> 4)) & 0xf0f0f0f0f0f0f0full) * 0x101010101010101ull >> 56;
 }
+#else
+// Use this standard bit-bashing population count
+inline static int pop64(uint64_t x) 
+{
+  // Lots of cache misses on following lines (>10K)
+  x = x - ((x >> 1) & 0x5555555555555555llu);
+  x = (x & 0x3333333333333333llu) + ((x >> 2) & 0x3333333333333333llu);
+  x = (x + (x >> 4)) & 0x0F0F0F0F0F0F0F0Fllu;
+  x = x + (x >> 8);
+  x = x + (x >> 16);
+  x = x + (x >> 32);
+  return (int)(x & 0x3Fllu);
+}
+
+static inline int32_t
+__occ_aux32(uint64_t dw, int32_t c)
+{
+  uint64_t dwA  = dw &  0xAAAAAAAAAAAAAAAAllu;
+  uint64_t dwNA = dw & ~0xAAAAAAAAAAAAAAAAllu;
+  uint64_t tmp;
+  switch(c) {
+    case 0:
+      tmp = (dwA >> 1) | dwNA;
+      break;
+    case 1:
+      tmp = ~(dwA >> 1) & dwNA;
+      break;
+    case 2:
+      tmp = (dwA >> 1) & ~dwNA;
+      break;
+    case 3:
+      tmp = (dwA >> 1) & dwNA;
+      break;
+    default:
+      tmap_bug();
+  }
+  tmp = pop64(tmp); // Gets 7.62% in profile
+  if(c == 0) {
+      tmp = 32 - tmp;
+  }
+  //assert_leq(tmp, 32);
+  //assert_geq(tmp, 0);
+  return (int32_t)tmp;
+}
+#endif
 
 static inline uint32_t
 __occ_aux16(uint32_t y, int c)

@@ -12,7 +12,7 @@
 #include "../../util/tmap_alloc.h"
 #include "../../util/tmap_definitions.h"
 #include "../../util/tmap_progress.h"
-#include "../../util/tmap_sam_print.h"
+#include "../../util/tmap_sam_convert.h"
 #include "../../seq/tmap_seq.h"
 #include "../../index/tmap_refseq.h"
 #include "../../index/tmap_bwt_gen.h"
@@ -106,8 +106,7 @@ tmap_map3_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt)
 
 // thread data
 typedef struct {
-    uint8_t *flow_order;
-    int32_t flow_order_len;
+    void *ptr; // dummy ptr
 } tmap_map3_thread_data_t;
 
 int32_t
@@ -128,16 +127,11 @@ tmap_map3_init(void **data, tmap_refseq_t *refseq, tmap_map_opt_t *opt)
 
 int32_t
 tmap_map3_thread_init(void **data, 
-                      uint8_t *flow_order, int32_t flow_order_len,
-                      uint8_t *key_seq, int32_t key_seq_len,
                       tmap_map_opt_t *opt)
 {
   tmap_map3_thread_data_t *d = NULL;
 
   d = tmap_calloc(1, sizeof(tmap_map3_thread_data_t), "d");
-
-  d->flow_order = flow_order;
-  d->flow_order_len = flow_order_len;
 
   (*data) = (void*)d;
 
@@ -149,7 +143,7 @@ tmap_map3_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_b
 {
   tmap_map_sams_t *sams = NULL;
   int32_t seq_len;
-  tmap_map3_thread_data_t *d = (tmap_map3_thread_data_t*)(*data);
+  //tmap_map3_thread_data_t *d = (tmap_map3_thread_data_t*)(*data);
 
   seq_len = tmap_seq_get_bases_length(seqs[0]);
   
@@ -159,7 +153,7 @@ tmap_map3_thread_map(void **data, tmap_seq_t **seqs, tmap_index_t *index, tmap_b
   }
   
   // align
-  sams = tmap_map3_aux_core(seqs[3], d->flow_order, d->flow_order_len, index->refseq, index->bwt, index->sa, hash, opt);
+  sams = tmap_map3_aux_core(seqs[3], index->refseq, index->bwt, index->sa, hash, opt);
 
   return sams;
 }

@@ -342,7 +342,6 @@ tmap_sff_init()
   sff->gheader = NULL;
   sff->rheader = NULL;
   sff->read = NULL;
-  sff->flow_start_index = -1;
 
   return sff;
 }
@@ -460,13 +459,15 @@ tmap_sff_get_qualities(tmap_sff_t *sff)
 }
 
 inline int32_t 
-tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping, uint8_t *key_seq, int32_t key_seq_len)
+tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping)
 {
-  int32_t i, was_int;
+  int32_t i, was_int, flow_start_index;
   int32_t left, right; // zero-based
   int32_t key_match = 1;
   uint8_t *flow_order = NULL;
-      
+  uint8_t *key_seq = NULL;
+  int32_t key_seq_len;
+
   was_int = 1;
   if(0 == sff->is_int) {
       was_int = 0;
@@ -474,6 +475,7 @@ tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping, uint8_t *
   }
 
   // check if the key sequence matches
+  key_seq_len = tmap_sff_get_key_seq_int(sff, &key_seq);
   if(NULL != key_seq && 0 < key_seq_len) {
       // NB: key_seq and sff must be in integer format
       for(i=0;i<key_seq_len;i++) {
@@ -483,6 +485,8 @@ tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping, uint8_t *
           }
       }
   }
+  free(key_seq); // free
+  key_seq = NULL;
 
   if(1 == remove_clipping) {
       // left clipping
@@ -537,25 +541,25 @@ tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping, uint8_t *
   }
 
   // set flow_start_index
-  sff->flow_start_index = i = 0;
+  flow_start_index = i = 0;
   tmap_sff_get_flow_order_int(sff, &flow_order);
   while(i < left) { // clipped bases are left
       /*
-      fprintf(stderr, "i=%d left=%d sff->flow_start_index=%d fo=%d base=%d\n", i, left, 
-              sff->flow_start_index, flow_order[sff->flow_start_index], sff->read->bases->s[i]);
+      fprintf(stderr, "i=%d left=%d flow_start_index=%d fo=%d base=%d\n", i, left, 
+              flow_start_index, flow_order[flow_start_index], sff->read->bases->s[i]);
               */
       // move to the flow for the current base
-      while(flow_order[sff->flow_start_index] != sff->read->bases->s[i]) {
-          sff->flow_start_index++;
+      while(flow_order[flow_start_index] != sff->read->bases->s[i]) {
+          flow_start_index++;
       }
       // move to the flow for the current base
-      while(i < left && flow_order[sff->flow_start_index] == sff->read->bases->s[i]) {
+      while(i < left && flow_order[flow_start_index] == sff->read->bases->s[i]) {
           i++;
       }
   }
   // finalize
-  while(flow_order[sff->flow_start_index] != sff->read->bases->s[i]) {
-      sff->flow_start_index++;
+  while(flow_order[flow_start_index] != sff->read->bases->s[i]) {
+      flow_start_index++;
   }
   free(flow_order); flow_order=NULL;
   
@@ -581,9 +585,8 @@ tmap_sff_remove_key_sequence(tmap_sff_t *sff, int32_t remove_clipping, uint8_t *
       sff->read->bases->s[sff->read->bases->l] = '\0';
       sff->read->quality->s[sff->read->quality->l] = '\0';
   }
-      
 
-  return key_match;
+  return flow_start_index;
 }
 
 int32_t
@@ -611,20 +614,8 @@ tmap_sff_get_key_seq_int(tmap_sff_t *sff, uint8_t **key_seq)
 }
 
 int32_t
-tmap_sff_get_flowgram(tmap_sff_t *sff, uint16_t **flowgram, int32_t mem)
+tmap_sff_get_flowgram(tmap_sff_t *sff, uint16_t **flowgram)
 {
-  int32_t i;
-  if(mem <= sff->gheader->flow_length) {
-      (*flowgram) = tmap_realloc((*flowgram), sizeof(uint16_t) * sff->gheader->flow_length, "flowgram");
-  }
-  for(i=0;i<sff->gheader->flow_length;i++) {
-      (*flowgram)[i] = sff->read->flowgram[i];
-  }
+  (*flowgram) = sff->read->flowgram;
   return sff->gheader->flow_length;
-}
-
-int32_t
-tmap_sff_get_flow_start_index(tmap_sff_t *sff)
-{
-  return sff->flow_start_index;
 }
