@@ -51,9 +51,7 @@ static tmap_command_t commands[] = {
       {tmap_refseq_pac2fasta_main, "pac2fasta", "converts a packed FASTA to a FASTA file", TMAP_COMMAND_UTILITIES},
       {tmap_bwt_bwtupdate_main, "bwtupdate", "updates the bwt hash width", TMAP_COMMAND_UTILITIES},
       {tmap_index_size, "indexsize", "gives the index size in bytes", TMAP_COMMAND_UTILITIES},
-#ifdef HAVE_SAMTOOLS
       {tmap_sam2fs_main, "sam2fs", "pretty print SAM records in flow space", TMAP_COMMAND_UTILITIES},
-#endif
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
       {tmap_fsw_main, "fsw", "perform flow Smith-Waterman", TMAP_COMMAND_DEBUG},
       {tmap_index_speed, "indexspeed", "index performance benchmarks", TMAP_COMMAND_DEBUG},
