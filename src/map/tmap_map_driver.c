@@ -333,7 +333,7 @@ tmap_map_driver_core_worker(sam_header_t *sam_header,
               // generate the cigars
               found = 0;
               for(j=0;j<num_ends;j++) { // for each end
-                  records[low]->sams[j] = tmap_map_util_sw_gen_cigar(index->refseq, records[low]->sams[j], seqs[j], stage->opt);
+                  records[low]->sams[j] = tmap_map_util_sw_gen_cigar(index->refseq, records[low]->sams[j], seqs_buffer[low]->seqs[j], seqs[j], stage->opt);
                   if(0 < records[low]->sams[j]->n) {
                       stage_stat->num_with_mapping++;
                       found = 1;

@@ -1768,6 +1768,7 @@ tmap_map_util_keytrim(uint8_t *query, int32_t qlen,
 tmap_map_sams_t *
 tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
                  tmap_map_sams_t *sams, 
+                 tmap_seq_t *seq,
                  tmap_seq_t **seqs,
                  tmap_map_opt_t *opt)
 {
@@ -1814,11 +1815,11 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       
   if(1 == opt->softclip_key) {
       // get first base
-      if(NULL == seqs[0]->ks) {
-          key_base = 0;
+      if(NULL == seq->ks) {
+          key_base = INT8_MAX;
       }
       else {
-          key_base = tmap_nt_char_to_int[(uint8_t)seqs[0]->ks[0]];
+          key_base = tmap_nt_char_to_int[(uint8_t)seq->ks[strlen(seq->ks)-1]]; // NB: last base of the key
       }
   }
   
@@ -2083,7 +2084,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       }
 
       // key trim the data
-      if(1 == opt->softclip_key && 0 != key_base) {
+      if(1 == opt->softclip_key && INT8_MAX != key_base) {
           tmap_map_util_keytrim(query, qlen, target, tlen, strand, key_base, s);
       }
 

@@ -375,6 +375,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   @details              generates the cigar after tmap_map_util_sw_gen_score has been called
   @param  refseq        the reference sequence
   @param  sams          the seeded sams
+  @param  seq           the original query sequence 
   @param  seqs          the query sequence (forward, reverse compliment, reverse, and compliment)
   @param  opt           the program parameters
   @return               the locally aligned sams
@@ -382,6 +383,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
 tmap_map_sams_t *
 tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
                  tmap_map_sams_t *sams, 
+                 tmap_seq_t *seq,
                  tmap_seq_t **seqs,
                  tmap_map_opt_t *opt);
 
