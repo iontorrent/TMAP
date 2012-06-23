@@ -1934,6 +1934,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
           // update start/end
           start_pos = tmp_sam.pos + 1; // one-based
           end_pos = start_pos + tlen - 1;
+          target = tmp_target; // reset target in memory
           if(target_mem < tlen) { // more memory?
               target_mem = tlen;
               tmap_roundup32(target_mem);
@@ -1944,6 +1945,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
           if(NULL == tmap_refseq_subseq2(refseq, sams->sams[end].seqid+1, start_pos, end_pos, target, 0, NULL)) {
               tmap_bug();
           }
+          tmp_target = target; // store for later
       }
 
       // path memory
@@ -2008,14 +2010,17 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
               }
               // do we need to continue?
               if(0 == leading && 0 == trailing) break; // no need
-              s->pos += leading; // Skip over the leading deletion
+              // Skip over the leading deletion
+              s->pos += leading; 
+              target + leading;
+              tlen -= (leading + trailing);
               // Redo the alignment
               if(0 < conv) { // NB: there were IUPAC bases
-                  s->score = tmap_sw_global_banded_core(target + leading, tlen - leading - trailing, query, qlen, &par_iupac,
+                  s->score = tmap_sw_global_banded_core(target, tlen, query, qlen, &par_iupac,
                                                         tmp_sam.result.score_fwd, path, &path_len, 0); 
               }
               else {
-                  s->score = tmap_sw_global_banded_core(target + leading, tlen - leading - trailing, query, qlen, &par,
+                  s->score = tmap_sw_global_banded_core(target, tlen, query, qlen, &par,
                                                         tmp_sam.result.score_fwd, path, &path_len, 0); 
               }
           }
