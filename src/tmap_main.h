@@ -64,10 +64,8 @@ extern int
 tmap_bwt_bwtupdate_main(int argc, char *argv[]);
 extern int 
 tmap_index_size(int argc, char *argv[]);
-#ifdef HAVE_SAMTOOLS
 extern int
 tmap_sam2fs_main(int argc, char *argv[]);
-#endif
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
 extern int
 tmap_fsw_main(int argc, char *argv[]);

@@ -81,6 +81,7 @@ tmap_sam_convert_tag_opt_init(bam1_t *b)
       s += 2;
       __skip_tag(s);
   }
+  /*
   char tag[2];
   for(tag[0]=0;tag[0]<127;tag[0]++) {
       if(!('A' <= tag[0] && tag[0] <= 'Z')
@@ -99,6 +100,7 @@ tmap_sam_convert_tag_opt_init(bam1_t *b)
           }
       }
   }
+  */
   return t;
 }
 
