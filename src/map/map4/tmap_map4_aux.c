@@ -135,7 +135,7 @@ tmap_map4_aux_core(tmap_seq_t *seq,
   if(query_len < min_seed_length) min_seed_length = query_len; 
   if (min_seed_length < 0) tmap_bug(); // this should not happen, or fix it upstream
   if(-1 == max_seed_length || query_len < max_seed_length) max_seed_length = query_len; 
-  if(query_len < max_seed_length * opt->max_seed_length_adj_coef) max_seed_length = (query_len + 1) / opt->max_seed_length_adj_coef;
+  if(0 < opt->max_seed_length_adj_coef && query_len < max_seed_length * opt->max_seed_length_adj_coef) max_seed_length = (query_len + 1) / opt->max_seed_length_adj_coef;
   if(max_seed_length < min_seed_length) max_seed_length = min_seed_length; // due to the previous line
 
   start = 0; // zero-based

@@ -863,11 +863,11 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
   // map4
   tmap_map_opt_options_add(opt->options, "min-seed-length", required_argument, 0, 0, 
                            TMAP_MAP_OPT_TYPE_INT,
-                           "the minimum seed length to accept hits",
+                           "the minimum seed length to accept hits (-1 to disable)",
                            NULL,
                            tmap_map_opt_option_print_func_min_seed_length,
                            TMAP_MAP_ALGO_MAP4);
-  tmap_map_opt_options_add(opt->options, "max-seed-length", required_argument, 0, 0, 
+  tmap_map_opt_options_add(opt->options, "max-seed-length (-1 to disable)", required_argument, 0, 0, 
                            TMAP_MAP_OPT_TYPE_INT,
                            "the maximum seed length to accept hits",
                            NULL,
@@ -875,7 +875,7 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            TMAP_MAP_ALGO_MAP4);
   tmap_map_opt_options_add(opt->options, "max-seed-length-adj-coef", required_argument, 0, 0, 
                            TMAP_MAP_OPT_TYPE_FLOAT,
-                           "the maximum seed length adjustment coefficient",
+                           "the maximum seed length adjustment coefficient (-1 to disable)",
                            NULL,
                            tmap_map_opt_option_print_func_max_seed_length_adj_coef,
                            TMAP_MAP_ALGO_MAP4);
@@ -2061,7 +2061,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
           }
       }
       if(-1 != opt->max_seed_length) tmap_error_cmd_check_int(opt->max_seed_length, 1, INT32_MAX, "--max-seed-length");
-      tmap_error_cmd_check_int(opt->max_seed_length_adj_coef, 0, INT32_MAX, "--max-seed-length-adj-coef");
+      if(0 < opt->max_seed_length_adj_coef) tmap_error_cmd_check_int(opt->max_seed_length_adj_coef, 0, INT32_MAX, "--max-seed-length-adj-coef");
       tmap_error_cmd_check_int(opt->hit_frac, 0, 1, "--hit-frac");
       if(-1 != opt->seed_step) tmap_error_cmd_check_int(opt->seed_step, 1, INT32_MAX, "--seed-step");
       tmap_error_cmd_check_int(opt->max_iwidth, 0, INT32_MAX, "--max-iwidth");
