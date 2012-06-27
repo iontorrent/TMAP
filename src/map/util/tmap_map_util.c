@@ -449,11 +449,9 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
                                          mate_strand, mate_seqid, mate_pos, mate_tlen,
                                          sam->mapq, sam->cigar, sam->n_cigar,
                                          sam->score, sam->ascore, sam->pscore, nh, sam->algo_id, sam->algo_stage, 
-                                         "\tXS:i:%d\tXT:i:%d\tZS:i:%d\tZE:i:%d",
+                                         "\tXS:i:%d\tXT:i:%d",
                                          sam->score_subo,
-                                         sam->n_seeds,
-                                         sam->seed_start,
-                                         sam->seed_end);
+                                         sam->n_seeds);
           break;
         case TMAP_MAP_ALGO_MAP4:
           return tmap_sam_convert_mapped(seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
@@ -1208,9 +1206,6 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
 
           // # of seeds
           s->n_seeds = (end - start + 1);
-          //seed start and stop
-          s->seed_start = start_pos;
-          s->seed_end = end_pos;
           // update aux data
           tmap_map_sam_malloc_aux(s);
           switch(s->algo_id) {
