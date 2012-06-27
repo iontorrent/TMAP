@@ -2007,7 +2007,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
               if(0 == leading && 0 == trailing) break; // no need
               // Skip over the leading deletion
               s->pos += leading; 
-              target + leading;
+              target += leading;
               tlen -= (leading + trailing);
               // Redo the alignment
               if(0 < conv) { // NB: there were IUPAC bases
