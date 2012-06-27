@@ -567,6 +567,11 @@ With a value of $-1$ will set the seed length to $\left(ceiling(log_4(R)) + 2\ri
 \subsubsection{\TT{--max-seed-length INT}}
 Specifies the maximum number of bases to use to seed (longest SMEM).
 
+\subsubsection{\TT{--max-seed-length-adj-coef FLOAT}}
+Specifies the maximum seed length adjustment coefficient.
+Suppose the maximum seed length is $L$, the query length is $N$, and the co-efficient is $Z$.
+If $N < L * Z$ then the maximum seed length will be adjusted to $(N + 1) / Z$. 
+
 \subsubsection{\TT{--max-iwidth INT}}
 Specifies the maximum interval size to accept a hit.
 

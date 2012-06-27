@@ -223,6 +223,7 @@ __tmap_map_opt_option_print_func_double_init(skip_seed_frac)
 // map4 options
 __tmap_map_opt_option_print_func_int_init(min_seed_length)
 __tmap_map_opt_option_print_func_int_init(max_seed_length)
+__tmap_map_opt_option_print_func_double_init(max_seed_length_adj_coef)
 __tmap_map_opt_option_print_func_int_init(max_iwidth)
 __tmap_map_opt_option_print_func_int_init(max_repr)
 __tmap_map_opt_option_print_func_tf_init(rand_repr)
@@ -872,6 +873,12 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_max_seed_length,
                            TMAP_MAP_ALGO_MAP4);
+  tmap_map_opt_options_add(opt->options, "max-seed-length-adj-coef", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_FLOAT,
+                           "the maximum seed length adjustment coefficient",
+                           NULL,
+                           tmap_map_opt_option_print_func_max_seed_length_adj_coef,
+                           TMAP_MAP_ALGO_MAP4);
   tmap_map_opt_options_add(opt->options, "max-iwidth", required_argument, 0, 0, 
                            TMAP_MAP_OPT_TYPE_INT,
                            "the maximum interval size to accept a hit",
@@ -1109,6 +1116,7 @@ tmap_map_opt_init(int32_t algo_id)
       // map4
       opt->min_seed_length = -1;
       opt->max_seed_length = 48; 
+      opt->max_seed_length_adj_coef = 2.0; 
       opt->hit_frac = 0.20;
       opt->seed_step = 8;
       opt->max_iwidth = 20;
@@ -1636,10 +1644,13 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
       // MAP 4
       else if(0 == strcmp("min-seed-length", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP4) {
-          opt->min_seed_length= atoi(optarg);
+          opt->min_seed_length = atoi(optarg);
       }
       else if(0 == strcmp("max-seed-length", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP4) {
-          opt->max_seed_length= atoi(optarg);
+          opt->max_seed_length = atoi(optarg);
+      }
+      else if(0 == strcmp("max-seed-length-adj-coef", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP4) {
+          opt->max_seed_length_adj_coef = atof(optarg);
       }
       else if(0 == strcmp("max-iwidth", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP4) {
           opt->max_iwidth = atoi(optarg);
@@ -2049,6 +2060,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
           }
       }
       if(-1 != opt->max_seed_length) tmap_error_cmd_check_int(opt->max_seed_length, 1, INT32_MAX, "--max-seed-length");
+      tmap_error_cmd_check_int(opt->max_seed_length_adj_coef, 0, INT32_MAX, "--max-seed-length-adj-coef");
       tmap_error_cmd_check_int(opt->hit_frac, 0, 1, "--hit-frac");
       if(-1 != opt->seed_step) tmap_error_cmd_check_int(opt->seed_step, 1, INT32_MAX, "--seed-step");
       tmap_error_cmd_check_int(opt->max_iwidth, 0, INT32_MAX, "--max-iwidth");

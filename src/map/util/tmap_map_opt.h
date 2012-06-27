@@ -265,6 +265,7 @@ typedef struct __tmap_map_opt_t {
     // map4 options
     int32_t min_seed_length; /*!< the minimum seed length to accept a hit (--min-seed-length) */
     int32_t max_seed_length; /*!< the maximum seed length to accept a hit (--max-seed-length) */
+    double max_seed_length_adj_coef; /*!< the maximum seed length adjustment coefficient (--max-seed-length-adj-coef) */
     int32_t max_iwidth; /*!< the maximum interval width to accept hits (--max-iwidth) */
     int32_t max_repr; /*!< the maximum number of representitive hits for repetitive hits (--max-repr) */
     int32_t use_min; /*!< when seed stepping, try seeding when at least the minimum seed length is present, otherwise maximum (--use-min) */
