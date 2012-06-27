@@ -6,7 +6,7 @@ import re
 import sys
 from optparse import OptionParser
 from itertools import *
-import progressbar
+#import progressbar
 
 def diff_int(val1, val2, wiggle):
     """returns true if abs(val2 - val1) <= wiggle"""
