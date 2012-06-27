@@ -449,11 +449,9 @@ tmap_map_sam_print(tmap_seq_t *seq, tmap_refseq_t *refseq, tmap_map_sam_t *sam, 
                                          mate_strand, mate_seqid, mate_pos, mate_tlen,
                                          sam->mapq, sam->cigar, sam->n_cigar,
                                          sam->score, sam->ascore, sam->pscore, nh, sam->algo_id, sam->algo_stage, 
-                                         "\tXS:i:%d\tXT:i:%d\tZS:i:%d\tZE:i:%d",
+                                         "\tXS:i:%d\tXT:i:%d",
                                          sam->score_subo,
-                                         sam->n_seeds,
-                                         sam->seed_start,
-                                         sam->seed_end);
+                                         sam->n_seeds);
           break;
         case TMAP_MAP_ALGO_MAP4:
           return tmap_sam_convert_mapped(seq, sam_flowspace_tags, bidirectional, seq_eq, refseq, 
@@ -1208,9 +1206,6 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
 
           // # of seeds
           s->n_seeds = (end - start + 1);
-          //seed start and stop
-          s->seed_start = start_pos;
-          s->seed_end = end_pos;
           // update aux data
           tmap_map_sam_malloc_aux(s);
           switch(s->algo_id) {
@@ -1934,6 +1929,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
           // update start/end
           start_pos = tmp_sam.pos + 1; // one-based
           end_pos = start_pos + tlen - 1;
+          target = tmp_target; // reset target in memory
           if(target_mem < tlen) { // more memory?
               target_mem = tlen;
               tmap_roundup32(target_mem);
@@ -1944,6 +1940,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
           if(NULL == tmap_refseq_subseq2(refseq, sams->sams[end].seqid+1, start_pos, end_pos, target, 0, NULL)) {
               tmap_bug();
           }
+          tmp_target = target; // store for later
       }
 
       // path memory
@@ -2008,14 +2005,17 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
               }
               // do we need to continue?
               if(0 == leading && 0 == trailing) break; // no need
-              s->pos += leading; // Skip over the leading deletion
+              // Skip over the leading deletion
+              s->pos += leading; 
+              target + leading;
+              tlen -= (leading + trailing);
               // Redo the alignment
               if(0 < conv) { // NB: there were IUPAC bases
-                  s->score = tmap_sw_global_banded_core(target + leading, tlen - leading - trailing, query, qlen, &par_iupac,
+                  s->score = tmap_sw_global_banded_core(target, tlen, query, qlen, &par_iupac,
                                                         tmp_sam.result.score_fwd, path, &path_len, 0); 
               }
               else {
-                  s->score = tmap_sw_global_banded_core(target + leading, tlen - leading - trailing, query, qlen, &par,
+                  s->score = tmap_sw_global_banded_core(target, tlen, query, qlen, &par,
                                                         tmp_sam.result.score_fwd, path, &path_len, 0); 
               }
           }
