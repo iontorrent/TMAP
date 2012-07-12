@@ -1217,7 +1217,7 @@ tmap_map_opt_usage_algo(tmap_map_opt_t *opt, int32_t stage)
 int
 tmap_map_opt_usage(tmap_map_opt_t *opt)
 {
-  int32_t i, j, prev_stage;
+  int32_t i, prev_stage;
   
   // print global options
   tmap_file_fprintf(tmap_file_stderr, "\n");
