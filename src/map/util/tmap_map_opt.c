@@ -1269,6 +1269,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
       if(opt->sub_opts[i]->algo_stage != prev_stage) {
           prev_stage = opt->sub_opts[i]->algo_stage;
           // print the stage
+          /*
           //tmap_file_fprintf(tmap_file_stderr, "\nstage%d options:\n", prev_stage);
           for(j=0;j<opt->options->n;j++) {
               tmap_map_opt_option_t *o = &opt->options->options[j];
@@ -1276,6 +1277,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
                   tmap_map_opt_option_print(o, opt);
               }
           }
+          */
       }
       
       tmap_map_opt_usage_algo(opt->sub_opts[i], opt->sub_opts[i]->algo_stage);
