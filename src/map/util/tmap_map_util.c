@@ -1079,7 +1079,7 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
   }
 
   if(opt->score_thr <= tmp_sam.score) { // NB: we could also specify 'prev_score <= tmp_sam.score'
-      int32_t add_current = 1; // yes, by deafult
+      int32_t add_current = 1; // yes, by default 
 
       // Save local variables
       // TODO: do we need to save this data in this fashion?
@@ -1988,7 +1988,20 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
           s->score = tmap_sw_global_banded_core(target, tlen, query, qlen, &par,
                                                 tmp_sam.result.score_fwd, path, &path_len, 0); 
       }
-      if(s->score != tmp_sam.score) {
+      if(s->score != tmp_sam.score && 1 < tmp_sam.result.n_best) {
+          /*
+          fprintf(stderr, "s->score=%d tmp_sam.score=%d\n", s->score, tmp_sam.score);
+          fprintf(stderr, "tmp_sam.result.n_best=%d\n", tmp_sam.result.n_best);
+          */
+
+          // explicitly fit the query into the target
+          if(0 < conv) { // NB: there were IUPAC bases
+              s->score = tmap_sw_fitting_core(target, tlen, query, qlen, &par_iupac, path, &path_len, 0);
+          }
+          else {
+              s->score = tmap_sw_fitting_core(target, tlen, query, qlen, &par, path, &path_len, 0);
+          }
+
           int32_t leading, trailing;
           while(1) {
               // check to see if there are leading/trailing deletions, then redo
@@ -2005,6 +2018,8 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
               }
               // do we need to continue?
               if(0 == leading && 0 == trailing) break; // no need
+              tmap_bug(); // NB: this should not happen with tmap_sw_fitting_core
+              /*
               // Skip over the leading deletion
               s->pos += leading; 
               target += leading;
@@ -2018,6 +2033,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
                   s->score = tmap_sw_global_banded_core(target, tlen, query, qlen, &par,
                                                         tmp_sam.result.score_fwd, path, &path_len, 0); 
               }
+              */
           }
           // TODO: should we skip otherwise? No, since VSW can differfrom GSW
       }
