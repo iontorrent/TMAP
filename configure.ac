@@ -9,7 +9,7 @@
 #  - scripts/doxygen/doxygen_config.ini (edit one instance of version #)
 
 AC_PREREQ(2.61);
-AC_INIT([tmap],[2.9.0],[nils.homer@lifetech.com],[tmap])
+AC_INIT([tmap],[2.9.1],[nils.homer@lifetech.com],[tmap])
 AC_COPYRIGHT([See LICENSE for copyright information.])
 AC_CONFIG_AUX_DIR(config)
 AM_INIT_AUTOMAKE([dist-bzip2 subdir-objects])
