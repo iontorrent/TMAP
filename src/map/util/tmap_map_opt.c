@@ -1979,7 +1979,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->pen_mm, 1, INT32_MAX, "-M");
   tmap_error_cmd_check_int(opt->pen_gapo, 1, INT32_MAX, "-O");
   tmap_error_cmd_check_int(opt->pen_gape, 1, INT32_MAX, "-E");
-  tmap_error_cmd_check_int(opt->pen_gapl, 1, INT32_MAX, "-E");
+  if(-1 != opt->pen_gapl) tmap_error_cmd_check_int(opt->pen_gapl, 1, INT32_MAX, "-G");
   if(1 != opt->gapl_len) tmap_error_cmd_check_int(opt->gapl_len, 1, INT32_MAX, "-E");
   tmap_error_cmd_check_int(opt->bw, 0, INT32_MAX, "-w");
   tmap_error_cmd_check_int(opt->softclip_type, 0, 3, "-g");
