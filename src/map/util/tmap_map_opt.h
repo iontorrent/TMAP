@@ -27,6 +27,10 @@
   */
 #define TMAP_MAP_OPT_PEN_GAPE 2
 /*!
+  The default long gap penalty.
+  */
+#define TMAP_MAP_OPT_PEN_GAPL 10
+/*!
   The default offset for homopolymer errors.
   */
 #define TMAP_MAP_OPT_FSCORE 2
@@ -142,11 +146,11 @@ typedef struct {
  * A list of global command line flags take or available.
  *
  * Taken:
- * ABCDEFGHIJLMORSTUWXYZ
+ * ABCDEFGHIKLMORSTUWXYZ
  * afghijklmnoqrsvwxyz
  *
  * Available:
- * GKV
+ * JV
  * t
  * 
  * NB: Lets reserve single character flags for global options. 
@@ -172,6 +176,8 @@ typedef struct __tmap_map_opt_t {
     int32_t pen_mm;  /*!< the mismatch penalty (-M,--pen-mismatch) */
     int32_t pen_gapo;  /*!< the indel open penalty (-O,--pen-gap-open) */
     int32_t pen_gape;  /*!< the indel extension penalty (-E,--pen-gap-extension) */
+    int32_t pen_gapl;  /*!< the long indel penalty (-G,--pen-gap-long) */
+    int32_t gapl_len;  /*!< the number of extra bases to add when searching for long indels (-K, --gap-long-length) */ 
     int32_t bw; /*!< the extra bases to add before and after the target during Smith-Waterman (-w,--band-width) */
     int32_t softclip_type; /*!< soft clip type (-g,--softclip-type) */
     int32_t dup_window; /*!< remove duplicate alignments from different algorithms within this bp window (-W,--duplicate-window) */

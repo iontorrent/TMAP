@@ -183,6 +183,16 @@ Specifies the gap extension penalty.
 This number must always be positive.
 See \autoref{sec:indel-scoring} for more information how insertions and deletions are scored.
 
+\subsubsection{\TT{-G,--pen-gap-long INT}}
+Specifies the long gap penalty.
+This number must always be positive.
+See \autoref{sec:indel-scoring} for more information how insertions and deletions are scored.
+
+\subsubsection{\TT{-K,--gap-long-length INT}}
+Specifies the number of extra bases to add when searching for long indels.
+If this number is negative, long indels are not considered.
+See \autoref{sec:indel-scoring} for more information how insertions and deletions are scored.
+
 \subsubsection{\TT{-w,--band,width INT}}
 Specifies the band width for local alignment.
 This number must always be positive.
@@ -946,6 +956,10 @@ TCAATAAAATTTT
 The first alignment may be preferred in base space due to the use of affine gap penalties (see \autoref{sec:indel-scoring}) and the other scoring parameters.
 If we penalize insertions or deletions due to homopolymer differences less than other insertions or deletions, the latter alignment may be more likely.
 Given Ion Torrent data, the latter may be more faithful to the underlying error mode.
+
+Another feature is the \TT{-G} and \TT{-K} options.
+When indels are detected using this method, the score for the indel is given by \TT{-G}.
+Since this is applied after the above alignment, typically only long gaps are given this score.
 
 \section{How are multiple equally scoring alignments in the same region chosen?}
 
