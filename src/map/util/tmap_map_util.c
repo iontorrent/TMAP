@@ -1821,7 +1821,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
   i = start = end = 0;
   start_pos = end_pos = 0;
   while(end < sams->n) {
-      uint8_t strand, *query=NULL, *query_rc=NULL, *tmp_target;
+      uint8_t strand, *query=NULL, *query_rc=NULL, *tmp_target=NULL;
       int32_t qlen;
       tmap_map_sam_t tmp_sam;
       tmap_map_sam_t *s = NULL;
@@ -2081,20 +2081,26 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
           end_pos = s->pos;
           if(end_pos < start_pos) tmap_bug(); // TODO: should this happen?
           tlen = end_pos - start_pos + 1;
+          if(tlen <= 0) tmap_bug();
           // target mem
           target = tmp_target; // reset target in memory
           if(target_mem < tlen) { // more memory?
               target_mem = tlen;
               tmap_roundup32(target_mem);
               target = tmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
+              tmp_target = target; // store for later
           }
           // Get the new target
           // NB: IUPAC codes are turned into mismatches
           if(NULL == tmap_refseq_subseq2(refseq, s->seqid+1, start_pos, end_pos, target, 0, &conv)) {
               tmap_bug();
           }
+          if(0 < conv && 0 == iupac_init) {
+              par_iupac.matrix = matrix_iupac;
+              __map_util_gen_ap_iupac(par_iupac, opt);
+              iupac_init = 1;
+          }
 
-           
           // try to add a larger deletion
           del_score = tmap_sw_clipping_core(target, tlen, query, query_start,
                                             (0 < conv) ? &par_iupac : &par,
@@ -2122,7 +2128,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
                                                     1, 1, // insertions,
                                                     path, &path_len, 0);
                   op = BAM_CINS;
-                  op_len = query_start - path[0].i;
+                  op_len = query_start - path[0].j;
                   new_score = ins_score;
                   pos_adj = 0;
               }
@@ -2137,6 +2143,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
                   new_score = del_score;
                   pos_adj = op_len;
               }
+              if(path[path_len-1].ctype == TMAP_SW_FROM_I) pos_adj++; // TODO: is this correct?
           }
           if(0 < new_score && 0 <= new_score - opt->pen_gapl) { 
               // get the cigar
@@ -2151,7 +2158,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
                   s->cigar[j+1+n_cigar] = s->cigar[j];
               }
               // add the operation
-              TMAP_SW_CIGAR_STORE(s->cigar[s->n_cigar], op, op_len);
+              TMAP_SW_CIGAR_STORE(s->cigar[n_cigar], op, op_len);
               // add the rest of the cigar
               for(j=0;j<n_cigar;j++) {
                   s->cigar[j] = cigar[j];
@@ -2170,7 +2177,8 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
               }
               free(cigar); cigar = NULL;
               // update the query end
-              query_start = path[path_len-1].j - 1;
+              query_start = path[path_len-1].j - 1; // query_start is one-based
+              if(query_start < 0) tmap_bug();
               s->score += new_score - opt->pen_gapl;
               s->pos -= pos_adj; // adjust the position further if there was a deletion
           }
@@ -2178,21 +2186,29 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
           // reset start/end position
           start_pos = s->pos + 1;
           end_pos = s->pos + s->target_len; 
+          if(end_pos < start_pos) tmap_bug();
 
           // retrieve the target
           //TODO: is this always necessary (keytrim)?
           // target mem
           tlen = end_pos - start_pos + 1;
+          if(tlen <= 0) tmap_bug();
           target = tmp_target; // reset target in memory
           if(target_mem < tlen) { // more memory?
               target_mem = tlen;
               tmap_roundup32(target_mem);
               target = tmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
+              tmp_target = target; // store for later
           }
           // Get the new target
           // NB: IUPAC codes are turned into mismatches
           if(NULL == tmap_refseq_subseq2(refseq, s->seqid+1, start_pos, end_pos, target, 0, &conv)) {
               tmap_bug();
+          }
+          if(0 < conv && 0 == iupac_init) {
+              par_iupac.matrix = matrix_iupac;
+              __map_util_gen_ap_iupac(par_iupac, opt);
+              iupac_init = 1;
           }
           
           // reset query
@@ -2227,21 +2243,27 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
               target_mem = tlen;
               tmap_roundup32(target_mem);
               target = tmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
+              tmp_target = target; // store for later
           }
           // Get the new target
           // NB: IUPAC codes are turned into mismatches
           if(NULL == tmap_refseq_subseq2(refseq, s->seqid+1, start_pos, end_pos, target, 0, &conv)) {
               tmap_bug();
           }
+          if(0 < conv && 0 == iupac_init) {
+              par_iupac.matrix = matrix_iupac;
+              __map_util_gen_ap_iupac(par_iupac, opt);
+              iupac_init = 1;
+          }
 
           // try to add a larger deletion
-          del_score = tmap_sw_clipping_core(target, tlen, query + query_end + 1, seq_len - query_end,
+          del_score = tmap_sw_clipping_core(target, tlen, query + query_end + 1, seq_len - query_end - 1,
                                             (0 < conv) ? &par_iupac : &par,
                                             0, 1, // deletions
                                             NULL, 0, 0);
 
           // try to add a larger insertion
-          ins_score = tmap_sw_clipping_core(target, tlen, query + query_end + 1, seq_len - query_end,
+          ins_score = tmap_sw_clipping_core(target, tlen, query + query_end + 1, seq_len - query_end - 1,
                                             (0 < conv) ? &par_iupac : &par, 
                                             1, 1, // insertions,
                                             NULL, 0, 0);
@@ -2253,7 +2275,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
           else {
               if(del_score < ins_score) {
                   // get the path
-                  tmap_sw_clipping_core(target, tlen, query + query_end + 1, seq_len - query_end,
+                  tmap_sw_clipping_core(target, tlen, query + query_end + 1, seq_len - query_end - 1,
                                         (0 < conv) ? &par_iupac : &par,
                                         1, 1, // insertions,
                                         path, &path_len, 0);
@@ -2263,7 +2285,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
               }
               else {
                   // get the path
-                  tmap_sw_clipping_core(target, tlen, query + query_end + 1, seq_len - query_end,
+                  tmap_sw_clipping_core(target, tlen, query + query_end + 1, seq_len - query_end - 1,
                                         (0 < conv) ? &par_iupac : &par,
                                         0, 1, // deletions
                                         path, &path_len, 0);
@@ -2299,7 +2321,8 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
               }
               free(cigar); cigar = NULL;
               // update the query end
-              query_end += path[0].j;
+              query_end += path[0].j; // query_end is zero-based
+              if(seq_len <= query_end) tmap_bug();
               s->score += new_score - opt->pen_gapl;
           }
 
@@ -2316,11 +2339,17 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
               target_mem = tlen;
               tmap_roundup32(target_mem);
               target = tmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
+              tmp_target = target; // store for later
           }
           // Get the new target
           // NB: IUPAC codes are turned into mismatches
           if(NULL == tmap_refseq_subseq2(refseq, s->seqid+1, start_pos, end_pos, target, 0, &conv)) {
               tmap_bug();
+          }
+          if(0 < conv && 0 == iupac_init) {
+              par_iupac.matrix = matrix_iupac;
+              __map_util_gen_ap_iupac(par_iupac, opt);
+              iupac_init = 1;
           }
       }
 
