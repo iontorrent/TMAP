@@ -196,6 +196,7 @@ typedef struct __tmap_map_opt_t {
     int32_t rand_read_name;  /*!< specifies to randomize based on the read name (-u,--rand-read-name) */
     int32_t input_compr;  /*!< the input compression type (-j,--input-bz2 and -z,--input-gz) */
     int32_t output_type;  /*!< the output type (0 - SAM, 1 - BAM (compressed), 2 - BAM (uncompressed)) */
+    int32_t end_repair; /*!< specifies to perform 5' end repair (0 - disabled, 1 - prefer mismatches, 2 - prefer indels) */
     key_t shm_key;  /*!< the shared memory key (-k,--shared-memory-key) */
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
     double sample_reads;  /*!< sample the reads at this fraction (-x,--sample-reads) */

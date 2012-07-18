@@ -1760,6 +1760,258 @@ tmap_map_util_keytrim(uint8_t *query, int32_t qlen,
   }
 }
 
+static void 
+tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
+                         uint8_t *target_prev, int32_t tlen, 
+                         int8_t strand, 
+                         tmap_sw_path_t *path,
+                         tmap_refseq_t *refseq,
+                         tmap_map_sam_t *s,
+                         tmap_map_opt_t *opt)
+{
+  int32_t i, j, cigar_i;
+  int32_t op, op_len, cur_len;
+  int32_t softclip_start;
+  int32_t old_score, new_score;
+  int32_t start_pos, end_pos;
+  // scoring matrix
+  int32_t matrix[25], matrix_iupac[80];
+  tmap_sw_param_t par, par_iupac;
+  int32_t path_len = 0;
+  uint32_t *cigar = NULL;
+  int32_t n_cigar = 0;
+  int32_t found = 0;
+
+  // TODO: use outside memory
+  uint8_t *target = NULL;
+  int32_t target_mem = 0;
+  int32_t conv = 0;
+
+  // PARAMETERS
+  int32_t max_match_len = 5; // the maximum # of query bases to consider for the sub-alignment 
+  int32_t num_prev_bases = 2; // the maximum number of bases prior to the alignment to include in the target
+
+  // check if we allow soft-clipping on the 5' end
+  softclip_start = (TMAP_MAP_OPT_SOFT_CLIP_LEFT == opt->softclip_type || TMAP_MAP_OPT_SOFT_CLIP_ALL == opt->softclip_type) ? 1 : 0;
+  // do not perform if so
+  if(1 == softclip_start) return;
+
+  // check the first cigar op
+  cigar_i = (0 == strand) ? 0 : (s->n_cigar - 1);
+  op = TMAP_SW_CIGAR_OP(s->cigar[cigar_i]);
+  op_len = TMAP_SW_CIGAR_LENGTH(s->cigar[cigar_i]);
+  if(op != BAM_CMATCH) return; // ignore, since we care only about turning mismatches into indels
+
+  // compute the old score of this sub-alignment
+  cur_len = (max_match_len < op_len) ? max_match_len : op_len; 
+  old_score = 0;
+  // NB: assumes the op is a match/mismatch
+  found = 0; // did we find mismatches?
+  if(0 == strand) { // forward
+      for(i=0;i<cur_len;i++) { // go through the match/mismatches
+          if(query[i] == target_prev[i]) old_score += opt->score_match;
+          else old_score -= opt->pen_mm, found = 1;
+      }
+  }
+  else { // reverse
+      for(i=0;i<cur_len;i++) { // go through the match/mismatches
+          if(query[qlen-i-1] == target_prev[tlen-i-1]) old_score += opt->score_match;
+          else old_score -= opt->pen_mm, found = 1;
+      }
+  }
+  if(0 == found) return; // no mismatches, so what are you worrying about?
+
+  // get more target upstream
+  if(0 == strand) { // forward
+      start_pos = s->pos + 1; // one-based
+      if(start_pos < num_prev_bases) start_pos = 1;
+      else start_pos -= num_prev_bases;
+      end_pos = s->pos + cur_len; // one-based 
+  }
+  else {
+      start_pos = s->pos + s->target_len; // 1-based
+      if(start_pos <= cur_len) start_pos = 1;
+      else start_pos -= cur_len - 1;
+      end_pos = s->pos + s->target_len + num_prev_bases;
+      if(refseq->annos[s->seqid].len < end_pos) end_pos = refseq->annos[s->seqid].len; // bound
+  }
+  tlen = end_pos - start_pos + 1;
+  if(target_mem < tlen) { // more memory?
+      target_mem = tlen;
+      tmap_roundup32(target_mem);
+      target = tmap_realloc(target, sizeof(uint8_t)*target_mem, "target");
+  }
+  // NB: IUPAC codes are turned into mismatches
+  if(NULL == tmap_refseq_subseq2(refseq, s->seqid+1, start_pos, end_pos, target, 0, &conv)) {
+      tmap_bug();
+  }
+
+  // set the scoring parameters
+  if(0 < conv) {
+      par_iupac.matrix = matrix_iupac;
+      for(i=0;i<80;i++) { 
+          if(0 < matrix_iupac_mask[i]) (par).matrix[i] = (opt)->score_match; 
+          else (par).matrix[i] = -cur_len * (opt)->pen_mm; 
+      }
+      (par).row = 16; 
+      (par).band_width = (opt)->bw; 
+  }
+  else {
+      par.matrix = matrix;
+      __map_util_gen_ap(par, opt); 
+      for(i=0;i<25;i++) { 
+          (par).matrix[i] = -cur_len * opt->pen_mm; // TODO: is this enough?
+      }
+      for(i=0;i<4;i++) { 
+          (par).matrix[i*5+i] = (opt)->score_match; 
+      }
+      (par).row = 5; 
+      (par).band_width = (opt)->bw; 
+  }
+  (par).gap_open = 0;
+  (par).gap_ext = (opt)->pen_mm;
+  (par).gap_end = (opt)->pen_mm;
+
+  // adjust query for the reverse strand
+  if(1 == strand) { // reverse
+      query = query + qlen - cur_len; // NB: do not use this otherwise
+  }
+
+  /*
+  for(i=0;i<cur_len;i++) {
+      fputc("ACGTN"[query[i]], stderr);
+  }
+  fputc('\n', stderr);
+  for(i=0;i<tlen;i++) {
+      fputc("ACGTN"[target[i]], stderr);
+  }
+  fputc('\n', stderr);
+  */
+
+  // map the target against the the query
+  if(0 == strand) {
+      new_score = tmap_sw_clipping_core2(target, tlen, query, cur_len,
+                                         (0 < conv) ? &par_iupac : &par,
+                                         1, 0, // do not skip the end of the target
+                                         0, 0, // no soft-clipping
+                                         path, &path_len, 0);
+  }
+  else {
+      new_score = tmap_sw_clipping_core2(target, tlen, query, cur_len,
+                                         (0 < conv) ? &par_iupac : &par,
+                                         0, 1, // do not skip the start of the target
+                                         0, 0, // no soft-clipping
+                                         path, &path_len, 0);
+  }
+  //fprintf(stderr, "new_score=%d old_score=%d\n", new_score, old_score);
+
+  found = 0; // reset
+  if(old_score < new_score || (2 == opt->end_repair && old_score == new_score)) { // update
+      // get the cigar
+      cigar = tmap_sw_path2cigar(path, path_len, &n_cigar);
+      if(0 == n_cigar) {
+          tmap_bug();
+      }
+      // TODO: what if it starts with an indel
+
+      if(0 == strand) { // reverse the cigar
+          for(i=0;i<n_cigar>>1;i++) {
+              j = cigar[i];
+              cigar[i] = cigar[n_cigar-i-1];
+              cigar[n_cigar-i-1] = j;
+          }
+      }
+
+      /*
+         for(i=0;i<n_cigar;i++) {
+         fprintf(stderr, "i=%d %d%c\n", i, 
+         bam_cigar_oplen(cigar[i]),
+         bam_cigar_opchr(cigar[i]));
+         }
+         */
+
+      // check if the cigars match
+      if(1 == n_cigar && TMAP_SW_CIGAR_OP(cigar[0]) == BAM_CMATCH) found = 0;
+      else found = 1; // do not match, hmmn
+  }
+
+  // should we update?
+  if(1 == found) {
+      // update the previous cigar op
+      if(cur_len == op_len) { // delete the whole thing
+          if(0 == strand) { // forward
+              // shift down
+              for(i=0;i<s->n_cigar-1;i++) {
+                  s->cigar[i] = s->cigar[i-1];
+              }
+          } // otherwise just reduced the # of cigars
+          s->n_cigar--;
+      }
+      else { // update
+          TMAP_SW_CIGAR_STORE(s->cigar[cigar_i], BAM_CMATCH, (op_len - cur_len)); 
+      }
+
+      // get more cigar
+      s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*(n_cigar+s->n_cigar), "s->cigar");
+      if(0 == strand) { // forward
+          // shift up
+          for(i=s->n_cigar-1;0<=i;i--) { 
+              s->cigar[i+n_cigar] = s->cigar[i];
+          }
+      } // otherwise append to the end
+      // add new cigar and update the position
+      for(i=0;i<n_cigar;i++) {
+          if(0 == strand) { // forward
+              s->cigar[i] = cigar[i];
+          }
+          else { // reverse
+              s->cigar[i + s->n_cigar] = cigar[i];
+          }
+          switch(TMAP_SW_CIGAR_OP(cigar[i])) {
+            case BAM_CDEL:
+              s->target_len -= TMAP_SW_CIGAR_LENGTH(cigar[i]);
+              if(0 == strand) s->pos -= TMAP_SW_CIGAR_LENGTH(cigar[i]);
+              break;
+            case BAM_CINS:
+              s->target_len += TMAP_SW_CIGAR_LENGTH(cigar[i]);
+              if(0 == strand) s->pos += TMAP_SW_CIGAR_LENGTH(cigar[i]);
+              break;
+            default:
+              break;
+          }
+      }
+      s->n_cigar += n_cigar;
+
+      // merge adjacent cigar operations that have the same value
+      for(i=s->n_cigar-2;0<=i;i--) {
+          if(TMAP_SW_CIGAR_OP(s->cigar[i]) == TMAP_SW_CIGAR_OP(s->cigar[i+1])) {
+              TMAP_SW_CIGAR_STORE(s->cigar[i], TMAP_SW_CIGAR_OP(s->cigar[i]), TMAP_SW_CIGAR_LENGTH(s->cigar[i]) + TMAP_SW_CIGAR_LENGTH(s->cigar[i+1]));
+              // shift down
+              for(j=i+1;j<s->n_cigar-1;j++) {
+                  s->cigar[j] = s->cigar[j+1];
+              }
+              s->n_cigar--;
+          }
+      }
+      /*
+      for(i=0;i<s->n_cigar;i++) {
+          fprintf(stderr, "i=%d %d%c\n", i, 
+                  bam_cigar_oplen(s->cigar[i]),
+                  bam_cigar_opchr(s->cigar[i]));
+      }
+      */
+
+      // update the score
+      // TODO: is this correct?
+      s->score += new_score;
+      s->score -= old_score;
+  }
+
+  // free
+  free(cigar);
+  free(target);
+}
+
 tmap_map_sams_t *
 tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
                  tmap_map_sams_t *sams, 
@@ -2063,7 +2315,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
        * Try to detect large indels present as soft-clipped prefixes of the
        * alignment.
        */
-      while(0) { // NB: so we can break out at any time
+      while(1) { // NB: so we can break out at any time
           if(0 < opt->pen_gapl && 0 < query_start) { // start of the alignment
               int32_t del_score = 0;
               int32_t ins_score = 0;
@@ -2102,14 +2354,18 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
               }
 
               // try to add a larger deletion
-              del_score = tmap_sw_clipping_core(target, tlen, query, query_start,
+              del_score = tmap_sw_clipping_core2(target, tlen, query, query_start,
                                                 (0 < conv) ? &par_iupac : &par,
+                                                1, 1, // allow the start and end of the target to be skipped
                                                 1, 0, // deletions
                                                 NULL, 0, 0);
 
               // try to add a larger insertion
-              ins_score = tmap_sw_clipping_core(target, tlen, query, query_start,
+              // TODO: how do we enforce that the target starts immediately where
+              // we want it to?
+              ins_score = tmap_sw_clipping_core2(target, tlen, query, query_start,
                                                 (0 < conv) ? &par_iupac : &par, 
+                                                1, 0, // only allow the start of the target to be skipped
                                                 1, 1, // insertions,
                                                 NULL, 0, 0);
               // reset start/end position
@@ -2123,8 +2379,9 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
               else {
                   if(del_score < ins_score) {
                       // get the path
-                      tmap_sw_clipping_core(target, tlen, query, query_start,
+                      tmap_sw_clipping_core2(target, tlen, query, query_start,
                                             (0 < conv) ? &par_iupac : &par, 
+                                            1, 0, // only allow the start of the target to be skipped
                                             1, 1, // insertions,
                                             path, &path_len, 0);
                       op = BAM_CINS;
@@ -2134,8 +2391,9 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
                   }
                   else {
                       // get the path
-                      tmap_sw_clipping_core(target, tlen, query, query_start,
+                      tmap_sw_clipping_core2(target, tlen, query, query_start,
                                             (0 < conv) ? &par_iupac : &par,
+                                            1, 1, // allow the start and end of the target to be skipped
                                             1, 0, // deletions
                                             path, &path_len, 0);
                       op = BAM_CDEL;
@@ -2215,13 +2473,14 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
               query = (uint8_t*)tmap_seq_get_bases(seqs[strand])->s; // forward genomic strand
               query += query_start;
           }
+          break;
       }
       
       /**
        * Try to detect large indels present as soft-clipped suffixes of the
        * alignment.
        */
-      while(0) { // NB: so we can break out at any time
+      while(1) { // NB: so we can break out at any time
           if(0 < opt->pen_gapl && query_end < seq_len-1) {
               int32_t del_score = 0;
               int32_t ins_score = 0;
@@ -2259,14 +2518,16 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
               }
 
               // try to add a larger deletion
-              del_score = tmap_sw_clipping_core(target, tlen, query + query_end + 1, seq_len - query_end - 1,
+              del_score = tmap_sw_clipping_core2(target, tlen, query + query_end + 1, seq_len - query_end - 1,
                                                 (0 < conv) ? &par_iupac : &par,
+                                                1, 1, // allow the start and end of the target to be skipped
                                                 0, 1, // deletions
                                                 NULL, 0, 0);
 
               // try to add a larger insertion
-              ins_score = tmap_sw_clipping_core(target, tlen, query + query_end + 1, seq_len - query_end - 1,
+              ins_score = tmap_sw_clipping_core2(target, tlen, query + query_end + 1, seq_len - query_end - 1,
                                                 (0 < conv) ? &par_iupac : &par, 
+                                                0, 1, // only allow the end of the target to be skipped
                                                 1, 1, // insertions,
                                                 NULL, 0, 0);
 
@@ -2277,8 +2538,9 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
               else {
                   if(del_score < ins_score) {
                       // get the path
-                      tmap_sw_clipping_core(target, tlen, query + query_end + 1, seq_len - query_end - 1,
+                      tmap_sw_clipping_core2(target, tlen, query + query_end + 1, seq_len - query_end - 1,
                                             (0 < conv) ? &par_iupac : &par,
+                                            0, 1, // only allow the end of the target to be skipped
                                             1, 1, // insertions,
                                             path, &path_len, 0);
                       op = BAM_CINS;
@@ -2287,8 +2549,9 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
                   }
                   else {
                       // get the path
-                      tmap_sw_clipping_core(target, tlen, query + query_end + 1, seq_len - query_end - 1,
+                      tmap_sw_clipping_core2(target, tlen, query + query_end + 1, seq_len - query_end - 1,
                                             (0 < conv) ? &par_iupac : &par,
+                                            1, 1, // allow the start and end of the target to be skipped
                                             0, 1, // deletions
                                             path, &path_len, 0);
                       op = BAM_CDEL;
@@ -2354,6 +2617,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
                   iupac_init = 1;
               }
           }
+          break;
       } 
 
       // add soft clipping 
@@ -2400,6 +2664,11 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
       if(1 == opt->softclip_key && INT8_MAX != key_base) {
           // get the new target
           tmap_map_util_keytrim(query, qlen, target, tlen, strand, key_base, s);
+      }
+
+      // end repair
+      if(0 != opt->end_repair) {
+          tmap_map_util_end_repair(query, qlen, target, tlen, strand, path, refseq, s, opt);
       }
 
       i++;

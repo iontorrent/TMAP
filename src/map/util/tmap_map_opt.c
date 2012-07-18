@@ -166,6 +166,7 @@ __tmap_map_opt_option_print_func_tf_init(rand_read_name)
 __tmap_map_opt_option_print_func_compr_init(input_compr_gz, input_compr, TMAP_FILE_GZ_COMPRESSION)
 __tmap_map_opt_option_print_func_compr_init(input_compr_bz2, input_compr, TMAP_FILE_BZ2_COMPRESSION)
 __tmap_map_opt_option_print_func_int_init(output_type)
+__tmap_map_opt_option_print_func_int_init(end_repair)
 __tmap_map_opt_option_print_func_int_init(shm_key)
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
 __tmap_map_opt_option_print_func_double_init(sample_reads)
@@ -424,6 +425,7 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
   static char *pairing[] = {"0 - no pairing is to be performed", "1 - mate pairs (-S 0 -P 1)", "2 - paired end (-S 1 -P 0)", NULL};
   static char *strandedness[] = {"0 - same strand", "1 - opposite strand", NULL};
   static char *positioning[] = {"0 - read one before read two", "1 - read two before read one", NULL};
+  static char *end_repair[] = {"0 - disable", "1 - prefer mismatches", "2 - prefer indels", NULL};
 
   opt->options = tmap_map_opt_options_init();
 
@@ -591,6 +593,12 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            "the output type",
                            output_type,
                            tmap_map_opt_option_print_func_output_type,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "end-repair", required_argument, 0, 0 /* no short flag */, 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "specifies to perform 5' end repair",
+                           end_repair,
+                           tmap_map_opt_option_print_func_end_repair,
                            TMAP_MAP_ALGO_GLOBAL);
   tmap_map_opt_options_add(opt->options, "shared-memory-key", required_argument, 0, 'k', 
                            TMAP_MAP_OPT_TYPE_INT,
@@ -1062,6 +1070,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->rand_read_name = 0;
   opt->input_compr = TMAP_FILE_NO_COMPRESSION;
   opt->output_type = 0;
+  opt->end_repair = 0;
   opt->shm_key = 0;
   opt->min_seq_len = -1;
   opt->max_seq_len = -1;
@@ -1512,6 +1521,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
               tmap_get_reads_file_format_from_fn_int(opt->fn_reads[i], &opt->reads_format, &opt->input_compr);
           }
       }
+      else if(0 == c && 0 == strcmp("end-repair", options[option_index].name)) {
+          opt->end_repair = atoi(optarg);
+      }
       // End of global options
       // Flowspace options
       else if(c == 'F' || (0 == c && 0 == strcmp("final-flowspace", options[option_index].name))) {       
@@ -1858,6 +1870,9 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
     if(opt_a->vsw_type != opt_b->vsw_type) {
         tmap_error("option -H was specified outside of the common options", Exit, CommandLineArgument);
     }
+    if(opt_a->end_repair != opt_b->end_repair) {
+        tmap_error("option --end-repair was specified outside of the common options", Exit, CommandLineArgument);
+    }
     // flowspace
     if(opt_a->fscore != opt_b->fscore) {
         tmap_error("option -X was specified outside of the common options", Exit, CommandLineArgument);
@@ -2006,6 +2021,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   */
   tmap_error_cmd_check_int(opt->rand_read_name, 0, 1, "-u");
   tmap_error_cmd_check_int(opt->output_type, 0, 2, "-o");
+  tmap_error_cmd_check_int(opt->end_repair, 0, 2, "--end-repair");
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
   tmap_error_cmd_check_int(opt->sample_reads, 0, 1, "-x");
 #endif
@@ -2177,6 +2193,7 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->rand_read_name = opt_src->rand_read_name;
     opt_dest->input_compr = opt_src->input_compr;
     opt_dest->output_type = opt_src->output_type;
+    opt_dest->end_repair = opt_src->end_repair;
     opt_dest->shm_key = opt_src->shm_key;
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
     opt_dest->sample_reads = opt_src->sample_reads;
@@ -2261,6 +2278,7 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "aln_flowspace=%d\n", opt->aln_flowspace);
   fprintf(stderr, "input_compr=%d\n", opt->input_compr);
   fprintf(stderr, "output_type=%d\n", opt->output_type);
+  fprintf(stderr, "end_repair=%d\n", opt->end_repair);
   fprintf(stderr, "shm_key=%d\n", (int)opt->shm_key);
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
   fprintf(stderr, "sample_reads=%lf\n", opt->sample_reads);

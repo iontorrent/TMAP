@@ -29,6 +29,7 @@
 
 #include <stdint.h>
 
+// TODO: replace these with those from bam.h
 #define TMAP_SW_CIGAR_OP(_cigar) (((_cigar) & 0xf))
 #define TMAP_SW_CIGAR_LENGTH(_cigar) (((_cigar) >> 4))
 #define TMAP_SW_CIGAR_STORE(_cigar, _op, _len) ((_cigar) = ((_len) << 4) | ((_op) & 0xf))
@@ -279,6 +280,27 @@ tmap_sw_clipping_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, 
 int32_t
 tmap_sw_fitting_core(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
                                 tmap_sw_path_t *path, int32_t *path_len, int32_t right_j);
+
+/*!
+  Performs a general alignment.
+  @param  seq1             the first DNA sequence (in 2-bit format)
+  @param  len1             the length of the first sequence
+  @param  seq2             the second DNA sequence (in 2-bit format)
+  @param  len2             the length of the second sequence
+  @param  ap               the alignment parameters
+  @param  seq1_start_skip  1 to allow clipping at the start of seq1, 0 otherwise
+  @param  seq1_end_skip    1 to allow clipping at the end of seq1, 0 otherwise
+  @param  seq2_start_clip  1 to allow clipping at the start of seq2, 0 otherwise
+  @param  seq2_end_clip    1 to allow clipping at the end of seq2, 0 otherwise
+  @param  path             the Smith-Waterman alignment path
+  @param  path_len         the Smith-Waterman alignment path length
+  @param  right_j          0 if we are to left-justify indels, 1 otherwise
+  @return                  the alignment score, 0 if none was found
+  */
+int32_t
+tmap_sw_clipping_core2(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2, const tmap_sw_param_t *ap,
+             int32_t seq1_start_skip, int32_t seq1_end_skip, int32_t seq2_start_clip, int32_t seq2_end_clip,
+             tmap_sw_path_t *path, int32_t *path_len, int32_t right_justify);
 
 /*!
   Creates a cigar array from an alignment path
