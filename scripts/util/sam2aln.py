@@ -216,9 +216,10 @@ def main(options):
       strand = 1
     
     qdna, tdna, matcha = alignment(strand, md, cigar, qseq)
-    #print qdna
-    #print matcha
-    #print tdna
+    print qdna
+    print matcha
+    print tdna
+    print ""
 
 if __name__ == '__main__':
   parser = OptionParser()
