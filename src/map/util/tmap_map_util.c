@@ -1940,9 +1940,9 @@ tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
       // update the previous cigar op
       if(cur_len == op_len) { // delete the whole thing
           if(0 == strand) { // forward
-              // shift down
+              // shift down, delete the first cigar operator
               for(i=0;i<s->n_cigar-1;i++) {
-                  s->cigar[i] = s->cigar[i-1];
+                  s->cigar[i] = s->cigar[i+1];
               }
           } // otherwise just reduced the # of cigars
           s->n_cigar--;
