@@ -174,9 +174,17 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
           tmap_bug();
       }
       // get the current header
-      header = io_in->seqios[0]->io.samio->fp->header->header; // wow, that's a lot of pointers
-      if(NULL == header) tmap_bug();
-      header = sam_header_clone(header); // clone the header
+      if(NULL == io_in->seqios[0]) tmap_bug();
+      if(NULL == io_in->seqios[0]->io.samio) tmap_bug();
+      if(NULL == io_in->seqios[0]->io.samio->fp->header) tmap_bug();
+      if(NULL == io_in->seqios[0]->io.samio->fp->header->header) {
+          header = sam_header_parse2(io_in->seqios[0]->io.samio->fp->header->text);
+      }
+      else {
+          header = io_in->seqios[0]->io.samio->fp->header->header; // wow, that's a lot of pointers
+          if(NULL == header) tmap_bug();
+          header = sam_header_clone(header); // clone the header
+      }
       if(NULL == header) tmap_bug();
   }
   else {

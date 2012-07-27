@@ -2,10 +2,14 @@
 #
 #  The version number in AC_INIT is for the tmap package.
 #  Developers - the version number should *NEVER* be changed except by, 
-#  or with explicit permission from, Nils Homer.
+#  or with explicit permission from, Nils Homer.  If you really feel 
+#  like changing the version number, you must change the following files:
+#  - doc/tmap-book.tex  (edit one instance of version #)
+#  - doc/tmap-book.pdf  (type make in the doc directory)
+#  - scripts/doxygen/doxygen_config.ini (edit one instance of version #)
 
 AC_PREREQ(2.61);
-AC_INIT([tmap],[2.3.6],[nils.homer@lifetech.com],[tmap])
+AC_INIT([tmap],[2.9.1],[nils.homer@lifetech.com],[tmap])
 AC_COPYRIGHT([See LICENSE for copyright information.])
 AC_CONFIG_AUX_DIR(config)
 AM_INIT_AUTOMAKE([dist-bzip2 subdir-objects])

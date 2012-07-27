@@ -212,17 +212,34 @@ def main(options):
     cigar = lines.cigar
     qseq = lines.seq
     strand = 0
-    if lines.is_reverse:
+    if lines.is_reverse and not options.forward_genome:
       strand = 1
     
-    qdna, tdna, matcha = alignment(strand, md, cigar, qseq)
-    #print qdna
-    #print matcha
-    #print tdna
+    qdna, tdna, match = alignment(strand, md, cigar, qseq)
+    if options.print_read_name:
+        print qname
+    if 0 < options.col_width:
+        i = 0
+        while i < len(match):
+            end = i + options.col_width
+            if len(match) < end:
+                end = len(match)
+            print qdna[i:end]
+            print match[i:end]
+            print tdna[i:end]
+            i += options.col_width
+    else:
+        print qdna
+        print match
+        print tdna
+    print ""
 
 if __name__ == '__main__':
   parser = OptionParser()
   parser.add_option('--sam', help="input sam file", dest='sam')
+  parser.add_option('--print-read-name', help="print the read name", dest='print_read_name', default=False, action="store_true")
+  parser.add_option('--column-width', help='column width for printing', dest='col_width', default=-1, type=int)
+  parser.add_option('--forward-genome', help='print alignments relative to the forward genomic strand', dest='forward_genome', default=False, action="store_true")
   if len(sys.argv[1:]) < 1:
     parser.print_help()
   else:

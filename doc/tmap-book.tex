@@ -32,7 +32,7 @@ urlcolor=myurlcolor     % color of external links
 % TODO check all options are present
 
 % Version number
-\newcommand{\Version}{2.3.6}
+\newcommand{\Version}{2.9.1}
 
 % layout
 \setlength\topmargin{0in}
@@ -183,6 +183,16 @@ Specifies the gap extension penalty.
 This number must always be positive.
 See \autoref{sec:indel-scoring} for more information how insertions and deletions are scored.
 
+\subsubsection{\TT{-G,--pen-gap-long INT}}
+Specifies the long gap penalty.
+This number must always be positive.
+See \autoref{sec:indel-scoring} for more information how insertions and deletions are scored.
+
+\subsubsection{\TT{-K,--gap-long-length INT}}
+Specifies the number of extra bases to add when searching for long indels.
+If this number is negative, long indels are not considered.
+See \autoref{sec:indel-scoring} for more information how insertions and deletions are scored.
+
 \subsubsection{\TT{-w,--band,width INT}}
 Specifies the band width for local alignment.
 This number must always be positive.
@@ -260,6 +270,19 @@ Specifies the output type:
 	\item BAM (compressed). This is equivalent of using \TT{-o 0} and piping the output into \TT{samtools view -Sb -}.
 	\item BAM (uncompressed). This is equivalent of using \TT{-o 0} and piping the output into \TT{samtools view -Su -}.
 \end{enumerate}
+
+\subsubsection{\TT{--end-repair}}
+Specifies to perform end repair.
+\begin{enumerate}
+	\setcounter{enumi}{-1} % start at zero
+	\item Disable.
+	\item Prefer mismatches (when breaking ties).
+	\item Prefer indels (when breaking ties).
+\end{enumerate}
+The basic algorithm is to examine each alignment for a stretch of match/mismatches at the 5' end of the read with at least one mismatch.
+We then perform a new Smith-Waterman alignment on a prefix of the read (beginning/5'-end) where we set the gap open penalty is set to zero, the gap extension penalty is set to the previous mismatch penalty, and the mismatch penalty is set to effectively infinity.
+
+This solves a problem where mismatches can be over-represented at the 5' end of the read when no 5' soft-clipping is performed, and there is a more likely (homopolymer error) explanation.
 
 \subsubsection{\TT{-k,--shared-memory-key INT}}
 Specifies the shared memory key if the reference index has been loaded into shared memory.
@@ -946,6 +969,11 @@ TCAATAAAATTTT
 The first alignment may be preferred in base space due to the use of affine gap penalties (see \autoref{sec:indel-scoring}) and the other scoring parameters.
 If we penalize insertions or deletions due to homopolymer differences less than other insertions or deletions, the latter alignment may be more likely.
 Given Ion Torrent data, the latter may be more faithful to the underlying error mode.
+
+Another feature is the \TT{-G} and \TT{-K} options.
+When indels are detected using this method, the score for the indel is given by \TT{-G}.
+Since this is applied after the above alignment, typically only long gaps are given this score.
+Indels may not be justified in this case.
 
 \section{How are multiple equally scoring alignments in the same region chosen?}
 

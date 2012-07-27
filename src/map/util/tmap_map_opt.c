@@ -147,6 +147,8 @@ __tmap_map_opt_option_print_func_int_init(score_match)
 __tmap_map_opt_option_print_func_int_init(pen_mm)
 __tmap_map_opt_option_print_func_int_init(pen_gapo)
 __tmap_map_opt_option_print_func_int_init(pen_gape)
+__tmap_map_opt_option_print_func_int_init(pen_gapl)
+__tmap_map_opt_option_print_func_int_init(gapl_len)
 __tmap_map_opt_option_print_func_int_init(bw)
 __tmap_map_opt_option_print_func_int_init(softclip_type)
 __tmap_map_opt_option_print_func_int_init(dup_window)
@@ -164,6 +166,7 @@ __tmap_map_opt_option_print_func_tf_init(rand_read_name)
 __tmap_map_opt_option_print_func_compr_init(input_compr_gz, input_compr, TMAP_FILE_GZ_COMPRESSION)
 __tmap_map_opt_option_print_func_compr_init(input_compr_bz2, input_compr, TMAP_FILE_BZ2_COMPRESSION)
 __tmap_map_opt_option_print_func_int_init(output_type)
+__tmap_map_opt_option_print_func_int_init(end_repair)
 __tmap_map_opt_option_print_func_int_init(shm_key)
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
 __tmap_map_opt_option_print_func_double_init(sample_reads)
@@ -422,6 +425,7 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
   static char *pairing[] = {"0 - no pairing is to be performed", "1 - mate pairs (-S 0 -P 1)", "2 - paired end (-S 1 -P 0)", NULL};
   static char *strandedness[] = {"0 - same strand", "1 - opposite strand", NULL};
   static char *positioning[] = {"0 - read one before read two", "1 - read two before read one", NULL};
+  static char *end_repair[] = {"0 - disable", "1 - prefer mismatches", "2 - prefer indels", NULL};
 
   opt->options = tmap_map_opt_options_init();
 
@@ -473,6 +477,18 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            "the indel extension penalty",
                            NULL,
                            tmap_map_opt_option_print_func_pen_gape,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "pen-gap-long", required_argument, 0, 'G', 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the long indel penalty",
+                           NULL,
+                           tmap_map_opt_option_print_func_pen_gapl,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "gap-long-length", required_argument, 0, 'K', 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "the number of extra bases to add when searching for long indels",
+                           NULL,
+                           tmap_map_opt_option_print_func_gapl_len,
                            TMAP_MAP_ALGO_GLOBAL);
   tmap_map_opt_options_add(opt->options, "band-width", required_argument, 0, 'w', 
                            TMAP_MAP_OPT_TYPE_INT,
@@ -577,6 +593,12 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            "the output type",
                            output_type,
                            tmap_map_opt_option_print_func_output_type,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "end-repair", required_argument, 0, 0 /* no short flag */, 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "specifies to perform 5' end repair",
+                           end_repair,
+                           tmap_map_opt_option_print_func_end_repair,
                            TMAP_MAP_ALGO_GLOBAL);
   tmap_map_opt_options_add(opt->options, "shared-memory-key", required_argument, 0, 'k', 
                            TMAP_MAP_OPT_TYPE_INT,
@@ -1028,6 +1050,8 @@ tmap_map_opt_init(int32_t algo_id)
   opt->pen_mm = TMAP_MAP_OPT_PEN_MM;
   opt->pen_gapo = TMAP_MAP_OPT_PEN_GAPO;
   opt->pen_gape = TMAP_MAP_OPT_PEN_GAPE;
+  opt->pen_gapl = TMAP_MAP_OPT_PEN_GAPL;
+  opt->gapl_len = 50;
   opt->bw = 50; 
   opt->softclip_type = TMAP_MAP_OPT_SOFT_CLIP_RIGHT;
   opt->dup_window = 128;
@@ -1046,6 +1070,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->rand_read_name = 0;
   opt->input_compr = TMAP_FILE_NO_COMPRESSION;
   opt->output_type = 0;
+  opt->end_repair = 0;
   opt->shm_key = 0;
   opt->min_seq_len = -1;
   opt->max_seq_len = -1;
@@ -1400,11 +1425,17 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(c == 'E' || (0 == c && 0 == strcmp("pen-gap-extension", options[option_index].name))) {       
           opt->pen_gape = atoi(optarg);
       }
+      else if(c == 'G' || (0 == c && 0 == strcmp("pen-gap-long", options[option_index].name))) {       
+          opt->pen_gapl = atoi(optarg);
+      }
       else if(c == 'H' || (0 == c && 0 == strcmp("vsw-type", options[option_index].name))) {       
           opt->vsw_type = atoi(optarg); 
       }
       else if(c == 'I' || (0 == c && 0 == strcmp("use-seq-equal", options[option_index].name))) {       
           opt->seq_eq = 1;
+      }
+      else if(c == 'K' || (0 == c && 0 == strcmp("gap-long-length", options[option_index].name))) {       
+          opt->gapl_len = atoi(optarg);
       }
       else if(c == 'M' || (0 == c && 0 == strcmp("pen-mismatch", options[option_index].name))) {       
           opt->pen_mm = atoi(optarg);
@@ -1489,6 +1520,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
           for(i=0;i<opt->fn_reads_num;i++) {
               tmap_get_reads_file_format_from_fn_int(opt->fn_reads[i], &opt->reads_format, &opt->input_compr);
           }
+      }
+      else if(0 == c && 0 == strcmp("end-repair", options[option_index].name)) {
+          opt->end_repair = atoi(optarg);
       }
       // End of global options
       // Flowspace options
@@ -1774,6 +1808,12 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
     if(opt_a->pen_gape != opt_b->pen_gape) {
         tmap_error("option -E was specified outside of the common options", Exit, CommandLineArgument);
     }
+    if(opt_a->pen_gapl != opt_b->pen_gapl) {
+        tmap_error("option -G was specified outside of the common options", Exit, CommandLineArgument);
+    }
+    if(opt_a->gapl_len != opt_b->gapl_len) {
+        tmap_error("option -K was specified outside of the common options", Exit, CommandLineArgument);
+    }
     if(opt_a->bw != opt_b->bw) {
         tmap_error("option -w was specified outside of the common options", Exit, CommandLineArgument);
     }
@@ -1829,6 +1869,9 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
 #endif
     if(opt_a->vsw_type != opt_b->vsw_type) {
         tmap_error("option -H was specified outside of the common options", Exit, CommandLineArgument);
+    }
+    if(opt_a->end_repair != opt_b->end_repair) {
+        tmap_error("option --end-repair was specified outside of the common options", Exit, CommandLineArgument);
     }
     // flowspace
     if(opt_a->fscore != opt_b->fscore) {
@@ -1951,6 +1994,8 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->pen_mm, 1, INT32_MAX, "-M");
   tmap_error_cmd_check_int(opt->pen_gapo, 1, INT32_MAX, "-O");
   tmap_error_cmd_check_int(opt->pen_gape, 1, INT32_MAX, "-E");
+  if(-1 != opt->pen_gapl) tmap_error_cmd_check_int(opt->pen_gapl, 1, INT32_MAX, "-G");
+  if(1 != opt->gapl_len) tmap_error_cmd_check_int(opt->gapl_len, 1, INT32_MAX, "-E");
   tmap_error_cmd_check_int(opt->bw, 0, INT32_MAX, "-w");
   tmap_error_cmd_check_int(opt->softclip_type, 0, 3, "-g");
   tmap_error_cmd_check_int(opt->softclip_key, 0, 1, "-y");
@@ -1976,6 +2021,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   */
   tmap_error_cmd_check_int(opt->rand_read_name, 0, 1, "-u");
   tmap_error_cmd_check_int(opt->output_type, 0, 2, "-o");
+  tmap_error_cmd_check_int(opt->end_repair, 0, 2, "--end-repair");
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
   tmap_error_cmd_check_int(opt->sample_reads, 0, 1, "-x");
 #endif
@@ -2120,6 +2166,8 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->pen_mm = opt_src->pen_mm;
     opt_dest->pen_gapo = opt_src->pen_gapo;
     opt_dest->pen_gape = opt_src->pen_gape;
+    opt_dest->pen_gapl = opt_src->pen_gapl;
+    opt_dest->gapl_len = opt_src->gapl_len;
     opt_dest->bw = opt_src->bw;
     opt_dest->softclip_type = opt_src->softclip_type;
     opt_dest->dup_window = opt_src->dup_window;
@@ -2145,6 +2193,7 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->rand_read_name = opt_src->rand_read_name;
     opt_dest->input_compr = opt_src->input_compr;
     opt_dest->output_type = opt_src->output_type;
+    opt_dest->end_repair = opt_src->end_repair;
     opt_dest->shm_key = opt_src->shm_key;
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
     opt_dest->sample_reads = opt_src->sample_reads;
@@ -2203,6 +2252,8 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "pen_mm=%d\n", opt->pen_mm);
   fprintf(stderr, "pen_gapo=%d\n", opt->pen_gapo);
   fprintf(stderr, "pen_gape=%d\n", opt->pen_gape);
+  fprintf(stderr, "pen_gapl=%d\n", opt->pen_gapl);
+  fprintf(stderr, "gapl_len=%d\n", opt->gapl_len);
   fprintf(stderr, "fscore=%d\n", opt->fscore);
   fprintf(stderr, "bw=%d\n", opt->bw);
   fprintf(stderr, "softclip_type=%d\n", opt->softclip_type);
@@ -2227,6 +2278,7 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "aln_flowspace=%d\n", opt->aln_flowspace);
   fprintf(stderr, "input_compr=%d\n", opt->input_compr);
   fprintf(stderr, "output_type=%d\n", opt->output_type);
+  fprintf(stderr, "end_repair=%d\n", opt->end_repair);
   fprintf(stderr, "shm_key=%d\n", (int)opt->shm_key);
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
   fprintf(stderr, "sample_reads=%lf\n", opt->sample_reads);
