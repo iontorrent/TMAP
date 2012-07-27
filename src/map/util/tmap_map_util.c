@@ -1760,6 +1760,24 @@ tmap_map_util_keytrim(uint8_t *query, int32_t qlen,
   }
 }
 
+
+static void
+tmap_map_util_merge_adjacent_cigar_operations(tmap_map_sam_t *s)
+{
+  int32_t i, j;
+  // merge adjacent cigar operations that have the same value
+  for(i=s->n_cigar-2;0<=i;i--) {
+      if(TMAP_SW_CIGAR_OP(s->cigar[i]) == TMAP_SW_CIGAR_OP(s->cigar[i+1])) {
+          TMAP_SW_CIGAR_STORE(s->cigar[i], TMAP_SW_CIGAR_OP(s->cigar[i]), TMAP_SW_CIGAR_LENGTH(s->cigar[i]) + TMAP_SW_CIGAR_LENGTH(s->cigar[i+1]));
+          // shift down
+          for(j=i+1;j<s->n_cigar-1;j++) {
+              s->cigar[j] = s->cigar[j+1];
+          }
+          s->n_cigar--;
+      }
+  }
+}
+
 static void 
 tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
                          uint8_t *target_prev, int32_t tlen, 
@@ -1983,16 +2001,7 @@ tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
       s->n_cigar += n_cigar;
 
       // merge adjacent cigar operations that have the same value
-      for(i=s->n_cigar-2;0<=i;i--) {
-          if(TMAP_SW_CIGAR_OP(s->cigar[i]) == TMAP_SW_CIGAR_OP(s->cigar[i+1])) {
-              TMAP_SW_CIGAR_STORE(s->cigar[i], TMAP_SW_CIGAR_OP(s->cigar[i]), TMAP_SW_CIGAR_LENGTH(s->cigar[i]) + TMAP_SW_CIGAR_LENGTH(s->cigar[i+1]));
-              // shift down
-              for(j=i+1;j<s->n_cigar-1;j++) {
-                  s->cigar[j] = s->cigar[j+1];
-              }
-              s->n_cigar--;
-          }
-      }
+      tmap_map_util_merge_adjacent_cigar_operations(s);
       /*
       for(i=0;i<s->n_cigar;i++) {
           fprintf(stderr, "i=%d %d%c\n", i, 
@@ -2404,24 +2413,27 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
                   if(path[path_len-1].ctype == TMAP_SW_FROM_I) pos_adj++; // TODO: is this correct?
               }
               if(0 < new_score && 0 <= new_score - opt->pen_gapl) { 
+                  int32_t n_cigar_op = (0 < op_len) ? 1 : 0; 
                   // get the cigar
                   cigar = tmap_sw_path2cigar(path, path_len, &n_cigar);
                   if(0 == n_cigar) {
                       tmap_bug();
                   }
                   // re-allocate the cigar
-                  s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*(1+n_cigar+s->n_cigar), "s->cigar");
+                  s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*(n_cigar_op+n_cigar+s->n_cigar), "s->cigar");
                   // shift up
                   for(j=s->n_cigar-1;0<=j;j--) { 
-                      s->cigar[j+1+n_cigar] = s->cigar[j];
+                      s->cigar[j+n_cigar_op+n_cigar] = s->cigar[j];
                   }
                   // add the operation
-                  TMAP_SW_CIGAR_STORE(s->cigar[n_cigar], op, op_len);
+                  if(1 == n_cigar_op) { // 0 < op_len
+                      TMAP_SW_CIGAR_STORE(s->cigar[n_cigar], op, op_len);
+                  }
                   // add the rest of the cigar
                   for(j=0;j<n_cigar;j++) {
                       s->cigar[j] = cigar[j];
                   }
-                  s->n_cigar += n_cigar + 1;
+                  s->n_cigar += n_cigar + n_cigar_op;
                   for(j=0;j<n_cigar;j++) {
                       switch(TMAP_SW_CIGAR_OP(cigar[j])) {
                         case BAM_CMATCH:
@@ -2439,6 +2451,8 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
                   if(query_start < 0) tmap_bug();
                   s->score += new_score - opt->pen_gapl;
                   s->pos -= pos_adj; // adjust the position further if there was a deletion
+                  // merge adjacent cigar operations
+                  tmap_map_util_merge_adjacent_cigar_operations(s);
               }
 
               // reset start/end position
@@ -2560,20 +2574,23 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
                   }
               }
               if(0 < new_score && 0 <= new_score - opt->pen_gapl) { 
+                  int32_t n_cigar_op = (0 < op_len) ? 1 : 0; 
                   // get the cigar
                   cigar = tmap_sw_path2cigar(path, path_len, &n_cigar);
                   if(0 == n_cigar) {
                       tmap_bug();
                   }
                   // re-allocate the cigar
-                  s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*(1+n_cigar+s->n_cigar), "s->cigar");
+                  s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*(n_cigar_op+n_cigar+s->n_cigar), "s->cigar");
                   // add the operation
-                  TMAP_SW_CIGAR_STORE(s->cigar[s->n_cigar], op, op_len);
+                  if(1 == n_cigar_op) { // 0 < op_len
+                      TMAP_SW_CIGAR_STORE(s->cigar[s->n_cigar], op, op_len);
+                  }
                   // add the rest of the cigar
                   for(j=0;j<n_cigar;j++) {
-                      s->cigar[j+s->n_cigar+1] = cigar[j];
+                      s->cigar[j+s->n_cigar+n_cigar_op] = cigar[j];
                   }
-                  s->n_cigar += n_cigar + 1;
+                  s->n_cigar += n_cigar + n_cigar_op;
                   for(j=0;j<n_cigar;j++) {
                       switch(TMAP_SW_CIGAR_OP(cigar[j])) {
                         case BAM_CMATCH:
@@ -2589,6 +2606,8 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
                   query_end += path[0].j; // query_end is zero-based
                   if(seq_len <= query_end) tmap_bug();
                   s->score += new_score - opt->pen_gapl;
+                  // merge adjacent cigar operations
+                  tmap_map_util_merge_adjacent_cigar_operations(s);
               }
 
               // reset start/end position
