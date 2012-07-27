@@ -735,6 +735,24 @@ tmap_map_driver_infer_pairing(tmap_seqs_io_t *io_in,
   return seqs_buffer_length;
 }
 
+#ifdef HAVE_LIBPTHREAD
+typedef struct {
+    tmap_seqs_io_t *io_in;
+    tmap_sam_io_t *io_out;
+    tmap_seqs_t **seqs_buffer;
+    int32_t seqs_buffer_length;
+    int32_t reads_queue_size;
+} tmap_map_driver_thread_io_data_t;
+
+static void *
+tmap_map_driver_thread_io_worker(void *arg)
+{
+  tmap_map_driver_thread_io_data_t *d = (tmap_map_driver_thread_io_data_t*)arg;
+  d->seqs_buffer_length = tmap_seqs_io_read_buffer(d->io_in, d->seqs_buffer, d->reads_queue_size, d->io_out->fp->header->header);
+  return d;
+}
+#endif
+
 void 
 tmap_map_driver_core(tmap_map_driver_t *driver)
 {
@@ -744,14 +762,20 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
   tmap_seqs_io_t *io_in = NULL; // input file(s)
   tmap_sam_io_t *io_out = NULL; // output file
   tmap_seqs_t **seqs_buffer = NULL; // buffer for the reads
+#ifdef HAVE_LIBPTHREAD
+  tmap_seqs_t **seqs_buffer_next = NULL; // buffer for the reads
+#endif
   tmap_map_record_t **records=NULL; // buffer for the mapped data
   tmap_map_bams_t **bams=NULL;// buffer for the mapped BAM data
   tmap_index_t *index = NULL; // reference indes
   tmap_map_stats_t *stat = NULL; // alignment statistics
 #ifdef HAVE_LIBPTHREAD
   pthread_attr_t *attr = NULL;
+  pthread_attr_t attr_io;
   pthread_t *threads = NULL;
+  pthread_t *thread_io = NULL;
   tmap_map_driver_thread_data_t *thread_data=NULL;
+  tmap_map_driver_thread_io_data_t thread_io_data;
   tmap_rand_t **rand = NULL; // random # generator for each thread
   tmap_map_stats_t **stats = NULL; // alignment statistics for each thread
 #else
@@ -801,8 +825,14 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
       reads_queue_size = driver->opt->reads_queue_size;
   }
   seqs_buffer = tmap_malloc(sizeof(tmap_seqs_t*)*reads_queue_size, "seqs_buffer");
+#ifdef HAVE_LIBPTHREAD
+  seqs_buffer_next = tmap_malloc(sizeof(tmap_seqs_t*)*reads_queue_size, "seqs_buffer_next");
+#endif
   for(i=0;i<reads_queue_size;i++) { // initialize the buffer
       seqs_buffer[i] = tmap_seqs_init(seq_type);
+#ifdef HAVE_LIBPTHREAD
+      seqs_buffer_next[i] = tmap_seqs_init(seq_type);
+#endif
   }
   records = tmap_malloc(sizeof(tmap_map_record_t*)*reads_queue_size, "records");
   bams = tmap_malloc(sizeof(tmap_map_bams_t*)*reads_queue_size, "bams");
@@ -854,21 +884,54 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
                                                      &attr, &threads, &thread_data, rand, stats,
 #endif
                                                      0);
-  seqs_loaded = (0 < seqs_buffer_length) ? 1 : 0;
+  if(0 == seqs_buffer_length) {
+      tmap_progress_print("loading reads");
+      seqs_buffer_length = tmap_seqs_io_read_buffer(io_in, seqs_buffer, reads_queue_size, io_out->fp->header->header);
+      tmap_progress_print2("loaded %d reads", seqs_buffer_length);
+  }
+  seqs_loaded = 1;
 
   // main processing loop
   tmap_progress_print("processing reads");
   while(1) {
       // get the reads
-      if(0 == seqs_loaded) {
+      if(0 == seqs_loaded) { 
           tmap_progress_print("loading reads");
+#ifdef HAVE_LIBPTHREAD
+          // join the thread that loads in the reads
+          if(0 != pthread_join((*thread_io), NULL)) {
+              tmap_error("error joining IO thread", Exit, ThreadError);
+          }
+          free(thread_io);
+          thread_io = NULL;
+          // swap buffers
+          seqs_buffer_length = thread_io_data.seqs_buffer_length;
+          seqs_buffer_next = seqs_buffer; // temporarily store this here
+          seqs_buffer = thread_io_data.seqs_buffer; 
+          thread_io_data.seqs_buffer = seqs_buffer_next;
+#else
           seqs_buffer_length = tmap_seqs_io_read_buffer(io_in, seqs_buffer, reads_queue_size, io_out->fp->header->header);
+#endif
           seqs_loaded = 1;
           tmap_progress_print2("loaded %d reads", seqs_buffer_length);
       }
-      if(0 == seqs_buffer_length) {
+      if(0 == seqs_buffer_length) { // are there any more?
           break;
       }
+#ifdef HAVE_LIBPTHREAD
+      // launch a new thread that loads in the reads 
+      pthread_attr_init(&attr_io);
+      pthread_attr_setdetachstate(&attr_io, PTHREAD_CREATE_JOINABLE);
+      thread_io = tmap_malloc(sizeof(pthread_t), "thread_io");
+      thread_io_data.io_in = io_in;
+      thread_io_data.io_out = io_out;
+      thread_io_data.seqs_buffer_length = 0;
+      thread_io_data.reads_queue_size = reads_queue_size;
+      thread_io_data.seqs_buffer = seqs_buffer_next;
+      if(0 != pthread_create(thread_io, &attr_io, tmap_map_driver_thread_io_worker, &thread_io_data)) {
+          tmap_error("error creating threads", Exit, ThreadError);
+      }
+#endif
 
       // create the threads
       if(0 == tmap_map_driver_create_threads(io_out->fp->header->header, seqs_buffer, records, 
@@ -971,8 +1034,14 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
   tmap_seqs_io_destroy(io_in);
   for(i=0;i<reads_queue_size;i++) {
       tmap_seqs_destroy(seqs_buffer[i]);
+#ifdef HAVE_LIBPTHREAD
+      tmap_seqs_destroy(seqs_buffer_next[i]);
+#endif
   }
   free(seqs_buffer);
+#ifdef HAVE_LIBPTHREAD
+  free(seqs_buffer_next);
+#endif
   free(records);
   free(bams);
   tmap_map_stats_destroy(stat);
@@ -983,6 +1052,7 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
   }
   free(stats);
   free(rand);
+  free(thread_io);
 #else
   tmap_rand_destroy(rand);
 #endif
