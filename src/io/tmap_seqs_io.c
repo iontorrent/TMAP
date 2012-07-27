@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <math.h>
 
 #include "../util/tmap_error.h"
 #include "../util/tmap_alloc.h"
@@ -165,6 +166,8 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
   sam_header_record_t *record = NULL;
   char tag[2];
   char *command_line= NULL;
+  char *id = NULL;
+  char *id_pp = NULL;
   int32_t i, j;
 
   // @HD
@@ -198,15 +201,34 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
       record = NULL;
   }
 
+  // Get the TMAP program ID
+  id = tmap_malloc(sizeof(char) * (1 + strlen(PACKAGE_NAME)), "id"); 
+  strcpy(id, PACKAGE_NAME); // default
+  for(i=j=0;NULL != sam_header_get_record(header, "PG", "ID", id, &i) && 0 < i;i=0) { // while the id is found
+      char *ptr = NULL;
+      // swap id and id_pp
+      ptr = id_pp;
+      id_pp = id;
+      id = ptr;
+      // create the new ID
+      j++;
+      id = tmap_realloc(id, sizeof(char) * (1 + (int)log10(j) + 1 + strlen(PACKAGE_NAME)), "id"); 
+      if(sprintf(id, "%s.%d", PACKAGE_NAME, j) < 0) tmap_bug();
+  }
+
   // @SQ
   if(NULL != refseq) {
       for(i=0;i<refseq->num_annos;i++) { // for each reference sequence
           char num[32];
-          record = sam_header_record_init("SQ"); // new reference sequence record
-          if(0 == sam_header_record_add(record, "SN", refseq->annos[i].name->s)) tmap_bug(); // reference sequence name
-          if(sprintf(num, "%u", (uint32_t)refseq->annos[i].len) < 0) tmap_bug(); // integer to string
-          if(0 == sam_header_record_add(record, "LN", num)) tmap_bug(); // reference sequence length
-          if(0 == sam_header_add_record(header, record)) tmap_bug(); // add the reference sequence record
+          // check to see if it already exists, if so ignore
+          sam_header_get_record(header, "SQ", "SN", refseq->annos[i].name->s, &j);
+          if(0 == j) {
+              record = sam_header_record_init("SQ"); // new reference sequence record
+              if(0 == sam_header_record_add(record, "SN", refseq->annos[i].name->s)) tmap_bug(); // reference sequence name
+              if(sprintf(num, "%u", (uint32_t)refseq->annos[i].len) < 0) tmap_bug(); // integer to string
+              if(0 == sam_header_record_add(record, "LN", num)) tmap_bug(); // reference sequence length
+              if(0 == sam_header_add_record(header, record)) tmap_bug(); // add the reference sequence record
+          }
       }
       record = NULL;
   }
@@ -254,7 +276,7 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
           else if(sprintf(buf, "NOID.%d", i+1) < 0) tmap_bug();
           if(0 == sam_header_record_add(record, "ID", buf)) tmap_bug(); // dummy ID
           if(0 == sam_header_record_add(record, "SM", "NOSM")) tmap_bug(); // dummy SM, for Picard validation
-          if(0 == sam_header_record_add(record, "PG", PACKAGE_NAME)) tmap_bug(); // dummy PG
+          if(0 == sam_header_record_add(record, "PG", id)) tmap_bug(); // dummy PG
           tmap_seqs_io_init2_fs_and_add(io_in, header, record); // add @RG.KS and @RG.FO
       }
   }
@@ -268,16 +290,15 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
               if(0 == sam_header_record_add(record, "SM", "NOSM")) tmap_bug(); // dummy SM, for Picard validation
           }
           if(NULL == sam_header_record_get(record, "PG")) {
-              if(0 == sam_header_record_add(record, "PG", PACKAGE_NAME)) tmap_bug(); // dummy PG
+              if(0 == sam_header_record_add(record, "PG", id)) tmap_bug(); // dummy PG
           }
       }
   }
 
   // @PG - program group
   // TODO: check for previous program group ID and set @PG.PP
-  // TODO: check if the @PG.ID exists, and recover
   record = sam_header_record_init("PG"); // new program group
-  if(0 == sam_header_record_add(record, "ID", PACKAGE_NAME)) tmap_bug(); // @PG.ID
+  if(0 == sam_header_record_add(record, "ID", id)) tmap_bug(); // @PG.ID
   if(0 == sam_header_record_add(record, "VN", PACKAGE_VERSION)) tmap_bug(); // @PG.VN
   // @PG.CL
   command_line = NULL;
@@ -293,6 +314,9 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
       command_line[j-1] = '\0';
   }
   if(0 == sam_header_record_add(record, "CL", command_line)) tmap_bug(); // @PG.CL
+  if(NULL != id_pp) { // @PG.PP
+      if(0 == sam_header_record_add(record, "PP", id_pp)) tmap_bug(); // @PG.CL
+  }
   if(0 == sam_header_add_record(header, record)) tmap_bug(); // add the record
   free(command_line);
 
