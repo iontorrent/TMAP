@@ -40,6 +40,25 @@ class Record(object):
             fieldName = tokens[x].split(':')[0].lower()
             setattr(self, fieldName, tokens[x])
 
+    def remove_hard_clip(self):
+        attr = getattr(self, 'cigar')
+        found = True
+        while found:
+            found = False
+            i = attr.find('H')
+            if -1 != i:
+                found = True
+                j = i-1
+                while 0 <= j and '0' <= attr[j] and attr[j] <= '9':
+                    j = j - 1
+                if j < 0:
+                    attr = attr[i+1:len(attr)]
+                elif i == len(attr)-1:
+                    attr = attr[0:j+1]
+                else:
+                    attr = attr[0:j+1] + attr[i+1:len(attr)]
+                break
+        setattr(self, fields[5], attr) # cigar is field 5
 
 class Sam(object):
 
@@ -128,6 +147,11 @@ def main(options):
             mapq2 = int(getattr( r2, 'mapq' ))
             if mapq1 < options.min_mapq and mapq2 < options.min_mapq:
                 continue
+
+        if options.ignore_hard_clip:
+            r1.remove_hard_clip()
+            r2.remove_hard_clip()
+
         diff_str = "[%s]" % (sam1.name)
         for field in fields:
             cont = [False, False] #var to track these 2 exceptions below to see which one failed
@@ -148,7 +172,7 @@ def main(options):
             elif not cont[0] and cont[1]:
                 print sam1.name, sam2.sam, "has the field: ", field, " and", sam1.sam, "does not"
                 continue
-            if not diff_field( getattr(r1, field), getattr(r2, field) ):
+            if not diff_field( attr1, attr2 ):
                 diff_str = "%s -- %s[%s]=%s %s[%s]=%s" % (diff_str, sam1.sam, field, str(attr1), sam2.sam, field, str(attr2))
         if len(diff_str) > len(sam1.name) + 2:
             print diff_str
@@ -171,6 +195,7 @@ if __name__ == '__main__':
                       dest='fields', action="append", default=[])
     parser.add_argument('--full-qname', help="keep the full query name", dest='full_qname', action="store_true", default=False)
     parser.add_argument('--min-mapq', help="examine only those records with a given minimum mapping quality", type=int, dest="min_mapq", default=0)
+    parser.add_argument('--ignore-hard-clip', help="ignore hard clips in the cigar", dest="ignore_hard_clip", action="store_true", default=False)
     options = parser.parse_args()
     if None == options.sam1:
         parser.print_help()
