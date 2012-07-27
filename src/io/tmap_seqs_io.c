@@ -330,6 +330,10 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
   bam_header->header = header; // soft-copy the header
   bam_header = sam_header_to_bam_header(bam_header); // convert
 
+  // free memory
+  free(id);
+  free(id_pp);
+
   return bam_header;
 }
 
