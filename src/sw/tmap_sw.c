@@ -1256,7 +1256,7 @@ tmap_sw_clipping_core2(uint8_t *seq1, int32_t len1, uint8_t *seq2, int32_t len2,
           tmap_sw_set_del(curr[j].del_score, dpcell[i] + j, last + j, right_justify);
           tmap_sw_set_ins(curr[j].ins_score, dpcell[i] + j, curr + j - 1, right_justify);
           // deal with starting anywhere in seq2
-          if(1 == seq2_start_clip && curr[j].match_score < 0) {
+          if((1 == j || 1 == seq2_start_clip) && curr[j].match_score < 0 && (1 == seq1_start_skip || 1 == i)) { 
               curr[j].match_score = 0;
               dpcell[i][j].match_from = TMAP_SW_FROM_S;
           }
