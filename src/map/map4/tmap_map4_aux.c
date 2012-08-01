@@ -252,11 +252,10 @@ tmap_map4_aux_core(tmap_seq_t *seq,
               tmap_bwt_int_t tmp;
               uint32_t seqid, pos;
               uint8_t strand;
-              uint32_t qstart, qend, len;
+              uint32_t qstart, qend;
 
               qstart = (uint32_t)((p->info >> 32) & 0xFFFF); // should be zero if moved all the way to the start of the query
-              qend = (uint32_t)(p->info & 0xFFFF) - 1; // should be qlen if moved all the way to the end of the query
-              len = qend - qstart + 1; 
+              qend = (uint32_t)(p->info & 0xFFFF) - 1; // should be query_len if moved all the way to the end of the query
               
               pacpos = p->x[0] + k;
               tmp = pacpos;
@@ -273,14 +272,21 @@ tmap_map4_aux_core(tmap_seq_t *seq,
 
                   pos--; // make zero-baed
 
-                  //fprintf(stderr, "1 seqid:%u pos:%u strand:%d qstart=%u qend=%u len=%u\n", seqid, pos, strand, qstart, qend, len);
+                  //fprintf(stderr, "1 seqid:%u pos:%u strand:%d qstart=%u qend=%u query_len=%u\n", seqid, pos, strand, qstart, qend, query_len);
                   // adjust the position
                   if(1 == strand) {
+                      int32_t len;
+                      len = query_len - qstart - 1;
                       // NB: could cross a contig boundary 
                       if(pos < len) pos = 0;
-                      else pos -= len-1;
+                      else pos -= len;
                   }
-                  //fprintf(stderr, "2 seqid:%u pos:%u strand:%d qstart=%u qend=%u len=%u\n", seqid, pos, strand, qstart, qend, len);
+                  else {
+                      // NB: could cross a contig boundary 
+                      if(pos < qstart) pos = 0;
+                      else pos -= qstart-1;
+                  }
+                  //fprintf(stderr, "2 seqid:%u pos:%u strand:%d qstart=%u qend=%u query_len=%u\n", seqid, pos, strand, qstart, qend, query_len);
 
                   // save
                   s = &sams->sams[n];
