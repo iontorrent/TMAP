@@ -29,7 +29,7 @@
 /*!
   The default long gap penalty.
   */
-#define TMAP_MAP_OPT_PEN_GAPL 10
+#define TMAP_MAP_OPT_PEN_GAPL -1 // turned off
 /*!
   The default offset for homopolymer errors.
   */
