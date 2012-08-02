@@ -107,7 +107,7 @@ tmap_server_start(char *fn_fasta, key_t key, uint32_t listing)
   // pack the SA
   cur_listing = TMAP_SHM_LISTING_SA;
   if(listing & cur_listing) {
-      tmap_progress_print("packing the s sa");
+      tmap_progress_print("packing the sa");
       sa = tmap_sa_read(fn_fasta);
       cur_bytes = tmap_sa_shm_num_bytes(sa);
       tmap_sa_shm_pack(sa, buf);
