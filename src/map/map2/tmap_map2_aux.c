@@ -351,7 +351,7 @@ tmap_map2_aux_aln(tmap_map_opt_t *opt,
       }
   }
   b[0] = bb[0][1]; b[1] = bb[1][1]; // bb[*][1] are "narrow SA hits"
-  tmap_map2_chain_filter(opt, seq[0]->l, b);
+  tmap_map2_chain_filter(opt, seq[0]->l, b); // NB: only unique seeds are chained
 
   // merge all hits
   for(k = 0; k < 2; ++k) {

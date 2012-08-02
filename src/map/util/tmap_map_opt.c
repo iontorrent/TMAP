@@ -219,6 +219,7 @@ __tmap_map_opt_option_print_func_int_init(max_seed_intv)
 __tmap_map_opt_option_print_func_int_init(z_best)
 __tmap_map_opt_option_print_func_int_init(seeds_rev)
 __tmap_map_opt_option_print_func_tf_init(narrow_rmdup)
+__tmap_map_opt_option_print_func_int_init(max_chain_gap)
 // map3 options
 __tmap_map_opt_option_print_func_int_init(hp_diff)
 __tmap_map_opt_option_print_func_tf_init(fwd_search)
@@ -862,6 +863,12 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_narrow_rmdup,
                            TMAP_MAP_ALGO_MAP2);
+  tmap_map_opt_options_add(opt->options, "max-chain-gap", required_argument, 0, 0, 
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "maximum gap size during chaining",
+                           NULL,
+                           tmap_map_opt_option_print_func_max_chain_gap,
+                           TMAP_MAP_ALGO_MAP2);
 
   // map3 options
   tmap_map_opt_options_add(opt->options, "hp-diff", required_argument, 0, 0, 
@@ -1125,6 +1132,7 @@ tmap_map_opt_init(int32_t algo_id)
       opt->seeds_rev = 5;
       opt->narrow_rmdup = 0;
       opt->max_seed_hits = 1024;
+      opt->max_chain_gap= 10000;
       break;
     case TMAP_MAP_ALGO_MAP3:
       // map3
@@ -1668,6 +1676,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       else if(0 == strcmp("narrow-rmdup", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP2) {
           opt->narrow_rmdup = 1;
       }
+      else if(0 == strcmp("max-chain-gap", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP2) {
+          opt->max_chain_gap = atoi(optarg);
+      }
       // MAP 3
       else if(0 == strcmp("hp-diff", options[option_index].name) && opt->algo_id == TMAP_MAP_ALGO_MAP3) {
           opt->hp_diff = atoi(optarg);
@@ -2092,6 +2103,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
       tmap_error_cmd_check_int(opt->seeds_rev, 0, INT32_MAX, "--seeds-rev");
       tmap_error_cmd_check_int(opt->narrow_rmdup, 0, 1, "--narrow-rmdup");
       tmap_error_cmd_check_int(opt->max_seed_hits, 1, INT32_MAX, "--max-seed-hits");
+      tmap_error_cmd_check_int(opt->max_chain_gap, 0, INT32_MAX, "--max-chain-gap");
       break;
     case TMAP_MAP_ALGO_MAP3:
       if(-1 != opt->seed_length) tmap_error_cmd_check_int(opt->seed_length, 1, INT32_MAX, "--seed-length");
@@ -2309,6 +2321,8 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "seeds_rev=%d\n", opt->seeds_rev);
   fprintf(stderr, "narrow_rmdup=%d\n", opt->narrow_rmdup);
   fprintf(stderr, "max_seed_hits=%d\n", opt->max_seed_hits);
+  fprintf(stderr, "max_chain_gap=%d\n", opt->max_chain_gap);
+  fprintf(stderr, "narrow_rmdup=%d\n", opt->narrow_rmdup);
   fprintf(stderr, "hp_diff=%d\n", opt->hp_diff);
   fprintf(stderr, "hit_frac=%lf\n", opt->hit_frac);
   fprintf(stderr, "seed_step=%d\n", opt->seed_step);

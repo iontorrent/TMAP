@@ -29,15 +29,16 @@ tmap_map2_chain_chaining(const tmap_map_opt_t *opt, int shift, int n, tmap_map2_
           tmap_map2_chain_t *q = chain + k;
           tmap_bwt_int_t x = p->qbeg - q->qbeg; // always positive
           tmap_bwt_int_t y = p->tbeg - q->tbeg;
-          if (y > 0 && x - y <= opt->bw && y - x <= opt->bw) {
+          if (y > 0 && x < opt->max_chain_gap && y < opt->max_chain_gap && x - y <= opt->bw && y - x <= opt->bw) { // chained
+
               if (p->qend > q->qend) q->qend = p->qend;
               if (p->tend > q->tend) q->tend = p->tend;
               ++q->chain;
               p->chain = shift + k;
               break;
-          }
+          } else if (q->chain > opt->seeds_rev * 2) k = 0; // if the chain is strong enough, do not check the previous chains
       }
-      if (k < 0) {
+      if (k < 0) { // not added to any previous chains
           chain[m] = *p;
           chain[m].chain = 1;
           chain[m].idx = p->chain = shift + m;
@@ -51,7 +52,7 @@ void
 tmap_map2_chain_filter(const tmap_map_opt_t *opt, int len, tmap_map2_aln_t *b[2])
 {
   tmap_map2_chain_t *z[2], *chain[2];
-  int32_t i, j, k, n[2], m[2];
+  int32_t i, j, k, n[2], m[2], thres = opt->seeds_rev * 2;
   char *flag;
   // initialization
   n[0] = b[0]->n; n[1] = b[1]->n;
@@ -86,7 +87,7 @@ tmap_map2_chain_filter(const tmap_map_opt_t *opt, int len, tmap_map2_aln_t *b[2]
       for (j = 0; j < k; ++j) {
           tmap_map2_chain_t *q = chain[0] + j;
           if (flag[q->idx]) continue;
-          if (q->qend >= p->qend && q->chain > p->chain * opt->seeds_rev * 2) {
+          if (q->qend >= p->qend && q->chain > p->chain * thres && p->chain < thres) {
               flag[p->idx] = 1;
               break;
           }

@@ -263,6 +263,7 @@ typedef struct __tmap_map_opt_t {
     int32_t z_best;  /*!< the number of top scoring hits to keep (--z-best) */
     int32_t seeds_rev;  /*!< the maximum number of seeds for which reverse alignment is triggered (--seeds-rev) */
     int32_t narrow_rmdup; /*!< remove duplicates in narrow hits (--narrow-rmdup) */
+    int32_t max_chain_gap; /*!< maximum gap size during chaining (--max-chain-gap) */
 
     // map3 options
     int32_t hp_diff; /*!< single homopolymer error difference for enumeration (--hp-diff) */
