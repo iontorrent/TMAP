@@ -1025,6 +1025,8 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
                            stat->num_after_rmdup/(double)stat->num_with_mapping,
                            stat->num_after_filter/(double)stat->num_with_mapping);
   }
+          
+  tmap_progress_print2("cleaning up");
 
   // cleanup the algorithm persistent data
   tmap_map_driver_do_cleanup(driver);

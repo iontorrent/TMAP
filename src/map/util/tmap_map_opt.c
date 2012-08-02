@@ -2007,7 +2007,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
               if(opt->read_rescue_std_num < 0) {
                   tmap_error("option -l was not specified", Exit, CommandLineArgument);
               }
-              tmap_error_cmd_check_int(opt->read_rescue_mapq_thr, 0, 1, "-m");
+              tmap_error_cmd_check_int(opt->read_rescue_mapq_thr, 0, 255, "-m");
           }
       }
       // OK
