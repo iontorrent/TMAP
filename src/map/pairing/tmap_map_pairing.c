@@ -344,9 +344,13 @@ tmap_map_pairing_read_rescue_helper(tmap_refseq_t *refseq,
   for(i=0;i<one->n;i++) {
       if(best == one->sams[i].score) {
           n_best++;
+          /*
           if(best_mapq != one->sams[i].mapq) {
+              fprintf(stderr, "best=%d one->sams[i].score=%d\n", best, one->sams[i].score);
+              fprintf(stderr, "best_mapq=%d one->sams[i].mapq=%d\n", best_mapq, one->sams[i].mapq);
               tmap_error("bug encountered", Exit, OutOfRange);
           }
+          */
       }
       else if(best < one->sams[i].score) {
           best_mapq = one->sams[i].mapq;
