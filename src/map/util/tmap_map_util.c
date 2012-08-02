@@ -1419,6 +1419,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
               tmap_map_util_gen_score_t *group = &groups[i];
               group->filtered = 0;
           }
+          num_groups_filtered = 0;
           if(stage_seed_freqc < 1.0 / sams->n) { // the filter will accept all hits
               break;
           }
@@ -1435,6 +1436,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           tmap_map_util_gen_score_t *group = &groups[i];
           group->filtered = 0;
       }
+      num_groups_filtered = 0;
   }
   else if(0 == filter_ok) { // we could not find an effective filter
       int32_t cur_max;
@@ -1459,10 +1461,16 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           }
       }
   }
-  
-  // save the number of groups
-  if(NULL != num_after_grouping) (*num_after_grouping) = num_groups;
 
+  /*
+  for(i=j=0;i<num_groups;i++) { // go through each group
+      tmap_map_util_gen_score_t *group = &groups[i];
+      if(1 == group->filtered && 0 == group->repr_hit) continue;
+      j++;
+  }
+  fprintf(stderr, "num_groups=%d num_groups_filtered=%d j=%d\n", num_groups, num_groups_filtered, j);
+  */
+  
   /*
   fprintf(stderr, "final sams->n=%d num_groups=%d num_groups_filtered=%d\n",
           sams->n,
@@ -1507,7 +1515,8 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                                         opt->max_seed_band, // NB: this may be modified as banding is unrolled
                                         opt->score_thr-1,
                                         vsw_opt, rand, opt);
-
+      // save the number of groups
+      if(NULL != num_after_grouping) (*num_after_grouping)++;
   }
   //fprintf(stderr, "unfiltered # = %d\n", j);
 
