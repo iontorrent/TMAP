@@ -443,7 +443,7 @@ tmap_map_pairing_read_rescue_helper(tmap_refseq_t *refseq,
   opt_local.max_seed_band = 0;
   opt_local.stage_seed_freqc = 0.0;
   opt_local.bw += ins_size_std * read_rescue_std_num;
-  sams = tmap_map_util_sw_gen_score(refseq, sams, two_seq, rand, &opt_local);
+  sams = tmap_map_util_sw_gen_score(refseq, sams, two_seq, rand, &opt_local, NULL);
 
   return sams;
 }

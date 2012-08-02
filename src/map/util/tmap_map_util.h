@@ -359,6 +359,7 @@ tmap_map_util_mapq(tmap_map_sams_t *sams, int32_t seq_len, tmap_map_opt_t *opt);
   @param  seqs          the query sequence (forward, reverse compliment, reverse, and compliment)
   @param  rand          the random number generator
   @param  opt           the program parameters
+  @param  num_after_grouping used to return the number seeds after grouping
   @return               the locally aligned sams
   */
 tmap_map_sams_t *
@@ -366,7 +367,8 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                  tmap_map_sams_t *sams,
                  tmap_seq_t **seqs,
                  tmap_rand_t *rand,
-                 tmap_map_opt_t *opt);
+                 tmap_map_opt_t *opt,
+                 int32_t *num_after_grouping);
 
 /*!
   perform local alignment

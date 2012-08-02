@@ -274,8 +274,9 @@ tmap_map_driver_core_worker(sam_header_t *sam_header,
 
               // generate scores with smith waterman
               for(j=0;j<num_ends;j++) { // for each end
-                  records[low]->sams[j] = tmap_map_util_sw_gen_score(index->refseq, records[low]->sams[j], seqs[j], rand, stage->opt);
+                  records[low]->sams[j] = tmap_map_util_sw_gen_score(index->refseq, records[low]->sams[j], seqs[j], rand, stage->opt, &k);
                   stage_stat->num_after_scoring += records[low]->sams[j]->n;
+                  stage_stat->num_after_grouping += k;
               }
 
               // remove duplicates
@@ -1004,9 +1005,10 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
       n_reads_processed += seqs_buffer_length;
       if(-1 != driver->opt->reads_queue_size) {
           tmap_progress_print2("processed %d reads", n_reads_processed);
-          tmap_progress_print2("stats [%.2lf,%.2lf,%.2lf,%.2lf,%.2lf]",
+          tmap_progress_print2("stats [%.2lf,%.2lf,%.2lf,%.2lf,%.2lf,%.2lf]",
                                stat->num_with_mapping * 100.0 / (double)stat->num_reads,
                                stat->num_after_seeding/(double)stat->num_with_mapping,
+                               stat->num_after_grouping/(double)stat->num_with_mapping,
                                stat->num_after_scoring/(double)stat->num_with_mapping,
                                stat->num_after_rmdup/(double)stat->num_with_mapping,
                                stat->num_after_filter/(double)stat->num_with_mapping);
@@ -1015,9 +1017,10 @@ tmap_map_driver_core(tmap_map_driver_t *driver)
   }
   if(-1 == driver->opt->reads_queue_size) {
       tmap_progress_print2("processed %d reads", n_reads_processed);
-      tmap_progress_print2("stats [%.2lf,%.2lf,%.2lf,%.2lf,%.2lf]",
+      tmap_progress_print2("stats [%.2lf,%.2lf,%.2lf,%.2lf,%.2lf,%.2lf]",
                            stat->num_with_mapping * 100.0 / (double)stat->num_reads,
                            stat->num_after_seeding/(double)stat->num_with_mapping,
+                           stat->num_after_grouping/(double)stat->num_with_mapping,
                            stat->num_after_scoring/(double)stat->num_with_mapping,
                            stat->num_after_rmdup/(double)stat->num_with_mapping,
                            stat->num_after_filter/(double)stat->num_with_mapping);

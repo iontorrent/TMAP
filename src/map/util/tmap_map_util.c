@@ -1250,7 +1250,8 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
                  tmap_map_sams_t *sams, 
                  tmap_seq_t **seqs,
                  tmap_rand_t *rand,
-                 tmap_map_opt_t *opt)
+                 tmap_map_opt_t *opt,
+                 int32_t *num_after_grouping)
 {
   int32_t i, j;
   int32_t start, end;
@@ -1268,6 +1269,8 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   int32_t num_groups = 0, num_groups_filtered = 0;
   double stage_seed_freqc = opt->stage_seed_freqc;
   int32_t max_group_size = 0, repr_hit, filter_ok = 0;
+
+  if(NULL != num_after_grouping) (*num_after_grouping) = 0;
 
   if(0 == sams->n) {
       return sams;
@@ -1321,7 +1324,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
 
       // check if the hits can be banded
       if(end + 1 < sams->n) {              
-          // fprintf(stderr, "%s seed start: %d end: %d next start: %d  next end: %d\n", seq_name, sams->sams[end].pos, (sams->sams[end].pos + sams->sams[end].target_len), sams->sams[end+1].pos, (sams->sams[end+1].pos + sams->sams[end+1].target_len));
+          //fprintf(stderr, "%d seed start: %d end: %d next start: %d next end: %d\n", end, sams->sams[end].pos, (sams->sams[end].pos + sams->sams[end].target_len), sams->sams[end+1].pos, (sams->sams[end+1].pos + sams->sams[end+1].target_len));
           if(sams->sams[end].strand == sams->sams[end+1].strand 
              && sams->sams[end].seqid == sams->sams[end+1].seqid) {
               tmap_map_util_sw_get_start_and_end_pos(&sams->sams[end+1], seq_len, strand, &start_pos_cur, &end_pos_cur);
@@ -1456,9 +1459,13 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
           }
       }
   }
+  
+  // save the number of groups
+  if(NULL != num_after_grouping) (*num_after_grouping) = num_groups;
 
   /*
-  fprintf(stderr, "final num_groups=%d num_groups_filtered=%d\n",
+  fprintf(stderr, "final sams->n=%d num_groups=%d num_groups_filtered=%d\n",
+          sams->n,
           num_groups,
           num_groups_filtered);
           */
