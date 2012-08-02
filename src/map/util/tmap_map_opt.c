@@ -903,7 +903,7 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            NULL,
                            tmap_map_opt_option_print_func_min_seed_length,
                            TMAP_MAP_ALGO_MAP4);
-  tmap_map_opt_options_add(opt->options, "max-seed-length (-1 to disable)", required_argument, 0, 0, 
+  tmap_map_opt_options_add(opt->options, "max-seed-length", required_argument, 0, 0, 
                            TMAP_MAP_OPT_TYPE_INT,
                            "the maximum seed length to accept hits",
                            NULL,
