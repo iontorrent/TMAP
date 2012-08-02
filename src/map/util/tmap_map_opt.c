@@ -154,6 +154,7 @@ __tmap_map_opt_option_print_func_int_init(softclip_type)
 __tmap_map_opt_option_print_func_int_init(dup_window)
 __tmap_map_opt_option_print_func_int_init(max_seed_band)
 __tmap_map_opt_option_print_func_tf_init(unroll_banding)
+__tmap_map_opt_option_print_func_double_init(long_hit_mult)
 __tmap_map_opt_option_print_func_int_init(score_thr)
 __tmap_map_opt_option_print_func_int_init(reads_queue_size)
 __tmap_map_opt_option_print_func_int_autodetected_init(num_threads, num_threads_autodetected)
@@ -520,6 +521,12 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            "unroll the grouped seeds from banding if multiple alignments are found",
                            NULL,
                            tmap_map_opt_option_print_func_unroll_banding,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "long-hit-mult", required_argument, 0, 0,
+                           TMAP_MAP_OPT_TYPE_FLOAT,
+                           "the multiplier of the query length for a minimum target length to identify a repetitive group",
+                           NULL,
+                           tmap_map_opt_option_print_func_long_hit_mult,
                            TMAP_MAP_ALGO_GLOBAL);
   tmap_map_opt_options_add(opt->options, "score-thres", required_argument, 0, 'T', 
                            TMAP_MAP_OPT_TYPE_INT,
@@ -1064,6 +1071,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->dup_window = 128;
   opt->max_seed_band = 15;
   opt->unroll_banding = 0;
+  opt->long_hit_mult = 3.0;
   opt->score_thr = 8;
   opt->reads_queue_size = 262144;
   opt->num_threads = tmap_detect_cpus();
@@ -1529,6 +1537,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
               tmap_get_reads_file_format_from_fn_int(opt->fn_reads[i], &opt->reads_format, &opt->input_compr);
           }
       }
+      else if(0 == c && 0 == strcmp("long-hit-mult", options[option_index].name)) {
+          opt->long_hit_mult = atof(optarg);
+      }
       else if(0 == c && 0 == strcmp("end-repair", options[option_index].name)) {
           opt->end_repair = atoi(optarg);
       }
@@ -1881,6 +1892,9 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
     if(opt_a->vsw_type != opt_b->vsw_type) {
         tmap_error("option -H was specified outside of the common options", Exit, CommandLineArgument);
     }
+    if(opt_a->long_hit_mult != opt_b->long_hit_mult) {
+        tmap_error("option --long-hit-mult was specified outside of the common options", Exit, CommandLineArgument);
+    }
     if(opt_a->end_repair != opt_b->end_repair) {
         tmap_error("option --end-repair was specified outside of the common options", Exit, CommandLineArgument);
     }
@@ -2013,6 +2027,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->dup_window, -1, INT32_MAX, "-W");
   tmap_error_cmd_check_int(opt->max_seed_band, 1, INT32_MAX, "-B");
   tmap_error_cmd_check_int(opt->unroll_banding, 0, 1, "-U");
+  tmap_error_cmd_check_int(opt->long_hit_mult, INT32_MIN, INT32_MAX, "--long-hit-mult");
   tmap_error_cmd_check_int(opt->score_thr, INT32_MIN, INT32_MAX, "-T");
   if(-1 != opt->reads_queue_size) tmap_error_cmd_check_int(opt->reads_queue_size, 1, INT32_MAX, "-q");
   tmap_error_cmd_check_int(opt->num_threads, 1, INT32_MAX, "-n");
@@ -2185,6 +2200,7 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->dup_window = opt_src->dup_window;
     opt_dest->max_seed_band = opt_src->max_seed_band;
     opt_dest->unroll_banding = opt_src->unroll_banding;
+    opt_dest->long_hit_mult = opt_src->long_hit_mult;
     opt_dest->score_thr = opt_src->score_thr;
     opt_dest->reads_queue_size = opt_src->reads_queue_size;
     opt_dest->num_threads = opt_src->num_threads;
@@ -2273,6 +2289,7 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "dup_window=%d\n", opt->dup_window);
   fprintf(stderr, "max_seed_band=%d\n", opt->max_seed_band);
   fprintf(stderr, "unroll_banding=%d\n", opt->unroll_banding);
+  fprintf(stderr, "long_hit_mult=%lf\n", opt->long_hit_mult);
   fprintf(stderr, "score_thr=%d\n", opt->score_thr);
   fprintf(stderr, "reads_queue_size=%d\n", opt->reads_queue_size);
   fprintf(stderr, "num_threads=%d\n", opt->num_threads);

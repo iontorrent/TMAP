@@ -218,6 +218,13 @@ Specifies the window in bases in which to group seeds prior to Smith Waterman.
 Specifies to unroll the grouped seeds from banding if multiple alignments are found.
 With this option, if multiple best scoring alignments are found within a group of seeds (see \TT{-B}), the seeds are ungrouped and Smith Waterman is performed on each seed.
 
+\subsubsection{\TT{--long-hit-mult FLOAT}}
+Specifies the multiplier of the query length for a minimum target length to identify a repetitive group.
+When seeds are merged into groups for Smith Waterman scoring, sometimes tandem repeats (ex. chr1:1796527-1797575) can be grouped into one hit.
+Then the mapping quality is artificially large as sub-optimal hits in this region are not considered.
+Therefore, if the target length for a group is larger than this value times the query (read) length, then the sub-optimal score is set to a value slightly smaller than the returned score for this group.
+This should result in more accurate mappings.
+
 \subsubsection{\TT{-T,--score-thres INT}}
 Specifies the number of multiples of the match score (\TT{-A}) for the minimum scoring threshold.
 

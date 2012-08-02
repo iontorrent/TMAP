@@ -183,6 +183,7 @@ typedef struct __tmap_map_opt_t {
     int32_t dup_window; /*!< remove duplicate alignments from different algorithms within this bp window (-W,--duplicate-window) */
     int32_t max_seed_band; /*!< the band to group seeds (-B,--max-seed-band) */
     int32_t unroll_banding; /*!< unroll the grouped seeds from banding if multiple alignments are found (-U,--unroll-banding) */
+    double long_hit_mult; /*!< the multiplier of the query length for a minimum target length to identify a repetitive group (--long-hit-size) */
     int32_t score_thr;  /*!< the score threshold (match-score-scaled) (-T,--score-thres) */
     int32_t reads_queue_size;  /*!< the reads queue size (-q,--reads-queue-size) */
     int32_t num_threads;  /*!< the number of threads (-n,--num-threads) */
@@ -195,8 +196,8 @@ typedef struct __tmap_map_opt_t {
     int32_t ignore_rg_sam_tags;  /*!< specifies to not use the RG header and RG record tags in the SAM file (-C,--keep-rg-from-sam) */
     int32_t rand_read_name;  /*!< specifies to randomize based on the read name (-u,--rand-read-name) */
     int32_t input_compr;  /*!< the input compression type (-j,--input-bz2 and -z,--input-gz) */
-    int32_t output_type;  /*!< the output type (0 - SAM, 1 - BAM (compressed), 2 - BAM (uncompressed)) */
-    int32_t end_repair; /*!< specifies to perform 5' end repair (0 - disabled, 1 - prefer mismatches, 2 - prefer indels) */
+    int32_t output_type;  /*!< the output type (0 - SAM, 1 - BAM (compressed), 2 - BAM (uncompressed)) (-o,--output-type) */
+    int32_t end_repair; /*!< specifies to perform 5' end repair (0 - disabled, 1 - prefer mismatches, 2 - prefer indels) (--end-repair) */
     key_t shm_key;  /*!< the shared memory key (-k,--shared-memory-key) */
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
     double sample_reads;  /*!< sample the reads at this fraction (-x,--sample-reads) */

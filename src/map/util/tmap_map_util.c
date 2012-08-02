@@ -967,7 +967,7 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
   tmap_map_sam_t tmp_sam;
   uint8_t *query;
   uint32_t qlen;
-  int32_t tlen, overflow = 0;
+  int32_t tlen, overflow = 0, is_long_hit = 0;
 
   // choose a random one within the window
   if(start == end) {
@@ -977,6 +977,10 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
       int32_t r = (int32_t)(tmap_rand_get(rand) * (end - start + 1));
       r += start;
       tmp_sam = sams->sams[r];
+  }
+
+  if(0 < opt->long_hit_mult && seq_len * opt->long_hit_mult <= end_pos - start_pos + 1) {
+      is_long_hit = 1;
   }
 
   // update the query sequence
@@ -1067,6 +1071,11 @@ tmap_map_util_sw_gen_score_helper(tmap_refseq_t *refseq, tmap_map_sams_t *sams,
       // similar, we can also down-weight the score a little bit.
       tmp_sam.score_subo = tmp_sam.score - opt->pen_gapo - opt->pen_gape; 
       //tmp_sam.score_subo = tmp_sam.score - 1;
+  }
+  if(1 == is_long_hit) {
+      // if we have many seeds that span a large tandem repeat, then we should
+      // downweight the sub-optimal score
+      tmp_sam.score_subo = tmp_sam.score - opt->pen_gapo - opt->pen_gape; 
   }
 
   /*
