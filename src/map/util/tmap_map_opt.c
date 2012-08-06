@@ -282,10 +282,10 @@ tmap_map_opt_option_print(tmap_map_opt_option_t *opt, tmap_map_opt_t *parent_opt
   length_to_description += tmap_file_fprintf(tmap_file_stderr, spacer);
   // short flag, if available
   if(0 < opt->option.val) {
-      length_to_description += tmap_file_fprintf(tmap_file_stderr, "%s-%c,%s", KBLU, (char)opt->option.val, KNRM);
+      length_to_description += tmap_file_fprintf(tmap_file_stderr, "%s-%c,%s", KCYN, (char)opt->option.val, KNRM);
   }
   // long flag
-  length_to_description += tmap_file_fprintf(tmap_file_stderr, "%s--%s%s", KBLU, opt->option.name, KNRM);
+  length_to_description += tmap_file_fprintf(tmap_file_stderr, "%s--%s%s", KCYN, opt->option.name, KNRM);
   if(NULL != parent_opt) {
       for(i=flag_length;i< parent_opt->options->max_flag_length;i++) {
           length_to_description += tmap_file_fprintf(tmap_file_stderr, " ");

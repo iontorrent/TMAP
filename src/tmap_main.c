@@ -94,7 +94,7 @@ tmap_usage(int argc, char *argv[])
       }
             
       if(c->type != TMAP_COMMAND_NONE) {
-          fprintf(stderr, "         %s%s%s", KBLU, c->name, KNRM);
+          fprintf(stderr, "         %s%s%s", KCYN, c->name, KNRM);
           for(i=strlen(c->name);i<16;i++) fputc(' ', stderr);
           fprintf(stderr, "%s%s%s\n", KWHT, c->help, KNRM);
       }
