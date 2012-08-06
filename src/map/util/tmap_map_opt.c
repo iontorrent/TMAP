@@ -319,7 +319,7 @@ tmap_map_opt_option_print(tmap_map_opt_option_t *opt, tmap_map_opt_t *parent_opt
               tmap_file_fprintf(tmap_file_stderr, " ");
           }
           tmap_file_fprintf(tmap_file_stderr, spacer);
-          tmap_file_fprintf(tmap_file_stderr, "%s%s%s\n", KYEL, opt->multi_options[i], KNRM);
+          tmap_file_fprintf(tmap_file_stderr, "%s%s%s\n", KGRN, opt->multi_options[i], KNRM);
       }
   }
 }
