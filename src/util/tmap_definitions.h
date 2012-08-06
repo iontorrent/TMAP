@@ -107,6 +107,7 @@ typedef int64_t tmap_bwt_sint_t;
 #endif
 
 // Terminal colors
+#ifndef DISABLE_COLORING
 #define KNRM  "\x1B[0m"
 #define KBLD  "\x1B[1m" // Bold
 #define KRED  "\x1B[31m"
@@ -117,6 +118,18 @@ typedef int64_t tmap_bwt_sint_t;
 #define KCYN  "\x1B[36m"
 #define KWHT  "\x1B[37m"
 #define KBLDRED "\x1B[1m\x1B[31m"
+#else
+#define KNRM  ""
+#define KBLD  ""
+#define KRED  ""
+#define KGRN  ""
+#define KYEL  ""
+#define KBLU  ""
+#define KMAG  ""
+#define KCYN  ""
+#define KWHT  ""
+#define KBLDRED ""
+#endif
 
 /*!
   One gibabyte.
