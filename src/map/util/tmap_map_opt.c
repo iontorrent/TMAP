@@ -38,52 +38,63 @@ TMAP_SORT_INIT(tmap_map_opt_sort_rg, tmap_map_opt_sort_rg_t, tmap_map_opt_sort_r
   
 static char *tmap_map_opt_input_types[] = {"INT", "FLOAT", "NUM", "FILE", "STRING", "NONE"};
 
+#define KNRM  "\x1B[0m"
+#define KRED  "\x1B[31m"
+#define KGRN  "\x1B[32m"
+#define KYEL  "\x1B[33m"
+#define KBLU  "\x1B[34m"
+#define KMAG  "\x1B[35m"
+#define KCYN  "\x1B[36m"
+#define KWHT  "\x1B[37m"
+
 // int32_t print function
 #define __tmap_map_opt_option_print_func_int_init(_name) \
   static void tmap_map_opt_option_print_func_##_name(void *arg) { \
       tmap_map_opt_t *opt = (tmap_map_opt_t*)arg; \
-      tmap_file_fprintf(tmap_file_stderr, "[%d]", opt->_name); \
+      tmap_file_fprintf(tmap_file_stderr, "%s[%s%d%s]%s", KMAG, KYEL, opt->_name, KMAG, KNRM); \
   }
 
 // double print function
 #define __tmap_map_opt_option_print_func_double_init(_name) \
   static void tmap_map_opt_option_print_func_##_name(void *arg) { \
       tmap_map_opt_t *opt = (tmap_map_opt_t*)arg; \
-      tmap_file_fprintf(tmap_file_stderr, "[%lf]", opt->_name); \
+      tmap_file_fprintf(tmap_file_stderr, "%s[%s%lf%s]%s", KMAG, KYEL, opt->_name, KMAG, KNRM); \
   }
 
 // char array print function
 #define __tmap_map_opt_option_print_func_chars_init(_name, _null_msg) \
   static void tmap_map_opt_option_print_func_##_name(void *arg) { \
       tmap_map_opt_t *opt = (tmap_map_opt_t*)arg; \
-      tmap_file_fprintf(tmap_file_stderr, "[%s]", (NULL == opt->_name) ? _null_msg : opt->_name); \
+      tmap_file_fprintf(tmap_file_stderr, "%s[%s%s%s]%s", KMAG, KYEL, (NULL == opt->_name) ? _null_msg : opt->_name, KMAG, KNRM); \
   } \
 
 // int32_t print function
 #define __tmap_map_opt_option_print_func_int_autodetected_init(_name, _detected) \
   static void tmap_map_opt_option_print_func_##_name(void *arg) { \
       tmap_map_opt_t *opt = (tmap_map_opt_t*)arg; \
-      tmap_file_fprintf(tmap_file_stderr, "(%s) [%d]", (0 == opt->_detected) ? "user set" : "autodetect", opt->_name); \
+      tmap_file_fprintf(tmap_file_stderr, "%s(%s%s%s)%s %s[%s%d%s]%s", KMAG, KYEL, (0 == opt->_detected) ? "user set" : "autodetect", \
+                        KMAG, KNRM, KMAG, KYEL, \
+                        opt->_name, KMAG, KNRM); \
   }
 
 // true/false 
 #define __tmap_map_opt_option_print_func_tf_init(_name) \
   static void tmap_map_opt_option_print_func_##_name(void *arg) { \
       tmap_map_opt_t *opt = (tmap_map_opt_t*)arg; \
-      tmap_file_fprintf(tmap_file_stderr, "[%s]", (1 == opt->_name) ? "true" : "false"); \
+      tmap_file_fprintf(tmap_file_stderr, "%s[%s%s%s]%s", KMAG, KYEL, (1 == opt->_name) ? "true" : "false", KMAG, KNRM); \
   }
 
 // verbosity
 #define __tmap_map_opt_option_print_func_verbosity_init() \
   static void tmap_map_opt_option_print_func_verbosity(void *arg) { \
-      tmap_file_fprintf(tmap_file_stderr, "[%s]", (1 == tmap_progress_get_verbosity()) ? "true" : "false"); \
+      tmap_file_fprintf(tmap_file_stderr, "%s[%s%s%s]%s", KMAG, KYEL, (1 == tmap_progress_get_verbosity()) ? "true" : "false", KMAG, KNRM); \
   }
 
 // compression
 #define __tmap_map_opt_option_print_func_compr_init(_name, _var, _compr) \
   static void tmap_map_opt_option_print_func_##_name(void *arg) { \
       tmap_map_opt_t *opt = (tmap_map_opt_t*)arg; \
-      tmap_file_fprintf(tmap_file_stderr, "[%s]", (_compr == opt->_var) ? "using" : "not using"); \
+      tmap_file_fprintf(tmap_file_stderr, "%s[%s%s%s]%s", KMAG, KYEL, (_compr == opt->_var) ? "using" : "not using", KMAG, KNRM); \
   }
 
 // number/probability
@@ -91,10 +102,10 @@ static char *tmap_map_opt_input_types[] = {"INT", "FLOAT", "NUM", "FILE", "STRIN
   static void tmap_map_opt_option_print_func_##_name_num(void *arg) { \
       tmap_map_opt_t *opt = (tmap_map_opt_t*)arg; \
       if(opt->_name_num < 0) { \
-          tmap_file_fprintf(tmap_file_stderr, "[probability: %lf]", opt->_name_prob); \
+          tmap_file_fprintf(tmap_file_stderr, "%s[probability: %s%lf%s]%s", KMAG, KYEL, opt->_name_prob, KMAG, KNRM); \
       } \
       else { \
-          tmap_file_fprintf(tmap_file_stderr, "[number: %d]", opt->_name_num); \
+          tmap_file_fprintf(tmap_file_stderr, "%s[number: %s%d%s]%s", KMAG, KYEL, opt->_name_num, KMAG, KNRM); \
       } \
   }
 
@@ -103,10 +114,10 @@ static char *tmap_map_opt_input_types[] = {"INT", "FLOAT", "NUM", "FILE", "STRIN
   static void tmap_map_opt_option_print_func_##_name_num(void *arg) { \
       tmap_map_opt_t *opt = (tmap_map_opt_t*)arg; \
       if(opt->_name_num < 0) { \
-          tmap_file_fprintf(tmap_file_stderr, "[fraction: %lf]", opt->_name_frac); \
+          tmap_file_fprintf(tmap_file_stderr, "%s[fraction: %s%lf%s]%s", KMAG, KYEL, opt->_name_frac, KMAG, KNRM); \
       } \
       else { \
-          tmap_file_fprintf(tmap_file_stderr, "[number: %d]", opt->_name_num); \
+          tmap_file_fprintf(tmap_file_stderr, "%s[number: %s%d%s]%s", KMAG, KYEL, opt->_name_num, KMAG, KNRM); \
       } \
   }
 
@@ -115,7 +126,7 @@ static char *tmap_map_opt_input_types[] = {"INT", "FLOAT", "NUM", "FILE", "STRIN
   static void tmap_map_opt_option_print_func_##_name_array(void *arg) { \
       tmap_map_opt_t *opt = (tmap_map_opt_t*)arg; \
       int32_t i; \
-      tmap_file_fprintf(tmap_file_stderr, "["); \
+      tmap_file_fprintf(tmap_file_stderr, "%s[%s", KMAG, KYEL); \
       if(0 == opt->_name_length) tmap_file_fprintf(tmap_file_stderr, _default); \
       else { \
           for(i=0;i<opt->_name_length;i++) { \
@@ -123,7 +134,7 @@ static char *tmap_map_opt_input_types[] = {"INT", "FLOAT", "NUM", "FILE", "STRIN
               tmap_file_fprintf(tmap_file_stderr, "%s", opt->_name_array[i]); \
           } \
       } \
-      tmap_file_fprintf(tmap_file_stderr, "]"); \
+      tmap_file_fprintf(tmap_file_stderr, "%s]%s", KMAG, KNRM); \
   }
 
 // reads format
@@ -131,7 +142,7 @@ static char *tmap_map_opt_input_types[] = {"INT", "FLOAT", "NUM", "FILE", "STRIN
   static void tmap_map_opt_option_print_func_##_name(void *arg) { \
       tmap_map_opt_t *opt = (tmap_map_opt_t*)arg; \
       char *reads_format = tmap_get_reads_file_format_string(opt->_name); \
-      tmap_file_fprintf(tmap_file_stderr, "[%s]", reads_format); \
+      tmap_file_fprintf(tmap_file_stderr, "%s[%s%s%s]%s", KMAG, KYEL, reads_format, KMAG, KNRM); \
       free(reads_format); \
   }
 
@@ -280,10 +291,10 @@ tmap_map_opt_option_print(tmap_map_opt_option_t *opt, tmap_map_opt_t *parent_opt
   length_to_description += tmap_file_fprintf(tmap_file_stderr, spacer);
   // short flag, if available
   if(0 < opt->option.val) {
-      length_to_description += tmap_file_fprintf(tmap_file_stderr, "-%c,", (char)opt->option.val);
+      length_to_description += tmap_file_fprintf(tmap_file_stderr, "%s-%c,%s", KBLU, (char)opt->option.val, KNRM);
   }
   // long flag
-  length_to_description += tmap_file_fprintf(tmap_file_stderr, "--%s", opt->option.name);
+  length_to_description += tmap_file_fprintf(tmap_file_stderr, "%s--%s%s", KBLU, opt->option.name, KNRM);
   if(NULL != parent_opt) {
       for(i=flag_length;i< parent_opt->options->max_flag_length;i++) {
           length_to_description += tmap_file_fprintf(tmap_file_stderr, " ");
@@ -291,8 +302,8 @@ tmap_map_opt_option_print(tmap_map_opt_option_t *opt, tmap_map_opt_t *parent_opt
   }
   length_to_description += tmap_file_fprintf(tmap_file_stderr, " ");
   // type
-  length_to_description += tmap_file_fprintf(tmap_file_stderr, "%s",
-                    (TMAP_MAP_OPT_TYPE_NONE == opt->type) ? "" : tmap_map_opt_input_types[opt->type]);
+  length_to_description += tmap_file_fprintf(tmap_file_stderr, "%s%s%s", KWHT,
+                    (TMAP_MAP_OPT_TYPE_NONE == opt->type) ? "" : tmap_map_opt_input_types[opt->type], KNRM);
   if(NULL != parent_opt) {
       for(i=type_length;i<parent_opt->options->max_type_length;i++) {
           length_to_description += tmap_file_fprintf(tmap_file_stderr, " ");
@@ -301,8 +312,8 @@ tmap_map_opt_option_print(tmap_map_opt_option_t *opt, tmap_map_opt_t *parent_opt
   // spacer
   length_to_description += tmap_file_fprintf(tmap_file_stderr, spacer);
   // description
-  tmap_file_fprintf(tmap_file_stderr, "%s",
-                    opt->description);
+  tmap_file_fprintf(tmap_file_stderr, "%s%s%s", KGRN,
+                    opt->description, KNRM);
   // value, if available
   if(NULL != opt->print_func && NULL != parent_opt) {
       tmap_file_fprintf(tmap_file_stderr, " ");
@@ -317,7 +328,7 @@ tmap_map_opt_option_print(tmap_map_opt_option_t *opt, tmap_map_opt_t *parent_opt
               tmap_file_fprintf(tmap_file_stderr, " ");
           }
           tmap_file_fprintf(tmap_file_stderr, spacer);
-          tmap_file_fprintf(tmap_file_stderr, "%s\n", opt->multi_options[i]);
+          tmap_file_fprintf(tmap_file_stderr, "%s%s%s\n", KYEL, opt->multi_options[i], KNRM);
       }
   }
 }
@@ -1238,13 +1249,13 @@ tmap_map_opt_usage_algo(tmap_map_opt_t *opt, int32_t stage)
       return; // NB: there are no MAPALL specific options
   }
   else if(opt->algo_id & TMAP_MAP_ALGO_STAGE) {
-      tmap_file_fprintf(tmap_file_stderr, "\nstage%d options: [stage options] [algorithm [algorithm options]]+\n", stage);
+      tmap_file_fprintf(tmap_file_stderr, "\n%sstage%d options: [stage options] [algorithm [algorithm options]]+%s\n", KRED, stage, KNRM);
   }
   else if(stage < 0) {
-      tmap_file_fprintf(tmap_file_stderr, "\n%s options (optional):\n", tmap_algo_id_to_name(opt->algo_id));
+      tmap_file_fprintf(tmap_file_stderr, "\n%s%s options (optional):%s\n", KRED, tmap_algo_id_to_name(opt->algo_id), KNRM);
   }
   else {
-      tmap_file_fprintf(tmap_file_stderr, "\n%s stage%d options (optional):\n", tmap_algo_id_to_name(opt->algo_id), stage);
+      tmap_file_fprintf(tmap_file_stderr, "\n%s%s stage%d options (optional):%s\n", KRED, tmap_algo_id_to_name(opt->algo_id), stage, KNRM);
   }
   for(i=0;i<opt->options->n;i++) {
       tmap_map_opt_option_t *o = &opt->options->options[i];
@@ -1263,17 +1274,21 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
   // print global options
   tmap_file_fprintf(tmap_file_stderr, "\n");
   if(opt->algo_id == TMAP_MAP_ALGO_MAPALL) {
-      tmap_file_fprintf(tmap_file_stderr, "\n%s [global options] [flowspace options] [stage[0-9]+ [stage options] [algorithm [algorithm options]]+]+\n", 
-                        tmap_algo_id_to_name(opt->algo_id));
+      tmap_file_fprintf(tmap_file_stderr, "\n%s%s [global options] [flowspace options] [stage[0-9]+ [stage options] [algorithm [algorithm options]]+]+%s\n", 
+                        KRED,
+                        tmap_algo_id_to_name(opt->algo_id),
+                        KNRM);
   }
   else {
-      tmap_file_fprintf(tmap_file_stderr, "Usage: %s %s [global options] [flowspace options] [%s options]\n", 
+      tmap_file_fprintf(tmap_file_stderr, "%sUsage: %s %s [global options] [flowspace options] [%s options]%s\n", 
+                        KRED,
                         PACKAGE, 
                         tmap_algo_id_to_name(opt->algo_id),
-                        tmap_algo_id_to_name(opt->algo_id));
+                        tmap_algo_id_to_name(opt->algo_id),
+                        KRED);
   }
   tmap_file_fprintf(tmap_file_stderr, "\n");
-  tmap_file_fprintf(tmap_file_stderr, "global options:\n");
+  tmap_file_fprintf(tmap_file_stderr, "%sglobal options:%s\n", KRED, KNRM);
   for(i=0;i<opt->options->n;i++) {
       tmap_map_opt_option_t *o = &opt->options->options[i];
 
@@ -1284,7 +1299,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
 
   // print flowspace options
   tmap_file_fprintf(tmap_file_stderr, "\n");
-  tmap_file_fprintf(tmap_file_stderr, "flowspace options:\n");
+  tmap_file_fprintf(tmap_file_stderr, "%sflowspace options:%s\n", KRED, KNRM);
   for(i=0;i<opt->options->n;i++) {
       tmap_map_opt_option_t *o = &opt->options->options[i];
 
@@ -1295,7 +1310,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
 
   // print pairing options
   tmap_file_fprintf(tmap_file_stderr, "\n");
-  tmap_file_fprintf(tmap_file_stderr, "pairing options:\n");
+  tmap_file_fprintf(tmap_file_stderr, "%spairing options:%s\n", KRED, KNRM);
   for(i=0;i<opt->options->n;i++) {
       tmap_map_opt_option_t *o = &opt->options->options[i];
 
