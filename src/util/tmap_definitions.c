@@ -605,6 +605,21 @@ tmap_validate_key_seq(const char *key_seq)
   return 0;
 }
 
+int
+tmap_version(int argc, char *argv[])
+{
+  fprintf(stderr, "\n");
+  fprintf(stderr, "%s%s:   %storrent mapper%s\n", KRED, PACKAGE, KWHT, KNRM);
+#ifdef GIT_REV
+  fprintf(stderr, "%sVersion: %s%s%s %sgit:%s%s%s\n", KRED, KWHT, PACKAGE_VERSION, KNRM, KRED, KWHT, GIT_REV, KNRM);
+#else
+  fprintf(stderr, "%sVersion: %s%s%s\n", KRED, KWHT, PACKAGE_VERSION, KNRM);
+#endif
+  fprintf(stderr, "%sWeb Site: %s%s%s\n", KRED, KWHT, "http://github.com/iontorrent/tmap", KNRM);
+  fprintf(stderr, "%sContact: %s%s%s\n\n", KRED, KWHT, PACKAGE_BUGREPORT, KNRM);
+  return 0;
+}
+
 // from pbzip2 version 1.1.6 
 /*
    This program, "pbzip2" is copyright (C) 2003-2011 Jeff Gilchrist.

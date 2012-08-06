@@ -106,6 +106,18 @@ typedef int64_t tmap_bwt_sint_t;
 #define TMAP_UNLIKELY(x) (x)
 #endif
 
+// Terminal colors
+#define KNRM  "\x1B[0m"
+#define KBLD  "\x1B[1m" // Bold
+#define KRED  "\x1B[31m"
+#define KGRN  "\x1B[32m"
+#define KYEL  "\x1B[33m"
+#define KBLU  "\x1B[34m"
+#define KMAG  "\x1B[35m"
+#define KCYN  "\x1B[36m"
+#define KWHT  "\x1B[37m"
+#define KBLDRED "\x1B[1m\x1B[31m"
+
 /*!
   One gibabyte.
  */
@@ -361,6 +373,15 @@ tmap_validate_flow_order(const char *flow_order);
   */
 int32_t
 tmap_validate_key_seq(const char *key_seq);
+
+/*!
+  Prints the TMAP version and initial info.
+  @param  argc  the number of arguments
+  @param  argv  the argument list
+  @return       1 if successful, 0 otherwise
+  */
+int
+tmap_version(int argc, char *argv[]);
 
 /*!
   @return  the number of cpus available for multi-threading

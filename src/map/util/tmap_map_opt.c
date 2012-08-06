@@ -38,15 +38,6 @@ TMAP_SORT_INIT(tmap_map_opt_sort_rg, tmap_map_opt_sort_rg_t, tmap_map_opt_sort_r
   
 static char *tmap_map_opt_input_types[] = {"INT", "FLOAT", "NUM", "FILE", "STRING", "NONE"};
 
-#define KNRM  "\x1B[0m"
-#define KRED  "\x1B[31m"
-#define KGRN  "\x1B[32m"
-#define KYEL  "\x1B[33m"
-#define KBLU  "\x1B[34m"
-#define KMAG  "\x1B[35m"
-#define KCYN  "\x1B[36m"
-#define KWHT  "\x1B[37m"
-
 // int32_t print function
 #define __tmap_map_opt_option_print_func_int_init(_name) \
   static void tmap_map_opt_option_print_func_##_name(void *arg) { \
@@ -1249,13 +1240,13 @@ tmap_map_opt_usage_algo(tmap_map_opt_t *opt, int32_t stage)
       return; // NB: there are no MAPALL specific options
   }
   else if(opt->algo_id & TMAP_MAP_ALGO_STAGE) {
-      tmap_file_fprintf(tmap_file_stderr, "\n%sstage%d options: [stage options] [algorithm [algorithm options]]+%s\n", KRED, stage, KNRM);
+      tmap_file_fprintf(tmap_file_stderr, "\n%sstage%d options: [stage options] [algorithm [algorithm options]]+%s\n", KBLDRED, stage, KNRM);
   }
   else if(stage < 0) {
-      tmap_file_fprintf(tmap_file_stderr, "\n%s%s options (optional):%s\n", KRED, tmap_algo_id_to_name(opt->algo_id), KNRM);
+      tmap_file_fprintf(tmap_file_stderr, "\n%s%s options (optional):%s\n", KBLDRED, tmap_algo_id_to_name(opt->algo_id), KNRM);
   }
   else {
-      tmap_file_fprintf(tmap_file_stderr, "\n%s%s stage%d options (optional):%s\n", KRED, tmap_algo_id_to_name(opt->algo_id), stage, KNRM);
+      tmap_file_fprintf(tmap_file_stderr, "\n%s%s stage%d options (optional):%s\n", KBLDRED, tmap_algo_id_to_name(opt->algo_id), stage, KNRM);
   }
   for(i=0;i<opt->options->n;i++) {
       tmap_map_opt_option_t *o = &opt->options->options[i];
@@ -1270,25 +1261,26 @@ int
 tmap_map_opt_usage(tmap_map_opt_t *opt)
 {
   int32_t i, prev_stage;
+
+  tmap_version(opt->argc, opt->argv);
   
   // print global options
-  tmap_file_fprintf(tmap_file_stderr, "\n");
   if(opt->algo_id == TMAP_MAP_ALGO_MAPALL) {
       tmap_file_fprintf(tmap_file_stderr, "\n%s%s [global options] [flowspace options] [stage[0-9]+ [stage options] [algorithm [algorithm options]]+]+%s\n", 
-                        KRED,
+                        KBLDRED,
                         tmap_algo_id_to_name(opt->algo_id),
                         KNRM);
   }
   else {
       tmap_file_fprintf(tmap_file_stderr, "%sUsage: %s %s [global options] [flowspace options] [%s options]%s\n", 
-                        KRED,
+                        KBLDRED,
                         PACKAGE, 
                         tmap_algo_id_to_name(opt->algo_id),
                         tmap_algo_id_to_name(opt->algo_id),
-                        KRED);
+                        KBLDRED);
   }
   tmap_file_fprintf(tmap_file_stderr, "\n");
-  tmap_file_fprintf(tmap_file_stderr, "%sglobal options:%s\n", KRED, KNRM);
+  tmap_file_fprintf(tmap_file_stderr, "%sglobal options:%s\n", KBLDRED, KNRM);
   for(i=0;i<opt->options->n;i++) {
       tmap_map_opt_option_t *o = &opt->options->options[i];
 
@@ -1299,7 +1291,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
 
   // print flowspace options
   tmap_file_fprintf(tmap_file_stderr, "\n");
-  tmap_file_fprintf(tmap_file_stderr, "%sflowspace options:%s\n", KRED, KNRM);
+  tmap_file_fprintf(tmap_file_stderr, "%sflowspace options:%s\n", KBLDRED, KNRM);
   for(i=0;i<opt->options->n;i++) {
       tmap_map_opt_option_t *o = &opt->options->options[i];
 
@@ -1310,7 +1302,7 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
 
   // print pairing options
   tmap_file_fprintf(tmap_file_stderr, "\n");
-  tmap_file_fprintf(tmap_file_stderr, "%spairing options:%s\n", KRED, KNRM);
+  tmap_file_fprintf(tmap_file_stderr, "%spairing options:%s\n", KBLDRED, KNRM);
   for(i=0;i<opt->options->n;i++) {
       tmap_map_opt_option_t *o = &opt->options->options[i];
 

@@ -9,26 +9,13 @@
 #include "util/tmap_alloc.h"
 #include "util/tmap_progress.h"
 #include "util/tmap_levenshtein.h"
+#include "util/tmap_definitions.h"
 #include "io/tmap_file.h"
 #include "samtools/bam.h"
 #include "tmap_main.h"
 
 tmap_file_t *tmap_file_stdout;
 tmap_file_t *tmap_file_stderr;
-
-static int
-tmap_version(int argc, char *argv[])
-{
-  fprintf(stdout, "\n");
-  fprintf(stdout, "%s:   torrent mapper\n", PACKAGE);
-#ifdef GIT_REV
-  fprintf(stdout, "Version: %s git:%s\n", PACKAGE_VERSION, GIT_REV);
-#else
-  fprintf(stdout, "Version: %s\n", PACKAGE_VERSION);
-#endif
-  fprintf(stdout, "Contact: %s\n\n", PACKAGE_BUGREPORT);
-  return 0;
-}
 
 static int 
 tmap_usage(int argc, char *argv[]);
@@ -71,15 +58,8 @@ tmap_usage(int argc, char *argv[])
 {
   tmap_command_t *c = NULL;
   int i, t;
-  fprintf(stderr, "\n");
-  fprintf(stderr, "%s:   torrent mapper\n", PACKAGE);
-#ifdef GIT_REV
-  fprintf(stderr, "Version: %s git:%s\n", PACKAGE_VERSION, GIT_REV);
-#else
-  fprintf(stderr, "Version: %s\n", PACKAGE_VERSION);
-#endif
-  fprintf(stderr, "Contact: %s\n\n", PACKAGE_BUGREPORT);
-  fprintf(stderr, "Usage:   %s <command> [options]\n\n", PACKAGE); 
+
+  tmap_version(argc, argv);
 
   c = commands;
   t = -1;
@@ -88,20 +68,20 @@ tmap_usage(int argc, char *argv[])
           if(0 <= t && TMAP_COMMAND_NONE != c->type) fprintf(stderr, "\n");
           switch(c->type) {
             case TMAP_COMMAND_PREPROCESSING:
-              fprintf(stderr, "Pre-processing:\n");
+              fprintf(stderr, "%sPre-processing:%s\n", KRED, KNRM);
               break;
             case TMAP_COMMAND_SERVER:
-              fprintf(stderr, "Server:\n");
+              fprintf(stderr, "%sServer:%s\n", KRED, KNRM);
               break;
             case TMAP_COMMAND_MAPPING:
-              fprintf(stderr, "Mapping:\n");
+              fprintf(stderr, "%sMapping:%s\n", KRED, KNRM);
               break;
             case TMAP_COMMAND_UTILITIES:
-              fprintf(stderr, "Utilities:\n");
+              fprintf(stderr, "%sUtilities:%s\n", KRED, KNRM);
               break;
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
             case TMAP_COMMAND_DEBUG:
-              fprintf(stderr, "Debugging:\n");
+              fprintf(stderr, "%sDebugging:%s\n", KRED, KNRM);
               break;
 #endif
             case TMAP_COMMAND_NONE:
@@ -114,9 +94,9 @@ tmap_usage(int argc, char *argv[])
       }
             
       if(c->type != TMAP_COMMAND_NONE) {
-          fprintf(stderr, "         %s", c->name);
+          fprintf(stderr, "         %s%s%s", KBLU, c->name, KNRM);
           for(i=strlen(c->name);i<16;i++) fputc(' ', stderr);
-          fprintf(stderr, "%s\n", c->help);
+          fprintf(stderr, "%s%s%s\n", KWHT, c->help, KNRM);
       }
       c++;
   }
