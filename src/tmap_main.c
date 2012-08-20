@@ -39,6 +39,8 @@ static tmap_command_t commands[] = {
       {tmap_bwt_bwtupdate_main, "bwtupdate", "updates the bwt hash width", TMAP_COMMAND_UTILITIES},
       {tmap_index_size, "indexsize", "gives the index size in bytes", TMAP_COMMAND_UTILITIES},
       {tmap_sam2fs_main, "sam2fs", "pretty print SAM records in flow space", TMAP_COMMAND_UTILITIES},
+      {samtools_main, "samtools", "samtools (Tools for alignments in the SAM format)", TMAP_COMMAND_UTILITIES},
+      {bcftools_main, "bcftools", "bcftools (Tools for data in the VCF/BCF formats)", TMAP_COMMAND_UTILITIES},
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
       {tmap_fsw_main, "fsw", "perform flow Smith-Waterman", TMAP_COMMAND_DEBUG},
       {tmap_index_speed, "indexspeed", "index performance benchmarks", TMAP_COMMAND_DEBUG},

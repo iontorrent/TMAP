@@ -67,13 +67,51 @@ samtools_SOURCES = \
 				   src/samtools/bam_import.c \
 				   src/samtools/bam_aux.c \
 				   src/samtools/bam_pileup.c \
+				   src/samtools/bam_lpileup.c \
+				   src/samtools/bam_md.c \
+				   src/samtools/faidx.c src/samtools/faidx.h \
+				   src/samtools/bedidx.c \
 				   src/samtools/razf.c src/samtools/razf.h \
 				   src/samtools/bgzf.c src/samtools/bgzf.h \
-				   src/samtools/faidx.c src/samtools/faidx.h \
 				   src/samtools/bam_endian.h \
 				   src/samtools/khash.h \
+				   src/samtools/klist.h \
 				   src/samtools/kseq.h \
-				   src/samtools/kstring.c src/samtools/kstring.h
+				   src/samtools/ksort.h \
+				   src/samtools/kstring.c src/samtools/kstring.h \
+				   src/samtools/knetfile.c \
+				   src/samtools/kaln.c src/samtools/kaln.h \
+				   src/samtools/kprobaln.c src/samtools/kprobaln.h \
+				   src/samtools/bam_index.c \
+				   src/samtools/bam_sort.c \
+				   src/samtools/bam_reheader.c \
+				   src/samtools/bam_cat.c \
+				   src/samtools/bam_tview.c \
+				   src/samtools/bam_plcmd.c \
+				   src/samtools/sam_view.c \
+				   src/samtools/bam_rmdup.c src/samtools/bam_rmdupse.c \
+				   src/samtools/bam_mate.c src/samtools/bam_stat.c src/samtools/bam_color.c \
+				   src/samtools/bam2bcf.c src/samtools/bam2bcf.h \
+				   src/samtools/bam2bcf_indel.c \
+				   src/samtools/errmod.c src/samtools/errmod.h \
+				   src/samtools/sample.c src/samtools/sample.h \
+				   src/samtools/cut_target.c src/samtools/phase.c src/samtools/bam2depth.c src/samtools/padding.c \
+				   src/samtools/bcftools/bcf.c src/samtools/bcftools/bcf.h \
+				   src/samtools/bcftools/bcf2qcall.c \
+				   src/samtools/bcftools/bcfutils.c \
+				   src/samtools/bcftools/call1.c \
+				   src/samtools/bcftools/em.c \
+				   src/samtools/bcftools/fet.c \
+				   src/samtools/bcftools/index.c \
+				   src/samtools/bcftools/kfunc.c \
+				   src/samtools/bcftools/kmin.c \
+				   src/samtools/bcftools/kmin.h \
+				   src/samtools/bcftools/main.c \
+				   src/samtools/bcftools/mut.c \
+				   src/samtools/bcftools/prob1.c \
+				   src/samtools/bcftools/prob1.h \
+				   src/samtools/bcftools/vcf.c \
+				   src/samtools/bamtk.c 
 
 tmap_SOURCES = \
 			   ${GLOBAL_SOURCES} \
@@ -106,6 +144,7 @@ tmap_SOURCES = \
 			   src/tmap_main.h src/tmap_main.c
 
 tmap_LDADD = 
+tmap_LDFLAGS = -Isrc/samtools 
 
 #noinst_LIBRARIES = libtmap.a
 #libtmap_a_SOURCES = ${GLOBAL_SOURCES} 

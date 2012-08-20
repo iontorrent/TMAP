@@ -66,6 +66,10 @@ extern int
 tmap_index_size(int argc, char *argv[]);
 extern int
 tmap_sam2fs_main(int argc, char *argv[]);
+extern int
+samtools_main(int argc, char *argv[]); 
+extern int
+bcftools_main(int argc, char *argv[]); 
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
 extern int
 tmap_fsw_main(int argc, char *argv[]);
