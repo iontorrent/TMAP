@@ -607,6 +607,9 @@ tmap_sam_convert_unmapped(tmap_seq_t *seq, int32_t sam_flowspace_tags, int32_t b
   va_end(ap);
   
   tmap_sam_convert_tag_opt_destroy(t);
+                  
+  // compute the bin for indexing
+  b->core.bin = bam_reg2bin(b->core.pos, bam_calend(&b->core, bam1_cigar(b))); 
 
   return b;
 }
@@ -832,6 +835,9 @@ tmap_sam_convert_mapped(tmap_seq_t *seq, int32_t sam_flowspace_tags, int32_t bid
   free(bases_eq);
   free(cigar);
   tmap_sam_convert_tag_opt_destroy(t);
+  
+  // compute the bin for indexing
+  b->core.bin = bam_reg2bin(b->core.pos, bam_calend(&b->core, bam1_cigar(b))); 
 
   return b;
 }
