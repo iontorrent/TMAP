@@ -391,7 +391,7 @@ tmap_seqs_io_sff2sam_main(int argc, char *argv[])
       io_out = tmap_sam_io_init2("-", "wb", header);
       break;
     case 2:
-      io_out = tmap_sam_io_init2("-", "wu", header);
+      io_out = tmap_sam_io_init2("-", "wbu", header);
       break;
     default:
       tmap_bug();
