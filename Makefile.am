@@ -79,7 +79,7 @@ samtools_SOURCES = \
 				   src/samtools/kseq.h \
 				   src/samtools/ksort.h \
 				   src/samtools/kstring.c src/samtools/kstring.h \
-				   src/samtools/knetfile.c \
+				   src/samtools/knetfile.c src/samtools/knetfile.h \
 				   src/samtools/kaln.c src/samtools/kaln.h \
 				   src/samtools/kprobaln.c src/samtools/kprobaln.h \
 				   src/samtools/bam_index.c \
