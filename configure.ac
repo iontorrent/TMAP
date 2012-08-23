@@ -82,14 +82,25 @@ CXXFLAGS="${CXXFLAGS} ${default_CXXFLAGS} ${extended_CXXFLAGS}";
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
+AC_C_VOLATILE
+AC_C_INLINE
 # Checks for library functions.
 AC_FUNC_MALLOC 
 AC_FUNC_REALLOC
+AC_FUNC_ALLOCA
+AC_FUNC_ERROR_AT_LINE
+AC_FUNC_FSEEKO
+AC_FUNC_MEMCMP
+AC_FUNC_SELECT_ARGTYPES
+AC_FUNC_STAT
+AC_FUNC_STRTOD
+AC_FUNC_VPRINTF
 AC_CHECK_LIB([z], [gzread])
 AC_CHECK_LIB([m], [pow])
 AC_CHECK_LIB([pthread], [pthread_create])
 #AC_CHECK_LIB([libtcmalloc_minimal],malloc) # Use this to not include the heap profiler and checker
 AC_CHECK_FUNCS([pow strdup memset strchr strdup strstr memmove getopt_long gettimeofday])
+AC_CHECK_FUNCS([gethostbyaddr gethostbyname memchr select socket sqrt strerror strtol])
 
 # Check types
 AC_TYPE_INT8_T
@@ -101,6 +112,9 @@ AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 AC_TYPE_SIZE_T
+AC_TYPE_OFF_T
+AC_TYPE_SIGNAL
+AC_TYPE_SSIZE_T
 
 # Set proprocessor SIZEOF_short_int, SIZEOF_int, SIZEOF_long_int
 AC_CHECK_SIZEOF([short int])
@@ -110,9 +124,9 @@ AC_CHECK_SIZEOF([long int])
 # Checks for header files.
 AC_HEADER_STDC
 AC_HEADER_STDBOOL
+AC_HEADER_TIME
 AC_CHECK_HEADERS([stdlib.h stdio.h stdint.h string.h sys/time.h unistd.h float.h zlib.h bzlib.h pthread.h limits.h netinet/in.h emmintrin.h getopt.h])
-
-AC_C_INLINE
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h stddef.h sys/socket.h wchar.h curses.h xcurses.h])
 
 AC_CONFIG_FILES([Makefile])
 
