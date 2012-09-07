@@ -14,7 +14,9 @@ TMAP is a fast and accurate alignment software for short and long nucleotide seq
     </code></pre>
 * To download a specific version, please get the latest source code, and then checkout the specific version using the tag listed below:
     <pre lang="bsh"><code>git checkout -b tag "tag name below"</code></pre>
-    For example: <pre lang="bsh"><code>git checkout -b 3.0.1 tmap.3.0.1</code></pre>
+    For example: <pre lang="bsh"><code>git checkout -b 3.0.1 tmap.3.0.1
+    git submodule update
+    </code></pre>
     Below is the list of tags associated with a specific Torrent Suite release:<table>
     <tr><td>Torrent Suite 3.0:</td><td>tmap.3.0.1</td></tr>
     <tr><td>Torrent Suite 2.2</td><td>tmap.0.3.7</td></tr>
