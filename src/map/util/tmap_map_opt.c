@@ -1266,9 +1266,16 @@ tmap_map_opt_usage(tmap_map_opt_t *opt)
   
   // print global options
   if(opt->algo_id == TMAP_MAP_ALGO_MAPALL) {
-      tmap_file_fprintf(tmap_file_stderr, "\n%s%s [global options] [flowspace options] [stage[0-9]+ [stage options] [algorithm [algorithm options]]+]+%s\n", 
+      tmap_file_fprintf(tmap_file_stderr, "\n%s%s %s[%sglobal options%s]%s %s[%sflowspace options%s]%s %s[%sstage%s[%s0-9%s]%s+ %s[%sstage options%s]%s %s[%salgorithm %s[%salgorithm options%s]%s%s]%s+%s]%s+%s\n", 
                         KBLDRED,
                         tmap_algo_id_to_name(opt->algo_id),
+                        KMAG, KWHT, KMAG, KBLDRED, KMAG, KWHT, KMAG, KBLDRED,
+                        KMAG, KWHT, KMAG, KBLDRED, KMAG, KWHT, KMAG, KBLDRED,
+                        KMAG, KWHT, KMAG, KBLDRED, KMAG, KWHT, KMAG, KBLDRED,
+                        KMAG, KWHT, KMAG, KBLDRED, KMAG, KWHT, KMAG, KBLDRED,
+                        KMAG, KWHT, KMAG, KBLDRED, KMAG, KWHT, KMAG, KBLDRED,
+                        KMAG, KWHT, KMAG, KBLDRED, KMAG, KWHT, KMAG, KBLDRED,
+                        KMAG, KWHT, KMAG, KBLDRED, KMAG, KWHT, KMAG, KBLDRED,
                         KNRM);
   }
   else {
