@@ -2031,16 +2031,27 @@ tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
   if(1 == found) {
       // update the previous cigar operators
       int32_t sum = 0, n = 0;
+      int32_t num_ref_added = 0, num_ref_removed = 0;
       i = (0 == strand) ? 0 : s->n_cigar-1;
       while((0 == strand && i < s->n_cigar) || (1 == strand && 0 <= i)) { // gets the number to delete, and modifies the last one if necessary in-place
+          // query
           switch(TMAP_SW_CIGAR_OP(s->cigar[i])) {
             case BAM_CMATCH:
             case BAM_CINS:
               sum += bam_cigar_oplen(s->cigar[i]);
-              break;
             default:
               break;
           }
+          // target
+          switch(TMAP_SW_CIGAR_OP(s->cigar[i])) {
+            case BAM_CMATCH:
+            case BAM_CDEL:
+              if(cur_len <= sum) num_ref_removed += (sum - cur_len);
+              else num_ref_removed += bam_cigar_oplen(s->cigar[i]);
+            default:
+              break;
+          }
+
           if(cur_len <= sum) {
               if(cur_len < sum) { // adjust current cigar
                   TMAP_SW_CIGAR_STORE(s->cigar[i], TMAP_SW_CIGAR_OP(s->cigar[i]), sum - cur_len); // store the difference
@@ -2079,6 +2090,14 @@ tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
               s->cigar[i + s->n_cigar] = cigar[i];
           }
           switch(TMAP_SW_CIGAR_OP(cigar[i])) {
+            case BAM_CMATCH:
+            case BAM_CDEL:
+              num_ref_added += TMAP_SW_CIGAR_LENGTH(cigar[i]);
+            default:
+              break;
+          }
+          /*
+          switch(TMAP_SW_CIGAR_OP(cigar[i])) {
             case BAM_CDEL:
               s->target_len -= TMAP_SW_CIGAR_LENGTH(cigar[i]);
               if(0 == strand) s->pos -= TMAP_SW_CIGAR_LENGTH(cigar[i]);
@@ -2090,8 +2109,11 @@ tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
             default:
               break;
           }
+          */
       }
       s->n_cigar += n_cigar;
+      s->target_len += (num_ref_added - num_ref_removed);
+      if(0 == strand) s->pos += (num_ref_added - num_ref_removed);
 
       // merge adjacent cigar operations that have the same value
       tmap_map_util_merge_adjacent_cigar_operations(s);
