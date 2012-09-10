@@ -2046,7 +2046,7 @@ tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
           switch(TMAP_SW_CIGAR_OP(s->cigar[i])) {
             case BAM_CMATCH:
             case BAM_CDEL:
-              if(cur_len <= sum) num_ref_removed += (sum - cur_len);
+              if(cur_len <= sum) num_ref_removed += (cur_len - (sum - bam_cigar_oplen(s->cigar[i])));
               else num_ref_removed += bam_cigar_oplen(s->cigar[i]);
             default:
               break;
@@ -2113,7 +2113,7 @@ tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
       }
       s->n_cigar += n_cigar;
       s->target_len += (num_ref_added - num_ref_removed);
-      if(0 == strand) s->pos += (num_ref_added - num_ref_removed);
+      if(0 == strand) s->pos += (num_ref_removed - num_ref_added);
 
       // merge adjacent cigar operations that have the same value
       tmap_map_util_merge_adjacent_cigar_operations(s);
