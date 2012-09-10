@@ -6,23 +6,32 @@ TMAP is a fast and accurate alignment software for short and long nucleotide seq
 
 * The latest TMAP is unsupported.  To use a supported version, please see the TMAP version associated with a Torrent Suite release below.
 
-*  Download TMAP now: http://github.com/iontorrent/TMAP/tags
-    * Torrent Suite 3.0: http://github.com/iontorrent/TMAP/tarball/tmap.3.0.1
-    * Torrent Suite 2.2: http://github.com/iontorrent/TMAP/tarball/tmap.0.3.7
-    * Torrent Suite 2.0.1: http://github.com/iontorrent/TMAP/tarball/tmap.0.2.3
-    * Torrent Suite 2.0:   http://github.com/iontorrent/TMAP/tarball/tmap.0.2.3
-    * Torrent Suite 1.5.1: http://github.com/iontorrent/TMAP/tarball/tmap.0.1.3
-    * Torrent Suite 1.5:   http://github.com/iontorrent/TMAP/tarball/tmap.0.1.3
-    * Torrent Suite 1.4.1: http://github.com/iontorrent/TMAP/tarball/tmap.0.0.28
-    * Torrent Suite 1.4:   http://github.com/iontorrent/TMAP/tarball/tmap.0.0.25
-    * Torrent Suite 1.3:   http://github.com/iontorrent/TMAP/tarball/tmap.0.0.19
-    * Torrent Suite 1.2:   http://github.com/iontorrent/TMAP/tarball/tmap.0.0.9
-*  See the latest manual: http://github.com/iontorrent/TMAP/blob/master/doc/tmap-book.pdf
 *  Get the latest source code: 
-    * <pre lang="bsh"><code>git clone git://github.com/iontorrent/TMAP.git</code></pre>
-    * <pre lang="bsh"><code>cd TMAP</code></pre>
-    * <pre lang="bsh"><code>git submodule init</code></pre>
-    * <pre lang="bsh"><code>git submodule update</code></pre>
+    <pre lang="bsh"><code>git clone git://github.com/iontorrent/TMAP.git
+    cd TMAP
+    git submodule init
+    git submodule update
+    </code></pre>
+* To download a specific version, please get the latest source code, and then checkout the specific version using the tag listed below:
+    <pre lang="bsh"><code>git checkout -b tag "tag name below"</code></pre>
+    For example: <pre lang="bsh"><code>git checkout -b 3.0.1 tmap.3.0.1
+    git submodule update
+    </code></pre>
+    Below is the list of tags associated with a specific Torrent Suite release:<table>
+    <tr><td>Torrent Suite 3.0:</td><td>tmap.3.0.1</td></tr>
+    <tr><td>Torrent Suite 2.2</td><td>tmap.0.3.7</td></tr>
+    <tr><td>Torrent Suite 2.0.1</td><td>tmap.0.2.3</td></tr>
+    <tr><td>Torrent Suite 2.0</td><td>tmap.0.2.3</td></tr>
+    <tr><td>Torrent Suite 1.5.1</td><td>tmap.0.1.3</td></tr>
+    <tr><td>Torrent Suite 1.5</td><td>tmap.0.1.3</td></tr>
+    <tr><td>Torrent Suite 1.4.1</td><td>tmap.0.0.28</td></tr>
+    <tr><td>Torrent Suite 1.4</td><td>tmap.0.0.25</td></tr>
+    <tr><td>Torrent Suite 1.3</td><td>tmap.0.0.19</td></tr>
+    <tr><td>Torrent Suite 1.2</td><td>tmap.0.0.9</td></tr>
+    </tr>
+    </table>
+*  See the latest manual: http://github.com/iontorrent/TMAP/blob/master/doc/tmap-book.pdf
+
 
 ##  Pre-requisites
 1. Compiler (required):
