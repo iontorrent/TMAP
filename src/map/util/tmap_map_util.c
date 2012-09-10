@@ -1813,7 +1813,7 @@ tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
                          tmap_map_sam_t *s,
                          tmap_map_opt_t *opt)
 {
-  int32_t i, j, cigar_i;
+  int32_t i, cigar_i;
   int32_t op, op_len, cur_len;
   int32_t softclip_start;
   int32_t old_score, new_score;
@@ -1848,6 +1848,10 @@ tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
 
   // compute the old score of this sub-alignment
   cur_len = (max_match_len < op_len) ? max_match_len : op_len; 
+  // NB: must include full HPs
+  while(cur_len < qlen && query[cur_len-1] == query[cur_len]) { // TODO: what about reference HPs?
+      cur_len++;
+  }
   old_score = 0;
   // NB: assumes the op is a match/mismatch
   found = 0; // did we find mismatches?
@@ -1958,13 +1962,15 @@ tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
       }
       // TODO: what if it starts with an indel
 
+      /*
       if(0 == strand) { // reverse the cigar
           for(i=0;i<n_cigar>>1;i++) {
-              j = cigar[i];
+              int32_t j = cigar[i];
               cigar[i] = cigar[n_cigar-i-1];
               cigar[n_cigar-i-1] = j;
           }
       }
+      */
 
       /*
          for(i=0;i<n_cigar;i++) {
