@@ -1815,6 +1815,7 @@ tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
 {
   int32_t i, cigar_i;
   int32_t op, op_len, cur_len;
+  int32_t cur_op, cur_op_len, cur_cigar_i, cur_cur_len, target_adj;
   int32_t softclip_start;
   int32_t old_score, new_score;
   int32_t start_pos, end_pos;
@@ -1846,13 +1847,17 @@ tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
   op_len = TMAP_SW_CIGAR_LENGTH(s->cigar[cigar_i]);
   if(op != BAM_CMATCH) return; // ignore, since we care only about turning mismatches into indels
 
-  // compute the old score of this sub-alignment
+  // get the amount of bases to adjust
   cur_len = (max_match_len < op_len) ? max_match_len : op_len; 
   // NB: must include full HPs
   while(cur_len < qlen && query[cur_len-1] == query[cur_len]) { // TODO: what about reference HPs?
       cur_len++;
   }
-  if(cur_len < qlen) cur_len++; // NB: include one more base to get left-justification correct
+  if(cur_len < qlen) {
+      cur_len++; // NB: include one more base to get left-justification correct
+  }
+
+  // compute the old score of this sub-alignment
   old_score = 0;
   // NB: assumes the op is a match/mismatch
   found = 0; // did we find mismatches?
@@ -1870,17 +1875,53 @@ tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
   }
   if(0 == found) return; // no mismatches, so what are you worrying about?
 
+  // see how many bases we should include from the reference
+  target_adj = 0;
+  cur_cur_len = cur_len;
+  cur_cigar_i = (0 == strand) ? 0 : (s->n_cigar - 1);
+  cur_op = TMAP_SW_CIGAR_OP(s->cigar[cur_cigar_i]);
+  cur_op_len = TMAP_SW_CIGAR_LENGTH(s->cigar[cur_cigar_i]);
+  while(0 < cur_cur_len) { // while read bases
+      if(0 == cur_op_len) { // update cigar
+          if(0 == strand) {
+              cur_cigar_i++;
+          }
+          else {
+              cur_cigar_i--;
+          }
+          cur_op = TMAP_SW_CIGAR_OP(s->cigar[cur_cigar_i]);
+          cur_op_len = TMAP_SW_CIGAR_LENGTH(s->cigar[cur_cigar_i]);
+      }
+
+      switch(cur_op) {
+        case BAM_CMATCH:
+          cur_cur_len--;
+          target_adj++;
+          break;
+        case BAM_CINS:
+          cur_cur_len--;
+          break;
+        case BAM_CDEL:
+          target_adj++;
+          break;
+        default:
+          tmap_bug();
+          break;
+      }
+      cur_op_len--;
+  }
+
   // get more target upstream
   if(0 == strand) { // forward
       start_pos = s->pos + 1; // one-based
       if(start_pos < num_prev_bases) start_pos = 1;
       else start_pos -= num_prev_bases;
-      end_pos = s->pos + cur_len; // one-based 
+      end_pos = s->pos + target_adj; // one-based 
   }
   else {
       start_pos = s->pos + s->target_len; // 1-based
-      if(start_pos <= cur_len) start_pos = 1;
-      else start_pos -= cur_len - 1;
+      if(start_pos <= target_adj) start_pos = 1;
+      else start_pos -= target_adj - 1;
       end_pos = s->pos + s->target_len + num_prev_bases;
       if(refseq->annos[s->seqid].len < end_pos) end_pos = refseq->annos[s->seqid].len; // bound
   }
@@ -1988,18 +2029,36 @@ tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
 
   // should we update?
   if(1 == found) {
-      // update the previous cigar op
-      if(cur_len == op_len) { // delete the whole thing
-          if(0 == strand) { // forward
-              // shift down, delete the first cigar operator
-              for(i=0;i<s->n_cigar-1;i++) {
-                  s->cigar[i] = s->cigar[i+1];
+      // update the previous cigar operators
+      int32_t sum = 0, n = 0;
+      i = (0 == strand) ? 0 : s->n_cigar-1;
+      while((0 == strand && i < s->n_cigar) || (1 == strand && 0 <= i)) { // gets the number to delete, and modifies the last one if necessary in-place
+          switch(TMAP_SW_CIGAR_OP(s->cigar[i])) {
+            case BAM_CMATCH:
+            case BAM_CINS:
+              sum += bam_cigar_oplen(s->cigar[i]);
+              break;
+            default:
+              break;
+          }
+          if(cur_len <= sum) {
+              if(cur_len < sum) { // adjust current cigar
+                  TMAP_SW_CIGAR_STORE(s->cigar[i], TMAP_SW_CIGAR_OP(s->cigar[i]), sum - cur_len); // store the difference
+                  i = (0 == strand) ? (i-1) : (i+1);
               }
-          } // otherwise just reduced the # of cigars
-          s->n_cigar--;
+              break;
+          }
+          i = (0 == strand) ? (i+1) : (i-1);
       }
-      else { // update
-          TMAP_SW_CIGAR_STORE(s->cigar[cigar_i], BAM_CMATCH, (op_len - cur_len)); 
+      n = (0 == strand) ? i : (s->n_cigar - i); // the number of cigar operations to delete
+      if(0 < n) { // delete the cigars
+          if(0 == strand) { // shift down, delete the first cigar operator
+              for(i=0;i<s->n_cigar-n;i++) {
+                  s->cigar[i] = s->cigar[i+n];
+              }
+          }
+          s->n_cigar -= n;
+          s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*s->n_cigar, "s->cigar"); // reduce the size
       }
 
       // get more cigar
@@ -2010,6 +2069,7 @@ tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
               s->cigar[i+n_cigar] = s->cigar[i];
           }
       } // otherwise append to the end
+      
       // add new cigar and update the position
       for(i=0;i<n_cigar;i++) {
           if(0 == strand) { // forward
