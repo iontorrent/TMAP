@@ -1852,6 +1852,7 @@ tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
   while(cur_len < qlen && query[cur_len-1] == query[cur_len]) { // TODO: what about reference HPs?
       cur_len++;
   }
+  if(cur_len < qlen) cur_len++; // NB: include one more base to get left-justification correct
   old_score = 0;
   // NB: assumes the op is a match/mismatch
   found = 0; // did we find mismatches?
