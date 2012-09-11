@@ -2014,14 +2014,6 @@ tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
       }
       */
 
-      /*
-         for(i=0;i<n_cigar;i++) {
-         fprintf(stderr, "i=%d %d%c\n", i, 
-         bam_cigar_oplen(cigar[i]),
-         bam_cigar_opchr(cigar[i]));
-         }
-         */
-
       // check if the cigars match
       if(1 == n_cigar && TMAP_SW_CIGAR_OP(cigar[0]) == BAM_CMATCH) found = 0;
       else found = 1; // do not match, hmmn
@@ -2029,6 +2021,22 @@ tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
 
   // should we update?
   if(1 == found) {
+      /*
+      fprintf(stderr, "strand=%d\n", strand);
+      fprintf(stderr, "cur_len=%d\n", cur_len);
+      fprintf(stderr, "OLD:\n");
+      for(i=0;i<s->n_cigar;i++) { // old
+          fprintf(stderr, "i=%d %d%c\n", i, 
+                  bam_cigar_oplen(s->cigar[i]),
+                  bam_cigar_opchr(s->cigar[i]));
+      }
+      fprintf(stderr, "ADDITION:\n");
+      for(i=0;i<n_cigar;i++) { // addition
+          fprintf(stderr, "i=%d %d%c\n", i, 
+                  bam_cigar_oplen(cigar[i]),
+                  bam_cigar_opchr(cigar[i]));
+      }
+      */
       // update the previous cigar operators
       int32_t sum = 0, n = 0;
       int32_t num_ref_added = 0, num_ref_removed = 0;
@@ -2052,6 +2060,7 @@ tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
               break;
           }
 
+          //fprintf(stderr, "i=%d cur_len=%d sum=%d\n", i, cur_len, sum);
           if(cur_len <= sum) {
               if(cur_len < sum) { // adjust current cigar
                   TMAP_SW_CIGAR_STORE(s->cigar[i], TMAP_SW_CIGAR_OP(s->cigar[i]), sum - cur_len); // store the difference
@@ -2061,7 +2070,8 @@ tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
           }
           i = (0 == strand) ? (i+1) : (i-1);
       }
-      n = (0 == strand) ? i : (s->n_cigar - i); // the number of cigar operations to delete
+      n = (0 == strand) ? (i+1) : (s->n_cigar - i); // the number of cigar operations to delete
+      //fprintf(stderr, "to delete: %d\n", n);
       if(0 < n) { // delete the cigars
           if(0 == strand) { // shift down, delete the first cigar operator
               for(i=0;i<s->n_cigar-n;i++) {
@@ -2071,6 +2081,14 @@ tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
           s->n_cigar -= n;
           s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*s->n_cigar, "s->cigar"); // reduce the size
       }
+      /*
+      fprintf(stderr, "CUT DOWN:\n");
+      for(i=0;i<s->n_cigar;i++) { // old
+          fprintf(stderr, "i=%d %d%c\n", i, 
+                  bam_cigar_oplen(s->cigar[i]),
+                  bam_cigar_opchr(s->cigar[i]));
+      }
+      */
 
       // get more cigar
       s->cigar = tmap_realloc(s->cigar, sizeof(uint32_t)*(n_cigar+s->n_cigar), "s->cigar");
@@ -2129,6 +2147,27 @@ tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
       // TODO: is this correct?
       s->score += new_score;
       s->score -= old_score;
+
+      /*
+      fprintf(stderr, "NEW:\n");
+      for(i=0;i<s->n_cigar;i++) { // old
+          fprintf(stderr, "i=%d %d%c\n", i, 
+                  bam_cigar_oplen(s->cigar[i]),
+                  bam_cigar_opchr(s->cigar[i]));
+      }
+      */
+      // Check that the cigar is valid
+      for(i=cur_len=0;i<s->n_cigar;i++) {
+          switch(TMAP_SW_CIGAR_OP(s->cigar[i])) { // NB: do not include soft-clip bases
+            case BAM_CMATCH:
+            case BAM_CINS:
+              cur_len += TMAP_SW_CIGAR_LENGTH(s->cigar[i]);
+            default:
+              break;
+          }
+      }
+      //fprintf(stderr, "cur_len=%d qlen=%d\n", cur_len, qlen);
+      if(cur_len != qlen) tmap_bug(); 
   }
 
   // free
