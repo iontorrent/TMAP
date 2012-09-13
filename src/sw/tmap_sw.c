@@ -267,8 +267,8 @@ tmap_sw_aln_destroy(tmap_sw_aln_t *aa)
 #endif
 
 #define tmap_sw_cmp(lhs_score, lhs_from_score, rhs_score, rhs_from_score, right_j) \
-  (lhs_score + lhs_from_score > rhs_score + rhs_from_score \
-   || (0 == right_j && lhs_score + lhs_from_score == rhs_score + rhs_from_score))
+  ((lhs_score) + (lhs_from_score) > (rhs_score) + (rhs_from_score) \
+   || (0 == (right_j) && (lhs_score) + (lhs_from_score) == (rhs_score) + (rhs_from_score)))
 
 #define tmap_sw_set(score_dest, from_dest, score_src, from_src) \
 { \
@@ -294,9 +294,9 @@ tmap_sw_aln_destroy(tmap_sw_aln_t *aa)
   tmap_sw_set_cmp(score_dest, from_dest, (p)->match_score, match_from_score, TMAP_SW_FROM_M, (p)->ins_score, ins_from_score, TMAP_SW_FROM_I, right_j); \
 }
 
-#define tmap_sw_set_ins_vs_del(score_dest, from_dest, p, ins_from_score, del_from_score, right_j) \
+#define tmap_sw_set_ins_vs_del(score_dest, from_dest, p, ins_from_score, del_from_score) \
 { \
-  tmap_sw_set_cmp(score_dest, from_dest, (p)->ins_score, ins_from_score, TMAP_SW_FROM_I, (p)->del_score, del_from_score, TMAP_SW_FROM_D, right_j); \
+  tmap_sw_set_cmp(score_dest, from_dest, (p)->ins_score, ins_from_score, TMAP_SW_FROM_I, (p)->del_score, del_from_score, TMAP_SW_FROM_D, 1); \
 }
 
 #define tmap_sw_set_match(MM, cur, p, sc, right_j) \
@@ -304,21 +304,21 @@ tmap_sw_aln_destroy(tmap_sw_aln_t *aa)
   if(tmap_sw_cmp((p)->match_score, 0, (p)->ins_score, 0, right_j)) { \
       tmap_sw_set_match_vs_del(MM, (cur)->match_from, p, sc, sc, right_j); \
   } else { \
-      tmap_sw_set_ins_vs_del(MM, (cur)->match_from, p, sc, sc, right_j); \
+      tmap_sw_set_ins_vs_del(MM, (cur)->match_from, p, sc, sc); \
   } \
 }
 
 #define tmap_sw_set_ins_aux(II, cur, p, right_j, gap_e, adj_indel) \
 { \
-  if(tmap_sw_cmp((p)->match_score, 0-gap_open, (p)->ins_score, 0, right_j)) { \
+  if(tmap_sw_cmp((p)->match_score, 0-gap_open, (p)->ins_score, 0, 1-right_j)) { \
       if(adj_indel) { \
-          tmap_sw_set_match_vs_del(II, (cur)->ins_from, p, 0-gap_open-gap_e, 0-gap_e, right_j); \
+          tmap_sw_set_match_vs_del(II, (cur)->ins_from, p, 0-gap_open-gap_e, 0-gap_e, 1-right_j); \
       } else { \
           tmap_sw_set(II, (cur)->ins_from, (p)->match_score-gap_open-gap_e, TMAP_SW_FROM_M); \
       } \
   } else { \
       if(adj_indel) { \
-          tmap_sw_set_ins_vs_del(II, (cur)->ins_from, p, 0-gap_e, 0-gap_open-gap_e, right_j); \
+          tmap_sw_set_ins_vs_del(II, (cur)->ins_from, p, 0-gap_e, 0-gap_open-gap_e); \
       } else { \
           tmap_sw_set(II, (cur)->ins_from, (p)->ins_score-gap_e, TMAP_SW_FROM_I); \
       } \
@@ -339,15 +339,15 @@ tmap_sw_aln_destroy(tmap_sw_aln_t *aa)
 
 #define tmap_sw_set_del_aux(DD, cur, p, right_j, gap_e, adj_indel) \
 { \
-  if(tmap_sw_cmp((p)->match_score, 0-gap_open, (p)->del_score, 0, right_j)) { \
+  if(tmap_sw_cmp((p)->match_score, 0-gap_open, (p)->del_score, 0, 1-right_j)) { \
       if(adj_indel) { \
-          tmap_sw_set_match_vs_ins(DD, (cur)->del_from, p, 0-gap_open-gap_ext, 0-gap_ext, right_j); \
+          tmap_sw_set_match_vs_ins(DD, (cur)->del_from, p, 0-gap_open-gap_ext, 0-gap_ext, 1-right_j); \
       } else { \
           tmap_sw_set(DD, (cur)->del_from, (p)->match_score-gap_open-gap_e, TMAP_SW_FROM_M); \
       } \
   } else { \
       if(adj_indel) { \
-          tmap_sw_set_ins_vs_del(DD, (cur)->del_from, p, 0-gap_ext-gap_ext, 0-gap_open, right_j); \
+          tmap_sw_set_ins_vs_del(DD, (cur)->del_from, p, 0-gap_ext-gap_ext, 0-gap_open); \
       } else { \
           tmap_sw_set(DD, (cur)->del_from, (p)->del_score-gap_e, TMAP_SW_FROM_D); \
       } \
