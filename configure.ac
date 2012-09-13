@@ -75,6 +75,7 @@ AC_ARG_ENABLE(32bit-support,
 			  AC_DEFINE(TMAP_BWT_32_BIT,1,[Define 1 if we want to enable TMAP 32bit support])],
 			  [AC_MSG_WARN("Using 64-bit SA intervals; Genome sizes greater than 4Gb are supported")])
 AC_ARG_ENABLE(coloring, [  --disable-coloring      disable terminal coloring], [AC_DEFINE(DISABLE_COLORING,1,[Define 1 if we want to disable terminal coloring])], [])
+AC_ARG_ENABLE(adjacent-indels, [  --enable-adjacent-indels      enable adjacent insertion and deletions in the alignment], [AC_DEFINE(ENABLE_ADJACENT_INDELS,1,[Define 1 if we want to enable adjacent indels support])], [])
 
 CFLAGS="${CFLAGS} ${default_CFLAGS} ${extended_CFLAGS}";
 CXXFLAGS="${CXXFLAGS} ${default_CXXFLAGS} ${extended_CXXFLAGS}";

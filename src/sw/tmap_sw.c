@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <config.h>
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_definitions.h"
 #include "tmap_sw.h"
@@ -261,76 +262,108 @@ tmap_sw_aln_destroy(tmap_sw_aln_t *aa)
 #define TMAP_SW_NT_LOCAL_SCORE int32_t
 #define TMAP_SW_NT_LOCAL_SHIFT 16
 #define TMAP_SW_NT_LOCAL_MASK 0xffff
+#ifndef ENABLE_ADJACENT_INDELS
+#define ENABLE_ADJACENT_INDELS 0
+#endif
+
+#define tmap_sw_cmp(lhs_score, lhs_from_score, rhs_score, rhs_from_score, right_j) \
+  (lhs_score + lhs_from_score > rhs_score + rhs_from_score \
+   || (0 == right_j && lhs_score + lhs_from_score == rhs_score + rhs_from_score))
+
+#define tmap_sw_set(score_dest, from_dest, score_src, from_src) \
+{ \
+  (score_dest) = (score_src); (from_dest) = (from_src); \
+}
+
+#define tmap_sw_set_cmp(score_dest, from_dest, lhs_score, lhs_from_score, lhs_from, rhs_score, rhs_from_score, rhs_from, right_j) \
+{ \
+  if(tmap_sw_cmp(lhs_score, lhs_from_score, rhs_score, rhs_from_score, right_j)) { \
+      tmap_sw_set(score_dest, from_dest, (lhs_score) + (lhs_from_score), lhs_from); \
+  } else { \
+      tmap_sw_set(score_dest, from_dest, (rhs_score) + (rhs_from_score), rhs_from); \
+  } \
+}
+
+#define tmap_sw_set_match_vs_del(score_dest, from_dest, p, match_from_score, del_from_score, right_j) \
+{ \
+  tmap_sw_set_cmp(score_dest, from_dest, (p)->match_score, match_from_score, TMAP_SW_FROM_M, (p)->del_score, del_from_score, TMAP_SW_FROM_D, right_j); \
+}
+
+#define tmap_sw_set_match_vs_ins(score_dest, from_dest, p, match_from_score, ins_from_score, right_j) \
+{ \
+  tmap_sw_set_cmp(score_dest, from_dest, (p)->match_score, match_from_score, TMAP_SW_FROM_M, (p)->ins_score, ins_from_score, TMAP_SW_FROM_I, right_j); \
+}
+
+#define tmap_sw_set_ins_vs_del(score_dest, from_dest, p, ins_from_score, del_from_score, right_j) \
+{ \
+  tmap_sw_set_cmp(score_dest, from_dest, (p)->ins_score, ins_from_score, TMAP_SW_FROM_I, (p)->del_score, del_from_score, TMAP_SW_FROM_D, right_j); \
+}
 
 #define tmap_sw_set_match(MM, cur, p, sc, right_j) \
 { \
-  if((p)->match_score > (p)->ins_score \
-     || (0 == right_j && (p)->match_score == (p)->ins_score)) { \
-      if((p)->match_score > (p)->del_score \
-          || (0 == right_j && (p)->match_score == (p)->del_score)) { \
-          (MM) = (p)->match_score + (sc); (cur)->match_from = TMAP_SW_FROM_M; \
+  if(tmap_sw_cmp((p)->match_score, 0, (p)->ins_score, 0, right_j)) { \
+      tmap_sw_set_match_vs_del(MM, (cur)->match_from, p, sc, sc, right_j); \
+  } else { \
+      tmap_sw_set_ins_vs_del(MM, (cur)->match_from, p, sc, sc, right_j); \
+  } \
+}
+
+#define tmap_sw_set_ins_aux(II, cur, p, right_j, gap_e, adj_indel) \
+{ \
+  if(tmap_sw_cmp((p)->match_score, 0-gap_open, (p)->ins_score, 0, right_j)) { \
+      if(adj_indel) { \
+          tmap_sw_set_match_vs_del(II, (cur)->ins_from, p, 0-gap_open-gap_e, 0-gap_e, right_j); \
       } else { \
-          (MM) = (p)->del_score + (sc); (cur)->match_from = TMAP_SW_FROM_D; \
+          tmap_sw_set(II, (cur)->ins_from, (p)->match_score-gap_open-gap_e, TMAP_SW_FROM_M); \
       } \
   } else { \
-      if((p)->ins_score > (p)->del_score) { \
-          (MM) = (p)->ins_score + (sc); (cur)->match_from = TMAP_SW_FROM_I; \
+      if(adj_indel) { \
+          tmap_sw_set_ins_vs_del(II, (cur)->ins_from, p, 0-gap_e, 0-gap_open-gap_e, right_j); \
       } else { \
-          (MM) = (p)->del_score + (sc); (cur)->match_from = TMAP_SW_FROM_D; \
+          tmap_sw_set(II, (cur)->ins_from, (p)->ins_score-gap_e, TMAP_SW_FROM_I); \
       } \
   } \
 }
 
 #define tmap_sw_set_ins(II, cur, p, right_j) \
-{ \
-  if((p)->match_score - gap_open > (p)->ins_score \
-     || (1 == right_j && (p)->match_score - gap_open == (p)->ins_score)) { \
-      (cur)->ins_from = TMAP_SW_FROM_M; \
-      (II) = (p)->match_score - gap_open - gap_ext; \
-  } else { \
-      (cur)->ins_from = TMAP_SW_FROM_I; \
-      (II) = (p)->ins_score - gap_ext; \
-  } \
-}
+  tmap_sw_set_ins_aux(II, cur, p, right_j, gap_ext, ENABLE_ADJACENT_INDELS) 
 
 #define tmap_sw_set_end_ins(II, cur, p, right_j) \
 { \
   if(gap_end >= 0) { \
-      if((p)->match_score - gap_open > (p)->ins_score \
-         || (1 == right_j && (p)->match_score - gap_open == (p)->ins_score)) { \
-          (cur)->ins_from = TMAP_SW_FROM_M; \
-          (II) = (p)->match_score - gap_open - gap_end; \
+      tmap_sw_set_ins_aux(II, cur, p, right_j, gap_end, ENABLE_ADJACENT_INDELS); \
+  } else { \
+      tmap_sw_set_ins_aux(II, cur, p, right_j, gap_ext, ENABLE_ADJACENT_INDELS); \
+  } \
+}
+
+#define tmap_sw_set_del_aux(DD, cur, p, right_j, gap_e, adj_indel) \
+{ \
+  if(tmap_sw_cmp((p)->match_score, 0-gap_open, (p)->del_score, 0, right_j)) { \
+      if(adj_indel) { \
+          tmap_sw_set_match_vs_ins(DD, (cur)->del_from, p, 0-gap_open-gap_ext, 0-gap_ext, right_j); \
       } else { \
-          (cur)->ins_from = TMAP_SW_FROM_I; \
-          (II) = (p)->ins_score - gap_end; \
+          tmap_sw_set(DD, (cur)->del_from, (p)->match_score-gap_open-gap_e, TMAP_SW_FROM_M); \
       } \
-  } else tmap_sw_set_ins(II, cur, p, right_j); \
+  } else { \
+      if(adj_indel) { \
+          tmap_sw_set_ins_vs_del(DD, (cur)->del_from, p, 0-gap_ext-gap_ext, 0-gap_open, right_j); \
+      } else { \
+          tmap_sw_set(DD, (cur)->del_from, (p)->del_score-gap_e, TMAP_SW_FROM_D); \
+      } \
+  } \
 }
 
 #define tmap_sw_set_del(DD, cur, p, right_j) \
-{ \
-  if((p)->match_score - gap_open > (p)->del_score \
-     || (1 == right_j && (p)->match_score - gap_open == (p)->del_score)) { \
-      (cur)->del_from = TMAP_SW_FROM_M; \
-      (DD) = (p)->match_score - gap_open - gap_ext; \
-  } else { \
-      (cur)->del_from = TMAP_SW_FROM_D; \
-      (DD) = (p)->del_score - gap_ext; \
-  } \
-}
+  tmap_sw_set_del_aux(DD, cur, p, right_j, gap_ext, ENABLE_ADJACENT_INDELS) 
 
 #define tmap_sw_set_end_del(DD, cur, p, right_j) \
 { \
   if(gap_end >= 0) { \
-      if((p)->match_score - gap_open > (p)->del_score \
-         || (1 == right_j && (p)->match_score - gap_open == (p)->del_score)) { \
-          (cur)->del_from = TMAP_SW_FROM_M; \
-          (DD) = (p)->match_score - gap_open - gap_end; \
-      } else { \
-          (cur)->del_from = TMAP_SW_FROM_D; \
-          (DD) = (p)->del_score - gap_end; \
-      } \
-  } else tmap_sw_set_del(DD, cur, p, right_j); \
+      tmap_sw_set_del_aux(DD, cur, p, right_j, gap_end, ENABLE_ADJACENT_INDELS); \
+  } else { \
+      tmap_sw_set_del_aux(DD, cur, p, right_j, gap_ext, ENABLE_ADJACENT_INDELS); \
+  } \
 }
 
 /* build score profile for accelerating alignment, in theory */
