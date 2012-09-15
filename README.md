@@ -7,14 +7,14 @@ TMAP is a fast and accurate alignment software for short and long nucleotide seq
 * The latest TMAP is unsupported.  To use a supported version, please see the TMAP version associated with a Torrent Suite release below.
 
 *  Get the latest source code: 
-    <pre lang="bsh"><code>git clone git://github.com/iontorrent/TMAP.git
+    <pre lang="bash"><code>git clone git://github.com/iontorrent/TMAP.git
     cd TMAP
     git submodule init
     git submodule update
     </code></pre>
 * To download a specific version, please get the latest source code, and then checkout the specific version using the tag listed below:
-    <pre lang="bsh"><code>git checkout -b tag "tag name below"</code></pre>
-    For example: <pre lang="bsh"><code>git checkout -b 3.0.1 tmap.3.0.1
+    <pre lang="bash"><code>git checkout -b tag "tag name below"</code></pre>
+    For example: <pre lang="bash"><code>git checkout -b 3.0.1 tmap.3.0.1
     git submodule update
     </code></pre>
     Below is the list of tags associated with a specific Torrent Suite release:<table>
@@ -40,9 +40,9 @@ TMAP is a fast and accurate alignment software for short and long nucleotide seq
 ##  To Install
 
 1. Compile TMAP:
-  <pre lang="bsh"><code>sh autogen.sh && ./configure && make</code></pre>
+  <pre lang="bash"><code>sh autogen.sh && ./configure && make</code></pre>
 2. Install
-  <pre lang="bsh"><code>make install</code></pre>
+  <pre lang="bash"><code>make install</code></pre>
 
 ##  Optional Installs
 
@@ -52,9 +52,9 @@ TMAP is a fast and accurate alignment software for short and long nucleotide seq
   http://code.google.com/p/google-perftools
   
   If you have previously compiled TMAP, execute the following command:
-  <pre lang="bsh"><code>make distclean && sh autogen.sh && ./configure && make clean && make</code></pre>
+  <pre lang="bash"><code>make distclean && sh autogen.sh && ./configure && make clean && make</code></pre>
   After installation, execute the following command:
-  <pre lang="bsh"><code>sh autogen.sh && ./configure && make clean && make</code></pre>
+  <pre lang="bash"><code>sh autogen.sh && ./configure && make clean && make</code></pre>
   The performance improve should occur when using multiple-threads.
 
 ##  Developer Notes
