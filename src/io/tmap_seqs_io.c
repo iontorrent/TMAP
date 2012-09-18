@@ -164,6 +164,7 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
   bam_header_t *bam_header = NULL;
   sam_header_t *header = NULL; // the output header
   sam_header_record_t *record = NULL;
+  sam_header_record_t **record_list = NULL;
   char tag[2];
   char *command_line= NULL;
   char *id = NULL;
@@ -204,7 +205,7 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
   // Get the TMAP program ID
   id = tmap_malloc(sizeof(char) * (1 + strlen(PACKAGE_NAME)), "id"); 
   strcpy(id, PACKAGE_NAME); // default
-  for(i=j=0;NULL != sam_header_get_record(header, "PG", "ID", id, &i) && 0 < i;i=0) { // while the id is found
+  for(i=j=0;NULL != (record_list = sam_header_get_record(header, "PG", "ID", id, &i)) && 0 < i;i=0) { // while the id is found
       char *ptr = NULL;
       // swap id and id_pp
       ptr = id_pp;
@@ -214,6 +215,8 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
       j++;
       id = tmap_realloc(id, sizeof(char) * (1 + (int)log10(j) + 1 + strlen(PACKAGE_NAME)), "id"); 
       if(sprintf(id, "%s.%d", PACKAGE_NAME, j) < 0) tmap_bug();
+      free(record_list);
+      record_list = NULL;
   }
 
   // @SQ
@@ -221,13 +224,18 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
       for(i=0;i<refseq->num_annos;i++) { // for each reference sequence
           char num[32];
           // check to see if it already exists, if so ignore
-          sam_header_get_record(header, "SQ", "SN", refseq->annos[i].name->s, &j);
+          j = 0;
+          record_list = sam_header_get_record(header, "SQ", "SN", refseq->annos[i].name->s, &j);
           if(0 == j) {
               record = sam_header_record_init("SQ"); // new reference sequence record
               if(0 == sam_header_record_add(record, "SN", refseq->annos[i].name->s)) tmap_bug(); // reference sequence name
               if(sprintf(num, "%u", (uint32_t)refseq->annos[i].len) < 0) tmap_bug(); // integer to string
               if(0 == sam_header_record_add(record, "LN", num)) tmap_bug(); // reference sequence length
               if(0 == sam_header_add_record(header, record)) tmap_bug(); // add the reference sequence record
+          }
+          else {
+              free(record_list);
+              record_list = NULL;
           }
       }
       record = NULL;
