@@ -191,7 +191,13 @@ def main(options):
       hpstats = HPStats(options.hpstats_maxhp, options.hpstats_maxrl)
 
   num_reads = 0
-  for read in sam.fetch():
+  while True:
+    try:
+        read = sam.next()
+    except:
+        break
+    if None == read:
+        break
     if read.is_unmapped:
         continue
     num_reads += 1
