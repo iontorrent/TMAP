@@ -373,4 +373,10 @@ extern int32_t tmap_sw_sm_blosum45[];
   */
 extern int32_t           tmap_sw_sm_hs[];
 
+/*!
+  main-like function for simple smith waterman
+  */
+int
+tmap_sw_main(int argc, char *argv[]);
+
 #endif

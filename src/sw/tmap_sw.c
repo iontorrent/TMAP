@@ -31,6 +31,8 @@
 #include <config.h>
 #include "../util/tmap_alloc.h"
 #include "../util/tmap_definitions.h"
+#include "../io/tmap_file.h"
+#include "../map/util/tmap_map_opt.h"
 #include "tmap_sw.h"
 
 /* char -> 17 (=16+1) nucleotides */
@@ -1497,4 +1499,178 @@ tmap_sw_path2cigar(const tmap_sw_path_t *path, int32_t path_len, int32_t *n_ciga
   }
 
   return cigar;
+}
+
+typedef struct {
+    int32_t score_match;
+    int32_t pen_mm;
+    int32_t pen_gapo;
+    int32_t pen_gape;
+    int32_t bw;
+    int32_t query_softclip;
+} sw_opt_t;
+
+static int
+usage(sw_opt_t *opt)
+{
+  tmap_file_fprintf(tmap_file_stderr, "tmap sw [options] <query> <target>\n");
+  tmap_file_fprintf(tmap_file_stderr, "\t\t-A\tINT\tscore for a match [%d]\n", opt->score_match);
+  tmap_file_fprintf(tmap_file_stderr, "\t\t-M\tINT\tthe mismatch penalty [%d]\n", opt->pen_mm);
+  tmap_file_fprintf(tmap_file_stderr, "\t\t-O\tINT\tthe indel start penalty [%d]\n", opt->pen_gapo);
+  tmap_file_fprintf(tmap_file_stderr, "\t\t-E\tINT\tthe indel extension penalty [%d]\n", opt->pen_gape);
+  tmap_file_fprintf(tmap_file_stderr, "\t\t-g\tINT\tthe soft-clipping type [%d]\n", opt->query_softclip);
+  tmap_file_fprintf(tmap_file_stderr, "\t\t\t\t\t0 - allow on the left and right portion of the read\n");
+  tmap_file_fprintf(tmap_file_stderr, "\t\t\t\t\t1 - allow on the left portion of the read\n");
+  tmap_file_fprintf(tmap_file_stderr, "\t\t\t\t\t2 - allow on the right portion of the read\n");
+  tmap_file_fprintf(tmap_file_stderr, "\t\t\t\t\t3 - do not allow soft-clipping\n");
+  return -1;
+}
+
+#define __sw_gen_ap(par, opt) do { \
+        int32_t i; \
+        for(i=0;i<25;i++) { \
+                    (par).matrix[i] = -(opt)->pen_mm; \
+                } \
+        for(i=0;i<4;i++) { \
+                    (par).matrix[i*5+i] = (opt)->score_match; \
+                } \
+        (par).gap_open = (opt)->pen_gapo; (par).gap_ext = (opt)->pen_gape; \
+        (par).gap_end = (opt)->pen_gape; \
+        (par).row = 5; \
+        (par).band_width = (opt)->bw; \
+} while(0)
+
+int
+tmap_sw_main(int argc, char *argv[]) 
+{
+  int c;
+  uint8_t *query = NULL, *target = NULL;
+  int32_t qlen, tlen;
+  tmap_sw_path_t *path = NULL;
+  int32_t path_len, score;
+  int32_t seq1_start_skip, seq1_end_skip, seq2_start_skip, seq2_end_skip;
+  sw_opt_t *opt = NULL;
+  tmap_sw_param_t ap;
+  uint32_t *cigar = NULL;
+  int32_t n_cigar = 0;
+  int32_t i, j, q_i, t_i;
+  char *q_aln = NULL, *t_aln = NULL, *aln = NULL;
+  int32_t q_aln_i, t_aln_i, aln_i;
+  int32_t matrix[25];
+
+  seq1_start_skip = 0; seq1_end_skip = 0;
+  seq2_start_skip = 0; seq2_end_skip = 0;
+
+  opt = tmap_calloc(1, sizeof(sw_opt_t), "opt");
+  opt->score_match = TMAP_MAP_OPT_SCORE_MATCH;
+  opt->pen_mm = TMAP_MAP_OPT_PEN_MM;
+  opt->pen_gapo = TMAP_MAP_OPT_PEN_GAPO;
+  opt->pen_gape = TMAP_MAP_OPT_PEN_GAPE;
+  opt->query_softclip = 3;
+
+  while((c = getopt(argc, argv, "A:M:O:E:g:h")) >= 0) {
+      switch(c) {
+        case 'A':
+          opt->score_match = atoi(optarg);
+          break;
+        case 'M':
+          opt->pen_mm = atoi(optarg);
+          break;
+        case 'E':
+          opt->pen_gapo = atoi(optarg);
+          break;
+        case 'O':
+          opt->pen_gape= atoi(optarg);
+          break;
+        case 'g':
+          opt->query_softclip = atoi(optarg);
+          break;
+        case 'h':
+        default:
+          return usage(opt);
+      }
+  }
+
+  if(argc != optind + 2 || 1 == argc) {
+      return usage(opt);
+  }
+
+  query = (uint8_t*)argv[1];
+  target = (uint8_t*)argv[2];
+  qlen = strlen((char*)query);
+  tlen = strlen((char*)target);
+  tmap_to_int((char*)query, qlen);
+  tmap_to_int((char*)target, tlen);
+
+  seq2_start_skip = (TMAP_MAP_OPT_SOFT_CLIP_LEFT == opt->query_softclip || TMAP_MAP_OPT_SOFT_CLIP_ALL == opt->query_softclip) ? 1 : 0;
+  seq2_end_skip = (TMAP_MAP_OPT_SOFT_CLIP_RIGHT == opt->query_softclip || TMAP_MAP_OPT_SOFT_CLIP_ALL == opt->query_softclip) ? 1 : 0;
+  opt->bw = qlen + tlen;
+
+  ap.matrix = matrix;
+  __sw_gen_ap(ap, opt); 
+  path = tmap_calloc(qlen + tlen, sizeof(tmap_sw_path_t), "path");
+
+  score = tmap_sw_clipping_core2(target, tlen, query, qlen, &ap,
+                                seq1_start_skip, seq1_end_skip, seq2_start_skip, seq2_end_skip,
+                                path, &path_len, 0);
+
+  cigar = tmap_sw_path2cigar(path, path_len, &n_cigar);
+
+  tmap_to_char((char*)query, qlen);
+  tmap_to_char((char*)target, tlen);
+  
+  q_aln = tmap_malloc(sizeof(char) * (qlen + tlen + 1), "q_aln");
+  t_aln = tmap_malloc(sizeof(char) * (qlen + tlen + 1), "t_aln");
+  aln = tmap_malloc(sizeof(char) * (qlen + tlen + 1), "aln");
+
+  // TODO: softclipping
+  q_i = t_i = 0;
+  q_aln_i = t_aln_i = aln_i = 0;
+  for(i=0;i<n_cigar;i++) {
+      uint32_t op, op_len;
+
+      op = TMAP_SW_CIGAR_OP(cigar[i]);
+      op_len = TMAP_SW_CIGAR_LENGTH(cigar[i]);
+
+      switch(op) {
+        case TMAP_SW_FROM_M:
+          for(j=0;j<op_len;j++) {
+              aln[aln_i++] = (query[q_i] == target[t_i]) ? '|' : ' ';
+              q_aln[q_aln_i++] = query[q_i++];
+              t_aln[t_aln_i++] = target[t_i++];
+          }
+          break;
+        case TMAP_SW_FROM_I:
+          for(j=0;j<op_len;j++) {
+              aln[aln_i++] = '-';
+              q_aln[q_aln_i++] = query[q_i++];
+              t_aln[t_aln_i++] = '-';
+          }
+          break;
+        case TMAP_SW_FROM_D:
+          for(j=0;j<op_len;j++) {
+              aln[aln_i++] = '-';
+              q_aln[q_aln_i++] = '-';
+              t_aln[t_aln_i++] = target[t_i++];
+          }
+          break;
+        default:
+          tmap_bug();
+      }
+  }
+  q_aln[q_aln_i++] = '\0';
+  t_aln[t_aln_i++] = '\0';
+  aln[aln_i++] = '\0';
+
+  // print
+  fprintf(stderr, "score: %d\n%s\n%s\n%s\n", score, q_aln, aln, t_aln);
+
+  free(path);
+  free(opt);
+  free(cigar);
+  free(q_aln);
+  free(t_aln);
+  free(aln);
+
+  return 0;
 }
