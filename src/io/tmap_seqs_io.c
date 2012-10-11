@@ -221,11 +221,17 @@ tmap_seqs_io_to_bam_header(tmap_refseq_t *refseq,
 
   // @SQ
   if(NULL != refseq) {
+      int32_t sq_exists = 0;
+      sam_header_records_t *records = NULL;
+      // NB: check to see if any SQ/SN records exist, if not, then ignore checking...
+      records = sam_header_get_records(header, "SQ");
+      if(NULL != records && 0 < records->n) sq_exists = 1;
       for(i=0;i<refseq->num_annos;i++) { // for each reference sequence
           char num[32];
-          // check to see if it already exists, if so ignore
           j = 0;
-          record_list = sam_header_get_record(header, "SQ", "SN", refseq->annos[i].name->s, &j);
+          if(1 == sq_exists) { // check to see if it already exists, if so ignore
+              record_list = sam_header_get_record(header, "SQ", "SN", refseq->annos[i].name->s, &j);
+          }
           if(0 == j) {
               record = sam_header_record_init("SQ"); // new reference sequence record
               if(0 == sam_header_record_add(record, "SN", refseq->annos[i].name->s)) tmap_bug(); // reference sequence name
