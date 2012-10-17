@@ -5,7 +5,11 @@
 extern "C" {
 #endif
 
+#ifdef __cplusplus 
+    typedef class AffineSWOptimization tmap_vsw_wrapper_t; 
+#else
     typedef struct AffineSWOptimization tmap_vsw_wrapper_t; 
+#endif
 
     tmap_vsw_wrapper_t* 
       tmap_vsw_wrapper_init(int type);
