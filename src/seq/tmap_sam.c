@@ -137,3 +137,13 @@ tmap_sam_get_fo_start_idx(tmap_sam_t *sam)
   if(NULL != tag) return bam_aux2i(tag);
   else return -1;
 }
+
+int32_t
+tmap_sam_get_zb(tmap_sam_t *sam)
+{
+  uint8_t *tag = NULL;
+  // ZB
+  tag = bam_aux_get(sam->b, "ZB");
+  if(NULL != tag) return bam_aux2i(tag);
+  else return -1;
+}

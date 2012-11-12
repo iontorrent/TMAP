@@ -115,4 +115,11 @@ tmap_sam_get_rg_id(tmap_sam_t *sam);
 int32_t
 tmap_sam_get_fo_start_idx(tmap_sam_t *sam);
 
+/*!
+  @param  sam      pointer to the structure 
+  @return          the value of the ZB tag, -1 if not available
+*/
+int32_t
+tmap_sam_get_zb(tmap_sam_t *sam);
+
 #endif

@@ -291,6 +291,9 @@ We then perform a new Smith-Waterman alignment on a prefix of the read (beginnin
 
 This solves a problem where mismatches can be over-represented at the 5' end of the read when no 5' soft-clipping is performed, and there is a more likely (homopolymer error) explanation.
 
+\subsubsection{\TT{-J,--max-adapter-bases-for-soft-clipping}}
+Specifies to perform 3' soft-clipping (via -g) if at most this # of adapter bases were found (ZB tag).
+
 \subsubsection{\TT{-k,--shared-memory-key INT}}
 Specifies the shared memory key if the reference index has been loaded into shared memory.
 

@@ -170,6 +170,8 @@ __tmap_map_opt_option_print_func_compr_init(input_compr_gz, input_compr, TMAP_FI
 __tmap_map_opt_option_print_func_compr_init(input_compr_bz2, input_compr, TMAP_FILE_BZ2_COMPRESSION)
 __tmap_map_opt_option_print_func_int_init(output_type)
 __tmap_map_opt_option_print_func_int_init(end_repair)
+__tmap_map_opt_option_print_func_int_init(max_adapter_bases_for_soft_clipping)
+
 __tmap_map_opt_option_print_func_int_init(shm_key)
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
 __tmap_map_opt_option_print_func_double_init(sample_reads)
@@ -609,6 +611,12 @@ tmap_map_opt_init_helper(tmap_map_opt_t *opt)
                            "specifies to perform 5' end repair",
                            end_repair,
                            tmap_map_opt_option_print_func_end_repair,
+                           TMAP_MAP_ALGO_GLOBAL);
+  tmap_map_opt_options_add(opt->options, "max-adapter-bases-for-soft-clipping", required_argument, 0, 'J',
+                           TMAP_MAP_OPT_TYPE_INT,
+                           "specifies to perform 3' soft-clipping (via -g) if at most this # of adapter bases were found (ZB tag)",
+                           NULL,
+                           tmap_map_opt_option_print_func_max_adapter_bases_for_soft_clipping,
                            TMAP_MAP_ALGO_GLOBAL);
   tmap_map_opt_options_add(opt->options, "shared-memory-key", required_argument, 0, 'k', 
                            TMAP_MAP_OPT_TYPE_INT,
@@ -1088,6 +1096,7 @@ tmap_map_opt_init(int32_t algo_id)
   opt->input_compr = TMAP_FILE_NO_COMPRESSION;
   opt->output_type = 0;
   opt->end_repair = 0;
+  opt->max_adapter_bases_for_soft_clipping = INT32_MAX;
   opt->shm_key = 0;
   opt->min_seq_len = -1;
   opt->max_seq_len = -1;
@@ -1463,6 +1472,9 @@ tmap_map_opt_parse(int argc, char *argv[], tmap_map_opt_t *opt)
       }
       else if(c == 'I' || (0 == c && 0 == strcmp("use-seq-equal", options[option_index].name))) {       
           opt->seq_eq = 1;
+      }
+      else if(c == 'J' || (0 == c && 0 == strcmp("max-adapter-bases-for-soft-clipping", options[option_index].name))) {
+          opt->max_adapter_bases_for_soft_clipping = atoi(optarg);
       }
       else if(c == 'K' || (0 == c && 0 == strcmp("gap-long-length", options[option_index].name))) {       
           opt->gapl_len = atoi(optarg);
@@ -1912,6 +1924,9 @@ tmap_map_opt_check_global(tmap_map_opt_t *opt_a, tmap_map_opt_t *opt_b)
     if(opt_a->end_repair != opt_b->end_repair) {
         tmap_error("option --end-repair was specified outside of the common options", Exit, CommandLineArgument);
     }
+    if(opt_a->max_adapter_bases_for_soft_clipping != opt_b->max_adapter_bases_for_soft_clipping) {
+        tmap_error("option --max-adapter-bases-for-soft-clipping was specified outside of the common options", Exit, CommandLineArgument);
+    }
     // flowspace
     if(opt_a->fscore != opt_b->fscore) {
         tmap_error("option -X was specified outside of the common options", Exit, CommandLineArgument);
@@ -2062,6 +2077,7 @@ tmap_map_opt_check(tmap_map_opt_t *opt)
   tmap_error_cmd_check_int(opt->rand_read_name, 0, 1, "-u");
   tmap_error_cmd_check_int(opt->output_type, 0, 2, "-o");
   tmap_error_cmd_check_int(opt->end_repair, 0, 2, "--end-repair");
+  tmap_error_cmd_check_int(opt->max_adapter_bases_for_soft_clipping, 0, INT32_MAX, "max-adapter-bases-for-soft-clipping");
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
   tmap_error_cmd_check_int(opt->sample_reads, 0, 1, "-x");
 #endif
@@ -2236,6 +2252,7 @@ tmap_map_opt_copy_global(tmap_map_opt_t *opt_dest, tmap_map_opt_t *opt_src)
     opt_dest->input_compr = opt_src->input_compr;
     opt_dest->output_type = opt_src->output_type;
     opt_dest->end_repair = opt_src->end_repair;
+    opt_dest->max_adapter_bases_for_soft_clipping = opt_src->max_adapter_bases_for_soft_clipping;
     opt_dest->shm_key = opt_src->shm_key;
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
     opt_dest->sample_reads = opt_src->sample_reads;
@@ -2322,6 +2339,7 @@ tmap_map_opt_print(tmap_map_opt_t *opt)
   fprintf(stderr, "input_compr=%d\n", opt->input_compr);
   fprintf(stderr, "output_type=%d\n", opt->output_type);
   fprintf(stderr, "end_repair=%d\n", opt->end_repair);
+  fprintf(stderr, "max_adapter_bases_for_soft_clipping=%d\n", opt->max_adapter_bases_for_soft_clipping);
   fprintf(stderr, "shm_key=%d\n", (int)opt->shm_key);
 #ifdef ENABLE_TMAP_DEBUG_FUNCTIONS
   fprintf(stderr, "sample_reads=%lf\n", opt->sample_reads);

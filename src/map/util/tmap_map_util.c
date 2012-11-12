@@ -1292,6 +1292,14 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
   tmap_sort_introsort(tmap_map_sam_sort_coord, sams->n, sams->sams);
   softclip_start = (TMAP_MAP_OPT_SOFT_CLIP_LEFT == opt->softclip_type || TMAP_MAP_OPT_SOFT_CLIP_ALL == opt->softclip_type) ? 1 : 0;
   softclip_end = (TMAP_MAP_OPT_SOFT_CLIP_RIGHT == opt->softclip_type || TMAP_MAP_OPT_SOFT_CLIP_ALL == opt->softclip_type) ? 1 : 0;
+  // check if the ZB tag is present...
+  if(TMAP_SEQ_TYPE_SAM == seqs[0]->type || TMAP_SEQ_TYPE_SAM == seqs[0]->type) { // SAM/BAM
+      tmap_sam_t *sam = seqs[0]->data.sam;
+      int32_t zb = tmap_sam_get_zb(sam);
+      if(-1 == zb || zb <= opt->max_adapter_bases_for_soft_clipping) { // are there too many bases, and so we should disable softclip_end?
+          softclip_end = 0;
+      }
+  }
 
   // initialize opt
   vsw_opt = tmap_vsw_opt_init(opt->score_match, opt->pen_mm, opt->pen_gapo, opt->pen_gape, opt->score_thr);
