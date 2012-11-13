@@ -45,7 +45,8 @@ tmap_map_pairing_get_position_diff(tmap_map_sam_t *one, tmap_map_sam_t *two, int
 /*!
   performs read rescue
   @param  refseq   the reference sequence
-  @param  one      the seeds for the first end (A)
+  @param  one_orig the original read for the first end (A)
+  @param  two_orig the original read for the second end (B)
   @param  two      the seeds for the second end (B)
   @param  one_seq  the sequence for the first end (foward/reverse compliment) (A)
   @param  two_seq  the sequence for the second end (forward/reverse compliment) (B)
@@ -56,6 +57,7 @@ tmap_map_pairing_get_position_diff(tmap_map_sam_t *one, tmap_map_sam_t *two, int
   */
 int32_t
 tmap_map_pairing_read_rescue(tmap_refseq_t *refseq, 
+                             tmap_seq_t *one_orig, tmap_seq_t *two_orig,
                              tmap_map_sams_t *one, tmap_map_sams_t *two, 
                              tmap_seq_t *one_seq[2], tmap_seq_t *two_seq[2], 
                              tmap_rand_t *rand, tmap_map_opt_t *opt);

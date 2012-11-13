@@ -56,6 +56,22 @@ TMAP_SORT_INIT(tmap_map_sam_sort_coord, tmap_map_sam_t, __tmap_map_sam_sort_coor
 TMAP_SORT_INIT(tmap_map_sam_sort_coord_end, tmap_map_sam_t, __tmap_map_sam_sort_coord_end_lt)
 TMAP_SORT_INIT(tmap_map_sam_sort_coord_score, tmap_map_sam_t, __tmap_map_sam_sort_coord_score_lt)
 TMAP_SORT_INIT(tmap_map_sam_sort_score_coord, tmap_map_sam_t, __tmap_map_sam_sort_score_coord_lt)
+  
+static void
+tmap_map_util_set_softclip(tmap_map_opt_t *opt, tmap_seq_t *seq, int32_t *softclip_start, int32_t *softclip_end)
+{
+  (*softclip_start) = (TMAP_MAP_OPT_SOFT_CLIP_LEFT == opt->softclip_type || TMAP_MAP_OPT_SOFT_CLIP_ALL == opt->softclip_type) ? 1 : 0;
+  (*softclip_end) = (TMAP_MAP_OPT_SOFT_CLIP_RIGHT == opt->softclip_type || TMAP_MAP_OPT_SOFT_CLIP_ALL == opt->softclip_type) ? 1 : 0;
+  // check if the ZB tag is present...
+  if(TMAP_SEQ_TYPE_SAM == seq->type || TMAP_SEQ_TYPE_BAM == seq->type) { // SAM/BAM
+      tmap_sam_t *sam = seq->data.sam;
+      int32_t zb = tmap_sam_get_zb(sam);
+      // keep 3' soft clipping on if zb tag does not exists or there are too few adapter bases.
+      if(-1 != zb && opt->max_adapter_bases_for_soft_clipping < zb) { 
+          (*softclip_end) = 0;
+      }
+  }
+}
 
 void
 tmap_map_sam_init(tmap_map_sam_t *s)
@@ -1256,11 +1272,12 @@ typedef struct {
 
 tmap_map_sams_t *
 tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
-                 tmap_map_sams_t *sams, 
-                 tmap_seq_t **seqs,
-                 tmap_rand_t *rand,
-                 tmap_map_opt_t *opt,
-                 int32_t *num_after_grouping)
+                           tmap_seq_t *seq,
+                           tmap_map_sams_t *sams, 
+                           tmap_seq_t **seqs,
+                           tmap_rand_t *rand,
+                           tmap_map_opt_t *opt,
+                           int32_t *num_after_grouping)
 {
   int32_t i, j;
   int32_t start, end;
@@ -1290,16 +1307,7 @@ tmap_map_util_sw_gen_score(tmap_refseq_t *refseq,
 
   // sort by strand/chr/pos/score
   tmap_sort_introsort(tmap_map_sam_sort_coord, sams->n, sams->sams);
-  softclip_start = (TMAP_MAP_OPT_SOFT_CLIP_LEFT == opt->softclip_type || TMAP_MAP_OPT_SOFT_CLIP_ALL == opt->softclip_type) ? 1 : 0;
-  softclip_end = (TMAP_MAP_OPT_SOFT_CLIP_RIGHT == opt->softclip_type || TMAP_MAP_OPT_SOFT_CLIP_ALL == opt->softclip_type) ? 1 : 0;
-  // check if the ZB tag is present...
-  if(TMAP_SEQ_TYPE_SAM == seqs[0]->type || TMAP_SEQ_TYPE_SAM == seqs[0]->type) { // SAM/BAM
-      tmap_sam_t *sam = seqs[0]->data.sam;
-      int32_t zb = tmap_sam_get_zb(sam);
-      if(-1 == zb || zb <= opt->max_adapter_bases_for_soft_clipping) { // are there too many bases, and so we should disable softclip_end?
-          softclip_end = 0;
-      }
-  }
+  tmap_map_util_set_softclip(opt, seq, &softclip_start, &softclip_end);
 
   // initialize opt
   vsw_opt = tmap_vsw_opt_init(opt->score_match, opt->pen_mm, opt->pen_gapo, opt->pen_gape, opt->score_thr);
@@ -1813,7 +1821,7 @@ tmap_map_util_merge_adjacent_cigar_operations(tmap_map_sam_t *s)
 }
 
 static void 
-tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
+tmap_map_util_end_repair(tmap_seq_t *seq, uint8_t *query, int32_t qlen,
                          uint8_t *target_prev, int32_t tlen, 
                          int8_t strand, 
                          tmap_sw_path_t *path,
@@ -1824,7 +1832,7 @@ tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
   int32_t i, cigar_i;
   int32_t op, op_len, cur_len;
   int32_t cur_op, cur_op_len, cur_cigar_i, cur_cur_len, target_adj;
-  int32_t softclip_start;
+  int32_t softclip_start, softclip_end;
   int32_t old_score, new_score;
   int32_t start_pos, end_pos;
   // scoring matrix
@@ -1845,7 +1853,7 @@ tmap_map_util_end_repair(uint8_t *query, int32_t qlen,
   int32_t num_prev_bases = 2; // the maximum number of bases prior to the alignment to include in the target
 
   // check if we allow soft-clipping on the 5' end
-  softclip_start = (TMAP_MAP_OPT_SOFT_CLIP_LEFT == opt->softclip_type || TMAP_MAP_OPT_SOFT_CLIP_ALL == opt->softclip_type) ? 1 : 0;
+  tmap_map_util_set_softclip(opt, seq, &softclip_start, &softclip_end);
   // do not perform if so
   if(1 == softclip_start) return;
 
@@ -2219,8 +2227,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
 
   // sort by strand/chr/pos/score
   tmap_sort_introsort(tmap_map_sam_sort_coord, sams->n, sams->sams);
-  softclip_start = (TMAP_MAP_OPT_SOFT_CLIP_LEFT == opt->softclip_type || TMAP_MAP_OPT_SOFT_CLIP_ALL == opt->softclip_type) ? 1 : 0;
-  softclip_end = (TMAP_MAP_OPT_SOFT_CLIP_RIGHT == opt->softclip_type || TMAP_MAP_OPT_SOFT_CLIP_ALL == opt->softclip_type) ? 1 : 0;
+  tmap_map_util_set_softclip(opt, seq, &softclip_start, &softclip_end);
   
   // initialize opt
   vsw_opt = tmap_vsw_opt_init(opt->score_match, opt->pen_mm, opt->pen_gapo, opt->pen_gape, opt->score_thr);
@@ -2849,7 +2856,7 @@ tmap_map_util_sw_gen_cigar(tmap_refseq_t *refseq,
 
       // end repair
       if(0 != opt->end_repair) {
-          tmap_map_util_end_repair(query, qlen, target, tlen, strand, path, refseq, s, opt);
+          tmap_map_util_end_repair(seq, query, qlen, target, tlen, strand, path, refseq, s, opt);
       }
 
       i++;

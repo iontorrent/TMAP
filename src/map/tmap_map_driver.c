@@ -274,7 +274,7 @@ tmap_map_driver_core_worker(sam_header_t *sam_header,
 
               // generate scores with smith waterman
               for(j=0;j<num_ends;j++) { // for each end
-                  records[low]->sams[j] = tmap_map_util_sw_gen_score(index->refseq, records[low]->sams[j], seqs[j], rand, stage->opt, &k);
+                  records[low]->sams[j] = tmap_map_util_sw_gen_score(index->refseq, seqs_buffer[low]->seqs[j], records[low]->sams[j], seqs[j], rand, stage->opt, &k);
                   stage_stat->num_after_scoring += records[low]->sams[j]->n;
                   stage_stat->num_after_grouping += k;
               }
@@ -303,6 +303,7 @@ tmap_map_driver_core_worker(sam_header_t *sam_header,
                   // read rescue
                   if(1 == stage->opt->read_rescue) {
                       int32_t flag = tmap_map_pairing_read_rescue(index->refseq, 
+                                                                  seqs_buffer[low]->seqs[0], seqs_buffer[low]->seqs[1],
                                                                   records[low]->sams[0], records[low]->sams[1],
                                                                   seqs[0], seqs[1],
                                                                   rand, stage->opt);

@@ -325,6 +325,7 @@ tmap_map_pairing_pick_pairs(tmap_map_sams_t *one, tmap_map_sams_t *two, tmap_seq
 // NB: rescues two from one
 static tmap_map_sams_t*
 tmap_map_pairing_read_rescue_helper(tmap_refseq_t *refseq,
+                                    tmap_seq_t *one_orig, tmap_seq_t *two_orig,
                                     tmap_map_sams_t *one, tmap_map_sams_t *two, 
                                     tmap_seq_t *one_seq[2], tmap_seq_t *two_seq[2], 
                                     double ins_size_mean, double ins_size_std,
@@ -447,13 +448,14 @@ tmap_map_pairing_read_rescue_helper(tmap_refseq_t *refseq,
   opt_local.max_seed_band = 0;
   opt_local.stage_seed_freqc = 0.0;
   opt_local.bw += ins_size_std * read_rescue_std_num;
-  sams = tmap_map_util_sw_gen_score(refseq, sams, two_seq, rand, &opt_local, NULL);
+  sams = tmap_map_util_sw_gen_score(refseq, two_orig, sams, two_seq, rand, &opt_local, NULL);
 
   return sams;
 }
 
 int32_t 
 tmap_map_pairing_read_rescue(tmap_refseq_t *refseq, 
+                             tmap_seq_t *one_seq_orig, tmap_seq_t *two_seq_orig,
                              tmap_map_sams_t *one, tmap_map_sams_t *two, 
                              tmap_seq_t *one_seq[2], tmap_seq_t *two_seq[2], 
                              tmap_rand_t *rand, tmap_map_opt_t *opt)
@@ -462,7 +464,7 @@ tmap_map_pairing_read_rescue(tmap_refseq_t *refseq,
   int32_t i, flag = 0;
   
   // Rescue #1 from #2
-  one_rr = tmap_map_pairing_read_rescue_helper(refseq, two, one, two_seq, one_seq,
+  one_rr = tmap_map_pairing_read_rescue_helper(refseq, two_seq_orig, one_seq_orig, two, one, two_seq, one_seq,
                                                opt->ins_size_mean, opt->ins_size_std,
                                                opt->strandedness, 1-opt->positioning, // NB: update positioning 
                                                opt->read_rescue_std_num,
@@ -484,7 +486,7 @@ tmap_map_pairing_read_rescue(tmap_refseq_t *refseq,
   }
   
   // Rescue #2 from #1
-  two_rr = tmap_map_pairing_read_rescue_helper(refseq, one, two, one_seq, two_seq,
+  two_rr = tmap_map_pairing_read_rescue_helper(refseq, one_seq_orig, two_seq_orig, one, two, one_seq, two_seq,
                                                opt->ins_size_mean, opt->ins_size_std,
                                                opt->strandedness, opt->positioning, 
                                                opt->read_rescue_std_num,
