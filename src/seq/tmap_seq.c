@@ -402,13 +402,13 @@ tmap_seq_update(tmap_seq_t *seq, int32_t idx, sam_header_t *header)
       seq->flowgram_len = tmap_seq_get_flowgram(seq, &seq->flowgram);
 
       // check if all flowspace information is available
-      if((NULL == seq->ks || NULL == seq->fo || -1 == seq->fo_start_idx || NULL == seq->flowgram)// anything missing
+      /*if((NULL == seq->ks || NULL == seq->fo || -1 == seq->fo_start_idx || NULL == seq->flowgram)// anything missing
          && (NULL != seq->ks || NULL != seq->fo || -1 != seq->fo_start_idx || NULL != seq->flowgram)) { // anything exists
           fprintf(stderr, "@RG.KS %s present.\n", (NULL == seq->ks) ? "is not" : "is");
           fprintf(stderr, "@RG.FO %s present.\n", (NULL == seq->fo) ? "is not" : "is");
           fprintf(stderr, "@SAM.FZ %s present.\n", (NULL == seq->flowgram) ? "is not" : "is");
           fprintf(stderr, "@SAM.ZF %s present.\n", (-1 == seq->fo_start_idx) ? "is not" : "is");
           tmap_error("Not all flowspace information available (@RG.KS and @RG.FO, and @SAM.FZ and @SAM.ZF)", Exit, OutOfRange);
-      }
+      }*/
   }
 }
